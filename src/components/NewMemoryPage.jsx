@@ -5,8 +5,8 @@ function NewMemoryPage({
   setDescription,
   date,
   setDate,
-  image,
-  setImage,
+  images,
+  setImages,
   saveMemory,
   inputStyle,
   buttonStyle,
@@ -70,61 +70,91 @@ function NewMemoryPage({
           marginTop: "15px",
         }}
       >
-        {image ? "Change Photo" : "Choose Photo"}
+        {images.length ? "Add More Photos" : "Choose Photos"}
 
         <input
           type="file"
           accept="image/*"
+          multiple
           style={{ display: "none" }}
           onChange={(e) => {
-            const file = e.target.files[0];
+            const files = Array.from(e.target.files);
 
-            if (!file) return;
+            if (!files.length) return;
 
-            const reader = new FileReader();
+            Promise.all(
+              files.map(
+                (file) =>
+                  new Promise((resolve) => {
+                    const reader = new FileReader();
 
-            reader.onloadend = () => {
-              setImage(reader.result);
-            };
+                    reader.onloadend = () => resolve(reader.result);
 
-            reader.readAsDataURL(file);
+                    reader.readAsDataURL(file);
+                  })
+              )
+            ).then((newImages) => {
+              setImages([...images, ...newImages]);
+            });
           }}
         />
       </label>
 
-      {image && (
+      {images.length > 0 && (
         <>
           <br />
           <br />
 
-          <img
-            src={image}
-            alt="Preview"
+          <div
             style={{
-              width: "100%",
-              maxWidth: "500px",
-              maxHeight: "300px",
-              objectFit: "cover",
-              borderRadius: "12px",
-            }}
-          />
-
-          <br />
-          <br />
-
-          <button
-            onClick={() => setImage("")}
-            style={{
-              background: "#dc2626",
-              color: "white",
-              border: "none",
-              padding: "10px 18px",
-              borderRadius: "8px",
-              cursor: "pointer",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
+              gap: "12px",
+              maxWidth: "700px",
+              margin: "0 auto",
             }}
           >
-            Remove Photo
-          </button>
+            {images.map((img, index) => (
+              <div
+                key={index}
+                style={{
+                  position: "relative",
+                }}
+              >
+                <img
+                  src={img}
+                  alt={`Memory ${index + 1}`}
+                  style={{
+                    width: "100%",
+                    height: "140px",
+                    objectFit: "cover",
+                    borderRadius: "10px",
+                  }}
+                />
+
+                <button
+                  onClick={() =>
+                    setImages(images.filter((_, i) => i !== index))
+                  }
+                  style={{
+                    position: "absolute",
+                    top: "6px",
+                    right: "6px",
+                    background: "#dc2626",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "50%",
+                    width: "28px",
+                    height: "28px",
+                    cursor: "pointer",
+                    fontWeight: "bold",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+          </div>
         </>
       )}
 

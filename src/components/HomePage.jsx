@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 function HomePage({
   memoryCount,
   memories,
@@ -8,6 +10,8 @@ function HomePage({
   inputStyle,
   containerStyle,
 }) {
+  const [selectedImage, setSelectedImage] = useState(null);
+
   return (
     <div style={containerStyle}>
       <h1 style={{ marginBottom: "10px" }}>Trace</h1>
@@ -81,28 +85,39 @@ function HomePage({
                   {memory.description}
                 </p>
 
-                {memory.image && (
-                  <img
-                    src={memory.image}
-                    alt="Memory"
-                    onClick={() => window.open(memory.image, "_blank")}
+                {memory.images && memory.images.length > 0 && (
+                  <div
                     style={{
-                      width: "100%",
-                      maxHeight: "500px",
-                      objectFit: "cover",
-                      borderRadius: "12px",
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fill, minmax(140px, 1fr))",
+                      gap: "10px",
                       marginTop: "20px",
-                      marginBottom: "20px",
-                      cursor: "pointer",
                     }}
-                  />
+                  >
+                    {memory.images.map((img, i) => (
+                      <img
+                        key={i}
+                        src={img}
+                        alt={`Memory ${i + 1}`}
+                        onClick={() => setSelectedImage(img)}
+                        style={{
+                          width: "100%",
+                          height: "140px",
+                          objectFit: "cover",
+                          borderRadius: "10px",
+                          cursor: "pointer",
+                        }}
+                      />
+                    ))}
+                  </div>
                 )}
 
                 <div
                   style={{
                     display: "flex",
                     gap: "10px",
-                    marginTop: "15px",
+                    marginTop: "20px",
                   }}
                 >
                   <button
@@ -143,6 +158,32 @@ function HomePage({
             ))
         )}
       </div>
+
+      {selectedImage && (
+        <div
+          onClick={() => setSelectedImage(null)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,.9)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            zIndex: 9999,
+            cursor: "pointer",
+          }}
+        >
+          <img
+            src={selectedImage}
+            alt="Full Size"
+            style={{
+              maxWidth: "95%",
+              maxHeight: "95%",
+              borderRadius: "12px",
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

@@ -1,24 +1,31 @@
 import { useState, useEffect } from "react";
 import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
+
 function App() {
   const [page, setPage] = useState("home");
-const [title, setTitle] = useState("");
-const [description, setDescription] = useState("");
-const [date, setDate] = useState("");
-const [editingIndex, setEditingIndex] = useState(null);
-const [image, setImage] = useState("");
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [date, setDate] = useState("");
+
+  const [editingIndex, setEditingIndex] = useState(null);
+
+  const [images, setImages] = useState([]);
+
   const [memories, setMemories] = useState([]);
   const [memoryCount, setMemoryCount] = useState(0);
-useEffect(() => {
-  const savedMemories = localStorage.getItem("memories");
 
-  if (savedMemories) {
-    const parsedMemories = JSON.parse(savedMemories);
-    setMemories(parsedMemories);
-    setMemoryCount(parsedMemories.length);
-  }
-}, []);
+  useEffect(() => {
+    const savedMemories = localStorage.getItem("memories");
+
+    if (savedMemories) {
+      const parsedMemories = JSON.parse(savedMemories);
+      setMemories(parsedMemories);
+      setMemoryCount(parsedMemories.length);
+    }
+  }, []);
+
   const buttonStyle = {
     padding: "15px 40px",
     fontSize: "24px",
@@ -27,7 +34,7 @@ useEffect(() => {
     backgroundColor: "#5ec8ff",
     color: "white",
     cursor: "pointer",
-    marginTop: "20px"
+    marginTop: "20px",
   };
 
   const inputStyle = {
@@ -37,86 +44,84 @@ useEffect(() => {
     fontSize: "24px",
     borderRadius: "12px",
     border: "2px solid #ccc",
-    marginTop: "20px"
-  };
-const containerStyle = {
-  minHeight: "100vh",
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "center",
-  alignItems: "center",
-  fontFamily: "Arial",
-  textAlign: "center",
-  padding: "20px",
-};
-function saveMemory() {
-  if (title.trim() === "") return;
-
- if (editingIndex !== null) {
-  const updatedMemories = [...memories];
-
-  updatedMemories[editingIndex] = {
-    title,
-    description,
-    date,
-    image,
+    marginTop: "20px",
   };
 
-  setMemories(updatedMemories);
-  localStorage.setItem(
-    "memories",
-    JSON.stringify(updatedMemories)
-  );
-
-  setEditingIndex(null);
-} else {
-  const newMemory = {
-    title,
-    description,
-    date,
-    image,
+  const containerStyle = {
+    minHeight: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    justifyContent: "center",
+    alignItems: "center",
+    fontFamily: "Arial",
+    textAlign: "center",
+    padding: "20px",
   };
 
-  const newMemories = [...memories, newMemory];
+  function saveMemory() {
+    if (title.trim() === "") return;
 
-  setMemories(newMemories);
-  localStorage.setItem(
-    "memories",
-    JSON.stringify(newMemories)
-  );
+    if (editingIndex !== null) {
+      const updatedMemories = [...memories];
 
-  setMemoryCount(newMemories.length);
-}
+      updatedMemories[editingIndex] = {
+        title,
+        description,
+        date,
+        images,
+      };
 
-setTitle("");
-setDescription("");
-setDate("");
-setImage("");
+      setMemories(updatedMemories);
+      localStorage.setItem("memories", JSON.stringify(updatedMemories));
 
-setPage("home");
-}
+      setEditingIndex(null);
+    } else {
+      const newMemory = {
+        title,
+        description,
+        date,
+        images,
+      };
 
-function deleteMemory(indexToDelete) {
-  const updatedMemories = memories.filter(
-    (_, index) => index !== indexToDelete
-  );
+      const newMemories = [...memories, newMemory];
 
-  setMemories(updatedMemories);
-  localStorage.setItem("memories", JSON.stringify(updatedMemories));
-  setMemoryCount(updatedMemories.length);
-}
- function editMemory(indexToEdit) {
-  const memory = memories[indexToEdit];
+      setMemories(newMemories);
+      localStorage.setItem("memories", JSON.stringify(newMemories));
 
-setTitle(memory.title);
-setDescription(memory.description);
-setDate(memory.date);
-setImage(memory.image || "");
+      setMemoryCount(newMemories.length);
+    }
 
-  setEditingIndex(indexToEdit);
-  setPage("new");
-}
-return (
+    setTitle("");
+    setDescription("");
+    setDate("");
+    setImages([]);
+
+    setPage("home");
+  }
+
+  function deleteMemory(indexToDelete) {
+    const updatedMemories = memories.filter(
+      (_, index) => index !== indexToDelete
+    );
+
+    setMemories(updatedMemories);
+    localStorage.setItem("memories", JSON.stringify(updatedMemories));
+    setMemoryCount(updatedMemories.length);
+  }
+
+  function editMemory(indexToEdit) {
+    const memory = memories[indexToEdit];
+
+    setTitle(memory.title);
+    setDescription(memory.description);
+    setDate(memory.date);
+    setImages(memory.images || []);
+
+    setEditingIndex(indexToEdit);
+    setPage("new");
+  }
+
+  return (
     <div
       style={{
         background: "#111827",
@@ -126,38 +131,38 @@ return (
         justifyContent: "center",
         alignItems: "center",
         flexDirection: "column",
-        fontFamily: "Arial"
+        fontFamily: "Arial",
       }}
     >
       {page === "home" ? (
-  <HomePage
-  memoryCount={memoryCount}
-  memories={memories}
-  onAddMemory={() => setPage("new")}
-  deleteMemory={deleteMemory}
-  editMemory={editMemory}
-  buttonStyle={buttonStyle}
-  inputStyle={inputStyle}
-  containerStyle={containerStyle}
-/>
+        <HomePage
+          memoryCount={memoryCount}
+          memories={memories}
+          onAddMemory={() => setPage("new")}
+          deleteMemory={deleteMemory}
+          editMemory={editMemory}
+          buttonStyle={buttonStyle}
+          inputStyle={inputStyle}
+          containerStyle={containerStyle}
+        />
       ) : (
-<NewMemoryPage
-  title={title}
-  setTitle={setTitle}
-  description={description}
-  setDescription={setDescription}
-  saveMemory={saveMemory}
-  inputStyle={inputStyle}
-  buttonStyle={buttonStyle}
-  containerStyle={containerStyle}
-  setPage={setPage}
-  date={date}
-setDate={setDate}
-  image={image}
-  setImage={setImage}
-editingIndex={editingIndex}
-setEditingIndex={setEditingIndex}
-/>
+        <NewMemoryPage
+          title={title}
+          setTitle={setTitle}
+          description={description}
+          setDescription={setDescription}
+          date={date}
+          setDate={setDate}
+          images={images}
+          setImages={setImages}
+          saveMemory={saveMemory}
+          inputStyle={inputStyle}
+          buttonStyle={buttonStyle}
+          containerStyle={containerStyle}
+          setPage={setPage}
+          editingIndex={editingIndex}
+          setEditingIndex={setEditingIndex}
+        />
       )}
     </div>
   );
