@@ -128,6 +128,33 @@ function HomePage({
                   {memory.description}
                 </p>
 
+                {Array.isArray(memory.categories) &&
+                  memory.categories.length > 0 && (
+                    <div
+                      style={{
+                        display: "flex",
+                        flexWrap: "wrap",
+                        gap: "8px",
+                        marginTop: "16px",
+                      }}
+                    >
+                      {memory.categories.map((category) => (
+                        <span
+                          key={category}
+                          style={{
+                            background: "#374151",
+                            borderRadius: "999px",
+                            color: "#d1d5db",
+                            fontSize: "14px",
+                            padding: "6px 10px",
+                          }}
+                        >
+                          {category}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
                 {memory.images && memory.images.length > 0 && (
                   <div
                     style={{

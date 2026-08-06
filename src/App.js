@@ -8,6 +8,7 @@ function App() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState("");
+  const [categories, setCategories] = useState([]);
 
   const [editingIndex, setEditingIndex] = useState(null);
 
@@ -70,6 +71,7 @@ function App() {
         description,
         date,
         images,
+        categories,
       };
 
       setMemories(updatedMemories);
@@ -82,6 +84,7 @@ function App() {
         description,
         date,
         images,
+        categories,
         favorite: false,
       };
 
@@ -97,6 +100,7 @@ function App() {
     setDescription("");
     setDate("");
     setImages([]);
+    setCategories([]);
 
     setPage("home");
   }
@@ -128,6 +132,7 @@ function App() {
     setDescription(memory.description);
     setDate(memory.date);
     setImages(memory.images || []);
+    setCategories(Array.isArray(memory.categories) ? memory.categories : []);
 
     setEditingIndex(indexToEdit);
     setPage("new");
@@ -167,6 +172,8 @@ function App() {
           setDescription={setDescription}
           date={date}
           setDate={setDate}
+          categories={categories}
+          setCategories={setCategories}
           images={images}
           setImages={setImages}
           saveMemory={saveMemory}

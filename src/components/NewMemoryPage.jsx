@@ -1,3 +1,18 @@
+const CATEGORY_OPTIONS = [
+  "Family",
+  "Friends",
+  "Travel",
+  "Fitness",
+  "Health",
+  "Work",
+  "Pets",
+  "Milestone",
+  "Food",
+  "Hobby",
+  "School",
+  "Other",
+];
+
 function NewMemoryPage({
   title,
   setTitle,
@@ -5,6 +20,8 @@ function NewMemoryPage({
   setDescription,
   date,
   setDate,
+  categories,
+  setCategories,
   images,
   setImages,
   saveMemory,
@@ -55,6 +72,60 @@ function NewMemoryPage({
         value={date}
         onChange={(e) => setDate(e.target.value)}
       />
+
+      <br />
+      <br />
+
+      <div
+        style={{
+          width: "500px",
+          maxWidth: "90%",
+          textAlign: "left",
+        }}
+      >
+        <p style={{ marginBottom: "10px", fontSize: "18px" }}>
+          Categories
+        </p>
+
+        <div
+          aria-label="Memory categories"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "10px",
+          }}
+        >
+          {CATEGORY_OPTIONS.map((category) => {
+            const isSelected = categories.includes(category);
+
+            return (
+              <button
+                key={category}
+                type="button"
+                aria-pressed={isSelected}
+                onClick={() => {
+                  setCategories(
+                    isSelected
+                      ? categories.filter((item) => item !== category)
+                      : [...categories, category]
+                  );
+                }}
+                style={{
+                  background: isSelected ? "#5ec8ff" : "#374151",
+                  color: "white",
+                  border: "none",
+                  borderRadius: "999px",
+                  padding: "8px 14px",
+                  cursor: "pointer",
+                  fontSize: "16px",
+                }}
+              >
+                {category}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <br />
       <br />
