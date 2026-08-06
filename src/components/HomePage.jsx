@@ -3,6 +3,7 @@ import { useState } from "react";
 function HomePage({
   memoryCount,
   memories,
+  toggleFavorite,
   onAddMemory,
   deleteMemory,
   editMemory,
@@ -13,10 +14,15 @@ function HomePage({
   const [selectedImage, setSelectedImage] = useState(null);
   const [search, setSearch] = useState("");
 
-  const filteredMemories = memories.filter((memory) => {
-    const text = `${memory.title} ${memory.description}`.toLowerCase();
-    return text.includes(search.toLowerCase());
-  });
+  const filteredMemories = memories
+    .filter((memory) => {
+      const text = `${memory.title} ${memory.description}`.toLowerCase();
+      return text.includes(search.toLowerCase());
+    })
+    .sort((a, b) => {
+      if (a.favorite === b.favorite) return 0;
+      return a.favorite ? -1 : 1;
+    });
 
   return (
     <div style={containerStyle}>
@@ -58,123 +64,140 @@ function HomePage({
         {filteredMemories.length === 0 ? (
           <p>No memories found.</p>
         ) : (
-          filteredMemories
-            .slice()
-            .reverse()
-            .map((memory) => {
-              const originalIndex = memories.indexOf(memory);
+          filteredMemories.map((memory) => {
+            const originalIndex = memories.indexOf(memory);
 
-              return (
+            return (
+              <div
+                key={originalIndex}
+                style={{
+                  background: "#1f2937",
+                  borderRadius: "16px",
+                  padding: "20px",
+                  marginBottom: "20px",
+                  textAlign: "left",
+                  boxShadow: "0 4px 12px rgba(0,0,0,.25)",
+                }}
+              >
                 <div
-                  key={originalIndex}
                   style={{
-                    background: "#1f2937",
-                    borderRadius: "16px",
-                    padding: "20px",
-                    marginBottom: "20px",
-                    textAlign: "left",
-                    boxShadow: "0 4px 12px rgba(0,0,0,.25)",
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
                   }}
                 >
-                  <h2 style={{ marginTop: 0 }}>
+                  <h2 style={{ margin: 0 }}>
                     {memory.title}
                   </h2>
 
-                  {memory.date && (
-                    <p
-                      style={{
-                        color: "#9ca3af",
-                        marginTop: "-5px",
-                        marginBottom: "15px",
-                      }}
-                    >
-                      {new Date(memory.date).toLocaleDateString("en-US", {
-                        month: "long",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </p>
-                  )}
-
-                  <p
+                  <button
+                    onClick={() => toggleFavorite(originalIndex)}
                     style={{
-                      whiteSpace: "pre-wrap",
-                      lineHeight: "1.6",
+                      background: "none",
+                      border: "none",
+                      fontSize: "30px",
+                      cursor: "pointer",
                     }}
                   >
-                    {memory.description}
+                    {memory.favorite ? "⭐" : "☆"}
+                  </button>
+                </div>
+
+                {memory.date && (
+                  <p
+                    style={{
+                      color: "#9ca3af",
+                      marginTop: "8px",
+                      marginBottom: "15px",
+                    }}
+                  >
+                    {new Date(memory.date).toLocaleDateString("en-US", {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </p>
+                )}
 
-                  {memory.images && memory.images.length > 0 && (
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns:
-                          "repeat(auto-fill, minmax(140px, 1fr))",
-                        gap: "10px",
-                        marginTop: "20px",
-                      }}
-                    >
-                      {memory.images.map((img, i) => (
-                        <img
-                          key={i}
-                          src={img}
-                          alt={`Memory ${i + 1}`}
-                          onClick={() => setSelectedImage(img)}
-                          style={{
-                            width: "100%",
-                            height: "140px",
-                            objectFit: "cover",
-                            borderRadius: "10px",
-                            cursor: "pointer",
-                          }}
-                        />
-                      ))}
-                    </div>
-                  )}
+                <p
+                  style={{
+                    whiteSpace: "pre-wrap",
+                    lineHeight: "1.6",
+                  }}
+                >
+                  {memory.description}
+                </p>
 
+                {memory.images && memory.images.length > 0 && (
                   <div
                     style={{
-                      display: "flex",
+                      display: "grid",
+                      gridTemplateColumns:
+                        "repeat(auto-fill, minmax(140px, 1fr))",
                       gap: "10px",
                       marginTop: "20px",
                     }}
                   >
-                    <button
-                      onClick={() => editMemory(originalIndex)}
-                      style={{
-                        background: "#2563eb",
-                        color: "white",
-                        border: "none",
-                        padding: "8px 16px",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Edit
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        if (window.confirm("Delete this memory?")) {
-                          deleteMemory(originalIndex);
-                        }
-                      }}
-                      style={{
-                        background: "#dc2626",
-                        color: "white",
-                        border: "none",
-                        padding: "8px 16px",
-                        borderRadius: "8px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Delete
-                    </button>
+                    {memory.images.map((img, i) => (
+                      <img
+                        key={i}
+                        src={img}
+                        alt={`Memory ${i + 1}`}
+                        onClick={() => setSelectedImage(img)}
+                        style={{
+                          width: "100%",
+                          height: "140px",
+                          objectFit: "cover",
+                          borderRadius: "10px",
+                          cursor: "pointer",
+                        }}
+                      />
+                    ))}
                   </div>
+                )}
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "10px",
+                    marginTop: "20px",
+                  }}
+                >
+                  <button
+                    onClick={() => editMemory(originalIndex)}
+                    style={{
+                      background: "#2563eb",
+                      color: "white",
+                      border: "none",
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (window.confirm("Delete this memory?")) {
+                        deleteMemory(originalIndex);
+                      }
+                    }}
+                    style={{
+                      background: "#dc2626",
+                      color: "white",
+                      border: "none",
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                    }}
+                  >
+                    Delete
+                  </button>
                 </div>
-              );
-            })
+              </div>
+            );
+          })
         )}
       </div>
 

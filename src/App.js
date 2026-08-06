@@ -65,6 +65,7 @@ function App() {
       const updatedMemories = [...memories];
 
       updatedMemories[editingIndex] = {
+        ...updatedMemories[editingIndex],
         title,
         description,
         date,
@@ -81,6 +82,7 @@ function App() {
         description,
         date,
         images,
+        favorite: false,
       };
 
       const newMemories = [...memories, newMemory];
@@ -97,6 +99,16 @@ function App() {
     setImages([]);
 
     setPage("home");
+  }
+
+  function toggleFavorite(index) {
+    const updatedMemories = [...memories];
+
+    updatedMemories[index].favorite =
+      !updatedMemories[index].favorite;
+
+    setMemories(updatedMemories);
+    localStorage.setItem("memories", JSON.stringify(updatedMemories));
   }
 
   function deleteMemory(indexToDelete) {
@@ -138,6 +150,8 @@ function App() {
         <HomePage
           memoryCount={memoryCount}
           memories={memories}
+          setMemories={setMemories}
+          toggleFavorite={toggleFavorite}
           onAddMemory={() => setPage("new")}
           deleteMemory={deleteMemory}
           editMemory={editMemory}
