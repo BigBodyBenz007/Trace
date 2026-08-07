@@ -125,9 +125,22 @@ function HomePage({
               alignItems: "flex-start",
               gap: "64px",
               padding: "8px 32px 16px",
+              position: "relative",
               width: "max-content",
             }}
           >
+            <div
+              aria-hidden="true"
+              style={{
+                background: "#6b7280",
+                height: "3px",
+                left: "32px",
+                position: "absolute",
+                right: "32px",
+                top: "108px",
+              }}
+            />
+
             {timelineGroups.map((yearGroup, yearIndex) => (
               <section
                 key={yearGroup.year}
@@ -137,7 +150,7 @@ function HomePage({
                   display: "flex",
                   flexDirection: "column",
                   flex: "0 0 auto",
-                  gap: "24px",
+                  gap: "20px",
                   paddingLeft: yearIndex === 0 ? 0 : "48px",
                 }}
               >
@@ -145,6 +158,7 @@ function HomePage({
                   style={{
                     color: "#e5e7eb",
                     fontSize: "28px",
+                    lineHeight: "34px",
                     margin: 0,
                     textAlign: "left",
                   }}
@@ -166,13 +180,14 @@ function HomePage({
                         display: "flex",
                         flexDirection: "column",
                         flex: "0 0 auto",
-                        gap: "14px",
+                        gap: 0,
                       }}
                     >
                       <h3
                         style={{
                           color: "#9ca3af",
                           fontSize: "18px",
+                          lineHeight: "22px",
                           margin: 0,
                           textAlign: "left",
                         }}
@@ -184,6 +199,7 @@ function HomePage({
                         style={{
                           display: "flex",
                           gap: "20px",
+                          paddingTop: "76px",
                         }}
                       >
                         {monthGroup.memories.map((memory) => {
@@ -192,6 +208,42 @@ function HomePage({
                           return (
                             <div
                               key={originalIndex}
+                              style={{
+                                flexShrink: 0,
+                                minWidth: "320px",
+                                position: "relative",
+                              }}
+                            >
+                              <div
+                                aria-hidden="true"
+                                style={{
+                                  background: "#6b7280",
+                                  height: "52px",
+                                  left: "50%",
+                                  position: "absolute",
+                                  top: "-52px",
+                                  transform: "translateX(-50%)",
+                                  width: "2px",
+                                }}
+                              />
+
+                              <div
+                                aria-hidden="true"
+                                style={{
+                                  background: "#5ec8ff",
+                                  border: "3px solid #111827",
+                                  borderRadius: "50%",
+                                  height: "18px",
+                                  left: "50%",
+                                  position: "absolute",
+                                  top: "-64px",
+                                  transform: "translateX(-50%)",
+                                  width: "18px",
+                                  zIndex: 1,
+                                }}
+                              />
+
+                            <div
                               style={{
                                 background: "#1f2937",
                                 borderRadius: "16px",
@@ -345,6 +397,7 @@ function HomePage({
                     Delete
                   </button>
                 </div>
+                            </div>
                             </div>
                           );
                         })}
