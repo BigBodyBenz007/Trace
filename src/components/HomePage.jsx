@@ -1,4 +1,11 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+function getTimelineTimestamp(memory, currentDay) {
+  if (!memory.date) return currentDay.getTime();
+
+  const date = new Date(`${memory.date}T00:00:00`);
+  return Number.isNaN(date.getTime()) ? currentDay.getTime() : date.getTime();
+}
 
 function HomePage({
   memoryCount,
@@ -13,16 +20,34 @@ function HomePage({
 }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [search, setSearch] = useState("");
+  const timelineRef = useRef(null);
+  const hasScrolledToNewest = useRef(false);
+  const currentDay = new Date();
+  currentDay.setHours(0, 0, 0, 0);
 
   const filteredMemories = memories
     .filter((memory) => {
       const text = `${memory.title} ${memory.description}`.toLowerCase();
       return text.includes(search.toLowerCase());
     })
-    .sort((a, b) => {
-      if (a.favorite === b.favorite) return 0;
-      return a.favorite ? -1 : 1;
-    });
+    .sort(
+      (a, b) =>
+        getTimelineTimestamp(a, currentDay) -
+        getTimelineTimestamp(b, currentDay)
+    );
+
+  useEffect(() => {
+    if (
+      hasScrolledToNewest.current ||
+      memories.length === 0 ||
+      !timelineRef.current
+    ) {
+      return;
+    }
+
+    timelineRef.current.scrollLeft = timelineRef.current.scrollWidth;
+    hasScrolledToNewest.current = true;
+  }, [memories.length]);
 
   return (
     <div style={containerStyle}>
@@ -55,30 +80,41 @@ function HomePage({
       </h2>
 
       <div
+        ref={timelineRef}
         style={{
-          width: "600px",
+          width: "100%",
           maxWidth: "95%",
           marginTop: "20px",
+          overflowX: "auto",
+          paddingBottom: "12px",
         }}
       >
         {filteredMemories.length === 0 ? (
           <p>No memories found.</p>
         ) : (
-          filteredMemories.map((memory) => {
-            const originalIndex = memories.indexOf(memory);
+          <div
+            style={{
+              display: "flex",
+              alignItems: "stretch",
+              gap: "20px",
+            }}
+          >
+            {filteredMemories.map((memory) => {
+              const originalIndex = memories.indexOf(memory);
 
-            return (
-              <div
-                key={originalIndex}
-                style={{
-                  background: "#1f2937",
-                  borderRadius: "16px",
-                  padding: "20px",
-                  marginBottom: "20px",
-                  textAlign: "left",
-                  boxShadow: "0 4px 12px rgba(0,0,0,.25)",
-                }}
-              >
+              return (
+                <div
+                  key={originalIndex}
+                  style={{
+                    background: "#1f2937",
+                    borderRadius: "16px",
+                    padding: "20px",
+                    minWidth: "320px",
+                    flexShrink: 0,
+                    textAlign: "left",
+                    boxShadow: "0 4px 12px rgba(0,0,0,.25)",
+                  }}
+                >
                 <div
                   style={{
                     display: "flex",
@@ -222,9 +258,10 @@ function HomePage({
                     Delete
                   </button>
                 </div>
-              </div>
-            );
-          })
+                </div>
+              );
+            })}
+          </div>
         )}
       </div>
 
