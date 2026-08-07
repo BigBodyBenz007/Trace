@@ -137,7 +137,7 @@ function HomePage({
                 left: "32px",
                 position: "absolute",
                 right: "32px",
-                top: "108px",
+                top: "118px",
               }}
             />
 
@@ -150,15 +150,16 @@ function HomePage({
                   display: "flex",
                   flexDirection: "column",
                   flex: "0 0 auto",
-                  gap: "20px",
+                  gap: "24px",
                   paddingLeft: yearIndex === 0 ? 0 : "48px",
                 }}
               >
                 <h2
                   style={{
                     color: "#e5e7eb",
-                    fontSize: "28px",
-                    lineHeight: "34px",
+                    fontSize: "34px",
+                    fontWeight: 800,
+                    lineHeight: "40px",
                     margin: 0,
                     textAlign: "left",
                   }}
