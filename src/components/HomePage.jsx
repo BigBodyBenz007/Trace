@@ -1,5 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 
+const CATEGORY_OPTIONS = [
+  "All",
+  "Family",
+  "Friends",
+  "Travel",
+  "Fitness",
+  "Health",
+  "Work",
+  "Pets",
+  "Milestone",
+  "Food",
+  "Hobby",
+  "School",
+  "Other",
+];
+
 function getTimelineDate(memory, currentDay) {
   if (!memory.date) return currentDay;
 
@@ -49,6 +65,7 @@ function HomePage({
 }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [search, setSearch] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedMemory, setSelectedMemory] = useState(null);
   const [hoveredMemory, setHoveredMemory] = useState(null);
   const timelineRef = useRef(null);
@@ -60,7 +77,13 @@ function HomePage({
   const filteredMemories = memories
     .filter((memory) => {
       const text = `${memory.title} ${memory.description}`.toLowerCase();
-      return text.includes(search.toLowerCase());
+      const matchesSearch = text.includes(search.toLowerCase());
+      const matchesCategory =
+        selectedCategory === "All" ||
+        (Array.isArray(memory.categories) &&
+          memory.categories.includes(selectedCategory));
+
+      return matchesSearch && matchesCategory;
     })
     .sort(
       (a, b) =>
@@ -149,13 +172,38 @@ function HomePage({
       <br />
       <br />
 
-      <input
-        style={inputStyle}
-        type="text"
-        placeholder="Search memories..."
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <div
+        style={{
+          display: "flex",
+          flexWrap: "wrap",
+          gap: "10px",
+        }}
+      >
+        <input
+          style={inputStyle}
+          type="text"
+          placeholder="Search memories..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+
+        <select
+          aria-label="Filter memories by category"
+          value={selectedCategory}
+          onChange={(e) => setSelectedCategory(e.target.value)}
+          style={{
+            ...inputStyle,
+            cursor: "pointer",
+            width: "auto",
+          }}
+        >
+          {CATEGORY_OPTIONS.map((category) => (
+            <option key={category} value={category}>
+              {category}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <h2 style={{ marginTop: "40px" }}>
         Memories Added: {memoryCount}
