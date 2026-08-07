@@ -146,7 +146,7 @@ function App() {
         minHeight: "100vh",
         display: "flex",
         justifyContent: "center",
-        alignItems: "center",
+        alignItems: "stretch",
         flexDirection: "column",
         fontFamily: "Arial",
       }}

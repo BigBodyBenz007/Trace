@@ -1,10 +1,35 @@
 import { useEffect, useRef, useState } from "react";
 
-function getTimelineTimestamp(memory, currentDay) {
-  if (!memory.date) return currentDay.getTime();
+function getTimelineDate(memory, currentDay) {
+  if (!memory.date) return currentDay;
 
   const date = new Date(`${memory.date}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? currentDay.getTime() : date.getTime();
+  return Number.isNaN(date.getTime()) ? currentDay : date;
+}
+
+function groupMemoriesByDate(memories, currentDay) {
+  return memories.reduce((yearGroups, memory) => {
+    const date = getTimelineDate(memory, currentDay);
+    const year = date.getFullYear();
+    const monthIndex = date.getMonth();
+    const month = date.toLocaleDateString("en-US", { month: "long" });
+    let yearGroup = yearGroups[yearGroups.length - 1];
+
+    if (!yearGroup || yearGroup.year !== year) {
+      yearGroup = { year, months: [] };
+      yearGroups.push(yearGroup);
+    }
+
+    let monthGroup = yearGroup.months[yearGroup.months.length - 1];
+
+    if (!monthGroup || monthGroup.monthIndex !== monthIndex) {
+      monthGroup = { month, monthIndex, memories: [] };
+      yearGroup.months.push(monthGroup);
+    }
+
+    monthGroup.memories.push(memory);
+    return yearGroups;
+  }, []);
 }
 
 function HomePage({
@@ -32,9 +57,9 @@ function HomePage({
     })
     .sort(
       (a, b) =>
-        getTimelineTimestamp(a, currentDay) -
-        getTimelineTimestamp(b, currentDay)
+        getTimelineDate(a, currentDay) - getTimelineDate(b, currentDay)
     );
+  const timelineGroups = groupMemoriesByDate(filteredMemories, currentDay);
 
   useEffect(() => {
     if (
@@ -45,7 +70,10 @@ function HomePage({
       return;
     }
 
-    timelineRef.current.scrollLeft = timelineRef.current.scrollWidth;
+    timelineRef.current.scrollLeft = Math.max(
+      0,
+      timelineRef.current.scrollWidth - timelineRef.current.clientWidth
+    );
     hasScrolledToNewest.current = true;
   }, [memories.length]);
 
@@ -83,10 +111,9 @@ function HomePage({
         ref={timelineRef}
         style={{
           width: "100%",
-          maxWidth: "95%",
+          maxWidth: "100%",
           marginTop: "20px",
           overflowX: "auto",
-          paddingBottom: "12px",
         }}
       >
         {filteredMemories.length === 0 ? (
@@ -95,26 +122,86 @@ function HomePage({
           <div
             style={{
               display: "flex",
-              alignItems: "stretch",
-              gap: "20px",
+              alignItems: "flex-start",
+              gap: "64px",
+              padding: "8px 32px 16px",
+              width: "max-content",
             }}
           >
-            {filteredMemories.map((memory) => {
-              const originalIndex = memories.indexOf(memory);
-
-              return (
-                <div
-                  key={originalIndex}
+            {timelineGroups.map((yearGroup, yearIndex) => (
+              <section
+                key={yearGroup.year}
+                style={{
+                  borderLeft:
+                    yearIndex === 0 ? "none" : "1px solid #374151",
+                  display: "flex",
+                  flexDirection: "column",
+                  flex: "0 0 auto",
+                  gap: "24px",
+                  paddingLeft: yearIndex === 0 ? 0 : "48px",
+                }}
+              >
+                <h2
                   style={{
-                    background: "#1f2937",
-                    borderRadius: "16px",
-                    padding: "20px",
-                    minWidth: "320px",
-                    flexShrink: 0,
+                    color: "#e5e7eb",
+                    fontSize: "28px",
+                    margin: 0,
                     textAlign: "left",
-                    boxShadow: "0 4px 12px rgba(0,0,0,.25)",
                   }}
                 >
+                  {yearGroup.year}
+                </h2>
+
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "flex-start",
+                    gap: "32px",
+                  }}
+                >
+                  {yearGroup.months.map((monthGroup) => (
+                    <section
+                      key={monthGroup.monthIndex}
+                      style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        flex: "0 0 auto",
+                        gap: "14px",
+                      }}
+                    >
+                      <h3
+                        style={{
+                          color: "#9ca3af",
+                          fontSize: "18px",
+                          margin: 0,
+                          textAlign: "left",
+                        }}
+                      >
+                        {monthGroup.month}
+                      </h3>
+
+                      <div
+                        style={{
+                          display: "flex",
+                          gap: "20px",
+                        }}
+                      >
+                        {monthGroup.memories.map((memory) => {
+                          const originalIndex = memories.indexOf(memory);
+
+                          return (
+                            <div
+                              key={originalIndex}
+                              style={{
+                                background: "#1f2937",
+                                borderRadius: "16px",
+                                padding: "20px",
+                                minWidth: "320px",
+                                flexShrink: 0,
+                                textAlign: "left",
+                                boxShadow: "0 4px 12px rgba(0,0,0,.25)",
+                              }}
+                            >
                 <div
                   style={{
                     display: "flex",
@@ -258,9 +345,15 @@ function HomePage({
                     Delete
                   </button>
                 </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </section>
+                  ))}
                 </div>
-              );
-            })}
+              </section>
+            ))}
           </div>
         )}
       </div>
