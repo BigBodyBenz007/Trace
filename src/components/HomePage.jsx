@@ -32,6 +32,10 @@ function groupMemoriesByDate(memories, currentDay) {
   }, []);
 }
 
+function getMemorySelectionKey(memory, index) {
+  return index;
+}
+
 function HomePage({
   memoryCount,
   memories,
@@ -45,8 +49,11 @@ function HomePage({
 }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [search, setSearch] = useState("");
+  const [selectedMemory, setSelectedMemory] = useState(null);
+  const [hoveredMemory, setHoveredMemory] = useState(null);
   const timelineRef = useRef(null);
   const hasScrolledToNewest = useRef(false);
+  const memoryCardRefs = useRef(new Map());
   const currentDay = new Date();
   currentDay.setHours(0, 0, 0, 0);
 
@@ -60,6 +67,53 @@ function HomePage({
         getTimelineDate(a, currentDay) - getTimelineDate(b, currentDay)
     );
   const timelineGroups = groupMemoriesByDate(filteredMemories, currentDay);
+
+  function scrollMemoryIntoView(selectionKey) {
+    const viewport = timelineRef.current;
+    const card = memoryCardRefs.current.get(selectionKey);
+
+    if (!viewport || !card) return;
+
+    const viewportBounds = viewport.getBoundingClientRect();
+    const cardBounds = card.getBoundingClientRect();
+
+    if (
+      cardBounds.left >= viewportBounds.left &&
+      cardBounds.right <= viewportBounds.right
+    ) {
+      return;
+    }
+
+    viewport.scrollBy({
+      left:
+        cardBounds.left -
+        viewportBounds.left -
+        (viewportBounds.width - cardBounds.width) / 2,
+      behavior: "smooth",
+    });
+  }
+
+  function selectMemory(memory, index) {
+    const selectionKey = getMemorySelectionKey(memory, index);
+    setSelectedMemory(selectionKey);
+    scrollMemoryIntoView(selectionKey);
+  }
+
+  function clearSelection() {
+    setSelectedMemory(null);
+  }
+
+  function isMemorySelected(memory, index) {
+    return selectedMemory === getMemorySelectionKey(memory, index);
+  }
+
+  function setNodeHover(memory, index) {
+    setHoveredMemory(getMemorySelectionKey(memory, index));
+  }
+
+  function isNodeHovered(memory, index) {
+    return hoveredMemory === getMemorySelectionKey(memory, index);
+  }
 
   useEffect(() => {
     if (
@@ -205,10 +259,33 @@ function HomePage({
                       >
                         {monthGroup.memories.map((memory) => {
                           const originalIndex = memories.indexOf(memory);
+                          const selectionKey = getMemorySelectionKey(
+                            memory,
+                            originalIndex
+                          );
+                          const isSelected = isMemorySelected(
+                            memory,
+                            originalIndex
+                          );
+                          const isHovered = isNodeHovered(
+                            memory,
+                            originalIndex
+                          );
 
                           return (
                             <div
                               key={originalIndex}
+                              ref={(element) => {
+                                if (element) {
+                                  memoryCardRefs.current.set(
+                                    selectionKey,
+                                    element
+                                  );
+                                } else {
+                                  memoryCardRefs.current.delete(selectionKey);
+                                }
+                              }}
+                              onClick={() => selectMemory(memory, originalIndex)}
                               style={{
                                 flexShrink: 0,
                                 minWidth: "320px",
@@ -228,17 +305,35 @@ function HomePage({
                                 }}
                               />
 
-                              <div
-                                aria-hidden="true"
+                              <button
+                                aria-label={`Select ${memory.title}`}
+                                type="button"
+                                onClick={(event) => {
+                                  event.stopPropagation();
+                                  selectMemory(memory, originalIndex);
+                                }}
+                                onMouseEnter={() =>
+                                  setNodeHover(memory, originalIndex)
+                                }
+                                onMouseLeave={() => setHoveredMemory(null)}
                                 style={{
-                                  background: "#5ec8ff",
+                                  background: isSelected ? "#bae6fd" : "#5ec8ff",
                                   border: "3px solid #111827",
                                   borderRadius: "50%",
+                                  boxShadow: isHovered
+                                    ? "0 0 16px rgba(94, 200, 255, 0.8)"
+                                    : "0 0 0 rgba(94, 200, 255, 0)",
+                                  cursor: "pointer",
                                   height: "18px",
                                   left: "50%",
+                                  padding: 0,
                                   position: "absolute",
                                   top: "-64px",
-                                  transform: "translateX(-50%)",
+                                  transform: isHovered
+                                    ? "translateX(-50%) scale(1.15)"
+                                    : "translateX(-50%) scale(1)",
+                                  transition:
+                                    "transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease",
                                   width: "18px",
                                   zIndex: 1,
                                 }}
@@ -252,7 +347,10 @@ function HomePage({
                                 minWidth: "320px",
                                 flexShrink: 0,
                                 textAlign: "left",
-                                boxShadow: "0 4px 12px rgba(0,0,0,.25)",
+                                boxShadow: isSelected
+                                  ? "0 0 0 2px #5ec8ff, 0 8px 20px rgba(94, 200, 255, 0.2)"
+                                  : "0 4px 12px rgba(0,0,0,.25)",
+                                transition: "box-shadow 160ms ease",
                               }}
                             >
                 <div
@@ -381,8 +479,10 @@ function HomePage({
                   </button>
 
                   <button
-                    onClick={() => {
+                    onClick={(event) => {
+                      event.stopPropagation();
                       if (window.confirm("Delete this memory?")) {
+                        clearSelection();
                         deleteMemory(originalIndex);
                       }
                     }}
