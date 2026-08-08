@@ -195,6 +195,24 @@ function App() {
     localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
   }
 
+  function updateNutritionEntry(id, entry) {
+    const updatedEntries = nutritionEntries.map((existingEntry) =>
+      existingEntry.id === id
+        ? { ...existingEntry, ...entry, id: existingEntry.id }
+        : existingEntry
+    );
+
+    setNutritionEntries(updatedEntries);
+    localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
+  }
+
+  function deleteNutritionEntry(id) {
+    const updatedEntries = nutritionEntries.filter((entry) => entry.id !== id);
+
+    setNutritionEntries(updatedEntries);
+    localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
+  }
+
   return (
     <div
       style={{
@@ -227,6 +245,8 @@ function App() {
           onBack={() => setPage("home")}
           nutritionEntries={nutritionEntries}
           saveNutritionEntry={saveNutritionEntry}
+          updateNutritionEntry={updateNutritionEntry}
+          deleteNutritionEntry={deleteNutritionEntry}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}

@@ -19,10 +19,25 @@ function getCurrentLocalDateTime() {
   };
 }
 
+function getLocalDateTimeFromTimestamp(loggedAt) {
+  const date = new Date(loggedAt);
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+
+  return {
+    date: `${date.getFullYear()}-${month}-${day}`,
+    time: `${hours}:${minutes}`,
+  };
+}
+
 function NutritionPage({
   onBack,
   nutritionEntries,
   saveNutritionEntry,
+  updateNutritionEntry,
+  deleteNutritionEntry,
   buttonStyle,
   inputStyle,
   containerStyle,
@@ -37,6 +52,7 @@ function NutritionPage({
   const [time, setTime] = useState(initialDateTime.time);
   const [notes, setNotes] = useState("");
   const [isDraftDirty, setIsDraftDirty] = useState(false);
+  const [editingEntryId, setEditingEntryId] = useState(null);
 
   const sortedEntries = [...nutritionEntries].sort(
     (a, b) => new Date(b.loggedAt) - new Date(a.loggedAt)
@@ -49,7 +65,7 @@ function NutritionPage({
 
     const fallbackDateTime = getCurrentLocalDateTime();
 
-    saveNutritionEntry({
+    const entry = {
       name: name.trim(),
       calories: toNutritionNumber(calories),
       protein: toNutritionNumber(protein),
@@ -59,7 +75,13 @@ function NutritionPage({
         `${date || fallbackDateTime.date}T${time || fallbackDateTime.time}`
       ).toISOString(),
       notes: notes.trim(),
-    });
+    };
+
+    if (editingEntryId === null) {
+      saveNutritionEntry(entry);
+    } else {
+      updateNutritionEntry(editingEntryId, entry);
+    }
 
     resetForm();
   }
@@ -76,11 +98,37 @@ function NutritionPage({
     setTime(currentDateTime.time);
     setNotes("");
     setIsDraftDirty(false);
+    setEditingEntryId(null);
+  }
+
+  function editEntry(entry) {
+    const localDateTime = getLocalDateTimeFromTimestamp(entry.loggedAt);
+
+    setName(entry.name);
+    setCalories(String(entry.calories));
+    setProtein(String(entry.protein));
+    setCarbohydrates(String(entry.carbohydrates));
+    setFat(String(entry.fat));
+    setDate(localDateTime.date);
+    setTime(localDateTime.time);
+    setNotes(entry.notes);
+    setIsDraftDirty(false);
+    setEditingEntryId(entry.id);
+  }
+
+  function deleteEntry(id) {
+    if (!window.confirm("Delete this nutrition entry?")) return;
+
+    deleteNutritionEntry(id);
+
+    if (editingEntryId === id) {
+      resetForm();
+    }
   }
 
   function cancelEntry() {
     if (
-      isDraftDirty &&
+      (editingEntryId !== null || isDraftDirty) &&
       !window.confirm("Discard this entry? Your unsaved changes will be lost.")
     ) {
       return;
@@ -118,7 +166,9 @@ function NutritionPage({
           width: "100%",
         }}
       >
-        <h2 style={{ marginTop: 0 }}>Log Food</h2>
+        <h2 style={{ marginTop: 0 }}>
+          {editingEntryId === null ? "Log Food" : "Edit Food"}
+        </h2>
 
         <label style={{ display: "block" }}>
           Food / meal name
@@ -216,7 +266,7 @@ function NutritionPage({
         </label>
 
         <button type="submit" style={buttonStyle}>
-          Save Food
+          {editingEntryId === null ? "Save Entry" : "Save Changes"}
         </button>
 
         <button
@@ -229,6 +279,18 @@ function NutritionPage({
           }}
         >
           Cancel Entry
+        </button>
+
+        <button
+          type="button"
+          onClick={onBack}
+          style={{
+            ...buttonStyle,
+            backgroundColor: "#666",
+            marginLeft: "10px",
+          }}
+        >
+          Back to Timeline
         </button>
       </form>
 
@@ -280,21 +342,44 @@ function NutritionPage({
                     {entry.notes}
                   </p>
                 )}
+
+                <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+                  <button
+                    type="button"
+                    onClick={() => editEntry(entry)}
+                    style={{
+                      background: "#2563eb",
+                      border: "none",
+                      borderRadius: "8px",
+                      color: "white",
+                      cursor: "pointer",
+                      padding: "8px 16px",
+                    }}
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => deleteEntry(entry.id)}
+                    style={{
+                      background: "#dc2626",
+                      border: "none",
+                      borderRadius: "8px",
+                      color: "white",
+                      cursor: "pointer",
+                      padding: "8px 16px",
+                    }}
+                  >
+                    Delete
+                  </button>
+                </div>
               </article>
             ))}
           </div>
         )}
       </section>
 
-      <button
-        style={{
-          ...buttonStyle,
-          backgroundColor: "#666",
-        }}
-        onClick={onBack}
-      >
-        Back to Timeline
-      </button>
     </div>
   );
 }
