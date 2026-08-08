@@ -69,6 +69,7 @@ function HomePage({
   const [favoriteFilter, setFavoriteFilter] = useState("all");
   const [selectedMemory, setSelectedMemory] = useState(null);
   const [detailMemoryIndex, setDetailMemoryIndex] = useState(null);
+  const [activeDetailPhotoIndex, setActiveDetailPhotoIndex] = useState(0);
   const [hoveredMemory, setHoveredMemory] = useState(null);
   const timelineRef = useRef(null);
   const hasScrolledToNewest = useRef(false);
@@ -130,6 +131,7 @@ function HomePage({
 
   function openMemoryDetail(memory, index) {
     selectMemory(memory, index);
+    setActiveDetailPhotoIndex(0);
     setDetailMemoryIndex(index);
   }
 
@@ -704,30 +706,122 @@ function HomePage({
             {detailMemory.images && detailMemory.images.length > 0 && (
               <div
                 style={{
-                  display: "grid",
-                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
-                  gap: "12px",
                   marginTop: "20px",
                 }}
               >
-                {detailMemory.images.map((img, index) => (
-                  <img
-                    key={index}
-                    src={img}
-                    alt={`Memory ${index + 1}`}
+                <img
+                  src={detailMemory.images[activeDetailPhotoIndex]}
+                  alt={`Memory ${activeDetailPhotoIndex + 1}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setSelectedImage(detailMemory.images[activeDetailPhotoIndex]);
+                  }}
+                  style={{
+                    borderRadius: "12px",
+                    cursor: "pointer",
+                    display: "block",
+                    height: "360px",
+                    objectFit: "contain",
+                    width: "100%",
+                  }}
+                />
+
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    gap: "10px",
+                    marginTop: "14px",
+                  }}
+                >
+                  <button
+                    type="button"
                     onClick={(event) => {
                       event.stopPropagation();
-                      setSelectedImage(img);
+                      setActiveDetailPhotoIndex(
+                        (currentIndex) =>
+                          (currentIndex - 1 + detailMemory.images.length) %
+                          detailMemory.images.length
+                      );
                     }}
                     style={{
-                      borderRadius: "10px",
+                      background: "#374151",
+                      border: "none",
+                      borderRadius: "8px",
+                      color: "white",
                       cursor: "pointer",
-                      height: "200px",
-                      objectFit: "cover",
-                      width: "100%",
+                      padding: "8px 16px",
                     }}
-                  />
-                ))}
+                  >
+                    Previous
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setActiveDetailPhotoIndex(
+                        (currentIndex) =>
+                          (currentIndex + 1) % detailMemory.images.length
+                      );
+                    }}
+                    style={{
+                      background: "#374151",
+                      border: "none",
+                      borderRadius: "8px",
+                      color: "white",
+                      cursor: "pointer",
+                      padding: "8px 16px",
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "10px",
+                    justifyContent: "center",
+                    marginTop: "14px",
+                  }}
+                >
+                  {detailMemory.images.map((img, index) => (
+                    <button
+                      key={index}
+                      type="button"
+                      aria-label={`Show photo ${index + 1}`}
+                      aria-pressed={activeDetailPhotoIndex === index}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setActiveDetailPhotoIndex(index);
+                      }}
+                      style={{
+                        background: "none",
+                        border:
+                          activeDetailPhotoIndex === index
+                            ? "3px solid #5ec8ff"
+                            : "3px solid transparent",
+                        borderRadius: "10px",
+                        cursor: "pointer",
+                        padding: 0,
+                      }}
+                    >
+                      <img
+                        src={img}
+                        alt={`Memory ${index + 1}`}
+                        style={{
+                          borderRadius: "7px",
+                          display: "block",
+                          height: "72px",
+                          objectFit: "cover",
+                          width: "96px",
+                        }}
+                      />
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 
