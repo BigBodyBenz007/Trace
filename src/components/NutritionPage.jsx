@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 function toNutritionNumber(value) {
   const number = Number(value);
@@ -43,9 +43,11 @@ function isSameLocalDate(firstDate, secondDate) {
 function NutritionPage({
   onBack,
   nutritionEntries,
+  nutritionGoals,
   saveNutritionEntry,
   updateNutritionEntry,
   deleteNutritionEntry,
+  saveNutritionGoals,
   buttonStyle,
   inputStyle,
   containerStyle,
@@ -61,6 +63,21 @@ function NutritionPage({
   const [notes, setNotes] = useState("");
   const [isDraftDirty, setIsDraftDirty] = useState(false);
   const [editingEntryId, setEditingEntryId] = useState(null);
+  const [goalValues, setGoalValues] = useState({
+    calories: String(nutritionGoals.calories),
+    protein: String(nutritionGoals.protein),
+    carbohydrates: String(nutritionGoals.carbohydrates),
+    fat: String(nutritionGoals.fat),
+  });
+
+  useEffect(() => {
+    setGoalValues({
+      calories: String(nutritionGoals.calories),
+      protein: String(nutritionGoals.protein),
+      carbohydrates: String(nutritionGoals.carbohydrates),
+      fat: String(nutritionGoals.fat),
+    });
+  }, [nutritionGoals]);
 
   const sortedEntries = [...nutritionEntries].sort(
     (a, b) => new Date(b.loggedAt) - new Date(a.loggedAt)
@@ -82,6 +99,12 @@ function NutritionPage({
     },
     { calories: 0, protein: 0, carbohydrates: 0, fat: 0 }
   );
+  const nutritionMetrics = [
+    { key: "calories", label: "Calories", unit: "" },
+    { key: "protein", label: "Protein", unit: "g" },
+    { key: "carbohydrates", label: "Carbohydrates", unit: "g" },
+    { key: "fat", label: "Fat", unit: "g" },
+  ];
 
   function saveFood(event) {
     event.preventDefault();
@@ -162,6 +185,17 @@ function NutritionPage({
     resetForm();
   }
 
+  function saveGoals(event) {
+    event.preventDefault();
+
+    saveNutritionGoals({
+      calories: toNutritionNumber(goalValues.calories),
+      protein: toNutritionNumber(goalValues.protein),
+      carbohydrates: toNutritionNumber(goalValues.carbohydrates),
+      fat: toNutritionNumber(goalValues.fat),
+    });
+  }
+
   const formInputStyle = {
     ...inputStyle,
     boxSizing: "border-box",
@@ -199,24 +233,100 @@ function NutritionPage({
             gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
           }}
         >
-          <div>
-            <strong>Calories</strong>
-            <p style={{ marginBottom: 0 }}>{todayTotals.calories}</p>
-          </div>
-          <div>
-            <strong>Protein (g)</strong>
-            <p style={{ marginBottom: 0 }}>{todayTotals.protein}</p>
-          </div>
-          <div>
-            <strong>Carbohydrates (g)</strong>
-            <p style={{ marginBottom: 0 }}>{todayTotals.carbohydrates}</p>
-          </div>
-          <div>
-            <strong>Fat (g)</strong>
-            <p style={{ marginBottom: 0 }}>{todayTotals.fat}</p>
-          </div>
+          {nutritionMetrics.map((metric) => {
+            const current = todayTotals[metric.key];
+            const goal = toNutritionNumber(nutritionGoals[metric.key]);
+            const hasGoal = goal > 0;
+            const progress = hasGoal ? (current / goal) * 100 : 0;
+
+            return (
+              <div key={metric.key}>
+                <strong>
+                  {metric.label}
+                  {metric.unit ? ` (${metric.unit})` : ""}
+                </strong>
+                <p style={{ marginBottom: hasGoal ? "8px" : 0 }}>
+                  {hasGoal
+                    ? `${current}${metric.unit} / ${goal}${metric.unit}`
+                    : `${current}${metric.unit} · No goal set`}
+                </p>
+
+                <div
+                  aria-label={`${metric.label} progress`}
+                  style={{
+                    background: "#374151",
+                    borderRadius: "999px",
+                    height: "8px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "#5ec8ff",
+                      borderRadius: "999px",
+                      height: "100%",
+                      width: `${hasGoal ? Math.min(progress, 100) : 0}%`,
+                    }}
+                  />
+                </div>
+
+                {hasGoal && (
+                  <p style={{ color: "#9ca3af", marginBottom: 0 }}>
+                    {Math.round(progress)}%
+                  </p>
+                )}
+              </div>
+            );
+          })}
         </div>
       </section>
+
+      <form
+        onSubmit={saveGoals}
+        style={{
+          background: "#1f2937",
+          borderRadius: "16px",
+          marginTop: "24px",
+          maxWidth: "700px",
+          padding: "24px",
+          textAlign: "left",
+          width: "100%",
+        }}
+      >
+        <h2 style={{ marginTop: 0 }}>Daily Goals</h2>
+
+        <div
+          style={{
+            display: "grid",
+            gap: "12px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+          }}
+        >
+          {nutritionMetrics.map((metric) => (
+            <label key={metric.key} style={{ display: "block" }}>
+              {metric.label}
+              {metric.unit ? ` (${metric.unit})` : ""}
+              <input
+                type="number"
+                min="0"
+                step="any"
+                style={formInputStyle}
+                value={goalValues[metric.key]}
+                onChange={(event) =>
+                  setGoalValues({
+                    ...goalValues,
+                    [metric.key]: event.target.value,
+                  })
+                }
+              />
+            </label>
+          ))}
+        </div>
+
+        <button type="submit" style={buttonStyle}>
+          Save Goals
+        </button>
+      </form>
 
       <form
         onSubmit={saveFood}

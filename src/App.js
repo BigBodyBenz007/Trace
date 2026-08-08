@@ -3,6 +3,19 @@ import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
 
+const DEFAULT_NUTRITION_GOALS = {
+  calories: 0,
+  protein: 0,
+  carbohydrates: 0,
+  fat: 0,
+};
+
+function toNonNegativeNumber(value) {
+  const number = Number(value);
+
+  return Number.isFinite(number) ? Math.max(0, number) : 0;
+}
+
 function createId(existingIds = new Set()) {
   let id;
 
@@ -31,6 +44,9 @@ function App() {
   const [memories, setMemories] = useState([]);
   const [memoryCount, setMemoryCount] = useState(0);
   const [nutritionEntries, setNutritionEntries] = useState([]);
+  const [nutritionGoals, setNutritionGoals] = useState(
+    DEFAULT_NUTRITION_GOALS
+  );
 
   useEffect(() => {
     const savedMemories = localStorage.getItem("memories");
@@ -58,6 +74,21 @@ function App() {
       if (didAssignIds) {
         localStorage.setItem("memories", JSON.stringify(memoriesWithIds));
       }
+    }
+  }, []);
+
+  useEffect(() => {
+    const savedNutritionGoals = localStorage.getItem("nutritionGoals");
+
+    if (savedNutritionGoals) {
+      const savedGoals = JSON.parse(savedNutritionGoals);
+
+      setNutritionGoals({
+        calories: toNonNegativeNumber(savedGoals.calories),
+        protein: toNonNegativeNumber(savedGoals.protein),
+        carbohydrates: toNonNegativeNumber(savedGoals.carbohydrates),
+        fat: toNonNegativeNumber(savedGoals.fat),
+      });
     }
   }, []);
 
@@ -213,6 +244,18 @@ function App() {
     localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
   }
 
+  function saveNutritionGoals(goals) {
+    const updatedGoals = {
+      calories: toNonNegativeNumber(goals.calories),
+      protein: toNonNegativeNumber(goals.protein),
+      carbohydrates: toNonNegativeNumber(goals.carbohydrates),
+      fat: toNonNegativeNumber(goals.fat),
+    };
+
+    setNutritionGoals(updatedGoals);
+    localStorage.setItem("nutritionGoals", JSON.stringify(updatedGoals));
+  }
+
   return (
     <div
       style={{
@@ -244,9 +287,11 @@ function App() {
         <NutritionPage
           onBack={() => setPage("home")}
           nutritionEntries={nutritionEntries}
+          nutritionGoals={nutritionGoals}
           saveNutritionEntry={saveNutritionEntry}
           updateNutritionEntry={updateNutritionEntry}
           deleteNutritionEntry={deleteNutritionEntry}
+          saveNutritionGoals={saveNutritionGoals}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}
