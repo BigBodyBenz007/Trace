@@ -2,6 +2,19 @@ import { useState, useEffect } from "react";
 import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
 
+function createMemoryId(existingIds = new Set()) {
+  let id;
+
+  do {
+    id =
+      typeof crypto !== "undefined" && typeof crypto.randomUUID === "function"
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  } while (existingIds.has(id));
+
+  return id;
+}
+
 function App() {
   const [page, setPage] = useState("home");
 
@@ -10,7 +23,7 @@ function App() {
   const [date, setDate] = useState("");
   const [categories, setCategories] = useState([]);
 
-  const [editingIndex, setEditingIndex] = useState(null);
+  const [editingId, setEditingId] = useState(null);
 
   const [images, setImages] = useState([]);
 
@@ -22,8 +35,27 @@ function App() {
 
     if (savedMemories) {
       const parsedMemories = JSON.parse(savedMemories);
-      setMemories(parsedMemories);
-      setMemoryCount(parsedMemories.length);
+      const existingIds = new Set();
+      let didAssignIds = false;
+      const memoriesWithIds = parsedMemories.map((memory) => {
+        if (memory.id && !existingIds.has(memory.id)) {
+          existingIds.add(memory.id);
+          return memory;
+        }
+
+        const id = createMemoryId(existingIds);
+        existingIds.add(id);
+        didAssignIds = true;
+
+        return { ...memory, id };
+      });
+
+      setMemories(memoriesWithIds);
+      setMemoryCount(memoriesWithIds.length);
+
+      if (didAssignIds) {
+        localStorage.setItem("memories", JSON.stringify(memoriesWithIds));
+      }
     }
   }, []);
 
@@ -62,24 +94,27 @@ function App() {
   function saveMemory() {
     if (title.trim() === "") return;
 
-    if (editingIndex !== null) {
-      const updatedMemories = [...memories];
-
-      updatedMemories[editingIndex] = {
-        ...updatedMemories[editingIndex],
-        title,
-        description,
-        date,
-        images,
-        categories,
-      };
+    if (editingId !== null) {
+      const updatedMemories = memories.map((memory) =>
+        memory.id === editingId
+          ? {
+              ...memory,
+              title,
+              description,
+              date,
+              images,
+              categories,
+            }
+          : memory
+      );
 
       setMemories(updatedMemories);
       localStorage.setItem("memories", JSON.stringify(updatedMemories));
 
-      setEditingIndex(null);
+      setEditingId(null);
     } else {
       const newMemory = {
+        id: createMemoryId(new Set(memories.map((memory) => memory.id))),
         title,
         description,
         date,
@@ -105,28 +140,29 @@ function App() {
     setPage("home");
   }
 
-  function toggleFavorite(index) {
-    const updatedMemories = [...memories];
-
-    updatedMemories[index].favorite =
-      !updatedMemories[index].favorite;
+  function toggleFavorite(id) {
+    const updatedMemories = memories.map((memory) =>
+      memory.id === id
+        ? { ...memory, favorite: !memory.favorite }
+        : memory
+    );
 
     setMemories(updatedMemories);
     localStorage.setItem("memories", JSON.stringify(updatedMemories));
   }
 
-  function deleteMemory(indexToDelete) {
-    const updatedMemories = memories.filter(
-      (_, index) => index !== indexToDelete
-    );
+  function deleteMemory(idToDelete) {
+    const updatedMemories = memories.filter((memory) => memory.id !== idToDelete);
 
     setMemories(updatedMemories);
     localStorage.setItem("memories", JSON.stringify(updatedMemories));
     setMemoryCount(updatedMemories.length);
   }
 
-  function editMemory(indexToEdit) {
-    const memory = memories[indexToEdit];
+  function editMemory(idToEdit) {
+    const memory = memories.find((item) => item.id === idToEdit);
+
+    if (!memory) return;
 
     setTitle(memory.title);
     setDescription(memory.description);
@@ -134,7 +170,7 @@ function App() {
     setImages(memory.images || []);
     setCategories(Array.isArray(memory.categories) ? memory.categories : []);
 
-    setEditingIndex(indexToEdit);
+    setEditingId(idToEdit);
     setPage("new");
   }
 
@@ -181,8 +217,8 @@ function App() {
           buttonStyle={buttonStyle}
           containerStyle={containerStyle}
           setPage={setPage}
-          editingIndex={editingIndex}
-          setEditingIndex={setEditingIndex}
+          editingIndex={editingId}
+          setEditingIndex={setEditingId}
         />
       )}
     </div>

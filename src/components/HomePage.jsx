@@ -48,8 +48,8 @@ function groupMemoriesByDate(memories, currentDay) {
   }, []);
 }
 
-function getMemorySelectionKey(memory, index) {
-  return index;
+function getMemorySelectionKey(memory) {
+  return memory.id;
 }
 
 function HomePage({
@@ -68,7 +68,7 @@ function HomePage({
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [favoriteFilter, setFavoriteFilter] = useState("all");
   const [selectedMemory, setSelectedMemory] = useState(null);
-  const [detailMemoryIndex, setDetailMemoryIndex] = useState(null);
+  const [detailMemoryId, setDetailMemoryId] = useState(null);
   const [activeDetailPhotoIndex, setActiveDetailPhotoIndex] = useState(0);
   const [hoveredMemory, setHoveredMemory] = useState(null);
   const timelineRef = useRef(null);
@@ -96,7 +96,9 @@ function HomePage({
     );
   const timelineGroups = groupMemoriesByDate(filteredMemories, currentDay);
   const detailMemory =
-    detailMemoryIndex === null ? null : memories[detailMemoryIndex];
+    detailMemoryId === null
+      ? null
+      : memories.find((memory) => memory.id === detailMemoryId);
 
   function scrollMemoryIntoView(selectionKey) {
     const viewport = timelineRef.current;
@@ -123,32 +125,32 @@ function HomePage({
     });
   }
 
-  function selectMemory(memory, index) {
-    const selectionKey = getMemorySelectionKey(memory, index);
+  function selectMemory(memory) {
+    const selectionKey = getMemorySelectionKey(memory);
     setSelectedMemory(selectionKey);
     scrollMemoryIntoView(selectionKey);
   }
 
-  function openMemoryDetail(memory, index) {
-    selectMemory(memory, index);
+  function openMemoryDetail(memory) {
+    selectMemory(memory);
     setActiveDetailPhotoIndex(0);
-    setDetailMemoryIndex(index);
+    setDetailMemoryId(memory.id);
   }
 
   function clearSelection() {
     setSelectedMemory(null);
   }
 
-  function isMemorySelected(memory, index) {
-    return selectedMemory === getMemorySelectionKey(memory, index);
+  function isMemorySelected(memory) {
+    return selectedMemory === getMemorySelectionKey(memory);
   }
 
-  function setNodeHover(memory, index) {
-    setHoveredMemory(getMemorySelectionKey(memory, index));
+  function setNodeHover(memory) {
+    setHoveredMemory(getMemorySelectionKey(memory));
   }
 
-  function isNodeHovered(memory, index) {
-    return hoveredMemory === getMemorySelectionKey(memory, index);
+  function isNodeHovered(memory) {
+    return hoveredMemory === getMemorySelectionKey(memory);
   }
 
   useEffect(() => {
@@ -333,23 +335,13 @@ function HomePage({
                         }}
                       >
                         {monthGroup.memories.map((memory) => {
-                          const originalIndex = memories.indexOf(memory);
-                          const selectionKey = getMemorySelectionKey(
-                            memory,
-                            originalIndex
-                          );
-                          const isSelected = isMemorySelected(
-                            memory,
-                            originalIndex
-                          );
-                          const isHovered = isNodeHovered(
-                            memory,
-                            originalIndex
-                          );
+                          const selectionKey = getMemorySelectionKey(memory);
+                          const isSelected = isMemorySelected(memory);
+                          const isHovered = isNodeHovered(memory);
 
                           return (
                             <div
-                              key={originalIndex}
+                              key={memory.id}
                               ref={(element) => {
                                 if (element) {
                                   memoryCardRefs.current.set(
@@ -360,9 +352,7 @@ function HomePage({
                                   memoryCardRefs.current.delete(selectionKey);
                                 }
                               }}
-                              onClick={() =>
-                                openMemoryDetail(memory, originalIndex)
-                              }
+                              onClick={() => openMemoryDetail(memory)}
                               style={{
                                 flexShrink: 0,
                                 minWidth: "320px",
@@ -387,10 +377,10 @@ function HomePage({
                                 type="button"
                                 onClick={(event) => {
                                   event.stopPropagation();
-                                  selectMemory(memory, originalIndex);
+                                  selectMemory(memory);
                                 }}
                                 onMouseEnter={() =>
-                                  setNodeHover(memory, originalIndex)
+                                  setNodeHover(memory)
                                 }
                                 onMouseLeave={() => setHoveredMemory(null)}
                                 style={{
@@ -444,7 +434,7 @@ function HomePage({
                   <button
                     onClick={(event) => {
                       event.stopPropagation();
-                      toggleFavorite(originalIndex);
+                      toggleFavorite(memory.id);
                     }}
                     style={{
                       background: "none",
@@ -550,7 +540,7 @@ function HomePage({
                   <button
                     onClick={(event) => {
                       event.stopPropagation();
-                      editMemory(originalIndex);
+                      editMemory(memory.id);
                     }}
                     style={{
                       background: "#2563eb",
@@ -569,7 +559,7 @@ function HomePage({
                       event.stopPropagation();
                       if (window.confirm("Delete this memory?")) {
                         clearSelection();
-                        deleteMemory(originalIndex);
+                        deleteMemory(memory.id);
                       }
                     }}
                     style={{
@@ -653,7 +643,7 @@ function HomePage({
                 aria-label="Close memory details"
                 onClick={(event) => {
                   event.stopPropagation();
-                  setDetailMemoryIndex(null);
+                  setDetailMemoryId(null);
                 }}
                 style={{
                   background: "none",
@@ -837,7 +827,7 @@ function HomePage({
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  toggleFavorite(detailMemoryIndex);
+                  toggleFavorite(detailMemoryId);
                 }}
                 style={{
                   background: "#374151",
@@ -855,8 +845,8 @@ function HomePage({
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  setDetailMemoryIndex(null);
-                  editMemory(detailMemoryIndex);
+                  setDetailMemoryId(null);
+                  editMemory(detailMemoryId);
                 }}
                 style={{
                   background: "#2563eb",
@@ -876,8 +866,8 @@ function HomePage({
                   event.stopPropagation();
                   if (window.confirm("Delete this memory?")) {
                     clearSelection();
-                    setDetailMemoryIndex(null);
-                    deleteMemory(detailMemoryIndex);
+                    setDetailMemoryId(null);
+                    deleteMemory(detailMemoryId);
                   }
                 }}
                 style={{
@@ -896,7 +886,7 @@ function HomePage({
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  setDetailMemoryIndex(null);
+                  setDetailMemoryId(null);
                 }}
                 style={{
                   background: "#4b5563",
