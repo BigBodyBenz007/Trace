@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
+import NutritionPage from "./components/NutritionPage";
 
 function createMemoryId(existingIds = new Set()) {
   let id;
@@ -194,10 +195,17 @@ function App() {
           setMemories={setMemories}
           toggleFavorite={toggleFavorite}
           onAddMemory={() => setPage("new")}
+          onOpenNutrition={() => setPage("nutrition")}
           deleteMemory={deleteMemory}
           editMemory={editMemory}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
+          containerStyle={containerStyle}
+        />
+      ) : page === "nutrition" ? (
+        <NutritionPage
+          onBack={() => setPage("home")}
+          buttonStyle={buttonStyle}
           containerStyle={containerStyle}
         />
       ) : (

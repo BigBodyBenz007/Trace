@@ -47,6 +47,7 @@ function HomePage({
   memories,
   toggleFavorite,
   onAddMemory,
+  onOpenNutrition,
   deleteMemory,
   editMemory,
   buttonStyle,
@@ -172,6 +173,16 @@ function HomePage({
         onClick={onAddMemory}
       >
         Add Memory
+      </button>
+
+      <button
+        style={{
+          ...buttonStyle,
+          backgroundColor: "#374151",
+        }}
+        onClick={onOpenNutrition}
+      >
+        Health & Nutrition
       </button>
 
       <br />
