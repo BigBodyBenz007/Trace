@@ -32,6 +32,14 @@ function getLocalDateTimeFromTimestamp(loggedAt) {
   };
 }
 
+function isSameLocalDate(firstDate, secondDate) {
+  return (
+    firstDate.getFullYear() === secondDate.getFullYear() &&
+    firstDate.getMonth() === secondDate.getMonth() &&
+    firstDate.getDate() === secondDate.getDate()
+  );
+}
+
 function NutritionPage({
   onBack,
   nutritionEntries,
@@ -56,6 +64,23 @@ function NutritionPage({
 
   const sortedEntries = [...nutritionEntries].sort(
     (a, b) => new Date(b.loggedAt) - new Date(a.loggedAt)
+  );
+  const today = new Date();
+  const todayTotals = nutritionEntries.reduce(
+    (totals, entry) => {
+      if (!isSameLocalDate(new Date(entry.loggedAt), today)) {
+        return totals;
+      }
+
+      return {
+        calories: totals.calories + toNutritionNumber(entry.calories),
+        protein: totals.protein + toNutritionNumber(entry.protein),
+        carbohydrates:
+          totals.carbohydrates + toNutritionNumber(entry.carbohydrates),
+        fat: totals.fat + toNutritionNumber(entry.fat),
+      };
+    },
+    { calories: 0, protein: 0, carbohydrates: 0, fat: 0 }
   );
 
   function saveFood(event) {
@@ -155,11 +180,50 @@ function NutritionPage({
         Track your food and nutrition here.
       </p>
 
+      <section
+        style={{
+          background: "#1f2937",
+          borderRadius: "16px",
+          maxWidth: "700px",
+          padding: "24px",
+          textAlign: "left",
+          width: "100%",
+        }}
+      >
+        <h2 style={{ marginTop: 0 }}>Today</h2>
+
+        <div
+          style={{
+            display: "grid",
+            gap: "12px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+          }}
+        >
+          <div>
+            <strong>Calories</strong>
+            <p style={{ marginBottom: 0 }}>{todayTotals.calories}</p>
+          </div>
+          <div>
+            <strong>Protein (g)</strong>
+            <p style={{ marginBottom: 0 }}>{todayTotals.protein}</p>
+          </div>
+          <div>
+            <strong>Carbohydrates (g)</strong>
+            <p style={{ marginBottom: 0 }}>{todayTotals.carbohydrates}</p>
+          </div>
+          <div>
+            <strong>Fat (g)</strong>
+            <p style={{ marginBottom: 0 }}>{todayTotals.fat}</p>
+          </div>
+        </div>
+      </section>
+
       <form
         onSubmit={saveFood}
         style={{
           background: "#1f2937",
           borderRadius: "16px",
+          marginTop: "24px",
           maxWidth: "700px",
           padding: "24px",
           textAlign: "left",
