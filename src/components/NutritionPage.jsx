@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 function toNutritionNumber(value) {
   const number = Number(value);
@@ -40,6 +40,82 @@ function isSameLocalDate(firstDate, secondDate) {
   );
 }
 
+function getLocalDateKey(date) {
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+export function calculateNutritionAverages(nutritionEntries, now = new Date()) {
+  const dailyTotals = new Map();
+
+  nutritionEntries.forEach((entry) => {
+    const loggedDate = new Date(entry.loggedAt);
+
+    if (Number.isNaN(loggedDate.getTime())) return;
+
+    const dayKey = getLocalDateKey(loggedDate);
+    const totals = dailyTotals.get(dayKey) || {
+      calories: 0,
+      protein: 0,
+      carbohydrates: 0,
+      fat: 0,
+    };
+
+    totals.calories += toNutritionNumber(entry.calories);
+    totals.protein += toNutritionNumber(entry.protein);
+    totals.carbohydrates += toNutritionNumber(entry.carbohydrates);
+    totals.fat += toNutritionNumber(entry.fat);
+    dailyTotals.set(dayKey, totals);
+  });
+
+  const lastSevenDayKeys = new Set();
+
+  for (let daysAgo = 0; daysAgo < 7; daysAgo += 1) {
+    const localDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    localDay.setDate(localDay.getDate() - daysAgo);
+    lastSevenDayKeys.add(getLocalDateKey(localDay));
+  }
+
+  const averageDays = (dayTotals) => {
+    const loggedDays = dayTotals.length;
+    const totals = dayTotals.reduce(
+      (sum, day) => ({
+        calories: sum.calories + day.calories,
+        protein: sum.protein + day.protein,
+        carbohydrates: sum.carbohydrates + day.carbohydrates,
+        fat: sum.fat + day.fat,
+      }),
+      { calories: 0, protein: 0, carbohydrates: 0, fat: 0 }
+    );
+
+    return {
+      loggedDays,
+      calories: loggedDays ? totals.calories / loggedDays : 0,
+      protein: loggedDays ? totals.protein / loggedDays : 0,
+      carbohydrates: loggedDays ? totals.carbohydrates / loggedDays : 0,
+      fat: loggedDays ? totals.fat / loggedDays : 0,
+    };
+  };
+
+  const lastSevenDays = [];
+  const thisMonth = [];
+
+  dailyTotals.forEach((totals, dayKey) => {
+    if (lastSevenDayKeys.has(dayKey)) {
+      lastSevenDays.push(totals);
+    }
+
+    const [year, month] = dayKey.split("-").map(Number);
+    if (year === now.getFullYear() && month === now.getMonth()) {
+      thisMonth.push(totals);
+    }
+  });
+
+  return {
+    lastSevenDays: averageDays(lastSevenDays),
+    thisMonth: averageDays(thisMonth),
+  };
+}
+
 function NutritionPage({
   onBack,
   nutritionEntries,
@@ -63,6 +139,8 @@ function NutritionPage({
   const [notes, setNotes] = useState("");
   const [isDraftDirty, setIsDraftDirty] = useState(false);
   const [editingEntryId, setEditingEntryId] = useState(null);
+  const todaySectionRef = useRef(null);
+  const entryFormRef = useRef(null);
   const [goalValues, setGoalValues] = useState({
     calories: String(nutritionGoals.calories),
     protein: String(nutritionGoals.protein),
@@ -105,6 +183,17 @@ function NutritionPage({
     { key: "carbohydrates", label: "Carbohydrates", unit: "g" },
     { key: "fat", label: "Fat", unit: "g" },
   ];
+  const nutritionAverages = calculateNutritionAverages(nutritionEntries, today);
+  const averagePeriods = [
+    { key: "lastSevenDays", label: "Last 7 Days" },
+    { key: "thisMonth", label: "This Month" },
+  ];
+
+  function formatAverage(value, metricKey) {
+    return metricKey === "calories"
+      ? Math.round(value)
+      : Number(value.toFixed(1));
+  }
 
   function saveFood(event) {
     event.preventDefault();
@@ -132,6 +221,7 @@ function NutritionPage({
     }
 
     resetForm();
+    todaySectionRef.current?.scrollIntoView({ behavior: "smooth" });
   }
 
   function resetForm() {
@@ -162,6 +252,7 @@ function NutritionPage({
     setNotes(entry.notes);
     setIsDraftDirty(false);
     setEditingEntryId(entry.id);
+    entryFormRef.current?.scrollIntoView({ behavior: "smooth" });
   }
 
   function deleteEntry(id) {
@@ -215,6 +306,7 @@ function NutritionPage({
       </p>
 
       <section
+        ref={todaySectionRef}
         style={{
           background: "#1f2937",
           borderRadius: "16px",
@@ -281,6 +373,60 @@ function NutritionPage({
         </div>
       </section>
 
+      <section
+        style={{
+          background: "#1f2937",
+          borderRadius: "16px",
+          marginTop: "24px",
+          maxWidth: "700px",
+          padding: "24px",
+          textAlign: "left",
+          width: "100%",
+        }}
+      >
+        <h2 style={{ marginTop: 0 }}>Nutrition Averages</h2>
+
+        <div
+          style={{
+            display: "grid",
+            gap: "16px",
+            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+          }}
+        >
+          {averagePeriods.map((period) => {
+            const averages = nutritionAverages[period.key];
+
+            return (
+              <article
+                key={period.key}
+                style={{
+                  background: "#111827",
+                  borderRadius: "12px",
+                  padding: "18px",
+                }}
+              >
+                <h3 style={{ marginTop: 0 }}>{period.label}</h3>
+                <p style={{ color: "#9ca3af" }}>
+                  Based on {averages.loggedDays} logged {averages.loggedDays === 1 ? "day" : "days"}
+                </p>
+
+                <div style={{ display: "grid", gap: "10px" }}>
+                  {nutritionMetrics.map((metric) => (
+                    <div key={metric.key}>
+                      <strong>Average {metric.label}</strong>
+                      <div>
+                        {formatAverage(averages[metric.key], metric.key)}
+                        {metric.unit}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
       <form
         onSubmit={saveGoals}
         style={{
@@ -329,6 +475,7 @@ function NutritionPage({
       </form>
 
       <form
+        ref={entryFormRef}
         onSubmit={saveFood}
         style={{
           background: "#1f2937",
@@ -341,7 +488,9 @@ function NutritionPage({
         }}
       >
         <h2 style={{ marginTop: 0 }}>
-          {editingEntryId === null ? "Log Food" : "Edit Food"}
+          {editingEntryId === null
+            ? "Add Nutrition Entry"
+            : "Edit Nutrition Entry"}
         </h2>
 
         <label style={{ display: "block" }}>
