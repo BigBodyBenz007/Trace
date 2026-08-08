@@ -19,6 +19,30 @@ function NewMemoryPage({
   editingIndex,
   setEditingIndex,
 }) {
+  function cancelMemory() {
+    const hasUnsavedContent =
+      title !== "" ||
+      description !== "" ||
+      date !== "" ||
+      categories.length > 0 ||
+      images.length > 0;
+
+    if (
+      (editingIndex !== null || hasUnsavedContent) &&
+      !window.confirm("Discard your changes? Your unsaved changes will be lost.")
+    ) {
+      return;
+    }
+
+    setTitle("");
+    setDescription("");
+    setDate("");
+    setCategories([]);
+    setImages([]);
+    setEditingIndex(null);
+    setPage("home");
+  }
+
   return (
     <div style={containerStyle}>
       <h1 style={{ marginBottom: "10px" }}>
@@ -234,12 +258,9 @@ function NewMemoryPage({
           ...buttonStyle,
           backgroundColor: "#666",
         }}
-        onClick={() => {
-          setEditingIndex(null);
-          setPage("home");
-        }}
+        onClick={cancelMemory}
       >
-        Back
+        Cancel
       </button>
     </div>
   );
