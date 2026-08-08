@@ -3,7 +3,7 @@ import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
 
-function createMemoryId(existingIds = new Set()) {
+function createId(existingIds = new Set()) {
   let id;
 
   do {
@@ -30,6 +30,7 @@ function App() {
 
   const [memories, setMemories] = useState([]);
   const [memoryCount, setMemoryCount] = useState(0);
+  const [nutritionEntries, setNutritionEntries] = useState([]);
 
   useEffect(() => {
     const savedMemories = localStorage.getItem("memories");
@@ -44,7 +45,7 @@ function App() {
           return memory;
         }
 
-        const id = createMemoryId(existingIds);
+        const id = createId(existingIds);
         existingIds.add(id);
         didAssignIds = true;
 
@@ -57,6 +58,14 @@ function App() {
       if (didAssignIds) {
         localStorage.setItem("memories", JSON.stringify(memoriesWithIds));
       }
+    }
+  }, []);
+
+  useEffect(() => {
+    const savedNutritionEntries = localStorage.getItem("nutritionEntries");
+
+    if (savedNutritionEntries) {
+      setNutritionEntries(JSON.parse(savedNutritionEntries));
     }
   }, []);
 
@@ -115,7 +124,7 @@ function App() {
       setEditingId(null);
     } else {
       const newMemory = {
-        id: createMemoryId(new Set(memories.map((memory) => memory.id))),
+        id: createId(new Set(memories.map((memory) => memory.id))),
         title,
         description,
         date,
@@ -175,6 +184,17 @@ function App() {
     setPage("new");
   }
 
+  function saveNutritionEntry(entry) {
+    const newEntry = {
+      ...entry,
+      id: createId(new Set(nutritionEntries.map((item) => item.id))),
+    };
+    const updatedEntries = [...nutritionEntries, newEntry];
+
+    setNutritionEntries(updatedEntries);
+    localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
+  }
+
   return (
     <div
       style={{
@@ -205,7 +225,10 @@ function App() {
       ) : page === "nutrition" ? (
         <NutritionPage
           onBack={() => setPage("home")}
+          nutritionEntries={nutritionEntries}
+          saveNutritionEntry={saveNutritionEntry}
           buttonStyle={buttonStyle}
+          inputStyle={inputStyle}
           containerStyle={containerStyle}
         />
       ) : (
