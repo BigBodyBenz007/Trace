@@ -1,19 +1,9 @@
 import { useEffect, useRef, useState } from "react";
+import { CATEGORY_OPTIONS } from "../constants/categories";
 
-const CATEGORY_OPTIONS = [
+const CATEGORY_FILTER_OPTIONS = [
   "All",
-  "Family",
-  "Friends",
-  "Travel",
-  "Fitness",
-  "Health",
-  "Work",
-  "Pets",
-  "Milestone",
-  "Food",
-  "Hobby",
-  "School",
-  "Other",
+  ...CATEGORY_OPTIONS,
 ];
 
 function getTimelineDate(memory, currentDay) {
@@ -212,7 +202,7 @@ function HomePage({
             width: "auto",
           }}
         >
-          {CATEGORY_OPTIONS.map((category) => (
+          {CATEGORY_FILTER_OPTIONS.map((category) => (
             <option key={category} value={category}>
               {category}
             </option>

@@ -1,17 +1,4 @@
-const CATEGORY_OPTIONS = [
-  "Family",
-  "Friends",
-  "Travel",
-  "Fitness",
-  "Health",
-  "Work",
-  "Pets",
-  "Milestone",
-  "Food",
-  "Hobby",
-  "School",
-  "Other",
-];
+import { CATEGORY_OPTIONS } from "../constants/categories";
 
 function NewMemoryPage({
   title,
