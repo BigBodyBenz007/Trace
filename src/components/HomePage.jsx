@@ -66,6 +66,7 @@ function HomePage({
   const [selectedImage, setSelectedImage] = useState(null);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [favoriteFilter, setFavoriteFilter] = useState("all");
   const [selectedMemory, setSelectedMemory] = useState(null);
   const [hoveredMemory, setHoveredMemory] = useState(null);
   const timelineRef = useRef(null);
@@ -82,8 +83,10 @@ function HomePage({
         selectedCategory === "All" ||
         (Array.isArray(memory.categories) &&
           memory.categories.includes(selectedCategory));
+      const matchesFavorite =
+        favoriteFilter === "all" || memory.favorite === true;
 
-      return matchesSearch && matchesCategory;
+      return matchesSearch && matchesCategory && matchesFavorite;
     })
     .sort(
       (a, b) =>
@@ -202,6 +205,20 @@ function HomePage({
               {category}
             </option>
           ))}
+        </select>
+
+        <select
+          aria-label="Filter memories by favorites"
+          value={favoriteFilter}
+          onChange={(e) => setFavoriteFilter(e.target.value)}
+          style={{
+            ...inputStyle,
+            cursor: "pointer",
+            width: "auto",
+          }}
+        >
+          <option value="all">All Memories</option>
+          <option value="favorites">Favorites Only</option>
         </select>
       </div>
 
