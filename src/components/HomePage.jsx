@@ -68,6 +68,7 @@ function HomePage({
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [favoriteFilter, setFavoriteFilter] = useState("all");
   const [selectedMemory, setSelectedMemory] = useState(null);
+  const [detailMemoryIndex, setDetailMemoryIndex] = useState(null);
   const [hoveredMemory, setHoveredMemory] = useState(null);
   const timelineRef = useRef(null);
   const hasScrolledToNewest = useRef(false);
@@ -93,6 +94,8 @@ function HomePage({
         getTimelineDate(a, currentDay) - getTimelineDate(b, currentDay)
     );
   const timelineGroups = groupMemoriesByDate(filteredMemories, currentDay);
+  const detailMemory =
+    detailMemoryIndex === null ? null : memories[detailMemoryIndex];
 
   function scrollMemoryIntoView(selectionKey) {
     const viewport = timelineRef.current;
@@ -123,6 +126,11 @@ function HomePage({
     const selectionKey = getMemorySelectionKey(memory, index);
     setSelectedMemory(selectionKey);
     scrollMemoryIntoView(selectionKey);
+  }
+
+  function openMemoryDetail(memory, index) {
+    selectMemory(memory, index);
+    setDetailMemoryIndex(index);
   }
 
   function clearSelection() {
@@ -350,7 +358,9 @@ function HomePage({
                                   memoryCardRefs.current.delete(selectionKey);
                                 }
                               }}
-                              onClick={() => selectMemory(memory, originalIndex)}
+                              onClick={() =>
+                                openMemoryDetail(memory, originalIndex)
+                              }
                               style={{
                                 flexShrink: 0,
                                 minWidth: "320px",
@@ -430,7 +440,10 @@ function HomePage({
                   </h2>
 
                   <button
-                    onClick={() => toggleFavorite(originalIndex)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      toggleFavorite(originalIndex);
+                    }}
                     style={{
                       background: "none",
                       border: "none",
@@ -509,7 +522,10 @@ function HomePage({
                         key={i}
                         src={img}
                         alt={`Memory ${i + 1}`}
-                        onClick={() => setSelectedImage(img)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setSelectedImage(img);
+                        }}
                         style={{
                           width: "100%",
                           height: "140px",
@@ -530,7 +546,10 @@ function HomePage({
                   }}
                 >
                   <button
-                    onClick={() => editMemory(originalIndex)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      editMemory(originalIndex);
+                    }}
                     style={{
                       background: "#2563eb",
                       color: "white",
@@ -576,6 +595,230 @@ function HomePage({
           </div>
         )}
       </div>
+
+      {detailMemory && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Memory details for ${detailMemory.title}`}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,.8)",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: "20px",
+            zIndex: 9998,
+          }}
+        >
+          <div
+            onClick={(event) => event.stopPropagation()}
+            style={{
+              background: "#1f2937",
+              borderRadius: "16px",
+              boxShadow: "0 12px 32px rgba(0,0,0,.45)",
+              maxHeight: "90vh",
+              maxWidth: "900px",
+              overflowY: "auto",
+              padding: "28px",
+              width: "100%",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "flex-start",
+                gap: "20px",
+              }}
+            >
+              <div>
+                <h2 style={{ margin: 0 }}>{detailMemory.title}</h2>
+                {detailMemory.date && (
+                  <p style={{ color: "#9ca3af", marginBottom: 0 }}>
+                    {new Date(detailMemory.date).toLocaleDateString("en-US", {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </p>
+                )}
+              </div>
+
+              <button
+                type="button"
+                aria-label="Close memory details"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setDetailMemoryIndex(null);
+                }}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "white",
+                  cursor: "pointer",
+                  fontSize: "28px",
+                  lineHeight: 1,
+                }}
+              >
+                ×
+              </button>
+            </div>
+
+            <p style={{ lineHeight: "1.7", whiteSpace: "pre-wrap" }}>
+              {detailMemory.description}
+            </p>
+
+            {Array.isArray(detailMemory.categories) &&
+              detailMemory.categories.length > 0 && (
+                <div
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    gap: "8px",
+                    marginTop: "16px",
+                  }}
+                >
+                  {detailMemory.categories.map((category) => (
+                    <span
+                      key={category}
+                      style={{
+                        background: "#374151",
+                        borderRadius: "999px",
+                        color: "#d1d5db",
+                        fontSize: "14px",
+                        padding: "6px 10px",
+                      }}
+                    >
+                      {category}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+            <p style={{ color: "#facc15", marginTop: "20px" }}>
+              Favorite: {detailMemory.favorite ? "Yes" : "No"}
+            </p>
+
+            {detailMemory.images && detailMemory.images.length > 0 && (
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+                  gap: "12px",
+                  marginTop: "20px",
+                }}
+              >
+                {detailMemory.images.map((img, index) => (
+                  <img
+                    key={index}
+                    src={img}
+                    alt={`Memory ${index + 1}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      setSelectedImage(img);
+                    }}
+                    style={{
+                      borderRadius: "10px",
+                      cursor: "pointer",
+                      height: "200px",
+                      objectFit: "cover",
+                      width: "100%",
+                    }}
+                  />
+                ))}
+              </div>
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                flexWrap: "wrap",
+                gap: "10px",
+                marginTop: "24px",
+              }}
+            >
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  toggleFavorite(detailMemoryIndex);
+                }}
+                style={{
+                  background: "#374151",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "white",
+                  cursor: "pointer",
+                  padding: "8px 16px",
+                }}
+              >
+                {detailMemory.favorite ? "Remove Favorite" : "Add Favorite"}
+              </button>
+
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setDetailMemoryIndex(null);
+                  editMemory(detailMemoryIndex);
+                }}
+                style={{
+                  background: "#2563eb",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "white",
+                  cursor: "pointer",
+                  padding: "8px 16px",
+                }}
+              >
+                Edit
+              </button>
+
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (window.confirm("Delete this memory?")) {
+                    clearSelection();
+                    setDetailMemoryIndex(null);
+                    deleteMemory(detailMemoryIndex);
+                  }
+                }}
+                style={{
+                  background: "#dc2626",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "white",
+                  cursor: "pointer",
+                  padding: "8px 16px",
+                }}
+              >
+                Delete
+              </button>
+
+              <button
+                type="button"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  setDetailMemoryIndex(null);
+                }}
+                style={{
+                  background: "#4b5563",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "white",
+                  cursor: "pointer",
+                  padding: "8px 16px",
+                }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedImage && (
         <div
