@@ -28,3 +28,11 @@ export function searchFoods(
     })
     .slice(0, Math.max(0, limit));
 }
+
+export function searchFoodCatalog(
+  query,
+  userFoods = [],
+  limit = DEFAULT_RESULT_LIMIT
+) {
+  return searchFoods(query, [...starterFoods, ...userFoods], limit);
+}

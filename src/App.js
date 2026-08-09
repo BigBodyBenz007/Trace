@@ -3,6 +3,12 @@ import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
 import {
+  addUserFood,
+  createUserFood,
+  readUserFoods,
+  writeUserFoods,
+} from "./services/userFoodCatalog";
+import {
   clearCompletedMigrationBackup,
   dataUrlToBlob,
   deletePhotos,
@@ -68,6 +74,7 @@ function App() {
   const [memories, setMemories] = useState([]);
   const [memoryCount, setMemoryCount] = useState(0);
   const [nutritionEntries, setNutritionEntries] = useState([]);
+  const [userFoods, setUserFoods] = useState([]);
   const [nutritionGoals, setNutritionGoals] = useState(
     DEFAULT_NUTRITION_GOALS
   );
@@ -211,6 +218,16 @@ function App() {
       });
     } catch (error) {
       setStorageError("Trace couldn't read the saved nutrition goals. The stored value was left unchanged.");
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setUserFoods(readUserFoods(localStorage));
+    } catch (error) {
+      setStorageError(
+        "Trace couldn't read the saved user food catalog. The stored value was left unchanged."
+      );
     }
   }, []);
 
@@ -447,6 +464,23 @@ function App() {
     }
   }
 
+  function saveUserFood({ name, nutrients }) {
+    const userFood = createUserFood(name, nutrients);
+    const result = addUserFood(userFoods, userFood);
+
+    if (!result.added) return true;
+
+    try {
+      writeUserFoods(localStorage, result.foods);
+      setUserFoods(result.foods);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("save this reusable food"));
+      return false;
+    }
+  }
+
   function updateNutritionEntry(id, entry) {
     const updatedEntries = nutritionEntries.map((existingEntry) =>
       existingEntry.id === id
@@ -546,8 +580,10 @@ function App() {
         <NutritionPage
           onBack={() => setPage("home")}
           nutritionEntries={nutritionEntries}
+          userFoods={userFoods}
           nutritionGoals={nutritionGoals}
           saveNutritionEntry={saveNutritionEntry}
+          saveUserFood={saveUserFood}
           updateNutritionEntry={updateNutritionEntry}
           deleteNutritionEntry={deleteNutritionEntry}
           saveNutritionGoals={saveNutritionGoals}

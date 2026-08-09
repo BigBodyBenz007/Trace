@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import FoodSearch from "./FoodSearch";
+import { scaleNutrition } from "../services/nutritionCalculation";
 
 function toNutritionNumber(value) {
   const number = Number(value);
@@ -120,8 +121,10 @@ export function calculateNutritionAverages(nutritionEntries, now = new Date()) {
 function NutritionPage({
   onBack,
   nutritionEntries,
+  userFoods = [],
   nutritionGoals,
   saveNutritionEntry,
+  saveUserFood = () => true,
   updateNutritionEntry,
   deleteNutritionEntry,
   saveNutritionGoals,
@@ -141,6 +144,10 @@ function NutritionPage({
   const [isDraftDirty, setIsDraftDirty] = useState(false);
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [foodReference, setFoodReference] = useState(null);
+  const [servingQuantity, setServingQuantity] = useState("1");
+  const [portionBasis, setPortionBasis] = useState(null);
+  const [nutritionBasis, setNutritionBasis] = useState(null);
+  const [foodSearchResetKey, setFoodSearchResetKey] = useState(0);
   const todaySectionRef = useRef(null);
   const entryFormRef = useRef(null);
   const nameInputRef = useRef(null);
@@ -216,7 +223,19 @@ function NutritionPage({
       ).toISOString(),
       notes: notes.trim(),
       ...(foodReference ? { foodReference } : {}),
+      ...(portionBasis && nutritionBasis
+        ? {
+            portion: {
+              amount: toNutritionNumber(servingQuantity),
+              unit: "serving",
+              basis: { ...portionBasis },
+            },
+            nutritionBasis: { ...nutritionBasis },
+          }
+        : {}),
     };
+
+    const isNewManualFood = editingEntryId === null && !foodReference;
 
     if (editingEntryId === null) {
       if (!saveNutritionEntry(entry)) return;
@@ -224,7 +243,20 @@ function NutritionPage({
       if (!updateNutritionEntry(editingEntryId, entry)) return;
     }
 
+    if (isNewManualFood) {
+      saveUserFood({
+        name: entry.name,
+        nutrients: {
+          calories: entry.calories,
+          protein: entry.protein,
+          carbohydrates: entry.carbohydrates,
+          fat: entry.fat,
+        },
+      });
+    }
+
     resetForm();
+    setFoodSearchResetKey((currentKey) => currentKey + 1);
     todaySectionRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }
 
@@ -242,6 +274,9 @@ function NutritionPage({
     setIsDraftDirty(false);
     setEditingEntryId(null);
     setFoodReference(null);
+    setServingQuantity("1");
+    setPortionBasis(null);
+    setNutritionBasis(null);
   }
 
   function markSelectedFoodModified() {
@@ -253,17 +288,30 @@ function NutritionPage({
   }
 
   function selectFood(food) {
+    const selectedNutritionBasis = { ...food.nutrients };
+    const selectedPortionBasis = {
+      amount: food.serving.amount,
+      unit: food.serving.unit,
+      description: food.serving.description,
+      ...(food.serving.grams === undefined
+        ? {}
+        : { grams: food.serving.grams }),
+    };
+
     setName(food.name);
-    setCalories(String(food.nutrients.calories));
-    setProtein(String(food.nutrients.protein));
-    setCarbohydrates(String(food.nutrients.carbohydrates));
-    setFat(String(food.nutrients.fat));
+    setCalories(String(selectedNutritionBasis.calories));
+    setProtein(String(selectedNutritionBasis.protein));
+    setCarbohydrates(String(selectedNutritionBasis.carbohydrates));
+    setFat(String(selectedNutritionBasis.fat));
     setFoodReference({
       source: food.provenance.source,
       sourceId: food.provenance.sourceId,
       confidence: food.provenance.confidence,
       modified: false,
     });
+    setServingQuantity("1");
+    setPortionBasis(selectedPortionBasis);
+    setNutritionBasis(selectedNutritionBasis);
     setIsDraftDirty(true);
 
     window.requestAnimationFrame(() => {
@@ -288,7 +336,27 @@ function NutritionPage({
     setFoodReference(
       entry.foodReference ? { ...entry.foodReference } : null
     );
+    if (entry.portion?.basis && entry.nutritionBasis) {
+      setServingQuantity(String(entry.portion.amount));
+      setPortionBasis({ ...entry.portion.basis });
+      setNutritionBasis({ ...entry.nutritionBasis });
+    } else {
+      setServingQuantity("1");
+      setPortionBasis(null);
+      setNutritionBasis(null);
+    }
     entryFormRef.current?.scrollIntoView?.({ behavior: "smooth" });
+  }
+
+  function changeServingQuantity(value) {
+    const scaledNutrition = scaleNutrition(nutritionBasis, value);
+
+    setServingQuantity(value);
+    setCalories(String(scaledNutrition.calories));
+    setProtein(String(scaledNutrition.protein));
+    setCarbohydrates(String(scaledNutrition.carbohydrates));
+    setFat(String(scaledNutrition.fat));
+    setIsDraftDirty(true);
   }
 
   function deleteEntry(id) {
@@ -310,6 +378,7 @@ function NutritionPage({
     }
 
     resetForm();
+    setFoodSearchResetKey((currentKey) => currentKey + 1);
   }
 
   function saveGoals(event) {
@@ -513,7 +582,12 @@ function NutritionPage({
         </button>
       </form>
 
-      <FoodSearch onSelectFood={selectFood} inputStyle={inputStyle} />
+      <FoodSearch
+        onSelectFood={selectFood}
+        inputStyle={inputStyle}
+        userFoods={userFoods}
+        resetKey={foodSearchResetKey}
+      />
 
       <form
         ref={entryFormRef}
@@ -533,6 +607,31 @@ function NutritionPage({
             ? "Add Nutrition Entry"
             : "Edit Nutrition Entry"}
         </h2>
+
+        {portionBasis && nutritionBasis && (
+          <div style={{ marginBottom: "16px" }}>
+            <label style={{ display: "block" }}>
+              Number of servings
+              <input
+                aria-describedby="serving-basis-description"
+                type="number"
+                min="0"
+                step="any"
+                style={formInputStyle}
+                value={servingQuantity}
+                onChange={(event) =>
+                  changeServingQuantity(event.target.value)
+                }
+              />
+            </label>
+            <p
+              id="serving-basis-description"
+              style={{ color: "#9ca3af", marginBottom: 0 }}
+            >
+              One serving: {portionBasis.description}
+            </p>
+          </div>
+        )}
 
         <label style={{ display: "block" }}>
           Food / meal name
@@ -712,6 +811,13 @@ function NutritionPage({
                   {entry.calories} calories · Protein {entry.protein}g ·
                   Carbohydrates {entry.carbohydrates}g · Fat {entry.fat}g
                 </p>
+
+                {entry.portion?.basis && (
+                  <p style={{ color: "#9ca3af", marginBottom: 0 }}>
+                    {entry.portion.amount} {entry.portion.unit} x{" "}
+                    {entry.portion.basis.description}
+                  </p>
+                )}
 
                 {entry.notes && (
                   <p style={{ color: "#d1d5db", whiteSpace: "pre-wrap" }}>

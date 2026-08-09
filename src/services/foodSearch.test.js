@@ -2,6 +2,7 @@ import starterFoods from "../data/starterFoods";
 import {
   DEFAULT_RESULT_LIMIT,
   normalizeFoodQuery,
+  searchFoodCatalog,
   searchFoods,
 } from "./foodSearch";
 
@@ -38,4 +39,21 @@ test("starter foods use the normalized source and confidence fields", () => {
     );
     expect(food.serving.description).toBeTruthy();
   });
+});
+
+test("combined catalog search includes user foods and keeps starter foods", () => {
+  const userFood = {
+    id: "user-added:meatloaf",
+    name: "Meatloaf",
+    serving: { amount: 1, unit: "serving", description: "1 serving" },
+    nutrients: { calories: 350, protein: 22, carbohydrates: 18, fat: 20 },
+    provenance: {
+      source: "user-added",
+      sourceId: "meatloaf",
+      confidence: "user-added",
+    },
+  };
+
+  expect(searchFoodCatalog("meatloaf", [userFood])).toEqual([userFood]);
+  expect(searchFoodCatalog("banana", [userFood])[0].id).toBe("banana-medium");
 });

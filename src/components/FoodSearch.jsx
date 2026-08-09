@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { searchFoods } from "../services/foodSearch";
+import { useEffect, useMemo, useState } from "react";
+import { searchFoodCatalog } from "../services/foodSearch";
 
 const CONFIDENCE_LABELS = {
   verified: "Verified",
@@ -7,10 +7,17 @@ const CONFIDENCE_LABELS = {
   "user-added": "User Added",
 };
 
-function FoodSearch({ onSelectFood, inputStyle }) {
+function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
   const [query, setQuery] = useState("");
-  const results = useMemo(() => searchFoods(query), [query]);
+  const results = useMemo(
+    () => searchFoodCatalog(query, userFoods),
+    [query, userFoods]
+  );
   const hasMeaningfulQuery = /[a-z0-9]/i.test(query);
+
+  useEffect(() => {
+    setQuery("");
+  }, [resetKey]);
 
   return (
     <section
