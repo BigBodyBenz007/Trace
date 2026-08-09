@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import FoodSearch from "./FoodSearch";
 
 function toNutritionNumber(value) {
   const number = Number(value);
@@ -139,8 +140,10 @@ function NutritionPage({
   const [notes, setNotes] = useState("");
   const [isDraftDirty, setIsDraftDirty] = useState(false);
   const [editingEntryId, setEditingEntryId] = useState(null);
+  const [foodReference, setFoodReference] = useState(null);
   const todaySectionRef = useRef(null);
   const entryFormRef = useRef(null);
+  const nameInputRef = useRef(null);
   const [goalValues, setGoalValues] = useState({
     calories: String(nutritionGoals.calories),
     protein: String(nutritionGoals.protein),
@@ -212,6 +215,7 @@ function NutritionPage({
         `${date || fallbackDateTime.date}T${time || fallbackDateTime.time}`
       ).toISOString(),
       notes: notes.trim(),
+      ...(foodReference ? { foodReference } : {}),
     };
 
     if (editingEntryId === null) {
@@ -221,7 +225,7 @@ function NutritionPage({
     }
 
     resetForm();
-    todaySectionRef.current?.scrollIntoView({ behavior: "smooth" });
+    todaySectionRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }
 
   function resetForm() {
@@ -237,6 +241,35 @@ function NutritionPage({
     setNotes("");
     setIsDraftDirty(false);
     setEditingEntryId(null);
+    setFoodReference(null);
+  }
+
+  function markSelectedFoodModified() {
+    setFoodReference((currentReference) =>
+      currentReference
+        ? { ...currentReference, modified: true }
+        : currentReference
+    );
+  }
+
+  function selectFood(food) {
+    setName(food.name);
+    setCalories(String(food.nutrients.calories));
+    setProtein(String(food.nutrients.protein));
+    setCarbohydrates(String(food.nutrients.carbohydrates));
+    setFat(String(food.nutrients.fat));
+    setFoodReference({
+      source: food.provenance.source,
+      sourceId: food.provenance.sourceId,
+      confidence: food.provenance.confidence,
+      modified: false,
+    });
+    setIsDraftDirty(true);
+
+    window.requestAnimationFrame(() => {
+      entryFormRef.current?.scrollIntoView?.({ behavior: "smooth" });
+      nameInputRef.current?.focus();
+    });
   }
 
   function editEntry(entry) {
@@ -252,7 +285,10 @@ function NutritionPage({
     setNotes(entry.notes);
     setIsDraftDirty(false);
     setEditingEntryId(entry.id);
-    entryFormRef.current?.scrollIntoView({ behavior: "smooth" });
+    setFoodReference(
+      entry.foodReference ? { ...entry.foodReference } : null
+    );
+    entryFormRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }
 
   function deleteEntry(id) {
@@ -477,6 +513,8 @@ function NutritionPage({
         </button>
       </form>
 
+      <FoodSearch onSelectFood={selectFood} inputStyle={inputStyle} />
+
       <form
         ref={entryFormRef}
         onSubmit={saveFood}
@@ -499,12 +537,14 @@ function NutritionPage({
         <label style={{ display: "block" }}>
           Food / meal name
           <input
+            ref={nameInputRef}
             required
             style={formInputStyle}
             value={name}
             onChange={(event) => {
               setName(event.target.value);
               setIsDraftDirty(true);
+              markSelectedFoodModified();
             }}
           />
         </label>
@@ -535,6 +575,7 @@ function NutritionPage({
                 onChange={(event) => {
                   setValue(event.target.value);
                   setIsDraftDirty(true);
+                  markSelectedFoodModified();
                 }}
               />
             </label>
