@@ -6,6 +6,10 @@ const CATEGORY_FILTER_OPTIONS = [
   ...CATEGORY_OPTIONS,
 ];
 
+function photoSource(photo) {
+  return typeof photo === "string" ? photo : photo?.url;
+}
+
 function getTimelineDate(memory, currentDay) {
   if (!memory.date) return currentDay;
 
@@ -518,24 +522,30 @@ function HomePage({
                       marginTop: "20px",
                     }}
                   >
-                    {memory.images.map((img, i) => (
-                      <img
-                        key={i}
-                        src={img}
-                        alt={`Memory ${i + 1}`}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedImage(img);
-                        }}
-                        style={{
-                          width: "100%",
-                          height: "140px",
-                          objectFit: "cover",
-                          borderRadius: "10px",
-                          cursor: "pointer",
-                        }}
-                      />
-                    ))}
+                    {memory.images.map((img, i) =>
+                      photoSource(img) ? (
+                        <img
+                          key={img.id || i}
+                          src={photoSource(img)}
+                          alt={`Memory ${i + 1}`}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedImage(photoSource(img));
+                          }}
+                          style={{
+                            width: "100%",
+                            height: "140px",
+                            objectFit: "cover",
+                            borderRadius: "10px",
+                            cursor: "pointer",
+                          }}
+                        />
+                      ) : (
+                        <div key={img.id || i} style={{ color: "#fca5a5" }}>
+                          Photo unavailable
+                        </div>
+                      )
+                    )}
                   </div>
                 )}
 
@@ -564,11 +574,10 @@ function HomePage({
                   </button>
 
                   <button
-                    onClick={(event) => {
+                    onClick={async (event) => {
                       event.stopPropagation();
                       if (window.confirm("Delete this memory?")) {
-                        clearSelection();
-                        deleteMemory(memory.id);
+                        if (await deleteMemory(memory.id)) clearSelection();
                       }
                     }}
                     style={{
@@ -710,11 +719,13 @@ function HomePage({
                 }}
               >
                 <img
-                  src={detailMemory.images[activeDetailPhotoIndex]}
+                  src={photoSource(detailMemory.images[activeDetailPhotoIndex])}
                   alt={`Memory ${activeDetailPhotoIndex + 1}`}
                   onClick={(event) => {
                     event.stopPropagation();
-                    setSelectedImage(detailMemory.images[activeDetailPhotoIndex]);
+                    setSelectedImage(
+                      photoSource(detailMemory.images[activeDetailPhotoIndex])
+                    );
                   }}
                   style={{
                     borderRadius: "12px",
@@ -809,7 +820,7 @@ function HomePage({
                       }}
                     >
                       <img
-                        src={img}
+                        src={photoSource(img)}
                         alt={`Memory ${index + 1}`}
                         style={{
                           borderRadius: "7px",
@@ -872,12 +883,13 @@ function HomePage({
 
               <button
                 type="button"
-                onClick={(event) => {
+                onClick={async (event) => {
                   event.stopPropagation();
                   if (window.confirm("Delete this memory?")) {
-                    clearSelection();
-                    setDetailMemoryId(null);
-                    deleteMemory(detailMemoryId);
+                    if (await deleteMemory(detailMemoryId)) {
+                      clearSelection();
+                      setDetailMemoryId(null);
+                    }
                   }
                 }}
                 style={{

@@ -1,7 +1,18 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
+import {
+  clearCompletedMigrationBackup,
+  dataUrlToBlob,
+  deletePhotos,
+  getPhoto,
+  hasLegacyPhotos,
+  markLegacyMigrationComplete,
+  migrateLegacyPhotos,
+  openPhotoDatabase,
+  putPhotos,
+} from "./storage/photoStorage";
 
 const DEFAULT_NUTRITION_GOALS = {
   calories: 0,
@@ -29,6 +40,19 @@ function createId(existingIds = new Set()) {
   return id;
 }
 
+function memoryMetadata(memories) {
+  return memories.map((memory) => ({
+    ...memory,
+    images: (memory.images || []).map((image) =>
+      typeof image === "string" ? image : image.id || image.legacyDataUrl
+    ),
+  }));
+}
+
+function storageMessage(action) {
+  return `Trace couldn't ${action} because browser storage is unavailable or full. Your existing data has not been intentionally removed.`;
+}
+
 function App() {
   const [page, setPage] = useState("home");
 
@@ -47,12 +71,34 @@ function App() {
   const [nutritionGoals, setNutritionGoals] = useState(
     DEFAULT_NUTRITION_GOALS
   );
+  const [storageError, setStorageError] = useState("");
+  const photoDatabaseRef = useRef(null);
+  const initializationStartedRef = useRef(false);
+  const activeObjectUrlsRef = useRef(new Set());
 
   useEffect(() => {
-    const savedMemories = localStorage.getItem("memories");
+    if (initializationStartedRef.current) return;
+    initializationStartedRef.current = true;
 
-    if (savedMemories) {
-      const parsedMemories = JSON.parse(savedMemories);
+    async function loadMemories() {
+      let rawMemories;
+      let parsedMemories;
+
+      try {
+        rawMemories = localStorage.getItem("memories");
+        if (!rawMemories) {
+          photoDatabaseRef.current = await openPhotoDatabase();
+          return;
+        }
+        parsedMemories = JSON.parse(rawMemories);
+        if (!Array.isArray(parsedMemories)) throw new Error("Invalid memories data.");
+      } catch (error) {
+        setStorageError(
+          "Trace couldn't read the saved memories because their stored data is malformed. The stored value was left unchanged."
+        );
+        return;
+      }
+
       const existingIds = new Set();
       let didAssignIds = false;
       const memoriesWithIds = parsedMemories.map((memory) => {
@@ -64,23 +110,97 @@ function App() {
         const id = createId(existingIds);
         existingIds.add(id);
         didAssignIds = true;
-
         return { ...memory, id };
       });
 
-      setMemories(memoriesWithIds);
-      setMemoryCount(memoriesWithIds.length);
+      try {
+        const database = await openPhotoDatabase();
+        photoDatabaseRef.current = database;
+        let compactMemories = memoriesWithIds;
 
-      if (didAssignIds) {
-        localStorage.setItem("memories", JSON.stringify(memoriesWithIds));
+        if (hasLegacyPhotos(memoriesWithIds)) {
+          compactMemories = await migrateLegacyPhotos(
+            database,
+            rawMemories,
+            memoriesWithIds
+          );
+          localStorage.setItem("memories", JSON.stringify(compactMemories));
+          await markLegacyMigrationComplete(database).catch(() => {
+            setStorageError(
+              "Trace migrated the saved photos, but couldn't finalize its migration backup yet. It will safely retry later."
+            );
+          });
+        } else {
+          if (didAssignIds) {
+            localStorage.setItem("memories", JSON.stringify(compactMemories));
+          }
+        }
+
+        let hasMissingPhoto = false;
+        const hydratedMemories = await Promise.all(
+          compactMemories.map(async (memory) => ({
+            ...memory,
+            images: await Promise.all(
+              (Array.isArray(memory.images) ? memory.images : []).map(
+                async (imageId) => {
+                  const photo = await getPhoto(database, imageId);
+                  if (!photo?.blob) {
+                    hasMissingPhoto = true;
+                    return { id: imageId, url: "", unavailable: true };
+                  }
+                  const url = URL.createObjectURL(photo.blob);
+                  activeObjectUrlsRef.current.add(url);
+                  return { id: imageId, url };
+                }
+              )
+            ),
+          }))
+        );
+
+        setMemories(hydratedMemories);
+        setMemoryCount(hydratedMemories.length);
+        if (!hasLegacyPhotos(memoriesWithIds)) {
+          await clearCompletedMigrationBackup(database).catch(() => {});
+        }
+        if (hasMissingPhoto) {
+          setStorageError(
+            "One or more saved photos could not be loaded. Trace kept their references and did not delete them."
+          );
+        }
+      } catch (error) {
+        setMemories(
+          memoriesWithIds.map((memory) => ({
+            ...memory,
+            images: (memory.images || []).map((image) => ({
+              id: null,
+              url: image,
+              legacyDataUrl: image,
+            })),
+          }))
+        );
+        setMemoryCount(memoriesWithIds.length);
+        setStorageError(
+          "Trace couldn't migrate saved photos to device photo storage. The original saved memories were left unchanged."
+        );
       }
     }
+
+    loadMemories();
   }, []);
 
   useEffect(() => {
-    const savedNutritionGoals = localStorage.getItem("nutritionGoals");
+    const activeObjectUrls = activeObjectUrlsRef.current;
 
-    if (savedNutritionGoals) {
+    return () => {
+      activeObjectUrls.forEach((url) => URL.revokeObjectURL(url));
+      activeObjectUrls.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    try {
+      const savedNutritionGoals = localStorage.getItem("nutritionGoals");
+      if (!savedNutritionGoals) return;
       const savedGoals = JSON.parse(savedNutritionGoals);
 
       setNutritionGoals({
@@ -89,14 +209,20 @@ function App() {
         carbohydrates: toNonNegativeNumber(savedGoals.carbohydrates),
         fat: toNonNegativeNumber(savedGoals.fat),
       });
+    } catch (error) {
+      setStorageError("Trace couldn't read the saved nutrition goals. The stored value was left unchanged.");
     }
   }, []);
 
   useEffect(() => {
-    const savedNutritionEntries = localStorage.getItem("nutritionEntries");
-
-    if (savedNutritionEntries) {
-      setNutritionEntries(JSON.parse(savedNutritionEntries));
+    try {
+      const savedNutritionEntries = localStorage.getItem("nutritionEntries");
+      if (!savedNutritionEntries) return;
+      const parsedEntries = JSON.parse(savedNutritionEntries);
+      if (!Array.isArray(parsedEntries)) throw new Error("Invalid nutrition data.");
+      setNutritionEntries(parsedEntries);
+    } catch (error) {
+      setStorageError("Trace couldn't read the saved nutrition entries. The stored value was left unchanged.");
     }
   }, []);
 
@@ -138,53 +264,110 @@ function App() {
     width: "100%",
   };
 
-  function saveMemory() {
-    if (title.trim() === "") return;
+  async function prepareMemoryImages(memoryId, draftImages) {
+    const photosToStore = [];
+    const preparedImages = draftImages.map((image) => {
+      if (image.id) return image;
+      const id = createId();
+      const blob = image.blob || dataUrlToBlob(image.legacyDataUrl || image.url);
+      photosToStore.push({ id, memoryId, blob });
+      return { id, url: image.url };
+    });
 
-    if (editingId !== null) {
-      const updatedMemories = memories.map((memory) =>
-        memory.id === editingId
-          ? {
-              ...memory,
-              title,
-              description,
-              date,
-              images,
-              categories,
-            }
-          : memory
+    await putPhotos(photoDatabaseRef.current, photosToStore);
+    return {
+      preparedImages,
+      newPhotoIds: photosToStore.map((photo) => photo.id),
+    };
+  }
+
+  async function saveMemory() {
+    if (title.trim() === "") return false;
+
+    try {
+      const memoryId =
+        editingId || createId(new Set(memories.map((item) => item.id)));
+      const { preparedImages, newPhotoIds } = await prepareMemoryImages(
+        memoryId,
+        images
       );
+      const previousMemory = memories.find((memory) => memory.id === editingId);
+      let updatedMemories;
+
+      if (editingId !== null) {
+        updatedMemories = memories.map((memory) =>
+          memory.id === editingId
+            ? {
+                ...memory,
+                title,
+                description,
+                date,
+                images: preparedImages,
+                categories,
+              }
+            : memory
+        );
+      } else {
+        const newMemory = {
+          id: memoryId,
+          title,
+          description,
+          date,
+          images: preparedImages,
+          categories,
+          favorite: false,
+        };
+
+        updatedMemories = [...memories, newMemory];
+      }
+
+      try {
+        localStorage.setItem(
+          "memories",
+          JSON.stringify(memoryMetadata(updatedMemories))
+        );
+      } catch (error) {
+        await deletePhotos(photoDatabaseRef.current, newPhotoIds).catch(() => {});
+        throw error;
+      }
 
       setMemories(updatedMemories);
-      localStorage.setItem("memories", JSON.stringify(updatedMemories));
-
+      setMemoryCount(updatedMemories.length);
       setEditingId(null);
-    } else {
-      const newMemory = {
-        id: createId(new Set(memories.map((memory) => memory.id))),
-        title,
-        description,
-        date,
-        images,
-        categories,
-        favorite: false,
-      };
+      setStorageError("");
 
-      const newMemories = [...memories, newMemory];
+      const retainedIds = new Set(preparedImages.map((image) => image.id));
+      const removedImages = (previousMemory?.images || []).filter(
+        (image) => image.id && !retainedIds.has(image.id)
+      );
+      await deletePhotos(
+        photoDatabaseRef.current,
+        removedImages.map((image) => image.id)
+      ).catch(() =>
+        setStorageError("The memory was saved, but Trace couldn't finish cleaning up removed photo data.")
+      );
 
-      setMemories(newMemories);
-      localStorage.setItem("memories", JSON.stringify(newMemories));
+      removedImages.forEach((image) => {
+        if (image.url) {
+          URL.revokeObjectURL(image.url);
+          activeObjectUrlsRef.current.delete(image.url);
+        }
+      });
 
-      setMemoryCount(newMemories.length);
+      preparedImages.forEach((image) => {
+        if (image.url?.startsWith("blob:")) activeObjectUrlsRef.current.add(image.url);
+      });
+      setTitle("");
+      setDescription("");
+      setDate("");
+      setImages([]);
+      setCategories([]);
+      setPage("home");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("save this memory"));
+      return false;
     }
-
-    setTitle("");
-    setDescription("");
-    setDate("");
-    setImages([]);
-    setCategories([]);
-
-    setPage("home");
   }
 
   function toggleFavorite(id) {
@@ -194,16 +377,41 @@ function App() {
         : memory
     );
 
-    setMemories(updatedMemories);
-    localStorage.setItem("memories", JSON.stringify(updatedMemories));
+    try {
+      localStorage.setItem("memories", JSON.stringify(memoryMetadata(updatedMemories)));
+      setMemories(updatedMemories);
+      setStorageError("");
+    } catch (error) {
+      setStorageError(storageMessage("update this favorite"));
+    }
   }
 
-  function deleteMemory(idToDelete) {
+  async function deleteMemory(idToDelete) {
     const updatedMemories = memories.filter((memory) => memory.id !== idToDelete);
+    const deletedMemory = memories.find((memory) => memory.id === idToDelete);
 
-    setMemories(updatedMemories);
-    localStorage.setItem("memories", JSON.stringify(updatedMemories));
-    setMemoryCount(updatedMemories.length);
+    try {
+      localStorage.setItem("memories", JSON.stringify(memoryMetadata(updatedMemories)));
+      setMemories(updatedMemories);
+      setMemoryCount(updatedMemories.length);
+      setStorageError("");
+      await deletePhotos(
+        photoDatabaseRef.current,
+        (deletedMemory?.images || []).map((image) => image.id).filter(Boolean)
+      ).catch(() =>
+        setStorageError("The memory was deleted, but Trace couldn't finish cleaning up its photo data.")
+      );
+      (deletedMemory?.images || []).forEach((image) => {
+        if (image.url) {
+          URL.revokeObjectURL(image.url);
+          activeObjectUrlsRef.current.delete(image.url);
+        }
+      });
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this memory"));
+      return false;
+    }
   }
 
   function editMemory(idToEdit) {
@@ -228,8 +436,15 @@ function App() {
     };
     const updatedEntries = [...nutritionEntries, newEntry];
 
-    setNutritionEntries(updatedEntries);
-    localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
+    try {
+      localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
+      setNutritionEntries(updatedEntries);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("save this nutrition entry"));
+      return false;
+    }
   }
 
   function updateNutritionEntry(id, entry) {
@@ -239,15 +454,29 @@ function App() {
         : existingEntry
     );
 
-    setNutritionEntries(updatedEntries);
-    localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
+    try {
+      localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
+      setNutritionEntries(updatedEntries);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("update this nutrition entry"));
+      return false;
+    }
   }
 
   function deleteNutritionEntry(id) {
     const updatedEntries = nutritionEntries.filter((entry) => entry.id !== id);
 
-    setNutritionEntries(updatedEntries);
-    localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
+    try {
+      localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
+      setNutritionEntries(updatedEntries);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this nutrition entry"));
+      return false;
+    }
   }
 
   function saveNutritionGoals(goals) {
@@ -258,8 +487,15 @@ function App() {
       fat: toNonNegativeNumber(goals.fat),
     };
 
-    setNutritionGoals(updatedGoals);
-    localStorage.setItem("nutritionGoals", JSON.stringify(updatedGoals));
+    try {
+      localStorage.setItem("nutritionGoals", JSON.stringify(updatedGoals));
+      setNutritionGoals(updatedGoals);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("save these nutrition goals"));
+      return false;
+    }
   }
 
   return (
@@ -275,6 +511,23 @@ function App() {
         fontFamily: "Arial",
       }}
     >
+      {storageError && (
+        <div
+          role="alert"
+          style={{
+            background: "#7f1d1d",
+            border: "1px solid #fca5a5",
+            borderRadius: "10px",
+            color: "white",
+            margin: "12px auto 0",
+            maxWidth: "700px",
+            padding: "12px 16px",
+            width: "calc(100% - 24px)",
+          }}
+        >
+          {storageError}
+        </div>
+      )}
       {page === "home" ? (
         <HomePage
           memoryCount={memoryCount}

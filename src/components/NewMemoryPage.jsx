@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { CATEGORY_OPTIONS } from "../constants/categories";
 
 function NewMemoryPage({
@@ -19,6 +20,25 @@ function NewMemoryPage({
   editingIndex,
   setEditingIndex,
 }) {
+  const formTopRef = useRef(null);
+
+  useEffect(() => {
+    if (editingIndex === null) return undefined;
+
+    const frameId = window.requestAnimationFrame(() => {
+      formTopRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [editingIndex]);
+
+  function releaseDraftPhoto(image) {
+    if (image?.isDraft && image.url) URL.revokeObjectURL(image.url);
+  }
+
   function cancelMemory() {
     const hasUnsavedContent =
       title !== "" ||
@@ -34,6 +54,7 @@ function NewMemoryPage({
       return;
     }
 
+    images.forEach(releaseDraftPhoto);
     setTitle("");
     setDescription("");
     setDate("");
@@ -45,7 +66,10 @@ function NewMemoryPage({
 
   return (
     <div style={containerStyle}>
-      <h1 style={{ marginBottom: "10px" }}>
+      <h1
+        ref={formTopRef}
+        style={{ marginBottom: "10px", scrollMarginTop: "12px" }}
+      >
         {editingIndex !== null ? "Edit Memory" : "New Memory"}
       </h1>
 
@@ -77,12 +101,46 @@ function NewMemoryPage({
       <br />
       <br />
 
-      <input
-        style={inputStyle}
-        type="date"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-      />
+      <label
+        style={{
+          display: "block",
+          textAlign: "left",
+          width: "min(500px, 100%)",
+        }}
+      >
+        Date
+        <div style={{ position: "relative" }}>
+          <input
+            style={{
+              ...inputStyle,
+              backgroundColor: "white",
+              color: date ? "#111827" : "transparent",
+              WebkitTextFillColor: date ? "#111827" : "transparent",
+              colorScheme: "light",
+              display: "block",
+              marginTop: "8px",
+            }}
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+          {!date && (
+            <span
+              aria-hidden="true"
+              style={{
+                color: "#6b7280",
+                left: "16px",
+                pointerEvents: "none",
+                position: "absolute",
+                top: "50%",
+                transform: "translateY(-50%)",
+              }}
+            >
+              Select a date
+            </span>
+          )}
+        </div>
+      </label>
 
       <br />
       <br />
@@ -164,20 +222,12 @@ function NewMemoryPage({
 
             if (!files.length) return;
 
-            Promise.all(
-              files.map(
-                (file) =>
-                  new Promise((resolve) => {
-                    const reader = new FileReader();
-
-                    reader.onloadend = () => resolve(reader.result);
-
-                    reader.readAsDataURL(file);
-                  })
-              )
-            ).then((newImages) => {
-              setImages([...images, ...newImages]);
-            });
+            const newImages = files.map((file) => ({
+              blob: file,
+              isDraft: true,
+              url: URL.createObjectURL(file),
+            }));
+            setImages([...images, ...newImages]);
           }}
         />
       </label>
@@ -205,7 +255,7 @@ function NewMemoryPage({
                 }}
               >
                 <img
-                  src={img}
+                  src={img.url}
                   alt={`Memory ${index + 1}`}
                   style={{
                     width: "100%",
@@ -216,9 +266,10 @@ function NewMemoryPage({
                 />
 
                 <button
-                  onClick={() =>
-                    setImages(images.filter((_, i) => i !== index))
-                  }
+                  onClick={() => {
+                    releaseDraftPhoto(img);
+                    setImages(images.filter((_, i) => i !== index));
+                  }}
                   style={{
                     position: "absolute",
                     top: "6px",

@@ -215,9 +215,9 @@ function NutritionPage({
     };
 
     if (editingEntryId === null) {
-      saveNutritionEntry(entry);
+      if (!saveNutritionEntry(entry)) return;
     } else {
-      updateNutritionEntry(editingEntryId, entry);
+      if (!updateNutritionEntry(editingEntryId, entry)) return;
     }
 
     resetForm();
@@ -258,7 +258,7 @@ function NutritionPage({
   function deleteEntry(id) {
     if (!window.confirm("Delete this nutrition entry?")) return;
 
-    deleteNutritionEntry(id);
+    if (!deleteNutritionEntry(id)) return;
 
     if (editingEntryId === id) {
       resetForm();
