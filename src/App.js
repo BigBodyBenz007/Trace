@@ -102,20 +102,22 @@ function App() {
 
   const buttonStyle = {
     padding: "15px 40px",
-    fontSize: "24px",
+    fontSize: "clamp(18px, 5vw, 24px)",
     borderRadius: "12px",
     border: "none",
     backgroundColor: "#5ec8ff",
     color: "white",
     cursor: "pointer",
     marginTop: "20px",
+    maxWidth: "100%",
   };
 
   const inputStyle = {
     padding: "15px",
-    width: "500px",
-    maxWidth: "90%",
-    fontSize: "24px",
+    boxSizing: "border-box",
+    width: "min(500px, 100%)",
+    maxWidth: "100%",
+    fontSize: "clamp(18px, 5vw, 24px)",
     borderRadius: "12px",
     border: "2px solid #ccc",
     marginTop: "20px",
@@ -129,7 +131,11 @@ function App() {
     alignItems: "center",
     fontFamily: "Arial",
     textAlign: "center",
-    padding: "20px",
+    padding: "clamp(12px, 4vw, 20px)",
+    boxSizing: "border-box",
+    maxWidth: "100%",
+    overflowX: "hidden",
+    width: "100%",
   };
 
   function saveMemory() {

@@ -193,10 +193,13 @@ function HomePage({
           display: "flex",
           flexWrap: "wrap",
           gap: "10px",
+          justifyContent: "center",
+          maxWidth: "700px",
+          width: "100%",
         }}
       >
         <input
-          style={inputStyle}
+          style={{ ...inputStyle, flex: "1 1 280px" }}
           type="text"
           placeholder="Search memories..."
           value={search}
@@ -210,7 +213,8 @@ function HomePage({
           style={{
             ...inputStyle,
             cursor: "pointer",
-            width: "auto",
+            flex: "1 1 160px",
+            width: "100%",
           }}
         >
           {CATEGORY_FILTER_OPTIONS.map((category) => (
@@ -227,7 +231,8 @@ function HomePage({
           style={{
             ...inputStyle,
             cursor: "pointer",
-            width: "auto",
+            flex: "1 1 180px",
+            width: "100%",
           }}
         >
           <option value="all">All Memories</option>
@@ -356,7 +361,8 @@ function HomePage({
                               onClick={() => openMemoryDetail(memory)}
                               style={{
                                 flexShrink: 0,
-                                minWidth: "320px",
+                                width:
+                                  "clamp(280px, calc(100vw - 64px), 320px)",
                                 position: "relative",
                               }}
                             >
@@ -412,9 +418,11 @@ function HomePage({
                                 background: "#1f2937",
                                 borderRadius: "16px",
                                 padding: "20px",
-                                minWidth: "320px",
+                                minWidth: 0,
+                                width: "100%",
                                 flexShrink: 0,
                                 textAlign: "left",
+                                overflowWrap: "anywhere",
                                 boxShadow: isSelected
                                   ? "0 0 0 2px #5ec8ff, 0 8px 20px rgba(94, 200, 255, 0.2)"
                                   : "0 4px 12px rgba(0,0,0,.25)",
@@ -616,6 +624,7 @@ function HomePage({
               overflowY: "auto",
               padding: "28px",
               width: "100%",
+              overflowWrap: "anywhere",
             }}
           >
             <div

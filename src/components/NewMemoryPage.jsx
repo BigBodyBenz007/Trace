@@ -89,8 +89,8 @@ function NewMemoryPage({
 
       <div
         style={{
-          width: "500px",
-          maxWidth: "90%",
+          width: "min(500px, 100%)",
+          maxWidth: "100%",
           textAlign: "left",
         }}
       >
@@ -194,6 +194,7 @@ function NewMemoryPage({
               gap: "12px",
               maxWidth: "700px",
               margin: "0 auto",
+              width: "100%",
             }}
           >
             {images.map((img, index) => (

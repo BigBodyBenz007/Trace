@@ -322,7 +322,8 @@ function NutritionPage({
           style={{
             display: "grid",
             gap: "12px",
-            gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(130px, 100%), 1fr))",
           }}
         >
           {nutritionMetrics.map((metric) => {
@@ -390,7 +391,8 @@ function NutritionPage({
           style={{
             display: "grid",
             gap: "16px",
-            gridTemplateColumns: "repeat(auto-fit, minmax(240px, 1fr))",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(240px, 100%), 1fr))",
           }}
         >
           {averagePeriods.map((period) => {
@@ -445,7 +447,8 @@ function NutritionPage({
           style={{
             display: "grid",
             gap: "12px",
-            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(140px, 100%), 1fr))",
           }}
         >
           {nutritionMetrics.map((metric) => (
@@ -510,7 +513,8 @@ function NutritionPage({
           style={{
             display: "grid",
             gap: "12px",
-            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(140px, 100%), 1fr))",
             marginTop: "16px",
           }}
         >
@@ -541,7 +545,8 @@ function NutritionPage({
           style={{
             display: "grid",
             gap: "12px",
-            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(180px, 100%), 1fr))",
             marginTop: "16px",
           }}
         >
@@ -588,33 +593,39 @@ function NutritionPage({
           />
         </label>
 
-        <button type="submit" style={buttonStyle}>
-          {editingEntryId === null ? "Save Entry" : "Save Changes"}
-        </button>
-
-        <button
-          type="button"
-          onClick={cancelEntry}
+        <div
           style={{
-            ...buttonStyle,
-            backgroundColor: "#666",
-            marginLeft: "10px",
+            display: "flex",
+            flexWrap: "wrap",
+            gap: "10px",
           }}
         >
-          Cancel Entry
-        </button>
+          <button type="submit" style={buttonStyle}>
+            {editingEntryId === null ? "Save Entry" : "Save Changes"}
+          </button>
 
-        <button
-          type="button"
-          onClick={onBack}
-          style={{
-            ...buttonStyle,
-            backgroundColor: "#666",
-            marginLeft: "10px",
-          }}
-        >
-          Back to Timeline
-        </button>
+          <button
+            type="button"
+            onClick={cancelEntry}
+            style={{
+              ...buttonStyle,
+              backgroundColor: "#666",
+            }}
+          >
+            Cancel Entry
+          </button>
+
+          <button
+            type="button"
+            onClick={onBack}
+            style={{
+              ...buttonStyle,
+              backgroundColor: "#666",
+            }}
+          >
+            Back to Timeline
+          </button>
+        </div>
       </form>
 
       <section
@@ -637,6 +648,7 @@ function NutritionPage({
                 style={{
                   background: "#1f2937",
                   borderRadius: "12px",
+                  overflowWrap: "anywhere",
                   padding: "18px",
                 }}
               >
