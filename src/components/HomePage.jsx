@@ -52,6 +52,7 @@ function HomePage({
   toggleFavorite,
   onAddMemory,
   onOpenNutrition,
+  onOpenMedications,
   deleteMemory,
   editMemory,
   buttonStyle,
@@ -187,6 +188,16 @@ function HomePage({
         onClick={onOpenNutrition}
       >
         Health & Nutrition
+      </button>
+
+      <button
+        style={{
+          ...buttonStyle,
+          backgroundColor: "#4b5563",
+        }}
+        onClick={onOpenMedications}
+      >
+        Medications & Supplements
       </button>
 
       <br />

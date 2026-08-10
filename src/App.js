@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
+import MedicationPage from "./components/MedicationPage";
 import {
   addUserFood,
   createUserFood,
@@ -74,6 +75,7 @@ function App() {
   const [memories, setMemories] = useState([]);
   const [memoryCount, setMemoryCount] = useState(0);
   const [nutritionEntries, setNutritionEntries] = useState([]);
+  const [medicationEntries, setMedicationEntries] = useState([]);
   const [userFoods, setUserFoods] = useState([]);
   const [nutritionGoals, setNutritionGoals] = useState(
     DEFAULT_NUTRITION_GOALS
@@ -248,6 +250,22 @@ function App() {
       setNutritionEntries(parsedEntries);
     } catch (error) {
       setStorageError("Trace couldn't read the saved nutrition entries. The stored value was left unchanged.");
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const savedMedicationEntries = localStorage.getItem("medicationEntries");
+      if (!savedMedicationEntries) return;
+      const parsedEntries = JSON.parse(savedMedicationEntries);
+      if (!Array.isArray(parsedEntries)) {
+        throw new Error("Invalid medication data.");
+      }
+      setMedicationEntries(parsedEntries);
+    } catch (error) {
+      setStorageError(
+        "Trace couldn't read the saved medication entries. The stored value was left unchanged."
+      );
     }
   }, []);
 
@@ -550,6 +568,65 @@ function App() {
     }
   }
 
+  function saveMedicationEntry(entry) {
+    const newEntry = {
+      ...entry,
+      id: createId(new Set(medicationEntries.map((item) => item.id))),
+    };
+    const updatedEntries = [...medicationEntries, newEntry];
+
+    try {
+      localStorage.setItem(
+        "medicationEntries",
+        JSON.stringify(updatedEntries)
+      );
+      setMedicationEntries(updatedEntries);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("save this medication entry"));
+      return false;
+    }
+  }
+
+  function updateMedicationEntry(id, entry) {
+    const updatedEntries = medicationEntries.map((existingEntry) =>
+      existingEntry.id === id
+        ? { ...existingEntry, ...entry, id: existingEntry.id }
+        : existingEntry
+    );
+
+    try {
+      localStorage.setItem(
+        "medicationEntries",
+        JSON.stringify(updatedEntries)
+      );
+      setMedicationEntries(updatedEntries);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("update this medication entry"));
+      return false;
+    }
+  }
+
+  function deleteMedicationEntry(id) {
+    const updatedEntries = medicationEntries.filter((entry) => entry.id !== id);
+
+    try {
+      localStorage.setItem(
+        "medicationEntries",
+        JSON.stringify(updatedEntries)
+      );
+      setMedicationEntries(updatedEntries);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this medication entry"));
+      return false;
+    }
+  }
+
   return (
     <div
       style={{
@@ -588,6 +665,7 @@ function App() {
           toggleFavorite={toggleFavorite}
           onAddMemory={() => setPage("new")}
           onOpenNutrition={() => setPage("nutrition")}
+          onOpenMedications={() => setPage("medications")}
           deleteMemory={deleteMemory}
           editMemory={editMemory}
           buttonStyle={buttonStyle}
@@ -605,6 +683,17 @@ function App() {
           updateNutritionEntry={updateNutritionEntry}
           deleteNutritionEntry={deleteNutritionEntry}
           saveNutritionGoals={saveNutritionGoals}
+          buttonStyle={buttonStyle}
+          inputStyle={inputStyle}
+          containerStyle={containerStyle}
+        />
+      ) : page === "medications" ? (
+        <MedicationPage
+          onBack={() => setPage("home")}
+          medicationEntries={medicationEntries}
+          saveMedicationEntry={saveMedicationEntry}
+          updateMedicationEntry={updateMedicationEntry}
+          deleteMedicationEntry={deleteMedicationEntry}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}

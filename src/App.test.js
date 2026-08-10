@@ -99,3 +99,55 @@ test("Add Memory to Timeline lands at the top", () => {
   expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
   expectDestinationScrolledToTop();
 });
+
+test("Timeline to Medications and back uses shared destination scrolling", () => {
+  renderAppAtTimeline();
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "Medications & Supplements" })
+  );
+
+  expect(
+    screen.getByRole("heading", { name: "Medications & Supplements" })
+  ).toBeInTheDocument();
+  expectDestinationScrolledToTop();
+  window.scrollTo.mockClear();
+
+  fireEvent.click(
+    screen.getAllByRole("button", { name: "Back to Timeline" })[0]
+  );
+
+  expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
+  expectDestinationScrolledToTop();
+});
+
+test("medication entries persist separately in localStorage", () => {
+  renderAppAtTimeline();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Medications & Supplements" })
+  );
+
+  fireEvent.change(screen.getByLabelText("Name"), {
+    target: { value: "Medication A" },
+  });
+  fireEvent.change(screen.getByLabelText("Amount / dose"), {
+    target: { value: "1.25" },
+  });
+  fireEvent.change(screen.getByLabelText("Dose unit"), {
+    target: { value: "mg" },
+  });
+  fireEvent.change(screen.getByLabelText("Method / route"), {
+    target: { value: "oral" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  const savedEntries = JSON.parse(localStorage.getItem("medicationEntries"));
+  expect(savedEntries).toHaveLength(1);
+  expect(savedEntries[0]).toMatchObject({
+    schemaVersion: 1,
+    name: "Medication A",
+    dose: { amount: 1.25, unit: "mg" },
+    route: { code: "oral" },
+  });
+  expect(localStorage.getItem("nutritionEntries")).toBeNull();
+});
