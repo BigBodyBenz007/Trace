@@ -293,7 +293,7 @@ test("integrates a browsable Exercise History summary", () => {
     name: /Incline Press.*1 performance/,
   });
   fireEvent.click(summary);
-  expect(screen.getByText("70.5 lb × 10 reps")).toBeInTheDocument();
+  expect(screen.getAllByText("70.5 lb × 10 reps")).toHaveLength(2);
   expect(screen.getByText("Controlled")).toBeInTheDocument();
 });
 

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { deriveExerciseHistory } from "../services/exerciseHistory";
+import { deriveExercisePrs } from "../services/exercisePr";
 
 function formatDate(timestamp) {
   const date = new Date(timestamp);
@@ -22,9 +23,118 @@ function setDescription(set) {
   return `${set?.load?.mode || "Load"} × ${set?.reps} reps`;
 }
 
+function recordsAtHeaviestWeights(records) {
+  const byUnit = new Map();
+  records.forEach((record) => {
+    if (!byUnit.has(record.unit)) byUnit.set(record.unit, []);
+    byUnit.get(record.unit).push(record);
+  });
+
+  return [...byUnit.entries()]
+    .sort(([firstUnit], [secondUnit]) => firstUnit.localeCompare(secondUnit))
+    .flatMap(([, unitRecords]) =>
+      unitRecords.sort((first, second) => second.weight - first.weight).slice(0, 3)
+    );
+}
+
+function CurrentRecords({ exercisePr }) {
+  if (!exercisePr) return null;
+
+  const { heaviestWeight, repsAtWeight, bodyweightReps } = exercisePr.records;
+  const visibleRepsAtWeight = recordsAtHeaviestWeights(repsAtWeight);
+  if (
+    heaviestWeight.length === 0 &&
+    visibleRepsAtWeight.length === 0 &&
+    !bodyweightReps
+  ) {
+    return null;
+  }
+
+  const recordGroupStyle = {
+    background: "#1f2937",
+    borderRadius: "10px",
+    overflowWrap: "anywhere",
+    padding: "12px",
+  };
+
+  return (
+    <section
+      aria-label={`${exercisePr.displayName} current records`}
+      style={{
+        background: "#111827",
+        border: "1px solid #374151",
+        borderRadius: "12px",
+        marginTop: "14px",
+        padding: "14px",
+      }}
+    >
+      <h4 style={{ margin: "0 0 12px" }}>Current Records</h4>
+      <div style={{ display: "grid", gap: "10px" }}>
+        {heaviestWeight.length > 0 && (
+          <div style={recordGroupStyle}>
+            <strong style={{ display: "block", marginBottom: "6px" }}>
+              Heaviest Weight
+            </strong>
+            {heaviestWeight.map((record) => (
+              <div key={record.unit} style={{ marginTop: "8px" }}>
+                <span style={{ display: "block", fontSize: "18px" }}>
+                  {record.weight} {record.unit} × {record.reps} reps
+                </span>
+                <span style={{ color: "#9ca3af", display: "block", marginTop: "2px" }}>
+                  {formatDate(record.performedAt)} · {record.workoutTitle}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {visibleRepsAtWeight.length > 0 && (
+          <div style={recordGroupStyle}>
+            <strong style={{ display: "block", marginBottom: "6px" }}>
+              Best Reps at Weight
+            </strong>
+            {visibleRepsAtWeight.map((record) => (
+              <span
+                key={`${record.unit}|${record.weight}`}
+                style={{ display: "block", marginTop: "4px" }}
+              >
+                {record.weight} {record.unit} — {record.reps} reps
+              </span>
+            ))}
+          </div>
+        )}
+
+        {bodyweightReps && (
+          <div style={recordGroupStyle}>
+            <strong style={{ display: "block", marginBottom: "6px" }}>
+              Bodyweight Rep Record
+            </strong>
+            <span style={{ display: "block", fontSize: "18px" }}>
+              {bodyweightReps.reps} reps
+            </span>
+            <span style={{ color: "#9ca3af", display: "block", marginTop: "2px" }}>
+              {formatDate(bodyweightReps.performedAt)} · {bodyweightReps.workoutTitle}
+            </span>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function ExerciseHistory({ workoutEntries, buttonStyle }) {
   const history = useMemo(
     () => deriveExerciseHistory(workoutEntries),
+    [workoutEntries]
+  );
+  const prsByIdentity = useMemo(
+    () =>
+      new Map(
+        deriveExercisePrs(workoutEntries).map((exercisePr) => [
+          exercisePr.identityKey,
+          exercisePr,
+        ])
+      ),
     [workoutEntries]
   );
   const [selectedIdentityKey, setSelectedIdentityKey] = useState(null);
@@ -97,6 +207,9 @@ function ExerciseHistory({ workoutEntries, buttonStyle }) {
                           Close History
                         </button>
                       </div>
+                      <CurrentRecords
+                        exercisePr={prsByIdentity.get(exercise.identityKey)}
+                      />
                       <div style={{ display: "grid", gap: "12px", marginTop: "14px" }}>
                         {exercise.performances.map((performance) => (
                           <article key={performance.performanceId} style={{ background: "#111827", border: "1px solid #374151", borderRadius: "12px", overflowWrap: "anywhere", padding: "16px" }}>

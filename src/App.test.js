@@ -426,7 +426,7 @@ test("workout edits and confirmed deletion update only workout storage", () => {
   });
 
   fireEvent.click(screen.getByRole("button", { name: /Squat.*1 performance/ }));
-  expect(screen.getAllByText("100 kg × 6 reps")).toHaveLength(2);
+  expect(screen.getAllByText("100 kg × 6 reps")).toHaveLength(3);
 
   jest.spyOn(window, "confirm").mockReturnValue(true);
   fireEvent.click(screen.getByRole("button", { name: "Delete" }));
