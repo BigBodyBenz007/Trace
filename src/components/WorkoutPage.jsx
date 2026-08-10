@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import ExerciseSearch from "./ExerciseSearch";
 import SavedExerciseEditor from "./SavedExerciseEditor";
 import ExerciseHistory from "./ExerciseHistory";
+import TrophyCase from "./TrophyCase";
 import {
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
@@ -65,6 +66,7 @@ function moveItem(items, index, direction) {
 function WorkoutPage({
   onBack,
   workoutEntries,
+  trophyEntries = [],
   savedExercises = [],
   saveWorkoutEntry,
   saveExerciseDefinitions = () => [],
@@ -74,6 +76,8 @@ function WorkoutPage({
   }),
   updateWorkoutEntry,
   deleteWorkoutEntry,
+  addTrophyCaseEntry = () => false,
+  removeTrophyCaseEntry = () => false,
   buttonStyle,
   inputStyle,
   containerStyle,
@@ -680,8 +684,16 @@ function WorkoutPage({
         </div>
       </form>
 
+      <TrophyCase
+        trophyEntries={trophyEntries}
+        removeTrophyCaseEntry={removeTrophyCaseEntry}
+        buttonStyle={buttonStyle}
+      />
+
       <ExerciseHistory
         workoutEntries={workoutEntries}
+        trophyEntries={trophyEntries}
+        addTrophyCaseEntry={addTrophyCaseEntry}
         buttonStyle={buttonStyle}
       />
 

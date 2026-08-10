@@ -369,6 +369,41 @@ test("workouts persist separately and reload as complete snapshots", () => {
   expect(screen.getByText(/Bodyweight.*6 reps/)).toBeInTheDocument();
 });
 
+test("curates a PR snapshot without coupling trophy membership to workout edits or deletion", () => {
+  render(<App />);
+  openWorkouts();
+  fillBodyweightWorkout("Push Day");
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  fireEvent.click(screen.getByRole("button", { name: /Dips.*1 performance/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Add to Trophy Case" }));
+  expect(screen.getByRole("button", { name: "In Trophy Case" })).toBeDisabled();
+  expect(screen.getByRole("group", { name: "Dips trophy" })).toHaveTextContent("6 reps");
+  const curatedSnapshot = JSON.parse(localStorage.getItem("trophyCaseEntries"));
+  expect(curatedSnapshot).toHaveLength(1);
+  expect(curatedSnapshot[0]).toMatchObject({
+    sourceType: "workout-pr",
+    sourceRecordType: "bodyweight-reps",
+    sourceSnapshot: { exerciseName: "Dips", recordValue: "6 reps", workoutTitle: "Push Day" },
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "4" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(screen.getByRole("group", { name: "Dips trophy" })).toHaveTextContent("6 reps");
+  expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual(curatedSnapshot);
+
+  jest.spyOn(window, "confirm").mockReturnValue(true);
+  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+  expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]);
+  expect(screen.getByRole("group", { name: "Dips trophy" })).toHaveTextContent("6 reps");
+  expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual(curatedSnapshot);
+
+  fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
+  expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual([]);
+  expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]);
+});
+
 test("workout edits and confirmed deletion update only workout storage", () => {
   const storedEntry = {
     id: "workout-existing",
@@ -433,6 +468,7 @@ test("workout edits and confirmed deletion update only workout storage", () => {
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]);
   expect(screen.getByText("No workouts logged yet.")).toBeInTheDocument();
   expect(screen.getByText("No exercise history yet.")).toBeInTheDocument();
+  expect(screen.getByText("No trophies yet. Achievements you choose to celebrate will appear here.")).toBeInTheDocument();
 });
 
 test("creates reusable exercises separately and immediately makes them searchable", () => {

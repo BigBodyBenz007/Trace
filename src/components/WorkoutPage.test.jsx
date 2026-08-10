@@ -286,15 +286,25 @@ test("provides top and bottom Timeline navigation controls", () => {
 
 test("integrates a browsable Exercise History summary", () => {
   renderPage({ workoutEntries: [entry()] });
-  expect(
-    screen.getByRole("heading", { name: "Exercise History" })
-  ).toBeInTheDocument();
+  const historyHeading = screen.getByRole("heading", { name: "Exercise History" });
+  expect(historyHeading).toBeInTheDocument();
   const summary = screen.getByRole("button", {
     name: /Incline Press.*1 performance/,
   });
   fireEvent.click(summary);
-  expect(screen.getAllByText("70.5 lb × 10 reps")).toHaveLength(2);
+  const history = historyHeading.closest("section");
+  expect(within(history).getAllByText("70.5 lb × 10 reps")).toHaveLength(2);
   expect(screen.getByText("Controlled")).toBeInTheDocument();
+});
+
+test("places an empty curated Trophy Case before Exercise History while PRs remain candidates", () => {
+  renderPage({ workoutEntries: [entry()] });
+  const trophyHeading = screen.getByRole("heading", { name: "Trophy Case" });
+  const historyHeading = screen.getByRole("heading", { name: "Exercise History" });
+  expect(trophyHeading.compareDocumentPosition(historyHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(screen.getByText("No trophies yet. Achievements you choose to celebrate will appear here.")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /Incline Press.*1 performance/ }));
+  expect(screen.getByRole("button", { name: "Add to Trophy Case" })).toBeInTheDocument();
 });
 
 test("selects a saved exercise and applies defaults only to untouched and new sets", () => {

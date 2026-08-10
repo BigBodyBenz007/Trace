@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { deriveExerciseHistory } from "../services/exerciseHistory";
 import { deriveExercisePrs } from "../services/exercisePr";
+import { createWorkoutPrCandidate } from "../services/trophyCase";
 
 function formatDate(timestamp) {
   const date = new Date(timestamp);
@@ -37,7 +38,21 @@ function recordsAtHeaviestWeights(records) {
     );
 }
 
-function CurrentRecords({ exercisePr }) {
+function CandidateAction({ candidate, trophySourceKeys, addTrophyCaseEntry, buttonStyle }) {
+  const isCurated = trophySourceKeys.has(candidate.sourceKey);
+  return (
+    <button
+      type="button"
+      disabled={isCurated}
+      onClick={() => addTrophyCaseEntry(candidate)}
+      style={{ ...buttonStyle, backgroundColor: isCurated ? "#4b5563" : "#a16207", fontSize: "16px", marginTop: "10px", minHeight: "44px", padding: "10px 14px" }}
+    >
+      {isCurated ? "In Trophy Case" : "Add to Trophy Case"}
+    </button>
+  );
+}
+
+function CurrentRecords({ exercisePr, trophySourceKeys, addTrophyCaseEntry, buttonStyle }) {
   if (!exercisePr) return null;
 
   const { heaviestWeight, repsAtWeight, bodyweightReps } = exercisePr.records;
@@ -83,6 +98,12 @@ function CurrentRecords({ exercisePr }) {
                 <span style={{ color: "#9ca3af", display: "block", marginTop: "2px" }}>
                   {formatDate(record.performedAt)} · {record.workoutTitle}
                 </span>
+                <CandidateAction
+                  candidate={createWorkoutPrCandidate(exercisePr, record)}
+                  trophySourceKeys={trophySourceKeys}
+                  addTrophyCaseEntry={addTrophyCaseEntry}
+                  buttonStyle={buttonStyle}
+                />
               </div>
             ))}
           </div>
@@ -115,6 +136,12 @@ function CurrentRecords({ exercisePr }) {
             <span style={{ color: "#9ca3af", display: "block", marginTop: "2px" }}>
               {formatDate(bodyweightReps.performedAt)} · {bodyweightReps.workoutTitle}
             </span>
+            <CandidateAction
+              candidate={createWorkoutPrCandidate(exercisePr, bodyweightReps)}
+              trophySourceKeys={trophySourceKeys}
+              addTrophyCaseEntry={addTrophyCaseEntry}
+              buttonStyle={buttonStyle}
+            />
           </div>
         )}
       </div>
@@ -122,7 +149,7 @@ function CurrentRecords({ exercisePr }) {
   );
 }
 
-function ExerciseHistory({ workoutEntries, buttonStyle }) {
+function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntry = () => false, buttonStyle }) {
   const history = useMemo(
     () => deriveExerciseHistory(workoutEntries),
     [workoutEntries]
@@ -138,6 +165,10 @@ function ExerciseHistory({ workoutEntries, buttonStyle }) {
     [workoutEntries]
   );
   const [selectedIdentityKey, setSelectedIdentityKey] = useState(null);
+  const trophySourceKeys = useMemo(
+    () => new Set(trophyEntries.map(({ sourceKey }) => sourceKey)),
+    [trophyEntries]
+  );
   const selectedHistory = history.find(
     ({ identityKey }) => identityKey === selectedIdentityKey
   );
@@ -209,6 +240,9 @@ function ExerciseHistory({ workoutEntries, buttonStyle }) {
                       </div>
                       <CurrentRecords
                         exercisePr={prsByIdentity.get(exercise.identityKey)}
+                        trophySourceKeys={trophySourceKeys}
+                        addTrophyCaseEntry={addTrophyCaseEntry}
+                        buttonStyle={buttonStyle}
                       />
                       <div style={{ display: "grid", gap: "12px", marginTop: "14px" }}>
                         {exercise.performances.map((performance) => (

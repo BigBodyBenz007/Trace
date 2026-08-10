@@ -35,6 +35,11 @@ import {
   openPhotoDatabase,
   putPhotos,
 } from "./storage/photoStorage";
+import {
+  addCuratedTrophy,
+  readTrophyCaseEntries,
+  writeTrophyCaseEntries,
+} from "./services/trophyCase";
 
 const DEFAULT_NUTRITION_GOALS = {
   calories: 0,
@@ -92,6 +97,7 @@ function App() {
   const [nutritionEntries, setNutritionEntries] = useState([]);
   const [medicationEntries, setMedicationEntries] = useState([]);
   const [workoutEntries, setWorkoutEntries] = useState([]);
+  const [trophyCaseEntries, setTrophyCaseEntries] = useState([]);
   const [savedExercises, setSavedExercises] = useState([]);
   const [medicationCompounds, setMedicationCompounds] = useState([]);
   const [userFoods, setUserFoods] = useState([]);
@@ -298,6 +304,14 @@ function App() {
       setStorageError(
         "Trace couldn't read the saved workouts. The stored value was left unchanged."
       );
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setTrophyCaseEntries(readTrophyCaseEntries(localStorage));
+    } catch (error) {
+      setStorageError("Trace couldn't read the Trophy Case because its stored data is malformed. The stored value was left unchanged.");
     }
   }, []);
 
@@ -842,6 +856,36 @@ function App() {
     }
   }
 
+  function addTrophyCaseEntry(candidate) {
+    const result = addCuratedTrophy(trophyCaseEntries, candidate, {
+      id: createId(new Set(trophyCaseEntries.map((entry) => entry.id))),
+      addedToTrophyCaseAt: new Date().toISOString(),
+    });
+    if (result.status === "duplicate") return true;
+    try {
+      writeTrophyCaseEntries(localStorage, result.entries);
+      setTrophyCaseEntries(result.entries);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("add this trophy"));
+      return false;
+    }
+  }
+
+  function removeTrophyCaseEntry(id) {
+    const updatedEntries = trophyCaseEntries.filter((entry) => entry.id !== id);
+    try {
+      writeTrophyCaseEntries(localStorage, updatedEntries);
+      setTrophyCaseEntries(updatedEntries);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("remove this trophy"));
+      return false;
+    }
+  }
+
   return (
     <div
       style={{
@@ -921,12 +965,15 @@ function App() {
         <WorkoutPage
           onBack={() => setPage("home")}
           workoutEntries={workoutEntries}
+          trophyEntries={trophyCaseEntries}
           savedExercises={savedExercises}
           saveWorkoutEntry={saveWorkoutEntry}
           saveExerciseDefinitions={saveExerciseDefinitions}
           updateSavedExercise={updateSavedExercise}
           updateWorkoutEntry={updateWorkoutEntry}
           deleteWorkoutEntry={deleteWorkoutEntry}
+          addTrophyCaseEntry={addTrophyCaseEntry}
+          removeTrophyCaseEntry={removeTrophyCaseEntry}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}
