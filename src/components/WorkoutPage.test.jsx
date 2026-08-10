@@ -284,6 +284,19 @@ test("provides top and bottom Timeline navigation controls", () => {
   expect(props.onBack).toHaveBeenCalledTimes(2);
 });
 
+test("integrates a browsable Exercise History summary", () => {
+  renderPage({ workoutEntries: [entry()] });
+  expect(
+    screen.getByRole("heading", { name: "Exercise History" })
+  ).toBeInTheDocument();
+  const summary = screen.getByRole("button", {
+    name: /Incline Press.*1 performance/,
+  });
+  fireEvent.click(summary);
+  expect(screen.getByText("70.5 lb × 10 reps")).toBeInTheDocument();
+  expect(screen.getByText("Controlled")).toBeInTheDocument();
+});
+
 test("selects a saved exercise and applies defaults only to untouched and new sets", () => {
   const dips = createExerciseDefinition({
     name: "Dips",

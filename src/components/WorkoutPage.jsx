@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import ExerciseSearch from "./ExerciseSearch";
 import SavedExerciseEditor from "./SavedExerciseEditor";
+import ExerciseHistory from "./ExerciseHistory";
 import {
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
@@ -678,6 +679,11 @@ function WorkoutPage({
           <button type="button" onClick={cancelWorkout} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel</button>
         </div>
       </form>
+
+      <ExerciseHistory
+        workoutEntries={workoutEntries}
+        buttonStyle={buttonStyle}
+      />
 
       <section style={{ marginTop: "36px", maxWidth: "760px", textAlign: "left", width: "100%" }}>
         <h2>Workout History</h2>

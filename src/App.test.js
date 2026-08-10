@@ -401,6 +401,9 @@ test("workout edits and confirmed deletion update only workout storage", () => {
   fireEvent.change(screen.getByLabelText("Workout title"), {
     target: { value: "Updated Workout" },
   });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
+    target: { value: "6" },
+  });
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
 
   const updated = JSON.parse(localStorage.getItem("workoutEntries"));
@@ -411,15 +414,25 @@ test("workout edits and confirmed deletion update only workout storage", () => {
     exercises: [
       {
         id: "exercise-existing",
-        sets: [{ id: "set-existing", load: { amount: 100, unit: "kg" } }],
+        sets: [
+          {
+            id: "set-existing",
+            reps: 6,
+            load: { amount: 100, unit: "kg" },
+          },
+        ],
       },
     ],
   });
+
+  fireEvent.click(screen.getByRole("button", { name: /Squat.*1 performance/ }));
+  expect(screen.getAllByText("100 kg × 6 reps")).toHaveLength(2);
 
   jest.spyOn(window, "confirm").mockReturnValue(true);
   fireEvent.click(screen.getByRole("button", { name: "Delete" }));
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]);
   expect(screen.getByText("No workouts logged yet.")).toBeInTheDocument();
+  expect(screen.getByText("No exercise history yet.")).toBeInTheDocument();
 });
 
 test("creates reusable exercises separately and immediately makes them searchable", () => {
@@ -554,7 +567,7 @@ test("editing a saved exercise refreshes defaults and never rewrites history", (
   expect(
     screen.getByRole("heading", { name: "Historical Push Day" })
   ).toBeInTheDocument();
-  expect(screen.getByText("Dips")).toBeInTheDocument();
+  expect(screen.getAllByText("Dips")).toHaveLength(2);
   expect(screen.getByText(/Bodyweight.*6 reps/)).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([
     historicalWorkout,
