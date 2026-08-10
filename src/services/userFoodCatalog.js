@@ -1,4 +1,5 @@
 import { normalizeFoodQuery } from "./foodSearch";
+import { createServingDefinition } from "./servingDefinition";
 
 export const USER_FOODS_STORAGE_KEY = "userFoods";
 
@@ -8,7 +9,11 @@ function toNonNegativeNumber(value) {
   return Number.isFinite(number) ? Math.max(0, number) : 0;
 }
 
-export function createUserFood(name, nutrients) {
+export function createUserFood(
+  name,
+  nutrients,
+  serving = createServingDefinition({ amount: 1, unit: "serving" })
+) {
   const normalizedName = normalizeFoodQuery(name);
 
   if (!normalizedName) return null;
@@ -18,11 +23,7 @@ export function createUserFood(name, nutrients) {
   return {
     id: `user-added:${sourceId}`,
     name: String(name).trim().replace(/\s+/g, " "),
-    serving: {
-      amount: 1,
-      unit: "serving",
-      description: "1 serving",
-    },
+    serving: { ...serving },
     nutrients: {
       calories: toNonNegativeNumber(nutrients?.calories),
       protein: toNonNegativeNumber(nutrients?.protein),
@@ -37,17 +38,48 @@ export function createUserFood(name, nutrients) {
   };
 }
 
+function foodDefinitionsMatch(firstFood, secondFood) {
+  const servingFields = ["amount", "unit", "description", "grams"];
+  const nutrientFields = ["calories", "protein", "carbohydrates", "fat"];
+
+  return (
+    servingFields.every(
+      (field) => firstFood.serving?.[field] === secondFood.serving?.[field]
+    ) &&
+    nutrientFields.every(
+      (field) => firstFood.nutrients?.[field] === secondFood.nutrients?.[field]
+    )
+  );
+}
+
 export function addUserFood(userFoods, userFood) {
-  if (!userFood) return { foods: userFoods, added: false };
+  if (!userFood) {
+    return {
+      foods: userFoods,
+      added: false,
+      existingFood: null,
+      matchesDefinition: false,
+    };
+  }
 
   const normalizedName = normalizeFoodQuery(userFood.name);
-  const alreadyExists = userFoods.some(
+  const existingFood = userFoods.find(
     (food) => normalizeFoodQuery(food.name) === normalizedName
   );
 
-  return alreadyExists
-    ? { foods: userFoods, added: false }
-    : { foods: [...userFoods, userFood], added: true };
+  return existingFood
+    ? {
+        foods: userFoods,
+        added: false,
+        existingFood,
+        matchesDefinition: foodDefinitionsMatch(existingFood, userFood),
+      }
+    : {
+        foods: [...userFoods, userFood],
+        added: true,
+        existingFood: null,
+        matchesDefinition: true,
+      };
 }
 
 export function readUserFoods(storage) {

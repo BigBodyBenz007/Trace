@@ -1,6 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import FoodSearch from "./FoodSearch";
-import { scaleNutrition } from "../services/nutritionCalculation";
+import {
+  NUTRIENT_KEYS,
+  scaleNutrition,
+} from "../services/nutritionCalculation";
+import {
+  SERVING_UNIT_OPTIONS,
+  createServingDefinition,
+  getServingDefinitionError,
+} from "../services/servingDefinition";
 
 function toNutritionNumber(value) {
   const number = Number(value);
@@ -44,6 +52,26 @@ function isSameLocalDate(firstDate, secondDate) {
 
 function getLocalDateKey(date) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function hasValidSavedCalculationBasis(entry) {
+  const portionAmount = Number(entry?.portion?.amount);
+  const basisAmount = Number(entry?.portion?.basis?.amount);
+  const basis = entry?.portion?.basis;
+
+  return Boolean(
+    Number.isFinite(portionAmount) &&
+      portionAmount >= 0 &&
+      Number.isFinite(basisAmount) &&
+      basisAmount > 0 &&
+      basis?.unit &&
+      basis?.description &&
+      entry?.nutritionBasis &&
+      NUTRIENT_KEYS.every((nutrient) => {
+        const value = Number(entry.nutritionBasis[nutrient]);
+        return Number.isFinite(value) && value >= 0;
+      })
+  );
 }
 
 export function calculateNutritionAverages(nutritionEntries, now = new Date()) {
@@ -124,7 +152,11 @@ function NutritionPage({
   userFoods = [],
   nutritionGoals,
   saveNutritionEntry,
-  saveUserFood = () => true,
+  saveUserFood = () => ({
+    status: "error",
+    food: null,
+    matchesDefinition: false,
+  }),
   updateNutritionEntry,
   deleteNutritionEntry,
   saveNutritionGoals,
@@ -148,6 +180,13 @@ function NutritionPage({
   const [portionBasis, setPortionBasis] = useState(null);
   const [nutritionBasis, setNutritionBasis] = useState(null);
   const [foodSearchResetKey, setFoodSearchResetKey] = useState(0);
+  const [manualServingAmount, setManualServingAmount] = useState("1");
+  const [manualServingUnit, setManualServingUnit] = useState("serving");
+  const [customServingDescription, setCustomServingDescription] = useState("");
+  const [saveAsReusableFood, setSaveAsReusableFood] = useState(true);
+  const [servingDefinitionError, setServingDefinitionError] = useState("");
+  const [entryStatusMessage, setEntryStatusMessage] = useState("");
+  const nutritionPageTopRef = useRef(null);
   const todaySectionRef = useRef(null);
   const entryFormRef = useRef(null);
   const nameInputRef = useRef(null);
@@ -198,6 +237,15 @@ function NutritionPage({
     { key: "lastSevenDays", label: "Last 7 Days" },
     { key: "thisMonth", label: "This Month" },
   ];
+  const isCreatingManualFood =
+    editingEntryId === null && !foodReference && !portionBasis;
+  const manualServingPreview = isCreatingManualFood
+    ? createServingDefinition({
+        amount: manualServingAmount,
+        unit: manualServingUnit,
+        customDescription: customServingDescription,
+      })
+    : null;
 
   function formatAverage(value, metricKey) {
     return metricKey === "calories"
@@ -211,31 +259,75 @@ function NutritionPage({
     if (name.trim() === "") return;
 
     const fallbackDateTime = getCurrentLocalDateTime();
-
-    const entry = {
-      name: name.trim(),
+    const enteredNutrition = {
       calories: toNutritionNumber(calories),
       protein: toNutritionNumber(protein),
       carbohydrates: toNutritionNumber(carbohydrates),
       fat: toNutritionNumber(fat),
+    };
+    let entryFoodReference = foodReference;
+    let entryPortionBasis = portionBasis;
+    let entryNutritionBasis = nutritionBasis;
+    let reusableFoodResult = null;
+
+    if (isCreatingManualFood && saveAsReusableFood) {
+      const definitionError = getServingDefinitionError({
+        amount: manualServingAmount,
+        unit: manualServingUnit,
+        customDescription: customServingDescription,
+      });
+
+      if (definitionError) {
+        setServingDefinitionError(definitionError);
+        return;
+      }
+
+      entryPortionBasis = manualServingPreview;
+      entryNutritionBasis = enteredNutrition;
+
+      reusableFoodResult = saveUserFood({
+        name: name.trim(),
+        nutrients: enteredNutrition,
+        serving: manualServingPreview,
+      });
+
+      if (
+        reusableFoodResult?.food &&
+        (reusableFoodResult.status === "added" ||
+          reusableFoodResult.matchesDefinition)
+      ) {
+        entryFoodReference = {
+          source: reusableFoodResult.food.provenance.source,
+          sourceId: reusableFoodResult.food.provenance.sourceId,
+          confidence: reusableFoodResult.food.provenance.confidence,
+          modified: false,
+        };
+        entryPortionBasis = { ...reusableFoodResult.food.serving };
+        entryNutritionBasis = { ...reusableFoodResult.food.nutrients };
+      }
+    }
+
+    const entry = {
+      name: name.trim(),
+      ...enteredNutrition,
       loggedAt: new Date(
         `${date || fallbackDateTime.date}T${time || fallbackDateTime.time}`
       ).toISOString(),
       notes: notes.trim(),
-      ...(foodReference ? { foodReference } : {}),
-      ...(portionBasis && nutritionBasis
+      ...(entryFoodReference ? { foodReference: entryFoodReference } : {}),
+      ...(entryPortionBasis && entryNutritionBasis
         ? {
             portion: {
-              amount: toNutritionNumber(servingQuantity),
+              amount: isCreatingManualFood
+                ? 1
+                : toNutritionNumber(servingQuantity),
               unit: "serving",
-              basis: { ...portionBasis },
+              basis: { ...entryPortionBasis },
             },
-            nutritionBasis: { ...nutritionBasis },
+            nutritionBasis: { ...entryNutritionBasis },
           }
         : {}),
     };
-
-    const isNewManualFood = editingEntryId === null && !foodReference;
 
     if (editingEntryId === null) {
       if (!saveNutritionEntry(entry)) return;
@@ -243,16 +335,17 @@ function NutritionPage({
       if (!updateNutritionEntry(editingEntryId, entry)) return;
     }
 
-    if (isNewManualFood) {
-      saveUserFood({
-        name: entry.name,
-        nutrients: {
-          calories: entry.calories,
-          protein: entry.protein,
-          carbohydrates: entry.carbohydrates,
-          fat: entry.fat,
-        },
-      });
+
+    if (reusableFoodResult?.status === "duplicate") {
+      setEntryStatusMessage(
+        `Entry logged. Your existing saved ${reusableFoodResult.food.name} was kept.`
+      );
+    } else if (reusableFoodResult?.status === "error") {
+      setEntryStatusMessage(
+        "Entry logged, but the reusable food could not be saved."
+      );
+    } else {
+      setEntryStatusMessage("");
     }
 
     resetForm();
@@ -277,6 +370,11 @@ function NutritionPage({
     setServingQuantity("1");
     setPortionBasis(null);
     setNutritionBasis(null);
+    setManualServingAmount("1");
+    setManualServingUnit("serving");
+    setCustomServingDescription("");
+    setSaveAsReusableFood(true);
+    setServingDefinitionError("");
   }
 
   function markSelectedFoodModified() {
@@ -312,6 +410,8 @@ function NutritionPage({
     setServingQuantity("1");
     setPortionBasis(selectedPortionBasis);
     setNutritionBasis(selectedNutritionBasis);
+    setServingDefinitionError("");
+    setEntryStatusMessage("");
     setIsDraftDirty(true);
 
     window.requestAnimationFrame(() => {
@@ -336,7 +436,7 @@ function NutritionPage({
     setFoodReference(
       entry.foodReference ? { ...entry.foodReference } : null
     );
-    if (entry.portion?.basis && entry.nutritionBasis) {
+    if (hasValidSavedCalculationBasis(entry)) {
       setServingQuantity(String(entry.portion.amount));
       setPortionBasis({ ...entry.portion.basis });
       setNutritionBasis({ ...entry.nutritionBasis });
@@ -379,6 +479,9 @@ function NutritionPage({
 
     resetForm();
     setFoodSearchResetKey((currentKey) => currentKey + 1);
+    window.requestAnimationFrame(() => {
+      nutritionPageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
+    });
   }
 
   function saveGoals(event) {
@@ -403,12 +506,25 @@ function NutritionPage({
   };
 
   return (
-    <div style={containerStyle}>
+    <div ref={nutritionPageTopRef} data-testid="nutrition-page" style={containerStyle}>
       <h1 style={{ marginBottom: "10px" }}>Health & Nutrition</h1>
 
       <p style={{ color: "#bbb", marginBottom: "30px" }}>
         Track your food and nutrition here.
       </p>
+
+      <button
+        type="button"
+        onClick={onBack}
+        style={{
+          ...buttonStyle,
+          backgroundColor: "#666",
+          marginBottom: "24px",
+          marginTop: 0,
+        }}
+      >
+        Back to Timeline
+      </button>
 
       <section
         ref={todaySectionRef}
@@ -589,6 +705,15 @@ function NutritionPage({
         resetKey={foodSearchResetKey}
       />
 
+      {entryStatusMessage && (
+        <p
+          role="status"
+          style={{ color: "#d1d5db", maxWidth: "700px", width: "100%" }}
+        >
+          {entryStatusMessage}
+        </p>
+      )}
+
       <form
         ref={entryFormRef}
         onSubmit={saveFood}
@@ -680,6 +805,110 @@ function NutritionPage({
             </label>
           ))}
         </div>
+
+        {isCreatingManualFood && (
+          <fieldset
+            style={{
+              border: "1px solid #4b5563",
+              borderRadius: "12px",
+              marginTop: "16px",
+              padding: "16px",
+            }}
+          >
+            <legend>Reusable food</legend>
+
+            <label style={{ display: "block" }}>
+              <input
+                type="checkbox"
+                checked={saveAsReusableFood}
+                onChange={(event) => {
+                  setSaveAsReusableFood(event.target.checked);
+                  setServingDefinitionError("");
+                  setIsDraftDirty(true);
+                }}
+              />{" "}
+              Save as reusable food
+            </label>
+
+            {saveAsReusableFood && (
+              <div style={{ marginTop: "16px" }}>
+                <strong>Nutrition values are for</strong>
+                <div
+                  style={{
+                    display: "grid",
+                    gap: "12px",
+                    gridTemplateColumns:
+                      "repeat(auto-fit, minmax(min(180px, 100%), 1fr))",
+                  }}
+                >
+                  <label style={{ display: "block" }}>
+                    Serving amount
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      style={formInputStyle}
+                      value={manualServingAmount}
+                      onChange={(event) => {
+                        setManualServingAmount(event.target.value);
+                        setServingDefinitionError("");
+                        setIsDraftDirty(true);
+                      }}
+                    />
+                  </label>
+
+                  <label style={{ display: "block" }}>
+                    Serving unit
+                    <select
+                      style={formInputStyle}
+                      value={manualServingUnit}
+                      onChange={(event) => {
+                        setManualServingUnit(event.target.value);
+                        setServingDefinitionError("");
+                        setIsDraftDirty(true);
+                      }}
+                    >
+                      {SERVING_UNIT_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+
+                {manualServingUnit === "custom" && (
+                  <label style={{ display: "block", marginTop: "12px" }}>
+                    Custom serving description
+                    <input
+                      required
+                      style={formInputStyle}
+                      placeholder="For example: 1 small homemade patty"
+                      value={customServingDescription}
+                      onChange={(event) => {
+                        setCustomServingDescription(event.target.value);
+                        setServingDefinitionError("");
+                        setIsDraftDirty(true);
+                      }}
+                    />
+                  </label>
+                )}
+
+                {manualServingPreview && (
+                  <p style={{ color: "#9ca3af", marginBottom: 0 }}>
+                    Nutrition entered for: {manualServingPreview.description}
+                  </p>
+                )}
+
+                {servingDefinitionError && (
+                  <p role="alert" style={{ color: "#fca5a5", marginBottom: 0 }}>
+                    {servingDefinitionError}
+                  </p>
+                )}
+              </div>
+            )}
+          </fieldset>
+        )}
 
         <div
           style={{

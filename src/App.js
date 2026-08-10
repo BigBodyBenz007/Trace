@@ -205,6 +205,14 @@ function App() {
   }, []);
 
   useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [page]);
+
+  useEffect(() => {
     try {
       const savedNutritionGoals = localStorage.getItem("nutritionGoals");
       if (!savedNutritionGoals) return;
@@ -464,20 +472,30 @@ function App() {
     }
   }
 
-  function saveUserFood({ name, nutrients }) {
-    const userFood = createUserFood(name, nutrients);
+  function saveUserFood({ name, nutrients, serving }) {
+    const userFood = createUserFood(name, nutrients, serving);
     const result = addUserFood(userFoods, userFood);
 
-    if (!result.added) return true;
+    if (!result.added) {
+      return {
+        status: "duplicate",
+        food: result.existingFood,
+        matchesDefinition: result.matchesDefinition,
+      };
+    }
 
     try {
       writeUserFoods(localStorage, result.foods);
       setUserFoods(result.foods);
       setStorageError("");
-      return true;
+      return {
+        status: "added",
+        food: userFood,
+        matchesDefinition: true,
+      };
     } catch (error) {
       setStorageError(storageMessage("save this reusable food"));
-      return false;
+      return { status: "error", food: null, matchesDefinition: false };
     }
   }
 

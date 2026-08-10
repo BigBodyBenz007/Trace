@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import NutritionPage, { calculateNutritionAverages } from "./NutritionPage";
+import { createUserFood } from "../services/userFoodCatalog";
 
 function localTimestamp(year, month, day, hour = 12) {
   return new Date(year, month, day, hour).toISOString();
@@ -67,6 +68,11 @@ test("uses local calendar boundaries across months", () => {
 });
 
 function renderNutritionPage(overrides = {}) {
+  const saveUserFood = jest.fn(({ name, nutrients, serving }) => ({
+    status: "added",
+    food: createUserFood(name, nutrients, serving),
+    matchesDefinition: true,
+  }));
   const props = {
     onBack: jest.fn(),
     nutritionEntries: [],
@@ -77,7 +83,7 @@ function renderNutritionPage(overrides = {}) {
       fat: 0,
     },
     saveNutritionEntry: jest.fn(() => true),
-    saveUserFood: jest.fn(() => true),
+    saveUserFood,
     updateNutritionEntry: jest.fn(() => true),
     deleteNutritionEntry: jest.fn(() => true),
     saveNutritionGoals: jest.fn(() => true),
@@ -105,6 +111,19 @@ function entryForm() {
       .closest("form")
   );
 }
+
+test("provides matching timeline navigation controls at the top and bottom", () => {
+  const props = renderNutritionPage();
+  const navigationButtons = screen.getAllByRole("button", {
+    name: "Back to Timeline",
+  });
+
+  expect(navigationButtons).toHaveLength(2);
+  fireEvent.click(navigationButtons[0]);
+  fireEvent.click(navigationButtons[1]);
+
+  expect(props.onBack).toHaveBeenCalledTimes(2);
+});
 
 test("selecting a search result populates the existing form", () => {
   renderNutritionPage();
@@ -168,9 +187,10 @@ test("catalog-populated values remain editable", () => {
   );
 });
 
-test("manual nutrition entry still saves without provenance", () => {
+test("manual-only nutrition entry still saves without reusable metadata", () => {
   const props = renderNutritionPage();
   const form = entryForm();
+  fireEvent.click(form.getByLabelText("Save as reusable food"));
   fireEvent.change(form.getByLabelText("Food / meal name"), {
     target: { value: "Homemade meal" },
   });
@@ -194,6 +214,76 @@ test("manual nutrition entry still saves without provenance", () => {
     "nutritionBasis"
   );
   expect(form.queryByLabelText("Number of servings")).not.toBeInTheDocument();
+  expect(props.saveUserFood).not.toHaveBeenCalled();
+});
+
+test("new manual foods default to a reusable one-serving definition", () => {
+  renderNutritionPage();
+  const form = entryForm();
+
+  expect(form.getByLabelText("Save as reusable food")).toBeChecked();
+  expect(form.getByLabelText("Serving amount")).toHaveValue(1);
+  expect(form.getByLabelText("Serving unit")).toHaveValue("serving");
+  expect(
+    form.getByText("Nutrition entered for: 1 serving")
+  ).toBeInTheDocument();
+});
+
+test("invalid reusable serving amounts block saving with an explanation", () => {
+  const props = renderNutritionPage();
+  const form = entryForm();
+  fireEvent.change(form.getByLabelText("Food / meal name"), {
+    target: { value: "Meatloaf" },
+  });
+  fireEvent.change(form.getByLabelText("Serving amount"), {
+    target: { value: "0" },
+  });
+
+  fireEvent.submit(
+    screen
+      .getByRole("heading", { name: "Add Nutrition Entry" })
+      .closest("form")
+  );
+
+  expect(props.saveNutritionEntry).not.toHaveBeenCalled();
+  expect(form.getByRole("alert")).toHaveTextContent(
+    "Serving amount must be greater than zero."
+  );
+});
+
+test("custom reusable servings require and snapshot a meaningful description", () => {
+  const props = renderNutritionPage();
+  const form = entryForm();
+  fireEvent.change(form.getByLabelText("Food / meal name"), {
+    target: { value: "Homemade patty" },
+  });
+  fireEvent.change(form.getByLabelText("Calories"), {
+    target: { value: "240" },
+  });
+  fireEvent.change(form.getByLabelText("Serving unit"), {
+    target: { value: "custom" },
+  });
+  fireEvent.change(form.getByLabelText("Custom serving description"), {
+    target: { value: "1 small homemade patty" },
+  });
+
+  expect(
+    form.getByText("Nutrition entered for: 1 small homemade patty")
+  ).toBeInTheDocument();
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    portion: {
+      amount: 1,
+      unit: "serving",
+      basis: {
+        amount: 1,
+        unit: "custom",
+        description: "1 small homemade patty",
+      },
+    },
+    nutritionBasis: expect.objectContaining({ calories: 240 }),
+  });
 });
 
 test("successfully saving a catalog food clears search and results", () => {
@@ -236,6 +326,34 @@ test("successfully saving a manual food clears search and requests persistence",
   expect(props.saveUserFood).toHaveBeenCalledWith({
     name: "Meatloaf",
     nutrients: {
+      calories: 350,
+      protein: 22,
+      carbohydrates: 18,
+      fat: 20,
+    },
+    serving: {
+      amount: 1,
+      unit: "serving",
+      description: "1 serving",
+    },
+  });
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    foodReference: {
+      source: "user-added",
+      sourceId: "meatloaf",
+      confidence: "user-added",
+      modified: false,
+    },
+    portion: {
+      amount: 1,
+      unit: "serving",
+      basis: {
+        amount: 1,
+        unit: "serving",
+        description: "1 serving",
+      },
+    },
+    nutritionBasis: {
       calories: 350,
       protein: 22,
       carbohydrates: 18,
@@ -304,6 +422,80 @@ test("a saved user food appears in search and scales like a catalog food", () =>
     },
   });
   expect(props.saveUserFood).not.toHaveBeenCalled();
+});
+
+test("a richer saved user food can be searched, selected, and scaled", () => {
+  const userFood = createUserFood(
+    "Meatloaf",
+    { calories: 350, protein: 22, carbohydrates: 18, fat: 20 },
+    { amount: 4, unit: "oz", description: "4 oz" }
+  );
+  const props = renderNutritionPage({ userFoods: [userFood] });
+
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "meatloaf" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Meatloaf/i }));
+  const form = entryForm();
+
+  expect(form.queryByLabelText("Serving amount")).not.toBeInTheDocument();
+  expect(form.getByText("One serving: 4 oz")).toBeInTheDocument();
+  fireEvent.change(form.getByLabelText("Number of servings"), {
+    target: { value: "0.5" },
+  });
+  expect(form.getByLabelText("Calories")).toHaveValue(175);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(11);
+
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+  expect(props.saveNutritionEntry.mock.calls[0][0].portion).toEqual({
+    amount: 0.5,
+    unit: "serving",
+    basis: { amount: 4, unit: "oz", description: "4 oz" },
+  });
+});
+
+test("a conflicting duplicate logs without provenance and keeps the saved food", () => {
+  const existingFood = createUserFood(
+    "Meatloaf",
+    { calories: 350, protein: 22, carbohydrates: 18, fat: 20 },
+    { amount: 1, unit: "slice", description: "1 slice" }
+  );
+  const saveUserFood = jest.fn(() => ({
+    status: "duplicate",
+    food: existingFood,
+    matchesDefinition: false,
+  }));
+  const props = renderNutritionPage({ saveUserFood });
+  const form = entryForm();
+  fireEvent.change(form.getByLabelText("Food / meal name"), {
+    target: { value: "  MEATLOAF " },
+  });
+  fireEvent.change(form.getByLabelText("Calories"), {
+    target: { value: "500" },
+  });
+  fireEvent.change(form.getByLabelText("Serving amount"), {
+    target: { value: "4" },
+  });
+  fireEvent.change(form.getByLabelText("Serving unit"), {
+    target: { value: "oz" },
+  });
+
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  const loggedEntry = props.saveNutritionEntry.mock.calls[0][0];
+  expect(loggedEntry).not.toHaveProperty("foodReference");
+  expect(loggedEntry).toMatchObject({
+    name: "MEATLOAF",
+    calories: 500,
+    portion: {
+      amount: 1,
+      unit: "serving",
+      basis: { amount: 4, unit: "oz", description: "4 oz" },
+    },
+  });
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Entry logged. Your existing saved Meatloaf was kept."
+  );
 });
 
 test("saves calculated totals with portion and immutable nutrition snapshots", () => {
@@ -448,6 +640,102 @@ test("editing a catalog entry restores quantity, basis, nutrition, and provenanc
   );
 });
 
+test("editing a richer user food restores its snapshot and scales fractionally", () => {
+  const savedEntry = {
+    id: "saved-meatloaf",
+    name: "Meatloaf",
+    calories: 350,
+    protein: 22,
+    carbohydrates: 18,
+    fat: 20,
+    loggedAt: localTimestamp(2026, 7, 8),
+    notes: "",
+    foodReference: {
+      source: "user-added",
+      sourceId: "meatloaf",
+      confidence: "user-added",
+      modified: false,
+    },
+    portion: {
+      amount: 1,
+      unit: "serving",
+      basis: {
+        amount: 4,
+        unit: "oz",
+        description: "4 oz",
+      },
+    },
+    nutritionBasis: {
+      calories: 350,
+      protein: 22,
+      carbohydrates: 18,
+      fat: 20,
+    },
+  };
+  const props = renderNutritionPage({ nutritionEntries: [savedEntry] });
+
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const form = entryForm();
+
+  expect(form.getByLabelText("Number of servings")).toHaveValue(1);
+  expect(form.getByText("One serving: 4 oz")).toBeInTheDocument();
+  fireEvent.change(form.getByLabelText("Number of servings"), {
+    target: { value: "1.5" },
+  });
+
+  expect(form.getByLabelText("Calories")).toHaveValue(525);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(33);
+  expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(27);
+  expect(form.getByLabelText("Fat (g)")).toHaveValue(30);
+
+  fireEvent.click(form.getByRole("button", { name: "Save Changes" }));
+  expect(props.updateNutritionEntry).toHaveBeenCalledWith(
+    "saved-meatloaf",
+    expect.objectContaining({
+      calories: 525,
+      protein: 33,
+      carbohydrates: 27,
+      fat: 30,
+      portion: {
+        amount: 1.5,
+        unit: "serving",
+        basis: savedEntry.portion.basis,
+      },
+      nutritionBasis: savedEntry.nutritionBasis,
+      foodReference: savedEntry.foodReference,
+    })
+  );
+});
+
+test("editing an entry with an incomplete snapshot keeps manual edit behavior", () => {
+  const incompleteEntry = {
+    id: "incomplete-entry",
+    name: "Older saved food",
+    calories: 300,
+    protein: 20,
+    carbohydrates: 30,
+    fat: 10,
+    loggedAt: localTimestamp(2026, 7, 8),
+    notes: "",
+    portion: {
+      amount: 1,
+      unit: "serving",
+      basis: { amount: 1, unit: "serving", description: "1 serving" },
+    },
+    nutritionBasis: {
+      calories: 300,
+      protein: 20,
+      carbohydrates: 30,
+    },
+  };
+  renderNutritionPage({ nutritionEntries: [incompleteEntry] });
+
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+
+  expect(entryForm().queryByLabelText("Number of servings")).not.toBeInTheDocument();
+  expect(entryForm().getByLabelText("Calories")).toHaveValue(300);
+});
+
 test("legacy entries remain editable without portion metadata", () => {
   const legacyEntry = {
     id: "legacy-entry",
@@ -481,4 +769,34 @@ test("legacy entries remain editable without portion metadata", () => {
       nutritionBasis: expect.anything(),
     })
   );
+});
+
+test("cancel resets the form and smoothly scrolls the nutrition view to the top", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalConfirm = window.confirm;
+  const scrollIntoView = jest.fn();
+  window.requestAnimationFrame = (callback) => {
+    callback();
+    return 1;
+  };
+  window.confirm = jest.fn(() => true);
+
+  renderNutritionPage();
+  const form = entryForm();
+  screen.getByTestId("nutrition-page").scrollIntoView = scrollIntoView;
+  fireEvent.change(form.getByLabelText("Food / meal name"), {
+    target: { value: "Draft meal" },
+  });
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "banana" },
+  });
+
+  fireEvent.click(form.getByRole("button", { name: "Cancel Entry" }));
+
+  expect(form.getByLabelText("Food / meal name")).toHaveValue("");
+  expect(screen.getByLabelText("Food search")).toHaveValue("");
+  expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth" });
+
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.confirm = originalConfirm;
 });

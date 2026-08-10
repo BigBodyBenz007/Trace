@@ -35,6 +35,16 @@ test("creates a reusable one-serving food with user-added provenance", () => {
   });
 });
 
+test("creates a reusable food with a richer canonical serving", () => {
+  expect(
+    createUserFood("Meatloaf", nutrients, {
+      amount: 4,
+      unit: "oz",
+      description: "4 oz",
+    }).serving
+  ).toEqual({ amount: 4, unit: "oz", description: "4 oz" });
+});
+
 test("persists and reads user foods from their own storage key", () => {
   const food = createUserFood("Meatloaf", nutrients);
 
@@ -56,5 +66,27 @@ test("prevents duplicate user foods by normalized name and keeps first values", 
   expect(addUserFood([original], replacement)).toEqual({
     foods: [original],
     added: false,
+    existingFood: original,
+    matchesDefinition: false,
+  });
+});
+
+test("recognizes an exact duplicate without replacing the existing record", () => {
+  const original = createUserFood("Meatloaf", nutrients, {
+    amount: 1,
+    unit: "slice",
+    description: "1 slice",
+  });
+  const duplicate = createUserFood("  MEATLOAF ", nutrients, {
+    amount: 1,
+    unit: "slice",
+    description: "1 slice",
+  });
+
+  expect(addUserFood([original], duplicate)).toEqual({
+    foods: [original],
+    added: false,
+    existingFood: original,
+    matchesDefinition: true,
   });
 });
