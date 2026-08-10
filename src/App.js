@@ -861,12 +861,12 @@ function App() {
       id: createId(new Set(trophyCaseEntries.map((entry) => entry.id))),
       addedToTrophyCaseAt: new Date().toISOString(),
     });
-    if (result.status === "duplicate") return true;
+    if (result.status === "duplicate") return null;
     try {
       writeTrophyCaseEntries(localStorage, result.entries);
       setTrophyCaseEntries(result.entries);
       setStorageError("");
-      return true;
+      return result.entry;
     } catch (error) {
       setStorageError(storageMessage("add this trophy"));
       return false;

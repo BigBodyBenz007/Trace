@@ -1,0 +1,167 @@
+.trophy-ceremony-overlay {
+  align-items: center;
+  background: rgba(3, 7, 18, 0.86);
+  box-sizing: border-box;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  overflow: hidden;
+  padding: 16px;
+  position: fixed;
+  z-index: 1000;
+}
+
+.trophy-ceremony {
+  background: linear-gradient(160deg, #111827, #172033);
+  border: 1px solid #a16207;
+  border-radius: 16px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.55), 0 0 28px rgba(94, 200, 255, 0.12);
+  box-sizing: border-box;
+  color: white;
+  max-width: 520px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 18px;
+  position: relative;
+  text-align: center;
+  width: 100%;
+}
+
+.trophy-ceremony__close {
+  background: #374151;
+  border: 1px solid #6b7280;
+  border-radius: 9px;
+  color: white;
+  cursor: pointer;
+  float: right;
+  font-size: 16px;
+  min-height: 44px;
+  padding: 9px 14px;
+  position: relative;
+  z-index: 5;
+}
+
+.trophy-ceremony__confirmation {
+  clear: both;
+  color: #fde68a;
+  font-size: 20px;
+  font-weight: 700;
+  margin: 8px 0 4px;
+}
+
+.trophy-ceremony__accessible-description {
+  margin: 0 0 14px;
+  overflow-wrap: anywhere;
+}
+
+.trophy-ceremony__case {
+  height: 250px;
+  margin: auto;
+  max-width: 400px;
+  perspective: 700px;
+  position: relative;
+  width: 100%;
+}
+
+.trophy-ceremony__interior {
+  align-items: center;
+  background: radial-gradient(circle at center, #253756 0, #0b1220 68%);
+  border: 3px solid #713f12;
+  border-radius: 10px;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  overflow: hidden;
+  position: absolute;
+}
+
+.trophy-ceremony__door {
+  background: linear-gradient(90deg, #172033, #29364c);
+  border: 2px solid #a16207;
+  bottom: 0;
+  position: absolute;
+  top: 0;
+  width: 50%;
+  z-index: 3;
+}
+
+.trophy-ceremony__door--left {
+  left: 0;
+  transform-origin: left center;
+  animation: trophy-door-left 1200ms ease-in-out 100ms forwards;
+}
+
+.trophy-ceremony__door--right {
+  right: 0;
+  transform-origin: right center;
+  animation: trophy-door-right 1200ms ease-in-out 100ms forwards;
+}
+
+.trophy-ceremony__trophy {
+  align-items: center;
+  animation: trophy-place 1900ms cubic-bezier(.2, .75, .25, 1) 1700ms both;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  max-width: 80%;
+  overflow: hidden;
+  position: relative;
+}
+
+.trophy-ceremony__trophy strong,
+.trophy-ceremony__trophy span { overflow-wrap: anywhere; }
+.trophy-ceremony__icon { font-size: 50px; }
+
+.trophy-ceremony__glint {
+  animation: trophy-glint 800ms ease-out 3650ms both;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent);
+  height: 160%;
+  left: -80%;
+  position: absolute;
+  top: -30%;
+  transform: rotate(18deg);
+  width: 28%;
+}
+
+.trophy-ceremony__streak {
+  animation: trophy-streak 900ms ease-out 1950ms both;
+  background: linear-gradient(90deg, transparent, #93c5fd);
+  height: 2px;
+  position: absolute;
+  width: 42px;
+}
+.trophy-ceremony__streak--one { left: 22%; top: 66%; }
+.trophy-ceremony__streak--two { animation-delay: 2250ms; right: 21%; top: 58%; }
+.trophy-ceremony__streak--three { animation-delay: 2550ms; left: 31%; top: 78%; width: 28px; }
+
+@keyframes trophy-door-left { to { transform: rotateY(-82deg); } }
+@keyframes trophy-door-right { to { transform: rotateY(82deg); } }
+@keyframes trophy-place {
+  from { opacity: 0; transform: translateY(90px) scale(.88); }
+  78% { opacity: 1; transform: translateY(-3px) scale(1); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes trophy-streak {
+  from { opacity: 0; transform: translateY(45px) scaleX(.45); }
+  35% { opacity: .7; }
+  to { opacity: 0; transform: translateY(-18px) scaleX(1); }
+}
+@keyframes trophy-glint {
+  from { opacity: 0; transform: translateX(0) rotate(18deg); }
+  30% { opacity: .8; }
+  to { opacity: 0; transform: translateX(620%) rotate(18deg); }
+}
+
+.trophy-ceremony--reduced .trophy-ceremony__door { display: none; }
+.trophy-ceremony--reduced .trophy-ceremony__trophy,
+.trophy-ceremony--reduced .trophy-ceremony__glint,
+.trophy-ceremony--reduced .trophy-ceremony__streak { animation: none; }
+.trophy-ceremony--reduced .trophy-ceremony__streak { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .trophy-ceremony__door { display: none; }
+  .trophy-ceremony__trophy,
+  .trophy-ceremony__glint,
+  .trophy-ceremony__streak { animation: none; }
+  .trophy-ceremony__streak { display: none; }
+}

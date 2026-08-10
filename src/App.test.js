@@ -377,6 +377,7 @@ test("curates a PR snapshot without coupling trophy membership to workout edits 
 
   fireEvent.click(screen.getByRole("button", { name: /Dips.*1 performance/ }));
   fireEvent.click(screen.getByRole("button", { name: "Add to Trophy Case" }));
+  expect(screen.getByRole("dialog", { name: "Added to Trophy Case" })).toHaveTextContent("6 reps");
   expect(screen.getByRole("button", { name: "In Trophy Case" })).toBeDisabled();
   expect(screen.getByRole("group", { name: "Dips trophy" })).toHaveTextContent("6 reps");
   const curatedSnapshot = JSON.parse(localStorage.getItem("trophyCaseEntries"));
@@ -386,6 +387,7 @@ test("curates a PR snapshot without coupling trophy membership to workout edits 
     sourceRecordType: "bodyweight-reps",
     sourceSnapshot: { exerciseName: "Dips", recordValue: "6 reps", workoutTitle: "Push Day" },
   });
+  fireEvent.click(screen.getByRole("button", { name: "Close Trophy Case ceremony" }));
 
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "4" } });
@@ -402,6 +404,30 @@ test("curates a PR snapshot without coupling trophy membership to workout edits 
   fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual([]);
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]);
+});
+
+test("loading or removing an existing trophy never replays its ceremony", () => {
+  const storedTrophy = {
+    schemaVersion: 1,
+    id: "existing-trophy",
+    sourceType: "memory",
+    sourceKey: "memory|existing",
+    sourceId: "memory-existing",
+    sourceRecordType: null,
+    title: "Existing Achievement",
+    description: "Already celebrated",
+    achievedAt: "2026-08-01T12:00:00.000Z",
+    addedToTrophyCaseAt: "2026-08-02T12:00:00.000Z",
+    sourceSnapshot: { recordValue: "Already celebrated" },
+    metadata: {},
+  };
+  localStorage.setItem("trophyCaseEntries", JSON.stringify([storedTrophy]));
+  render(<App />);
+  openWorkouts();
+  expect(screen.getByRole("group", { name: "Existing Achievement trophy" })).toBeInTheDocument();
+  expect(screen.queryByRole("dialog", { name: "Added to Trophy Case" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
+  expect(screen.queryByRole("dialog", { name: "Added to Trophy Case" })).not.toBeInTheDocument();
 });
 
 test("workout edits and confirmed deletion update only workout storage", () => {
