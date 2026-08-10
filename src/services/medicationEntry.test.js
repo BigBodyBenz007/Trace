@@ -116,3 +116,20 @@ test("rejects invalid local dates and preserves createdAt during edits", () => {
   expect(updated.createdAt).toBe(existingEntry.createdAt);
   expect(updated.updatedAt).toBe("2026-08-11T00:00:00.000Z");
 });
+
+test("copies an optional compound reference without replacing the snapshot", () => {
+  const compoundReference = {
+    source: "user-saved",
+    sourceId: "user-saved:ss-31",
+    modified: true,
+  };
+  const entry = createMedicationEntry({ ...validDraft, compoundReference });
+
+  expect(entry.compoundReference).toEqual(compoundReference);
+  expect(entry).toMatchObject({
+    name: "Medication A",
+    dose: { amount: 1.25, unit: "mg" },
+    route: { code: "subcutaneous" },
+  });
+  expect(entry.compoundReference).not.toBe(compoundReference);
+});

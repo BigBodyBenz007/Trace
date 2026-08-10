@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import CompoundSearch from "./CompoundSearch";
+import SavedCompoundEditor from "./SavedCompoundEditor";
 import {
   DOSE_UNIT_OPTIONS,
   ROUTE_OPTIONS,
@@ -9,6 +11,7 @@ import {
   formatRoute,
   getMedicationEntryError,
 } from "../services/medicationEntry";
+import { getCompoundDefinitionError } from "../services/compoundCatalog";
 
 function getCurrentLocalDateTime() {
   const now = new Date();
@@ -41,7 +44,17 @@ function getLocalDateTimeFromTimestamp(timestamp) {
 function MedicationPage({
   onBack,
   medicationEntries,
+  compounds = [],
   saveMedicationEntry,
+  saveCompoundDefinition = () => ({
+    status: "error",
+    compound: null,
+    matchesDefinition: false,
+  }),
+  updateCompoundDefinition = () => ({
+    status: "error",
+    message: "The saved compound could not be updated.",
+  }),
   updateMedicationEntry,
   deleteMedicationEntry,
   buttonStyle,
@@ -61,6 +74,12 @@ function MedicationPage({
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [isDraftDirty, setIsDraftDirty] = useState(false);
   const [formError, setFormError] = useState("");
+  const [compoundReference, setCompoundReference] = useState(null);
+  const [saveAsReusableCompound, setSaveAsReusableCompound] = useState(false);
+  const [defaultDoseAmount, setDefaultDoseAmount] = useState("");
+  const [compoundSearchResetKey, setCompoundSearchResetKey] = useState(0);
+  const [entryStatusMessage, setEntryStatusMessage] = useState("");
+  const [editingCompound, setEditingCompound] = useState(null);
   const pageTopRef = useRef(null);
   const formRef = useRef(null);
 
@@ -90,6 +109,7 @@ function MedicationPage({
       date,
       time,
       notes,
+      compoundReference,
     };
   }
 
@@ -108,6 +128,9 @@ function MedicationPage({
     setEditingEntryId(null);
     setIsDraftDirty(false);
     setFormError("");
+    setCompoundReference(null);
+    setSaveAsReusableCompound(false);
+    setDefaultDoseAmount("");
   }
 
   function saveEntry(event) {
@@ -123,7 +146,42 @@ function MedicationPage({
     const existingEntry = medicationEntries.find(
       (entry) => entry.id === editingEntryId
     );
-    const entry = createMedicationEntry(entryDraft, existingEntry);
+    let resolvedCompoundReference = compoundReference;
+    let compoundResult = null;
+
+    if (!compoundReference && saveAsReusableCompound) {
+      const compoundDraft = {
+        name,
+        defaultDoseAmount,
+        doseUnit,
+        customDoseUnit,
+        route,
+        customRoute,
+      };
+      const compoundError = getCompoundDefinitionError(compoundDraft);
+      if (compoundError) {
+        setFormError(compoundError);
+        return;
+      }
+
+      compoundResult = saveCompoundDefinition(compoundDraft);
+
+      if (
+        compoundResult?.compound &&
+        (compoundResult.status === "added" || compoundResult.matchesDefinition)
+      ) {
+        resolvedCompoundReference = {
+          source: "user-saved",
+          sourceId: compoundResult.compound.id,
+          modified: false,
+        };
+      }
+    }
+
+    const entry = createMedicationEntry(
+      { ...entryDraft, compoundReference: resolvedCompoundReference },
+      existingEntry
+    );
 
     if (editingEntryId === null) {
       if (!saveMedicationEntry(entry)) return;
@@ -131,7 +189,20 @@ function MedicationPage({
       return;
     }
 
+    if (compoundResult?.status === "duplicate") {
+      setEntryStatusMessage(
+        `Entry logged. Your existing saved ${compoundResult.compound.name} was kept.`
+      );
+    } else if (compoundResult?.status === "error") {
+      setEntryStatusMessage(
+        "Entry logged, but the reusable compound could not be saved."
+      );
+    } else {
+      setEntryStatusMessage("");
+    }
+
     resetForm();
+    setCompoundSearchResetKey((currentKey) => currentKey + 1);
     pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }
 
@@ -150,6 +221,11 @@ function MedicationPage({
     setEditingEntryId(entry.id);
     setIsDraftDirty(false);
     setFormError("");
+    setCompoundReference(
+      entry.compoundReference ? { ...entry.compoundReference } : null
+    );
+    setSaveAsReusableCompound(false);
+    setDefaultDoseAmount("");
     formRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }
 
@@ -169,15 +245,50 @@ function MedicationPage({
     }
 
     resetForm();
+    setCompoundSearchResetKey((currentKey) => currentKey + 1);
     window.requestAnimationFrame(() => {
       pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
     });
   }
 
-  function changeDraft(setValue, value) {
+  function markCompoundModified() {
+    setCompoundReference((currentReference) =>
+      currentReference
+        ? { ...currentReference, modified: true }
+        : currentReference
+    );
+  }
+
+  function changeDraft(setValue, value, affectsCompound = false) {
     setValue(value);
     setIsDraftDirty(true);
     setFormError("");
+    if (affectsCompound) markCompoundModified();
+  }
+
+  function selectCompound(compound) {
+    const defaultDose = compound.defaults.dose;
+
+    setName(compound.name);
+    setDoseAmount(
+      defaultDose.amount === undefined ? "" : String(defaultDose.amount)
+    );
+    setDoseUnit(defaultDose.unit);
+    setCustomDoseUnit(defaultDose.customUnit || "");
+    setRoute(compound.defaults.route.code);
+    setCustomRoute(compound.defaults.route.customLabel || "");
+    setCompoundReference({
+      source: "user-saved",
+      sourceId: compound.id,
+      modified: false,
+    });
+    setSaveAsReusableCompound(false);
+    setDefaultDoseAmount("");
+    setIsDraftDirty(true);
+    setFormError("");
+    setEntryStatusMessage("");
+    setEditingCompound(null);
+    formRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }
 
   const backButtonStyle = {
@@ -204,6 +315,36 @@ function MedicationPage({
         Back to Timeline
       </button>
 
+      {editingEntryId === null && (
+        <CompoundSearch
+          compounds={compounds}
+          onSelectCompound={selectCompound}
+          onEditCompound={setEditingCompound}
+          inputStyle={inputStyle}
+          resetKey={compoundSearchResetKey}
+        />
+      )}
+
+      {editingEntryId === null && editingCompound && (
+        <SavedCompoundEditor
+          key={editingCompound.id}
+          compound={editingCompound}
+          onSave={updateCompoundDefinition}
+          onCancel={() => setEditingCompound(null)}
+          buttonStyle={buttonStyle}
+          inputStyle={inputStyle}
+        />
+      )}
+
+      {entryStatusMessage && (
+        <p
+          role="status"
+          style={{ color: "#d1d5db", maxWidth: "700px", width: "100%" }}
+        >
+          {entryStatusMessage}
+        </p>
+      )}
+
       <form
         ref={formRef}
         onSubmit={saveEntry}
@@ -227,7 +368,7 @@ function MedicationPage({
             required
             style={formInputStyle}
             value={name}
-            onChange={(event) => changeDraft(setName, event.target.value)}
+            onChange={(event) => changeDraft(setName, event.target.value, true)}
           />
         </label>
 
@@ -259,7 +400,9 @@ function MedicationPage({
             <select
               style={formInputStyle}
               value={doseUnit}
-              onChange={(event) => changeDraft(setDoseUnit, event.target.value)}
+              onChange={(event) =>
+                changeDraft(setDoseUnit, event.target.value, true)
+              }
             >
               <option value="">Select a unit...</option>
               {DOSE_UNIT_OPTIONS.map((option) => (
@@ -280,7 +423,7 @@ function MedicationPage({
               style={formInputStyle}
               value={customDoseUnit}
               onChange={(event) =>
-                changeDraft(setCustomDoseUnit, event.target.value)
+                changeDraft(setCustomDoseUnit, event.target.value, true)
               }
             />
           </label>
@@ -291,7 +434,9 @@ function MedicationPage({
           <select
             style={formInputStyle}
             value={route}
-            onChange={(event) => changeDraft(setRoute, event.target.value)}
+            onChange={(event) =>
+              changeDraft(setRoute, event.target.value, true)
+            }
           >
             <option value="">Select a method or route...</option>
             {ROUTE_OPTIONS.map((option) => (
@@ -311,7 +456,7 @@ function MedicationPage({
               style={formInputStyle}
               value={customRoute}
               onChange={(event) =>
-                changeDraft(setCustomRoute, event.target.value)
+                changeDraft(setCustomRoute, event.target.value, true)
               }
             />
           </label>
@@ -356,6 +501,50 @@ function MedicationPage({
             onChange={(event) => changeDraft(setNotes, event.target.value)}
           />
         </label>
+
+        {!compoundReference && (
+          <fieldset
+            style={{
+              border: "1px solid #4b5563",
+              borderRadius: "12px",
+              marginTop: "16px",
+              padding: "16px",
+            }}
+          >
+            <legend>Reusable compound</legend>
+            <label style={{ display: "block" }}>
+              <input
+                type="checkbox"
+                checked={saveAsReusableCompound}
+                onChange={(event) => {
+                  setSaveAsReusableCompound(event.target.checked);
+                  setDefaultDoseAmount("");
+                  setIsDraftDirty(true);
+                  setFormError("");
+                }}
+              />{" "}
+              Save as reusable compound
+            </label>
+
+            {saveAsReusableCompound && (
+              <label style={{ display: "block", marginTop: "12px" }}>
+                Default dose amount (optional)
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  style={formInputStyle}
+                  value={defaultDoseAmount}
+                  onChange={(event) => {
+                    setDefaultDoseAmount(event.target.value);
+                    setIsDraftDirty(true);
+                    setFormError("");
+                  }}
+                />
+              </label>
+            )}
+          </fieldset>
+        )}
 
         {formError && (
           <p role="alert" style={{ color: "#fca5a5" }}>

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import MedicationPage from "./MedicationPage";
+import { createCompoundDefinition } from "../services/compoundCatalog";
 
 function localTimestamp(year, month, day, hour = 12, minute = 0) {
   return new Date(year, month, day, hour, minute).toISOString();
@@ -21,10 +22,16 @@ function savedEntry(overrides = {}) {
 }
 
 function renderMedicationPage(overrides = {}) {
+  const saveCompoundDefinition = jest.fn((draft) => {
+    const compound = createCompoundDefinition(draft);
+    return { status: "added", compound, matchesDefinition: true };
+  });
   const props = {
     onBack: jest.fn(),
     medicationEntries: [],
     saveMedicationEntry: jest.fn(() => true),
+    saveCompoundDefinition,
+    updateCompoundDefinition: jest.fn(() => ({ status: "updated" })),
     updateMedicationEntry: jest.fn(() => true),
     deleteMedicationEntry: jest.fn(() => true),
     buttonStyle: {},
@@ -35,6 +42,25 @@ function renderMedicationPage(overrides = {}) {
 
   render(<MedicationPage {...props} />);
   return props;
+}
+
+function savedCompound(overrides = {}) {
+  return createCompoundDefinition({
+    name: "SS-31",
+    defaultDoseAmount: "",
+    doseUnit: "mg",
+    customDoseUnit: "",
+    route: "subcutaneous",
+    customRoute: "",
+    ...overrides,
+  });
+}
+
+function selectSavedCompound(name = "SS-31") {
+  fireEvent.change(screen.getByLabelText("Saved compound search"), {
+    target: { value: name },
+  });
+  fireEvent.click(screen.getByRole("button", { name: `Select ${name}` }));
 }
 
 function entryForm() {
@@ -100,6 +126,188 @@ test("saves a trimmed historical entry with decimal precision", () => {
     })
   );
   expect(form.getByLabelText("Name")).toHaveValue("");
+});
+
+test("reusable creation defaults off and saves without a default amount", () => {
+  const props = renderMedicationPage();
+  const form = entryForm();
+  fillRequiredFields(form, { name: "SS-31" });
+
+  expect(form.getByLabelText("Save as reusable compound")).not.toBeChecked();
+  expect(
+    form.queryByLabelText("Default dose amount (optional)")
+  ).not.toBeInTheDocument();
+  fireEvent.click(form.getByLabelText("Save as reusable compound"));
+  expect(form.getByLabelText("Default dose amount (optional)")).toHaveValue(
+    null
+  );
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveCompoundDefinition).toHaveBeenCalledWith({
+    name: "SS-31",
+    defaultDoseAmount: "",
+    doseUnit: "mg",
+    customDoseUnit: "",
+    route: "subcutaneous",
+    customRoute: "",
+  });
+  expect(props.saveMedicationEntry.mock.calls[0][0]).toMatchObject({
+    name: "SS-31",
+    dose: { amount: 1.25, unit: "mg" },
+    compoundReference: {
+      source: "user-saved",
+      sourceId: "user-saved:ss-31",
+      modified: false,
+    },
+  });
+});
+
+test("reusable creation stores only an explicitly entered default amount", () => {
+  const props = renderMedicationPage();
+  const form = entryForm();
+  fillRequiredFields(form, { name: "SS-31", doseAmount: "4" });
+  fireEvent.click(form.getByLabelText("Save as reusable compound"));
+  fireEvent.change(form.getByLabelText("Default dose amount (optional)"), {
+    target: { value: "3.5" },
+  });
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveCompoundDefinition).toHaveBeenCalledWith(
+    expect.objectContaining({ defaultDoseAmount: "3.5" })
+  );
+  expect(props.saveMedicationEntry.mock.calls[0][0].dose.amount).toBe(4);
+});
+
+test("selecting a compound without a default amount leaves dose amount blank", () => {
+  renderMedicationPage({ compounds: [savedCompound()] });
+
+  selectSavedCompound();
+  const form = entryForm();
+
+  expect(form.getByLabelText("Name")).toHaveValue("SS-31");
+  expect(form.getByLabelText("Amount / dose")).toHaveValue(null);
+  expect(form.getByLabelText("Dose unit")).toHaveValue("mg");
+  expect(form.getByLabelText("Method / route")).toHaveValue("subcutaneous");
+  expect(
+    form.queryByLabelText("Save as reusable compound")
+  ).not.toBeInTheDocument();
+});
+
+test("selected saved amount prefills but changing it affects only the log", () => {
+  const props = renderMedicationPage({
+    compounds: [savedCompound({ defaultDoseAmount: "3.5" })],
+  });
+  selectSavedCompound();
+  const form = entryForm();
+
+  expect(form.getByLabelText("Amount / dose")).toHaveValue(3.5);
+  fireEvent.change(form.getByLabelText("Amount / dose"), {
+    target: { value: "4.25" },
+  });
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveMedicationEntry.mock.calls[0][0]).toMatchObject({
+    dose: { amount: 4.25, unit: "mg" },
+    compoundReference: {
+      source: "user-saved",
+      sourceId: "user-saved:ss-31",
+      modified: false,
+    },
+  });
+  expect(props.saveCompoundDefinition).not.toHaveBeenCalled();
+});
+
+test("name, unit, and route overrides mark a selected reference modified", () => {
+  const props = renderMedicationPage({ compounds: [savedCompound()] });
+  selectSavedCompound();
+  const form = entryForm();
+  fireEvent.change(form.getByLabelText("Name"), {
+    target: { value: "SS-31 personal label" },
+  });
+  fireEvent.change(form.getByLabelText("Dose unit"), {
+    target: { value: "mcg" },
+  });
+  fireEvent.change(form.getByLabelText("Method / route"), {
+    target: { value: "oral" },
+  });
+  fireEvent.change(form.getByLabelText("Amount / dose"), {
+    target: { value: "2" },
+  });
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(
+    props.saveMedicationEntry.mock.calls[0][0].compoundReference.modified
+  ).toBe(true);
+});
+
+test("selecting saved custom defaults restores custom fields", () => {
+  renderMedicationPage({
+    compounds: [
+      savedCompound({
+        doseUnit: "custom",
+        customDoseUnit: "sprays",
+        route: "other",
+        customRoute: "Recorded route",
+      }),
+    ],
+  });
+  selectSavedCompound();
+  const form = entryForm();
+
+  expect(form.getByLabelText("Dose unit")).toHaveValue("custom");
+  expect(form.getByLabelText("Custom dose unit")).toHaveValue("sprays");
+  expect(form.getByLabelText("Method / route")).toHaveValue("other");
+  expect(form.getByLabelText("Other method / route")).toHaveValue(
+    "Recorded route"
+  );
+});
+
+test("exact duplicate keeps and references the existing definition", () => {
+  const existing = savedCompound();
+  const saveCompoundDefinition = jest.fn(() => ({
+    status: "duplicate",
+    compound: existing,
+    matchesDefinition: true,
+  }));
+  const props = renderMedicationPage({ saveCompoundDefinition });
+  const form = entryForm();
+  fillRequiredFields(form, { name: "  ss-31  " });
+  fireEvent.click(form.getByLabelText("Save as reusable compound"));
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveMedicationEntry.mock.calls[0][0].compoundReference).toEqual({
+    source: "user-saved",
+    sourceId: existing.id,
+    modified: false,
+  });
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Entry logged. Your existing saved SS-31 was kept."
+  );
+});
+
+test("conflicting duplicate logs its snapshot without a misleading reference", () => {
+  const existing = savedCompound();
+  const saveCompoundDefinition = jest.fn(() => ({
+    status: "duplicate",
+    compound: existing,
+    matchesDefinition: false,
+  }));
+  const props = renderMedicationPage({ saveCompoundDefinition });
+  const form = entryForm();
+  fillRequiredFields(form, { name: "SS-31", route: "oral" });
+  fireEvent.click(form.getByLabelText("Save as reusable compound"));
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  const loggedEntry = props.saveMedicationEntry.mock.calls[0][0];
+  expect(loggedEntry).toMatchObject({
+    name: "SS-31",
+    dose: { amount: 1.25, unit: "mg" },
+    route: { code: "oral" },
+  });
+  expect(loggedEntry).not.toHaveProperty("compoundReference");
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Entry logged. Your existing saved SS-31 was kept."
+  );
 });
 
 test("shows and saves custom unit and route fields only when selected", () => {
@@ -172,6 +380,218 @@ test("edits from the historical snapshot and preserves creation time", () => {
       updatedAt: expect.any(String),
     })
   );
+  expect(props.updateMedicationEntry.mock.calls[0][1]).not.toHaveProperty(
+    "compoundReference"
+  );
+});
+
+test("editing a Phase 1 entry can save it as a reusable compound", () => {
+  const entry = savedEntry({ name: "SS-31" });
+  const props = renderMedicationPage({ medicationEntries: [entry] });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const form = entryForm();
+
+  expect(form.getByLabelText("Save as reusable compound")).not.toBeChecked();
+  fireEvent.click(form.getByLabelText("Save as reusable compound"));
+  fireEvent.click(form.getByRole("button", { name: "Save Changes" }));
+
+  expect(props.saveCompoundDefinition).toHaveBeenCalledWith({
+    name: "SS-31",
+    defaultDoseAmount: "",
+    doseUnit: "mg",
+    customDoseUnit: "",
+    route: "subcutaneous",
+    customRoute: "",
+  });
+  expect(props.updateMedicationEntry).toHaveBeenCalledWith(
+    entry.id,
+    expect.objectContaining({
+      name: "SS-31",
+      dose: entry.dose,
+      route: entry.route,
+      compoundReference: {
+        source: "user-saved",
+        sourceId: "user-saved:ss-31",
+        modified: false,
+      },
+    })
+  );
+});
+
+test("edit-to-reusable supports an optional user-entered default amount", () => {
+  const entry = savedEntry({ name: "SS-31", dose: { amount: 5, unit: "mg" } });
+  const props = renderMedicationPage({ medicationEntries: [entry] });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const form = entryForm();
+  fireEvent.click(form.getByLabelText("Save as reusable compound"));
+  fireEvent.change(form.getByLabelText("Default dose amount (optional)"), {
+    target: { value: "3.5" },
+  });
+  fireEvent.click(form.getByRole("button", { name: "Save Changes" }));
+
+  expect(props.saveCompoundDefinition).toHaveBeenCalledWith(
+    expect.objectContaining({ defaultDoseAmount: "3.5" })
+  );
+  expect(props.updateMedicationEntry.mock.calls[0][1].dose.amount).toBe(5);
+});
+
+test("edit-to-reusable exact duplicate attaches the existing reference", () => {
+  const entry = savedEntry({ name: "SS-31" });
+  const existing = savedCompound();
+  const saveCompoundDefinition = jest.fn(() => ({
+    status: "duplicate",
+    compound: existing,
+    matchesDefinition: true,
+  }));
+  const props = renderMedicationPage({
+    medicationEntries: [entry],
+    saveCompoundDefinition,
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const form = entryForm();
+  fireEvent.click(form.getByLabelText("Save as reusable compound"));
+  fireEvent.click(form.getByRole("button", { name: "Save Changes" }));
+
+  expect(props.updateMedicationEntry.mock.calls[0][1].compoundReference).toEqual({
+    source: "user-saved",
+    sourceId: existing.id,
+    modified: false,
+  });
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Entry logged. Your existing saved SS-31 was kept."
+  );
+});
+
+test("edit-to-reusable conflict preserves snapshot without attaching a reference", () => {
+  const entry = savedEntry({
+    name: "SS-31",
+    dose: { amount: 7, unit: "mg" },
+    route: { code: "oral" },
+  });
+  const existing = savedCompound();
+  const saveCompoundDefinition = jest.fn(() => ({
+    status: "duplicate",
+    compound: existing,
+    matchesDefinition: false,
+  }));
+  const props = renderMedicationPage({
+    medicationEntries: [entry],
+    saveCompoundDefinition,
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const form = entryForm();
+  fireEvent.click(form.getByLabelText("Save as reusable compound"));
+  fireEvent.click(form.getByRole("button", { name: "Save Changes" }));
+
+  const updatedEntry = props.updateMedicationEntry.mock.calls[0][1];
+  expect(updatedEntry).toMatchObject({
+    name: "SS-31",
+    dose: { amount: 7, unit: "mg" },
+    route: { code: "oral" },
+  });
+  expect(updatedEntry).not.toHaveProperty("compoundReference");
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Entry logged. Your existing saved SS-31 was kept."
+  );
+});
+
+test("a referenced historical edit does not offer or update reusable saving", () => {
+  const entry = savedEntry({
+    name: "Historical name",
+    dose: { amount: 8, unit: "mg" },
+    route: { code: "oral" },
+    compoundReference: {
+      source: "user-saved",
+      sourceId: "user-saved:ss-31",
+      modified: false,
+    },
+  });
+  const props = renderMedicationPage({
+    medicationEntries: [entry],
+    compounds: [savedCompound({ defaultDoseAmount: "3.5" })],
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const form = entryForm();
+
+  expect(
+    form.queryByLabelText("Save as reusable compound")
+  ).not.toBeInTheDocument();
+  expect(form.getByLabelText("Name")).toHaveValue("Historical name");
+  expect(form.getByLabelText("Amount / dose")).toHaveValue(8);
+  expect(form.getByLabelText("Method / route")).toHaveValue("oral");
+  fireEvent.change(form.getByLabelText("Amount / dose"), {
+    target: { value: "9" },
+  });
+  fireEvent.click(form.getByRole("button", { name: "Save Changes" }));
+
+  expect(props.saveCompoundDefinition).not.toHaveBeenCalled();
+  expect(props.updateMedicationEntry.mock.calls[0][1]).toMatchObject({
+    name: "Historical name",
+    dose: { amount: 9, unit: "mg" },
+    route: { code: "oral" },
+    compoundReference: {
+      source: "user-saved",
+      sourceId: "user-saved:ss-31",
+      modified: false,
+    },
+  });
+});
+
+test("compound persistence failure does not block the historical edit", () => {
+  const entry = savedEntry({ name: "SS-31" });
+  const saveCompoundDefinition = jest.fn(() => ({
+    status: "error",
+    compound: null,
+    matchesDefinition: false,
+  }));
+  const props = renderMedicationPage({
+    medicationEntries: [entry],
+    saveCompoundDefinition,
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const form = entryForm();
+  fireEvent.click(form.getByLabelText("Save as reusable compound"));
+  fireEvent.change(form.getByLabelText("Amount / dose"), {
+    target: { value: "2" },
+  });
+  fireEvent.click(form.getByRole("button", { name: "Save Changes" }));
+
+  expect(props.updateMedicationEntry).toHaveBeenCalledWith(
+    entry.id,
+    expect.objectContaining({ dose: { amount: 2, unit: "mg" } })
+  );
+  expect(props.updateMedicationEntry.mock.calls[0][1]).not.toHaveProperty(
+    "compoundReference"
+  );
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Entry logged, but the reusable compound could not be saved."
+  );
+});
+
+test("editing a referenced entry uses its historical snapshot without catalog lookup", () => {
+  const entry = savedEntry({
+    name: "Historical SS-31",
+    dose: { amount: 5, unit: "mg" },
+    route: { code: "oral" },
+    compoundReference: {
+      source: "user-saved",
+      sourceId: "user-saved:ss-31",
+      modified: true,
+    },
+  });
+  renderMedicationPage({
+    medicationEntries: [entry],
+    compounds: [savedCompound({ defaultDoseAmount: "3.5" })],
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const form = entryForm();
+  expect(form.getByLabelText("Name")).toHaveValue("Historical SS-31");
+  expect(form.getByLabelText("Amount / dose")).toHaveValue(5);
+  expect(form.getByLabelText("Method / route")).toHaveValue("oral");
+  expect(
+    screen.queryByLabelText("Saved compound search")
+  ).not.toBeInTheDocument();
 });
 
 test("confirms deletion before removing an entry", () => {

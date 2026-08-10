@@ -95,6 +95,9 @@ export function createMedicationEntry(
     notes: String(draft.notes || "").trim(),
     createdAt: existingEntry?.createdAt || timestamp,
     updatedAt: timestamp,
+    ...(draft.compoundReference
+      ? { compoundReference: { ...draft.compoundReference } }
+      : {}),
   };
 }
 

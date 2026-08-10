@@ -4,6 +4,13 @@ import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
 import MedicationPage from "./components/MedicationPage";
 import {
+  addCompoundDefinition,
+  createCompoundDefinition,
+  readCompoundDefinitions,
+  updateCompoundDefinition as updateCompoundInCatalog,
+  writeCompoundDefinitions,
+} from "./services/compoundCatalog";
+import {
   addUserFood,
   createUserFood,
   readUserFoods,
@@ -76,6 +83,7 @@ function App() {
   const [memoryCount, setMemoryCount] = useState(0);
   const [nutritionEntries, setNutritionEntries] = useState([]);
   const [medicationEntries, setMedicationEntries] = useState([]);
+  const [medicationCompounds, setMedicationCompounds] = useState([]);
   const [userFoods, setUserFoods] = useState([]);
   const [nutritionGoals, setNutritionGoals] = useState(
     DEFAULT_NUTRITION_GOALS
@@ -265,6 +273,16 @@ function App() {
     } catch (error) {
       setStorageError(
         "Trace couldn't read the saved medication entries. The stored value was left unchanged."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setMedicationCompounds(readCompoundDefinitions(localStorage));
+    } catch (error) {
+      setStorageError(
+        "Trace couldn't read the saved compound catalog. The stored value was left unchanged."
       );
     }
   }, []);
@@ -589,6 +607,58 @@ function App() {
     }
   }
 
+  function saveCompoundDefinition(draft) {
+    const compound = createCompoundDefinition(draft);
+    const result = addCompoundDefinition(medicationCompounds, compound);
+
+    if (!result.added) {
+      return {
+        status: "duplicate",
+        compound: result.existingCompound,
+        matchesDefinition: result.matchesDefinition,
+      };
+    }
+
+    try {
+      writeCompoundDefinitions(localStorage, result.compounds);
+      setMedicationCompounds(result.compounds);
+      setStorageError("");
+      return {
+        status: "added",
+        compound,
+        matchesDefinition: true,
+      };
+    } catch (error) {
+      setStorageError(storageMessage("save this reusable compound"));
+      return { status: "error", compound: null, matchesDefinition: false };
+    }
+  }
+
+  function updateSavedCompound(id, draft) {
+    const result = updateCompoundInCatalog(
+      medicationCompounds,
+      id,
+      draft
+    );
+
+    if (result.error) {
+      return { status: "invalid", message: result.error };
+    }
+
+    try {
+      writeCompoundDefinitions(localStorage, result.compounds);
+      setMedicationCompounds(result.compounds);
+      setStorageError("");
+      return { status: "updated", compound: result.updatedCompound };
+    } catch (error) {
+      setStorageError(storageMessage("update this reusable compound"));
+      return {
+        status: "error",
+        message: "The saved compound could not be updated.",
+      };
+    }
+  }
+
   function updateMedicationEntry(id, entry) {
     const updatedEntries = medicationEntries.map((existingEntry) =>
       existingEntry.id === id
@@ -691,7 +761,10 @@ function App() {
         <MedicationPage
           onBack={() => setPage("home")}
           medicationEntries={medicationEntries}
+          compounds={medicationCompounds}
           saveMedicationEntry={saveMedicationEntry}
+          saveCompoundDefinition={saveCompoundDefinition}
+          updateCompoundDefinition={updateSavedCompound}
           updateMedicationEntry={updateMedicationEntry}
           deleteMedicationEntry={deleteMedicationEntry}
           buttonStyle={buttonStyle}
