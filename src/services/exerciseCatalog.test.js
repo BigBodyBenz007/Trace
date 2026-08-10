@@ -100,3 +100,19 @@ test("persists and reloads definitions", () => {
   storage.getItem.mockReturnValue(serialized);
   expect(readSavedExercises(storage)).toEqual([saved]);
 });
+
+test("related but distinct saved exercise names coexist without canonical merging", () => {
+  const squat = definition({ name: "squat" });
+  const oneLegged = definition({ name: "Barbell Back Squat one legged" });
+  const first = addExerciseDefinition([], squat);
+  const second = addExerciseDefinition(first.exercises, oneLegged);
+
+  expect(first.added).toBe(true);
+  expect(second.added).toBe(true);
+  expect(second.exercises).toHaveLength(2);
+  expect(second.exercises.map(({ id }) => id)).toEqual([squat.id, oneLegged.id]);
+  expect(second.exercises.map(({ name }) => name)).toEqual([
+    "squat",
+    "Barbell Back Squat one legged",
+  ]);
+});

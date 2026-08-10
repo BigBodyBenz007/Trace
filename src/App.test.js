@@ -451,10 +451,10 @@ test("creates reusable exercises separately and immediately makes them searchabl
 
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Find a saved exercise for exercise 1",
+      name: "Find an exercise for exercise 1",
     })
   );
-  fireEvent.change(screen.getByLabelText("Saved exercise search"), {
+  fireEvent.change(screen.getByLabelText("Exercise search"), {
     target: { value: "dips" },
   });
   expect(
@@ -505,8 +505,8 @@ test("editing a saved exercise refreshes defaults and never rewrites history", (
 
   const firstRender = render(<App />);
   openWorkouts();
-  fireEvent.click(screen.getByRole("button", { name: /Find a saved exercise/ }));
-  fireEvent.change(screen.getByLabelText("Saved exercise search"), {
+  fireEvent.click(screen.getByRole("button", { name: /Find an exercise/ }));
+  fireEvent.change(screen.getByLabelText("Exercise search"), {
     target: { value: "dips" },
   });
   fireEvent.click(
@@ -559,4 +559,64 @@ test("editing a saved exercise refreshes defaults and never rewrites history", (
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([
     historicalWorkout,
   ]);
+});
+
+test("persists related custom squat exercises separately and surfaces both in unified search", () => {
+  const squat = createExerciseDefinition({
+    name: "squat",
+    defaultLoadMode: "external",
+    defaultWeightUnit: "lb",
+  });
+  localStorage.setItem("savedExercises", JSON.stringify([squat]));
+  render(<App />);
+  openWorkouts();
+  fireEvent.change(screen.getByLabelText("Workout title"), {
+    target: { value: "Leg Day" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), {
+    target: { value: "Barbell Back Squat one legged" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), {
+    target: { value: "95" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
+    target: { value: "5" },
+  });
+  fireEvent.click(screen.getByLabelText("Save as reusable exercise"));
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  const catalog = JSON.parse(localStorage.getItem("savedExercises"));
+  expect(catalog.map(({ name }) => name)).toEqual([
+    "squat",
+    "Barbell Back Squat one legged",
+  ]);
+  expect(new Set(catalog.map(({ id }) => id)).size).toBe(2);
+  const loggedExercise = JSON.parse(localStorage.getItem("workoutEntries"))[0]
+    .exercises[0];
+  expect(loggedExercise.exerciseReference).toMatchObject({
+    source: "user-saved",
+    sourceId: catalog[1].id,
+    modified: false,
+  });
+  expect(loggedExercise).not.toHaveProperty("exerciseId");
+
+  fireEvent.click(
+    screen.getByRole("button", { name: "Find an exercise for exercise 1" })
+  );
+  fireEvent.change(screen.getByLabelText("Exercise search"), {
+    target: { value: "squ" },
+  });
+  expect(
+    screen.getByRole("button", { name: "Select saved exercise squat" })
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", {
+      name: "Select saved exercise Barbell Back Squat one legged",
+    })
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", {
+      name: "Select Trace exercise Barbell Back Squat",
+    })
+  ).toBeInTheDocument();
 });

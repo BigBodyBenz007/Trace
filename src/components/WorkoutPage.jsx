@@ -44,6 +44,7 @@ function emptyExercise() {
   return {
     id: createWorkoutItemId("exercise"),
     name: "",
+    exerciseId: null,
     exerciseReference: null,
     saveAsReusable: false,
     defaultLoadMode: "external",
@@ -203,6 +204,7 @@ function WorkoutPage({
     updateExercise(exerciseId, (exercise) => ({
       ...exercise,
       name: value,
+      exerciseId: null,
       exerciseReference: exercise.exerciseReference
         ? { ...exercise.exerciseReference, modified: true }
         : null,
@@ -214,6 +216,7 @@ function WorkoutPage({
     updateExercise(exerciseId, (exercise) => ({
       ...exercise,
       name: savedExercise.name,
+      exerciseId: null,
       exerciseReference: {
         source: "user-saved",
         sourceId: savedExercise.id,
@@ -231,6 +234,17 @@ function WorkoutPage({
             }
           : set
       ),
+    }));
+    setActiveSearchExerciseId(null);
+  }
+
+  function selectBuiltInExercise(exerciseId, builtInExercise) {
+    updateExercise(exerciseId, (exercise) => ({
+      ...exercise,
+      name: builtInExercise.name,
+      exerciseId: builtInExercise.id,
+      exerciseReference: null,
+      saveAsReusable: false,
     }));
     setActiveSearchExerciseId(null);
   }
@@ -345,6 +359,7 @@ function WorkoutPage({
       entry.exercises.map((exercise) => ({
         id: exercise.id,
         name: exercise.name,
+        exerciseId: exercise.exerciseId || null,
         exerciseReference: exercise.exerciseReference
           ? { ...exercise.exerciseReference }
           : null,
@@ -488,16 +503,19 @@ function WorkoutPage({
                 setEditingSavedExercise(null);
               }}
               aria-expanded={activeSearchExerciseId === exercise.id}
-              aria-label={`Find a saved exercise for exercise ${exerciseIndex + 1}`}
+              aria-label={`Find an exercise for exercise ${exerciseIndex + 1}`}
               style={{ ...smallButtonStyle, marginBottom: "12px" }}
             >
-              Find a Saved Exercise
+              Find an Exercise
             </button>
             {activeSearchExerciseId === exercise.id && (
               <ExerciseSearch
                 exercises={savedExercises}
                 onSelectExercise={(savedExercise) =>
                   selectSavedExercise(exercise.id, savedExercise)
+                }
+                onSelectBuiltInExercise={(builtInExercise) =>
+                  selectBuiltInExercise(exercise.id, builtInExercise)
                 }
                 onEditExercise={(savedExercise) =>
                   setEditingSavedExercise({

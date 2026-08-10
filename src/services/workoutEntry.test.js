@@ -47,6 +47,7 @@ test("creates a complete strength workout snapshot with decimal external load", 
       {
         id: "exercise-1",
         name: "Incline Dumbbell Press",
+        exerciseId: "trace:chest-db-incline-004",
         sets: [
           {
             id: "set-1",
@@ -172,4 +173,61 @@ test("snapshots optional exercise references without requiring a catalog", () =>
   expect(createWorkoutEntry(draft).exercises[0]).not.toHaveProperty(
     "exerciseReference"
   );
+});
+
+test("stores stable built-in IDs for exact canonical and safe alias matches", () => {
+  const canonicalDraft = validDraft();
+  canonicalDraft.exercises[0].name = "Dumbbell Bench Press";
+  expect(createWorkoutEntry(canonicalDraft).exercises[0]).toMatchObject({
+    name: "Dumbbell Bench Press",
+    exerciseId: "trace:chest-db-bench-002",
+  });
+
+  const aliasDraft = validDraft();
+  aliasDraft.exercises[0].name = "DB Bench-Press!";
+  expect(createWorkoutEntry(aliasDraft).exercises[0]).toMatchObject({
+    name: "DB Bench-Press!",
+    exerciseId: "trace:chest-db-bench-002",
+  });
+});
+
+test("does not assign IDs to ambiguous or unknown exercise names", () => {
+  for (const name of ["Incline Press", "My Garage Press"]) {
+    const draft = validDraft();
+    draft.exercises[0].name = name;
+    expect(createWorkoutEntry(draft).exercises[0]).not.toHaveProperty(
+      "exerciseId"
+    );
+  }
+});
+
+test("custom saved references take precedence over matching built-in aliases", () => {
+  const draft = validDraft();
+  draft.exercises[0].name = "DB Bench Press";
+  draft.exercises[0].exerciseReference = {
+    source: "user-saved",
+    sourceId: "user-saved:custom-bench",
+    modified: false,
+  };
+  const saved = createWorkoutEntry(draft).exercises[0];
+  expect(saved.exerciseReference.sourceId).toBe("user-saved:custom-bench");
+  expect(saved).not.toHaveProperty("exerciseId");
+});
+
+test("legacy exercise snapshots without identity fields remain valid", () => {
+  const legacyExercise = {
+    id: "legacy-exercise",
+    name: "Legacy Movement",
+    sets: [
+      {
+        id: "legacy-set",
+        reps: 10,
+        load: { mode: "bodyweight" },
+        notes: "",
+      },
+    ],
+  };
+  expect(legacyExercise.name).toBe("Legacy Movement");
+  expect(legacyExercise).not.toHaveProperty("exerciseId");
+  expect(legacyExercise).not.toHaveProperty("exerciseReference");
 });

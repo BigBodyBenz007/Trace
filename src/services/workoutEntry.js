@@ -2,6 +2,7 @@ import {
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
 } from "../constants/workoutOptions";
+import { resolveBuiltInExerciseName } from "./exerciseIdentity";
 
 const LOAD_MODES = new Set(WORKOUT_LOAD_MODES.map(({ value }) => value));
 const WEIGHT_UNITS = new Set(WORKOUT_WEIGHT_UNITS.map(({ value }) => value));
@@ -12,6 +13,15 @@ function meaningfulText(value) {
 
 function cleanText(value) {
   return String(value || "").trim();
+}
+
+function builtInExerciseId(exercise) {
+  if (exercise.exerciseReference) return null;
+  if (exercise.exerciseId) return exercise.exerciseId;
+  const result = resolveBuiltInExerciseName(exercise.name);
+  return result.status === "canonical" || result.status === "alias"
+    ? result.exercise.id
+    : null;
 }
 
 export function createWorkoutItemId(prefix = "item") {
@@ -98,13 +108,16 @@ export function createWorkoutEntry(draft, existingEntry = null, now = new Date()
     title: cleanText(draft.title),
     occurredAt: workoutLocalDateTimeToIso(draft.date, draft.time),
     notes: cleanText(draft.notes),
-    exercises: draft.exercises.map((exercise) => ({
-      id: exercise.id,
-      name: cleanText(exercise.name),
-      ...(exercise.exerciseReference
-        ? { exerciseReference: { ...exercise.exerciseReference } }
-        : {}),
-      sets: exercise.sets.map((set) => ({
+    exercises: draft.exercises.map((exercise) => {
+      const exerciseId = builtInExerciseId(exercise);
+      return {
+        id: exercise.id,
+        name: cleanText(exercise.name),
+        ...(exerciseId ? { exerciseId } : {}),
+        ...(exercise.exerciseReference
+          ? { exerciseReference: { ...exercise.exerciseReference } }
+          : {}),
+        sets: exercise.sets.map((set) => ({
         id: set.id,
         reps: Number(set.reps),
         load:
@@ -116,8 +129,9 @@ export function createWorkoutEntry(draft, existingEntry = null, now = new Date()
                 unit: set.weightUnit,
               },
         notes: cleanText(set.notes),
-      })),
-    })),
+        })),
+      };
+    }),
     createdAt: existingEntry?.createdAt || timestamp,
     updatedAt: timestamp,
   };

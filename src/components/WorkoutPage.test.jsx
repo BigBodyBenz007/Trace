@@ -293,10 +293,10 @@ test("selects a saved exercise and applies defaults only to untouched and new se
   const props = renderPage({ savedExercises: [dips] });
   fireEvent.click(
     screen.getByRole("button", {
-      name: "Find a saved exercise for exercise 1",
+      name: "Find an exercise for exercise 1",
     })
   );
-  fireEvent.change(screen.getByLabelText("Saved exercise search"), {
+  fireEvent.change(screen.getByLabelText("Exercise search"), {
     target: { value: "dips" },
   });
   fireEvent.click(
@@ -339,8 +339,8 @@ test("only exercise name changes mark a selected reference modified", () => {
     defaultWeightUnit: "kg",
   });
   const props = renderPage({ savedExercises: [press] });
-  fireEvent.click(screen.getByRole("button", { name: /Find a saved exercise/ }));
-  fireEvent.change(screen.getByLabelText("Saved exercise search"), {
+  fireEvent.click(screen.getByRole("button", { name: /Find an exercise/ }));
+  fireEvent.change(screen.getByLabelText("Exercise search"), {
     target: { value: "press" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Select saved exercise Press" }));
@@ -353,8 +353,8 @@ test("only exercise name changes mark a selected reference modified", () => {
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].exerciseReference.modified).toBe(false);
 
   props.saveWorkoutEntry.mockClear();
-  fireEvent.click(screen.getByRole("button", { name: /Find a saved exercise/ }));
-  fireEvent.change(screen.getByLabelText("Saved exercise search"), { target: { value: "press" } });
+  fireEvent.click(screen.getByRole("button", { name: /Find an exercise/ }));
+  fireEvent.change(screen.getByLabelText("Exercise search"), { target: { value: "press" } });
   fireEvent.click(screen.getByRole("button", { name: "Select saved exercise Press" }));
   fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Strict Press" } });
   fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Day" } });
@@ -400,8 +400,8 @@ test("selection does not overwrite load choices on a touched initial set", () =>
   const dips = createExerciseDefinition({ name: "Dips", defaultLoadMode: "bodyweight", defaultWeightUnit: "lb" });
   renderPage({ savedExercises: [dips] });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), { target: { value: "10" } });
-  fireEvent.click(screen.getByRole("button", { name: /Find a saved exercise/ }));
-  fireEvent.change(screen.getByLabelText("Saved exercise search"), { target: { value: "dips" } });
+  fireEvent.click(screen.getByRole("button", { name: /Find an exercise/ }));
+  fireEvent.change(screen.getByLabelText("Exercise search"), { target: { value: "dips" } });
   fireEvent.click(screen.getByRole("button", { name: "Select saved exercise Dips" }));
   expect(screen.getByLabelText("Exercise 1 set 1 load mode")).toHaveValue("external");
   expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(10);
@@ -463,4 +463,81 @@ test("Phase 1 exercises are eligible during edit while referenced exercises are 
   render(<WorkoutPage {...renderPageProps({ workoutEntries: [referenced] })} />);
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   expect(screen.queryByLabelText("Save as reusable exercise")).not.toBeInTheDocument();
+});
+
+test("selecting a Trace exercise saves its canonical name and built-in ID", () => {
+  const props = renderPage();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Find an exercise for exercise 1" })
+  );
+  fireEvent.change(screen.getByLabelText("Exercise search"), {
+    target: { value: "db bench" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Select Trace exercise Dumbbell Bench Press",
+    })
+  );
+  expect(screen.getByLabelText("Exercise 1 name")).toHaveValue(
+    "Dumbbell Bench Press"
+  );
+  fireEvent.change(screen.getByLabelText("Workout title"), {
+    target: { value: "Chest Day" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), {
+    target: { value: "70" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
+    target: { value: "10" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0]).toMatchObject({
+    name: "Dumbbell Bench Press",
+    exerciseId: "trace:chest-db-bench-002",
+  });
+  expect(
+    props.saveWorkoutEntry.mock.calls[0][0].exercises[0]
+  ).not.toHaveProperty("exerciseReference");
+});
+
+test("manually typed ambiguous names remain without a built-in ID", () => {
+  const props = renderPage();
+  fireEvent.change(screen.getByLabelText("Workout title"), {
+    target: { value: "Chest Day" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), {
+    target: { value: "Incline Press" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), {
+    target: { value: "70" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
+    target: { value: "10" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0]).not.toHaveProperty(
+    "exerciseId"
+  );
+});
+
+test("editing preserves built-in identity until the exercise name changes", () => {
+  const builtInEntry = entry({
+    exercises: [
+      {
+        ...entry().exercises[0],
+        name: "Dumbbell Bench Press",
+        exerciseId: "trace:chest-db-bench-002",
+      },
+    ],
+  });
+  const props = renderPage({ workoutEntries: [builtInEntry] });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
+    target: { value: "12" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(props.updateWorkoutEntry.mock.calls[0][1].exercises[0].exerciseId).toBe(
+    "trace:chest-db-bench-002"
+  );
 });
