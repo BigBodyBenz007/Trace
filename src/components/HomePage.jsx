@@ -53,6 +53,7 @@ function HomePage({
   onAddMemory,
   onOpenNutrition,
   onOpenMedications,
+  onOpenWorkouts,
   deleteMemory,
   editMemory,
   buttonStyle,
@@ -198,6 +199,16 @@ function HomePage({
         onClick={onOpenMedications}
       >
         Medications & Supplements
+      </button>
+
+      <button
+        style={{
+          ...buttonStyle,
+          backgroundColor: "#334155",
+        }}
+        onClick={onOpenWorkouts}
+      >
+        Workouts
       </button>
 
       <br />

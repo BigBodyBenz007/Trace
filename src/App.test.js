@@ -51,6 +51,25 @@ function expectDestinationScrolledToTop() {
   });
 }
 
+function openWorkouts() {
+  fireEvent.click(screen.getByRole("button", { name: "Workouts" }));
+}
+
+function fillBodyweightWorkout(title = "Push Day") {
+  fireEvent.change(screen.getByLabelText("Workout title"), {
+    target: { value: title },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), {
+    target: { value: "Dips" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 load mode"), {
+    target: { value: "bodyweight" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
+    target: { value: "6" },
+  });
+}
+
 test("Timeline to Nutrition lands at the top after rendering", () => {
   renderAppAtTimeline();
 
@@ -59,6 +78,21 @@ test("Timeline to Nutrition lands at the top after rendering", () => {
   expect(
     screen.getByRole("heading", { name: "Health & Nutrition" })
   ).toBeInTheDocument();
+  expectDestinationScrolledToTop();
+});
+
+test("Timeline to Workouts and Workouts to Timeline land at the top", () => {
+  renderAppAtTimeline();
+  openWorkouts();
+
+  expect(screen.getByRole("heading", { name: "Workouts" })).toBeInTheDocument();
+  expectDestinationScrolledToTop();
+
+  window.scrollTo.mockClear();
+  fireEvent.click(
+    screen.getAllByRole("button", { name: "Back to Timeline" })[0]
+  );
+  expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
   expectDestinationScrolledToTop();
 });
 
@@ -300,4 +334,89 @@ test("editing a saved compound refreshes defaults without rewriting history and 
   expect(JSON.parse(localStorage.getItem("medicationEntries"))).toEqual([
     historicalEntry,
   ]);
+});
+
+test("workouts persist separately and reload as complete snapshots", () => {
+  const firstRender = render(<App />);
+  openWorkouts();
+  fillBodyweightWorkout("Push Day");
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  const stored = JSON.parse(localStorage.getItem("workoutEntries"));
+  expect(stored).toHaveLength(1);
+  expect(stored[0]).toMatchObject({
+    schemaVersion: 1,
+    type: "strength",
+    title: "Push Day",
+    exercises: [
+      {
+        name: "Dips",
+        sets: [{ reps: 6, load: { mode: "bodyweight" } }],
+      },
+    ],
+  });
+  expect(stored[0].id).toBeTruthy();
+  expect(stored[0].exercises[0].id).toBeTruthy();
+  expect(stored[0].exercises[0].sets[0].id).toBeTruthy();
+  expect(localStorage.getItem("nutritionEntries")).toBeNull();
+  expect(localStorage.getItem("medicationEntries")).toBeNull();
+
+  firstRender.unmount();
+  render(<App />);
+  openWorkouts();
+  expect(screen.getByRole("heading", { name: "Push Day" })).toBeInTheDocument();
+  expect(screen.getByText(/Bodyweight.*6 reps/)).toBeInTheDocument();
+});
+
+test("workout edits and confirmed deletion update only workout storage", () => {
+  const storedEntry = {
+    id: "workout-existing",
+    schemaVersion: 1,
+    type: "strength",
+    title: "Original Workout",
+    occurredAt: "2026-08-09T18:30:00.000Z",
+    notes: "",
+    exercises: [
+      {
+        id: "exercise-existing",
+        name: "Squat",
+        sets: [
+          {
+            id: "set-existing",
+            reps: 5,
+            load: { mode: "external", amount: 100, unit: "kg" },
+            notes: "",
+          },
+        ],
+      },
+    ],
+    createdAt: "2026-08-09T19:00:00.000Z",
+    updatedAt: "2026-08-09T19:00:00.000Z",
+  };
+  localStorage.setItem("workoutEntries", JSON.stringify([storedEntry]));
+  render(<App />);
+  openWorkouts();
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Workout title"), {
+    target: { value: "Updated Workout" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+  const updated = JSON.parse(localStorage.getItem("workoutEntries"));
+  expect(updated[0]).toMatchObject({
+    id: storedEntry.id,
+    createdAt: storedEntry.createdAt,
+    title: "Updated Workout",
+    exercises: [
+      {
+        id: "exercise-existing",
+        sets: [{ id: "set-existing", load: { amount: 100, unit: "kg" } }],
+      },
+    ],
+  });
+
+  jest.spyOn(window, "confirm").mockReturnValue(true);
+  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+  expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]);
+  expect(screen.getByText("No workouts logged yet.")).toBeInTheDocument();
 });

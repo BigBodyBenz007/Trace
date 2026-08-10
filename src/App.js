@@ -3,6 +3,7 @@ import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
 import MedicationPage from "./components/MedicationPage";
+import WorkoutPage from "./components/WorkoutPage";
 import {
   addCompoundDefinition,
   createCompoundDefinition,
@@ -83,6 +84,7 @@ function App() {
   const [memoryCount, setMemoryCount] = useState(0);
   const [nutritionEntries, setNutritionEntries] = useState([]);
   const [medicationEntries, setMedicationEntries] = useState([]);
+  const [workoutEntries, setWorkoutEntries] = useState([]);
   const [medicationCompounds, setMedicationCompounds] = useState([]);
   const [userFoods, setUserFoods] = useState([]);
   const [nutritionGoals, setNutritionGoals] = useState(
@@ -273,6 +275,20 @@ function App() {
     } catch (error) {
       setStorageError(
         "Trace couldn't read the saved medication entries. The stored value was left unchanged."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const savedWorkoutEntries = localStorage.getItem("workoutEntries");
+      if (!savedWorkoutEntries) return;
+      const parsedEntries = JSON.parse(savedWorkoutEntries);
+      if (!Array.isArray(parsedEntries)) throw new Error("Invalid workout data.");
+      setWorkoutEntries(parsedEntries);
+    } catch (error) {
+      setStorageError(
+        "Trace couldn't read the saved workouts. The stored value was left unchanged."
       );
     }
   }, []);
@@ -697,6 +713,56 @@ function App() {
     }
   }
 
+  function saveWorkoutEntry(entry) {
+    const newEntry = {
+      ...entry,
+      id: createId(new Set(workoutEntries.map((item) => item.id))),
+    };
+    const updatedEntries = [...workoutEntries, newEntry];
+
+    try {
+      localStorage.setItem("workoutEntries", JSON.stringify(updatedEntries));
+      setWorkoutEntries(updatedEntries);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("save this workout"));
+      return false;
+    }
+  }
+
+  function updateWorkoutEntry(id, entry) {
+    const updatedEntries = workoutEntries.map((existingEntry) =>
+      existingEntry.id === id
+        ? { ...existingEntry, ...entry, id: existingEntry.id }
+        : existingEntry
+    );
+
+    try {
+      localStorage.setItem("workoutEntries", JSON.stringify(updatedEntries));
+      setWorkoutEntries(updatedEntries);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("update this workout"));
+      return false;
+    }
+  }
+
+  function deleteWorkoutEntry(id) {
+    const updatedEntries = workoutEntries.filter((entry) => entry.id !== id);
+
+    try {
+      localStorage.setItem("workoutEntries", JSON.stringify(updatedEntries));
+      setWorkoutEntries(updatedEntries);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this workout"));
+      return false;
+    }
+  }
+
   return (
     <div
       style={{
@@ -736,6 +802,7 @@ function App() {
           onAddMemory={() => setPage("new")}
           onOpenNutrition={() => setPage("nutrition")}
           onOpenMedications={() => setPage("medications")}
+          onOpenWorkouts={() => setPage("workouts")}
           deleteMemory={deleteMemory}
           editMemory={editMemory}
           buttonStyle={buttonStyle}
@@ -767,6 +834,17 @@ function App() {
           updateCompoundDefinition={updateSavedCompound}
           updateMedicationEntry={updateMedicationEntry}
           deleteMedicationEntry={deleteMedicationEntry}
+          buttonStyle={buttonStyle}
+          inputStyle={inputStyle}
+          containerStyle={containerStyle}
+        />
+      ) : page === "workouts" ? (
+        <WorkoutPage
+          onBack={() => setPage("home")}
+          workoutEntries={workoutEntries}
+          saveWorkoutEntry={saveWorkoutEntry}
+          updateWorkoutEntry={updateWorkoutEntry}
+          deleteWorkoutEntry={deleteWorkoutEntry}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}
