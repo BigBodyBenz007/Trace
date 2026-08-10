@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import App from "./App";
 import { createCompoundDefinition } from "./services/compoundCatalog";
+import { createExerciseDefinition } from "./services/exerciseCatalog";
 
 jest.mock("./storage/photoStorage", () => ({
   clearCompletedMigrationBackup: jest.fn(),
@@ -419,4 +420,143 @@ test("workout edits and confirmed deletion update only workout storage", () => {
   fireEvent.click(screen.getByRole("button", { name: "Delete" }));
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]);
   expect(screen.getByText("No workouts logged yet.")).toBeInTheDocument();
+});
+
+test("creates reusable exercises separately and immediately makes them searchable", () => {
+  render(<App />);
+  openWorkouts();
+  fillBodyweightWorkout("Push Day");
+  fireEvent.click(screen.getByLabelText("Save as reusable exercise"));
+  fireEvent.change(
+    screen.getByLabelText("Exercise 1 reusable default load mode"),
+    { target: { value: "bodyweight" } }
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  const catalog = JSON.parse(localStorage.getItem("savedExercises"));
+  const workouts = JSON.parse(localStorage.getItem("workoutEntries"));
+  expect(catalog).toHaveLength(1);
+  expect(catalog[0]).toMatchObject({
+    id: expect.stringMatching(/^user-saved:/),
+    name: "Dips",
+    defaults: { load: { mode: "bodyweight" } },
+  });
+  expect(catalog[0]).not.toHaveProperty("reps");
+  expect(catalog[0].defaults.load).not.toHaveProperty("amount");
+  expect(workouts[0].exercises[0].exerciseReference).toEqual({
+    source: "user-saved",
+    sourceId: catalog[0].id,
+    modified: false,
+  });
+
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Find a saved exercise for exercise 1",
+    })
+  );
+  fireEvent.change(screen.getByLabelText("Saved exercise search"), {
+    target: { value: "dips" },
+  });
+  expect(
+    screen.getByRole("button", { name: "Select saved exercise Dips" })
+  ).toBeInTheDocument();
+});
+
+test("editing a saved exercise refreshes defaults and never rewrites history", () => {
+  const savedExercise = createExerciseDefinition(
+    {
+      name: "Dips",
+      defaultLoadMode: "bodyweight",
+      defaultWeightUnit: "lb",
+    },
+    new Date("2025-01-01T00:00:00.000Z")
+  );
+  const historicalWorkout = {
+    id: "historical-workout",
+    schemaVersion: 1,
+    type: "strength",
+    title: "Historical Push Day",
+    occurredAt: "2026-01-01T12:00:00.000Z",
+    notes: "Untouched history",
+    exercises: [
+      {
+        id: "historical-exercise",
+        name: "Dips",
+        exerciseReference: {
+          source: "user-saved",
+          sourceId: savedExercise.id,
+          modified: false,
+        },
+        sets: [
+          {
+            id: "historical-set",
+            reps: 6,
+            load: { mode: "bodyweight" },
+            notes: "Historical set",
+          },
+        ],
+      },
+    ],
+    createdAt: "2026-01-01T12:00:00.000Z",
+    updatedAt: "2026-01-01T12:00:00.000Z",
+  };
+  localStorage.setItem("savedExercises", JSON.stringify([savedExercise]));
+  localStorage.setItem("workoutEntries", JSON.stringify([historicalWorkout]));
+
+  const firstRender = render(<App />);
+  openWorkouts();
+  fireEvent.click(screen.getByRole("button", { name: /Find a saved exercise/ }));
+  fireEvent.change(screen.getByLabelText("Saved exercise search"), {
+    target: { value: "dips" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Edit saved exercise Dips" })
+  );
+  fireEvent.change(screen.getByLabelText("Saved exercise name"), {
+    target: { value: "Weighted Dips" },
+  });
+  fireEvent.change(screen.getByLabelText("Saved default load mode"), {
+    target: { value: "external" },
+  });
+  fireEvent.change(screen.getByLabelText("Saved default weight unit"), {
+    target: { value: "kg" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Save Saved Exercise" })
+  );
+
+  const updatedCatalog = JSON.parse(localStorage.getItem("savedExercises"));
+  expect(updatedCatalog[0]).toMatchObject({
+    id: savedExercise.id,
+    createdAt: savedExercise.createdAt,
+    name: "Weighted Dips",
+    defaults: { load: { mode: "external", unit: "kg" } },
+  });
+  expect(updatedCatalog[0].updatedAt).not.toBe(savedExercise.updatedAt);
+  expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([
+    historicalWorkout,
+  ]);
+  expect(screen.getByText("Weighted Dips")).toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Select saved exercise Weighted Dips" })
+  );
+  expect(screen.getByLabelText("Exercise 1 name")).toHaveValue("Weighted Dips");
+  expect(screen.getByLabelText("Exercise 1 set 1 load mode")).toHaveValue(
+    "external"
+  );
+  expect(screen.getByLabelText("Exercise 1 set 1 weight unit")).toHaveValue(
+    "kg"
+  );
+
+  firstRender.unmount();
+  render(<App />);
+  openWorkouts();
+  expect(
+    screen.getByRole("heading", { name: "Historical Push Day" })
+  ).toBeInTheDocument();
+  expect(screen.getByText("Dips")).toBeInTheDocument();
+  expect(screen.getByText(/Bodyweight.*6 reps/)).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([
+    historicalWorkout,
+  ]);
 });

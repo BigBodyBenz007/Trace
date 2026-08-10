@@ -1,4 +1,6 @@
 import { useRef, useState } from "react";
+import ExerciseSearch from "./ExerciseSearch";
+import SavedExerciseEditor from "./SavedExerciseEditor";
 import {
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
@@ -8,6 +10,7 @@ import {
   createWorkoutItemId,
   getWorkoutEntryError,
 } from "../services/workoutEntry";
+import { getExerciseDefinitionError } from "../services/exerciseCatalog";
 
 function currentLocalDateTime() {
   const now = new Date();
@@ -25,14 +28,15 @@ function localDateTime(timestamp) {
   };
 }
 
-function emptySet() {
+function emptySet(defaultLoadMode = "external", defaultWeightUnit = "lb") {
   return {
     id: createWorkoutItemId("set"),
     reps: "",
-    loadMode: "external",
+    loadMode: defaultLoadMode,
     weightAmount: "",
-    weightUnit: "lb",
+    weightUnit: defaultWeightUnit,
     notes: "",
+    isUntouched: true,
   };
 }
 
@@ -40,6 +44,10 @@ function emptyExercise() {
   return {
     id: createWorkoutItemId("exercise"),
     name: "",
+    exerciseReference: null,
+    saveAsReusable: false,
+    defaultLoadMode: "external",
+    defaultWeightUnit: "lb",
     sets: [emptySet()],
   };
 }
@@ -55,7 +63,13 @@ function moveItem(items, index, direction) {
 function WorkoutPage({
   onBack,
   workoutEntries,
+  savedExercises = [],
   saveWorkoutEntry,
+  saveExerciseDefinitions = () => [],
+  updateSavedExercise = () => ({
+    status: "error",
+    message: "The saved exercise could not be updated.",
+  }),
   updateWorkoutEntry,
   deleteWorkoutEntry,
   buttonStyle,
@@ -71,6 +85,10 @@ function WorkoutPage({
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [isDirty, setIsDirty] = useState(false);
   const [formError, setFormError] = useState("");
+  const [statusMessage, setStatusMessage] = useState("");
+  const [activeSearchExerciseId, setActiveSearchExerciseId] = useState(null);
+  const [editingSavedExercise, setEditingSavedExercise] = useState(null);
+  const [searchResetKey, setSearchResetKey] = useState(0);
   const pageTopRef = useRef(null);
   const formRef = useRef(null);
 
@@ -117,7 +135,7 @@ function WorkoutPage({
     updateExercise(exerciseId, (exercise) => ({
       ...exercise,
       sets: exercise.sets.map((set) =>
-        set.id === setId ? { ...set, ...values } : set
+        set.id === setId ? { ...set, ...values, isUntouched: false } : set
       ),
     }));
   }
@@ -140,7 +158,10 @@ function WorkoutPage({
   function addSet(exerciseId) {
     updateExercise(exerciseId, (exercise) => ({
       ...exercise,
-      sets: [...exercise.sets, emptySet()],
+      sets: [
+        ...exercise.sets,
+        emptySet(exercise.defaultLoadMode, exercise.defaultWeightUnit),
+      ],
     }));
   }
 
@@ -168,10 +189,58 @@ function WorkoutPage({
     setEditingEntryId(null);
     setIsDirty(false);
     setFormError("");
+    setStatusMessage("");
+    setActiveSearchExerciseId(null);
+    setEditingSavedExercise(null);
+    setSearchResetKey((current) => current + 1);
   }
 
   function draft() {
     return { title, date, time, notes, exercises };
+  }
+
+  function changeExerciseName(exerciseId, value) {
+    updateExercise(exerciseId, (exercise) => ({
+      ...exercise,
+      name: value,
+      exerciseReference: exercise.exerciseReference
+        ? { ...exercise.exerciseReference, modified: true }
+        : null,
+    }));
+  }
+
+  function selectSavedExercise(exerciseId, savedExercise) {
+    const load = savedExercise.defaults.load;
+    updateExercise(exerciseId, (exercise) => ({
+      ...exercise,
+      name: savedExercise.name,
+      exerciseReference: {
+        source: "user-saved",
+        sourceId: savedExercise.id,
+        modified: false,
+      },
+      saveAsReusable: false,
+      defaultLoadMode: load.mode,
+      defaultWeightUnit: load.unit || "lb",
+      sets: exercise.sets.map((set) =>
+        set.isUntouched
+          ? {
+              ...set,
+              loadMode: load.mode,
+              weightUnit: load.unit || "lb",
+            }
+          : set
+      ),
+    }));
+    setActiveSearchExerciseId(null);
+  }
+
+  function reusableDefinitionDraft(exercise) {
+    return {
+      name: exercise.name,
+      defaultLoadMode: exercise.defaultLoadMode,
+      defaultWeightUnit: exercise.defaultWeightUnit,
+    };
   }
 
   function saveWorkout(event) {
@@ -183,8 +252,65 @@ function WorkoutPage({
       return;
     }
 
+    const reusableExercises = exercises.filter(
+      (exercise) => !exercise.exerciseReference && exercise.saveAsReusable
+    );
+    for (const exercise of reusableExercises) {
+      const definitionError = getExerciseDefinitionError(
+        reusableDefinitionDraft(exercise)
+      );
+      if (definitionError) {
+        setFormError(definitionError);
+        return;
+      }
+    }
+
+    const definitionResults = saveExerciseDefinitions(
+      reusableExercises.map(reusableDefinitionDraft)
+    );
+    const resultByExerciseId = new Map(
+      reusableExercises.map((exercise, index) => [
+        exercise.id,
+        definitionResults[index],
+      ])
+    );
+    const conflicts = [];
+    let catalogFailure = false;
+    const resolvedExercises = exercises.map((exercise) => {
+      const result = resultByExerciseId.get(exercise.id);
+      if (!result) {
+        if (exercise.saveAsReusable && !exercise.exerciseReference) {
+          catalogFailure = true;
+          return { ...exercise, exerciseReference: null };
+        }
+        return exercise;
+      }
+      if (
+        result.exercise &&
+        (result.status === "added" || result.matchesDefinition)
+      ) {
+        return {
+          ...exercise,
+          exerciseReference: {
+            source: "user-saved",
+            sourceId: result.exercise.id,
+            modified: false,
+          },
+        };
+      }
+      if (result.status === "duplicate") {
+        conflicts.push(result.exercise?.name || exercise.name.trim());
+      } else if (result.status === "error") {
+        catalogFailure = true;
+      }
+      return { ...exercise, exerciseReference: null };
+    });
+
     const existingEntry = workoutEntries.find(({ id }) => id === editingEntryId);
-    const entry = createWorkoutEntry(workoutDraft, existingEntry);
+    const entry = createWorkoutEntry(
+      { ...workoutDraft, exercises: resolvedExercises },
+      existingEntry
+    );
     const saved =
       editingEntryId === null
         ? saveWorkoutEntry(entry)
@@ -192,6 +318,20 @@ function WorkoutPage({
     if (!saved) return;
 
     resetForm();
+    const messages = [];
+    if (conflicts.length > 0) {
+      messages.push(
+        `Your existing saved ${conflicts.join(", ")} definition${
+          conflicts.length === 1 ? " was" : "s were"
+        } kept.`
+      );
+    }
+    if (catalogFailure) {
+      messages.push("One or more reusable exercises could not be saved.");
+    }
+    setStatusMessage(
+      messages.length > 0 ? `Workout logged. ${messages.join(" ")}` : ""
+    );
     pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }
 
@@ -205,6 +345,15 @@ function WorkoutPage({
       entry.exercises.map((exercise) => ({
         id: exercise.id,
         name: exercise.name,
+        exerciseReference: exercise.exerciseReference
+          ? { ...exercise.exerciseReference }
+          : null,
+        saveAsReusable: false,
+        defaultLoadMode: exercise.sets[0]?.load.mode || "external",
+        defaultWeightUnit:
+          exercise.sets[0]?.load.mode === "external"
+            ? exercise.sets[0].load.unit
+            : "lb",
         sets: exercise.sets.map((set) => ({
           id: set.id,
           reps: String(set.reps),
@@ -213,12 +362,16 @@ function WorkoutPage({
             set.load.mode === "external" ? String(set.load.amount) : "",
           weightUnit: set.load.mode === "external" ? set.load.unit : "lb",
           notes: set.notes || "",
+          isUntouched: false,
         })),
       }))
     );
     setEditingEntryId(entry.id);
     setIsDirty(false);
     setFormError("");
+    setStatusMessage("");
+    setActiveSearchExerciseId(null);
+    setEditingSavedExercise(null);
     formRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }
 
@@ -255,6 +408,12 @@ function WorkoutPage({
       >
         Back to Timeline
       </button>
+
+      {statusMessage && (
+        <p role="status" style={{ color: "#d1d5db", maxWidth: "760px", width: "100%" }}>
+          {statusMessage}
+        </p>
+      )}
 
       <form
         ref={formRef}
@@ -320,20 +479,122 @@ function WorkoutPage({
               padding: "18px",
             }}
           >
+            <button
+              type="button"
+              onClick={() => {
+                setActiveSearchExerciseId((current) =>
+                  current === exercise.id ? null : exercise.id
+                );
+                setEditingSavedExercise(null);
+              }}
+              aria-expanded={activeSearchExerciseId === exercise.id}
+              aria-label={`Find a saved exercise for exercise ${exerciseIndex + 1}`}
+              style={{ ...smallButtonStyle, marginBottom: "12px" }}
+            >
+              Find a Saved Exercise
+            </button>
+            {activeSearchExerciseId === exercise.id && (
+              <ExerciseSearch
+                exercises={savedExercises}
+                onSelectExercise={(savedExercise) =>
+                  selectSavedExercise(exercise.id, savedExercise)
+                }
+                onEditExercise={(savedExercise) =>
+                  setEditingSavedExercise({
+                    exercise: savedExercise,
+                    exerciseCardId: exercise.id,
+                  })
+                }
+                inputStyle={inputStyle}
+                resetKey={searchResetKey}
+              />
+            )}
+            {editingSavedExercise?.exerciseCardId === exercise.id && (
+              <SavedExerciseEditor
+                key={editingSavedExercise.exercise.id}
+                exercise={editingSavedExercise.exercise}
+                onSave={updateSavedExercise}
+                onCancel={() => setEditingSavedExercise(null)}
+                inputStyle={inputStyle}
+                buttonStyle={buttonStyle}
+              />
+            )}
             <label style={{ display: "block" }}>
               Exercise {exerciseIndex + 1} name
               <input
                 value={exercise.name}
                 onChange={(event) =>
-                  updateExercise(exercise.id, (current) => ({
-                    ...current,
-                    name: event.target.value,
-                  }))
+                  changeExerciseName(exercise.id, event.target.value)
                 }
                 maxLength={120}
                 style={formInputStyle}
               />
             </label>
+            {!exercise.exerciseReference && (
+              <div style={{ marginTop: "12px" }}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={exercise.saveAsReusable}
+                    onChange={(event) =>
+                      updateExercise(exercise.id, (current) => ({
+                        ...current,
+                        saveAsReusable: event.target.checked,
+                        ...(event.target.checked
+                          ? {
+                              defaultLoadMode:
+                                current.sets[0]?.loadMode ||
+                                current.defaultLoadMode,
+                              defaultWeightUnit:
+                                current.sets[0]?.weightUnit ||
+                                current.defaultWeightUnit,
+                            }
+                          : {}),
+                      }))
+                    }
+                  />{" "}
+                  Save as reusable exercise
+                </label>
+                {exercise.saveAsReusable && (
+                  <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", marginTop: "10px" }}>
+                    <label>
+                      Reusable default load mode
+                      <select
+                        aria-label={`Exercise ${exerciseIndex + 1} reusable default load mode`}
+                        value={exercise.defaultLoadMode}
+                        onChange={(event) =>
+                          updateExercise(exercise.id, (current) => ({
+                            ...current,
+                            defaultLoadMode: event.target.value,
+                          }))
+                        }
+                        style={formInputStyle}
+                      >
+                        {WORKOUT_LOAD_MODES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                      </select>
+                    </label>
+                    {exercise.defaultLoadMode === "external" && (
+                      <label>
+                        Reusable default weight unit
+                        <select
+                          aria-label={`Exercise ${exerciseIndex + 1} reusable default weight unit`}
+                          value={exercise.defaultWeightUnit}
+                          onChange={(event) =>
+                            updateExercise(exercise.id, (current) => ({
+                              ...current,
+                              defaultWeightUnit: event.target.value,
+                            }))
+                          }
+                          style={formInputStyle}
+                        >
+                          {WORKOUT_WEIGHT_UNITS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                      </label>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "12px" }}>
               <button type="button" onClick={() => reorderExercise(exerciseIndex, -1)} disabled={exerciseIndex === 0} aria-label={`Move exercise ${exerciseIndex + 1} up`} style={smallButtonStyle}>Move Up</button>
               <button type="button" onClick={() => reorderExercise(exerciseIndex, 1)} disabled={exerciseIndex === exercises.length - 1} aria-label={`Move exercise ${exerciseIndex + 1} down`} style={smallButtonStyle}>Move Down</button>

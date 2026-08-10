@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import WorkoutPage from "./WorkoutPage";
+import { createExerciseDefinition } from "../services/exerciseCatalog";
 
 const originalRequestAnimationFrame = window.requestAnimationFrame;
 
@@ -44,11 +45,13 @@ function entry(overrides = {}) {
   };
 }
 
-function renderPage(overrides = {}) {
-  const props = {
+function renderPageProps(overrides = {}) {
+  return {
     onBack: jest.fn(),
     workoutEntries: [],
     saveWorkoutEntry: jest.fn(() => true),
+    saveExerciseDefinitions: jest.fn(() => []),
+    updateSavedExercise: jest.fn(() => ({ status: "updated" })),
     updateWorkoutEntry: jest.fn(() => true),
     deleteWorkoutEntry: jest.fn(() => true),
     buttonStyle: {},
@@ -56,6 +59,10 @@ function renderPage(overrides = {}) {
     containerStyle: {},
     ...overrides,
   };
+}
+
+function renderPage(overrides = {}) {
+  const props = renderPageProps(overrides);
   render(<WorkoutPage {...props} />);
   return props;
 }
@@ -275,4 +282,185 @@ test("provides top and bottom Timeline navigation controls", () => {
   fireEvent.click(buttons[0]);
   fireEvent.click(buttons[1]);
   expect(props.onBack).toHaveBeenCalledTimes(2);
+});
+
+test("selects a saved exercise and applies defaults only to untouched and new sets", () => {
+  const dips = createExerciseDefinition({
+    name: "Dips",
+    defaultLoadMode: "bodyweight",
+    defaultWeightUnit: "lb",
+  });
+  const props = renderPage({ savedExercises: [dips] });
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Find a saved exercise for exercise 1",
+    })
+  );
+  fireEvent.change(screen.getByLabelText("Saved exercise search"), {
+    target: { value: "dips" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Select saved exercise Dips" })
+  );
+
+  expect(screen.getByLabelText("Exercise 1 name")).toHaveValue("Dips");
+  expect(screen.getByLabelText("Exercise 1 set 1 load mode")).toHaveValue(
+    "bodyweight"
+  );
+  expect(
+    screen.queryByLabelText("Save as reusable exercise")
+  ).not.toBeInTheDocument();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Add set to exercise 1" })
+  );
+  expect(screen.getByLabelText("Exercise 1 set 2 load mode")).toHaveValue(
+    "bodyweight"
+  );
+
+  fireEvent.change(screen.getByLabelText("Workout title"), {
+    target: { value: "Push Day" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
+    target: { value: "6" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 2 reps"), {
+    target: { value: "5" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(
+    props.saveWorkoutEntry.mock.calls[0][0].exercises[0].exerciseReference
+  ).toEqual({ source: "user-saved", sourceId: dips.id, modified: false });
+});
+
+test("only exercise name changes mark a selected reference modified", () => {
+  const press = createExerciseDefinition({
+    name: "Press",
+    defaultLoadMode: "external",
+    defaultWeightUnit: "kg",
+  });
+  const props = renderPage({ savedExercises: [press] });
+  fireEvent.click(screen.getByRole("button", { name: /Find a saved exercise/ }));
+  fireEvent.change(screen.getByLabelText("Saved exercise search"), {
+    target: { value: "press" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Select saved exercise Press" }));
+  fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Day" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), { target: { value: "25" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "8" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 notes"), { target: { value: "Log-specific" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight unit"), { target: { value: "lb" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].exerciseReference.modified).toBe(false);
+
+  props.saveWorkoutEntry.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: /Find a saved exercise/ }));
+  fireEvent.change(screen.getByLabelText("Saved exercise search"), { target: { value: "press" } });
+  fireEvent.click(screen.getByRole("button", { name: "Select saved exercise Press" }));
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Strict Press" } });
+  fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Day" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), { target: { value: "25" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "8" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].exerciseReference.modified).toBe(true);
+});
+
+test("creates a per-exercise reusable definition and attaches its reference", () => {
+  const saved = createExerciseDefinition({ name: "Dips", defaultLoadMode: "bodyweight", defaultWeightUnit: "lb" });
+  const saveExerciseDefinitions = jest.fn(() => [
+    { status: "added", exercise: saved, matchesDefinition: true },
+  ]);
+  const props = renderPage({ saveExerciseDefinitions });
+  fillFirstSet({ bodyweight: true });
+  fireEvent.click(screen.getByLabelText("Save as reusable exercise"));
+  fireEvent.change(screen.getByLabelText("Exercise 1 reusable default load mode"), { target: { value: "bodyweight" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  expect(saveExerciseDefinitions).toHaveBeenCalledWith([
+    { name: "Dips", defaultLoadMode: "bodyweight", defaultWeightUnit: "lb" },
+  ]);
+  expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].exerciseReference).toEqual({ source: "user-saved", sourceId: saved.id, modified: false });
+});
+
+test("an exact duplicate safely attaches the existing reference", () => {
+  const existing = createExerciseDefinition({ name: "Dips", defaultLoadMode: "bodyweight", defaultWeightUnit: "lb" });
+  const props = renderPage({
+    saveExerciseDefinitions: jest.fn(() => [
+      { status: "duplicate", exercise: existing, matchesDefinition: true },
+    ]),
+  });
+  fillFirstSet({ bodyweight: true });
+  fireEvent.click(screen.getByLabelText("Save as reusable exercise"));
+  fireEvent.change(screen.getByLabelText("Exercise 1 reusable default load mode"), { target: { value: "bodyweight" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].exerciseReference).toEqual({ source: "user-saved", sourceId: existing.id, modified: false });
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+});
+
+test("selection does not overwrite load choices on a touched initial set", () => {
+  const dips = createExerciseDefinition({ name: "Dips", defaultLoadMode: "bodyweight", defaultWeightUnit: "lb" });
+  renderPage({ savedExercises: [dips] });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), { target: { value: "10" } });
+  fireEvent.click(screen.getByRole("button", { name: /Find a saved exercise/ }));
+  fireEvent.change(screen.getByLabelText("Saved exercise search"), { target: { value: "dips" } });
+  fireEvent.click(screen.getByRole("button", { name: "Select saved exercise Dips" }));
+  expect(screen.getByLabelText("Exercise 1 set 1 load mode")).toHaveValue("external");
+  expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(10);
+});
+
+test("keeps conflicting historical snapshots unreferenced and combines messages", () => {
+  const existingDips = createExerciseDefinition({ name: "Dips", defaultLoadMode: "external", defaultWeightUnit: "kg" });
+  const existingPress = createExerciseDefinition({ name: "Press", defaultLoadMode: "external", defaultWeightUnit: "kg" });
+  const props = renderPage({
+    saveExerciseDefinitions: jest.fn(() => [
+      { status: "duplicate", exercise: existingDips, matchesDefinition: false },
+      { status: "duplicate", exercise: existingPress, matchesDefinition: false },
+    ]),
+  });
+  fillFirstSet({ bodyweight: true });
+  fireEvent.click(screen.getByLabelText("Save as reusable exercise"));
+  fireEvent.change(screen.getByLabelText("Exercise 1 reusable default load mode"), { target: { value: "bodyweight" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
+  fireEvent.change(screen.getByLabelText("Exercise 2 name"), { target: { value: "Press" } });
+  fireEvent.change(screen.getByLabelText("Exercise 2 set 1 weight"), { target: { value: "20" } });
+  fireEvent.change(screen.getByLabelText("Exercise 2 set 1 reps"), { target: { value: "10" } });
+  fireEvent.click(screen.getAllByLabelText("Save as reusable exercise")[1]);
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  expect(props.saveWorkoutEntry.mock.calls[0][0].exercises.every((exercise) => !exercise.exerciseReference)).toBe(true);
+  expect(screen.getByRole("status")).toHaveTextContent("Dips, Press definitions were kept");
+});
+
+test("catalog failure does not block history and leaves no misleading reference", () => {
+  const props = renderPage({
+    saveExerciseDefinitions: jest.fn(() => [
+      { status: "error", exercise: null, matchesDefinition: false },
+    ]),
+  });
+  fillFirstSet();
+  fireEvent.click(screen.getByLabelText("Save as reusable exercise"));
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(props.saveWorkoutEntry).toHaveBeenCalledTimes(1);
+  expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0]).not.toHaveProperty("exerciseReference");
+  expect(screen.getByRole("status")).toHaveTextContent("reusable exercises could not be saved");
+});
+
+test("Phase 1 exercises are eligible during edit while referenced exercises are not", () => {
+  const phaseOne = entry();
+  const referenced = entry({
+    id: "referenced-workout",
+    title: "Referenced",
+    exercises: [
+      {
+        ...entry().exercises[0],
+        exerciseReference: { source: "user-saved", sourceId: "user-saved:press", modified: false },
+      },
+    ],
+  });
+  const { unmount } = render(<WorkoutPage {...renderPageProps({ workoutEntries: [phaseOne] })} />);
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(screen.getByLabelText("Save as reusable exercise")).toBeInTheDocument();
+  unmount();
+  render(<WorkoutPage {...renderPageProps({ workoutEntries: [referenced] })} />);
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(screen.queryByLabelText("Save as reusable exercise")).not.toBeInTheDocument();
 });

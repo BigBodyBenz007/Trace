@@ -5,6 +5,13 @@ import NutritionPage from "./components/NutritionPage";
 import MedicationPage from "./components/MedicationPage";
 import WorkoutPage from "./components/WorkoutPage";
 import {
+  addExerciseDefinition,
+  createExerciseDefinition,
+  readSavedExercises,
+  updateExerciseDefinition as updateExerciseInCatalog,
+  writeSavedExercises,
+} from "./services/exerciseCatalog";
+import {
   addCompoundDefinition,
   createCompoundDefinition,
   readCompoundDefinitions,
@@ -85,6 +92,7 @@ function App() {
   const [nutritionEntries, setNutritionEntries] = useState([]);
   const [medicationEntries, setMedicationEntries] = useState([]);
   const [workoutEntries, setWorkoutEntries] = useState([]);
+  const [savedExercises, setSavedExercises] = useState([]);
   const [medicationCompounds, setMedicationCompounds] = useState([]);
   const [userFoods, setUserFoods] = useState([]);
   const [nutritionGoals, setNutritionGoals] = useState(
@@ -289,6 +297,16 @@ function App() {
     } catch (error) {
       setStorageError(
         "Trace couldn't read the saved workouts. The stored value was left unchanged."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setSavedExercises(readSavedExercises(localStorage));
+    } catch (error) {
+      setStorageError(
+        "Trace couldn't read the saved exercise catalog. The stored value was left unchanged."
       );
     }
   }, []);
@@ -731,6 +749,67 @@ function App() {
     }
   }
 
+  function saveExerciseDefinitions(drafts) {
+    let nextExercises = savedExercises;
+    let addedAny = false;
+    const results = drafts.map((draft) => {
+      const definition = createExerciseDefinition(draft);
+      const result = addExerciseDefinition(nextExercises, definition);
+      if (result.added) {
+        nextExercises = result.exercises;
+        addedAny = true;
+        return {
+          status: "added",
+          exercise: definition,
+          matchesDefinition: true,
+        };
+      }
+      return {
+        status: "duplicate",
+        exercise: result.existingExercise,
+        matchesDefinition: result.matchesDefinition,
+      };
+    });
+
+    if (!addedAny) return results;
+    try {
+      writeSavedExercises(localStorage, nextExercises);
+      setSavedExercises(nextExercises);
+      setStorageError("");
+      return results;
+    } catch (error) {
+      setStorageError(storageMessage("save these reusable exercises"));
+      return results.map((result) =>
+        result.status === "added"
+          ? {
+              status: "error",
+              exercise: null,
+              matchesDefinition: false,
+            }
+          : result
+      );
+    }
+  }
+
+  function updateSavedExercise(id, draft) {
+    const result = updateExerciseInCatalog(savedExercises, id, draft);
+    if (result.error) {
+      return { status: "invalid", message: result.error };
+    }
+    try {
+      writeSavedExercises(localStorage, result.exercises);
+      setSavedExercises(result.exercises);
+      setStorageError("");
+      return { status: "updated", exercise: result.updatedExercise };
+    } catch (error) {
+      setStorageError(storageMessage("update this reusable exercise"));
+      return {
+        status: "error",
+        message: "The saved exercise could not be updated.",
+      };
+    }
+  }
+
   function updateWorkoutEntry(id, entry) {
     const updatedEntries = workoutEntries.map((existingEntry) =>
       existingEntry.id === id
@@ -842,7 +921,10 @@ function App() {
         <WorkoutPage
           onBack={() => setPage("home")}
           workoutEntries={workoutEntries}
+          savedExercises={savedExercises}
           saveWorkoutEntry={saveWorkoutEntry}
+          saveExerciseDefinitions={saveExerciseDefinitions}
+          updateSavedExercise={updateSavedExercise}
           updateWorkoutEntry={updateWorkoutEntry}
           deleteWorkoutEntry={deleteWorkoutEntry}
           buttonStyle={buttonStyle}

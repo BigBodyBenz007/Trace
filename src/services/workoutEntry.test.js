@@ -155,3 +155,21 @@ test("preserves nested order, ids, and createdAt during editing", () => {
 test("accepts valid future local timestamps without scheduling behavior", () => {
   expect(getWorkoutEntryError(validDraft({ date: "2099-12-31" }))).toBe("");
 });
+
+test("snapshots optional exercise references without requiring a catalog", () => {
+  const draft = validDraft();
+  draft.exercises[0].exerciseReference = {
+    source: "user-saved",
+    sourceId: "user-saved:press",
+    modified: false,
+  };
+  const entry = createWorkoutEntry(draft);
+  expect(entry.exercises[0].exerciseReference).toEqual(
+    draft.exercises[0].exerciseReference
+  );
+
+  delete draft.exercises[0].exerciseReference;
+  expect(createWorkoutEntry(draft).exercises[0]).not.toHaveProperty(
+    "exerciseReference"
+  );
+});
