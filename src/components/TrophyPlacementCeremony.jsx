@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import "./TrophyPlacementCeremony.css";
 
+const NOOP = () => {};
+
 function useReducedMotion() {
   const [reduced, setReduced] = useState(
     () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || false
@@ -20,11 +22,12 @@ function useReducedMotion() {
 function TrophyPlacementCeremony({
   entry,
   onClose,
-  onCeremonyStart = () => {},
-  onTrophySettle = () => {},
+  onCeremonyStart = NOOP,
+  onTrophySettle = NOOP,
 }) {
   const closeRef = useRef(null);
   const reducedMotion = useReducedMotion();
+  const [isComplete, setIsComplete] = useState(reducedMotion);
 
   useEffect(() => {
     const previouslyFocused = document.activeElement;
@@ -34,7 +37,10 @@ function TrophyPlacementCeremony({
       () => onTrophySettle(entry),
       reducedMotion ? 0 : 3600
     );
-    const closeTimer = window.setTimeout(onClose, reducedMotion ? 2600 : 5800);
+    const completionTimer = window.setTimeout(
+      () => setIsComplete(true),
+      reducedMotion ? 0 : 4450
+    );
     const handleKeyDown = (event) => {
       if (event.key === "Escape") onClose();
     };
@@ -42,7 +48,7 @@ function TrophyPlacementCeremony({
 
     return () => {
       window.clearTimeout(settleTimer);
-      window.clearTimeout(closeTimer);
+      window.clearTimeout(completionTimer);
       document.removeEventListener("keydown", handleKeyDown);
       previouslyFocused?.focus?.();
     };
@@ -57,7 +63,7 @@ function TrophyPlacementCeremony({
         aria-describedby="trophy-ceremony-description"
         aria-labelledby="trophy-ceremony-title"
         aria-modal="true"
-        className={`trophy-ceremony${reducedMotion ? " trophy-ceremony--reduced" : ""}`}
+        className={`trophy-ceremony${reducedMotion ? " trophy-ceremony--reduced" : ""}${isComplete ? " trophy-ceremony--complete" : ""}`}
         role="dialog"
       >
         <button ref={closeRef} className="trophy-ceremony__close" type="button" onClick={onClose} aria-label="Close Trophy Case ceremony">

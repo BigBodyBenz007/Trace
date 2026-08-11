@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import TrophyPlacementCeremony from "./TrophyPlacementCeremony";
 
 const entry = {
@@ -19,7 +19,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  jest.runOnlyPendingTimers();
+  jest.clearAllTimers();
   jest.useRealTimers();
 });
 
@@ -44,30 +44,45 @@ test("supports Escape, automatic completion, and isolated lifecycle hooks", () =
   expect(start).toHaveBeenCalledWith(entry);
   jest.advanceTimersByTime(3599);
   expect(settle).not.toHaveBeenCalled();
-  jest.advanceTimersByTime(1);
+  act(() => jest.advanceTimersByTime(1));
   expect(settle).toHaveBeenCalledWith(entry);
   fireEvent.keyDown(document, { key: "Escape" });
   expect(close).toHaveBeenCalledTimes(1);
 });
 
-test("holds the settled trophy until the 5.8 second automatic dismissal", () => {
+test("remains visible indefinitely after reaching its completed static state", () => {
   const close = jest.fn();
   render(<TrophyPlacementCeremony entry={entry} onClose={close} />);
-  jest.advanceTimersByTime(5799);
+  jest.advanceTimersByTime(4449);
+  expect(screen.getByRole("dialog")).not.toHaveClass("trophy-ceremony--complete");
+  act(() => jest.advanceTimersByTime(1));
+  expect(screen.getByRole("dialog")).toHaveClass("trophy-ceremony--complete");
+  jest.advanceTimersByTime(60000);
   expect(close).not.toHaveBeenCalled();
-  jest.advanceTimersByTime(1);
-  expect(close).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
 });
 
-test("uses a static completed state for reduced motion", () => {
+test("backdrop clicks do not dismiss the ceremony", () => {
+  const close = jest.fn();
+  render(<TrophyPlacementCeremony entry={entry} onClose={close} />);
+  fireEvent.click(screen.getByRole("presentation"));
+  expect(close).not.toHaveBeenCalled();
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
+});
+
+test("uses a static completed state for reduced motion until explicitly dismissed", () => {
   window.matchMedia = jest.fn(() => ({
     matches: true,
     addEventListener: jest.fn(),
     removeEventListener: jest.fn(),
   }));
   const settle = jest.fn();
-  render(<TrophyPlacementCeremony entry={entry} onClose={jest.fn()} onTrophySettle={settle} />);
-  expect(screen.getByRole("dialog")).toHaveClass("trophy-ceremony--reduced");
-  jest.advanceTimersByTime(0);
+  const close = jest.fn();
+  render(<TrophyPlacementCeremony entry={entry} onClose={close} onTrophySettle={settle} />);
+  act(() => jest.advanceTimersByTime(0));
+  expect(screen.getByRole("dialog")).toHaveClass("trophy-ceremony--reduced", "trophy-ceremony--complete");
   expect(settle).toHaveBeenCalledWith(entry);
+  jest.advanceTimersByTime(60000);
+  expect(close).not.toHaveBeenCalled();
+  expect(screen.getByRole("dialog")).toBeInTheDocument();
 });
