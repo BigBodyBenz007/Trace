@@ -4,6 +4,7 @@ import {
   createWorkoutPrCandidate,
   createMemoryTrophyCandidate,
   readTrophyCaseEntries,
+  reconcileWorkoutTrophyEntries,
   writeTrophyCaseEntries,
 } from "./trophyCase";
 
@@ -42,6 +43,95 @@ test("keeps Saved and Trace identities distinct", () => {
   const trace = candidate("trace|trace:bench");
   const saved = candidate("saved|saved:bench");
   expect(trace.sourceKey).not.toBe(saved.sourceKey);
+});
+
+test("creates a correctly labeled reps-at-weight trophy snapshot", () => {
+  const repsCandidate = createWorkoutPrCandidate(
+    { identityKey: "trace|trace:bench", displayName: "Bench", source: "trace" },
+    {
+      recordType: "reps-at-weight",
+      achievement: "matched",
+      workoutId: "workout-2",
+      performanceId: "performance-2",
+      setId: "set-2",
+      performedAt: "2026-08-12T12:00:00.000Z",
+      workoutTitle: "Volume Day",
+      weight: 80,
+      unit: "lb",
+      reps: 12,
+    }
+  );
+  const result = addCuratedTrophy([], repsCandidate, {
+    id: "reps-trophy",
+    addedToTrophyCaseAt: "2026-08-13T12:00:00.000Z",
+  });
+
+  expect(result.entry).toMatchObject({
+    sourceRecordType: "reps-at-weight",
+    description: "Reps at Weight · 80 lb × 12 reps",
+    sourceSnapshot: {
+      recordLabel: "Reps at Weight",
+      recordValue: "80 lb × 12 reps",
+      achievement: "matched",
+      workoutId: "workout-2",
+      performanceId: "performance-2",
+      setId: "set-2",
+    },
+  });
+});
+
+test("refreshes only resolvable workout trophies and preserves curated membership", () => {
+  const original = createWorkoutPrCandidate(
+    { identityKey: "trace|trace:bench", displayName: "Bench", source: "trace" },
+    {
+      recordType: "heaviest-weight",
+      workoutId: "workout",
+      performanceId: "workout|exercise|0",
+      setId: "set",
+      performedAt: "2026-08-10T12:00:00.000Z",
+      workoutTitle: "Chest Day",
+      weight: 80,
+      unit: "lb",
+      reps: 8,
+    }
+  );
+  const curated = addCuratedTrophy([], original, {
+    id: "trophy",
+    addedToTrophyCaseAt: "2026-08-11T12:00:00.000Z",
+  }).entry;
+  const memory = addCuratedTrophy([], createMemoryTrophyCandidate({
+    id: "memory",
+    title: "Unrelated",
+  }), {
+    id: "memory-trophy",
+    addedToTrophyCaseAt: "2026-08-11T12:00:00.000Z",
+  }).entry;
+  const correctedWorkouts = [{
+    id: "workout",
+    title: "Corrected Chest Day",
+    occurredAt: "2026-08-10T12:00:00.000Z",
+    exercises: [{
+      id: "exercise",
+      name: "Bench",
+      exerciseId: "trace:bench",
+      sets: [{ id: "set", reps: 16, load: { mode: "external", amount: 80, unit: "lb" }, notes: "" }],
+    }],
+  }];
+
+  const reconciled = reconcileWorkoutTrophyEntries([curated, memory], correctedWorkouts);
+  expect(reconciled[0]).toMatchObject({
+    id: "trophy",
+    addedToTrophyCaseAt: "2026-08-11T12:00:00.000Z",
+    title: "Bench",
+    sourceSnapshot: {
+      recordValue: "80 lb × 16 reps",
+      workoutTitle: "Corrected Chest Day",
+      workoutId: "workout",
+      setId: "set",
+    },
+  });
+  expect(reconciled[1]).toBe(memory);
+  expect(reconcileWorkoutTrophyEntries(reconciled, [])).toBe(reconciled);
 });
 
 test("creates lightweight Memory candidates from stable identity", () => {

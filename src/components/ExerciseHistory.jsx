@@ -2,6 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { deriveExerciseHistory } from "../services/exerciseHistory";
 import { deriveExercisePrs } from "../services/exercisePr";
 import { createWorkoutPrCandidate } from "../services/trophyCase";
+import {
+  describeExerciseRecord,
+  getExerciseRecordTrackKey,
+} from "../services/exerciseRecordDescriptor";
 
 function formatDate(timestamp) {
   const date = new Date(timestamp);
@@ -49,6 +53,105 @@ function CandidateAction({ candidate, trophySourceKeys, addTrophyCaseEntry, butt
     >
       {isCurated ? "In Trophy Case" : "Add to Trophy Case"}
     </button>
+  );
+}
+
+function timestampValue(value) {
+  const timestamp = new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
+}
+
+function compareProgressionEventsForDisplay(first, second) {
+  const timeDifference =
+    timestampValue(second.performedAt) - timestampValue(first.performedAt);
+  if (timeDifference !== 0) return timeDifference;
+  const workoutComparison = String(first.workoutId).localeCompare(
+    String(second.workoutId)
+  );
+  if (workoutComparison !== 0) return workoutComparison;
+  const exerciseDifference = first.exerciseIndex - second.exerciseIndex;
+  if (exerciseDifference !== 0) return exerciseDifference;
+  const setDifference = first.setIndex - second.setIndex;
+  if (setDifference !== 0) return setDifference;
+  return first.recordType.localeCompare(second.recordType);
+}
+
+function PrTimeline({ exercisePr, trophySourceKeys, addTrophyCaseEntry, buttonStyle }) {
+  if (!exercisePr) return null;
+  const currentSourceKeyByTrack = new Map();
+  Object.values(exercisePr.records).forEach((value) => {
+    const records = Array.isArray(value) ? value : value ? [value] : [];
+    records.forEach((record) => {
+      currentSourceKeyByTrack.set(
+        getExerciseRecordTrackKey(record),
+        createWorkoutPrCandidate(exercisePr, record).sourceKey
+      );
+    });
+  });
+  const events = Object.values(exercisePr.progression)
+    .flat()
+    .sort(compareProgressionEventsForDisplay);
+  if (events.length === 0) return null;
+
+  return (
+    <section
+      aria-label={`${exercisePr.displayName} PR timeline`}
+      style={{
+        background: "#111827",
+        border: "1px solid #374151",
+        borderRadius: "12px",
+        marginTop: "14px",
+        padding: "14px",
+      }}
+    >
+      <h4 style={{ margin: "0 0 12px" }}>PR Timeline</h4>
+      <ol style={{ display: "grid", gap: "12px", listStyle: "none", margin: 0, padding: 0 }}>
+        {events.map((event) => {
+          const candidate = createWorkoutPrCandidate(exercisePr, event);
+          const presentationStatus = event.achievement === "matched"
+            ? "matched"
+            : currentSourceKeyByTrack.get(getExerciseRecordTrackKey(event)) === candidate.sourceKey
+              ? "current"
+              : "former";
+          const description = describeExerciseRecord(event, presentationStatus);
+          const isCurrent = presentationStatus === "current";
+          const accentColor = isCurrent
+            ? "#f59e0b"
+            : presentationStatus === "matched"
+              ? "#60a5fa"
+              : "#6b7280";
+          return (
+            <li
+              key={candidate.sourceKey}
+              data-achievement={event.achievement}
+              data-record-status={presentationStatus}
+              style={{
+                background: isCurrent ? "#172033" : "transparent",
+                borderLeft: `4px solid ${accentColor}`,
+                borderRadius: isCurrent ? "6px" : 0,
+                padding: isCurrent ? "10px 10px 10px 12px" : "0 0 0 12px",
+              }}
+            >
+              <strong style={{ color: isCurrent ? "#fde68a" : presentationStatus === "matched" ? "#93c5fd" : "#d1d5db", display: "block" }}>
+                {description.status}
+              </strong>
+              <span style={{ display: "block", marginTop: "4px" }}>
+                {description.label} · {description.value}
+              </span>
+              <span style={{ color: "#9ca3af", display: "block", marginTop: "2px" }}>
+                {formatDate(event.performedAt)} · {event.workoutTitle}
+              </span>
+              <CandidateAction
+                candidate={candidate}
+                trophySourceKeys={trophySourceKeys}
+                addTrophyCaseEntry={addTrophyCaseEntry}
+                buttonStyle={buttonStyle}
+              />
+            </li>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
 
@@ -115,12 +218,18 @@ function CurrentRecords({ exercisePr, trophySourceKeys, addTrophyCaseEntry, butt
               Best Reps at Weight
             </strong>
             {visibleRepsAtWeight.map((record) => (
-              <span
+              <div
                 key={`${record.unit}|${record.weight}`}
                 style={{ display: "block", marginTop: "4px" }}
               >
                 {record.weight} {record.unit} — {record.reps} reps
-              </span>
+                <CandidateAction
+                  candidate={createWorkoutPrCandidate(exercisePr, record)}
+                  trophySourceKeys={trophySourceKeys}
+                  addTrophyCaseEntry={addTrophyCaseEntry}
+                  buttonStyle={buttonStyle}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -239,6 +348,12 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                         </button>
                       </div>
                       <CurrentRecords
+                        exercisePr={prsByIdentity.get(exercise.identityKey)}
+                        trophySourceKeys={trophySourceKeys}
+                        addTrophyCaseEntry={addTrophyCaseEntry}
+                        buttonStyle={buttonStyle}
+                      />
+                      <PrTimeline
                         exercisePr={prsByIdentity.get(exercise.identityKey)}
                         trophySourceKeys={trophySourceKeys}
                         addTrophyCaseEntry={addTrophyCaseEntry}

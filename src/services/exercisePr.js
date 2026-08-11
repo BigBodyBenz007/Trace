@@ -122,7 +122,7 @@ function deriveIncreasingRecord(candidates, recordType, valueFor) {
   let winner = null;
   const progression = [];
 
-  candidates.forEach((candidate) => {
+  [...candidates].sort(compareCandidates).forEach((candidate) => {
     const value = valueFor(candidate);
     if (bestValue === null || value > bestValue) {
       bestValue = value;

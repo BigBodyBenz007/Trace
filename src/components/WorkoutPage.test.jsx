@@ -304,7 +304,7 @@ test("places an empty curated Trophy Case before Exercise History while PRs rema
   expect(trophyHeading.compareDocumentPosition(historyHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByText("No trophies yet. Achievements you choose to celebrate will appear here.")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /Incline Press.*1 performance/ }));
-  expect(screen.getByRole("button", { name: "Add to Trophy Case" })).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Add to Trophy Case" }).length).toBeGreaterThan(0);
 });
 
 test("selects a saved exercise and applies defaults only to untouched and new sets", () => {

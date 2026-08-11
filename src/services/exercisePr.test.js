@@ -224,3 +224,27 @@ test("does not mutate workout entries or nested sets", () => {
   deriveExercisePrs(entries);
   expect(entries).toEqual(snapshot);
 });
+
+test("recalculates independent progressions by workout chronology rather than insertion order", () => {
+  const prs = deriveExercisePrs([
+    workout("created-first", "2026-08-10T10:00:00.000Z", [
+      traceExercise("later", [external("later-100", 100, 10), external("later-120", 120, 5)]),
+    ]),
+    workout("backdated", "2026-08-01T10:00:00.000Z", [
+      traceExercise("earlier", [external("earlier-100", 100, 8), external("earlier-130", 130, 4)]),
+    ]),
+  ])[0];
+
+  expect(prs.progression.repsAtWeight
+    .filter(({ weight }) => weight === 100)
+    .map(({ setId, reps, achievement }) => [setId, reps, achievement]))
+    .toEqual([
+      ["earlier-100", 8, "new"],
+      ["later-100", 10, "new"],
+    ]);
+  expect(prs.progression.heaviestWeight.map(({ setId, weight }) => [setId, weight]))
+    .toEqual([["earlier-100", 100], ["earlier-130", 130]]);
+  expect(prs.progression.heaviestWeight).not.toEqual(
+    expect.arrayContaining([expect.objectContaining({ setId: "later-120" })])
+  );
+});

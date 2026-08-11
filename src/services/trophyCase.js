@@ -1,3 +1,10 @@
+import { deriveExercisePrs } from "./exercisePr";
+import {
+  describeExerciseRecord,
+  getExerciseRecordSourceScope,
+  snapshotExerciseRecord,
+} from "./exerciseRecordDescriptor";
+
 export const TROPHY_CASE_STORAGE_KEY = "trophyCaseEntries";
 export const WORKOUT_PR_SOURCE_TYPE = "workout-pr";
 export const MEMORY_SOURCE_TYPE = "memory";
@@ -35,7 +42,7 @@ function recordSourceKey(exercisePr, record) {
     WORKOUT_PR_SOURCE_TYPE,
     exercisePr.identityKey,
     record.recordType,
-    record.unit || "bodyweight",
+    getExerciseRecordSourceScope(record),
     record.workoutId,
     record.performanceId,
     record.setId || record.setIndex,
@@ -43,11 +50,7 @@ function recordSourceKey(exercisePr, record) {
 }
 
 export function createWorkoutPrCandidate(exercisePr, record) {
-  const isBodyweight = record.recordType === "bodyweight-reps";
-  const label = isBodyweight ? "Bodyweight Rep Record" : "Heaviest Weight";
-  const value = isBodyweight
-    ? `${record.reps} reps`
-    : `${record.weight} ${record.unit} × ${record.reps} reps`;
+  const { label, value } = describeExerciseRecord(record);
 
   return {
     sourceType: WORKOUT_PR_SOURCE_TYPE,
@@ -66,11 +69,49 @@ export function createWorkoutPrCandidate(exercisePr, record) {
       workoutTitle: record.workoutTitle,
       performanceId: record.performanceId,
       setId: record.setId,
-      reps: record.reps,
-      ...(isBodyweight ? { loadMode: "bodyweight" } : { loadMode: "external", weight: record.weight, unit: record.unit }),
+      achievement: record.achievement || "new",
+      ...snapshotExerciseRecord(record),
     },
     metadata: { exerciseSource: exercisePr.source },
   };
+}
+
+function refreshedEntry(entry, candidate) {
+  return {
+    ...entry,
+    sourceType: candidate.sourceType,
+    sourceKey: candidate.sourceKey,
+    sourceId: candidate.sourceId || null,
+    sourceRecordType: candidate.sourceRecordType || null,
+    title: candidate.title,
+    description: candidate.description || "",
+    achievedAt: candidate.achievedAt || null,
+    sourceSnapshot: { ...(candidate.sourceSnapshot || {}) },
+    metadata: { ...(candidate.metadata || {}) },
+  };
+}
+
+export function reconcileWorkoutTrophyEntries(entries, workoutEntries) {
+  const candidatesBySourceKey = new Map();
+  deriveExercisePrs(workoutEntries).forEach((exercisePr) => {
+    Object.values(exercisePr.progression).flat().forEach((record) => {
+      const candidate = createWorkoutPrCandidate(exercisePr, record);
+      candidatesBySourceKey.set(candidate.sourceKey, candidate);
+    });
+  });
+
+  let changed = false;
+  const reconciled = entries.map((entry) => {
+    if (entry.sourceType !== WORKOUT_PR_SOURCE_TYPE) return entry;
+    const candidate = candidatesBySourceKey.get(entry.sourceKey);
+    if (!candidate) return entry;
+    const refreshed = refreshedEntry(entry, candidate);
+    if (JSON.stringify(refreshed) === JSON.stringify(entry)) return entry;
+    changed = true;
+    return refreshed;
+  });
+
+  return changed ? reconciled : entries;
 }
 
 export function createCuratedTrophyEntry(candidate, { id, addedToTrophyCaseAt }) {

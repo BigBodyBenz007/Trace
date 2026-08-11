@@ -1,5 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import ExerciseHistory from "./ExerciseHistory";
+import { deriveExercisePrs } from "../services/exercisePr";
+import { createWorkoutPrCandidate } from "../services/trophyCase";
 
 function workout(id, title, occurredAt, exercise) {
   return { id, title, occurredAt, exercises: [exercise] };
@@ -296,4 +298,208 @@ test("renders legacy records without assigning them to built-in history", () => 
     />
   );
   expect(screen.getByRole("button", { name: /Incline Press/ })).toBeInTheDocument();
+});
+
+test("displays PR progression newest-first with current, former, and matched track status", () => {
+  const makeExercise = (instanceId, setId, weight, reps) => ({
+    id: instanceId,
+    name: "Bench Press",
+    exerciseId: "trace:bench",
+    sets: [{ id: setId, reps, load: { mode: "external", amount: weight, unit: "lb" }, notes: "" }],
+  });
+  render(
+    <ExerciseHistory
+      workoutEntries={[
+        workout("latest", "Match Day", "2026-08-03T12:00:00.000Z", makeExercise("three", "three-set", 80, 8)),
+        workout("first", "First Day", "2026-08-01T12:00:00.000Z", makeExercise("one", "one-set", 70, 10)),
+        workout("middle", "Heavy Day", "2026-08-02T12:00:00.000Z", makeExercise("two", "two-set", 80, 8)),
+      ]}
+      buttonStyle={{}}
+    />
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: /Bench Press/ }));
+  const timeline = screen.getByRole("region", { name: "Bench Press PR timeline" });
+  const events = within(timeline).getAllByRole("listitem");
+  expect(events.map((event) => event.textContent)).toEqual([
+    expect.stringContaining("Match Day"),
+    expect.stringContaining("Match Day"),
+    expect.stringContaining("Heavy Day"),
+    expect.stringContaining("Heavy Day"),
+    expect.stringContaining("First Day"),
+    expect.stringContaining("First Day"),
+  ]);
+  expect(events.filter((event) => event.dataset.achievement === "new")).toHaveLength(4);
+  expect(events.filter((event) => event.dataset.achievement === "matched")).toHaveLength(2);
+  expect(within(timeline).getAllByText(/^Matched .* Record$/)).toHaveLength(2);
+  expect(events.filter((event) => event.dataset.recordStatus === "current")).toHaveLength(3);
+  expect(events.filter((event) => event.dataset.recordStatus === "former")).toHaveLength(1);
+  expect(within(timeline).getByText("Current Heaviest Weight Record")).toBeInTheDocument();
+  expect(within(timeline).getByText("Former Heaviest Weight Record")).toBeInTheDocument();
+  expect(within(timeline).getAllByText("Current Reps-at-Weight Record")).toHaveLength(2);
+  expect(timeline).toHaveTextContent("Heaviest Weight · 80 lb × 8 reps");
+  expect(timeline).toHaveTextContent("Reps at Weight · 80 lb × 8 reps");
+});
+
+test("renders bodyweight progression with its record descriptor", () => {
+  render(
+    <ExerciseHistory
+      workoutEntries={[
+        workout("pull", "Back Day", "2026-08-08T12:00:00.000Z", {
+          id: "pull-up",
+          name: "Pull-Up",
+          exerciseId: "trace:pull-up",
+          sets: [{ id: "set", reps: 12, load: { mode: "bodyweight" }, notes: "" }],
+        }),
+      ]}
+      buttonStyle={{}}
+    />
+  );
+  fireEvent.click(screen.getByRole("button", { name: /Pull-Up/ }));
+  expect(screen.getByRole("region", { name: "Pull-Up PR timeline" })).toHaveTextContent(
+    "Current Bodyweight Reps RecordBodyweight Reps · 12 reps"
+  );
+});
+
+test("keeps lb, kg, and bodyweight current/former status independent", () => {
+  const mixedExercise = (id, sets) => ({
+    id,
+    name: "Mixed Press",
+    exerciseId: "trace:mixed-press",
+    sets,
+  });
+  render(
+    <ExerciseHistory
+      workoutEntries={[
+        workout("old", "Old Mixed Day", "2026-08-01T12:00:00.000Z", mixedExercise("old-exercise", [
+          { id: "old-lb", reps: 8, load: { mode: "external", amount: 100, unit: "lb" }, notes: "" },
+          { id: "old-kg", reps: 6, load: { mode: "external", amount: 60, unit: "kg" }, notes: "" },
+          { id: "old-body", reps: 8, load: { mode: "bodyweight" }, notes: "" },
+        ])),
+        workout("new", "New Mixed Day", "2026-08-10T12:00:00.000Z", mixedExercise("new-exercise", [
+          { id: "new-lb", reps: 5, load: { mode: "external", amount: 120, unit: "lb" }, notes: "" },
+          { id: "new-kg", reps: 10, load: { mode: "external", amount: 50, unit: "kg" }, notes: "" },
+          { id: "new-body", reps: 12, load: { mode: "bodyweight" }, notes: "" },
+        ])),
+      ]}
+      buttonStyle={{}}
+    />
+  );
+  fireEvent.click(screen.getByRole("button", { name: /Mixed Press/ }));
+  const timeline = screen.getByRole("region", { name: "Mixed Press PR timeline" });
+  const eventFor = (text) => within(timeline).getByText(text).closest("li");
+
+  expect(eventFor("Heaviest Weight · 120 lb × 5 reps")).toHaveAttribute("data-record-status", "current");
+  expect(eventFor("Heaviest Weight · 100 lb × 8 reps")).toHaveAttribute("data-record-status", "former");
+  expect(eventFor("Heaviest Weight · 60 kg × 6 reps")).toHaveAttribute("data-record-status", "current");
+  expect(eventFor("Bodyweight Reps · 12 reps")).toHaveAttribute("data-record-status", "current");
+  expect(eventFor("Bodyweight Reps · 8 reps")).toHaveAttribute("data-record-status", "former");
+  expect(eventFor("Reps at Weight · 50 kg × 10 reps")).toHaveAttribute("data-record-status", "current");
+  expect(eventFor("Reps at Weight · 60 kg × 6 reps")).toHaveAttribute("data-record-status", "current");
+});
+
+test("keeps a former milestone manually curated in the Trophy Case", () => {
+  const oldWorkout = workout("old", "Old Day", "2026-08-01T12:00:00.000Z", {
+    id: "old-exercise",
+    name: "Bench Press",
+    exerciseId: "trace:bench",
+    sets: [{ id: "old-set", reps: 8, load: { mode: "external", amount: 100, unit: "lb" }, notes: "" }],
+  });
+  const newWorkout = workout("new", "New Day", "2026-08-10T12:00:00.000Z", {
+    id: "new-exercise",
+    name: "Bench Press",
+    exerciseId: "trace:bench",
+    sets: [{ id: "new-set", reps: 5, load: { mode: "external", amount: 120, unit: "lb" }, notes: "" }],
+  });
+  const oldPr = deriveExercisePrs([oldWorkout])[0];
+  const oldCandidate = createWorkoutPrCandidate(oldPr, oldPr.progression.heaviestWeight[0]);
+
+  render(
+    <ExerciseHistory
+      workoutEntries={[oldWorkout, newWorkout]}
+      trophyEntries={[{ id: "trophy", sourceKey: oldCandidate.sourceKey }]}
+      buttonStyle={{}}
+    />
+  );
+  fireEvent.click(screen.getByRole("button", { name: /Bench Press/ }));
+  const timeline = screen.getByRole("region", { name: "Bench Press PR timeline" });
+  const formerEvent = within(timeline).getByText("Former Heaviest Weight Record").closest("li");
+  expect(within(formerEvent).getByRole("button", { name: "In Trophy Case" })).toBeDisabled();
+});
+
+test("keeps same-named exercise timelines separated by stable identity", () => {
+  render(
+    <ExerciseHistory
+      workoutEntries={[{
+        id: "identities",
+        title: "Press Day",
+        occurredAt: "2026-08-10T12:00:00.000Z",
+        exercises: [
+          {
+            id: "trace-instance",
+            name: "Bench Press",
+            exerciseId: "trace:bench",
+            sets: [{ id: "trace-set", reps: 5, load: { mode: "external", amount: 200, unit: "lb" }, notes: "" }],
+          },
+          {
+            id: "saved-instance",
+            name: "Bench Press",
+            exerciseReference: { source: "user-saved", sourceId: "saved:bench", modified: false },
+            sets: [{ id: "saved-set", reps: 10, load: { mode: "external", amount: 50, unit: "lb" }, notes: "" }],
+          },
+        ],
+      }]}
+      buttonStyle={{}}
+    />
+  );
+
+  const summaries = screen.getAllByRole("button", { name: /Bench Press 1 performance/ });
+  fireEvent.click(summaries[0]);
+  const firstTimelineText = screen.getByRole("region", { name: "Bench Press PR timeline" }).textContent;
+  fireEvent.click(summaries[1]);
+  const savedTimeline = screen.getByRole("region", { name: "Bench Press PR timeline" });
+  const secondTimelineText = savedTimeline.textContent;
+  expect([firstTimelineText, secondTimelineText]).toEqual(
+    expect.arrayContaining([
+      expect.stringContaining("200 lb × 5 reps"),
+      expect.stringContaining("50 lb × 10 reps"),
+    ])
+  );
+  expect(firstTimelineText.includes("200 lb × 5 reps")).not.toBe(
+    firstTimelineText.includes("50 lb × 10 reps")
+  );
+  expect(secondTimelineText.includes("200 lb × 5 reps")).not.toBe(
+    secondTimelineText.includes("50 lb × 10 reps")
+  );
+});
+
+test("manually curates a reps-at-weight timeline achievement", () => {
+  const addTrophyCaseEntry = jest.fn();
+  render(
+    <ExerciseHistory
+      workoutEntries={[
+        workout("records", "Volume Day", "2026-08-10T12:00:00.000Z", builtInExercise("trace:bench", "Bench Press", 10, "set")),
+      ]}
+      addTrophyCaseEntry={addTrophyCaseEntry}
+      buttonStyle={{}}
+    />
+  );
+  fireEvent.click(screen.getByRole("button", { name: /Bench Press/ }));
+  const timeline = screen.getByRole("region", { name: "Bench Press PR timeline" });
+  const repsEvent = within(timeline)
+    .getByText("Reps at Weight · 80 lb × 10 reps")
+    .closest("li");
+  fireEvent.click(within(repsEvent).getByRole("button", { name: "Add to Trophy Case" }));
+
+  expect(addTrophyCaseEntry).toHaveBeenCalledWith(
+    expect.objectContaining({
+      sourceRecordType: "reps-at-weight",
+      description: "Reps at Weight · 80 lb × 10 reps",
+      sourceSnapshot: expect.objectContaining({
+        exerciseIdentityKey: "trace|trace:bench",
+        workoutId: "records",
+        setId: "set",
+      }),
+    })
+  );
 });

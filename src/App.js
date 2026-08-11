@@ -40,6 +40,7 @@ import {
 import {
   addCuratedTrophy,
   readTrophyCaseEntries,
+  reconcileWorkoutTrophyEntries,
   writeTrophyCaseEntries,
 } from "./services/trophyCase";
 
@@ -318,6 +319,21 @@ function App() {
       setStorageError("Trace couldn't read the Trophy Case because its stored data is malformed. The stored value was left unchanged.");
     }
   }, []);
+
+  useEffect(() => {
+    const reconciled = reconcileWorkoutTrophyEntries(
+      trophyCaseEntries,
+      workoutEntries
+    );
+    if (reconciled === trophyCaseEntries) return;
+    try {
+      writeTrophyCaseEntries(localStorage, reconciled);
+      setTrophyCaseEntries(reconciled);
+      setStorageError("");
+    } catch (error) {
+      setStorageError(storageMessage("refresh Trophy Case achievements"));
+    }
+  }, [trophyCaseEntries, workoutEntries]);
 
   useEffect(() => {
     try {

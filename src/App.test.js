@@ -479,16 +479,17 @@ test("workouts persist separately and reload as complete snapshots", () => {
   expect(screen.getByText(/Bodyweight.*6 reps/)).toBeInTheDocument();
 });
 
-test("curates a PR snapshot without coupling trophy membership to workout edits or deletion", () => {
+test("refreshes a resolvable curated PR after correction and freezes it after source deletion", async () => {
   render(<App />);
   openWorkouts();
   fillBodyweightWorkout("Push Day");
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
 
   fireEvent.click(screen.getByRole("button", { name: /Dips.*1 performance/ }));
-  fireEvent.click(screen.getByRole("button", { name: "Add to Trophy Case" }));
+  const currentRecords = screen.getByRole("region", { name: "Dips current records" });
+  fireEvent.click(within(currentRecords).getByRole("button", { name: "Add to Trophy Case" }));
   expect(screen.getByRole("dialog", { name: "Added to Trophy Case" })).toHaveTextContent("6 reps");
-  expect(screen.getByRole("button", { name: "In Trophy Case" })).toBeDisabled();
+  expect(screen.getAllByRole("button", { name: "In Trophy Case" }).every((button) => button.disabled)).toBe(true);
   expect(screen.getByRole("group", { name: "Dips trophy" })).toHaveTextContent("6 reps");
   const curatedSnapshot = JSON.parse(localStorage.getItem("trophyCaseEntries"));
   expect(curatedSnapshot).toHaveLength(1);
@@ -500,16 +501,24 @@ test("curates a PR snapshot without coupling trophy membership to workout edits 
   fireEvent.click(screen.getByRole("button", { name: "Close Trophy Case ceremony" }));
 
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
-  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "4" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "16" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
-  expect(screen.getByRole("group", { name: "Dips trophy" })).toHaveTextContent("6 reps");
-  expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual(curatedSnapshot);
+  await waitFor(() => {
+    expect(screen.getByRole("group", { name: "Dips trophy" })).toHaveTextContent("16 reps");
+  });
+  const correctedSnapshot = JSON.parse(localStorage.getItem("trophyCaseEntries"));
+  expect(correctedSnapshot[0]).toMatchObject({
+    id: curatedSnapshot[0].id,
+    addedToTrophyCaseAt: curatedSnapshot[0].addedToTrophyCaseAt,
+    sourceKey: curatedSnapshot[0].sourceKey,
+    sourceSnapshot: { recordValue: "16 reps" },
+  });
 
   jest.spyOn(window, "confirm").mockReturnValue(true);
   fireEvent.click(screen.getByRole("button", { name: "Delete" }));
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]);
-  expect(screen.getByRole("group", { name: "Dips trophy" })).toHaveTextContent("6 reps");
-  expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual(curatedSnapshot);
+  expect(screen.getByRole("group", { name: "Dips trophy" })).toHaveTextContent("16 reps");
+  expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual(correctedSnapshot);
 
   fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual([]);
