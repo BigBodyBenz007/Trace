@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deriveExerciseHistory } from "../services/exerciseHistory";
 import { deriveExercisePrs } from "../services/exercisePr";
 import { createWorkoutPrCandidate } from "../services/trophyCase";
@@ -61,6 +61,10 @@ function timestampValue(value) {
   return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
+function isModalInteraction(target) {
+  return Boolean(target?.closest?.('[aria-modal="true"]'));
+}
+
 function compareProgressionEventsForDisplay(first, second) {
   const timeDifference =
     timestampValue(second.performedAt) - timestampValue(first.performedAt);
@@ -76,7 +80,14 @@ function compareProgressionEventsForDisplay(first, second) {
   return first.recordType.localeCompare(second.recordType);
 }
 
-function PrTimeline({ exercisePr, trophySourceKeys, addTrophyCaseEntry, buttonStyle }) {
+function PrTimeline({
+  exercisePr,
+  trophySourceKeys,
+  addTrophyCaseEntry,
+  buttonStyle,
+  panelRef,
+  onCollapse,
+}) {
   if (!exercisePr) return null;
   const currentSourceKeyByTrack = new Map();
   Object.values(exercisePr.records).forEach((value) => {
@@ -95,7 +106,10 @@ function PrTimeline({ exercisePr, trophySourceKeys, addTrophyCaseEntry, buttonSt
 
   return (
     <section
+      ref={panelRef}
       aria-label={`${exercisePr.displayName} PR timeline`}
+      onMouseDown={(event) => event.stopPropagation()}
+      onClick={(event) => event.stopPropagation()}
       style={{
         background: "#111827",
         border: "1px solid #374151",
@@ -105,6 +119,13 @@ function PrTimeline({ exercisePr, trophySourceKeys, addTrophyCaseEntry, buttonSt
       }}
     >
       <h4 style={{ margin: "0 0 12px" }}>PR Timeline</h4>
+      <button
+        type="button"
+        onClick={onCollapse}
+        style={{ ...buttonStyle, backgroundColor: "#4b5563", fontSize: "16px", marginTop: 0, minHeight: "44px", padding: "10px 14px" }}
+      >
+        Hide PR Timeline
+      </button>
       <ol style={{ display: "grid", gap: "12px", listStyle: "none", margin: 0, padding: 0 }}>
         {events.map((event) => {
           const candidate = createWorkoutPrCandidate(exercisePr, event);
@@ -151,6 +172,13 @@ function PrTimeline({ exercisePr, trophySourceKeys, addTrophyCaseEntry, buttonSt
           );
         })}
       </ol>
+      <button
+        type="button"
+        onClick={onCollapse}
+        style={{ ...buttonStyle, backgroundColor: "#4b5563", fontSize: "16px", minHeight: "44px", padding: "10px 14px" }}
+      >
+        Hide PR Timeline
+      </button>
     </section>
   );
 }
@@ -274,6 +302,10 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
     [workoutEntries]
   );
   const [selectedIdentityKey, setSelectedIdentityKey] = useState(null);
+  const [isPrTimelineOpen, setIsPrTimelineOpen] = useState(false);
+  const prTimelineRef = useRef(null);
+  const exerciseHistoryDetailRef = useRef(null);
+  const exerciseSummaryRefs = useRef(new Map());
   const trophySourceKeys = useMemo(
     () => new Set(trophyEntries.map(({ sourceKey }) => sourceKey)),
     [trophyEntries]
@@ -289,11 +321,61 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
     padding: "10px 14px",
   };
 
+  const closeExerciseHistory = useCallback(() => {
+    const summary = exerciseSummaryRefs.current.get(selectedIdentityKey);
+    setIsPrTimelineOpen(false);
+    setSelectedIdentityKey(null);
+    summary?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+  }, [selectedIdentityKey]);
+
   useEffect(() => {
     if (selectedIdentityKey && !selectedHistory) {
       setSelectedIdentityKey(null);
+      setIsPrTimelineOpen(false);
     }
   }, [selectedHistory, selectedIdentityKey]);
+
+  useEffect(() => {
+    if (!isPrTimelineOpen) return undefined;
+
+    function handlePointerDown(event) {
+      if (isModalInteraction(event.target)) return;
+      if (prTimelineRef.current?.contains(event.target)) return;
+      setIsPrTimelineOpen(false);
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+    };
+  }, [isPrTimelineOpen]);
+
+  useEffect(() => {
+    if (!selectedIdentityKey) return undefined;
+
+    function handlePointerDown(event) {
+      if (isModalInteraction(event.target)) return;
+      if (exerciseHistoryDetailRef.current?.contains(event.target)) return;
+      if (exerciseSummaryRefs.current.get(selectedIdentityKey)?.contains(event.target)) return;
+      closeExerciseHistory();
+    }
+
+    function handleKeyDown(event) {
+      if (event.key !== "Escape") return;
+      if (isPrTimelineOpen) {
+        setIsPrTimelineOpen(false);
+        return;
+      }
+      closeExerciseHistory();
+    }
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [closeExerciseHistory, isPrTimelineOpen, selectedIdentityKey]);
 
   return (
     <section
@@ -313,12 +395,24 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
               return (
                 <div key={exercise.identityKey}>
                   <button
+                    ref={(node) => {
+                      if (node) {
+                        exerciseSummaryRefs.current.set(exercise.identityKey, node);
+                      } else {
+                        exerciseSummaryRefs.current.delete(exercise.identityKey);
+                      }
+                    }}
                     type="button"
                     aria-controls={detailId}
                     aria-expanded={isExpanded}
-                    onClick={() =>
-                      setSelectedIdentityKey(isExpanded ? null : exercise.identityKey)
-                    }
+                    onClick={() => {
+                      if (isExpanded) {
+                        closeExerciseHistory();
+                      } else {
+                        setIsPrTimelineOpen(false);
+                        setSelectedIdentityKey(exercise.identityKey);
+                      }
+                    }}
                     style={{
                       background: isExpanded ? "#1d4ed8" : "#1f2937",
                       border: "1px solid #4b5563",
@@ -340,10 +434,14 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                   </button>
 
                   {isExpanded && (
-                    <div id={detailId} style={{ margin: "14px 0 10px" }}>
+                    <div
+                      ref={exerciseHistoryDetailRef}
+                      id={detailId}
+                      style={{ margin: "14px 0 10px" }}
+                    >
                       <div style={{ alignItems: "center", display: "flex", flexWrap: "wrap", gap: "10px", justifyContent: "space-between" }}>
                         <h3 style={{ margin: 0 }}>{exercise.displayName}</h3>
-                        <button type="button" onClick={() => setSelectedIdentityKey(null)} style={{ ...compactButtonStyle, backgroundColor: "#4b5563" }}>
+                        <button type="button" onClick={closeExerciseHistory} style={{ ...compactButtonStyle, backgroundColor: "#4b5563" }}>
                           Close History
                         </button>
                       </div>
@@ -353,12 +451,24 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                         addTrophyCaseEntry={addTrophyCaseEntry}
                         buttonStyle={buttonStyle}
                       />
-                      <PrTimeline
-                        exercisePr={prsByIdentity.get(exercise.identityKey)}
-                        trophySourceKeys={trophySourceKeys}
-                        addTrophyCaseEntry={addTrophyCaseEntry}
-                        buttonStyle={buttonStyle}
-                      />
+                      {isPrTimelineOpen ? (
+                        <PrTimeline
+                          exercisePr={prsByIdentity.get(exercise.identityKey)}
+                          trophySourceKeys={trophySourceKeys}
+                          addTrophyCaseEntry={addTrophyCaseEntry}
+                          buttonStyle={buttonStyle}
+                          panelRef={prTimelineRef}
+                          onCollapse={() => setIsPrTimelineOpen(false)}
+                        />
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setIsPrTimelineOpen(true)}
+                          style={{ ...compactButtonStyle, backgroundColor: "#374151", marginTop: "14px" }}
+                        >
+                          View PR Timeline
+                        </button>
+                      )}
                       <div style={{ display: "grid", gap: "12px", marginTop: "14px" }}>
                         {exercise.performances.map((performance) => (
                           <article key={performance.performanceId} style={{ background: "#111827", border: "1px solid #374151", borderRadius: "12px", overflowWrap: "anywhere", padding: "16px" }}>
@@ -379,6 +489,13 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                           </article>
                         ))}
                       </div>
+                      <button
+                        type="button"
+                        onClick={closeExerciseHistory}
+                        style={{ ...compactButtonStyle, backgroundColor: "#4b5563", marginTop: "14px" }}
+                      >
+                        Close History
+                      </button>
                     </div>
                   )}
                 </div>

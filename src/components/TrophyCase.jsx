@@ -18,8 +18,18 @@ function compareEntries(first, second) {
   return String(first.id).localeCompare(String(second.id));
 }
 
-function TrophyCase({ trophyEntries = [], removeTrophyCaseEntry = () => false, buttonStyle = {} }) {
+function TrophyCase({
+  trophyEntries = [],
+  removeTrophyCaseEntry = () => false,
+  buttonStyle = {},
+  headingLevel = "h2",
+  heading = "Trophy Case",
+  headingId = "trophy-case-heading",
+  description = "",
+  emptyMessage = "No trophies yet. Achievements you choose to celebrate will appear here.",
+}) {
   const trophies = useMemo(() => [...trophyEntries].sort(compareEntries), [trophyEntries]);
+  const Heading = headingLevel;
   const actionStyle = {
     ...buttonStyle,
     backgroundColor: "#4b5563",
@@ -30,10 +40,11 @@ function TrophyCase({ trophyEntries = [], removeTrophyCaseEntry = () => false, b
   };
 
   return (
-    <section aria-labelledby="trophy-case-heading" style={{ marginTop: "36px", maxWidth: "760px", minWidth: 0, textAlign: "left", width: "100%" }}>
-      <h2 id="trophy-case-heading">Trophy Case</h2>
+    <section aria-labelledby={headingId} style={{ marginTop: "36px", maxWidth: "760px", minWidth: 0, textAlign: "left", width: "100%" }}>
+      <Heading id={headingId}>{heading}</Heading>
+      {description && <p style={{ color: "#bbb" }}>{description}</p>}
       {trophies.length === 0 ? (
-        <p style={{ color: "#bbb" }}>No trophies yet. Achievements you choose to celebrate will appear here.</p>
+        <p style={{ color: "#bbb" }}>{emptyMessage}</p>
       ) : (
         <div data-testid="trophy-card-list" style={{ display: "grid", gap: "14px", minWidth: 0, width: "100%" }}>
           {trophies.map((entry) => (

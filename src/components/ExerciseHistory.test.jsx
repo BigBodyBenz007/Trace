@@ -3,6 +3,24 @@ import ExerciseHistory from "./ExerciseHistory";
 import { deriveExercisePrs } from "../services/exercisePr";
 import { createWorkoutPrCandidate } from "../services/trophyCase";
 
+let originalScrollIntoView;
+let scrollTargets;
+
+beforeAll(() => {
+  originalScrollIntoView = Element.prototype.scrollIntoView;
+});
+
+beforeEach(() => {
+  scrollTargets = [];
+  Element.prototype.scrollIntoView = jest.fn(function recordScrollTarget() {
+    scrollTargets.push(this);
+  });
+});
+
+afterAll(() => {
+  Element.prototype.scrollIntoView = originalScrollIntoView;
+});
+
 function workout(id, title, occurredAt, exercise) {
   return { id, title, occurredAt, exercises: [exercise] };
 }
@@ -23,6 +41,10 @@ function builtInExercise(id, name, reps, occurredSetId) {
   };
 }
 
+function expandPrTimeline() {
+  fireEvent.click(screen.getByRole("button", { name: "View PR Timeline" }));
+}
+
 test("renders summaries and opens newest-first performance details", () => {
   render(
     <ExerciseHistory
@@ -36,6 +58,10 @@ test("renders summaries and opens newest-first performance details", () => {
   const summary = screen.getByRole("button", { name: /Dumbbell Bench Press/ });
   expect(summary).toHaveTextContent("2 performances");
   fireEvent.click(summary);
+
+  expect(screen.getByText("Current Records")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "View PR Timeline" })).toBeInTheDocument();
+  expect(screen.queryByText("PR Timeline")).not.toBeInTheDocument();
 
   const detailArticles = screen.getAllByRole("article");
   expect(within(detailArticles[0]).getByText("New Chest Day")).toBeInTheDocument();
@@ -91,8 +117,14 @@ test("expands details directly below their summary and toggles one exercise at a
   expect(within(squatDetail).getByRole("heading", { name: "Barbell Back Squat" })).toBeInTheDocument();
   expect(screen.getAllByRole("article")).toHaveLength(1);
 
-  fireEvent.click(screen.getByRole("button", { name: "Close History" }));
+  expect(screen.getAllByRole("button", { name: "Close History" })).toHaveLength(2);
+  fireEvent.click(screen.getAllByRole("button", { name: "Close History" })[0]);
   expect(squatSummary).toHaveAttribute("aria-expanded", "false");
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "smooth",
+    block: "center",
+  });
+  expect(scrollTargets[scrollTargets.length - 1]).toBe(squatSummary);
   expect(screen.queryByRole("button", { name: "Close History" })).not.toBeInTheDocument();
 });
 
@@ -300,6 +332,117 @@ test("renders legacy records without assigning them to built-in history", () => 
   expect(screen.getByRole("button", { name: /Incline Press/ })).toBeInTheDocument();
 });
 
+test("expands and dismisses the PR Timeline without disrupting inside actions", () => {
+  const addTrophyCaseEntry = jest.fn();
+  render(
+    <ExerciseHistory
+      workoutEntries={[
+        workout("records", "Volume Day", "2026-08-10T12:00:00.000Z", builtInExercise("trace:bench", "Bench Press", 10, "set")),
+      ]}
+      addTrophyCaseEntry={addTrophyCaseEntry}
+      buttonStyle={{}}
+    />
+  );
+  fireEvent.click(screen.getByRole("button", { name: /Bench Press/ }));
+  const performance = screen.getByRole("article");
+  expect(performance).toHaveTextContent("Volume Day");
+  expect(screen.queryByRole("region", { name: "Bench Press PR timeline" })).not.toBeInTheDocument();
+
+  expandPrTimeline();
+  let timeline = screen.getByRole("region", { name: "Bench Press PR timeline" });
+  expect(timeline).toHaveTextContent("Current Heaviest Weight Record");
+  expect(timeline).toHaveTextContent("Current Reps-at-Weight Record");
+  fireEvent.mouseDown(timeline);
+  expect(screen.getByRole("region", { name: "Bench Press PR timeline" })).toBeInTheDocument();
+
+  const repsEvent = within(timeline).getByText(/Reps at Weight/).closest("li");
+  const add = within(repsEvent).getByRole("button", { name: "Add to Trophy Case" });
+  fireEvent.mouseDown(add);
+  fireEvent.click(add);
+  expect(addTrophyCaseEntry).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("region", { name: "Bench Press PR timeline" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Hide PR Timeline" })[0]);
+  expect(screen.queryByRole("region", { name: "Bench Press PR timeline" })).not.toBeInTheDocument();
+
+  expandPrTimeline();
+  fireEvent.mouseDown(performance);
+  expect(screen.queryByRole("region", { name: "Bench Press PR timeline" })).not.toBeInTheDocument();
+  expect(performance).toHaveTextContent("Volume Day");
+
+  expandPrTimeline();
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.queryByRole("region", { name: "Bench Press PR timeline" })).not.toBeInTheDocument();
+});
+
+test("dismisses Exercise History from both controls, outside clicks, and layered Escape", () => {
+  const addTrophyCaseEntry = jest.fn();
+  const edit = jest.fn();
+  const remove = jest.fn();
+  const workouts = [
+    workout("records", "Volume Day", "2026-08-10T12:00:00.000Z", builtInExercise("trace:bench", "Bench Press", 10, "set")),
+  ];
+  const snapshot = JSON.parse(JSON.stringify(workouts));
+  render(
+    <>
+      <ExerciseHistory
+        workoutEntries={workouts}
+        addTrophyCaseEntry={addTrophyCaseEntry}
+        buttonStyle={{}}
+      />
+      <button type="button" onClick={edit}>Edit</button>
+      <button type="button" onClick={remove}>Delete</button>
+    </>
+  );
+  const summary = screen.getByRole("button", { name: /Bench Press/ });
+
+  fireEvent.click(summary);
+  const detail = document.getElementById(summary.getAttribute("aria-controls"));
+  expect(screen.getAllByRole("button", { name: "Close History" })).toHaveLength(2);
+  fireEvent.mouseDown(detail);
+  fireEvent.click(within(detail).getByText("Current Records"));
+  expect(summary).toHaveAttribute("aria-expanded", "true");
+
+  const currentAdd = within(screen.getByRole("region", { name: "Bench Press current records" }))
+    .getAllByRole("button", { name: "Add to Trophy Case" })[0];
+  fireEvent.mouseDown(currentAdd);
+  fireEvent.click(currentAdd);
+  expect(addTrophyCaseEntry).toHaveBeenCalledTimes(1);
+  expect(summary).toHaveAttribute("aria-expanded", "true");
+
+  expandPrTimeline();
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(summary).toHaveAttribute("aria-expanded", "true");
+  expect(screen.queryByRole("region", { name: "Bench Press PR timeline" })).not.toBeInTheDocument();
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(summary).toHaveAttribute("aria-expanded", "false");
+  expect(summary.scrollIntoView).toHaveBeenLastCalledWith({ behavior: "smooth", block: "center" });
+
+  fireEvent.click(summary);
+  expect(screen.getByRole("button", { name: "View PR Timeline" })).toBeInTheDocument();
+  summary.scrollIntoView.mockClear();
+  fireEvent.click(screen.getAllByRole("button", { name: "Close History" })[1]);
+  expect(summary).toHaveAttribute("aria-expanded", "false");
+  expect(summary.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+
+  fireEvent.click(summary);
+  summary.scrollIntoView.mockClear();
+  fireEvent.mouseDown(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(edit).toHaveBeenCalledTimes(1);
+  expect(summary).toHaveAttribute("aria-expanded", "false");
+  expect(summary.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+
+  fireEvent.click(summary);
+  summary.scrollIntoView.mockClear();
+  fireEvent.mouseDown(screen.getByRole("button", { name: "Delete" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+  expect(remove).toHaveBeenCalledTimes(1);
+  expect(summary).toHaveAttribute("aria-expanded", "false");
+  expect(summary.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+  expect(workouts).toEqual(snapshot);
+});
+
 test("displays PR progression newest-first with current, former, and matched track status", () => {
   const makeExercise = (instanceId, setId, weight, reps) => ({
     id: instanceId,
@@ -319,6 +462,7 @@ test("displays PR progression newest-first with current, former, and matched tra
   );
 
   fireEvent.click(screen.getByRole("button", { name: /Bench Press/ }));
+  expandPrTimeline();
   const timeline = screen.getByRole("region", { name: "Bench Press PR timeline" });
   const events = within(timeline).getAllByRole("listitem");
   expect(events.map((event) => event.textContent)).toEqual([
@@ -356,6 +500,7 @@ test("renders bodyweight progression with its record descriptor", () => {
     />
   );
   fireEvent.click(screen.getByRole("button", { name: /Pull-Up/ }));
+  expandPrTimeline();
   expect(screen.getByRole("region", { name: "Pull-Up PR timeline" })).toHaveTextContent(
     "Current Bodyweight Reps RecordBodyweight Reps · 12 reps"
   );
@@ -386,6 +531,7 @@ test("keeps lb, kg, and bodyweight current/former status independent", () => {
     />
   );
   fireEvent.click(screen.getByRole("button", { name: /Mixed Press/ }));
+  expandPrTimeline();
   const timeline = screen.getByRole("region", { name: "Mixed Press PR timeline" });
   const eventFor = (text) => within(timeline).getByText(text).closest("li");
 
@@ -422,6 +568,7 @@ test("keeps a former milestone manually curated in the Trophy Case", () => {
     />
   );
   fireEvent.click(screen.getByRole("button", { name: /Bench Press/ }));
+  expandPrTimeline();
   const timeline = screen.getByRole("region", { name: "Bench Press PR timeline" });
   const formerEvent = within(timeline).getByText("Former Heaviest Weight Record").closest("li");
   expect(within(formerEvent).getByRole("button", { name: "In Trophy Case" })).toBeDisabled();
@@ -455,8 +602,10 @@ test("keeps same-named exercise timelines separated by stable identity", () => {
 
   const summaries = screen.getAllByRole("button", { name: /Bench Press 1 performance/ });
   fireEvent.click(summaries[0]);
+  expandPrTimeline();
   const firstTimelineText = screen.getByRole("region", { name: "Bench Press PR timeline" }).textContent;
   fireEvent.click(summaries[1]);
+  expandPrTimeline();
   const savedTimeline = screen.getByRole("region", { name: "Bench Press PR timeline" });
   const secondTimelineText = savedTimeline.textContent;
   expect([firstTimelineText, secondTimelineText]).toEqual(
@@ -485,6 +634,7 @@ test("manually curates a reps-at-weight timeline achievement", () => {
     />
   );
   fireEvent.click(screen.getByRole("button", { name: /Bench Press/ }));
+  expandPrTimeline();
   const timeline = screen.getByRole("region", { name: "Bench Press PR timeline" });
   const repsEvent = within(timeline)
     .getByText("Reps at Weight · 80 lb × 10 reps")

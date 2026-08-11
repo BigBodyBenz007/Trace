@@ -5,6 +5,7 @@ import NutritionPage from "./components/NutritionPage";
 import MedicationPage from "./components/MedicationPage";
 import WorkoutPage from "./components/WorkoutPage";
 import TrophyPlacementCeremony from "./components/TrophyPlacementCeremony";
+import TrophyCasePage from "./components/TrophyCasePage";
 import { detectMemoryAchievement } from "./services/memoryAchievement";
 import {
   addExerciseDefinition,
@@ -961,6 +962,7 @@ function App() {
           onOpenNutrition={() => setPage("nutrition")}
           onOpenMedications={() => setPage("medications")}
           onOpenWorkouts={() => setPage("workouts")}
+          onOpenTrophyCase={() => setPage("trophy-case")}
           deleteMemory={deleteMemory}
           editMemory={editMemory}
           trophyEntries={trophyCaseEntries}
@@ -1015,6 +1017,14 @@ function App() {
           removeTrophyCaseEntry={removeTrophyCaseEntry}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
+          containerStyle={containerStyle}
+        />
+      ) : page === "trophy-case" ? (
+        <TrophyCasePage
+          onBack={() => setPage("home")}
+          trophyEntries={trophyCaseEntries}
+          removeTrophyCaseEntry={removeTrophyCaseEntry}
+          buttonStyle={buttonStyle}
           containerStyle={containerStyle}
         />
       ) : (

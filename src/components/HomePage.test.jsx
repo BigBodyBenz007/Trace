@@ -8,6 +8,7 @@ const baseProps = {
   onOpenNutrition: jest.fn(),
   onOpenMedications: jest.fn(),
   onOpenWorkouts: jest.fn(),
+  onOpenTrophyCase: jest.fn(),
   deleteMemory: jest.fn(),
   editMemory: jest.fn(),
   addTrophyCaseEntry: jest.fn(),
@@ -22,6 +23,12 @@ const memories = [
 ];
 
 beforeEach(() => jest.clearAllMocks());
+
+test("opens the dedicated Trophy Case from the Timeline", () => {
+  render(<HomePage {...baseProps} memories={[]} trophyEntries={[]} />);
+  fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
+  expect(baseProps.onOpenTrophyCase).toHaveBeenCalledTimes(1);
+});
 
 test("offers stable, distinct Memory trophy candidates", () => {
   render(<HomePage {...baseProps} memories={memories} trophyEntries={[]} />);

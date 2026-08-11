@@ -55,6 +55,7 @@ function HomePage({
   onOpenNutrition,
   onOpenMedications,
   onOpenWorkouts,
+  onOpenTrophyCase,
   deleteMemory,
   editMemory,
   trophyEntries = [],
@@ -227,6 +228,16 @@ function HomePage({
         onClick={onOpenWorkouts}
       >
         Workouts
+      </button>
+
+      <button
+        style={{
+          ...buttonStyle,
+          backgroundColor: "#a16207",
+        }}
+        onClick={onOpenTrophyCase}
+      >
+        Open Trophy Case
       </button>
 
       {memoryAchievementSuggestion &&

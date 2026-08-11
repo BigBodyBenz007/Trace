@@ -102,6 +102,21 @@ test("Timeline to Workouts and Workouts to Timeline land at the top", () => {
   expectDestinationScrolledToTop();
 });
 
+test("Timeline opens the empty Trophy Case and returns at the top without replaying a ceremony", () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
+
+  expect(screen.getByRole("heading", { level: 1, name: "Trophy Case" })).toBeInTheDocument();
+  expect(screen.getByText("No trophies yet. Achievements you choose to celebrate will appear here.")).toBeInTheDocument();
+  expect(screen.queryByRole("dialog", { name: "Added to Trophy Case" })).not.toBeInTheDocument();
+  expectDestinationScrolledToTop();
+
+  window.scrollTo.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
+  expectDestinationScrolledToTop();
+});
+
 test("Nutrition to Timeline lands at the top after rendering", () => {
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Health & Nutrition" }));
@@ -167,10 +182,12 @@ test("new Memory trophies persist, trigger the shared ceremony, preserve snapsho
   fireEvent.click(screen.getByRole("button", { name: "Close Trophy Case ceremony" }));
   expect(screen.getByRole("button", { name: "In Trophy Case" })).toBeDisabled();
 
-  openWorkouts();
+  fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
+  expect(screen.getByRole("group", { name: "Graduation Day trophy" })).toBeInTheDocument();
+  expect(screen.queryByRole("dialog", { name: "Added to Trophy Case" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(JSON.parse(localStorage.getItem("memories"))).toHaveLength(1);
-  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
   fireEvent.click(screen.getByRole("button", { name: "Add to Trophy Case" }));
   const readdedTrophies = JSON.parse(localStorage.getItem("trophyCaseEntries"));
   expect(readdedTrophies).toHaveLength(1);
@@ -523,6 +540,52 @@ test("refreshes a resolvable curated PR after correction and freezes it after so
   fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual([]);
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]);
+});
+
+test("dedicated Trophy Case removal preserves workout history, derived PRs, and inline behavior", () => {
+  render(<App />);
+  openWorkouts();
+  fillBodyweightWorkout("Push Day");
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  fireEvent.click(screen.getByRole("button", { name: /Dips.*1 performance/ }));
+  const currentRecords = screen.getByRole("region", { name: "Dips current records" });
+  fireEvent.click(within(currentRecords).getByRole("button", { name: "Add to Trophy Case" }));
+  fireEvent.click(screen.getByRole("button", { name: "Close Trophy Case ceremony" }));
+  const storedWorkouts = JSON.parse(localStorage.getItem("workoutEntries"));
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
+  fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
+  expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual([]);
+  expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual(storedWorkouts);
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  openWorkouts();
+  expect(screen.getByText("No trophies yet. Achievements you choose to celebrate will appear here.")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /Dips.*1 performance/ }));
+  expect(screen.getByRole("region", { name: "Dips current records" })).toHaveTextContent("6 reps");
+  expect(screen.getAllByRole("button", { name: "Add to Trophy Case" }).length).toBeGreaterThan(0);
+});
+
+test("adding a PR Timeline achievement keeps both Timeline and Exercise History expanded", () => {
+  render(<App />);
+  openWorkouts();
+  fillBodyweightWorkout("Push Day");
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  const summary = screen.getByRole("button", { name: /Dips.*1 performance/ });
+  fireEvent.click(summary);
+  fireEvent.click(screen.getByRole("button", { name: "View PR Timeline" }));
+  const timeline = screen.getByRole("region", { name: "Dips PR timeline" });
+  fireEvent.click(within(timeline).getByRole("button", { name: "Add to Trophy Case" }));
+
+  expect(screen.getByRole("dialog", { name: "Added to Trophy Case" })).toBeInTheDocument();
+  const closeCeremony = screen.getByRole("button", { name: "Close Trophy Case ceremony" });
+  fireEvent.mouseDown(closeCeremony);
+  fireEvent.click(closeCeremony);
+  expect(screen.getByRole("region", { name: "Dips PR timeline" })).toBeInTheDocument();
+  expect(summary).toHaveAttribute("aria-expanded", "true");
+  expect(within(screen.getByRole("region", { name: "Dips PR timeline" }))
+    .getByRole("button", { name: "In Trophy Case" })).toBeDisabled();
 });
 
 test("loading or removing an existing trophy never replays its ceremony", () => {
