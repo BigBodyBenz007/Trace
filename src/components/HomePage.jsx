@@ -59,6 +59,8 @@ function HomePage({
   editMemory,
   trophyEntries = [],
   addTrophyCaseEntry = () => false,
+  memoryAchievementSuggestion = null,
+  dismissMemoryAchievementSuggestion = () => {},
   buttonStyle,
   inputStyle,
   containerStyle,
@@ -106,7 +108,11 @@ function HomePage({
   }
 
   function addMemoryToTrophyCase(memory) {
-    return addTrophyCaseEntry(createMemoryTrophyCandidate(memory));
+    const added = addTrophyCaseEntry(createMemoryTrophyCandidate(memory));
+    if (added && memoryAchievementSuggestion?.memory?.id === memory.id) {
+      dismissMemoryAchievementSuggestion();
+    }
+    return added;
   }
 
   function scrollMemoryIntoView(selectionKey) {
@@ -222,6 +228,49 @@ function HomePage({
       >
         Workouts
       </button>
+
+      {memoryAchievementSuggestion &&
+        !isMemoryInTrophyCase(memoryAchievementSuggestion.memory) && (
+          <section
+            aria-label="Memory achievement suggestion"
+            aria-live="polite"
+            style={{
+              background: "#1f2937",
+              border: "1px solid #a16207",
+              borderRadius: "12px",
+              boxSizing: "border-box",
+              marginTop: "20px",
+              maxWidth: "700px",
+              minWidth: 0,
+              padding: "16px",
+              textAlign: "left",
+              width: "100%",
+            }}
+          >
+            <strong style={{ display: "block" }}>
+              This sounds like an achievement. Would you like to add it to your Trophy Case?
+            </strong>
+            <span style={{ color: "#d1d5db", display: "block", marginTop: "6px", overflowWrap: "anywhere" }}>
+              {memoryAchievementSuggestion.memory.title}
+            </span>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "14px" }}>
+              <button
+                type="button"
+                onClick={() => addMemoryToTrophyCase(memoryAchievementSuggestion.memory)}
+                style={{ background: "#a16207", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", minHeight: "44px", padding: "10px 16px" }}
+              >
+                Add to Trophy Case
+              </button>
+              <button
+                type="button"
+                onClick={dismissMemoryAchievementSuggestion}
+                style={{ background: "#4b5563", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", minHeight: "44px", padding: "10px 16px" }}
+              >
+                Not this time
+              </button>
+            </div>
+          </section>
+        )}
 
       <br />
       <br />

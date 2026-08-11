@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import App from "./App";
 import { createCompoundDefinition } from "./services/compoundCatalog";
 import { createExerciseDefinition } from "./services/exerciseCatalog";
@@ -152,7 +152,8 @@ test("new Memory trophies persist, trigger the shared ceremony, preserve snapsho
   fireEvent.click(screen.getByRole("button", { name: "Save Memory" }));
 
   await screen.findByRole("heading", { name: "Trace" });
-  fireEvent.click(screen.getByRole("button", { name: "Add to Trophy Case" }));
+  const suggestion = screen.getByRole("region", { name: "Memory achievement suggestion" });
+  fireEvent.click(within(suggestion).getByRole("button", { name: "Add to Trophy Case" }));
   const ceremony = screen.getByRole("dialog", { name: "Added to Trophy Case" });
   expect(ceremony).toHaveTextContent("Graduation Day");
   expect(ceremony).toHaveTextContent("Finally finished my degree.");
@@ -180,6 +181,7 @@ test("new Memory trophies persist, trigger the shared ceremony, preserve snapsho
   fireEvent.change(screen.getByPlaceholderText("Memory title..."), { target: { value: "Edited Graduation" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
   await screen.findByRole("heading", { name: "Edited Graduation" });
+  expect(screen.queryByRole("region", { name: "Memory achievement suggestion" })).not.toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual(readdedTrophies);
 
   jest.spyOn(window, "confirm").mockReturnValue(true);
@@ -216,6 +218,32 @@ test("legacy Memories receive a compatibility-safe stable ID and remain trophy-e
     sourceKey: `memory|${migratedMemory.id}`,
   });
   openPhotoDatabase.mockImplementation(() => new Promise(() => {}));
+});
+
+test("edited Memories are re-evaluated and declining keeps manual trophy addition available", async () => {
+  putPhotos.mockResolvedValue(undefined);
+  deletePhotos.mockResolvedValue(undefined);
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+  fireEvent.change(screen.getByPlaceholderText("Memory title..."), { target: { value: "Morning Run" } });
+  fireEvent.change(screen.getByPlaceholderText("Tell your story..."), { target: { value: "Ran today." } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Memory" }));
+  await screen.findByRole("heading", { name: "Morning Run" });
+  expect(screen.queryByRole("region", { name: "Memory achievement suggestion" })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByPlaceholderText("Tell your story..."), {
+    target: { value: "Finished my first 5K today after training for three months." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  const suggestion = await screen.findByRole("region", { name: "Memory achievement suggestion" });
+  expect(suggestion).toHaveTextContent("This sounds like an achievement");
+  expect(localStorage.getItem("trophyCaseEntries")).toBeNull();
+
+  fireEvent.click(within(suggestion).getByRole("button", { name: "Not this time" }));
+  expect(screen.queryByRole("region", { name: "Memory achievement suggestion" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Add to Trophy Case" })).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("memories"))[0].description).toContain("first 5K");
 });
 
 test("Timeline to Medications and back uses shared destination scrolling", () => {

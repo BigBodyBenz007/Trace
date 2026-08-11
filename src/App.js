@@ -5,6 +5,7 @@ import NutritionPage from "./components/NutritionPage";
 import MedicationPage from "./components/MedicationPage";
 import WorkoutPage from "./components/WorkoutPage";
 import TrophyPlacementCeremony from "./components/TrophyPlacementCeremony";
+import { detectMemoryAchievement } from "./services/memoryAchievement";
 import {
   addExerciseDefinition,
   createExerciseDefinition,
@@ -100,6 +101,7 @@ function App() {
   const [workoutEntries, setWorkoutEntries] = useState([]);
   const [trophyCaseEntries, setTrophyCaseEntries] = useState([]);
   const [ceremonyEntry, setCeremonyEntry] = useState(null);
+  const [memoryAchievementSuggestion, setMemoryAchievementSuggestion] = useState(null);
   const [savedExercises, setSavedExercises] = useState([]);
   const [medicationCompounds, setMedicationCompounds] = useState([]);
   const [userFoods, setUserFoods] = useState([]);
@@ -468,6 +470,20 @@ function App() {
       preparedImages.forEach((image) => {
         if (image.url?.startsWith("blob:")) activeObjectUrlsRef.current.add(image.url);
       });
+      const savedMemory = updatedMemories.find((memory) => memory.id === memoryId);
+      try {
+        const detection = detectMemoryAchievement(savedMemory);
+        const alreadyCurated = trophyCaseEntries.some(
+          ({ sourceKey }) => sourceKey === `memory|${memoryId}`
+        );
+        setMemoryAchievementSuggestion(
+          detection.confidence === "high" && !alreadyCurated
+            ? { memory: savedMemory, detection }
+            : null
+        );
+      } catch (error) {
+        setMemoryAchievementSuggestion(null);
+      }
       setTitle("");
       setDescription("");
       setDate("");
@@ -933,6 +949,8 @@ function App() {
           editMemory={editMemory}
           trophyEntries={trophyCaseEntries}
           addTrophyCaseEntry={addTrophyCaseEntry}
+          memoryAchievementSuggestion={memoryAchievementSuggestion}
+          dismissMemoryAchievementSuggestion={() => setMemoryAchievementSuggestion(null)}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}
