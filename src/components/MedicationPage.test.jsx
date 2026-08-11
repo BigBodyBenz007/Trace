@@ -40,8 +40,40 @@ function renderMedicationPage(overrides = {}) {
     ...overrides,
   };
 
-  render(<MedicationPage {...props} />);
+  const view = render(<MedicationPage {...props} />);
+  Object.defineProperty(props, "rerenderPage", {
+    enumerable: false,
+    value(nextOverrides = {}) {
+      Object.assign(props, nextOverrides);
+      view.rerender(<MedicationPage {...props} />);
+    },
+  });
   return props;
+}
+
+function historyEntry(id) {
+  return document.querySelector(`[data-entry-id="${id}"]`);
+}
+
+function installDeferredScrollMocks() {
+  const callbacks = [];
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalScrollIntoView = Element.prototype.scrollIntoView;
+  window.requestAnimationFrame = jest.fn((callback) => {
+    callbacks.push(callback);
+    return callbacks.length;
+  });
+  Element.prototype.scrollIntoView = jest.fn();
+
+  return {
+    flush() {
+      callbacks.splice(0).forEach((callback) => callback());
+    },
+    restore() {
+      window.requestAnimationFrame = originalRequestAnimationFrame;
+      Element.prototype.scrollIntoView = originalScrollIntoView;
+    },
+  };
 }
 
 function savedCompound(overrides = {}) {
@@ -126,6 +158,25 @@ test("saves a trimmed historical entry with decimal precision", () => {
     })
   );
   expect(form.getByLabelText("Name")).toHaveValue("");
+});
+
+test("logs medication, peptide, and supplement names without classification", () => {
+  const props = renderMedicationPage();
+  const form = entryForm();
+
+  ["Medication A", "Peptide B", "Supplement C"].forEach((name) => {
+    fillRequiredFields(form, { name });
+    fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+  });
+
+  expect(props.saveMedicationEntry.mock.calls.map(([entry]) => entry.name)).toEqual([
+    "Medication A",
+    "Peptide B",
+    "Supplement C",
+  ]);
+  props.saveMedicationEntry.mock.calls.forEach(([entry]) => {
+    expect(entry).not.toHaveProperty("classification");
+  });
 });
 
 test("reusable creation defaults off and saves without a default amount", () => {
@@ -618,6 +669,148 @@ test("displays entries newest occurredAt first", () => {
   const articles = screen.getAllByRole("article");
   expect(within(articles[0]).getByText("Newer entry")).toBeInTheDocument();
   expect(within(articles[1]).getByText("Older entry")).toBeInTheDocument();
+});
+
+test("searches names with normalized case and whitespace, stays grouped, and clears", () => {
+  const entries = [
+    savedEntry({ id: "older", name: "Alpha   Peptide", occurredAt: localTimestamp(2026, 7, 8) }),
+    savedEntry({ id: "newer", name: "Alpha Peptide", occurredAt: localTimestamp(2026, 7, 10) }),
+    savedEntry({ id: "other", name: "Vitamin D", occurredAt: localTimestamp(2026, 7, 9) }),
+  ];
+  const snapshot = JSON.parse(JSON.stringify(entries));
+  renderMedicationPage({ medicationEntries: entries });
+
+  fireEvent.change(screen.getByLabelText("Search logged entries"), {
+    target: { value: "  ALPHA    peptide " },
+  });
+
+  expect(screen.getAllByRole("article")).toHaveLength(2);
+  expect(screen.getAllByRole("article").map((article) => article.dataset.entryId)).toEqual([
+    "newer",
+    "older",
+  ]);
+  expect(screen.getAllByTestId(/medication-history-group-/)).toHaveLength(2);
+  expect(entries).toEqual(snapshot);
+
+  fireEvent.click(screen.getByRole("button", { name: "Clear History Search" }));
+  expect(screen.getAllByRole("article")).toHaveLength(3);
+});
+
+test("distinguishes no search matches from an entirely empty history", () => {
+  const props = renderMedicationPage({ medicationEntries: [savedEntry()] });
+  fireEvent.change(screen.getByLabelText("Search logged entries"), {
+    target: { value: "not present" },
+  });
+  expect(screen.getByText("No matching logged entries.")).toBeInTheDocument();
+  expect(screen.queryByText("No medication entries yet.")).not.toBeInTheDocument();
+
+  props.rerenderPage({ medicationEntries: [] });
+  expect(screen.getByText("No medication entries yet.")).toBeInTheDocument();
+  expect(screen.queryByText("No matching logged entries.")).not.toBeInTheDocument();
+});
+
+test("filtered edit saves the correct entry and returns to its updated group", () => {
+  const scroll = installDeferredScrollMocks();
+  const first = savedEntry({ id: "first", name: "Peptide One" });
+  const second = savedEntry({ id: "second", name: "Peptide Two" });
+  const props = renderMedicationPage({ medicationEntries: [first, second] });
+  fireEvent.change(screen.getByLabelText("Search logged entries"), {
+    target: { value: "two" },
+  });
+
+  fireEvent.click(within(historyEntry("second")).getByRole("button", { name: "Edit" }));
+  const editHeading = screen.getByRole("heading", { name: "Edit Entry" });
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+  scroll.flush();
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "smooth",
+    block: "start",
+  });
+  expect(Element.prototype.scrollIntoView.mock.instances[0]).toBe(editHeading);
+  expect(editHeading).toHaveStyle({ scrollMarginTop: "24px" });
+  fireEvent.change(entryForm().getByLabelText("Date"), { target: { value: "2026-08-12" } });
+  fireEvent.click(entryForm().getByRole("button", { name: "Save Changes" }));
+  const updated = { ...second, ...props.updateMedicationEntry.mock.calls[0][1] };
+  props.rerenderPage({ medicationEntries: [first, updated] });
+  scroll.flush();
+
+  expect(props.updateMedicationEntry).toHaveBeenCalledWith("second", expect.any(Object));
+  expect(screen.getByLabelText("Search logged entries")).toHaveValue("two");
+  expect(Element.prototype.scrollIntoView).toHaveBeenLastCalledWith({
+    behavior: "smooth",
+    block: "center",
+  });
+  expect(Element.prototype.scrollIntoView.mock.instances.at(-1)).toBe(historyEntry("second"));
+  expect(historyEntry("second").closest("section")).toHaveAttribute(
+    "data-testid",
+    "medication-history-group-2026-08-12"
+  );
+  scroll.restore();
+});
+
+test("cancel preserves search and returns to the exact originating entry", () => {
+  const scroll = installDeferredScrollMocks();
+  const originalConfirm = window.confirm;
+  window.confirm = jest.fn(() => true);
+  renderMedicationPage({
+    medicationEntries: [
+      savedEntry({ id: "first", name: "Shared name" }),
+      savedEntry({ id: "second", name: "Shared name", occurredAt: localTimestamp(2026, 7, 8) }),
+    ],
+  });
+  fireEvent.change(screen.getByLabelText("Search logged entries"), { target: { value: "shared" } });
+  fireEvent.click(within(historyEntry("second")).getByRole("button", { name: "Edit" }));
+  fireEvent.click(entryForm().getByRole("button", { name: "Cancel Entry" }));
+  scroll.flush();
+
+  expect(screen.getByLabelText("Search logged entries")).toHaveValue("shared");
+  expect(Element.prototype.scrollIntoView.mock.instances.at(-1)).toBe(historyEntry("second"));
+  window.confirm = originalConfirm;
+  scroll.restore();
+});
+
+test("a renamed filtered edit keeps search and returns to the history context", () => {
+  const scroll = installDeferredScrollMocks();
+  const entry = savedEntry({ id: "target", name: "Matching medicine" });
+  const props = renderMedicationPage({ medicationEntries: [entry] });
+  fireEvent.change(screen.getByLabelText("Search logged entries"), { target: { value: "matching" } });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(entryForm().getByLabelText("Name"), { target: { value: "Renamed" } });
+  fireEvent.click(entryForm().getByRole("button", { name: "Save Changes" }));
+  const updated = { ...entry, ...props.updateMedicationEntry.mock.calls[0][1] };
+  props.rerenderPage({ medicationEntries: [updated] });
+  scroll.flush();
+
+  expect(screen.getByLabelText("Search logged entries")).toHaveValue("matching");
+  expect(screen.getByText("No matching logged entries.")).toBeInTheDocument();
+  expect(Element.prototype.scrollIntoView.mock.instances.at(-1)).toBe(
+    screen.getByTestId("medication-history")
+  );
+  scroll.restore();
+});
+
+test("filtered deletion removes only its entry and restores nearby history context", () => {
+  const scroll = installDeferredScrollMocks();
+  const originalConfirm = window.confirm;
+  window.confirm = jest.fn(() => true);
+  const compound = savedCompound();
+  const first = savedEntry({ id: "first", name: "Vitamin A" });
+  const second = savedEntry({ id: "second", name: "Vitamin B" });
+  const props = renderMedicationPage({ medicationEntries: [first, second], compounds: [compound] });
+  fireEvent.change(screen.getByLabelText("Search logged entries"), { target: { value: "vitamin" } });
+  fireEvent.click(within(historyEntry("second")).getByRole("button", { name: "Delete" }));
+  props.rerenderPage({ medicationEntries: [first] });
+  scroll.flush();
+
+  expect(props.deleteMedicationEntry).toHaveBeenCalledWith("second");
+  expect(historyEntry("first")).toBeInTheDocument();
+  expect(screen.getByLabelText("Search logged entries")).toHaveValue("vitamin");
+  expect(props.compounds).toEqual([compound]);
+  expect(Element.prototype.scrollIntoView.mock.instances.at(-1)).toBe(
+    screen.getByTestId("medication-history-group-2026-08-09")
+  );
+  window.confirm = originalConfirm;
+  scroll.restore();
 });
 
 test("cancel resets the form without navigating away", () => {

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import CompoundSearch from "./CompoundSearch";
 import SavedCompoundEditor from "./SavedCompoundEditor";
 import {
@@ -12,6 +12,11 @@ import {
   getMedicationEntryError,
 } from "../services/medicationEntry";
 import { getCompoundDefinitionError } from "../services/compoundCatalog";
+import {
+  formatMedicationHistoryDate,
+  getMedicationEntryLocalDateKey,
+  getVisibleMedicationHistory,
+} from "../services/medicationHistory";
 
 function getCurrentLocalDateTime() {
   const now = new Date();
@@ -80,12 +85,17 @@ function MedicationPage({
   const [compoundSearchResetKey, setCompoundSearchResetKey] = useState(0);
   const [entryStatusMessage, setEntryStatusMessage] = useState("");
   const [editingCompound, setEditingCompound] = useState(null);
+  const [historyQuery, setHistoryQuery] = useState("");
   const pageTopRef = useRef(null);
   const formRef = useRef(null);
-
-  const sortedEntries = [...medicationEntries].sort(
-    (firstEntry, secondEntry) =>
-      new Date(secondEntry.occurredAt) - new Date(firstEntry.occurredAt)
+  const editHeadingRef = useRef(null);
+  const historyTopRef = useRef(null);
+  const historyEntryRefs = useRef(new Map());
+  const historyGroupRefs = useRef(new Map());
+  const editOriginRef = useRef(null);
+  const visibleHistoryGroups = getVisibleMedicationHistory(
+    medicationEntries,
+    historyQuery
   );
 
   const formInputStyle = {
@@ -97,6 +107,19 @@ function MedicationPage({
     padding: "12px",
     width: "100%",
   };
+
+  useEffect(() => {
+    if (editingEntryId === null) return undefined;
+
+    const frameId = window.requestAnimationFrame(() => {
+      editHeadingRef.current?.scrollIntoView?.({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [editingEntryId]);
 
   function draft() {
     return {
@@ -131,6 +154,16 @@ function MedicationPage({
     setCompoundReference(null);
     setSaveAsReusableCompound(false);
     setDefaultDoseAmount("");
+  }
+
+  function scrollToHistoryContext({ entryId, dateKey } = {}) {
+    window.requestAnimationFrame(() => {
+      const target =
+        historyEntryRefs.current.get(entryId) ||
+        historyGroupRefs.current.get(dateKey) ||
+        historyTopRef.current;
+      target?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    });
   }
 
   function saveEntry(event) {
@@ -183,7 +216,8 @@ function MedicationPage({
       existingEntry
     );
 
-    if (editingEntryId === null) {
+    const wasEditing = editingEntryId !== null;
+    if (!wasEditing) {
       if (!saveMedicationEntry(entry)) return;
     } else if (!updateMedicationEntry(editingEntryId, entry)) {
       return;
@@ -203,7 +237,15 @@ function MedicationPage({
 
     resetForm();
     setCompoundSearchResetKey((currentKey) => currentKey + 1);
-    pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
+    if (wasEditing) {
+      scrollToHistoryContext({
+        entryId: editingEntryId,
+        dateKey: getMedicationEntryLocalDateKey(entry),
+      });
+      editOriginRef.current = null;
+    } else {
+      pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
+    }
   }
 
   function editEntry(entry) {
@@ -226,14 +268,19 @@ function MedicationPage({
     );
     setSaveAsReusableCompound(false);
     setDefaultDoseAmount("");
-    formRef.current?.scrollIntoView?.({ behavior: "smooth" });
+    editOriginRef.current = {
+      entryId: entry.id,
+      dateKey: getMedicationEntryLocalDateKey(entry),
+    };
   }
 
   function deleteEntry(id) {
     if (!window.confirm("Delete this medication entry?")) return;
+    const entry = medicationEntries.find((item) => item.id === id);
     if (!deleteMedicationEntry(id)) return;
 
     if (editingEntryId === id) resetForm();
+    scrollToHistoryContext({ dateKey: getMedicationEntryLocalDateKey(entry) });
   }
 
   function cancelEntry() {
@@ -244,11 +291,17 @@ function MedicationPage({
       return;
     }
 
+    const origin = editOriginRef.current;
     resetForm();
     setCompoundSearchResetKey((currentKey) => currentKey + 1);
-    window.requestAnimationFrame(() => {
-      pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
-    });
+    if (origin) {
+      scrollToHistoryContext(origin);
+      editOriginRef.current = null;
+    } else {
+      window.requestAnimationFrame(() => {
+        pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
+      });
+    }
   }
 
   function markCompoundModified() {
@@ -357,7 +410,10 @@ function MedicationPage({
           width: "100%",
         }}
       >
-        <h2 style={{ marginTop: 0 }}>
+        <h2
+          ref={editHeadingRef}
+          style={{ marginTop: 0, scrollMarginTop: "24px" }}
+        >
           {editingEntryId === null ? "Add Entry" : "Edit Entry"}
         </h2>
 
@@ -563,17 +619,70 @@ function MedicationPage({
       </form>
 
       <section
+        ref={historyTopRef}
+        data-testid="medication-history"
         style={{ marginTop: "30px", maxWidth: "700px", textAlign: "left", width: "100%" }}
       >
         <h2>Logged Entries</h2>
-        {sortedEntries.length === 0 ? (
+        {medicationEntries.length === 0 ? (
           <p style={{ color: "#bbb" }}>No medication entries yet.</p>
         ) : (
-          <div style={{ display: "grid", gap: "12px" }}>
-            {sortedEntries.map((entry) => (
-              <article
-                key={entry.id}
-                style={{
+          <>
+            <div style={{ marginBottom: "20px" }}>
+              <label style={{ display: "block" }}>
+                Search logged entries
+                <input
+                  type="search"
+                  placeholder="Search history by name..."
+                  value={historyQuery}
+                  onChange={(event) => setHistoryQuery(event.target.value)}
+                  style={formInputStyle}
+                />
+              </label>
+              {historyQuery && (
+                <button
+                  type="button"
+                  onClick={() => setHistoryQuery("")}
+                  style={{ ...backButtonStyle, marginTop: "10px" }}
+                >
+                  Clear History Search
+                </button>
+              )}
+            </div>
+            {visibleHistoryGroups.length === 0 ? (
+              <p role="status" style={{ color: "#bbb" }}>
+                No matching logged entries.
+              </p>
+            ) : (
+              <div style={{ display: "grid", gap: "22px" }}>
+                {visibleHistoryGroups.map((group) => (
+                  <section
+                    key={group.dateKey}
+                    ref={(element) => {
+                      if (element) {
+                        historyGroupRefs.current.set(group.dateKey, element);
+                      } else {
+                        historyGroupRefs.current.delete(group.dateKey);
+                      }
+                    }}
+                    data-testid={`medication-history-group-${group.dateKey}`}
+                  >
+                    <h3 style={{ color: "#d1d5db", marginTop: 0 }}>
+                      {formatMedicationHistoryDate(group.dateKey)}
+                    </h3>
+                    <div style={{ display: "grid", gap: "12px" }}>
+                      {group.entries.map((entry) => (
+                        <article
+                          key={entry.id}
+                          ref={(element) => {
+                            if (element) {
+                              historyEntryRefs.current.set(entry.id, element);
+                            } else {
+                              historyEntryRefs.current.delete(entry.id);
+                            }
+                          }}
+                          data-entry-id={entry.id}
+                          style={{
                   background: "#1f2937",
                   borderRadius: "12px",
                   overflowWrap: "anywhere",
@@ -589,7 +698,7 @@ function MedicationPage({
                     justifyContent: "space-between",
                   }}
                 >
-                  <h3 style={{ margin: 0 }}>{entry.name}</h3>
+                  <h4 style={{ fontSize: "1.17em", margin: 0 }}>{entry.name}</h4>
                   <span style={{ color: "#9ca3af" }}>
                     {new Date(entry.occurredAt).toLocaleString()}
                   </span>
@@ -633,9 +742,14 @@ function MedicationPage({
                     Delete
                   </button>
                 </div>
-              </article>
-            ))}
-          </div>
+                        </article>
+                      ))}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            )}
+          </>
         )}
       </section>
 
