@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 
 function timestampValue(value) {
   const timestamp = new Date(value).getTime();
@@ -27,9 +27,24 @@ function TrophyCase({
   headingId = "trophy-case-heading",
   description = "",
   emptyMessage = "No trophies yet. Achievements you choose to celebrate will appear here.",
+  onViewSource = null,
+  sourceAvailable = () => false,
+  restoreTrophyId = null,
+  onRestoreComplete = () => {},
 }) {
   const trophies = useMemo(() => [...trophyEntries].sort(compareEntries), [trophyEntries]);
   const Heading = headingLevel;
+  const cardRefs = useRef(new Map());
+  useEffect(() => {
+    if (!restoreTrophyId) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      const card = cardRefs.current.get(restoreTrophyId);
+      if (!card) return;
+      card.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      onRestoreComplete(restoreTrophyId);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [onRestoreComplete, restoreTrophyId, trophies]);
   const actionStyle = {
     ...buttonStyle,
     backgroundColor: "#4b5563",
@@ -50,6 +65,10 @@ function TrophyCase({
           {trophies.map((entry) => (
             <div
               key={entry.id}
+              ref={(node) => {
+                if (node) cardRefs.current.set(entry.id, node);
+                else cardRefs.current.delete(entry.id);
+              }}
               role="group"
               aria-label={`${entry.title} trophy`}
               data-source-key={entry.sourceKey}
@@ -74,6 +93,23 @@ function TrophyCase({
                 Achieved: {formatDate(entry.achievedAt)}
                 {entry.sourceSnapshot?.workoutTitle ? ` · ${entry.sourceSnapshot.workoutTitle}` : ""}
               </span>
+              {onViewSource && (
+                <>
+                  <button
+                    type="button"
+                    disabled={!sourceAvailable(entry)}
+                    onClick={() => onViewSource(entry)}
+                    style={actionStyle}
+                  >
+                    {entry.sourceType === "memory" ? "View Memory" : "View Workout"}
+                  </button>
+                  {!sourceAvailable(entry) && (
+                    <span style={{ color: "#9ca3af", display: "block", marginTop: "8px" }}>
+                      Source no longer available
+                    </span>
+                  )}
+                </>
+              )}
               <button type="button" onClick={() => removeTrophyCaseEntry(entry.id)} style={actionStyle}>
                 Remove from Trophy Case
               </button>

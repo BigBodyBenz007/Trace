@@ -3,6 +3,8 @@ import WorkoutPage from "./WorkoutPage";
 import { createExerciseDefinition } from "../services/exerciseCatalog";
 
 const originalRequestAnimationFrame = window.requestAnimationFrame;
+const originalCreateObjectURL = URL.createObjectURL;
+const originalRevokeObjectURL = URL.revokeObjectURL;
 
 beforeEach(() => {
   window.requestAnimationFrame = (callback) => {
@@ -10,10 +12,14 @@ beforeEach(() => {
     return 1;
   };
   Element.prototype.scrollIntoView = jest.fn();
+  URL.createObjectURL = jest.fn((file) => `blob:${file.name}`);
+  URL.revokeObjectURL = jest.fn();
 });
 
 afterEach(() => {
   window.requestAnimationFrame = originalRequestAnimationFrame;
+  URL.createObjectURL = originalCreateObjectURL;
+  URL.revokeObjectURL = originalRevokeObjectURL;
   jest.restoreAllMocks();
 });
 
@@ -273,6 +279,45 @@ test("cancel confirms dirty changes, resets, and scrolls to the workout top", ()
   );
   expect(screen.getByLabelText("Workout title")).toHaveValue("");
   expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth" });
+});
+
+test("adds multiple optional photos and can remove one before saving", () => {
+  const props = renderPage();
+  fillFirstSet();
+  const first = new File(["first"], "first.jpg", { type: "image/jpeg" });
+  const second = new File(["second"], "second.jpg", { type: "image/jpeg" });
+
+  fireEvent.change(screen.getByLabelText("Choose Photos"), {
+    target: { files: [first, second] },
+  });
+  expect(screen.getByAltText("Workout attachment 1")).toHaveAttribute("src", "blob:first.jpg");
+  expect(screen.getByAltText("Workout attachment 2")).toHaveAttribute("src", "blob:second.jpg");
+  const removePhoto = screen.getByRole("button", { name: "Remove workout photo 1" });
+  expect(removePhoto).toHaveTextContent("×");
+  fireEvent.click(removePhoto);
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  expect(props.saveWorkoutEntry).toHaveBeenCalledWith(expect.objectContaining({
+    photos: [expect.objectContaining({ blob: second, isDraft: true, url: "blob:second.jpg" })],
+  }));
+  expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:first.jpg");
+});
+
+test("editing preserves photos and each workout history card owns its gallery", () => {
+  const withPhoto = entry({ photos: [{ id: "photo-1", url: "blob:stored" }] });
+  const withoutPhoto = entry({ id: "workout-2", title: "No Photo Workout" });
+  const props = renderPage({ workoutEntries: [withPhoto, withoutPhoto] });
+
+  expect(screen.getByRole("region", { name: "Chest Day photos" })).toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "No Photo Workout photos" })).not.toBeInTheDocument();
+  fireEvent.click(within(screen.getByText("Chest Day").closest("article")).getByRole("button", { name: "Edit" }));
+  expect(screen.getByAltText("Workout attachment 1")).toHaveAttribute("src", "blob:stored");
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+  expect(props.updateWorkoutEntry).toHaveBeenCalledWith(
+    "workout-1",
+    expect.objectContaining({ photos: [{ id: "photo-1", url: "blob:stored" }] })
+  );
 });
 
 test("provides top and bottom Timeline navigation controls", () => {

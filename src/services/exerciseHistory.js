@@ -69,6 +69,7 @@ export function deriveExerciseHistory(workouts = []) {
         exerciseInstanceId: exercise.id || null,
         exerciseIndex,
         exerciseNameSnapshot: exercise.name || "Unnamed Exercise",
+        photos: Array.isArray(workout.photos) ? workout.photos.map((photo) => ({ ...photo })) : [],
         sets: (Array.isArray(exercise.sets) ? exercise.sets : []).map(copySet),
       };
       const existing = groups.get(identity.identityKey);

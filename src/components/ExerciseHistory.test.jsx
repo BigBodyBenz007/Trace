@@ -45,6 +45,25 @@ function expandPrTimeline() {
   fireEvent.click(screen.getByRole("button", { name: "View PR Timeline" }));
 }
 
+test("Trophy source navigation expands the exact performance, highlights its set, and returns", () => {
+  const entry = workout("workout-source", "Source Day", "2026-08-10T12:00:00.000Z", builtInExercise("trace:bench-press", "Bench Press", 8, "set-source"));
+  entry.photos = [{ id: "workout-photo", url: "blob:source-photo" }];
+  const performanceId = "workout-source|instance-set-source|0";
+  const back = jest.fn();
+  render(<ExerciseHistory workoutEntries={[entry]} trophySourceTarget={{ workoutId: "workout-source", exerciseIdentityKey: "trace|trace:bench-press", performanceId, setId: "set-source" }} onReturnToTrophyCase={back} />);
+  expect(screen.getByRole("button", { name: /Bench Press.*1 performance/ })).toHaveAttribute("aria-expanded", "true");
+  const sourcePerformance = document.querySelector('[data-performance-id="workout-source|instance-set-source|0"]');
+  expect(sourcePerformance).toBeInTheDocument();
+  expect(document.querySelector('[data-source-set="true"]')).toHaveTextContent("80 lb");
+  expect(screen.getByRole("region", { name: "Source Day photos" })).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Back to Trophy Case" })).toHaveLength(1);
+  expect(within(sourcePerformance).getByRole("button", { name: "Back to Trophy Case" })).toBeInTheDocument();
+  const currentRecords = screen.getByText("Current Records").closest("section");
+  expect(within(currentRecords).queryByRole("button", { name: "Back to Trophy Case" })).not.toBeInTheDocument();
+  fireEvent.click(within(sourcePerformance).getByRole("button", { name: "Back to Trophy Case" }));
+  expect(back).toHaveBeenCalled();
+});
+
 test("renders summaries and opens newest-first performance details", () => {
   render(
     <ExerciseHistory

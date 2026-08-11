@@ -6,6 +6,7 @@ import {
   describeExerciseRecord,
   getExerciseRecordTrackKey,
 } from "../services/exerciseRecordDescriptor";
+import WorkoutPhotos from "./WorkoutPhotos";
 
 function formatDate(timestamp) {
   const date = new Date(timestamp);
@@ -286,7 +287,7 @@ function CurrentRecords({ exercisePr, trophySourceKeys, addTrophyCaseEntry, butt
   );
 }
 
-function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntry = () => false, buttonStyle }) {
+function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntry = () => false, buttonStyle, trophySourceTarget = null, onReturnToTrophyCase = null }) {
   const history = useMemo(
     () => deriveExerciseHistory(workoutEntries),
     [workoutEntries]
@@ -306,6 +307,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
   const prTimelineRef = useRef(null);
   const exerciseHistoryDetailRef = useRef(null);
   const exerciseSummaryRefs = useRef(new Map());
+  const performanceRefs = useRef(new Map());
   const trophySourceKeys = useMemo(
     () => new Set(trophyEntries.map(({ sourceKey }) => sourceKey)),
     [trophyEntries]
@@ -327,6 +329,24 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
     setSelectedIdentityKey(null);
     summary?.scrollIntoView?.({ behavior: "smooth", block: "center" });
   }, [selectedIdentityKey]);
+
+  useEffect(() => {
+    if (!trophySourceTarget?.exerciseIdentityKey) return undefined;
+    setIsPrTimelineOpen(false);
+    setSelectedIdentityKey(trophySourceTarget.exerciseIdentityKey);
+    return undefined;
+  }, [trophySourceTarget]);
+
+  useEffect(() => {
+    if (!trophySourceTarget?.performanceId || selectedIdentityKey !== trophySourceTarget.exerciseIdentityKey) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      performanceRefs.current.get(trophySourceTarget.performanceId)?.scrollIntoView?.({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [selectedIdentityKey, trophySourceTarget]);
 
   useEffect(() => {
     if (selectedIdentityKey && !selectedHistory) {
@@ -471,12 +491,26 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                       )}
                       <div style={{ display: "grid", gap: "12px", marginTop: "14px" }}>
                         {exercise.performances.map((performance) => (
-                          <article key={performance.performanceId} style={{ background: "#111827", border: "1px solid #374151", borderRadius: "12px", overflowWrap: "anywhere", padding: "16px" }}>
+                          <article
+                            key={performance.performanceId}
+                            ref={(node) => {
+                              if (node) performanceRefs.current.set(performance.performanceId, node);
+                              else performanceRefs.current.delete(performance.performanceId);
+                            }}
+                            data-performance-id={performance.performanceId}
+                            style={{ background: "#111827", border: performance.performanceId === trophySourceTarget?.performanceId ? "2px solid #d97706" : "1px solid #374151", borderRadius: "12px", overflowWrap: "anywhere", padding: "16px", scrollMarginTop: "24px" }}
+                          >
                             <h4 style={{ margin: 0 }}>{formatDate(performance.performedAt)}</h4>
                             <p style={{ color: "#d1d5db", margin: "6px 0 10px" }}>{performance.workoutTitle}</p>
+                            {performance.performanceId === trophySourceTarget?.performanceId && onReturnToTrophyCase && (
+                              <button type="button" onClick={onReturnToTrophyCase} style={{ ...compactButtonStyle, backgroundColor: "#a16207", marginBottom: "12px" }}>
+                                Back to Trophy Case
+                              </button>
+                            )}
+                            <WorkoutPhotos photos={performance.photos} label={`${performance.workoutTitle} photos`} />
                             <ol style={{ marginBottom: 0, paddingLeft: "24px" }}>
                               {performance.sets.map((set, setIndex) => (
-                                <li key={set.id || setIndex} style={{ marginBottom: "6px" }}>
+                                <li key={set.id || setIndex} data-source-set={set.id === trophySourceTarget?.setId ? "true" : undefined} style={{ background: set.id === trophySourceTarget?.setId ? "rgba(217, 119, 6, 0.18)" : "transparent", borderRadius: "6px", marginBottom: "6px", padding: set.id === trophySourceTarget?.setId ? "6px" : 0 }}>
                                   {setDescription(set)}
                                   {set.notes && (
                                     <span style={{ color: "#9ca3af", display: "block", whiteSpace: "pre-wrap" }}>

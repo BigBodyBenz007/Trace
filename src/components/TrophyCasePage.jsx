@@ -6,6 +6,10 @@ function TrophyCasePage({
   removeTrophyCaseEntry = () => false,
   buttonStyle,
   containerStyle,
+  onViewSource,
+  sourceAvailable,
+  restoreTrophyId,
+  onRestoreComplete,
 }) {
   const lifeAchievements = trophyEntries.filter(
     ({ sourceType }) => sourceType === "memory"
@@ -52,6 +56,10 @@ function TrophyCasePage({
             heading="Life Achievements"
             headingId="life-achievements-heading"
             emptyMessage="No Life Achievements curated yet."
+            onViewSource={onViewSource}
+            sourceAvailable={sourceAvailable}
+            restoreTrophyId={restoreTrophyId}
+            onRestoreComplete={onRestoreComplete}
           />
           <TrophyCase
             trophyEntries={workoutAchievements}
@@ -60,6 +68,10 @@ function TrophyCasePage({
             heading="Workout Achievements"
             headingId="workout-achievements-heading"
             emptyMessage="No Workout Achievements curated yet."
+            onViewSource={onViewSource}
+            sourceAvailable={sourceAvailable}
+            restoreTrophyId={restoreTrophyId}
+            onRestoreComplete={onRestoreComplete}
           />
         </div>
       )}

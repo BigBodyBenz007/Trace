@@ -3,6 +3,7 @@ import ExerciseSearch from "./ExerciseSearch";
 import SavedExerciseEditor from "./SavedExerciseEditor";
 import ExerciseHistory from "./ExerciseHistory";
 import TrophyCase from "./TrophyCase";
+import WorkoutPhotos from "./WorkoutPhotos";
 import {
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
@@ -81,6 +82,8 @@ function WorkoutPage({
   buttonStyle,
   inputStyle,
   containerStyle,
+  trophySourceTarget = null,
+  onReturnToTrophyCase = null,
 }) {
   const initialDateTime = currentLocalDateTime();
   const [title, setTitle] = useState("");
@@ -92,6 +95,7 @@ function WorkoutPage({
   const [isDirty, setIsDirty] = useState(false);
   const [formError, setFormError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [photos, setPhotos] = useState([]);
   const [activeSearchExerciseId, setActiveSearchExerciseId] = useState(null);
   const [editingSavedExercise, setEditingSavedExercise] = useState(null);
   const [searchResetKey, setSearchResetKey] = useState(0);
@@ -199,11 +203,13 @@ function WorkoutPage({
     setStatusMessage("");
     setActiveSearchExerciseId(null);
     setEditingSavedExercise(null);
+    photos.filter(({ isDraft }) => isDraft).forEach(({ url }) => url && URL.revokeObjectURL(url));
+    setPhotos([]);
     setSearchResetKey((current) => current + 1);
   }
 
   function draft() {
-    return { title, date, time, notes, exercises };
+    return { title, date, time, notes, exercises, photos };
   }
 
   function changeExerciseName(exerciseId, value) {
@@ -327,32 +333,40 @@ function WorkoutPage({
     });
 
     const existingEntry = workoutEntries.find(({ id }) => id === editingEntryId);
-    const entry = createWorkoutEntry(
+    const entry = { ...createWorkoutEntry(
       { ...workoutDraft, exercises: resolvedExercises },
       existingEntry
-    );
-    const saved =
+    ), photos };
+    const saveResult =
       editingEntryId === null
         ? saveWorkoutEntry(entry)
         : updateWorkoutEntry(editingEntryId, entry);
-    if (!saved) return;
 
-    resetForm();
-    const messages = [];
-    if (conflicts.length > 0) {
-      messages.push(
-        `Your existing saved ${conflicts.join(", ")} definition${
-          conflicts.length === 1 ? " was" : "s were"
-        } kept.`
+    function finishSave(saved) {
+      if (!saved) return;
+      resetForm();
+      const messages = [];
+      if (conflicts.length > 0) {
+        messages.push(
+          `Your existing saved ${conflicts.join(", ")} definition${
+            conflicts.length === 1 ? " was" : "s were"
+          } kept.`
+        );
+      }
+      if (catalogFailure) {
+        messages.push("One or more reusable exercises could not be saved.");
+      }
+      setStatusMessage(
+        messages.length > 0 ? `Workout logged. ${messages.join(" ")}` : ""
       );
+      pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
     }
-    if (catalogFailure) {
-      messages.push("One or more reusable exercises could not be saved.");
+
+    if (saveResult && typeof saveResult.then === "function") {
+      saveResult.then(finishSave);
+    } else {
+      finishSave(saveResult);
     }
-    setStatusMessage(
-      messages.length > 0 ? `Workout logged. ${messages.join(" ")}` : ""
-    );
-    pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }
 
   function editWorkout(entry) {
@@ -387,6 +401,7 @@ function WorkoutPage({
         })),
       }))
     );
+    setPhotos((entry.photos || []).map((photo) => ({ ...photo })));
     setEditingEntryId(entry.id);
     setIsDirty(false);
     setFormError("");
@@ -411,8 +426,15 @@ function WorkoutPage({
 
   function removeWorkout(id) {
     if (!window.confirm("Delete this workout?")) return;
-    if (!deleteWorkoutEntry(id)) return;
-    if (editingEntryId === id) resetForm();
+    const deleteResult = deleteWorkoutEntry(id);
+    const finishDelete = (deleted) => {
+      if (deleted && editingEntryId === id) resetForm();
+    };
+    if (deleteResult && typeof deleteResult.then === "function") {
+      deleteResult.then(finishDelete);
+    } else {
+      finishDelete(deleteResult);
+    }
   }
 
   return (
@@ -678,6 +700,37 @@ function WorkoutPage({
         ))}
         <button type="button" onClick={addExercise} style={smallButtonStyle}>Add Exercise</button>
 
+        <section aria-label="Workout photo attachments" style={{ marginTop: "22px" }}>
+          <h3>Photos (optional)</h3>
+          <label style={{ ...smallButtonStyle, cursor: "pointer", display: "inline-block" }}>
+            {photos.length ? "Add More Photos" : "Choose Photos"}
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              style={{ display: "none" }}
+              onChange={(event) => {
+                const additions = Array.from(event.target.files || []).map((blob) => ({ blob, isDraft: true, url: URL.createObjectURL(blob) }));
+                if (additions.length) { setPhotos((current) => [...current, ...additions]); markChanged(); }
+                event.target.value = "";
+              }}
+            />
+          </label>
+          {photos.length > 0 && (
+            <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", marginTop: "12px" }}>
+              {photos.map((photo, index) => (
+                <div key={photo.id || `${photo.url}-${index}`} style={{ position: "relative" }}>
+                  <img src={photo.url} alt={`Workout attachment ${index + 1}`} style={{ borderRadius: "8px", height: "110px", objectFit: "cover", width: "100%" }} />
+                  {false && (
+                  <button type="button" aria-label={`Remove workout photo ${index + 1}`} onClick={() => { if (photo.isDraft && photo.url) URL.revokeObjectURL(photo.url); setPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index)); markChanged(); }} style={{ background: "#b91c1c", border: 0, borderRadius: "50%", color: "white", cursor: "pointer", position: "absolute", right: "5px", top: "5px" }}>Ã—</button>
+                  )}
+                  <button type="button" aria-label={`Remove workout photo ${index + 1}`} onClick={() => { if (photo.isDraft && photo.url) URL.revokeObjectURL(photo.url); setPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index)); markChanged(); }} style={{ background: "#b91c1c", border: 0, borderRadius: "50%", color: "white", cursor: "pointer", position: "absolute", right: "5px", top: "5px" }}>{"\u00d7"}</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
         {formError && <p role="alert" style={{ color: "#fca5a5" }}>{formError}</p>}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
           <button type="submit" style={buttonStyle}>{editingEntryId === null ? "Save Workout" : "Save Changes"}</button>
@@ -696,6 +749,8 @@ function WorkoutPage({
         trophyEntries={trophyEntries}
         addTrophyCaseEntry={addTrophyCaseEntry}
         buttonStyle={buttonStyle}
+        trophySourceTarget={trophySourceTarget}
+        onReturnToTrophyCase={onReturnToTrophyCase}
       />
 
       <section style={{ marginTop: "36px", maxWidth: "760px", textAlign: "left", width: "100%" }}>
@@ -709,6 +764,7 @@ function WorkoutPage({
                 <h3 style={{ marginTop: 0 }}>{entry.title}</h3>
                 <p>{new Date(entry.occurredAt).toLocaleString()}</p>
                 {entry.notes && <p style={{ whiteSpace: "pre-wrap" }}>{entry.notes}</p>}
+                <WorkoutPhotos photos={entry.photos} label={`${entry.title} photos`} />
                 {entry.exercises.map((exercise) => (
                   <div key={exercise.id} style={{ marginTop: "14px" }}>
                     <strong>{exercise.name}</strong>

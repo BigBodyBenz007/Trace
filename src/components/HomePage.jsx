@@ -66,6 +66,9 @@ function HomePage({
   buttonStyle,
   inputStyle,
   containerStyle,
+  trophySourceTarget = null,
+  onReturnToTrophyCase = null,
+  onExitTrophySource = null,
 }) {
   const [selectedImage, setSelectedImage] = useState(null);
   const [search, setSearch] = useState("");
@@ -78,6 +81,7 @@ function HomePage({
   const timelineRef = useRef(null);
   const hasScrolledToNewest = useRef(false);
   const memoryCardRefs = useRef(new Map());
+  const detailPanelRef = useRef(null);
   const currentDay = new Date();
   currentDay.setHours(0, 0, 0, 0);
 
@@ -154,6 +158,11 @@ function HomePage({
     setDetailMemoryId(memory.id);
   }
 
+  function closeMemoryDetail() {
+    setDetailMemoryId(null);
+    if (trophySourceTarget && onReturnToTrophyCase) onReturnToTrophyCase();
+  }
+
   function clearSelection() {
     setSelectedMemory(null);
   }
@@ -169,6 +178,19 @@ function HomePage({
   function isNodeHovered(memory) {
     return hoveredMemory === getMemorySelectionKey(memory);
   }
+
+  useEffect(() => {
+    if (!trophySourceTarget?.memoryId) return undefined;
+    const memory = memories.find(({ id }) => id === trophySourceTarget.memoryId);
+    if (!memory) return undefined;
+    setSelectedMemory(memory.id);
+    setActiveDetailPhotoIndex(0);
+    setDetailMemoryId(memory.id);
+    const frame = window.requestAnimationFrame(() => {
+      detailPanelRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [memories, trophySourceTarget]);
 
   useEffect(() => {
     if (
@@ -749,6 +771,7 @@ function HomePage({
           }}
         >
           <div
+            ref={detailPanelRef}
             onClick={(event) => event.stopPropagation()}
             style={{
               background: "#1f2937",
@@ -785,10 +808,10 @@ function HomePage({
 
               <button
                 type="button"
-                aria-label="Close memory details"
+                aria-label={trophySourceTarget ? "Back to Trophy Case" : "Close memory details"}
                 onClick={(event) => {
                   event.stopPropagation();
-                  setDetailMemoryId(null);
+                  closeMemoryDetail();
                 }}
                 style={{
                   background: "none",
@@ -799,7 +822,7 @@ function HomePage({
                   lineHeight: 1,
                 }}
               >
-                ×
+                {trophySourceTarget ? "Back to Trophy Case" : "×"}
               </button>
             </div>
 
@@ -1012,6 +1035,7 @@ function HomePage({
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
+                  if (trophySourceTarget) onExitTrophySource?.();
                   setDetailMemoryId(null);
                   editMemory(detailMemoryId);
                 }}
@@ -1034,7 +1058,7 @@ function HomePage({
                   if (window.confirm("Delete this memory?")) {
                     if (await deleteMemory(detailMemoryId)) {
                       clearSelection();
-                      setDetailMemoryId(null);
+                      closeMemoryDetail();
                     }
                   }
                 }}
@@ -1050,11 +1074,11 @@ function HomePage({
                 Delete
               </button>
 
-              <button
+              {!trophySourceTarget && <button
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  setDetailMemoryId(null);
+                  closeMemoryDetail();
                 }}
                 style={{
                   background: "#4b5563",
@@ -1066,7 +1090,7 @@ function HomePage({
                 }}
               >
                 Close
-              </button>
+              </button>}
             </div>
           </div>
         </div>

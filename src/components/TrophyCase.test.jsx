@@ -34,6 +34,36 @@ test("displays the preserved source snapshot and removes only curated membership
   expect(remove).toHaveBeenCalledWith("trophy-1");
 });
 
+test("source actions are opt-in so the inline Trophy Case remains unchanged", () => {
+  render(<TrophyCase trophyEntries={[trophy()]} />);
+  expect(screen.queryByRole("button", { name: "View Workout" })).not.toBeInTheDocument();
+});
+
+test("dedicated source controls navigate when available and preserve unavailable trophies", () => {
+  const view = jest.fn();
+  render(<TrophyCase trophyEntries={[trophy()]} onViewSource={view} sourceAvailable={() => true} />);
+  fireEvent.click(screen.getByRole("button", { name: "View Workout" }));
+  expect(view).toHaveBeenCalledWith(expect.objectContaining({ id: "trophy-1" }));
+  expect(screen.getByRole("button", { name: "Remove from Trophy Case" })).toBeEnabled();
+});
+
+test("restores the exact originating Trophy card after it renders", () => {
+  const original = Element.prototype.scrollIntoView;
+  const originalFrame = window.requestAnimationFrame;
+  const originalCancel = window.cancelAnimationFrame;
+  Element.prototype.scrollIntoView = jest.fn();
+  window.requestAnimationFrame = (callback) => { callback(); return 1; };
+  window.cancelAnimationFrame = jest.fn();
+  const complete = jest.fn();
+  render(<TrophyCase trophyEntries={[trophy({ id: "first", title: "First" }), trophy({ id: "target", title: "Target", addedToTrophyCaseAt: "2026-08-12T12:00:00Z" })]} restoreTrophyId="target" onRestoreComplete={complete} />);
+  const target = screen.getByRole("group", { name: "Target trophy" });
+  expect(target.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+  expect(complete).toHaveBeenCalledWith("target");
+  Element.prototype.scrollIntoView = original;
+  window.requestAnimationFrame = originalFrame;
+  window.cancelAnimationFrame = originalCancel;
+});
+
 test("orders newest additions first with deterministic id ties", () => {
   render(<TrophyCase trophyEntries={[
     trophy({ id: "z", title: "Old", addedToTrophyCaseAt: "2026-08-01T12:00:00.000Z" }),

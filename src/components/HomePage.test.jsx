@@ -53,6 +53,20 @@ test("opens the dedicated Trophy Case from the Timeline", () => {
   expect(baseProps.onOpenTrophyCase).toHaveBeenCalledTimes(1);
 });
 
+test("Trophy source navigation opens the existing live Memory detail and returns", () => {
+  const back = jest.fn();
+  const memory = { id: "memory-live", title: "Edited title", description: "Current details", date: "2026-05-18", categories: ["Achievement"], images: [{ id: "photo", url: "blob:photo" }], favorite: true };
+  render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} trophySourceTarget={{ memoryId: memory.id }} onReturnToTrophyCase={back} />);
+  const dialog = screen.getByRole("dialog", { name: "Memory details for Edited title" });
+  expect(dialog).toHaveTextContent("Current details");
+  expect(dialog).toHaveTextContent("Achievement");
+  expect(within(dialog).getAllByAltText("Memory 1")[0]).toHaveAttribute("src", "blob:photo");
+  expect(within(dialog).getAllByRole("button", { name: "Back to Trophy Case" })).toHaveLength(1);
+  expect(within(dialog).queryByRole("button", { name: "Close" })).not.toBeInTheDocument();
+  fireEvent.click(within(dialog).getByRole("button", { name: "Back to Trophy Case" }));
+  expect(back).toHaveBeenCalledTimes(1);
+});
+
 test("offers stable, distinct Memory trophy candidates", () => {
   render(<HomePage {...baseProps} memories={memories} trophyEntries={[]} />);
   const addButtons = screen.getAllByRole("button", { name: "Add to Trophy Case" });

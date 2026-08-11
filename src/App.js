@@ -52,6 +52,7 @@ import {
   readProtocols,
   writeProtocols,
 } from "./services/protocol";
+import { resolveTrophySource } from "./services/trophySourceNavigation";
 
 const DEFAULT_NUTRITION_GOALS = {
   calories: 0,
@@ -88,6 +89,15 @@ function memoryMetadata(memories) {
   }));
 }
 
+function workoutMetadata(entries) {
+  return entries.map((entry) => ({
+    ...entry,
+    ...(Array.isArray(entry.photos)
+      ? { photos: entry.photos.map((photo) => typeof photo === "string" ? photo : photo.id).filter(Boolean) }
+      : {}),
+  }));
+}
+
 function storageMessage(action) {
   return `Trace couldn't ${action} because browser storage is unavailable or full. Your existing data has not been intentionally removed.`;
 }
@@ -120,9 +130,11 @@ function App() {
     DEFAULT_NUTRITION_GOALS
   );
   const [storageError, setStorageError] = useState("");
+  const [trophySourceNavigation, setTrophySourceNavigation] = useState(null);
   const photoDatabaseRef = useRef(null);
   const initializationStartedRef = useRef(false);
   const activeObjectUrlsRef = useRef(new Set());
+  const skipNextPageTopScrollRef = useRef(false);
 
   useEffect(() => {
     if (initializationStartedRef.current) return;
@@ -246,6 +258,10 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (skipNextPageTopScrollRef.current) {
+      skipNextPageTopScrollRef.current = false;
+      return undefined;
+    }
     const frameId = window.requestAnimationFrame(() => {
       window.scrollTo({ top: 0, left: 0, behavior: "auto" });
     });
@@ -319,17 +335,36 @@ function App() {
   }, []);
 
   useEffect(() => {
-    try {
+    async function loadWorkouts() {
+      try {
       const savedWorkoutEntries = localStorage.getItem("workoutEntries");
       if (!savedWorkoutEntries) return;
       const parsedEntries = JSON.parse(savedWorkoutEntries);
       if (!Array.isArray(parsedEntries)) throw new Error("Invalid workout data.");
-      setWorkoutEntries(parsedEntries);
-    } catch (error) {
-      setStorageError(
-        "Trace couldn't read the saved workouts. The stored value was left unchanged."
-      );
+      if (!parsedEntries.some((entry) => Array.isArray(entry.photos) && entry.photos.length > 0)) {
+        setWorkoutEntries(parsedEntries);
+        return;
+      }
+      const database = photoDatabaseRef.current || await openPhotoDatabase();
+      photoDatabaseRef.current = database;
+      const hydrated = await Promise.all(parsedEntries.map(async (entry) => ({
+        ...entry,
+        ...(Array.isArray(entry.photos) ? { photos: (await Promise.all(entry.photos.map(async (value) => {
+          const id = typeof value === "string" ? value : value?.id;
+          if (!id) return null;
+          const photo = await getPhoto(database, id);
+          if (!photo?.blob) return { id };
+          const url = URL.createObjectURL(photo.blob);
+          activeObjectUrlsRef.current.add(url);
+          return { id, url };
+        }))).filter(Boolean) } : {}),
+      })));
+      setWorkoutEntries(hydrated);
+      } catch (error) {
+        setStorageError("Trace couldn't read the saved workouts or their photos. The stored value was left unchanged.");
+      }
     }
+    loadWorkouts();
   }, []);
 
   useEffect(() => {
@@ -866,22 +901,73 @@ function App() {
     }
   }
 
-  function saveWorkoutEntry(entry) {
-    const newEntry = {
-      ...entry,
-      id: createId(new Set(workoutEntries.map((item) => item.id))),
-    };
-    const updatedEntries = [...workoutEntries, newEntry];
-
-    try {
-      localStorage.setItem("workoutEntries", JSON.stringify(updatedEntries));
-      setWorkoutEntries(updatedEntries);
-      setStorageError("");
-      return true;
-    } catch (error) {
-      setStorageError(storageMessage("save this workout"));
-      return false;
+  async function prepareWorkoutPhotos(entry, workoutId, existingEntry = null) {
+    const incomingPhotos = entry.photos || [];
+    const existingPhotos = existingEntry?.photos || [];
+    if (incomingPhotos.length === 0 && existingPhotos.length === 0) {
+      return { prepared: [], newIds: [], removed: [] };
     }
+    const database = photoDatabaseRef.current || await openPhotoDatabase();
+    photoDatabaseRef.current = database;
+    const existingById = new Map(existingPhotos.filter(({ id }) => id).map((photo) => [photo.id, photo]));
+    const newRecords = [];
+    const prepared = [];
+    for (const photo of incomingPhotos) {
+      if (photo.id && existingById.has(photo.id)) { prepared.push(existingById.get(photo.id)); continue; }
+      if (!photo.blob) continue;
+      const id = createId(new Set([...existingById.keys(), ...newRecords.map((record) => record.id)]));
+      newRecords.push({ id, workoutId, blob: photo.blob });
+      const url = URL.createObjectURL(photo.blob);
+      activeObjectUrlsRef.current.add(url);
+      prepared.push({ id, url });
+    }
+    await putPhotos(database, newRecords);
+    const retained = new Set(prepared.map(({ id }) => id));
+    const removed = existingPhotos.filter(({ id }) => id && !retained.has(id));
+    return { prepared, newIds: newRecords.map(({ id }) => id), removed };
+  }
+
+  function saveWorkoutEntry(entry) {
+    const id = createId(new Set(workoutEntries.map((item) => item.id)));
+    const persist = async (photoResult) => {
+      const newEntry = {
+        ...entry,
+        id,
+        ...(photoResult.prepared.length ? { photos: photoResult.prepared } : {}),
+      };
+      const updatedEntries = [...workoutEntries, newEntry];
+      try {
+        localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
+        setWorkoutEntries(updatedEntries);
+        setStorageError("");
+        return true;
+      } catch (error) {
+        if (photoResult.newIds.length) {
+          await Promise.resolve(deletePhotos(photoDatabaseRef.current, photoResult.newIds)).catch(() => {});
+        }
+        setStorageError(storageMessage("save this workout"));
+        return false;
+      }
+    };
+    if (!(entry.photos || []).length) {
+      const newEntry = { ...entry, id };
+      const updatedEntries = [...workoutEntries, newEntry];
+      try {
+        localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
+        setWorkoutEntries(updatedEntries);
+        setStorageError("");
+        return true;
+      } catch (error) {
+        setStorageError(storageMessage("save this workout"));
+        return false;
+      }
+    }
+    return prepareWorkoutPhotos(entry, id)
+      .then(persist)
+      .catch(() => {
+        setStorageError(storageMessage("save these workout photos"));
+        return false;
+      });
   }
 
   function saveExerciseDefinitions(drafts) {
@@ -946,29 +1032,53 @@ function App() {
   }
 
   function updateWorkoutEntry(id, entry) {
-    const updatedEntries = workoutEntries.map((existingEntry) =>
-      existingEntry.id === id
-        ? { ...existingEntry, ...entry, id: existingEntry.id }
-        : existingEntry
-    );
-
-    try {
-      localStorage.setItem("workoutEntries", JSON.stringify(updatedEntries));
-      setWorkoutEntries(updatedEntries);
-      setStorageError("");
-      return true;
-    } catch (error) {
-      setStorageError(storageMessage("update this workout"));
-      return false;
+    const existingEntry = workoutEntries.find((item) => item.id === id);
+    const hasPhotos = (entry.photos || []).length > 0 || (existingEntry?.photos || []).length > 0;
+    if (!hasPhotos) {
+      const updatedEntries = workoutEntries.map((item) => item.id === id ? { ...item, ...entry, id: item.id } : item);
+      try {
+        localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
+        setWorkoutEntries(updatedEntries);
+        setStorageError("");
+        return true;
+      } catch (error) {
+        setStorageError(storageMessage("update this workout"));
+        return false;
+      }
     }
+    return prepareWorkoutPhotos(entry, id, existingEntry).then(async (photoResult) => {
+      const updatedEntries = workoutEntries.map((item) => item.id === id
+        ? { ...item, ...entry, photos: photoResult.prepared, id: item.id }
+        : item);
+      try {
+        localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
+        setWorkoutEntries(updatedEntries);
+        const removedIds = photoResult.removed.map(({ id }) => id);
+        if (removedIds.length) await Promise.resolve(deletePhotos(photoDatabaseRef.current, removedIds)).catch(() => setStorageError("The workout was saved, but Trace couldn't clean up removed photos."));
+        photoResult.removed.forEach(({ url }) => { if (url) { URL.revokeObjectURL(url); activeObjectUrlsRef.current.delete(url); } });
+        setStorageError("");
+        return true;
+      } catch (error) {
+        if (photoResult.newIds.length) await Promise.resolve(deletePhotos(photoDatabaseRef.current, photoResult.newIds)).catch(() => {});
+        setStorageError(storageMessage("update this workout"));
+        return false;
+      }
+    }).catch(() => {
+      setStorageError(storageMessage("update these workout photos"));
+      return false;
+    });
   }
 
   function deleteWorkoutEntry(id) {
     const updatedEntries = workoutEntries.filter((entry) => entry.id !== id);
+    const deleted = workoutEntries.find((entry) => entry.id === id);
 
     try {
-      localStorage.setItem("workoutEntries", JSON.stringify(updatedEntries));
+      localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
       setWorkoutEntries(updatedEntries);
+      const photoIds = (deleted?.photos || []).map(({ id }) => id).filter(Boolean);
+      if (photoIds.length) Promise.resolve(deletePhotos(photoDatabaseRef.current, photoIds)).catch(() => setStorageError("The workout was deleted, but Trace couldn't clean up its photos."));
+      (deleted?.photos || []).forEach(({ url }) => { if (url) { URL.revokeObjectURL(url); activeObjectUrlsRef.current.delete(url); } });
       setStorageError("");
       return true;
     } catch (error) {
@@ -1006,6 +1116,24 @@ function App() {
       setStorageError(storageMessage("remove this trophy"));
       return false;
     }
+  }
+
+  function getTrophySource(entry) {
+    return resolveTrophySource(entry, { memories, workouts: workoutEntries });
+  }
+
+  function openTrophySource(entry) {
+    const target = getTrophySource(entry);
+    if (!target) return false;
+    setTrophySourceNavigation({ originTrophyId: entry.id, sourceType: entry.sourceType, target });
+    skipNextPageTopScrollRef.current = true;
+    setPage(entry.sourceType === "memory" ? "home" : "workouts");
+    return true;
+  }
+
+  function returnToTrophyCase() {
+    skipNextPageTopScrollRef.current = true;
+    setPage("trophy-case");
   }
 
   return (
@@ -1059,6 +1187,9 @@ function App() {
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}
+          trophySourceTarget={trophySourceNavigation?.sourceType === "memory" ? trophySourceNavigation.target : null}
+          onReturnToTrophyCase={returnToTrophyCase}
+          onExitTrophySource={() => setTrophySourceNavigation(null)}
         />
       ) : page === "nutrition" ? (
         <NutritionPage
@@ -1105,6 +1236,8 @@ function App() {
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}
+          trophySourceTarget={trophySourceNavigation?.sourceType === "workout-pr" ? trophySourceNavigation.target : null}
+          onReturnToTrophyCase={returnToTrophyCase}
         />
       ) : page === "protocols" ? (
         <ProtocolsPage
@@ -1126,6 +1259,10 @@ function App() {
           removeTrophyCaseEntry={removeTrophyCaseEntry}
           buttonStyle={buttonStyle}
           containerStyle={containerStyle}
+          onViewSource={openTrophySource}
+          sourceAvailable={(entry) => Boolean(getTrophySource(entry))}
+          restoreTrophyId={trophySourceNavigation?.originTrophyId || null}
+          onRestoreComplete={() => setTrophySourceNavigation(null)}
         />
       ) : (
         <NewMemoryPage

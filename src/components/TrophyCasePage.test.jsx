@@ -119,3 +119,12 @@ test("renders intentional empty-group copy when only one source is present", () 
   expect(screen.getByRole("group", { name: "Bench Press trophy" })).toBeInTheDocument();
   expect(screen.queryByText("No trophies yet. Achievements you choose to celebrate will appear here.")).not.toBeInTheDocument();
 });
+
+test("shows disabled unavailable source behavior without affecting removal", () => {
+  const remove = jest.fn();
+  render(<TrophyCasePage trophyEntries={[trophy()]} onViewSource={jest.fn()} sourceAvailable={() => false} removeTrophyCaseEntry={remove} />);
+  expect(screen.getByRole("button", { name: "View Workout" })).toBeDisabled();
+  expect(screen.getByText("Source no longer available")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
+  expect(remove).toHaveBeenCalledWith("workout-trophy");
+});

@@ -20,6 +20,8 @@ let originalRequestAnimationFrame;
 let originalCancelAnimationFrame;
 let originalScrollTo;
 let originalScrollIntoView;
+let originalCreateObjectURL;
+let originalRevokeObjectURL;
 
 beforeEach(() => {
   localStorage.clear();
@@ -27,6 +29,8 @@ beforeEach(() => {
   originalCancelAnimationFrame = window.cancelAnimationFrame;
   originalScrollTo = window.scrollTo;
   originalScrollIntoView = Element.prototype.scrollIntoView;
+  originalCreateObjectURL = URL.createObjectURL;
+  originalRevokeObjectURL = URL.revokeObjectURL;
   window.requestAnimationFrame = (callback) => {
     callback();
     return 1;
@@ -34,6 +38,8 @@ beforeEach(() => {
   window.cancelAnimationFrame = jest.fn();
   window.scrollTo = jest.fn();
   Element.prototype.scrollIntoView = jest.fn();
+  URL.createObjectURL = jest.fn((blob) => `blob:${blob.size}:${blob.type}`);
+  URL.revokeObjectURL = jest.fn();
 });
 
 afterEach(() => {
@@ -41,6 +47,8 @@ afterEach(() => {
   window.cancelAnimationFrame = originalCancelAnimationFrame;
   window.scrollTo = originalScrollTo;
   Element.prototype.scrollIntoView = originalScrollIntoView;
+  URL.createObjectURL = originalCreateObjectURL;
+  URL.revokeObjectURL = originalRevokeObjectURL;
 });
 
 function renderAppAtTimeline() {
@@ -595,6 +603,36 @@ test("workouts persist separately and reload as complete snapshots", () => {
   openWorkouts();
   expect(screen.getByRole("heading", { name: "Push Day" })).toBeInTheDocument();
   expect(screen.getByText(/Bodyweight.*6 reps/)).toBeInTheDocument();
+});
+
+test("workout photo blobs stay in IndexedDB references and are cleaned up with only their workout", async () => {
+  const database = { name: "photo-db" };
+  openPhotoDatabase.mockResolvedValue(database);
+  putPhotos.mockResolvedValue(undefined);
+  deletePhotos.mockResolvedValue(undefined);
+  openPhotoDatabase.mockClear();
+  putPhotos.mockClear();
+  deletePhotos.mockClear();
+  render(<App />);
+  openWorkouts();
+  fillBodyweightWorkout("Photo Workout");
+  const photo = new File(["workout image"], "workout.jpg", { type: "image/jpeg" });
+  fireEvent.change(screen.getByLabelText("Choose Photos"), { target: { files: [photo] } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  await waitFor(() => expect(JSON.parse(localStorage.getItem("workoutEntries"))).toHaveLength(1));
+  const stored = JSON.parse(localStorage.getItem("workoutEntries"))[0];
+  expect(stored.photos).toEqual([expect.any(String)]);
+  expect(JSON.stringify(stored)).not.toContain("workout image");
+  expect(putPhotos).toHaveBeenCalledWith(database, [
+    expect.objectContaining({ id: stored.photos[0], workoutId: stored.id, blob: photo }),
+  ]);
+  expect(screen.getByRole("region", { name: "Photo Workout photos" })).toBeInTheDocument();
+
+  jest.spyOn(window, "confirm").mockReturnValue(true);
+  fireEvent.click(within(screen.getByText("Photo Workout").closest("article")).getByRole("button", { name: "Delete" }));
+  await waitFor(() => expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]));
+  expect(deletePhotos).toHaveBeenCalledWith(database, [stored.photos[0]]);
 });
 
 test("refreshes a resolvable curated PR after correction and freezes it after source deletion", async () => {
