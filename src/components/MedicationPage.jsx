@@ -86,13 +86,15 @@ function MedicationPage({
   const [entryStatusMessage, setEntryStatusMessage] = useState("");
   const [editingCompound, setEditingCompound] = useState(null);
   const [historyQuery, setHistoryQuery] = useState("");
+  const [formNavigationRequest, setFormNavigationRequest] = useState(0);
   const pageTopRef = useRef(null);
-  const formRef = useRef(null);
   const editHeadingRef = useRef(null);
+  const compoundSearchRef = useRef(null);
   const historyTopRef = useRef(null);
   const historyEntryRefs = useRef(new Map());
   const historyGroupRefs = useRef(new Map());
   const editOriginRef = useRef(null);
+  const selectionOriginRef = useRef(false);
   const visibleHistoryGroups = getVisibleMedicationHistory(
     medicationEntries,
     historyQuery
@@ -109,7 +111,7 @@ function MedicationPage({
   };
 
   useEffect(() => {
-    if (editingEntryId === null) return undefined;
+    if (formNavigationRequest === 0) return undefined;
 
     const frameId = window.requestAnimationFrame(() => {
       editHeadingRef.current?.scrollIntoView?.({
@@ -119,7 +121,7 @@ function MedicationPage({
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [editingEntryId]);
+  }, [formNavigationRequest]);
 
   function draft() {
     return {
@@ -246,6 +248,7 @@ function MedicationPage({
     } else {
       pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
     }
+    selectionOriginRef.current = false;
   }
 
   function editEntry(entry) {
@@ -272,6 +275,8 @@ function MedicationPage({
       entryId: entry.id,
       dateKey: getMedicationEntryLocalDateKey(entry),
     };
+    selectionOriginRef.current = false;
+    setFormNavigationRequest((request) => request + 1);
   }
 
   function deleteEntry(id) {
@@ -292,31 +297,46 @@ function MedicationPage({
     }
 
     const origin = editOriginRef.current;
+    const returnToSearch = selectionOriginRef.current;
     resetForm();
-    setCompoundSearchResetKey((currentKey) => currentKey + 1);
     if (origin) {
+      setCompoundSearchResetKey((currentKey) => currentKey + 1);
       scrollToHistoryContext(origin);
       editOriginRef.current = null;
+      selectionOriginRef.current = false;
+    } else if (returnToSearch) {
+      selectionOriginRef.current = false;
+      window.requestAnimationFrame(() => {
+        compoundSearchRef.current?.scrollIntoView?.({
+          behavior: "smooth",
+          block: "start",
+        });
+      });
     } else {
+      setCompoundSearchResetKey((currentKey) => currentKey + 1);
       window.requestAnimationFrame(() => {
         pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
       });
     }
   }
 
-  function markCompoundModified() {
+  function markCompoundModified(changeType) {
     setCompoundReference((currentReference) =>
-      currentReference
+      currentReference &&
+      !(
+        currentReference.source === "trace-catalog" &&
+        changeType === "logging-default"
+      )
         ? { ...currentReference, modified: true }
         : currentReference
     );
   }
 
-  function changeDraft(setValue, value, affectsCompound = false) {
+  function changeDraft(setValue, value, compoundChangeType = null) {
     setValue(value);
     setIsDraftDirty(true);
     setFormError("");
-    if (affectsCompound) markCompoundModified();
+    if (compoundChangeType) markCompoundModified(compoundChangeType);
   }
 
   function selectCompound(compound) {
@@ -341,7 +361,49 @@ function MedicationPage({
     setFormError("");
     setEntryStatusMessage("");
     setEditingCompound(null);
-    formRef.current?.scrollIntoView?.({ behavior: "smooth" });
+    selectionOriginRef.current = true;
+    setFormNavigationRequest((request) => request + 1);
+  }
+
+  function selectBuiltInCompound(compound) {
+    setName(compound.name);
+    setDoseAmount("");
+    setDoseUnit("");
+    setCustomDoseUnit("");
+    setRoute("");
+    setCustomRoute("");
+    setCompoundReference({
+      source: "trace-catalog",
+      sourceId: compound.id,
+      category: compound.category,
+      modified: false,
+    });
+    setSaveAsReusableCompound(false);
+    setDefaultDoseAmount("");
+    setIsDraftDirty(true);
+    setFormError("");
+    setEntryStatusMessage("");
+    setEditingCompound(null);
+    selectionOriginRef.current = true;
+    setFormNavigationRequest((request) => request + 1);
+  }
+
+  function useCustomCompound(customName) {
+    setName(customName);
+    setDoseAmount("");
+    setDoseUnit("");
+    setCustomDoseUnit("");
+    setRoute("");
+    setCustomRoute("");
+    setCompoundReference(null);
+    setSaveAsReusableCompound(false);
+    setDefaultDoseAmount("");
+    setIsDraftDirty(true);
+    setFormError("");
+    setEntryStatusMessage("");
+    setEditingCompound(null);
+    selectionOriginRef.current = true;
+    setFormNavigationRequest((request) => request + 1);
   }
 
   const backButtonStyle = {
@@ -369,13 +431,26 @@ function MedicationPage({
       </button>
 
       {editingEntryId === null && (
-        <CompoundSearch
-          compounds={compounds}
-          onSelectCompound={selectCompound}
-          onEditCompound={setEditingCompound}
-          inputStyle={inputStyle}
-          resetKey={compoundSearchResetKey}
-        />
+        <div
+          ref={compoundSearchRef}
+          data-testid="compound-search-context"
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            scrollMarginTop: "24px",
+            width: "100%",
+          }}
+        >
+          <CompoundSearch
+            compounds={compounds}
+            onSelectCompound={selectCompound}
+            onSelectBuiltInCompound={selectBuiltInCompound}
+            onUseCustomCompound={useCustomCompound}
+            onEditCompound={setEditingCompound}
+            inputStyle={inputStyle}
+            resetKey={compoundSearchResetKey}
+          />
+        </div>
       )}
 
       {editingEntryId === null && editingCompound && (
@@ -399,7 +474,6 @@ function MedicationPage({
       )}
 
       <form
-        ref={formRef}
         onSubmit={saveEntry}
         style={{
           background: "#1f2937",
@@ -424,7 +498,9 @@ function MedicationPage({
             required
             style={formInputStyle}
             value={name}
-            onChange={(event) => changeDraft(setName, event.target.value, true)}
+            onChange={(event) =>
+              changeDraft(setName, event.target.value, "identity")
+            }
           />
         </label>
 
@@ -457,7 +533,7 @@ function MedicationPage({
               style={formInputStyle}
               value={doseUnit}
               onChange={(event) =>
-                changeDraft(setDoseUnit, event.target.value, true)
+                changeDraft(setDoseUnit, event.target.value, "logging-default")
               }
             >
               <option value="">Select a unit...</option>
@@ -479,7 +555,11 @@ function MedicationPage({
               style={formInputStyle}
               value={customDoseUnit}
               onChange={(event) =>
-                changeDraft(setCustomDoseUnit, event.target.value, true)
+                changeDraft(
+                  setCustomDoseUnit,
+                  event.target.value,
+                  "logging-default"
+                )
               }
             />
           </label>
@@ -491,7 +571,7 @@ function MedicationPage({
             style={formInputStyle}
             value={route}
             onChange={(event) =>
-              changeDraft(setRoute, event.target.value, true)
+              changeDraft(setRoute, event.target.value, "logging-default")
             }
           >
             <option value="">Select a method or route...</option>
@@ -512,7 +592,11 @@ function MedicationPage({
               style={formInputStyle}
               value={customRoute}
               onChange={(event) =>
-                changeDraft(setCustomRoute, event.target.value, true)
+                changeDraft(
+                  setCustomRoute,
+                  event.target.value,
+                  "logging-default"
+                )
               }
             />
           </label>

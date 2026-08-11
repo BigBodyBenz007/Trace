@@ -315,6 +315,47 @@ test("medication entries persist separately in localStorage", () => {
   expect(localStorage.getItem("nutritionEntries")).toBeNull();
 });
 
+test("Trace catalog logging persists a self-contained identity snapshot", () => {
+  renderAppAtTimeline();
+  fireEvent.click(
+    screen.getByRole("button", { name: "Medications & Supplements" })
+  );
+  fireEvent.change(screen.getByLabelText("Compound search"), {
+    target: { value: "LY3437943" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Select Trace compound Retatrutide" })
+  );
+  fireEvent.change(screen.getByLabelText("Amount / dose"), {
+    target: { value: "2.5" },
+  });
+  fireEvent.change(screen.getByLabelText("Dose unit"), {
+    target: { value: "mg" },
+  });
+  fireEvent.change(screen.getByLabelText("Method / route"), {
+    target: { value: "subcutaneous" },
+  });
+  fireEvent.change(screen.getByLabelText("Notes (optional)"), {
+    target: { value: "Historical catalog snapshot" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  const entries = JSON.parse(localStorage.getItem("medicationEntries"));
+  expect(entries[0]).toMatchObject({
+    name: "Retatrutide",
+    dose: { amount: 2.5, unit: "mg" },
+    route: { code: "subcutaneous" },
+    notes: "Historical catalog snapshot",
+    compoundReference: {
+      source: "trace-catalog",
+      sourceId: "trace:compound:retatrutide",
+      category: "peptide",
+      modified: false,
+    },
+  });
+  expect(localStorage.getItem("medicationCompounds")).toBeNull();
+});
+
 test("reusable compounds persist separately and are immediately searchable", () => {
   renderAppAtTimeline();
   fireEvent.click(
@@ -354,10 +395,12 @@ test("reusable compounds persist separately and are immediately searchable", () 
     modified: false,
   });
 
-  fireEvent.change(screen.getByLabelText("Saved compound search"), {
+  fireEvent.change(screen.getByLabelText("Compound search"), {
     target: { value: "ss-31" },
   });
-  expect(screen.getByRole("button", { name: "Select SS-31" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Select saved compound SS-31" })
+  ).toBeInTheDocument();
 });
 
 test("persisted reusable compounds reload independently from entries", () => {
@@ -372,12 +415,12 @@ test("persisted reusable compounds reload independently from entries", () => {
   fireEvent.click(
     screen.getByRole("button", { name: "Medications & Supplements" })
   );
-  fireEvent.change(screen.getByLabelText("Saved compound search"), {
+  fireEvent.change(screen.getByLabelText("Compound search"), {
     target: { value: "saved" },
   });
 
   expect(
-    screen.getByRole("button", { name: "Select Saved Compound" })
+    screen.getByRole("button", { name: "Select saved compound Saved Compound" })
   ).toBeInTheDocument();
   expect(screen.getByText("No medication entries yet.")).toBeInTheDocument();
 });
@@ -415,7 +458,7 @@ test("editing a saved compound refreshes defaults without rewriting history and 
   fireEvent.click(
     screen.getByRole("button", { name: "Medications & Supplements" })
   );
-  fireEvent.change(screen.getByLabelText("Saved compound search"), {
+  fireEvent.change(screen.getByLabelText("Compound search"), {
     target: { value: "retatrutide" },
   });
   fireEvent.click(
@@ -446,7 +489,7 @@ test("editing a saved compound refreshes defaults without rewriting history and 
   expect(screen.getByText(/Saved defaults: 20 mg/)).toBeInTheDocument();
 
   fireEvent.click(
-    screen.getByRole("button", { name: "Select Retatrutide" })
+    screen.getByRole("button", { name: "Select saved compound Retatrutide" })
   );
   expect(screen.getByLabelText("Amount / dose")).toHaveValue(20);
 
@@ -455,7 +498,7 @@ test("editing a saved compound refreshes defaults without rewriting history and 
   fireEvent.click(
     screen.getByRole("button", { name: "Medications & Supplements" })
   );
-  fireEvent.change(screen.getByLabelText("Saved compound search"), {
+  fireEvent.change(screen.getByLabelText("Compound search"), {
     target: { value: "retatrutide" },
   });
   expect(screen.getByText(/Saved defaults: 20 mg/)).toBeInTheDocument();

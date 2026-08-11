@@ -89,10 +89,12 @@ function savedCompound(overrides = {}) {
 }
 
 function selectSavedCompound(name = "SS-31") {
-  fireEvent.change(screen.getByLabelText("Saved compound search"), {
+  fireEvent.change(screen.getByLabelText("Compound search"), {
     target: { value: name },
   });
-  fireEvent.click(screen.getByRole("button", { name: `Select ${name}` }));
+  fireEvent.click(
+    screen.getByRole("button", { name: `Select saved compound ${name}` })
+  );
 }
 
 function entryForm() {
@@ -266,6 +268,159 @@ test("selected saved amount prefills but changing it affects only the log", () =
     },
   });
   expect(props.saveCompoundDefinition).not.toHaveBeenCalled();
+});
+
+test("saved selection navigates to the form heading only after defaults render", () => {
+  const scroll = installDeferredScrollMocks();
+  renderMedicationPage({
+    compounds: [savedCompound({ defaultDoseAmount: "3.5" })],
+  });
+  selectSavedCompound();
+
+  const heading = screen.getByRole("heading", { name: "Add Entry" });
+  expect(entryForm().getByLabelText("Amount / dose")).toHaveValue(3.5);
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+  scroll.flush();
+  expect(Element.prototype.scrollIntoView.mock.instances[0]).toBe(heading);
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "smooth",
+    block: "start",
+  });
+  scroll.restore();
+});
+
+test("Trace catalog selection identifies only, navigates after render, and snapshots the reference", () => {
+  const scroll = installDeferredScrollMocks();
+  const props = renderMedicationPage();
+  fireEvent.change(screen.getByLabelText("Compound search"), {
+    target: { value: "LY3437943" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Select Trace compound Retatrutide" })
+  );
+
+  const form = entryForm();
+  const heading = screen.getByRole("heading", { name: "Add Entry" });
+  expect(form.getByLabelText("Name")).toHaveValue("Retatrutide");
+  expect(form.getByLabelText("Amount / dose")).toHaveValue(null);
+  expect(form.getByLabelText("Dose unit")).toHaveValue("");
+  expect(form.getByLabelText("Method / route")).toHaveValue("");
+  expect(screen.queryByLabelText(/schedule|frequency/i)).not.toBeInTheDocument();
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+  scroll.flush();
+  expect(Element.prototype.scrollIntoView.mock.instances[0]).toBe(heading);
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "smooth",
+    block: "start",
+  });
+
+  fireEvent.change(form.getByLabelText("Amount / dose"), { target: { value: "2.5" } });
+  fireEvent.change(form.getByLabelText("Dose unit"), { target: { value: "mg" } });
+  fireEvent.change(form.getByLabelText("Method / route"), {
+    target: { value: "subcutaneous" },
+  });
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveMedicationEntry).toHaveBeenCalledWith(
+    expect.objectContaining({
+      name: "Retatrutide",
+      dose: { amount: 2.5, unit: "mg" },
+      route: { code: "subcutaneous" },
+      compoundReference: {
+        source: "trace-catalog",
+        sourceId: "trace:compound:retatrutide",
+        category: "peptide",
+        modified: false,
+      },
+    })
+  );
+  scroll.restore();
+});
+
+test("renaming a Trace identity marks its reference modified", () => {
+  const props = renderMedicationPage();
+  fireEvent.change(screen.getByLabelText("Compound search"), {
+    target: { value: "retatrutide" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Select Trace compound Retatrutide" })
+  );
+  const form = entryForm();
+  fireEvent.change(form.getByLabelText("Name"), { target: { value: "My label" } });
+  fireEvent.change(form.getByLabelText("Amount / dose"), { target: { value: "1" } });
+  fireEvent.change(form.getByLabelText("Dose unit"), { target: { value: "mg" } });
+  fireEvent.change(form.getByLabelText("Method / route"), { target: { value: "oral" } });
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveMedicationEntry.mock.calls[0][0].compoundReference).toMatchObject({
+    source: "trace-catalog",
+    sourceId: "trace:compound:retatrutide",
+    modified: true,
+  });
+});
+
+test("custom continuation prefills only the name and remains a manual entry", () => {
+  const props = renderMedicationPage();
+  fireEvent.change(screen.getByLabelText("Compound search"), {
+    target: { value: "  My   Custom  " },
+  });
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "Use “My Custom” as Custom Compound",
+    })
+  );
+  const form = entryForm();
+  expect(form.getByLabelText("Name")).toHaveValue("My Custom");
+  expect(form.getByLabelText("Amount / dose")).toHaveValue(null);
+  expect(form.getByLabelText("Save as reusable compound")).not.toBeChecked();
+  fillRequiredFields(form, { name: "My Custom" });
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+  expect(props.saveMedicationEntry.mock.calls[0][0]).not.toHaveProperty(
+    "compoundReference"
+  );
+});
+
+test("canceling a catalog selection preserves and returns to compound search", () => {
+  const scroll = installDeferredScrollMocks();
+  const originalConfirm = window.confirm;
+  window.confirm = jest.fn(() => true);
+  renderMedicationPage();
+  fireEvent.change(screen.getByLabelText("Compound search"), {
+    target: { value: "retatrutide" },
+  });
+  fireEvent.click(
+    screen.getByRole("button", { name: "Select Trace compound Retatrutide" })
+  );
+  scroll.flush();
+  fireEvent.click(entryForm().getByRole("button", { name: "Cancel Entry" }));
+  scroll.flush();
+
+  expect(screen.getByLabelText("Compound search")).toHaveValue("retatrutide");
+  expect(Element.prototype.scrollIntoView.mock.instances.at(-1)).toBe(
+    screen.getByTestId("compound-search-context")
+  );
+  window.confirm = originalConfirm;
+  scroll.restore();
+});
+
+test("unknown Trace references remain readable from their historical snapshot", () => {
+  const entry = savedEntry({
+    name: "Historical Catalog Name",
+    compoundReference: {
+      source: "trace-catalog",
+      sourceId: "trace:compound:no-longer-present",
+      category: "other",
+      modified: false,
+    },
+  });
+  renderMedicationPage({ medicationEntries: [entry] });
+
+  expect(screen.getByText("Historical Catalog Name")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(entryForm().getByLabelText("Name")).toHaveValue(
+    "Historical Catalog Name"
+  );
+  expect(entryForm().getByLabelText("Amount / dose")).toHaveValue(1.25);
 });
 
 test("name, unit, and route overrides mark a selected reference modified", () => {
@@ -641,7 +796,7 @@ test("editing a referenced entry uses its historical snapshot without catalog lo
   expect(form.getByLabelText("Amount / dose")).toHaveValue(5);
   expect(form.getByLabelText("Method / route")).toHaveValue("oral");
   expect(
-    screen.queryByLabelText("Saved compound search")
+    screen.queryByLabelText("Compound search")
   ).not.toBeInTheDocument();
 });
 
