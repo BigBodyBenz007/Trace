@@ -1,5 +1,34 @@
 export const TROPHY_CASE_STORAGE_KEY = "trophyCaseEntries";
 export const WORKOUT_PR_SOURCE_TYPE = "workout-pr";
+export const MEMORY_SOURCE_TYPE = "memory";
+
+export function createMemoryTrophyCandidate(memory) {
+  const imageReferences = (Array.isArray(memory?.images) ? memory.images : [])
+    .map((image) => (typeof image === "object" ? image?.id : null))
+    .filter(Boolean);
+
+  return {
+    sourceType: MEMORY_SOURCE_TYPE,
+    sourceKey: `${MEMORY_SOURCE_TYPE}|${memory.id}`,
+    sourceId: memory.id,
+    sourceRecordType: null,
+    title: memory.title || "Untitled Memory",
+    description: memory.description || "",
+    achievedAt: memory.date ? `${memory.date}T12:00:00` : null,
+    sourceSnapshot: {
+      memoryId: memory.id,
+      title: memory.title || "Untitled Memory",
+      description: memory.description || "",
+      date: memory.date || "",
+      categories: Array.isArray(memory.categories) ? [...memory.categories] : [],
+      imageReferences,
+    },
+    metadata: {
+      categoryCount: Array.isArray(memory.categories) ? memory.categories.length : 0,
+      photoCount: Array.isArray(memory.images) ? memory.images.length : 0,
+    },
+  };
+}
 
 function recordSourceKey(exercisePr, record) {
   return [

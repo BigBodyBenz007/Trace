@@ -3,7 +3,6 @@ import ExerciseSearch from "./ExerciseSearch";
 import SavedExerciseEditor from "./SavedExerciseEditor";
 import ExerciseHistory from "./ExerciseHistory";
 import TrophyCase from "./TrophyCase";
-import TrophyPlacementCeremony from "./TrophyPlacementCeremony";
 import {
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
@@ -96,7 +95,6 @@ function WorkoutPage({
   const [activeSearchExerciseId, setActiveSearchExerciseId] = useState(null);
   const [editingSavedExercise, setEditingSavedExercise] = useState(null);
   const [searchResetKey, setSearchResetKey] = useState(0);
-  const [ceremonyEntry, setCeremonyEntry] = useState(null);
   const pageTopRef = useRef(null);
   const formRef = useRef(null);
 
@@ -120,13 +118,6 @@ function WorkoutPage({
   };
   const backButtonStyle = { ...buttonStyle, backgroundColor: "#666" };
 
-  function addTrophyWithCeremony(candidate) {
-    const addedEntry = addTrophyCaseEntry(candidate);
-    if (addedEntry && typeof addedEntry === "object") {
-      setCeremonyEntry(addedEntry);
-    }
-    return addedEntry;
-  }
 
   function markChanged() {
     setIsDirty(true);
@@ -703,16 +694,9 @@ function WorkoutPage({
       <ExerciseHistory
         workoutEntries={workoutEntries}
         trophyEntries={trophyEntries}
-        addTrophyCaseEntry={addTrophyWithCeremony}
+        addTrophyCaseEntry={addTrophyCaseEntry}
         buttonStyle={buttonStyle}
       />
-
-      {ceremonyEntry && (
-        <TrophyPlacementCeremony
-          entry={ceremonyEntry}
-          onClose={() => setCeremonyEntry(null)}
-        />
-      )}
 
       <section style={{ marginTop: "36px", maxWidth: "760px", textAlign: "left", width: "100%" }}>
         <h2>Workout History</h2>

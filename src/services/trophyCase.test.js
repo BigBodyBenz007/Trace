@@ -2,6 +2,7 @@ import {
   TROPHY_CASE_STORAGE_KEY,
   addCuratedTrophy,
   createWorkoutPrCandidate,
+  createMemoryTrophyCandidate,
   readTrophyCaseEntries,
   writeTrophyCaseEntries,
 } from "./trophyCase";
@@ -41,4 +42,40 @@ test("keeps Saved and Trace identities distinct", () => {
   const trace = candidate("trace|trace:bench");
   const saved = candidate("saved|saved:bench");
   expect(trace.sourceKey).not.toBe(saved.sourceKey);
+});
+
+test("creates lightweight Memory candidates from stable identity", () => {
+  const candidate = createMemoryTrophyCandidate({
+    id: "memory-1",
+    title: "Graduation Day",
+    description: "Finally finished my degree.",
+    date: "2026-05-18",
+    categories: ["Achievement", "Family"],
+    images: [
+      { id: "photo-1", url: "blob:large-photo" },
+      "data:image/jpeg;base64,very-large-legacy-photo",
+    ],
+  });
+  expect(candidate).toMatchObject({
+    sourceType: "memory",
+    sourceKey: "memory|memory-1",
+    sourceId: "memory-1",
+    title: "Graduation Day",
+    description: "Finally finished my degree.",
+    sourceSnapshot: {
+      memoryId: "memory-1",
+      date: "2026-05-18",
+      categories: ["Achievement", "Family"],
+      imageReferences: ["photo-1"],
+    },
+    metadata: { categoryCount: 2, photoCount: 2 },
+  });
+  expect(JSON.stringify(candidate)).not.toContain("blob:large-photo");
+  expect(JSON.stringify(candidate)).not.toContain("base64");
+});
+
+test("different Memories with identical text remain distinct", () => {
+  const first = createMemoryTrophyCandidate({ id: "memory-a", title: "Graduation", description: "Done" });
+  const second = createMemoryTrophyCandidate({ id: "memory-b", title: "Graduation", description: "Done" });
+  expect(first.sourceKey).not.toBe(second.sourceKey);
 });

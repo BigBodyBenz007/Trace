@@ -1,7 +1,8 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import App from "./App";
 import { createCompoundDefinition } from "./services/compoundCatalog";
 import { createExerciseDefinition } from "./services/exerciseCatalog";
+import { deletePhotos, openPhotoDatabase, putPhotos } from "./storage/photoStorage";
 
 jest.mock("./storage/photoStorage", () => ({
   clearCompletedMigrationBackup: jest.fn(),
@@ -18,24 +19,28 @@ jest.mock("./storage/photoStorage", () => ({
 let originalRequestAnimationFrame;
 let originalCancelAnimationFrame;
 let originalScrollTo;
+let originalScrollIntoView;
 
 beforeEach(() => {
   localStorage.clear();
   originalRequestAnimationFrame = window.requestAnimationFrame;
   originalCancelAnimationFrame = window.cancelAnimationFrame;
   originalScrollTo = window.scrollTo;
+  originalScrollIntoView = Element.prototype.scrollIntoView;
   window.requestAnimationFrame = (callback) => {
     callback();
     return 1;
   };
   window.cancelAnimationFrame = jest.fn();
   window.scrollTo = jest.fn();
+  Element.prototype.scrollIntoView = jest.fn();
 });
 
 afterEach(() => {
   window.requestAnimationFrame = originalRequestAnimationFrame;
   window.cancelAnimationFrame = originalCancelAnimationFrame;
   window.scrollTo = originalScrollTo;
+  Element.prototype.scrollIntoView = originalScrollIntoView;
 });
 
 function renderAppAtTimeline() {
@@ -134,6 +139,83 @@ test("Add Memory to Timeline lands at the top", () => {
 
   expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
   expectDestinationScrolledToTop();
+});
+
+test("new Memory trophies persist, trigger the shared ceremony, preserve snapshots, and can be re-added", async () => {
+  putPhotos.mockResolvedValue(undefined);
+  deletePhotos.mockResolvedValue(undefined);
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+  fireEvent.change(screen.getByPlaceholderText("Memory title..."), { target: { value: "Graduation Day" } });
+  fireEvent.change(screen.getByPlaceholderText("Tell your story..."), { target: { value: "Finally finished my degree." } });
+  fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: "2026-05-18" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Memory" }));
+
+  await screen.findByRole("heading", { name: "Trace" });
+  fireEvent.click(screen.getByRole("button", { name: "Add to Trophy Case" }));
+  const ceremony = screen.getByRole("dialog", { name: "Added to Trophy Case" });
+  expect(ceremony).toHaveTextContent("Graduation Day");
+  expect(ceremony).toHaveTextContent("Finally finished my degree.");
+  const originalTrophies = JSON.parse(localStorage.getItem("trophyCaseEntries"));
+  expect(originalTrophies).toHaveLength(1);
+  expect(originalTrophies[0]).toMatchObject({
+    sourceType: "memory",
+    sourceKey: `memory|${originalTrophies[0].sourceId}`,
+    sourceSnapshot: { title: "Graduation Day", description: "Finally finished my degree.", date: "2026-05-18" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Close Trophy Case ceremony" }));
+  expect(screen.getByRole("button", { name: "In Trophy Case" })).toBeDisabled();
+
+  openWorkouts();
+  fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
+  expect(JSON.parse(localStorage.getItem("memories"))).toHaveLength(1);
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Add to Trophy Case" }));
+  const readdedTrophies = JSON.parse(localStorage.getItem("trophyCaseEntries"));
+  expect(readdedTrophies).toHaveLength(1);
+  expect(readdedTrophies[0].id).not.toBe(originalTrophies[0].id);
+  fireEvent.click(screen.getByRole("button", { name: "Close Trophy Case ceremony" }));
+
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByPlaceholderText("Memory title..."), { target: { value: "Edited Graduation" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  await screen.findByRole("heading", { name: "Edited Graduation" });
+  expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual(readdedTrophies);
+
+  jest.spyOn(window, "confirm").mockReturnValue(true);
+  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+  await waitFor(() => expect(JSON.parse(localStorage.getItem("memories"))).toEqual([]));
+  expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual(readdedTrophies);
+
+  openWorkouts();
+  expect(screen.getByRole("group", { name: "Graduation Day trophy" })).toHaveTextContent("Finally finished my degree.");
+  fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
+  expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual([]);
+});
+
+test("legacy Memories receive a compatibility-safe stable ID and remain trophy-eligible", async () => {
+  const legacyMemory = {
+    title: "Legacy Milestone",
+    description: "Saved before Memory IDs existed.",
+    date: "2020-01-02",
+    categories: ["Milestone"],
+    images: [],
+    favorite: false,
+  };
+  localStorage.setItem("memories", JSON.stringify([legacyMemory]));
+  openPhotoDatabase.mockResolvedValue({});
+  render(<App />);
+  const add = await screen.findByRole("button", { name: "Add to Trophy Case" });
+  const migratedMemory = JSON.parse(localStorage.getItem("memories"))[0];
+  expect(migratedMemory).toMatchObject(legacyMemory);
+  expect(migratedMemory.id).toBeTruthy();
+  fireEvent.click(add);
+  expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))[0]).toMatchObject({
+    sourceType: "memory",
+    sourceId: migratedMemory.id,
+    sourceKey: `memory|${migratedMemory.id}`,
+  });
+  openPhotoDatabase.mockImplementation(() => new Promise(() => {}));
 });
 
 test("Timeline to Medications and back uses shared destination scrolling", () => {

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { CATEGORY_OPTIONS } from "../constants/categories";
+import { createMemoryTrophyCandidate } from "../services/trophyCase";
 
 const CATEGORY_FILTER_OPTIONS = [
   "All",
@@ -56,6 +57,8 @@ function HomePage({
   onOpenWorkouts,
   deleteMemory,
   editMemory,
+  trophyEntries = [],
+  addTrophyCaseEntry = () => false,
   buttonStyle,
   inputStyle,
   containerStyle,
@@ -96,6 +99,15 @@ function HomePage({
     detailMemoryId === null
       ? null
       : memories.find((memory) => memory.id === detailMemoryId);
+  const trophySourceKeys = new Set(trophyEntries.map(({ sourceKey }) => sourceKey));
+
+  function isMemoryInTrophyCase(memory) {
+    return trophySourceKeys.has(`memory|${memory.id}`);
+  }
+
+  function addMemoryToTrophyCase(memory) {
+    return addTrophyCaseEntry(createMemoryTrophyCandidate(memory));
+  }
 
   function scrollMemoryIntoView(selectionKey) {
     const viewport = timelineRef.current;
@@ -574,10 +586,31 @@ function HomePage({
                 <div
                   style={{
                     display: "flex",
+                    flexWrap: "wrap",
                     gap: "10px",
                     marginTop: "20px",
                   }}
                 >
+                  <button
+                    type="button"
+                    disabled={isMemoryInTrophyCase(memory)}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      addMemoryToTrophyCase(memory);
+                    }}
+                    style={{
+                      background: isMemoryInTrophyCase(memory) ? "#4b5563" : "#a16207",
+                      color: "white",
+                      border: "none",
+                      minHeight: "44px",
+                      padding: "8px 16px",
+                      borderRadius: "8px",
+                      cursor: isMemoryInTrophyCase(memory) ? "default" : "pointer",
+                    }}
+                  >
+                    {isMemoryInTrophyCase(memory) ? "In Trophy Case" : "Add to Trophy Case"}
+                  </button>
+
                   <button
                     onClick={(event) => {
                       event.stopPropagation();
@@ -866,6 +899,26 @@ function HomePage({
                 marginTop: "24px",
               }}
             >
+              <button
+                type="button"
+                disabled={isMemoryInTrophyCase(detailMemory)}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  addMemoryToTrophyCase(detailMemory);
+                }}
+                style={{
+                  background: isMemoryInTrophyCase(detailMemory) ? "#4b5563" : "#a16207",
+                  border: "none",
+                  borderRadius: "8px",
+                  color: "white",
+                  cursor: isMemoryInTrophyCase(detailMemory) ? "default" : "pointer",
+                  minHeight: "44px",
+                  padding: "8px 16px",
+                }}
+              >
+                {isMemoryInTrophyCase(detailMemory) ? "In Trophy Case" : "Add to Trophy Case"}
+              </button>
+
               <button
                 type="button"
                 onClick={(event) => {

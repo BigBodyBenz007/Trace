@@ -50,3 +50,25 @@ test("keeps curated cards stacked and width-contained", () => {
   expect(screen.getByTestId("trophy-card-list")).toHaveStyle({ display: "grid", width: "100%", minWidth: 0 });
   expect(screen.getByRole("group", { name: /trophy$/ })).toHaveStyle({ boxSizing: "border-box", minWidth: 0, overflow: "hidden", width: "100%" });
 });
+
+test("displays Memory and Workout trophies together in added order", () => {
+  const memoryTrophy = trophy({
+    id: "memory-trophy",
+    sourceType: "memory",
+    sourceKey: "memory|graduation",
+    sourceId: "graduation",
+    sourceRecordType: null,
+    title: "Graduation Day",
+    description: "Finally finished my degree.",
+    achievedAt: "2026-05-18T12:00:00.000Z",
+    addedToTrophyCaseAt: "2026-08-12T12:00:00.000Z",
+    sourceSnapshot: { title: "Graduation Day", description: "Finally finished my degree.", date: "2026-05-18" },
+  });
+  render(<TrophyCase trophyEntries={[trophy(), memoryTrophy]} />);
+  const cards = screen.getAllByRole("group", { name: /trophy$/ });
+  expect(cards.map((card) => card.getAttribute("aria-label"))).toEqual([
+    "Graduation Day trophy", "Dumbbell Bench Press trophy",
+  ]);
+  expect(cards[0]).toHaveTextContent("Finally finished my degree.");
+  expect(cards[1]).toHaveTextContent("80 lb × 8 reps");
+});

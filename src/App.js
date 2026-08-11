@@ -4,6 +4,7 @@ import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
 import MedicationPage from "./components/MedicationPage";
 import WorkoutPage from "./components/WorkoutPage";
+import TrophyPlacementCeremony from "./components/TrophyPlacementCeremony";
 import {
   addExerciseDefinition,
   createExerciseDefinition,
@@ -98,6 +99,7 @@ function App() {
   const [medicationEntries, setMedicationEntries] = useState([]);
   const [workoutEntries, setWorkoutEntries] = useState([]);
   const [trophyCaseEntries, setTrophyCaseEntries] = useState([]);
+  const [ceremonyEntry, setCeremonyEntry] = useState(null);
   const [savedExercises, setSavedExercises] = useState([]);
   const [medicationCompounds, setMedicationCompounds] = useState([]);
   const [userFoods, setUserFoods] = useState([]);
@@ -865,6 +867,7 @@ function App() {
     try {
       writeTrophyCaseEntries(localStorage, result.entries);
       setTrophyCaseEntries(result.entries);
+      setCeremonyEntry(result.entry);
       setStorageError("");
       return result.entry;
     } catch (error) {
@@ -928,6 +931,8 @@ function App() {
           onOpenWorkouts={() => setPage("workouts")}
           deleteMemory={deleteMemory}
           editMemory={editMemory}
+          trophyEntries={trophyCaseEntries}
+          addTrophyCaseEntry={addTrophyCaseEntry}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}
@@ -997,6 +1002,12 @@ function App() {
           setPage={setPage}
           editingIndex={editingId}
           setEditingIndex={setEditingId}
+        />
+      )}
+      {ceremonyEntry && (
+        <TrophyPlacementCeremony
+          entry={ceremonyEntry}
+          onClose={() => setCeremonyEntry(null)}
         />
       )}
     </div>
