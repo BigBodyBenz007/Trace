@@ -3,6 +3,7 @@ import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
 import MedicationPage from "./components/MedicationPage";
+import ProtocolsPage from "./components/ProtocolsPage";
 import WorkoutPage from "./components/WorkoutPage";
 import TrophyPlacementCeremony from "./components/TrophyPlacementCeremony";
 import TrophyCasePage from "./components/TrophyCasePage";
@@ -44,6 +45,13 @@ import {
   reconcileWorkoutTrophyEntries,
   writeTrophyCaseEntries,
 } from "./services/trophyCase";
+import {
+  createProtocol,
+  endProtocol as createEndedProtocol,
+  getProtocolError,
+  readProtocols,
+  writeProtocols,
+} from "./services/protocol";
 
 const DEFAULT_NUTRITION_GOALS = {
   calories: 0,
@@ -100,6 +108,7 @@ function App() {
   const [memoryCount, setMemoryCount] = useState(0);
   const [nutritionEntries, setNutritionEntries] = useState([]);
   const [medicationEntries, setMedicationEntries] = useState([]);
+  const [protocols, setProtocols] = useState([]);
   const [workoutEntries, setWorkoutEntries] = useState([]);
   const [trophyCaseEntries, setTrophyCaseEntries] = useState([]);
   const [ceremonyEntry, setCeremonyEntry] = useState(null);
@@ -295,6 +304,16 @@ function App() {
     } catch (error) {
       setStorageError(
         "Trace couldn't read the saved medication entries. The stored value was left unchanged."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setProtocols(readProtocols(localStorage));
+    } catch (error) {
+      setStorageError(
+        "Trace couldn't read the saved protocols. The stored value was left unchanged."
       );
     }
   }, []);
@@ -780,6 +799,73 @@ function App() {
     }
   }
 
+  function saveProtocol(draft) {
+    const protocol = createProtocol(draft);
+    if (!protocol) {
+      return { status: "invalid", message: getProtocolError(draft) };
+    }
+    const updatedProtocols = [...protocols, protocol];
+    try {
+      writeProtocols(localStorage, updatedProtocols);
+      setProtocols(updatedProtocols);
+      setStorageError("");
+      return { status: "saved", protocol };
+    } catch (error) {
+      setStorageError(storageMessage("save this protocol"));
+      return { status: "error", message: "The protocol could not be saved." };
+    }
+  }
+
+  function updateProtocol(id, draft) {
+    const existing = protocols.find((protocol) => protocol.id === id);
+    if (!existing || existing.status !== "active") {
+      return { status: "invalid", message: "Only an active protocol can be edited." };
+    }
+    const protocol = createProtocol(draft, existing);
+    if (!protocol) {
+      return { status: "invalid", message: getProtocolError(draft) };
+    }
+    const updatedProtocols = protocols.map((item) => item.id === id ? protocol : item);
+    try {
+      writeProtocols(localStorage, updatedProtocols);
+      setProtocols(updatedProtocols);
+      setStorageError("");
+      return { status: "saved", protocol };
+    } catch (error) {
+      setStorageError(storageMessage("update this protocol"));
+      return { status: "error", message: "The protocol could not be updated." };
+    }
+  }
+
+  function finishProtocol(id) {
+    const existing = protocols.find((protocol) => protocol.id === id);
+    const ended = createEndedProtocol(existing);
+    if (!ended) return false;
+    const updatedProtocols = protocols.map((item) => item.id === id ? ended : item);
+    try {
+      writeProtocols(localStorage, updatedProtocols);
+      setProtocols(updatedProtocols);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("end this protocol"));
+      return false;
+    }
+  }
+
+  function deleteProtocol(id) {
+    const updatedProtocols = protocols.filter((protocol) => protocol.id !== id);
+    try {
+      writeProtocols(localStorage, updatedProtocols);
+      setProtocols(updatedProtocols);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this protocol"));
+      return false;
+    }
+  }
+
   function saveWorkoutEntry(entry) {
     const newEntry = {
       ...entry,
@@ -961,6 +1047,7 @@ function App() {
           onAddMemory={() => setPage("new")}
           onOpenNutrition={() => setPage("nutrition")}
           onOpenMedications={() => setPage("medications")}
+          onOpenProtocols={() => setPage("protocols")}
           onOpenWorkouts={() => setPage("workouts")}
           onOpenTrophyCase={() => setPage("trophy-case")}
           deleteMemory={deleteMemory}
@@ -1015,6 +1102,19 @@ function App() {
           deleteWorkoutEntry={deleteWorkoutEntry}
           addTrophyCaseEntry={addTrophyCaseEntry}
           removeTrophyCaseEntry={removeTrophyCaseEntry}
+          buttonStyle={buttonStyle}
+          inputStyle={inputStyle}
+          containerStyle={containerStyle}
+        />
+      ) : page === "protocols" ? (
+        <ProtocolsPage
+          onBack={() => setPage("home")}
+          protocols={protocols}
+          compounds={medicationCompounds}
+          saveProtocol={saveProtocol}
+          updateProtocol={updateProtocol}
+          endProtocol={finishProtocol}
+          deleteProtocol={deleteProtocol}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}

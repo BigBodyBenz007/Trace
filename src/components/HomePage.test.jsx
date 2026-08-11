@@ -7,6 +7,7 @@ const baseProps = {
   onAddMemory: jest.fn(),
   onOpenNutrition: jest.fn(),
   onOpenMedications: jest.fn(),
+  onOpenProtocols: jest.fn(),
   onOpenWorkouts: jest.fn(),
   onOpenTrophyCase: jest.fn(),
   deleteMemory: jest.fn(),
@@ -16,6 +17,28 @@ const baseProps = {
   inputStyle: {},
   containerStyle: {},
 };
+
+test("renders primary Timeline actions in the intended order", () => {
+  render(<HomePage {...baseProps} memories={[]} trophyEntries={[]} />);
+  const names = screen.getAllByRole("button")
+    .map((button) => button.textContent.trim())
+    .filter((name) => [
+      "Add Memory",
+      "Health & Nutrition",
+      "Workouts",
+      "Medications & Supplements",
+      "Protocols",
+      "Open Trophy Case",
+    ].includes(name));
+  expect(names).toEqual([
+    "Add Memory",
+    "Health & Nutrition",
+    "Workouts",
+    "Medications & Supplements",
+    "Protocols",
+    "Open Trophy Case",
+  ]);
+});
 
 const memories = [
   { id: "memory-a", title: "Same Day", description: "First", date: "2026-05-18", categories: [], images: [], favorite: false },

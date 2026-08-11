@@ -87,6 +87,64 @@ test("Timeline to Nutrition lands at the top after rendering", () => {
   expectDestinationScrolledToTop();
 });
 
+test("Timeline opens Protocols and returns to Timeline at the top", () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Protocols" }));
+  expect(screen.getByRole("heading", { name: "Protocols" })).toBeInTheDocument();
+  expectDestinationScrolledToTop();
+  window.scrollTo.mockClear();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
+  expectDestinationScrolledToTop();
+});
+
+test("ending and deleting a protocol never changes medication history", async () => {
+  const medicationEntry = { id: "med:future", name: "Legacy", occurredAt: "2030-01-01T12:00:00.000Z" };
+  const protocol = {
+    id: "protocol:one", schemaVersion: 1, name: "User plan", startDate: "2026-08-01",
+    endDate: null, status: "active", notes: "", createdAt: "2026-08-01T00:00:00.000Z",
+    updatedAt: "2026-08-01T00:00:00.000Z", endedAt: null,
+    items: [{ id: "protocol-item:one", compound: { name: "Unknown snapshot", reference: { source: "trace-catalog", sourceId: "trace:compound:removed" } }, dose: { amount: 1, unit: "mg" }, route: { code: "oral" }, schedule: { type: "weekly-days", weekdays: [1] }, notes: "" }],
+  };
+  localStorage.setItem("medicationEntries", JSON.stringify([medicationEntry]));
+  localStorage.setItem("protocols", JSON.stringify([protocol]));
+  window.confirm = jest.fn(() => true);
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Protocols" }));
+  await waitFor(() => expect(screen.getByText("User plan")).toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button", { name: "View Protocol" }));
+  expect(screen.getByText("Unknown snapshot")).toBeInTheDocument();
+  fireEvent.click(screen.getAllByRole("button", { name: "End Protocol" })[0]);
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toEqual([medicationEntry]);
+  await waitFor(() => expect(screen.getByLabelText("Ended Protocols")).toHaveTextContent("User plan"));
+  fireEvent.click(screen.getByRole("button", { name: "View Protocol" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Delete Protocol" })[0]);
+  expect(JSON.parse(localStorage.getItem("protocols"))).toEqual([]);
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toEqual([medicationEntry]);
+});
+
+test("creates and persists a protocol without generating medication history", () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Protocols" }));
+  fireEvent.click(screen.getByRole("button", { name: "Create Protocol" }));
+  fireEvent.change(screen.getByLabelText("Protocol name"), { target: { value: "My weekly plan" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add Protocol Item" }));
+  fireEvent.change(screen.getByLabelText("Protocol compound search"), { target: { value: "Personal compound" } });
+  fireEvent.click(screen.getByRole("button", { name: /Use.*Personal compound.*Custom Compound/ }));
+  const itemEditor = screen.getByRole("article", { name: /Personal compound/ });
+  fireEvent.change(within(itemEditor).getByLabelText("Dose amount"), { target: { value: "3" } });
+  fireEvent.change(within(itemEditor).getByLabelText("Dose unit"), { target: { value: "mg" } });
+  fireEvent.change(within(itemEditor).getByLabelText("Route"), { target: { value: "oral" } });
+  fireEvent.click(within(itemEditor).getByLabelText("Friday"));
+  fireEvent.click(screen.getAllByRole("button", { name: "Save Protocol" })[0]);
+  const saved = JSON.parse(localStorage.getItem("protocols"));
+  expect(saved).toHaveLength(1);
+  expect(saved[0]).toMatchObject({ name: "My weekly plan", status: "active" });
+  expect(saved[0].items[0].compound).toEqual({ name: "Personal compound" });
+  expect(localStorage.getItem("medicationEntries")).toBeNull();
+  expect(screen.getByText("My weekly plan")).toBeInTheDocument();
+});
+
 test("Timeline to Workouts and Workouts to Timeline land at the top", () => {
   renderAppAtTimeline();
   openWorkouts();

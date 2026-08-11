@@ -54,6 +54,7 @@ function HomePage({
   onAddMemory,
   onOpenNutrition,
   onOpenMedications,
+  onOpenProtocols,
   onOpenWorkouts,
   onOpenTrophyCase,
   deleteMemory,
@@ -213,6 +214,16 @@ function HomePage({
       <button
         style={{
           ...buttonStyle,
+          backgroundColor: "#334155",
+        }}
+        onClick={onOpenWorkouts}
+      >
+        Workouts
+      </button>
+
+      <button
+        style={{
+          ...buttonStyle,
           backgroundColor: "#4b5563",
         }}
         onClick={onOpenMedications}
@@ -223,11 +234,11 @@ function HomePage({
       <button
         style={{
           ...buttonStyle,
-          backgroundColor: "#334155",
+          backgroundColor: "#0f766e",
         }}
-        onClick={onOpenWorkouts}
+        onClick={onOpenProtocols}
       >
-        Workouts
+        Protocols
       </button>
 
       <button
