@@ -1,6 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORY_OPTIONS } from "../constants/categories";
+import { deriveLifeCurrent } from "../services/lifeCurrent";
+import { deriveLifeCurrentLayout } from "../services/lifeCurrentLayout";
 import { createMemoryTrophyCandidate } from "../services/trophyCase";
+import LifeCurrent from "./LifeCurrent";
 
 const CATEGORY_FILTER_OPTIONS = [
   "All",
@@ -60,6 +63,9 @@ function HomePage({
   deleteMemory,
   editMemory,
   trophyEntries = [],
+  nutritionEntries = [],
+  workoutEntries = [],
+  medicationEntries = [],
   addTrophyCaseEntry = () => false,
   memoryAchievementSuggestion = null,
   dismissMemoryAchievementSuggestion = () => {},
@@ -84,6 +90,21 @@ function HomePage({
   const detailPanelRef = useRef(null);
   const currentDay = new Date();
   currentDay.setHours(0, 0, 0, 0);
+  const lifeCurrent = useMemo(
+    () =>
+      deriveLifeCurrent({
+        memories,
+        nutritionEntries,
+        workoutEntries,
+        medicationEntries,
+        trophyCaseEntries: trophyEntries,
+      }),
+    [memories, nutritionEntries, workoutEntries, medicationEntries, trophyEntries]
+  );
+  const lifeCurrentLayout = useMemo(
+    () => deriveLifeCurrentLayout(lifeCurrent),
+    [lifeCurrent]
+  );
 
   const filteredMemories = memories
     .filter((memory) => {
@@ -384,20 +405,20 @@ function HomePage({
           overflowX: "auto",
         }}
       >
-        {filteredMemories.length === 0 ? (
-          <p>No memories found.</p>
-        ) : (
-          <div
+        <div
             style={{
               display: "flex",
               alignItems: "flex-start",
               gap: "64px",
+              minHeight: filteredMemories.length === 0 ? "150px" : undefined,
+              minWidth: filteredMemories.length === 0 ? "100%" : undefined,
               padding: "8px 32px 16px",
               position: "relative",
-              width: "max-content",
+              width: filteredMemories.length === 0 ? "auto" : "max-content",
             }}
           >
-            <div
+            <LifeCurrent layout={lifeCurrentLayout} />
+            {lifeCurrentLayout.points.length === 0 && filteredMemories.length > 0 && <div
               aria-hidden="true"
               style={{
                 background: "#6b7280",
@@ -407,7 +428,12 @@ function HomePage({
                 right: "32px",
                 top: "118px",
               }}
-            />
+            />}
+
+            {filteredMemories.length === 0 ? (
+              <p style={{ position: "relative", zIndex: 1 }}>No memories found.</p>
+            ) : (
+              <>
 
             {timelineGroups.map((yearGroup, yearIndex) => (
               <section
@@ -750,8 +776,9 @@ function HomePage({
                 </div>
               </section>
             ))}
+              </>
+            )}
           </div>
-        )}
       </div>
 
       {detailMemory && (

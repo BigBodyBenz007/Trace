@@ -69,6 +69,17 @@ function openWorkouts() {
   fireEvent.click(screen.getByRole("button", { name: "Workouts" }));
 }
 
+test("passes authoritative structured activity to the Home Life Current", async () => {
+  localStorage.setItem("nutritionEntries", JSON.stringify([
+    { id: "nutrition-current", loggedAt: "2026-05-18T12:00:00" },
+  ]));
+
+  renderAppAtTimeline();
+
+  expect(await screen.findByTestId("life-current")).toBeInTheDocument();
+  expect(screen.getByText("No memories found.")).toBeInTheDocument();
+});
+
 function fillBodyweightWorkout(title = "Push Day") {
   fireEvent.change(screen.getByLabelText("Workout title"), {
     target: { value: title },

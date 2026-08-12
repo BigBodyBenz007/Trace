@@ -53,6 +53,41 @@ test("opens the dedicated Trophy Case from the Timeline", () => {
   expect(baseProps.onOpenTrophyCase).toHaveBeenCalledTimes(1);
 });
 
+test("renders Life Current from full source data independently of Memory filters", () => {
+  const fullMemories = [
+    { ...memories[0], title: "Mountain trip" },
+    { ...memories[1], title: "Quiet evening", date: "2026-08-19" },
+  ];
+  render(
+    <HomePage
+      {...baseProps}
+      memories={fullMemories}
+      trophyEntries={[]}
+      nutritionEntries={[{ id: "meal", loggedAt: "2026-06-01T12:00:00" }]}
+      workoutEntries={[{ id: "workout", occurredAt: "2026-07-01T12:00:00", exercises: [] }]}
+      medicationEntries={[{ id: "dose", occurredAt: "2026-08-01T12:00:00" }]}
+    />
+  );
+  const current = screen.getByTestId("life-current");
+  const pathBeforeFilter = current.querySelector("path").getAttribute("d");
+
+  fireEvent.change(screen.getByPlaceholderText("Search memories..."), {
+    target: { value: "Mountain" },
+  });
+
+  expect(screen.getByText("Mountain trip")).toBeInTheDocument();
+  expect(screen.queryByText("Quiet evening")).not.toBeInTheDocument();
+  expect(screen.getByTestId("life-current").querySelector("path"))
+    .toHaveAttribute("d", pathBeforeFilter);
+});
+
+test("retains the existing Timeline fallback line when full activity has no dated bucket", () => {
+  const undated = { ...memories[0], date: "" };
+  const { container } = render(<HomePage {...baseProps} memories={[undated]} trophyEntries={[]} />);
+  expect(screen.queryByTestId("life-current")).not.toBeInTheDocument();
+  expect(container.querySelector('div[aria-hidden="true"]')).toBeInTheDocument();
+});
+
 test("Trophy source navigation opens the existing live Memory detail and returns", () => {
   const back = jest.fn();
   const memory = { id: "memory-live", title: "Edited title", description: "Current details", date: "2026-05-18", categories: ["Achievement"], images: [{ id: "photo", url: "blob:photo" }], favorite: true };

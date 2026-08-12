@@ -1181,6 +1181,9 @@ function App() {
           deleteMemory={deleteMemory}
           editMemory={editMemory}
           trophyEntries={trophyCaseEntries}
+          nutritionEntries={nutritionEntries}
+          workoutEntries={workoutEntries}
+          medicationEntries={medicationEntries}
           addTrophyCaseEntry={addTrophyCaseEntry}
           memoryAchievementSuggestion={memoryAchievementSuggestion}
           dismissMemoryAchievementSuggestion={() => setMemoryAchievementSuggestion(null)}
