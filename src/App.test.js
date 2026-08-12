@@ -257,7 +257,7 @@ test("new Memory trophies persist, trigger the shared ceremony, preserve snapsho
     sourceSnapshot: { title: "Graduation Day", description: "Finally finished my degree.", date: "2026-05-18" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Close Trophy Case ceremony" }));
-  expect(screen.getByRole("button", { name: "In Trophy Case" })).toBeDisabled();
+  expect(screen.getByLabelText("In Trophy Case")).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
   expect(screen.getByRole("group", { name: "Graduation Day trophy" })).toBeInTheDocument();
@@ -265,6 +265,7 @@ test("new Memory trophies persist, trigger the shared ceremony, preserve snapsho
   fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(JSON.parse(localStorage.getItem("memories"))).toHaveLength(1);
   fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open memory Graduation Day" }));
   fireEvent.click(screen.getByRole("button", { name: "Add to Trophy Case" }));
   const readdedTrophies = JSON.parse(localStorage.getItem("trophyCaseEntries"));
   expect(readdedTrophies).toHaveLength(1);
@@ -279,6 +280,7 @@ test("new Memory trophies persist, trigger the shared ceremony, preserve snapsho
   expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual(readdedTrophies);
 
   jest.spyOn(window, "confirm").mockReturnValue(true);
+  fireEvent.click(screen.getByRole("button", { name: "Open memory Edited Graduation" }));
   fireEvent.click(screen.getByRole("button", { name: "Delete" }));
   await waitFor(() => expect(JSON.parse(localStorage.getItem("memories"))).toEqual([]));
   expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual(readdedTrophies);
@@ -301,7 +303,9 @@ test("legacy Memories receive a compatibility-safe stable ID and remain trophy-e
   localStorage.setItem("memories", JSON.stringify([legacyMemory]));
   openPhotoDatabase.mockResolvedValue({});
   render(<App />);
-  const add = await screen.findByRole("button", { name: "Add to Trophy Case" });
+  const memoryPreview = await screen.findByRole("button", { name: "Open memory Legacy Milestone" });
+  fireEvent.click(memoryPreview);
+  const add = screen.getByRole("button", { name: "Add to Trophy Case" });
   const migratedMemory = JSON.parse(localStorage.getItem("memories"))[0];
   expect(migratedMemory).toMatchObject(legacyMemory);
   expect(migratedMemory.id).toBeTruthy();
@@ -325,6 +329,7 @@ test("edited Memories are re-evaluated and declining keeps manual trophy additio
   await screen.findByRole("heading", { name: "Morning Run" });
   expect(screen.queryByRole("region", { name: "Memory achievement suggestion" })).not.toBeInTheDocument();
 
+  fireEvent.click(screen.getByRole("button", { name: "Open memory Morning Run" }));
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   fireEvent.change(screen.getByPlaceholderText("Tell your story..."), {
     target: { value: "Finished my first 5K today after training for three months." },
@@ -336,6 +341,7 @@ test("edited Memories are re-evaluated and declining keeps manual trophy additio
 
   fireEvent.click(within(suggestion).getByRole("button", { name: "Not this time" }));
   expect(screen.queryByRole("region", { name: "Memory achievement suggestion" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Open memory Morning Run" }));
   expect(screen.getByRole("button", { name: "Add to Trophy Case" })).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("memories"))[0].description).toContain("first 5K");
 });

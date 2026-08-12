@@ -3,6 +3,10 @@ import { CATEGORY_OPTIONS } from "../constants/categories";
 import { deriveLifeCurrent } from "../services/lifeCurrent";
 import { deriveLifeCurrentLayout } from "../services/lifeCurrentLayout";
 import { createMemoryTrophyCandidate } from "../services/trophyCase";
+import {
+  calculateTimelineFocusScale,
+  TIMELINE_FOCUS_TUNING,
+} from "../services/timelineFocus";
 import LifeCurrent from "./LifeCurrent";
 
 const CATEGORY_FILTER_OPTIONS = [
@@ -85,6 +89,7 @@ function HomePage({
   const [activeDetailPhotoIndex, setActiveDetailPhotoIndex] = useState(0);
   const [hoveredMemory, setHoveredMemory] = useState(null);
   const timelineRef = useRef(null);
+  const timelineFocusFrameRef = useRef(null);
   const hasScrolledToNewest = useRef(false);
   const memoryCardRefs = useRef(new Map());
   const detailPanelRef = useRef(null);
@@ -124,6 +129,7 @@ function HomePage({
         getTimelineDate(a, currentDay) - getTimelineDate(b, currentDay)
     );
   const timelineGroups = groupMemoriesByDate(filteredMemories, currentDay);
+  const timelineFocusKey = filteredMemories.map(({ id }) => id).join("|");
   const detailMemory =
     detailMemoryId === null
       ? null
@@ -199,6 +205,50 @@ function HomePage({
   function isNodeHovered(memory) {
     return hoveredMemory === getMemorySelectionKey(memory);
   }
+
+  useEffect(() => {
+    const viewport = timelineRef.current;
+    if (!viewport) return undefined;
+
+    function updateTimelineFocus() {
+      const viewportBounds = viewport.getBoundingClientRect();
+      const viewportCenter = viewportBounds.left + viewportBounds.width / 2;
+
+      memoryCardRefs.current.forEach((card) => {
+        const bounds = card.getBoundingClientRect();
+        const cardCenter = bounds.left + bounds.width / 2;
+        const scale = calculateTimelineFocusScale(cardCenter - viewportCenter);
+        const visual = card.querySelector("[data-timeline-card-visual]");
+        if (visual) {
+          visual.style.setProperty("--timeline-focus-scale", scale.toFixed(4));
+        }
+        card.style.zIndex = String(Math.round(scale * 100));
+      });
+    }
+
+    function scheduleTimelineFocusUpdate() {
+      if (timelineFocusFrameRef.current !== null) return;
+      timelineFocusFrameRef.current = window.requestAnimationFrame(() => {
+        timelineFocusFrameRef.current = null;
+        updateTimelineFocus();
+      });
+    }
+
+    viewport.addEventListener("scroll", scheduleTimelineFocusUpdate, {
+      passive: true,
+    });
+    window.addEventListener("resize", scheduleTimelineFocusUpdate);
+    scheduleTimelineFocusUpdate();
+
+    return () => {
+      viewport.removeEventListener("scroll", scheduleTimelineFocusUpdate);
+      window.removeEventListener("resize", scheduleTimelineFocusUpdate);
+      if (timelineFocusFrameRef.current !== null) {
+        window.cancelAnimationFrame(timelineFocusFrameRef.current);
+        timelineFocusFrameRef.current = null;
+      }
+    };
+  }, [timelineFocusKey]);
 
   useEffect(() => {
     if (!trophySourceTarget?.memoryId) return undefined;
@@ -397,6 +447,7 @@ function HomePage({
       </h2>
 
       <div
+        data-testid="memory-timeline-viewport"
         ref={timelineRef}
         style={{
           width: "100%",
@@ -501,9 +552,21 @@ function HomePage({
                           const selectionKey = getMemorySelectionKey(memory);
                           const isSelected = isMemorySelected(memory);
                           const isHovered = isNodeHovered(memory);
+                          const photoCount = Array.isArray(memory.images)
+                            ? memory.images.length
+                            : 0;
+                          const previewPhotos = (memory.images || [])
+                            .slice(0, 3)
+                            .filter((photo) => photoSource(photo));
+                          const remainingPhotoCount = Math.max(
+                            0,
+                            photoCount - 3
+                          );
 
                           return (
                             <div
+                              aria-label={"Open memory " + memory.title}
+                              data-testid={"timeline-memory-" + memory.id}
                               key={memory.id}
                               ref={(element) => {
                                 if (element) {
@@ -516,10 +579,21 @@ function HomePage({
                                 }
                               }}
                               onClick={() => openMemoryDetail(memory)}
+                              onKeyDown={(event) => {
+                                if (
+                                  event.target === event.currentTarget &&
+                                  (event.key === "Enter" || event.key === " ")
+                                ) {
+                                  event.preventDefault();
+                                  openMemoryDetail(memory);
+                                }
+                              }}
+                              role="button"
+                              tabIndex={0}
                               style={{
                                 flexShrink: 0,
-                                width:
-                                  "clamp(280px, calc(100vw - 64px), 320px)",
+                                minHeight: "236px",
+                                width: TIMELINE_FOCUS_TUNING.baseCardWidth,
                                 position: "relative",
                               }}
                             >
@@ -571,10 +645,13 @@ function HomePage({
                               />
 
                             <div
+                              data-timeline-card-visual="true"
                               style={{
                                 background: "#1f2937",
-                                borderRadius: "16px",
-                                padding: "20px",
+                                borderRadius: "14px",
+                                boxSizing: "border-box",
+                                minHeight: "164px",
+                                padding: "12px",
                                 minWidth: 0,
                                 width: "100%",
                                 flexShrink: 0,
@@ -583,7 +660,15 @@ function HomePage({
                                 boxShadow: isSelected
                                   ? "0 0 0 2px #5ec8ff, 0 8px 20px rgba(94, 200, 255, 0.2)"
                                   : "0 4px 12px rgba(0,0,0,.25)",
-                                transition: "box-shadow 160ms ease",
+                                transform:
+                                  "scale(var(--timeline-focus-scale, " +
+                                  TIMELINE_FOCUS_TUNING.minimumScale +
+                                  "))",
+                                transformOrigin: "center top",
+                                transition:
+                                  "transform " +
+                                  TIMELINE_FOCUS_TUNING.transitionMilliseconds +
+                                  "ms ease-out, box-shadow 160ms ease",
                               }}
                             >
                 <div
@@ -593,32 +678,27 @@ function HomePage({
                     alignItems: "center",
                   }}
                 >
-                  <h2 style={{ margin: 0 }}>
+                  <h2 style={{ fontSize: "16px", lineHeight: 1.25, margin: 0 }}>
                     {memory.title}
                   </h2>
 
-                  <button
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      toggleFavorite(memory.id);
-                    }}
-                    style={{
-                      background: "none",
-                      border: "none",
-                      fontSize: "30px",
-                      cursor: "pointer",
-                    }}
-                  >
-                    {memory.favorite ? "⭐" : "☆"}
-                  </button>
+                  {memory.favorite && (
+                    <span
+                      aria-label="Favorite"
+                      style={{ color: "#facc15", fontSize: "16px" }}
+                    >
+                      ★
+                    </span>
+                  )}
                 </div>
 
                 {memory.date && (
                   <p
                     style={{
                       color: "#9ca3af",
-                      marginTop: "8px",
-                      marginBottom: "15px",
+                      fontSize: "12px",
+                      marginTop: "6px",
+                      marginBottom: "8px",
                     }}
                   >
                     {new Date(memory.date).toLocaleDateString("en-US", {
@@ -629,8 +709,23 @@ function HomePage({
                   </p>
                 )}
 
+                {isMemoryInTrophyCase(memory) && (
+                  <span
+                    aria-label="In Trophy Case"
+                    style={{
+                      color: "#fbbf24",
+                      display: "block",
+                      fontSize: "10px",
+                      marginTop: "6px",
+                    }}
+                  >
+                    Trophy
+                  </span>
+                )}
+
                 <p
                   style={{
+                    display: "none",
                     whiteSpace: "pre-wrap",
                     lineHeight: "1.6",
                   }}
@@ -648,63 +743,87 @@ function HomePage({
                         marginTop: "16px",
                       }}
                     >
-                      {memory.categories.map((category) => (
+                      {memory.categories.slice(0, 2).map((category) => (
                         <span
                           key={category}
                           style={{
                             background: "#374151",
                             borderRadius: "999px",
                             color: "#d1d5db",
-                            fontSize: "14px",
-                            padding: "6px 10px",
+                            fontSize: "10px",
+                            padding: "3px 6px",
                           }}
                         >
                           {category}
                         </span>
                       ))}
+                      {memory.categories.length > 2 && (
+                        <span style={{ color: "#9ca3af", fontSize: "10px" }}>
+                          +{memory.categories.length - 2}
+                        </span>
+                      )}
                     </div>
                   )}
 
-                {memory.images && memory.images.length > 0 && (
+                {previewPhotos.length > 0 && (
                   <div
+                    aria-label={photoCount + " photo preview"}
+                    data-testid={"timeline-photo-gallery-" + memory.id}
                     style={{
                       display: "grid",
+                      gap: "4px",
                       gridTemplateColumns:
-                        "repeat(auto-fill, minmax(140px, 1fr))",
-                      gap: "10px",
-                      marginTop: "20px",
+                        photoCount === 1
+                          ? "1fr"
+                          : photoCount === 2
+                            ? "repeat(2, 1fr)"
+                            : photoCount === 3
+                              ? "repeat(3, 1fr)"
+                              : "repeat(2, 1fr)",
+                      gridTemplateRows:
+                        photoCount >= 4 ? "repeat(2, 39px)" : "82px",
+                      marginTop: "10px",
                     }}
                   >
-                    {memory.images.map((img, i) =>
-                      photoSource(img) ? (
-                        <img
-                          key={img.id || i}
-                          src={photoSource(img)}
-                          alt={`Memory ${i + 1}`}
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            setSelectedImage(photoSource(img));
-                          }}
-                          style={{
-                            width: "100%",
-                            height: "140px",
-                            objectFit: "cover",
-                            borderRadius: "10px",
-                            cursor: "pointer",
-                          }}
-                        />
-                      ) : (
-                        <div key={img.id || i} style={{ color: "#fca5a5" }}>
-                          Photo unavailable
-                        </div>
-                      )
+                    {previewPhotos.map((img, i) => (
+                      <img
+                        aria-hidden="true"
+                        alt=""
+                        data-timeline-gallery-thumbnail="true"
+                        key={img.id || i}
+                        src={photoSource(img)}
+                        style={{
+                          borderRadius: "6px",
+                          height: "100%",
+                          objectFit: "cover",
+                          width: "100%",
+                        }}
+                      />
+                    ))}
+                    {remainingPhotoCount > 0 && (
+                      <div
+                        aria-label={remainingPhotoCount + " more photos"}
+                        data-testid="timeline-photo-overflow"
+                        style={{
+                          alignItems: "center",
+                          background: "#374151",
+                          borderRadius: "6px",
+                          color: "#f3f4f6",
+                          display: "flex",
+                          fontSize: "13px",
+                          fontWeight: 700,
+                          justifyContent: "center",
+                        }}
+                      >
+                        +{remainingPhotoCount}
+                      </div>
                     )}
                   </div>
                 )}
 
                 <div
                   style={{
-                    display: "flex",
+                    display: "none",
                     flexWrap: "wrap",
                     gap: "10px",
                     marginTop: "20px",

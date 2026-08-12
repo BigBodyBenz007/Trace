@@ -1,5 +1,6 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import HomePage from "./HomePage";
+import { TIMELINE_FOCUS_TUNING } from "../services/timelineFocus";
 
 const baseProps = {
   memoryCount: 2,
@@ -88,6 +89,149 @@ test("retains the existing Timeline fallback line when full activity has no date
   expect(container.querySelector('div[aria-hidden="true"]')).toBeInTheDocument();
 });
 
+test("renders compact Timeline previews while keeping full content in Memory Detail", () => {
+  const memory = {
+    id: "compact",
+    title: "Compact preview",
+    description: "This complete description belongs in the detail view.",
+    date: "2026-05-18",
+    categories: ["Travel", "Friends", "Milestone"],
+    images: [
+      { id: "one", url: "blob:one" },
+      { id: "two", url: "blob:two" },
+    ],
+    favorite: true,
+  };
+  render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} />);
+  const card = screen.getByTestId("timeline-memory-compact");
+  expect(card).toHaveStyle({ width: "184px" });
+  expect(within(card).queryByText(memory.description)).not.toBeVisible();
+  expect(card.querySelectorAll("[data-timeline-gallery-thumbnail]")).toHaveLength(2);
+  expect(within(card).getByText("+1")).toBeInTheDocument();
+
+  fireEvent.click(card);
+  const detail = screen.getByRole("dialog", { name: "Memory details for Compact preview" });
+  expect(detail).toHaveTextContent(memory.description);
+  expect(within(detail).getAllByAltText(/Memory/)).toHaveLength(3);
+});
+
+test("updates visual focus from viewport-center geometry without changing selection", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  window.cancelAnimationFrame = jest.fn();
+  const focusMemories = [
+    { ...memories[0], id: "left", title: "Left" },
+    { ...memories[0], id: "center", title: "Center" },
+    { ...memories[0], id: "right", title: "Right" },
+  ];
+  const { unmount } = render(
+    <HomePage {...baseProps} memories={focusMemories} trophyEntries={[]} />
+  );
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const left = screen.getByTestId("timeline-memory-left");
+  const center = screen.getByTestId("timeline-memory-center");
+  const right = screen.getByTestId("timeline-memory-right");
+  viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 400 }));
+  viewport.scrollBy = jest.fn();
+  left.getBoundingClientRect = jest.fn(() => ({ left: 10, width: 100 }));
+  center.getBoundingClientRect = jest.fn(() => ({ left: 150, width: 100 }));
+  right.getBoundingClientRect = jest.fn(() => ({ left: 290, width: 100 }));
+
+  act(() => frames.shift()());
+  const scale = (card) =>
+    Number(card.querySelector("[data-timeline-card-visual]")
+      .style.getPropertyValue("--timeline-focus-scale"));
+  expect(scale(center)).toBe(TIMELINE_FOCUS_TUNING.maximumScale);
+  expect(scale(left)).toBeLessThan(scale(center));
+  expect(scale(left)).toBeCloseTo(scale(right), 3);
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+  fireEvent.scroll(viewport);
+  fireEvent.scroll(viewport);
+  expect(window.requestAnimationFrame).toHaveBeenCalledTimes(2);
+  act(() => frames.shift()());
+  expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+  fireEvent.click(left);
+  expect(screen.getByRole("dialog", { name: "Memory details for Left" })).toBeInTheDocument();
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.cancelAnimationFrame = originalCancelAnimationFrame;
+});
+
+function memoryWithPhotos(count) {
+  return {
+    ...memories[0],
+    id: "gallery-" + count,
+    title: "Gallery " + count,
+    images: Array.from({ length: count }, (_, index) => ({
+      id: "photo-" + index,
+      url: "blob:photo-" + index,
+    })),
+  };
+}
+
+test.each([
+  [1, 1, null],
+  [2, 2, null],
+  [3, 3, null],
+  [4, 3, "+1"],
+  [8, 3, "+5"],
+  [50, 3, "+47"],
+])(
+  "renders a bounded adaptive gallery for %i photos",
+  (count, thumbnailCount, overflowText) => {
+    const memory = memoryWithPhotos(count);
+    render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} />);
+    const card = screen.getByTestId("timeline-memory-" + memory.id);
+    expect(card.querySelectorAll("[data-timeline-gallery-thumbnail]"))
+      .toHaveLength(thumbnailCount);
+    if (overflowText) {
+      expect(within(card).getByTestId("timeline-photo-overflow"))
+        .toHaveTextContent(overflowText);
+    } else {
+      expect(within(card).queryByTestId("timeline-photo-overflow"))
+        .not.toBeInTheDocument();
+    }
+  }
+);
+
+test("large galleries render only preview metadata and thumbnails are not separate controls", () => {
+  const memory = memoryWithPhotos(137);
+  render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} />);
+  const card = screen.getByTestId("timeline-memory-" + memory.id);
+  const thumbnails = card.querySelectorAll("[data-timeline-gallery-thumbnail]");
+  expect(thumbnails).toHaveLength(3);
+  expect(within(card).getByTestId("timeline-photo-overflow")).toHaveTextContent("+134");
+  expect(within(card).queryAllByRole("button")).toHaveLength(1);
+
+  fireEvent.click(thumbnails[0]);
+  const detail = screen.getByRole("dialog", {
+    name: "Memory details for Gallery 137",
+  });
+  expect(within(detail).getAllByRole("button", { name: /Show photo/ }))
+    .toHaveLength(137);
+});
+
+test("cancels a pending Timeline focus frame when Home unmounts", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  window.requestAnimationFrame = jest.fn(() => 77);
+  window.cancelAnimationFrame = jest.fn();
+  const { unmount } = render(
+    <HomePage {...baseProps} memories={[memories[0]]} trophyEntries={[]} />
+  );
+  unmount();
+  expect(window.cancelAnimationFrame).toHaveBeenCalledWith(77);
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.cancelAnimationFrame = originalCancelAnimationFrame;
+});
+
 test("Trophy source navigation opens the existing live Memory detail and returns", () => {
   const back = jest.fn();
   const memory = { id: "memory-live", title: "Edited title", description: "Current details", date: "2026-05-18", categories: ["Achievement"], images: [{ id: "photo", url: "blob:photo" }], favorite: true };
@@ -104,10 +248,11 @@ test("Trophy source navigation opens the existing live Memory detail and returns
 
 test("offers stable, distinct Memory trophy candidates", () => {
   render(<HomePage {...baseProps} memories={memories} trophyEntries={[]} />);
-  const addButtons = screen.getAllByRole("button", { name: "Add to Trophy Case" });
-  expect(addButtons).toHaveLength(2);
-  fireEvent.click(addButtons[0]);
-  fireEvent.click(addButtons[1]);
+  fireEvent.click(screen.getByTestId("timeline-memory-memory-a"));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Add to Trophy Case" }));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Close memory details" }));
+  fireEvent.click(screen.getByTestId("timeline-memory-memory-b"));
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Add to Trophy Case" }));
   expect(baseProps.addTrophyCaseEntry.mock.calls.map(([candidate]) => candidate.sourceKey)).toEqual([
     "memory|memory-a", "memory|memory-b",
   ]);
@@ -115,7 +260,9 @@ test("offers stable, distinct Memory trophy candidates", () => {
 
 test("shows an accessible non-duplicating state for a curated Memory", () => {
   render(<HomePage {...baseProps} memories={[memories[0]]} trophyEntries={[{ sourceKey: "memory|memory-a" }]} />);
-  expect(screen.getByRole("button", { name: "In Trophy Case" })).toBeDisabled();
+  expect(screen.getByLabelText("In Trophy Case")).toBeInTheDocument();
+  fireEvent.click(screen.getByTestId("timeline-memory-memory-a"));
+  expect(within(screen.getByRole("dialog")).getByRole("button", { name: "In Trophy Case" })).toBeDisabled();
   expect(screen.queryByRole("button", { name: "Add to Trophy Case" })).not.toBeInTheDocument();
 });
 
@@ -134,7 +281,9 @@ test("offers and dismisses a high-confidence suggestion without removing manual 
   expect(suggestion).toHaveAttribute("aria-live", "polite");
   fireEvent.click(screen.getByRole("button", { name: "Not this time" }));
   expect(dismiss).toHaveBeenCalledTimes(1);
-  expect(screen.getAllByRole("button", { name: "Add to Trophy Case" })).toHaveLength(2);
+  fireEvent.click(screen.getByTestId("timeline-memory-memory-a"));
+  expect(within(screen.getByRole("dialog")).getByRole("button", { name: "Add to Trophy Case" }))
+    .toBeInTheDocument();
 });
 
 test("accepting a suggestion uses the same Memory trophy candidate pathway", () => {
