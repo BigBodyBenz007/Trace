@@ -4,6 +4,7 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { shouldLoadSyntheticLife } from "./development/syntheticMode";
+import { registerTraceServiceWorker } from "./serviceWorkerRegistration";
 
 let RootComponent = App;
 if (shouldLoadSyntheticLife(process.env.NODE_ENV, window.location.search)) {
@@ -21,3 +22,4 @@ root.render(
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
 reportWebVitals();
+registerTraceServiceWorker();
