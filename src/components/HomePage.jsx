@@ -1,7 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { CATEGORY_OPTIONS } from "../constants/categories";
 import { deriveLifeCurrent } from "../services/lifeCurrent";
 import { deriveLifeCurrentLayout } from "../services/lifeCurrentLayout";
+import {
+  deriveLifeCurrentCameraWindow,
+  deriveLifeCurrentWindow,
+  LIFE_CURRENT_WINDOW_TUNING,
+} from "../services/lifeCurrentWindow";
 import { createMemoryTrophyCandidate } from "../services/trophyCase";
 import {
   calculateTimelineFocusScale,
@@ -54,6 +59,27 @@ function getMemorySelectionKey(memory) {
   return memory.id;
 }
 
+function MemorySearchInput({ search, setSearch, style }) {
+  const [inputValue, setInputValue] = useState(search);
+  const [, startTransition] = useTransition();
+
+  useEffect(() => setInputValue(search), [search]);
+
+  return (
+    <input
+      style={style}
+      type="text"
+      placeholder="Search memories..."
+      value={inputValue}
+      onChange={(event) => {
+        const nextSearch = event.target.value;
+        setInputValue(nextSearch);
+        startTransition(() => setSearch(nextSearch));
+      }}
+    />
+  );
+}
+
 function HomePage({
   memoryCount,
   memories,
@@ -88,13 +114,22 @@ function HomePage({
   const [detailMemoryId, setDetailMemoryId] = useState(null);
   const [activeDetailPhotoIndex, setActiveDetailPhotoIndex] = useState(0);
   const [hoveredMemory, setHoveredMemory] = useState(null);
+  const [filteredCameraDate, setFilteredCameraDate] = useState(null);
   const timelineRef = useRef(null);
   const timelineFocusFrameRef = useRef(null);
+  const visibleTimelineCardsRef = useRef(new Set());
+  const detailOriginScrollLeftRef = useRef(null);
+  const filterOriginRef = useRef(null);
+  const restoreFilterOriginRef = useRef(false);
+  const filteredCameraDateRef = useRef(null);
   const hasScrolledToNewest = useRef(false);
   const memoryCardRefs = useRef(new Map());
   const detailPanelRef = useRef(null);
-  const currentDay = new Date();
-  currentDay.setHours(0, 0, 0, 0);
+  const currentDay = useMemo(() => {
+    const day = new Date();
+    day.setHours(0, 0, 0, 0);
+    return day;
+  }, []);
   const lifeCurrent = useMemo(
     () =>
       deriveLifeCurrent({
@@ -111,7 +146,10 @@ function HomePage({
     [lifeCurrent]
   );
 
-  const filteredMemories = memories
+  const sortedMemories = useMemo(() => [...memories].sort(
+    (a, b) => getTimelineDate(a, currentDay) - getTimelineDate(b, currentDay)
+  ), [currentDay, memories]);
+  const filteredMemories = useMemo(() => sortedMemories
     .filter((memory) => {
       const text = `${memory.title} ${memory.description}`.toLowerCase();
       const matchesSearch = text.includes(search.toLowerCase());
@@ -123,12 +161,47 @@ function HomePage({
         favoriteFilter === "all" || memory.favorite === true;
 
       return matchesSearch && matchesCategory && matchesFavorite;
-    })
-    .sort(
-      (a, b) =>
-        getTimelineDate(a, currentDay) - getTimelineDate(b, currentDay)
+    }), [favoriteFilter, search, selectedCategory, sortedMemories]);
+  const isMemoryFilterActive = search.length > 0 ||
+    selectedCategory !== "All" || favoriteFilter !== "all";
+  const filteredLifeCurrentRange = useMemo(() => {
+    if (!isMemoryFilterActive) return lifeCurrentLayout;
+    const exactYear = /^\d{4}$/.test(search.trim()) ? search.trim() : null;
+    if (exactYear) {
+      return deriveLifeCurrentWindow(lifeCurrentLayout, {
+        startDateKey: `${exactYear}-01-01`,
+        endDateKey: `${exactYear}-12-31`,
+      });
+    }
+    const datedMatches = filteredMemories.filter(({ date }) =>
+      /^\d{4}-\d{2}-\d{2}$/.test(String(date || ""))
     );
-  const timelineGroups = groupMemoriesByDate(filteredMemories, currentDay);
+    if (datedMatches.length === 0) return { points: [], bounds: {} };
+    return deriveLifeCurrentWindow(lifeCurrentLayout, {
+      startDateKey: datedMatches[0].date,
+      endDateKey: datedMatches[datedMatches.length - 1].date,
+      paddingDays: LIFE_CURRENT_WINDOW_TUNING.paddingDays,
+      minimumWindowDays: LIFE_CURRENT_WINDOW_TUNING.minimumWindowDays,
+    });
+  }, [filteredMemories, isMemoryFilterActive, lifeCurrentLayout, search]);
+  const filteredLifeCurrentLayout = useMemo(() => {
+    if (!isMemoryFilterActive || !filteredCameraDate || !filteredLifeCurrentRange.bounds?.earliestDateKey) {
+      return filteredLifeCurrentRange;
+    }
+    return deriveLifeCurrentCameraWindow(lifeCurrentLayout, {
+      rangeStartDateKey: filteredLifeCurrentRange.bounds.earliestDateKey,
+      rangeEndDateKey: filteredLifeCurrentRange.bounds.latestDateKey,
+      anchorDateKey: filteredCameraDate,
+      windowDays: LIFE_CURRENT_WINDOW_TUNING.cameraWindowDays,
+    });
+  }, [filteredCameraDate, filteredLifeCurrentRange, isMemoryFilterActive, lifeCurrentLayout]);
+  const timelineGroups = useMemo(
+    () => groupMemoriesByDate(
+      isMemoryFilterActive ? filteredMemories : sortedMemories,
+      currentDay
+    ),
+    [currentDay, filteredMemories, isMemoryFilterActive, sortedMemories]
+  );
   const timelineFocusKey = filteredMemories.map(({ id }) => id).join("|");
   const detailMemory =
     detailMemoryId === null
@@ -173,6 +246,50 @@ function HomePage({
     });
   }
 
+  function captureFilterOrigin() {
+    const viewport = timelineRef.current;
+    if (!viewport) return;
+    const viewportBounds = viewport.getBoundingClientRect();
+    const center = viewportBounds.left + viewportBounds.width / 2;
+    let closest = null;
+    const nearbyCards = visibleTimelineCardsRef.current.size > 0
+      ? visibleTimelineCardsRef.current
+      : memoryCardRefs.current.values();
+    Array.from(nearbyCards).forEach((card) => {
+      const bounds = card.getBoundingClientRect();
+      const distance = Math.abs(bounds.left + bounds.width / 2 - center);
+      if (!closest || distance < closest.distance) {
+        closest = { memoryId: card.dataset.memoryId || null, distance };
+      }
+    });
+    filterOriginRef.current = {
+      memoryId: closest?.memoryId || null,
+      scrollLeft: viewport.scrollLeft,
+    };
+  }
+
+  function prepareFilterTransition(nextSearch, nextCategory, nextFavorite) {
+    const nextActive = nextSearch.length > 0 ||
+      nextCategory !== "All" || nextFavorite !== "all";
+    if (!isMemoryFilterActive && nextActive) captureFilterOrigin();
+    if (isMemoryFilterActive && !nextActive) restoreFilterOriginRef.current = true;
+  }
+
+  function updateSearch(nextSearch) {
+    prepareFilterTransition(nextSearch, selectedCategory, favoriteFilter);
+    setSearch(nextSearch);
+  }
+
+  function updateCategory(nextCategory) {
+    prepareFilterTransition(search, nextCategory, favoriteFilter);
+    setSelectedCategory(nextCategory);
+  }
+
+  function updateFavoriteFilter(nextFavorite) {
+    prepareFilterTransition(search, selectedCategory, nextFavorite);
+    setFavoriteFilter(nextFavorite);
+  }
+
   function selectMemory(memory) {
     const selectionKey = getMemorySelectionKey(memory);
     setSelectedMemory(selectionKey);
@@ -180,6 +297,7 @@ function HomePage({
   }
 
   function openMemoryDetail(memory) {
+    detailOriginScrollLeftRef.current = timelineRef.current?.scrollLeft ?? null;
     selectMemory(memory);
     setActiveDetailPhotoIndex(0);
     setDetailMemoryId(memory.id);
@@ -187,6 +305,12 @@ function HomePage({
 
   function closeMemoryDetail() {
     setDetailMemoryId(null);
+    if (!trophySourceTarget && detailOriginScrollLeftRef.current !== null) {
+      const scrollLeft = detailOriginScrollLeftRef.current;
+      window.requestAnimationFrame(() => {
+        if (timelineRef.current) timelineRef.current.scrollLeft = scrollLeft;
+      });
+    }
     if (trophySourceTarget && onReturnToTrophyCase) onReturnToTrophyCase();
   }
 
@@ -209,14 +333,25 @@ function HomePage({
   useEffect(() => {
     const viewport = timelineRef.current;
     if (!viewport) return undefined;
+    const visibleCards = visibleTimelineCardsRef.current;
 
     function updateTimelineFocus() {
       const viewportBounds = viewport.getBoundingClientRect();
       const viewportCenter = viewportBounds.left + viewportBounds.width / 2;
 
-      memoryCardRefs.current.forEach((card) => {
+      const cards = visibleCards.size > 0
+        ? visibleCards
+        : memoryCardRefs.current.values();
+      let closestDate = null;
+      let closestDistance = Infinity;
+      Array.from(cards).forEach((card) => {
         const bounds = card.getBoundingClientRect();
         const cardCenter = bounds.left + bounds.width / 2;
+        const distance = Math.abs(cardCenter - viewportCenter);
+        if (distance < closestDistance && card.dataset.memoryDate) {
+          closestDistance = distance;
+          closestDate = card.dataset.memoryDate;
+        }
         const scale = calculateTimelineFocusScale(cardCenter - viewportCenter);
         const visual = card.querySelector("[data-timeline-card-visual]");
         if (visual) {
@@ -224,6 +359,14 @@ function HomePage({
         }
         card.style.zIndex = String(Math.round(scale * 100));
       });
+      if (
+        isMemoryFilterActive &&
+        closestDate &&
+        closestDate !== filteredCameraDateRef.current
+      ) {
+        filteredCameraDateRef.current = closestDate;
+        setFilteredCameraDate(closestDate);
+      }
     }
 
     function scheduleTimelineFocusUpdate() {
@@ -238,17 +381,89 @@ function HomePage({
       passive: true,
     });
     window.addEventListener("resize", scheduleTimelineFocusUpdate);
+    let observer = null;
+    if (typeof IntersectionObserver === "function") {
+      observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(({ isIntersecting, target }) => {
+            if (isIntersecting) visibleCards.add(target);
+            else visibleCards.delete(target);
+          });
+          scheduleTimelineFocusUpdate();
+        },
+        { root: viewport, rootMargin: "0px 480px" }
+      );
+      memoryCardRefs.current.forEach((card) => observer.observe(card));
+    }
     scheduleTimelineFocusUpdate();
 
     return () => {
       viewport.removeEventListener("scroll", scheduleTimelineFocusUpdate);
       window.removeEventListener("resize", scheduleTimelineFocusUpdate);
+      observer?.disconnect();
+      visibleCards.clear();
       if (timelineFocusFrameRef.current !== null) {
         window.cancelAnimationFrame(timelineFocusFrameRef.current);
         timelineFocusFrameRef.current = null;
       }
     };
-  }, [timelineFocusKey]);
+  }, [isMemoryFilterActive, timelineFocusKey]);
+
+  useEffect(() => {
+    if (!isMemoryFilterActive || filteredMemories.length === 0) return;
+    const firstDated = filteredMemories.find(({ date }) => /^\d{4}-\d{2}-\d{2}$/.test(String(date || "")));
+    if (firstDated && !filteredCameraDateRef.current) {
+      filteredCameraDateRef.current = firstDated.date;
+      setFilteredCameraDate(firstDated.date);
+    }
+  }, [filteredMemories, isMemoryFilterActive]);
+
+  useEffect(() => {
+    if (isMemoryFilterActive || !restoreFilterOriginRef.current) return undefined;
+    restoreFilterOriginRef.current = false;
+    const origin = filterOriginRef.current;
+    filterOriginRef.current = null;
+    filteredCameraDateRef.current = null;
+    setFilteredCameraDate(null);
+    const frame = window.requestAnimationFrame(() => {
+      const viewport = timelineRef.current;
+      if (!viewport) return;
+      const card = origin?.memoryId
+        ? memoryCardRefs.current.get(origin.memoryId)
+        : null;
+      if (card) {
+        const viewportBounds = viewport.getBoundingClientRect();
+        const cardBounds = card.getBoundingClientRect();
+        viewport.scrollLeft += cardBounds.left - viewportBounds.left -
+          (viewportBounds.width - cardBounds.width) / 2;
+      } else if (!origin?.memoryId && Number.isFinite(origin?.scrollLeft)) {
+        viewport.scrollLeft = origin.scrollLeft;
+      } else {
+        viewport.scrollLeft = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [isMemoryFilterActive, timelineFocusKey]);
+
+  useEffect(() => {
+    if (!/^\d{4}$/.test(search.trim())) return undefined;
+    const year = search.trim();
+    const earliest = filteredMemories.find((memory) =>
+      String(memory.date || "").startsWith(year + "-")
+    );
+    if (!earliest) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      const viewport = timelineRef.current;
+      const card = memoryCardRefs.current.get(earliest.id);
+      if (!viewport || !card) return;
+      const viewportBounds = viewport.getBoundingClientRect();
+      const cardBounds = card.getBoundingClientRect();
+      viewport.scrollLeft +=
+        cardBounds.left - viewportBounds.left -
+        (viewportBounds.width - cardBounds.width) / 2;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [filteredMemories, search]);
 
   useEffect(() => {
     if (!trophySourceTarget?.memoryId) return undefined;
@@ -400,18 +615,16 @@ function HomePage({
           width: "100%",
         }}
       >
-        <input
+        <MemorySearchInput
           style={{ ...inputStyle, flex: "1 1 280px" }}
-          type="text"
-          placeholder="Search memories..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
+          search={search}
+          setSearch={updateSearch}
         />
 
         <select
           aria-label="Filter memories by category"
           value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
+          onChange={(e) => updateCategory(e.target.value)}
           style={{
             ...inputStyle,
             cursor: "pointer",
@@ -429,7 +642,7 @@ function HomePage({
         <select
           aria-label="Filter memories by favorites"
           value={favoriteFilter}
-          onChange={(e) => setFavoriteFilter(e.target.value)}
+          onChange={(e) => updateFavoriteFilter(e.target.value)}
           style={{
             ...inputStyle,
             cursor: "pointer",
@@ -454,21 +667,46 @@ function HomePage({
           maxWidth: "100%",
           marginTop: "20px",
           overflowX: "auto",
+          position: "relative",
         }}
       >
+        {isMemoryFilterActive && (
+          <div
+            data-testid="filtered-life-current-context"
+            data-window-start={filteredLifeCurrentLayout.bounds?.earliestDateKey || ""}
+            data-window-end={filteredLifeCurrentLayout.bounds?.latestDateKey || ""}
+            data-authoritative-points={lifeCurrentLayout.points.length}
+            data-window-points={filteredLifeCurrentLayout.points.length}
+            style={{
+              height: 0,
+              left: 0,
+              pointerEvents: "none",
+              position: "sticky",
+              top: 0,
+              width: "100%",
+              zIndex: 0,
+            }}
+          >
+            <LifeCurrent layout={filteredLifeCurrentLayout} />
+          </div>
+        )}
         <div
+            data-testid="timeline-content-canvas"
+            data-full-memory-count={sortedMemories.length}
+            data-visible-memory-count={filteredMemories.length}
+            data-filtered={isMemoryFilterActive ? "true" : "false"}
             style={{
               display: "flex",
               alignItems: "flex-start",
               gap: "64px",
-              minHeight: filteredMemories.length === 0 ? "150px" : undefined,
-              minWidth: filteredMemories.length === 0 ? "100%" : undefined,
+              minHeight: "150px",
+              minWidth: "100%",
               padding: "8px 32px 16px",
               position: "relative",
-              width: filteredMemories.length === 0 ? "auto" : "max-content",
+              width: sortedMemories.length === 0 ? "auto" : "max-content",
             }}
           >
-            <LifeCurrent layout={lifeCurrentLayout} />
+            {!isMemoryFilterActive && <LifeCurrent layout={lifeCurrentLayout} />}
             {lifeCurrentLayout.points.length === 0 && filteredMemories.length > 0 && <div
               aria-hidden="true"
               style={{
@@ -481,9 +719,10 @@ function HomePage({
               }}
             />}
 
-            {filteredMemories.length === 0 ? (
-              <p style={{ position: "relative", zIndex: 1 }}>No memories found.</p>
-            ) : (
+            {filteredMemories.length === 0 && (
+              <p style={{ left: "32px", position: "absolute", zIndex: 1 }}>No memories found.</p>
+            )}
+            {sortedMemories.length > 0 && (
               <>
 
             {timelineGroups.map((yearGroup, yearIndex) => (
@@ -566,6 +805,8 @@ function HomePage({
                           return (
                             <div
                               aria-label={"Open memory " + memory.title}
+                              data-memory-date={memory.date || ""}
+                              data-memory-id={memory.id}
                               data-testid={"timeline-memory-" + memory.id}
                               key={memory.id}
                               ref={(element) => {
@@ -591,6 +832,9 @@ function HomePage({
                               role="button"
                               tabIndex={0}
                               style={{
+                                contain: "layout paint style",
+                                contentVisibility: "auto",
+                                containIntrinsicSize: "184px 236px",
                                 flexShrink: 0,
                                 minHeight: "236px",
                                 width: TIMELINE_FOCUS_TUNING.baseCardWidth,

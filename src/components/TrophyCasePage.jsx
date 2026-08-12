@@ -10,6 +10,7 @@ function TrophyCasePage({
   sourceAvailable,
   restoreTrophyId,
   onRestoreComplete,
+  allowRemoval = true,
 }) {
   const lifeAchievements = trophyEntries.filter(
     ({ sourceType }) => sourceType === "memory"
@@ -60,6 +61,7 @@ function TrophyCasePage({
             sourceAvailable={sourceAvailable}
             restoreTrophyId={restoreTrophyId}
             onRestoreComplete={onRestoreComplete}
+            allowRemoval={allowRemoval}
           />
           <TrophyCase
             trophyEntries={workoutAchievements}
@@ -72,6 +74,7 @@ function TrophyCasePage({
             sourceAvailable={sourceAvailable}
             restoreTrophyId={restoreTrophyId}
             onRestoreComplete={onRestoreComplete}
+            allowRemoval={allowRemoval}
           />
         </div>
       )}

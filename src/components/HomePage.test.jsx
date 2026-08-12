@@ -71,6 +71,8 @@ test("renders Life Current from full source data independently of Memory filters
   );
   const current = screen.getByTestId("life-current");
   const pathBeforeFilter = current.querySelector("path").getAttribute("d");
+  const canvas = screen.getByTestId("timeline-content-canvas");
+  expect(canvas).toHaveAttribute("data-full-memory-count", "2");
 
   fireEvent.change(screen.getByPlaceholderText("Search memories..."), {
     target: { value: "Mountain" },
@@ -78,8 +80,41 @@ test("renders Life Current from full source data independently of Memory filters
 
   expect(screen.getByText("Mountain trip")).toBeInTheDocument();
   expect(screen.queryByText("Quiet evening")).not.toBeInTheDocument();
-  expect(screen.getByTestId("life-current").querySelector("path"))
-    .toHaveAttribute("d", pathBeforeFilter);
+  expect(screen.getByTestId("life-current").querySelector("path").getAttribute("d"))
+    .not.toBe(pathBeforeFilter);
+  expect(screen.getByTestId("timeline-content-canvas")).toBe(canvas);
+  expect(canvas).toHaveAttribute("data-full-memory-count", "2");
+  expect(canvas).toHaveAttribute("data-visible-memory-count", "1");
+  expect(canvas).toHaveAttribute("data-filtered", "true");
+  expect(canvas.querySelectorAll("[data-testid^='timeline-memory-']"))
+    .toHaveLength(1);
+  expect(canvas.querySelector("[data-timeline-memory-placeholder]"))
+    .not.toBeInTheDocument();
+  expect(screen.getByTestId("filtered-life-current-context"))
+    .toHaveStyle({ position: "sticky", width: "100%" });
+  expect(screen.getByTestId("filtered-life-current-context"))
+    .toHaveAttribute("data-authoritative-points", "5");
+  expect(Number(screen.getByTestId("filtered-life-current-context")
+    .getAttribute("data-window-points"))).toBeGreaterThan(1);
+});
+
+test("keeps the controlled search input immediate and clearing restores all Memories", () => {
+  render(<HomePage {...baseProps} memories={memories} trophyEntries={[]} />);
+  const input = screen.getByPlaceholderText("Search memories...");
+
+  fireEvent.change(input, { target: { value: "First" } });
+  expect(input).toHaveValue("First");
+  expect(screen.getByTestId("timeline-memory-memory-a")).toBeInTheDocument();
+  expect(screen.queryByTestId("timeline-memory-memory-b")).not.toBeInTheDocument();
+
+  fireEvent.change(input, { target: { value: "" } });
+  expect(input).toHaveValue("");
+  expect(screen.getByTestId("timeline-memory-memory-a")).toBeInTheDocument();
+  expect(screen.getByTestId("timeline-memory-memory-b")).toBeInTheDocument();
+  expect(screen.getByTestId("timeline-content-canvas"))
+    .toHaveAttribute("data-filtered", "false");
+  expect(screen.queryByTestId("filtered-life-current-context"))
+    .not.toBeInTheDocument();
 });
 
 test("retains the existing Timeline fallback line when full activity has no dated bucket", () => {
@@ -162,6 +197,234 @@ test("updates visual focus from viewport-center geometry without changing select
   unmount();
   window.requestAnimationFrame = originalRequestAnimationFrame;
   window.cancelAnimationFrame = originalCancelAnimationFrame;
+});
+
+test("limits focus geometry reads to cards near the Timeline viewport", () => {
+  const originalObserver = global.IntersectionObserver;
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  let observerCallback;
+  global.IntersectionObserver = jest.fn(function (callback) {
+    observerCallback = callback;
+    this.observe = jest.fn();
+    this.disconnect = jest.fn();
+  });
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  const manyMemories = Array.from({ length: 100 }, (_, index) => ({
+    ...memories[0],
+    id: "scale-" + index,
+    title: "Scale " + index,
+  }));
+  const { unmount } = render(
+    <HomePage {...baseProps} memories={manyMemories} trophyEntries={[]} />
+  );
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const near = screen.getByTestId("timeline-memory-scale-50");
+  const secondNear = screen.getByTestId("timeline-memory-scale-51");
+  const far = screen.getByTestId("timeline-memory-scale-0");
+  viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 400 }));
+  near.getBoundingClientRect = jest.fn(() => ({ left: 150, width: 100 }));
+  secondNear.getBoundingClientRect = jest.fn(() => ({ left: 260, width: 100 }));
+  far.getBoundingClientRect = jest.fn(() => ({ left: -5000, width: 100 }));
+
+  act(() => observerCallback([
+    { isIntersecting: true, target: near },
+    { isIntersecting: true, target: secondNear },
+  ]));
+  act(() => frames.pop()());
+
+  expect(near.getBoundingClientRect).toHaveBeenCalled();
+  expect(secondNear.getBoundingClientRect).toHaveBeenCalled();
+  expect(far.getBoundingClientRect).not.toHaveBeenCalled();
+  expect(global.IntersectionObserver).toHaveBeenCalledWith(
+    expect.any(Function),
+    expect.objectContaining({ root: viewport, rootMargin: "0px 480px" })
+  );
+  unmount();
+  global.IntersectionObserver = originalObserver;
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+});
+
+test("a plain year search positions the earliest matching Memory after filtering", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  const datedMemories = [
+    { ...memories[0], id: "december", title: "December 2000", date: "2000-12-20" },
+    { ...memories[0], id: "january", title: "January 2000", date: "2000-01-05" },
+    { ...memories[0], id: "other", title: "Other year", date: "2001-01-01" },
+  ];
+  const { unmount } = render(
+    <HomePage {...baseProps} memories={datedMemories} trophyEntries={[]} />
+  );
+  act(() => {
+    while (frames.length) frames.shift()();
+  });
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  viewport.scrollLeft = 0;
+  viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 400 }));
+  const january = screen.getByTestId("timeline-memory-january");
+  january.getBoundingClientRect = jest.fn(() => ({ left: 300, width: 100 }));
+
+  fireEvent.change(screen.getByPlaceholderText("Search memories..."), {
+    target: { value: "2000" },
+  });
+  act(() => {
+    while (frames.length) frames.shift()();
+  });
+
+  expect(screen.getByTestId("timeline-memory-january")).toBeInTheDocument();
+  expect(screen.getByTestId("timeline-memory-december")).toBeInTheDocument();
+  expect(viewport.scrollLeft).toBe(150);
+  expect(screen.getByTestId("filtered-life-current-context"))
+    .toHaveAttribute("data-window-start", "2000-01-05");
+  expect(screen.getByTestId("filtered-life-current-context"))
+    .toHaveAttribute("data-window-end", "2000-05-04");
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+});
+
+test("filtered browsing moves the authoritative Current camera with the centered dated Memory", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  const yearMemories = [
+    { ...memories[0], id: "early", title: "Early 1999", date: "1999-01-15" },
+    { ...memories[0], id: "middle", title: "Middle 1999", date: "1999-06-15" },
+    { ...memories[0], id: "late", title: "Late 1999", date: "1999-12-15" },
+  ];
+  const { unmount } = render(
+    <HomePage
+      {...baseProps}
+      memories={yearMemories}
+      trophyEntries={[]}
+      nutritionEntries={[
+        { id: "early-meal-a", loggedAt: "1999-01-20T12:00:00" },
+        { id: "early-meal-b", loggedAt: "1999-02-10T12:00:00" },
+        { id: "late-meal-a", loggedAt: "1999-09-01T12:00:00" },
+        { id: "late-meal-b", loggedAt: "1999-11-10T12:00:00" },
+      ]}
+    />
+  );
+  act(() => { while (frames.length) frames.shift()(); });
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 400 }));
+  fireEvent.change(screen.getByPlaceholderText("Search memories..."), {
+    target: { value: "1999" },
+  });
+  const early = screen.getByTestId("timeline-memory-early");
+  const middle = screen.getByTestId("timeline-memory-middle");
+  const late = screen.getByTestId("timeline-memory-late");
+  early.getBoundingClientRect = jest.fn(() => ({ left: 150, width: 100 }));
+  middle.getBoundingClientRect = jest.fn(() => ({ left: 500, width: 100 }));
+  late.getBoundingClientRect = jest.fn(() => ({ left: 850, width: 100 }));
+  act(() => { while (frames.length) frames.shift()(); });
+  const context = screen.getByTestId("filtered-life-current-context");
+  const earlyStart = context.getAttribute("data-window-start");
+  const earlyPath = screen.getByTestId("life-current").querySelector("path").getAttribute("d");
+
+  early.getBoundingClientRect = jest.fn(() => ({ left: -550, width: 100 }));
+  middle.getBoundingClientRect = jest.fn(() => ({ left: -200, width: 100 }));
+  late.getBoundingClientRect = jest.fn(() => ({ left: 150, width: 100 }));
+  fireEvent.scroll(viewport);
+  act(() => { while (frames.length) frames.shift()(); });
+
+  expect(context.getAttribute("data-window-start")).not.toBe(earlyStart);
+  expect(screen.getByTestId("life-current").querySelector("path").getAttribute("d"))
+    .not.toBe(earlyPath);
+  expect(context).toHaveAttribute("data-authoritative-points", "7");
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+});
+
+test("clearing temporary filters restores the original semantic Timeline position", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  const originMemories = [
+    { ...memories[0], id: "old", title: "Old 1999", date: "1999-01-01" },
+    { ...memories[0], id: "origin", title: "Origin 2014", date: "2014-06-01" },
+    { ...memories[0], id: "new", title: "New 2026", date: "2026-01-01" },
+  ];
+  const { unmount } = render(
+    <HomePage {...baseProps} memories={originMemories} trophyEntries={[]} />
+  );
+  act(() => { while (frames.length) frames.shift()(); });
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  viewport.scrollLeft = 700;
+  viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 400 }));
+  screen.getByTestId("timeline-memory-old").getBoundingClientRect = jest.fn(() => ({ left: -500, width: 100 }));
+  screen.getByTestId("timeline-memory-origin").getBoundingClientRect = jest.fn(() => ({ left: 150, width: 100 }));
+  screen.getByTestId("timeline-memory-new").getBoundingClientRect = jest.fn(() => ({ left: 600, width: 100 }));
+
+  const input = screen.getByPlaceholderText("Search memories...");
+  fireEvent.change(input, { target: { value: "1999" } });
+  fireEvent.change(input, { target: { value: "2026" } });
+  fireEvent.change(input, { target: { value: "" } });
+  const restoredOrigin = screen.getByTestId("timeline-memory-origin");
+  restoredOrigin.getBoundingClientRect = jest.fn(() => ({ left: 350, width: 100 }));
+  act(() => { while (frames.length) frames.shift()(); });
+
+  expect(restoredOrigin.getBoundingClientRect).toHaveBeenCalled();
+  expect(viewport.scrollLeft).toBe(500);
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+});
+
+test("ordinary text search does not invoke year-specific Timeline positioning", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const callbacks = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    callbacks.push(callback);
+    return callbacks.length;
+  });
+  const { unmount } = render(
+    <HomePage {...baseProps} memories={memories} trophyEntries={[]} />
+  );
+  act(() => {
+    while (callbacks.length) callbacks.shift()();
+  });
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  viewport.scrollLeft = 73;
+  fireEvent.change(screen.getByPlaceholderText("Search memories..."), {
+    target: { value: "First" },
+  });
+  act(() => {
+    while (callbacks.length) callbacks.shift()();
+  });
+  expect(viewport.scrollLeft).toBe(73);
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+});
+
+test("closing Memory Detail restores the originating horizontal Timeline position", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  window.requestAnimationFrame = jest.fn((callback) => {
+    callback();
+    return 1;
+  });
+  render(<HomePage {...baseProps} memories={memories} trophyEntries={[]} />);
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  viewport.scrollLeft = 412;
+  fireEvent.click(screen.getByTestId("timeline-memory-memory-a"));
+  viewport.scrollLeft = 0;
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", {
+    name: "Close memory details",
+  }));
+  expect(viewport.scrollLeft).toBe(412);
+  window.requestAnimationFrame = originalRequestAnimationFrame;
 });
 
 function memoryWithPhotos(count) {

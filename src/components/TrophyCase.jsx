@@ -31,6 +31,7 @@ function TrophyCase({
   sourceAvailable = () => false,
   restoreTrophyId = null,
   onRestoreComplete = () => {},
+  allowRemoval = true,
 }) {
   const trophies = useMemo(() => [...trophyEntries].sort(compareEntries), [trophyEntries]);
   const Heading = headingLevel;
@@ -110,9 +111,11 @@ function TrophyCase({
                   )}
                 </>
               )}
-              <button type="button" onClick={() => removeTrophyCaseEntry(entry.id)} style={actionStyle}>
-                Remove from Trophy Case
-              </button>
+              {allowRemoval && (
+                <button type="button" onClick={() => removeTrophyCaseEntry(entry.id)} style={actionStyle}>
+                  Remove from Trophy Case
+                </button>
+              )}
             </div>
           ))}
         </div>
