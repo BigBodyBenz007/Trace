@@ -98,6 +98,21 @@ test("renders Life Current from full source data independently of Memory filters
     .getAttribute("data-window-points"))).toBeGreaterThan(1);
 });
 
+test("unfiltered Timeline reserves one bounded quiet trailing-river extent", () => {
+  render(<HomePage {...baseProps} memories={memories} trophyEntries={[]} />);
+  const canvas = screen.getByTestId("timeline-content-canvas");
+  expect(screen.getByTestId("life-current-quiet-trail")).toBeInTheDocument();
+  expect(canvas).toHaveStyle({ paddingRight: "192px" });
+  expect(canvas).toHaveAttribute("data-quiet-trail-extent", "160");
+
+  fireEvent.change(screen.getByPlaceholderText("Search memories..."), {
+    target: { value: "First" },
+  });
+  expect(screen.queryByTestId("life-current-quiet-trail")).not.toBeInTheDocument();
+  expect(canvas).toHaveStyle({ paddingRight: "32px" });
+  expect(canvas).toHaveAttribute("data-quiet-trail-extent", "0");
+});
+
 test("keeps the controlled search input immediate and clearing restores all Memories", () => {
   render(<HomePage {...baseProps} memories={memories} trophyEntries={[]} />);
   const input = screen.getByPlaceholderText("Search memories...");
@@ -115,6 +130,42 @@ test("keeps the controlled search input immediate and clearing restores all Memo
     .toHaveAttribute("data-filtered", "false");
   expect(screen.queryByTestId("filtered-life-current-context"))
     .not.toBeInTheDocument();
+});
+
+test.each([
+  ["June", ["june", "prior"]],
+  ["jun", ["june", "prior"]],
+  ["2026", ["june", "may"]],
+  ["June 2026", ["june"]],
+  ["June 12", ["june", "prior"]],
+  ["June 12, 2026", ["june"]],
+  ["6/12/2026", ["june"]],
+  ["06/12/2026", ["june"]],
+])("date-aware Timeline search %s returns authoritative date matches", (query, ids) => {
+  const datedMemories = [
+    { ...memories[0], id: "june", title: "Neutral Alpha", description: "No date text", date: "2026-06-12" },
+    { ...memories[1], id: "may", title: "Neutral Beta", description: "No calendar text", date: "2026-05-03" },
+    { ...memories[1], id: "prior", title: "Neutral Gamma", description: "No year text", date: "2025-06-12" },
+  ];
+  render(<HomePage {...baseProps} memories={datedMemories} trophyEntries={[]} />);
+  fireEvent.change(screen.getByPlaceholderText("Search memories..."), {
+    target: { value: query },
+  });
+
+  ids.forEach((id) => expect(screen.getByTestId("timeline-memory-" + id)).toBeInTheDocument());
+  expect(screen.getByTestId("timeline-content-canvas"))
+    .toHaveAttribute("data-visible-memory-count", String(ids.length));
+  expect(screen.queryByTestId("life-current-quiet-trail")).not.toBeInTheDocument();
+});
+
+test("date-aware search remains case-insensitive and searches categories", () => {
+  const dated = { ...memories[0], id: "dated", title: "Neutral", description: "Plain", date: "2026-06-12", categories: ["Milestone"] };
+  render(<HomePage {...baseProps} memories={[dated]} trophyEntries={[]} />);
+  const input = screen.getByPlaceholderText("Search memories...");
+  fireEvent.change(input, { target: { value: "jUnE" } });
+  expect(screen.getByTestId("timeline-memory-dated")).toBeInTheDocument();
+  fireEvent.change(input, { target: { value: "milestone" } });
+  expect(screen.getByTestId("timeline-memory-dated")).toBeInTheDocument();
 });
 
 test("retains the existing Timeline fallback line when full activity has no dated bucket", () => {
@@ -139,7 +190,16 @@ test("renders compact Timeline previews while keeping full content in Memory Det
   };
   render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} />);
   const card = screen.getByTestId("timeline-memory-compact");
-  expect(card).toHaveStyle({ width: "184px" });
+  const visual = card.querySelector("[data-timeline-card-visual]");
+  expect(card).toHaveStyle({
+    contain: "layout paint style",
+    width: "240px",
+  });
+  expect(card).toHaveAttribute("data-containment-width", "240");
+  expect(card).toHaveAttribute("data-containment-gutter", "28");
+  expect(card.style.marginLeft).toBe("-28px");
+  expect(card.style.marginRight).toBe("-28px");
+  expect(visual).toHaveStyle({ margin: "0 auto", width: "184px" });
   expect(within(card).queryByText(memory.description)).not.toBeVisible();
   expect(card.querySelectorAll("[data-timeline-gallery-thumbnail]")).toHaveLength(2);
   expect(within(card).getByText("+1")).toBeInTheDocument();
@@ -148,6 +208,51 @@ test("renders compact Timeline previews while keeping full content in Memory Det
   const detail = screen.getByRole("dialog", { name: "Memory details for Compact preview" });
   expect(detail).toHaveTextContent(memory.description);
   expect(within(detail).getAllByAltText(/Memory/)).toHaveLength(3);
+});
+
+test("mobile focused cards can grow without paint-containment clipping", () => {
+  render(<HomePage {...baseProps} memories={memories} trophyEntries={[]} />);
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const card = screen.getByTestId("timeline-memory-memory-a");
+  const visual = card.querySelector("[data-timeline-card-visual]");
+  viewport.style.width = "390px";
+
+  expect(TIMELINE_FOCUS_TUNING.baseCardWidth *
+    TIMELINE_FOCUS_TUNING.maximumScale).toBeLessThan(390);
+  expect(240 - 28 - 28).toBe(TIMELINE_FOCUS_TUNING.baseCardWidth);
+  expect(card).toHaveAttribute("data-containment-width", "240");
+  expect(visual).toHaveStyle({ transformOrigin: "center top" });
+  expect(within(card).getByText("Same Day")).toBeInTheDocument();
+  expect(within(card).getByText(/May/)).toBeInTheDocument();
+});
+
+test("initial newest navigation centers the final Memory before the quiet trail", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  window.cancelAnimationFrame = jest.fn();
+  const { unmount } = render(
+    <HomePage {...baseProps} memories={memories} trophyEntries={[]} />
+  );
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const finalCard = screen.getByTestId("timeline-memory-memory-b");
+  viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 390 }));
+  finalCard.getBoundingClientRect = jest.fn(() => ({ left: 300, width: 240 }));
+
+  act(() => {
+    while (frames.length) frames.shift()();
+  });
+
+  expect(finalCard.getBoundingClientRect).toHaveBeenCalled();
+  expect(viewport.scrollLeft).toBe(225);
+  expect(screen.getByTestId("life-current-quiet-trail")).toBeInTheDocument();
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.cancelAnimationFrame = originalCancelAnimationFrame;
 });
 
 test("updates visual focus from viewport-center geometry without changing selection", () => {
@@ -177,7 +282,9 @@ test("updates visual focus from viewport-center geometry without changing select
   center.getBoundingClientRect = jest.fn(() => ({ left: 150, width: 100 }));
   right.getBoundingClientRect = jest.fn(() => ({ left: 290, width: 100 }));
 
-  act(() => frames.shift()());
+  act(() => {
+    while (frames.length) frames.shift()();
+  });
   const scale = (card) =>
     Number(card.querySelector("[data-timeline-card-visual]")
       .style.getPropertyValue("--timeline-focus-scale"));
@@ -186,9 +293,10 @@ test("updates visual focus from viewport-center geometry without changing select
   expect(scale(left)).toBeCloseTo(scale(right), 3);
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
+  const callsBeforeScroll = window.requestAnimationFrame.mock.calls.length;
   fireEvent.scroll(viewport);
   fireEvent.scroll(viewport);
-  expect(window.requestAnimationFrame).toHaveBeenCalledTimes(2);
+  expect(window.requestAnimationFrame).toHaveBeenCalledTimes(callsBeforeScroll + 1);
   act(() => frames.shift()());
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
@@ -234,7 +342,9 @@ test("limits focus geometry reads to cards near the Timeline viewport", () => {
     { isIntersecting: true, target: near },
     { isIntersecting: true, target: secondNear },
   ]));
-  act(() => frames.pop()());
+  act(() => {
+    while (frames.length) frames.shift()();
+  });
 
   expect(near.getBoundingClientRect).toHaveBeenCalled();
   expect(secondNear.getBoundingClientRect).toHaveBeenCalled();

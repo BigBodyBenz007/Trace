@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import LifeCurrent from "./LifeCurrent";
+import LifeCurrent, { LIFE_CURRENT_TRAIL_TUNING } from "./LifeCurrent";
 
 function layout(points) {
   return { points };
@@ -57,4 +57,39 @@ test("is decorative and cannot intercept Timeline pointer interaction", () => {
   const current = screen.getByTestId("life-current");
   expect(current).toHaveAttribute("aria-hidden", "true");
   expect(current).toHaveStyle({ pointerEvents: "none" });
+});
+
+test("renders a bounded quiet trail after the final authoritative point", () => {
+  const points = [
+    point("2025-01-01", 0),
+    point("2026-08-06", 1),
+  ];
+  render(<LifeCurrent layout={layout(points)} showQuietTrail />);
+
+  const current = screen.getByTestId("life-current");
+  const trail = screen.getByTestId("life-current-quiet-trail");
+  expect(current).toHaveAttribute("data-last-activity-date", "2026-08-06");
+  expect(current).toHaveAttribute("data-quiet-trail", "true");
+  expect(current).toHaveAttribute("data-visible-end-x", "1000");
+  expect(current.querySelector("path").getAttribute("d")).toMatch(/1000 28$/);
+  expect(trail).toHaveStyle({
+    pointerEvents: "none",
+    width: `${LIFE_CURRENT_TRAIL_TUNING.extentPixels}px`,
+  });
+  expect(trail).toHaveAttribute("data-start-x", "0");
+  expect(trail).toHaveAttribute("data-end-x", "160");
+  expect(trail).toHaveAttribute("viewBox", "0 0 160 56");
+  expect(screen.getByTestId("life-current-quiet-trail-path"))
+    .toHaveAttribute("stroke-opacity", String(LIFE_CURRENT_TRAIL_TUNING.opacity));
+  expect(points).toHaveLength(2);
+  expect(points.at(-1).dateKey).toBe("2026-08-06");
+});
+
+test("does not add a quiet trail to camera-window rendering by default", () => {
+  render(<LifeCurrent layout={layout([
+    point("2026-01-01", 0),
+    point("2026-08-06", 1),
+  ])} />);
+  expect(screen.queryByTestId("life-current-quiet-trail")).not.toBeInTheDocument();
+  expect(screen.getByTestId("life-current")).toHaveAttribute("data-visible-end-x", "988");
 });

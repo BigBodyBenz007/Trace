@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { CATEGORY_OPTIONS } from "../constants/categories";
 import { deriveLifeCurrent } from "../services/lifeCurrent";
 import { deriveLifeCurrentLayout } from "../services/lifeCurrentLayout";
+import { matchesMemorySearch } from "../services/memorySearch";
 import {
   deriveLifeCurrentCameraWindow,
   deriveLifeCurrentWindow,
@@ -13,11 +14,17 @@ import {
   TIMELINE_FOCUS_TUNING,
 } from "../services/timelineFocus";
 import LifeCurrent from "./LifeCurrent";
+import { LIFE_CURRENT_TRAIL_TUNING } from "./LifeCurrent";
 
 const CATEGORY_FILTER_OPTIONS = [
   "All",
   ...CATEGORY_OPTIONS,
 ];
+const TIMELINE_FOCUS_CONTAINMENT_WIDTH = Math.ceil(
+  TIMELINE_FOCUS_TUNING.baseCardWidth * TIMELINE_FOCUS_TUNING.maximumScale
+);
+const TIMELINE_FOCUS_CONTAINMENT_GUTTER =
+  (TIMELINE_FOCUS_CONTAINMENT_WIDTH - TIMELINE_FOCUS_TUNING.baseCardWidth) / 2;
 
 function photoSource(photo) {
   return typeof photo === "string" ? photo : photo?.url;
@@ -151,8 +158,7 @@ function HomePage({
   ), [currentDay, memories]);
   const filteredMemories = useMemo(() => sortedMemories
     .filter((memory) => {
-      const text = `${memory.title} ${memory.description}`.toLowerCase();
-      const matchesSearch = text.includes(search.toLowerCase());
+      const matchesSearch = matchesMemorySearch(memory, search);
       const matchesCategory =
         selectedCategory === "All" ||
         (Array.isArray(memory.categories) &&
@@ -487,12 +493,26 @@ function HomePage({
       return;
     }
 
-    timelineRef.current.scrollLeft = Math.max(
+    const viewport = timelineRef.current;
+    viewport.scrollLeft = Math.max(
       0,
-      timelineRef.current.scrollWidth - timelineRef.current.clientWidth
+      viewport.scrollWidth - viewport.clientWidth
     );
     hasScrolledToNewest.current = true;
-  }, [memories.length]);
+    const newestMemory = sortedMemories[sortedMemories.length - 1];
+    const frame = window.requestAnimationFrame(() => {
+      const newestCard = newestMemory
+        ? memoryCardRefs.current.get(getMemorySelectionKey(newestMemory))
+        : null;
+      if (!newestCard) return;
+      const viewportBounds = viewport.getBoundingClientRect();
+      const cardBounds = newestCard.getBoundingClientRect();
+      if (viewportBounds.width <= 0 || cardBounds.width <= 0) return;
+      viewport.scrollLeft += cardBounds.left - viewportBounds.left -
+        (viewportBounds.width - cardBounds.width) / 2;
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [memories.length, sortedMemories]);
 
   return (
     <div style={containerStyle}>
@@ -695,18 +715,23 @@ function HomePage({
             data-full-memory-count={sortedMemories.length}
             data-visible-memory-count={filteredMemories.length}
             data-filtered={isMemoryFilterActive ? "true" : "false"}
+            data-quiet-trail-extent={isMemoryFilterActive ? "0" : LIFE_CURRENT_TRAIL_TUNING.extentPixels}
             style={{
               display: "flex",
               alignItems: "flex-start",
               gap: "64px",
               minHeight: "150px",
               minWidth: "100%",
-              padding: "8px 32px 16px",
+              padding: isMemoryFilterActive
+                ? "8px 32px 16px"
+                : `8px ${32 + LIFE_CURRENT_TRAIL_TUNING.extentPixels}px 16px 32px`,
               position: "relative",
               width: sortedMemories.length === 0 ? "auto" : "max-content",
             }}
           >
-            {!isMemoryFilterActive && <LifeCurrent layout={lifeCurrentLayout} />}
+            {!isMemoryFilterActive && (
+              <LifeCurrent layout={lifeCurrentLayout} showQuietTrail />
+            )}
             {lifeCurrentLayout.points.length === 0 && filteredMemories.length > 0 && <div
               aria-hidden="true"
               style={{
@@ -805,6 +830,8 @@ function HomePage({
                           return (
                             <div
                               aria-label={"Open memory " + memory.title}
+                              data-containment-gutter={TIMELINE_FOCUS_CONTAINMENT_GUTTER}
+                              data-containment-width={TIMELINE_FOCUS_CONTAINMENT_WIDTH}
                               data-memory-date={memory.date || ""}
                               data-memory-id={memory.id}
                               data-testid={"timeline-memory-" + memory.id}
@@ -833,11 +860,14 @@ function HomePage({
                               tabIndex={0}
                               style={{
                                 contain: "layout paint style",
+                                containIntrinsicSize: `${TIMELINE_FOCUS_CONTAINMENT_WIDTH}px 236px`,
                                 contentVisibility: "auto",
-                                containIntrinsicSize: "184px 236px",
                                 flexShrink: 0,
+                                marginLeft: `-${TIMELINE_FOCUS_CONTAINMENT_GUTTER}px`,
+                                marginRight: `-${TIMELINE_FOCUS_CONTAINMENT_GUTTER}px`,
                                 minHeight: "236px",
-                                width: TIMELINE_FOCUS_TUNING.baseCardWidth,
+                                overflow: "visible",
+                                width: TIMELINE_FOCUS_CONTAINMENT_WIDTH,
                                 position: "relative",
                               }}
                             >
@@ -897,7 +927,8 @@ function HomePage({
                                 minHeight: "164px",
                                 padding: "12px",
                                 minWidth: 0,
-                                width: "100%",
+                                margin: "0 auto",
+                                width: TIMELINE_FOCUS_TUNING.baseCardWidth,
                                 flexShrink: 0,
                                 textAlign: "left",
                                 overflowWrap: "anywhere",

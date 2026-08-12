@@ -6,9 +6,18 @@ const CENTER_Y = VIEWBOX_HEIGHT / 2;
 const MEANDER = 8;
 const EDGE_INSET = 12;
 
-function pointCoordinates(points) {
+export const LIFE_CURRENT_TRAIL_TUNING = Object.freeze({
+  extentPixels: 160,
+  strokeWidth: 4,
+  opacity: 0.24,
+});
+
+function pointCoordinates(points, extendFinalPointToEdge = false) {
   return points.map((point, index) => ({
-    x: EDGE_INSET + point.normalizedX * (VIEWBOX_WIDTH - EDGE_INSET * 2),
+    x:
+      EDGE_INSET +
+      point.normalizedX *
+        (VIEWBOX_WIDTH - EDGE_INSET - (extendFinalPointToEdge ? 0 : EDGE_INSET)),
     y:
       CENTER_Y +
       (index === 0 || index === points.length - 1
@@ -17,8 +26,8 @@ function pointCoordinates(points) {
   }));
 }
 
-function currentPath(points) {
-  const coordinates = pointCoordinates(points);
+function currentPath(points, extendFinalPointToEdge = false) {
+  const coordinates = pointCoordinates(points, extendFinalPointToEdge);
   if (coordinates.length === 0) return "";
   if (coordinates.length === 1) {
     const [{ x, y }] = coordinates;
@@ -33,15 +42,19 @@ function currentPath(points) {
   }, "");
 }
 
-function LifeCurrent({ layout }) {
+function LifeCurrent({ layout, showQuietTrail = false }) {
   const points = Array.isArray(layout?.points) ? layout.points : [];
-  const path = currentPath(points);
+  const path = currentPath(points, showQuietTrail);
   if (!path) return null;
 
   return (
+    <>
     <svg
       aria-hidden="true"
       data-testid="life-current"
+      data-last-activity-date={points[points.length - 1]?.dateKey || ""}
+      data-quiet-trail={showQuietTrail ? "true" : "false"}
+      data-visible-end-x={showQuietTrail ? VIEWBOX_WIDTH : VIEWBOX_WIDTH - EDGE_INSET}
       preserveAspectRatio="none"
       viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
       style={{
@@ -50,9 +63,13 @@ function LifeCurrent({ layout }) {
         overflow: "visible",
         pointerEvents: "none",
         position: "absolute",
-        right: "32px",
+        right: showQuietTrail
+          ? `${32 + LIFE_CURRENT_TRAIL_TUNING.extentPixels}px`
+          : "32px",
         top: "90px",
-        width: "calc(100% - 64px)",
+        width: showQuietTrail
+          ? `calc(100% - ${64 + LIFE_CURRENT_TRAIL_TUNING.extentPixels}px)`
+          : "calc(100% - 64px)",
         zIndex: 0,
       }}
     >
@@ -67,6 +84,39 @@ function LifeCurrent({ layout }) {
         vectorEffect="non-scaling-stroke"
       />
     </svg>
+    {showQuietTrail && (
+      <svg
+          aria-hidden="true"
+          data-testid="life-current-quiet-trail"
+          preserveAspectRatio="none"
+          data-start-x="0"
+          data-end-x={LIFE_CURRENT_TRAIL_TUNING.extentPixels}
+          viewBox={`0 0 ${LIFE_CURRENT_TRAIL_TUNING.extentPixels} ${VIEWBOX_HEIGHT}`}
+          style={{
+            height: `${VIEWBOX_HEIGHT}px`,
+            overflow: "visible",
+            pointerEvents: "none",
+            position: "absolute",
+            right: "32px",
+            top: "90px",
+            width: `${LIFE_CURRENT_TRAIL_TUNING.extentPixels}px`,
+            zIndex: 0,
+          }}
+        >
+          <path
+            d="M 0 28 C 42 28, 70 24, 104 27 C 126 29, 144 28, 160 28"
+            data-testid="life-current-quiet-trail-path"
+            fill="none"
+            stroke="#60a5fa"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeOpacity={LIFE_CURRENT_TRAIL_TUNING.opacity}
+            strokeWidth={LIFE_CURRENT_TRAIL_TUNING.strokeWidth}
+            vectorEffect="non-scaling-stroke"
+          />
+      </svg>
+    )}
+    </>
   );
 }
 
