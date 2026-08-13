@@ -83,6 +83,54 @@ test("successful save clears a restored draft and does not duplicate the workout
   expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
 });
 
+test("saving a restored draft records its original start and actual finish", () => {
+  const startedAt = "2026-08-09T18:30:00.000Z";
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify({
+    schemaVersion: 1,
+    startedAt,
+    updatedAt: startedAt,
+    form: {
+      title: "Restored workout",
+      date: "2026-08-09",
+      time: "13:30",
+      notes: "",
+      exercises: [{
+        id: "exercise-restored",
+        name: "Squat",
+        notes: "",
+        sets: [{ id: "set-restored", reps: "5", loadMode: "external", weightAmount: "225", weightUnit: "lb", notes: "", isUntouched: false }],
+      }],
+    },
+    context: { activeSearchExerciseId: null },
+  }));
+  jest.useFakeTimers().setSystemTime(new Date("2026-08-09T19:35:00.000Z"));
+  try {
+    const props = renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+    expect(props.saveWorkoutEntry).toHaveBeenCalledWith(expect.objectContaining({
+      startedAt,
+      finishedAt: "2026-08-09T19:35:00.000Z",
+    }));
+    expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("unmount does not add finish timing and a failed save retains the draft", async () => {
+  const view = render(<WorkoutPage {...renderPageProps()} />);
+  fillFirstSet();
+  const draft = await storedDraft();
+  expect(draft).not.toHaveProperty("finishedAt");
+  view.unmount();
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY))).not.toHaveProperty("finishedAt");
+
+  const props = renderPage({ saveWorkoutEntry: jest.fn(() => false) });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(props.saveWorkoutEntry.mock.calls[0][0]).toHaveProperty("finishedAt");
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).not.toBeNull();
+});
+
 test("editing a saved workout neither restores into nor clears the new-workout draft", async () => {
   const initial = render(<WorkoutPage {...renderPageProps()} />);
   fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "New draft" } });
@@ -324,7 +372,10 @@ test("shows mechanical validation errors", () => {
 });
 
 test("restores and updates a complete historical snapshot", () => {
-  const saved = entry();
+  const saved = entry({
+    startedAt: "2026-08-09T18:30:00.000Z",
+    finishedAt: "2026-08-09T19:35:00.000Z",
+  });
   const props = renderPage({ workoutEntries: [saved] });
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
 
@@ -342,6 +393,8 @@ test("restores and updates a complete historical snapshot", () => {
     saved.id,
     expect.objectContaining({
       createdAt: saved.createdAt,
+      startedAt: saved.startedAt,
+      finishedAt: saved.finishedAt,
       exercises: [
         expect.objectContaining({
           id: "exercise-1",
@@ -350,6 +403,24 @@ test("restores and updates a complete historical snapshot", () => {
       ],
     })
   );
+});
+
+test("shows completion timing while legacy workouts render without fabricated timing", () => {
+  renderPage({
+    workoutEntries: [
+      entry({
+        startedAt: "2026-08-09T18:30:00.000Z",
+        finishedAt: "2026-08-09T19:35:00.000Z",
+      }),
+      entry({ id: "legacy", title: "Legacy Workout" }),
+    ],
+  });
+  const completed = screen.getByText("Chest Day").closest("article");
+  expect(within(completed).getByText("Start")).toBeInTheDocument();
+  expect(within(completed).getByText("Finish")).toBeInTheDocument();
+  expect(within(completed).getByText("1 hr 5 min")).toBeInTheDocument();
+  const legacy = screen.getByText("Legacy Workout").closest("article");
+  expect(within(legacy).queryByText("Duration")).not.toBeInTheDocument();
 });
 
 test("retains a valid draft when persistence fails", () => {

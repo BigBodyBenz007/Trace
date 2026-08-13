@@ -42,6 +42,8 @@ test("creates a complete strength workout snapshot with decimal external load", 
     type: "strength",
     title: "Chest Day",
     occurredAt: workoutLocalDateTimeToIso("2026-08-09", "18:30"),
+    startedAt: workoutLocalDateTimeToIso("2026-08-09", "18:30"),
+    finishedAt: "2026-08-10T00:00:00.000Z",
     notes: "Strong session.\nKept form steady.",
     exercises: [
       {
@@ -123,7 +125,7 @@ test("validates external load amount, controlled unit, and load mode", () => {
   expect(getWorkoutEntryError(invalidMode)).toMatch(/valid load mode/);
 });
 
-test("preserves nested order, ids, and createdAt during editing", () => {
+test("preserves nested order, ids, createdAt, and completion timing during editing", () => {
   const draft = validDraft({
     exercises: [
       validDraft().exercises[0],
@@ -141,7 +143,11 @@ test("preserves nested order, ids, and createdAt during editing", () => {
       },
     ],
   });
-  const existing = { createdAt: "2025-01-01T00:00:00.000Z" };
+  const existing = {
+    createdAt: "2025-01-01T00:00:00.000Z",
+    startedAt: "2025-01-01T18:00:00.000Z",
+    finishedAt: "2025-01-01T19:05:00.000Z",
+  };
   const entry = createWorkoutEntry(
     draft,
     existing,
@@ -151,6 +157,18 @@ test("preserves nested order, ids, and createdAt during editing", () => {
   expect(entry.exercises.map(({ id }) => id)).toEqual(["exercise-1", "exercise-2"]);
   expect(entry.createdAt).toBe(existing.createdAt);
   expect(entry.updatedAt).toBe("2026-01-01T00:00:00.000Z");
+  expect(entry.startedAt).toBe(existing.startedAt);
+  expect(entry.finishedAt).toBe(existing.finishedAt);
+});
+
+test("does not fabricate completion timing when editing a legacy workout", () => {
+  const entry = createWorkoutEntry(
+    validDraft(),
+    { createdAt: "2025-01-01T00:00:00.000Z" },
+    new Date("2026-01-01T00:00:00.000Z")
+  );
+  expect(entry).not.toHaveProperty("startedAt");
+  expect(entry).not.toHaveProperty("finishedAt");
 });
 
 test("accepts valid future local timestamps without scheduling behavior", () => {

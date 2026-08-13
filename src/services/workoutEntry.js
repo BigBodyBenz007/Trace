@@ -102,11 +102,19 @@ export function createWorkoutEntry(draft, existingEntry = null, now = new Date()
   if (getWorkoutEntryError(draft)) return null;
 
   const timestamp = now.toISOString();
+  const occurredAt = workoutLocalDateTimeToIso(draft.date, draft.time);
+  const startedAt = existingEntry?.startedAt || draft.startedAt || occurredAt;
   return {
     schemaVersion: 1,
     type: "strength",
     title: cleanText(draft.title),
-    occurredAt: workoutLocalDateTimeToIso(draft.date, draft.time),
+    occurredAt,
+    ...(!existingEntry || existingEntry.startedAt ? { startedAt } : {}),
+    ...(!existingEntry
+      ? { finishedAt: timestamp }
+      : existingEntry.finishedAt
+        ? { finishedAt: existingEntry.finishedAt }
+        : {}),
     notes: cleanText(draft.notes),
     exercises: draft.exercises.map((exercise) => {
       const exerciseId = builtInExerciseId(exercise);

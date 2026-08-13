@@ -14,6 +14,7 @@ import {
   getWorkoutEntryError,
 } from "../services/workoutEntry";
 import { getExerciseDefinitionError } from "../services/exerciseCatalog";
+import { formatWorkoutDuration } from "../services/workoutDuration";
 import {
   clearWorkoutDraft,
   readWorkoutDraft,
@@ -69,6 +70,31 @@ function moveItem(items, index, direction) {
   const moved = [...items];
   [moved[index], moved[destination]] = [moved[destination], moved[index]];
   return moved;
+}
+
+function WorkoutTiming({ entry }) {
+  if (!entry.startedAt || !entry.finishedAt) return null;
+  const start = new Date(entry.startedAt);
+  const finish = new Date(entry.finishedAt);
+  if (!Number.isFinite(start.getTime()) || !Number.isFinite(finish.getTime())) {
+    return null;
+  }
+  const duration = formatWorkoutDuration(entry.startedAt, entry.finishedAt);
+
+  return (
+    <dl style={{ display: "grid", gap: "6px", gridTemplateColumns: "max-content minmax(0, 1fr)", margin: "10px 0", maxWidth: "100%" }}>
+      <dt style={{ color: "#9ca3af" }}>Start</dt>
+      <dd style={{ margin: 0, overflowWrap: "anywhere" }}>{start.toLocaleString()}</dd>
+      <dt style={{ color: "#9ca3af" }}>Finish</dt>
+      <dd style={{ margin: 0, overflowWrap: "anywhere" }}>{finish.toLocaleString()}</dd>
+      {duration && (
+        <>
+          <dt style={{ color: "#9ca3af" }}>Duration</dt>
+          <dd style={{ margin: 0 }}>{duration}</dd>
+        </>
+      )}
+    </dl>
+  );
 }
 
 function WorkoutPage({
@@ -257,7 +283,15 @@ function WorkoutPage({
   }
 
   function draft() {
-    return { title, date, time, notes, exercises, photos };
+    return {
+      title,
+      date,
+      time,
+      startedAt: startedAtRef.current,
+      notes,
+      exercises,
+      photos,
+    };
   }
 
   function changeExerciseName(exerciseId, value) {
@@ -828,6 +862,7 @@ function WorkoutPage({
               <article key={entry.id} style={{ background: "#1f2937", borderRadius: "12px", padding: "18px" }}>
                 <h3 style={{ marginTop: 0 }}>{entry.title}</h3>
                 <p>{new Date(entry.occurredAt).toLocaleString()}</p>
+                <WorkoutTiming entry={entry} />
                 {entry.notes && <p style={{ whiteSpace: "pre-wrap" }}>{entry.notes}</p>}
                 <WorkoutPhotos photos={entry.photos} label={`${entry.title} photos`} />
                 {entry.exercises.map((exercise) => (
