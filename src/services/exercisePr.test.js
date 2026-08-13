@@ -225,6 +225,25 @@ test("does not mutate workout entries or nested sets", () => {
   expect(entries).toEqual(snapshot);
 });
 
+test("excludes nested drops from every PR type while keeping the parent eligible", () => {
+  const parent = external("parent", 100, 8, "lb", {
+    drops: [
+      external("heavy-drop", 200, 20),
+      external("rep-drop", 50, 99),
+      bodyweight("bodyweight-drop", 100),
+    ],
+  });
+  const prs = deriveExercisePrs([
+    workout("w", "2026-08-01T10:00:00.000Z", [traceExercise("e", [parent])]),
+  ])[0];
+  expect(prs.records.heaviestWeight[0]).toMatchObject({ setId: "parent", weight: 100, reps: 8 });
+  expect(prs.records.repsAtWeight).toEqual([
+    expect.objectContaining({ setId: "parent", weight: 100, reps: 8 }),
+  ]);
+  expect(prs.records.bodyweightReps).toBeNull();
+  expect(JSON.stringify(prs)).not.toMatch(/heavy-drop|rep-drop|bodyweight-drop/);
+});
+
 test("recalculates independent progressions by workout chronology rather than insertion order", () => {
   const prs = deriveExercisePrs([
     workout("created-first", "2026-08-10T10:00:00.000Z", [

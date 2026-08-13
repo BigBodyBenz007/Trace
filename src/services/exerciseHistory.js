@@ -48,6 +48,14 @@ function copySet(set) {
   return {
     ...set,
     load: set?.load ? { ...set.load } : set?.load,
+    ...(Array.isArray(set?.drops)
+      ? {
+          drops: set.drops.map((drop) => ({
+            ...drop,
+            load: drop?.load ? { ...drop.load } : drop?.load,
+          })),
+        }
+      : {}),
   };
 }
 

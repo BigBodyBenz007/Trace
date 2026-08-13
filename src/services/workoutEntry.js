@@ -76,26 +76,56 @@ export function getWorkoutEntryError(draft) {
     for (let setIndex = 0; setIndex < exercise.sets.length; setIndex += 1) {
       const set = exercise.sets[setIndex];
       const location = `exercise ${exerciseIndex + 1}, set ${setIndex + 1}`;
-      const reps = Number(set?.reps);
-      if (!Number.isFinite(reps) || !Number.isInteger(reps) || reps <= 0) {
-        return `Enter positive whole-number reps for ${location}.`;
-      }
-      if (!LOAD_MODES.has(set?.loadMode)) {
-        return `Choose a valid load mode for ${location}.`;
-      }
-      if (set.loadMode === "external") {
-        const amount = Number(set.weightAmount);
-        if (!Number.isFinite(amount) || amount <= 0) {
-          return `Enter an external weight greater than zero for ${location}.`;
-        }
-        if (!WEIGHT_UNITS.has(set.weightUnit)) {
-          return `Choose lb or kg for ${location}.`;
-        }
+      const setError = getSetSegmentError(set, location);
+      if (setError) return setError;
+      const drops = Array.isArray(set?.drops) ? set.drops : [];
+      for (let dropIndex = 0; dropIndex < drops.length; dropIndex += 1) {
+        const dropError = getSetSegmentError(
+          drops[dropIndex],
+          `${location}, drop ${dropIndex + 1}`
+        );
+        if (dropError) return dropError;
       }
     }
   }
 
   return "";
+}
+
+function getSetSegmentError(segment, location) {
+  const reps = Number(segment?.reps);
+  if (!Number.isFinite(reps) || !Number.isInteger(reps) || reps <= 0) {
+    return `Enter positive whole-number reps for ${location}.`;
+  }
+  if (!LOAD_MODES.has(segment?.loadMode)) {
+    return `Choose a valid load mode for ${location}.`;
+  }
+  if (segment.loadMode === "external") {
+    const amount = Number(segment.weightAmount);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return `Enter an external weight greater than zero for ${location}.`;
+    }
+    if (!WEIGHT_UNITS.has(segment.weightUnit)) {
+      return `Choose lb or kg for ${location}.`;
+    }
+  }
+  return "";
+}
+
+function completedSetSegment(segment) {
+  return {
+    id: segment.id,
+    reps: Number(segment.reps),
+    load:
+      segment.loadMode === "bodyweight"
+        ? { mode: "bodyweight" }
+        : {
+            mode: "external",
+            amount: Number(segment.weightAmount),
+            unit: segment.weightUnit,
+          },
+    notes: cleanText(segment.notes),
+  };
 }
 
 export function createWorkoutEntry(draft, existingEntry = null, now = new Date()) {
@@ -126,19 +156,13 @@ export function createWorkoutEntry(draft, existingEntry = null, now = new Date()
           ? { exerciseReference: { ...exercise.exerciseReference } }
           : {}),
         ...(cleanText(exercise.notes) ? { notes: cleanText(exercise.notes) } : {}),
-        sets: exercise.sets.map((set) => ({
-        id: set.id,
-        reps: Number(set.reps),
-        load:
-          set.loadMode === "bodyweight"
-            ? { mode: "bodyweight" }
-            : {
-                mode: "external",
-                amount: Number(set.weightAmount),
-                unit: set.weightUnit,
-              },
-        notes: cleanText(set.notes),
-        })),
+        sets: exercise.sets.map((set) => {
+          const completed = completedSetSegment(set);
+          const drops = Array.isArray(set.drops) ? set.drops : [];
+          return drops.length > 0
+            ? { ...completed, drops: drops.map(completedSetSegment) }
+            : completed;
+        }),
       };
     }),
     createdAt: existingEntry?.createdAt || timestamp,

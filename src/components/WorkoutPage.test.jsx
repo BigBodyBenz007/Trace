@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import WorkoutPage from "./WorkoutPage";
 import { createExerciseDefinition } from "../services/exerciseCatalog";
 import { WORKOUT_DRAFT_STORAGE_KEY } from "../services/workoutDraft";
@@ -6,6 +6,7 @@ import { WORKOUT_DRAFT_STORAGE_KEY } from "../services/workoutDraft";
 const originalRequestAnimationFrame = window.requestAnimationFrame;
 const originalCreateObjectURL = URL.createObjectURL;
 const originalRevokeObjectURL = URL.revokeObjectURL;
+const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
 
 beforeEach(() => {
   localStorage.clear();
@@ -14,6 +15,17 @@ beforeEach(() => {
     return 1;
   };
   Element.prototype.scrollIntoView = jest.fn();
+  Element.prototype.getBoundingClientRect = jest.fn(() => ({
+    top: 100,
+    bottom: 150,
+    left: 0,
+    right: 300,
+    width: 300,
+    height: 50,
+    x: 0,
+    y: 100,
+    toJSON: () => {},
+  }));
   URL.createObjectURL = jest.fn((file) => `blob:${file.name}`);
   URL.revokeObjectURL = jest.fn();
 });
@@ -151,6 +163,7 @@ afterEach(() => {
   window.requestAnimationFrame = originalRequestAnimationFrame;
   URL.createObjectURL = originalCreateObjectURL;
   URL.revokeObjectURL = originalRevokeObjectURL;
+  Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
   jest.restoreAllMocks();
 });
 
@@ -223,6 +236,17 @@ function fillFirstSet({ bodyweight = false } = {}) {
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
     target: { value: "10" },
   });
+}
+
+function addExternalDrop({ exercise = 1, set = 1, weight, reps, notes = "", unit = "lb" }) {
+  fireEvent.click(screen.getByRole("button", { name: `Add drop to exercise ${exercise} set ${set}` }));
+  const dropNumber = screen.getAllByRole("region", { name: new RegExp(`Exercise ${exercise} set ${set} drop`) }).length;
+  if (unit !== "lb") {
+    fireEvent.change(screen.getByLabelText(`Exercise ${exercise} set ${set} drop ${dropNumber} weight unit`), { target: { value: unit } });
+  }
+  fireEvent.change(screen.getByLabelText(`Exercise ${exercise} set ${set} drop ${dropNumber} weight`), { target: { value: String(weight) } });
+  fireEvent.change(screen.getByLabelText(`Exercise ${exercise} set ${set} drop ${dropNumber} reps`), { target: { value: String(reps) } });
+  if (notes) fireEvent.change(screen.getByLabelText(`Exercise ${exercise} set ${set} drop ${dropNumber} notes`), { target: { value: notes } });
 }
 
 test("starts with one empty exercise containing one external-load set", () => {
@@ -356,6 +380,305 @@ test("adds, removes, and reorders exercises and sets without drag and drop", () 
   expect(screen.queryByLabelText("Exercise 2 name")).not.toBeInTheDocument();
 });
 
+test("adds ordered drops with inherited settings, autofocus, edits, and targeted removal", () => {
+  renderPage();
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight unit"), { target: { value: "kg" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add drop to exercise 1 set 1" }));
+  const firstWeight = screen.getByLabelText("Exercise 1 set 1 drop 1 weight");
+  expect(firstWeight).toHaveFocus();
+  expect(screen.getByLabelText("Exercise 1 set 1 drop 1 weight unit")).toHaveValue("kg");
+  fireEvent.change(firstWeight, { target: { value: "55" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 1 reps"), { target: { value: "8" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 1 notes"), { target: { value: "Fast" } });
+
+  fireEvent.click(screen.getByRole("button", { name: "Add drop to exercise 1 set 1" }));
+  const secondWeight = screen.getByLabelText("Exercise 1 set 1 drop 2 weight");
+  expect(secondWeight).toHaveFocus();
+  expect(firstWeight).toHaveValue(55);
+  expect(screen.getByLabelText("Exercise 1 set 1 drop 2 weight unit")).toHaveValue("kg");
+  fireEvent.change(secondWeight, { target: { value: "40" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 2 reps"), { target: { value: "6" } });
+
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
+  expect(screen.getByText("Drop removed")).toBeInTheDocument();
+  expect(screen.getByLabelText("Exercise 1 set 1 drop 2 weight")).toHaveValue(40);
+  expect(screen.queryByLabelText("Exercise 1 set 1 drop 1 weight")).not.toBeInTheDocument();
+});
+
+test("contextual Undo restores the exact drop ID, position, mode, unit, values, and notes", () => {
+  const props = renderPage();
+  fillFirstSet();
+  addExternalDrop({ weight: 55, reps: 8, notes: "Exact drop", unit: "kg" });
+  addExternalDrop({ weight: 40, reps: 6 });
+  const original = screen.getByRole("region", { name: "Exercise 1 set 1 drop 1" });
+  const originalId = original.getAttribute("data-drop-id");
+  fireEvent.click(within(original).getByRole("button", { name: /Remove/ }));
+
+  const status = screen.getByRole("status");
+  expect(status).toHaveTextContent("Drop removed");
+  expect(within(status).getByRole("button", { name: /Undo removed drop/ })).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Exercise 1 set 1 drop 2" })).toHaveAttribute("data-drop-id", expect.any(String));
+  expect(screen.queryByRole("region", { name: "Exercise 1 set 1 drop 1" })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: /Undo removed drop/ }));
+  const restored = screen.getByRole("region", { name: "Exercise 1 set 1 drop 1" });
+  expect(restored).toHaveAttribute("data-drop-id", originalId);
+  expect(screen.getByLabelText("Exercise 1 set 1 drop 1 weight")).toHaveValue(55);
+  expect(screen.getByLabelText("Exercise 1 set 1 drop 1 reps")).toHaveValue(8);
+  expect(screen.getByLabelText("Exercise 1 set 1 drop 1 weight unit")).toHaveValue("kg");
+  expect(screen.getByLabelText("Exercise 1 set 1 drop 1 notes")).toHaveValue("Exact drop");
+  expect(screen.queryByText("Drop removed")).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].sets[0].drops[0]).toMatchObject({
+    id: originalId,
+    reps: 8,
+    load: { mode: "external", amount: 55, unit: "kg" },
+    notes: "Exact drop",
+  });
+});
+
+test.each([
+  ["above", { top: -30, bottom: 20, left: 0, right: 300 }],
+  ["below", { top: 780, bottom: 830, left: 0, right: 300 }],
+  ["partially clipped", { top: 740, bottom: 790, left: 0, right: 300 }],
+])("scrolls the contextual Undo row into view when %s the viewport", (_label, rectangle) => {
+  Element.prototype.getBoundingClientRect.mockReturnValue({
+    width: 300,
+    height: 50,
+    x: rectangle.left,
+    y: rectangle.top,
+    toJSON: () => {},
+    ...rectangle,
+  });
+  Object.defineProperty(window, "innerHeight", { configurable: true, value: 768 });
+  renderPage();
+  addExternalDrop({ weight: 55, reps: 8 });
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
+  const status = screen.getByRole("status");
+  expect(status.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
+});
+
+test("does not scroll when the contextual Undo row is fully visible", () => {
+  renderPage();
+  addExternalDrop({ weight: 55, reps: 8 });
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
+  expect(screen.getByRole("status")).toBeInTheDocument();
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+});
+
+test("targets only the newly removed row with multiple independent parent sets", () => {
+  renderPage();
+  addExternalDrop({ weight: 55, reps: 8 });
+  fireEvent.click(screen.getByRole("button", { name: "Add set to exercise 1" }));
+  addExternalDrop({ set: 2, weight: 35, reps: 6 });
+  Element.prototype.getBoundingClientRect
+    .mockReturnValueOnce({ top: 100, bottom: 150, left: 0, right: 300 })
+    .mockReturnValueOnce({ top: 900, bottom: 950, left: 0, right: 300 });
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 2 drop 1" }));
+  const statuses = screen.getAllByRole("status");
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "nearest" });
+  expect(Element.prototype.getBoundingClientRect.mock.instances.at(-1)).toBe(statuses[1]);
+});
+
+test("unrelated rerenders and Undo restoration do not trigger visibility scrolling", () => {
+  Element.prototype.getBoundingClientRect.mockReturnValue({ top: -30, bottom: 20, left: 0, right: 300 });
+  renderPage();
+  addExternalDrop({ weight: 55, reps: 8 });
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+  fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Still editing" } });
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole("button", { name: /Undo removed drop/ }));
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
+});
+
+test("Undo expires after eight seconds and then numbering settles", () => {
+  jest.useFakeTimers();
+  try {
+    renderPage();
+    addExternalDrop({ weight: 55, reps: 8 });
+    addExternalDrop({ weight: 40, reps: 6 });
+    fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
+    expect(screen.getByRole("region", { name: "Exercise 1 set 1 drop 2" })).toBeInTheDocument();
+    act(() => jest.advanceTimersByTime(7999));
+    expect(screen.getByText("Drop removed")).toBeInTheDocument();
+    act(() => jest.advanceTimersByTime(1));
+    expect(screen.queryByText("Drop removed")).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Exercise 1 set 1 drop 1" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Exercise 1 set 1 drop 1 weight")).toHaveValue(40);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("a second removal in one parent replaces its pending Undo", () => {
+  renderPage();
+  addExternalDrop({ weight: 60, reps: 8 });
+  addExternalDrop({ weight: 50, reps: 7 });
+  addExternalDrop({ weight: 40, reps: 6 });
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 2" }));
+  expect(screen.getAllByText("Drop removed")).toHaveLength(1);
+  fireEvent.click(screen.getByRole("button", { name: /Undo removed drop/ }));
+  expect(screen.getByLabelText("Exercise 1 set 1 drop 1 weight")).toHaveValue(50);
+  expect(screen.getByLabelText("Exercise 1 set 1 drop 2 weight")).toHaveValue(40);
+  expect(screen.queryByDisplayValue(60)).not.toBeInTheDocument();
+});
+
+test("different parent sets keep independent pending Undo rows", () => {
+  renderPage();
+  addExternalDrop({ weight: 55, reps: 8 });
+  fireEvent.click(screen.getByRole("button", { name: "Add set to exercise 1" }));
+  addExternalDrop({ set: 2, weight: 35, reps: 6 });
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 2 drop 1" }));
+  expect(screen.getAllByText("Drop removed")).toHaveLength(2);
+  fireEvent.click(screen.getByRole("button", { name: "Undo removed drop from exercise 1 set 2" }));
+  expect(screen.getByLabelText("Exercise 1 set 2 drop 1 weight")).toHaveValue(35);
+  expect(screen.getByText("Drop removed")).toBeInTheDocument();
+});
+
+test("focuses the correct new drop across multiple exercises and sets", () => {
+  renderPage();
+  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
+  fireEvent.click(screen.getByRole("button", { name: "Add set to exercise 2" }));
+  fireEvent.click(screen.getByRole("button", { name: "Add drop to exercise 2 set 2" }));
+  expect(screen.getByLabelText("Exercise 2 set 2 drop 1 weight")).toHaveFocus();
+  expect(screen.queryByLabelText("Exercise 1 set 1 drop 1 weight")).not.toBeInTheDocument();
+});
+
+test.each([375, 390, 430])("keeps drop controls constrained at %ipx", (width) => {
+  const originalWidth = window.innerWidth;
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+  try {
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Add drop to exercise 1 set 1" }));
+    const drop = screen.getByRole("region", { name: "Exercise 1 set 1 drop 1" });
+    expect(drop).toHaveStyle({ maxWidth: "100%", overflow: "hidden" });
+    expect(screen.getByLabelText("Exercise 1 set 1 drop 1 weight")).toHaveStyle({ maxWidth: "100%", width: "100%" });
+  } finally {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth });
+  }
+});
+
+test("drop data survives draft persistence and restoration with stable IDs and order", async () => {
+  const first = render(<WorkoutPage {...renderPageProps()} />);
+  fillFirstSet();
+  fireEvent.click(screen.getByRole("button", { name: "Add drop to exercise 1 set 1" }));
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 1 weight"), { target: { value: "55" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 1 reps"), { target: { value: "8" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 1 notes"), { target: { value: "No rest" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add drop to exercise 1 set 1" }));
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 2 weight"), { target: { value: "40" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 2 reps"), { target: { value: "6" } });
+
+  await waitFor(() => expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).form.exercises[0].sets[0].drops[1].reps).toBe("6"));
+  const stored = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+  const ids = stored.form.exercises[0].sets[0].drops.map(({ id }) => id);
+  first.unmount();
+  render(<WorkoutPage {...renderPageProps()} />);
+  expect(screen.getByLabelText("Exercise 1 set 1 drop 1 weight")).toHaveValue(55);
+  expect(screen.getByLabelText("Exercise 1 set 1 drop 1 notes")).toHaveValue("No rest");
+  expect(screen.getByLabelText("Exercise 1 set 1 drop 2 weight")).toHaveValue(40);
+  const restored = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+  expect(restored.form.exercises[0].sets[0].drops.map(({ id }) => id)).toEqual(ids);
+});
+
+test("remove and Undo flow naturally through draft persistence without persisting the placeholder", async () => {
+  renderPage();
+  fillFirstSet();
+  addExternalDrop({ weight: 55, reps: 8, notes: "Draft drop" });
+  const id = screen.getByRole("region", { name: "Exercise 1 set 1 drop 1" }).getAttribute("data-drop-id");
+  await waitFor(() => expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).form.exercises[0].sets[0].drops).toHaveLength(1));
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
+  await waitFor(() => expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).form.exercises[0].sets[0].drops).toEqual([]));
+  expect(JSON.stringify(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)))).not.toContain("Drop removed");
+  fireEvent.click(screen.getByRole("button", { name: /Undo removed drop/ }));
+  await waitFor(() => expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).form.exercises[0].sets[0].drops[0].id).toBe(id));
+});
+
+test("saves normalized drops and failed save retains the complete drop draft", async () => {
+  const props = renderPage({ saveWorkoutEntry: jest.fn(() => false) });
+  fillFirstSet();
+  fireEvent.click(screen.getByRole("button", { name: "Add drop to exercise 1 set 1" }));
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 1 weight"), { target: { value: "55" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 1 reps"), { target: { value: "8" } });
+  await storedDraft();
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].sets[0].drops).toEqual([
+    expect.objectContaining({ reps: 8, load: { mode: "external", amount: 55, unit: "lb" } }),
+  ]);
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).form.exercises[0].sets[0].drops).toHaveLength(1);
+});
+
+test("historical drops can be edited, extended, and removed without changing timing", () => {
+  const saved = entry({
+    startedAt: "2026-08-09T18:30:00.000Z",
+    finishedAt: "2026-08-09T19:35:00.000Z",
+    exercises: [{
+      ...entry().exercises[0],
+      sets: [{ ...entry().exercises[0].sets[0], drops: [{ id: "drop-old", reps: 8, load: { mode: "external", amount: 55, unit: "lb" }, notes: "Old drop" }] }],
+    }],
+  });
+  const props = renderPage({ workoutEntries: [saved] });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(screen.getByLabelText("Exercise 1 set 1 drop 1 weight")).toHaveValue(55);
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 1 reps"), { target: { value: "9" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add drop to exercise 1 set 1" }));
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 2 weight"), { target: { value: "40" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 2 reps"), { target: { value: "7" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(props.updateWorkoutEntry).toHaveBeenCalledWith(saved.id, expect.objectContaining({
+    startedAt: saved.startedAt,
+    finishedAt: saved.finishedAt,
+    exercises: [expect.objectContaining({ sets: [expect.objectContaining({ drops: [expect.objectContaining({ id: "drop-old", reps: 9 }), expect.objectContaining({ reps: 7 })] })] })],
+  }));
+});
+
+test("historical drop removal can be undone before saving with timing intact", () => {
+  const saved = entry({
+    startedAt: "2026-08-09T18:30:00.000Z",
+    finishedAt: "2026-08-09T19:35:00.000Z",
+    exercises: [{
+      ...entry().exercises[0],
+      sets: [{ ...entry().exercises[0].sets[0], drops: [{ id: "historical-drop", reps: 8, load: { mode: "external", amount: 55, unit: "lb" }, notes: "Restore me" }] }],
+    }],
+  });
+  const props = renderPage({ workoutEntries: [saved] });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
+  expect(screen.getByText("Drop removed")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /Undo removed drop/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(props.updateWorkoutEntry).toHaveBeenCalledWith(saved.id, expect.objectContaining({
+    startedAt: saved.startedAt,
+    finishedAt: saved.finishedAt,
+    exercises: [expect.objectContaining({ sets: [expect.objectContaining({ drops: [expect.objectContaining({ id: "historical-drop", notes: "Restore me" })] })] })],
+  }));
+});
+
+test("saving after Undo expires persists the removed state", () => {
+  jest.useFakeTimers();
+  try {
+    const props = renderPage();
+    fillFirstSet();
+    addExternalDrop({ weight: 55, reps: 8 });
+    fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
+    act(() => jest.advanceTimersByTime(8000));
+    fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+    expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].sets[0]).not.toHaveProperty("drops");
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 test("shows mechanical validation errors", () => {
   renderPage();
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
@@ -446,6 +769,29 @@ test("shows completion timing while legacy workouts render without fabricated ti
   expect(within(completed).getByText("1 hr 5 min")).toBeInTheDocument();
   const legacy = screen.getByText("Legacy Workout").closest("article");
   expect(within(legacy).queryByText("Duration")).not.toBeInTheDocument();
+});
+
+test("Workout History nests drop segments without changing parent set numbering", () => {
+  const withDrops = entry({
+    exercises: [{
+      ...entry().exercises[0],
+      sets: [{
+        ...entry().exercises[0].sets[0],
+        notes: "Parent note",
+        drops: [
+          { id: "drop-1", reps: 8, load: { mode: "external", amount: 55, unit: "lb" }, notes: "First drop" },
+          { id: "drop-2", reps: 6, load: { mode: "bodyweight" }, notes: "Second drop" },
+        ],
+      }],
+    }],
+  });
+  renderPage({ workoutEntries: [withDrops] });
+  const card = screen.getByText("Chest Day").closest("article");
+  expect(within(card).getAllByRole("listitem")).toHaveLength(1);
+  expect(within(card).getByText("↳ Drop 1: 55 lb × 8 reps")).toBeInTheDocument();
+  expect(within(card).getByText("↳ Drop 2: Bodyweight × 6 reps")).toBeInTheDocument();
+  expect(within(card).getByText("First drop")).toBeInTheDocument();
+  expect(within(card).getByText("Second drop")).toBeInTheDocument();
 });
 
 test("retains a valid draft when persistence fails", () => {

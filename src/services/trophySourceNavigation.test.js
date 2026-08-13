@@ -12,6 +12,18 @@ test("uses stable set identity across performance-position changes", () => {
   expect(resolveWorkoutTrophySource(entry, [workout])).toMatchObject({ workoutId: "w1", exerciseIdentityKey: "trace|trace:bench-press", setId: "s1" });
 });
 
+test("parent Trophy navigation remains stable when its set contains drops", () => {
+  const withDrops = JSON.parse(JSON.stringify(workout));
+  withDrops.exercises[0].sets[0].drops = [
+    { id: "drop-1", reps: 8, load: { mode: "external", amount: 80, unit: "lb" }, notes: "" },
+  ];
+  const entry = { sourceType: "workout-pr", sourceId: "w1", sourceSnapshot: { setId: "s1" } };
+  expect(resolveWorkoutTrophySource(entry, [withDrops])).toMatchObject({
+    workoutId: "w1",
+    setId: "s1",
+  });
+});
+
 test("uses safe performance and exercise fallbacks but rejects materially missing sources", () => {
   const performanceId = "w1|e1|0";
   expect(resolveWorkoutTrophySource({ sourceType: "workout-pr", sourceId: "w1", sourceSnapshot: { performanceId } }, [workout])).toMatchObject({ performanceId });

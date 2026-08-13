@@ -29,6 +29,22 @@ function setDescription(set) {
   return `${set?.load?.mode || "Load"} × ${set?.reps} reps`;
 }
 
+function DropSegments({ drops }) {
+  if (!Array.isArray(drops) || drops.length === 0) return null;
+  return (
+    <div style={{ borderLeft: "2px solid #60a5fa", display: "grid", gap: "6px", marginTop: "6px", maxWidth: "100%", paddingLeft: "10px" }}>
+      {drops.map((drop, dropIndex) => (
+        <div key={drop.id || dropIndex} style={{ overflowWrap: "anywhere" }}>
+          <span>↳ Drop {dropIndex + 1}: {setDescription(drop)}</span>
+          {drop.notes && (
+            <span style={{ color: "#9ca3af", display: "block", whiteSpace: "pre-wrap" }}>{drop.notes}</span>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function recordsAtHeaviestWeights(records) {
   const byUnit = new Map();
   records.forEach((record) => {
@@ -517,6 +533,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                                       {set.notes}
                                     </span>
                                   )}
+                                  <DropSegments drops={set.drops} />
                                 </li>
                               ))}
                             </ol>

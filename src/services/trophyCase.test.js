@@ -7,6 +7,7 @@ import {
   reconcileWorkoutTrophyEntries,
   writeTrophyCaseEntries,
 } from "./trophyCase";
+import { deriveExercisePrs } from "./exercisePr";
 
 function candidate(identityKey = "trace|trace:bench") {
   return createWorkoutPrCandidate(
@@ -37,6 +38,31 @@ test("prevents the exact source achievement from being duplicated", () => {
   const duplicate = addCuratedTrophy(first.entries, candidate(), { id: "second", addedToTrophyCaseAt: "2026-08-12T12:00:00.000Z" });
   expect(duplicate.status).toBe("duplicate");
   expect(duplicate.entries).toHaveLength(1);
+});
+
+test("workout drops create no Trophy candidates and leave parent source identity unchanged", () => {
+  const workouts = [{
+    id: "workout",
+    title: "Drop Day",
+    occurredAt: "2026-08-10T12:00:00.000Z",
+    exercises: [{
+      id: "exercise",
+      name: "Bench",
+      exerciseId: "trace:bench",
+      sets: [{
+        id: "set",
+        reps: 8,
+        load: { mode: "external", amount: 80, unit: "lb" },
+        notes: "",
+        drops: [{ id: "drop", reps: 20, load: { mode: "external", amount: 120, unit: "lb" }, notes: "" }],
+      }],
+    }],
+  }];
+  const events = Object.values(deriveExercisePrs(workouts)[0].progression).flat();
+  const candidates = events.map((record) => createWorkoutPrCandidate(deriveExercisePrs(workouts)[0], record));
+  expect(candidates.length).toBeGreaterThan(0);
+  expect(candidates.every(({ sourceKey, sourceSnapshot }) => sourceKey.includes("|set") && sourceSnapshot.setId === "set")).toBe(true);
+  expect(candidates.every(({ sourceKey }) => !sourceKey.includes("|drop|"))).toBe(true);
 });
 
 test("keeps Saved and Trace identities distinct", () => {

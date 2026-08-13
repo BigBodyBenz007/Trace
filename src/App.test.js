@@ -635,6 +635,28 @@ test("workouts persist separately and reload as complete snapshots", () => {
   expect(screen.getByText(/Bodyweight.*6 reps/)).toBeInTheDocument();
 });
 
+test("completed workout drops persist recursively and reload in Workout History", () => {
+  const firstRender = render(<App />);
+  openWorkouts();
+  fillBodyweightWorkout("Drop Push Day");
+  fireEvent.click(screen.getByRole("button", { name: "Add drop to exercise 1 set 1" }));
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 1 reps"), {
+    target: { value: "4" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  const stored = JSON.parse(localStorage.getItem("workoutEntries"));
+  expect(stored[0].exercises[0].sets[0].drops).toEqual([
+    expect.objectContaining({ reps: 4, load: { mode: "bodyweight" } }),
+  ]);
+  const dropId = stored[0].exercises[0].sets[0].drops[0].id;
+  firstRender.unmount();
+  render(<App />);
+  openWorkouts();
+  expect(screen.getByText("↳ Drop 1: Bodyweight × 4 reps")).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("workoutEntries"))[0].exercises[0].sets[0].drops[0].id).toBe(dropId);
+});
+
 test("workout photo blobs stay in IndexedDB references and are cleaned up with only their workout", async () => {
   const database = { name: "photo-db" };
   openPhotoDatabase.mockResolvedValue(database);

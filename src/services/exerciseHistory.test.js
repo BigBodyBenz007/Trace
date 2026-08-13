@@ -125,6 +125,23 @@ test("preserves every set, note, unit, and load mode for future calculations", (
   expect(history[0].performances[0].sets).not.toBe(sets);
 });
 
+test("deep-copies ordered drops without flattening or mutating the workout", () => {
+  const drops = [
+    set("drop-1", { load: { mode: "external", amount: 60, unit: "lb" }, reps: 8, notes: "First" }),
+    set("drop-2", { load: { mode: "bodyweight" }, reps: 6, notes: "Second" }),
+  ];
+  const parent = set("parent", { drops });
+  const source = workout("w", "2026-08-10T12:00:00.000Z", [exercise("e", "Press", {}, [parent])]);
+  const derived = deriveExerciseHistory([source])[0].performances[0].sets;
+  expect(derived).toHaveLength(1);
+  expect(derived[0].drops).toEqual(drops);
+  expect(derived[0].drops).not.toBe(drops);
+  expect(derived[0].drops[0]).not.toBe(drops[0]);
+  expect(derived[0].drops[0].load).not.toBe(drops[0].load);
+  derived[0].drops[0].load.amount = 1;
+  expect(source.exercises[0].sets[0].drops[0].load.amount).toBe(60);
+});
+
 test("preserves repeated occurrences of one identity in the same workout", () => {
   const history = deriveExerciseHistory([
     workout("w", "2026-08-10T12:00:00.000Z", [

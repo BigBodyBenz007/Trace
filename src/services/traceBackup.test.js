@@ -144,9 +144,25 @@ test("preview validation and an unconfirmed restore never mutate storage", async
 });
 
 test("full restore preserves IDs, dates, all structured domains, photo bytes and MIME type", async () => {
+  const workoutWithDrops = {
+    id: "workout-1",
+    exercises: [{
+      id: "exercise-1",
+      sets: [{
+        id: "set-1",
+        reps: 10,
+        load: { mode: "external", amount: 70, unit: "lb" },
+        notes: "Parent",
+        drops: [
+          { id: "drop-1", reps: 8, load: { mode: "external", amount: 55, unit: "lb" }, notes: "First" },
+          { id: "drop-2", reps: 6, load: { mode: "external", amount: 40, unit: "kg" }, notes: "Second" },
+        ],
+      }],
+    }],
+  };
   const structured = emptyStructured({
     memories: [{ id: "memory-1", date: "1999-06-12", categories: ["Family"], tags: ["legacy"], images: ["photo-1"] }],
-    nutritionEntries: [{ id: "meal-1" }], workoutEntries: [{ id: "workout-1" }],
+    nutritionEntries: [{ id: "meal-1" }], workoutEntries: [workoutWithDrops],
     medicationEntries: [{ id: "dose-1" }], medicationCompounds: [{ id: "compound-1" }],
     protocols: [{ id: "protocol-1" }], trophyCaseEntries: [{ id: "trophy-1" }],
     savedExercises: [{ id: "exercise-1" }], userFoods: [{ id: "food-1" }],
@@ -159,7 +175,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(summary).toMatchObject({ memories: 1, photos: 1, workouts: 1 });
   expect(JSON.parse(storage.value("memories"))[0]).toMatchObject({ id: "memory-1", date: "1999-06-12", images: ["photo-1"] });
   expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1" }]);
-  expect(JSON.parse(storage.value("workoutEntries"))).toEqual([{ id: "workout-1" }]);
+  expect(JSON.parse(storage.value("workoutEntries"))).toEqual([workoutWithDrops]);
   expect(JSON.parse(storage.value("medicationEntries"))).toEqual([{ id: "dose-1" }]);
   expect(JSON.parse(storage.value("protocols"))).toEqual([{ id: "protocol-1" }]);
   expect(JSON.parse(storage.value("trophyCaseEntries"))).toEqual([{ id: "trophy-1" }]);

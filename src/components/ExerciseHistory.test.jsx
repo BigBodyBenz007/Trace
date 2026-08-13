@@ -171,6 +171,22 @@ test("renders bodyweight sets and repeated workout occurrences without loss", ()
   expect(screen.getAllByRole("article")).toHaveLength(2);
 });
 
+test("renders ordered drops nested beneath one numbered parent set", () => {
+  const exercise = builtInExercise("trace:press", "Press", 10, "parent");
+  exercise.sets[0].drops = [
+    { id: "drop-1", reps: 8, load: { mode: "external", amount: 60, unit: "lb" }, notes: "First drop" },
+    { id: "drop-2", reps: 6, load: { mode: "bodyweight" }, notes: "Second drop" },
+  ];
+  render(<ExerciseHistory workoutEntries={[workout("w", "Drop Day", "2026-08-10T12:00:00.000Z", exercise)]} buttonStyle={{}} />);
+  fireEvent.click(screen.getByRole("button", { name: /Press.*1 performance/ }));
+  const performance = screen.getByText("Drop Day").closest("article");
+  expect(within(performance).getAllByRole("listitem")).toHaveLength(1);
+  expect(within(performance).getByText("↳ Drop 1: 60 lb × 8 reps")).toBeInTheDocument();
+  expect(within(performance).getByText("↳ Drop 2: Bodyweight × 6 reps")).toBeInTheDocument();
+  expect(within(performance).getByText("First drop")).toBeInTheDocument();
+  expect(within(performance).getByText("Second drop")).toBeInTheDocument();
+});
+
 test("renders separate lb and kg records with sources and limits reps-at-weight per unit", () => {
   const sets = [
     { id: "50", reps: 15, load: { mode: "external", amount: 50, unit: "lb" }, notes: "" },

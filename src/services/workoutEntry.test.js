@@ -84,6 +84,41 @@ test("stores bodyweight explicitly without external amount or unit", () => {
   });
 });
 
+test("normalizes ordered drop segments without mutating the editable source", () => {
+  const draft = validDraft();
+  draft.exercises[0].sets[0].drops = [
+    { id: "drop-1", reps: "8", loadMode: "external", weightAmount: "55.5", weightUnit: "lb", notes: " First " },
+    { id: "drop-2", reps: "6", loadMode: "bodyweight", weightAmount: "ignored", weightUnit: "kg", notes: "Second" },
+  ];
+  const before = JSON.parse(JSON.stringify(draft));
+  const set = createWorkoutEntry(draft).exercises[0].sets[0];
+  expect(set.drops).toEqual([
+    { id: "drop-1", reps: 8, load: { mode: "external", amount: 55.5, unit: "lb" }, notes: "First" },
+    { id: "drop-2", reps: 6, load: { mode: "bodyweight" }, notes: "Second" },
+  ]);
+  expect(draft).toEqual(before);
+});
+
+test("omits empty or malformed drops and accepts legacy sets", () => {
+  const empty = validDraft();
+  empty.exercises[0].sets[0].drops = [];
+  expect(createWorkoutEntry(empty).exercises[0].sets[0]).not.toHaveProperty("drops");
+  const malformed = validDraft();
+  malformed.exercises[0].sets[0].drops = { unexpected: true };
+  expect(createWorkoutEntry(malformed).exercises[0].sets[0]).not.toHaveProperty("drops");
+});
+
+test.each([
+  ["reps", { reps: "0", loadMode: "external", weightAmount: "50", weightUnit: "lb" }, /drop 1/],
+  ["load mode", { reps: "8", loadMode: "invalid", weightAmount: "50", weightUnit: "lb" }, /valid load mode/],
+  ["weight", { reps: "8", loadMode: "external", weightAmount: "0", weightUnit: "lb" }, /greater than zero/],
+  ["unit", { reps: "8", loadMode: "external", weightAmount: "50", weightUnit: "stone" }, /lb or kg/],
+])("validates drop %s", (_label, drop, expected) => {
+  const draft = validDraft();
+  draft.exercises[0].sets[0].drops = [{ id: "drop", notes: "", ...drop }];
+  expect(getWorkoutEntryError(draft)).toMatch(expected);
+});
+
 test.each([
   ["blank title", { title: " " }, "Enter a workout title."],
   ["invalid date", { date: "2026-02-30" }, "Enter a valid date and time."],

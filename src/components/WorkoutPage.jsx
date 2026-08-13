@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import ExerciseSearch from "./ExerciseSearch";
 import SavedExerciseEditor from "./SavedExerciseEditor";
 import ExerciseHistory from "./ExerciseHistory";
@@ -47,6 +47,7 @@ function emptySet(defaultLoadMode = "external", defaultWeightUnit = "lb") {
     weightUnit: defaultWeightUnit,
     notes: "",
     isUntouched: true,
+    drops: [],
   };
 }
 
@@ -61,6 +62,18 @@ function emptyExercise() {
     defaultWeightUnit: "lb",
     notes: "",
     sets: [emptySet()],
+  };
+}
+
+function emptyDrop(loadMode = "external", weightUnit = "lb") {
+  return {
+    id: createWorkoutItemId("drop"),
+    reps: "",
+    loadMode,
+    weightAmount: "",
+    weightUnit,
+    notes: "",
+    isUntouched: true,
   };
 }
 
@@ -94,6 +107,26 @@ function WorkoutTiming({ entry }) {
         </>
       )}
     </dl>
+  );
+}
+
+function completedSetDescription(set) {
+  return set.load.mode === "bodyweight"
+    ? `Bodyweight × ${set.reps} reps`
+    : `${set.load.amount} ${set.load.unit} × ${set.reps} reps`;
+}
+
+function CompletedDropSegments({ drops }) {
+  if (!Array.isArray(drops) || drops.length === 0) return null;
+  return (
+    <div style={{ borderLeft: "2px solid #60a5fa", display: "grid", gap: "6px", marginTop: "6px", maxWidth: "100%", paddingLeft: "10px" }}>
+      {drops.map((drop, dropIndex) => (
+        <div key={drop.id || dropIndex} style={{ overflowWrap: "anywhere" }}>
+          <span>↳ Drop {dropIndex + 1}: {completedSetDescription(drop)}</span>
+          {drop.notes && <span style={{ color: "#9ca3af", display: "block", whiteSpace: "pre-wrap" }}>{drop.notes}</span>}
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -136,10 +169,16 @@ function WorkoutPage({
   );
   const [editingSavedExercise, setEditingSavedExercise] = useState(null);
   const [activeWorkoutEntryId, setActiveWorkoutEntryId] = useState(null);
+  const [focusDropId, setFocusDropId] = useState(null);
+  const [pendingDropRemovals, setPendingDropRemovals] = useState({});
   const [searchResetKey, setSearchResetKey] = useState(0);
   const pageTopRef = useRef(null);
   const formRef = useRef(null);
   const workoutEntryRefs = useRef(new Map());
+  const dropInputRefs = useRef(new Map());
+  const dropRemovalTimersRef = useRef(new Map());
+  const dropUndoRowRefs = useRef(new Map());
+  const pendingUndoVisibilityRef = useRef(null);
   const startedAtRef = useRef(
     restoredDraftRef.current?.startedAt ||
       new Date(`${initialDateTime.date}T${initialDateTime.time}`).toISOString()
@@ -173,6 +212,39 @@ function WorkoutPage({
       persist();
     };
   }, [title, date, time, notes, exercises, activeSearchExerciseId, editingEntryId, isDirty]);
+
+  useLayoutEffect(() => {
+    if (!focusDropId) return;
+    const input = dropInputRefs.current.get(focusDropId);
+    if (input) {
+      input.focus({ preventScroll: true });
+      setFocusDropId(null);
+    }
+  }, [exercises, focusDropId]);
+
+  useLayoutEffect(() => {
+    const request = pendingUndoVisibilityRef.current;
+    if (!request) return;
+    const pending = pendingDropRemovals[request.parentKey];
+    const row = dropUndoRowRefs.current.get(request.parentKey);
+    if (!pending || pending.drop.id !== request.dropId || !row) return;
+    pendingUndoVisibilityRef.current = null;
+    const rectangle = row.getBoundingClientRect();
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    const isFullyVisible =
+      rectangle.top >= 0 &&
+      rectangle.bottom <= viewportHeight &&
+      rectangle.left >= 0 &&
+      rectangle.right <= window.innerWidth;
+    if (!isFullyVisible) {
+      row.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+    }
+  }, [pendingDropRemovals]);
+
+  useEffect(() => () => {
+    dropRemovalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    dropRemovalTimersRef.current.clear();
+  }, []);
 
   const sortedEntries = [...workoutEntries].sort(
     (first, second) => new Date(second.occurredAt) - new Date(first.occurredAt)
@@ -263,7 +335,125 @@ function WorkoutPage({
     }));
   }
 
+  function addDrop(exerciseId, setId) {
+    const addedDropId = createWorkoutItemId("drop");
+    updateExercise(exerciseId, (exercise) => ({
+      ...exercise,
+      sets: exercise.sets.map((set) => {
+        if (set.id !== setId) return set;
+        const drops = Array.isArray(set.drops) ? set.drops : [];
+        const previous = drops[drops.length - 1] || set;
+        const drop = {
+          ...emptyDrop(previous.loadMode, previous.weightUnit || "lb"),
+          id: addedDropId,
+        };
+        return { ...set, drops: [...drops, drop] };
+      }),
+    }));
+    setFocusDropId(addedDropId);
+  }
+
+  function updateDrop(exerciseId, setId, dropId, values) {
+    updateExercise(exerciseId, (exercise) => ({
+      ...exercise,
+      sets: exercise.sets.map((set) =>
+        set.id === setId
+          ? {
+              ...set,
+              drops: (Array.isArray(set.drops) ? set.drops : []).map((drop) =>
+                drop.id === dropId
+                  ? { ...drop, ...values, isUntouched: false }
+                  : drop
+              ),
+            }
+          : set
+      ),
+    }));
+  }
+
+  function removeDrop(exerciseId, setId, dropId) {
+    const exercise = exercises.find(({ id }) => id === exerciseId);
+    const set = exercise?.sets.find(({ id }) => id === setId);
+    const drops = Array.isArray(set?.drops) ? set.drops : [];
+    const dropIndex = drops.findIndex(({ id }) => id === dropId);
+    if (dropIndex < 0) return;
+    const parentKey = `${exerciseId}|${setId}`;
+    const previousTimer = dropRemovalTimersRef.current.get(parentKey);
+    if (previousTimer) window.clearTimeout(previousTimer);
+    const pending = {
+      parentKey,
+      exerciseId,
+      setId,
+      dropIndex,
+      drop: { ...drops[dropIndex] },
+    };
+    pendingUndoVisibilityRef.current = { parentKey, dropId: pending.drop.id };
+    updateExercise(exerciseId, (exercise) => ({
+      ...exercise,
+      sets: exercise.sets.map((set) =>
+        set.id === setId
+          ? {
+              ...set,
+              drops: (Array.isArray(set.drops) ? set.drops : []).filter(
+                (drop) => drop.id !== dropId
+              ),
+            }
+          : set
+      ),
+    }));
+    setPendingDropRemovals((current) => ({ ...current, [parentKey]: pending }));
+    const timer = window.setTimeout(() => {
+      dropRemovalTimersRef.current.delete(parentKey);
+      setPendingDropRemovals((current) => {
+        if (current[parentKey] !== pending) return current;
+        const next = { ...current };
+        delete next[parentKey];
+        return next;
+      });
+    }, 8000);
+    dropRemovalTimersRef.current.set(parentKey, timer);
+  }
+
+  function undoDropRemoval(parentKey) {
+    const pending = pendingDropRemovals[parentKey];
+    if (!pending) return;
+    const timer = dropRemovalTimersRef.current.get(parentKey);
+    if (timer) window.clearTimeout(timer);
+    dropRemovalTimersRef.current.delete(parentKey);
+    updateExercise(pending.exerciseId, (exercise) => ({
+      ...exercise,
+      sets: exercise.sets.map((set) => {
+        if (set.id !== pending.setId) return set;
+        const drops = Array.isArray(set.drops) ? set.drops : [];
+        const insertionIndex = Math.min(pending.dropIndex, drops.length);
+        return {
+          ...set,
+          drops: [
+            ...drops.slice(0, insertionIndex),
+            pending.drop,
+            ...drops.slice(insertionIndex),
+          ],
+        };
+      }),
+    }));
+    setPendingDropRemovals((current) => {
+      const next = { ...current };
+      delete next[parentKey];
+      return next;
+    });
+    pendingUndoVisibilityRef.current = null;
+  }
+
+  function clearPendingDropRemovals() {
+    dropRemovalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
+    dropRemovalTimersRef.current.clear();
+    dropUndoRowRefs.current.clear();
+    pendingUndoVisibilityRef.current = null;
+    setPendingDropRemovals({});
+  }
+
   function resetForm({ clearDraft = false } = {}) {
+    clearPendingDropRemovals();
     if (clearDraft) draftPersistenceEnabledRef.current = false;
     const current = currentLocalDateTime();
     setTitle("");
@@ -466,6 +656,7 @@ function WorkoutPage({
   }
 
   function editWorkout(entry) {
+    clearPendingDropRemovals();
     const entryDateTime = localDateTime(entry.occurredAt);
     setTitle(entry.title);
     setDate(entryDateTime.date);
@@ -495,6 +686,17 @@ function WorkoutPage({
           weightUnit: set.load.mode === "external" ? set.load.unit : "lb",
           notes: set.notes || "",
           isUntouched: false,
+          drops: (Array.isArray(set.drops) ? set.drops : []).map((drop) => ({
+            id: drop.id,
+            reps: String(drop.reps),
+            loadMode: drop.load?.mode || "external",
+            weightAmount:
+              drop.load?.mode === "external" ? String(drop.load.amount) : "",
+            weightUnit:
+              drop.load?.mode === "external" ? drop.load.unit : "lb",
+            notes: drop.notes || "",
+            isUntouched: false,
+          })),
         })),
       }))
     );
@@ -802,6 +1004,87 @@ function WorkoutPage({
                   Set notes (optional)
                   <input aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} notes`} value={set.notes} onChange={(event) => updateSet(exercise.id, set.id, { notes: event.target.value })} style={formInputStyle} />
                 </label>
+                {(() => {
+                  const drops = Array.isArray(set.drops) ? set.drops : [];
+                  const parentKey = `${exercise.id}|${set.id}`;
+                  const pending = pendingDropRemovals[parentKey];
+                  const rows = drops.map((drop, dropIndex) => ({
+                    type: "drop",
+                    drop,
+                    dropIndex,
+                    displayNumber:
+                      pending && dropIndex >= pending.dropIndex
+                        ? dropIndex + 2
+                        : dropIndex + 1,
+                  }));
+                  if (pending) {
+                    rows.splice(Math.min(pending.dropIndex, rows.length), 0, {
+                      type: "removed",
+                      pending,
+                    });
+                  }
+                  return rows.map((row) => row.type === "removed" ? (
+                    <div
+                      key={`removed:${row.pending.drop.id}`}
+                      ref={(node) => {
+                        if (node) dropUndoRowRefs.current.set(parentKey, node);
+                        else dropUndoRowRefs.current.delete(parentKey);
+                      }}
+                      role="status"
+                      aria-live="polite"
+                      style={{ alignItems: "center", background: "#374151", borderLeft: "3px solid #f59e0b", borderRadius: "8px", display: "flex", flexWrap: "wrap", gap: "10px", justifyContent: "space-between", marginTop: "12px", maxWidth: "100%", padding: "10px 12px" }}
+                    >
+                      <span>Drop removed</span>
+                      <button type="button" onClick={() => undoDropRemoval(parentKey)} aria-label={`Undo removed drop from exercise ${exerciseIndex + 1} set ${setIndex + 1}`} style={{ ...smallButtonStyle, backgroundColor: "#b45309", minHeight: "44px" }}>Undo</button>
+                    </div>
+                  ) : (() => {
+                    const { drop, displayNumber } = row;
+                    return (
+                  <section
+                    key={drop.id}
+                    data-drop-id={drop.id}
+                    aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber}`}
+                    style={{ borderLeft: "3px solid #60a5fa", marginTop: "12px", maxWidth: "100%", overflow: "hidden", padding: "10px 0 10px 12px" }}
+                  >
+                    <strong style={{ display: "block", marginBottom: "8px" }}>↳ Drop {displayNumber}</strong>
+                    <div style={{ display: "grid", gap: "8px", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", maxWidth: "100%" }}>
+                      <label>
+                        Load mode
+                        <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} load mode`} value={drop.loadMode} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { loadMode: event.target.value })} style={formInputStyle}>
+                          {WORKOUT_LOAD_MODES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                        </select>
+                      </label>
+                      {drop.loadMode === "external" && (
+                        <>
+                          <label>
+                            Weight
+                            <input ref={(node) => { if (node) dropInputRefs.current.set(drop.id, node); else dropInputRefs.current.delete(drop.id); }} type="number" min="0" step="any" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} weight`} value={drop.weightAmount} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { weightAmount: event.target.value })} style={formInputStyle} />
+                          </label>
+                          <label>
+                            Weight unit
+                            <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} weight unit`} value={drop.weightUnit} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { weightUnit: event.target.value })} style={formInputStyle}>
+                              {WORKOUT_WEIGHT_UNITS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                            </select>
+                          </label>
+                        </>
+                      )}
+                      <label>
+                        Reps
+                        <input ref={drop.loadMode === "bodyweight" ? (node) => { if (node) dropInputRefs.current.set(drop.id, node); else dropInputRefs.current.delete(drop.id); } : undefined} type="number" min="1" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} reps`} value={drop.reps} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { reps: event.target.value })} style={formInputStyle} />
+                      </label>
+                    </div>
+                    <label style={{ display: "block", marginTop: "8px" }}>
+                      Drop notes (optional)
+                      <input aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} notes`} value={drop.notes} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { notes: event.target.value })} style={formInputStyle} />
+                    </label>
+                    <button type="button" onClick={() => removeDrop(exercise.id, set.id, drop.id)} aria-label={`Remove exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber}`} style={{ ...smallButtonStyle, backgroundColor: "#9f1239", marginTop: "10px" }}>Remove Drop</button>
+                  </section>
+                    );
+                  })());
+                })()}
+                <button type="button" onClick={() => addDrop(exercise.id, set.id)} aria-label={`Add drop to exercise ${exerciseIndex + 1} set ${setIndex + 1}`} style={{ ...smallButtonStyle, backgroundColor: "#1d4ed8", marginTop: "12px" }}>
+                  {(Array.isArray(set.drops) ? set.drops : []).length > 0 ? "+ Add Another Drop" : "+ Add Drop"}
+                </button>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "12px" }}>
                   <button type="button" disabled={setIndex === 0} onClick={() => reorderSet(exercise.id, setIndex, -1)} aria-label={`Move exercise ${exerciseIndex + 1} set ${setIndex + 1} up`} style={smallButtonStyle}>Move Up</button>
                   <button type="button" disabled={setIndex === exercise.sets.length - 1} onClick={() => reorderSet(exercise.id, setIndex, 1)} aria-label={`Move exercise ${exerciseIndex + 1} set ${setIndex + 1} down`} style={smallButtonStyle}>Move Down</button>
@@ -885,8 +1168,9 @@ function WorkoutPage({
                     <ol style={{ marginBottom: 0 }}>
                       {exercise.sets.map((set) => (
                         <li key={set.id}>
-                          {set.load.mode === "bodyweight" ? "Bodyweight" : `${set.load.amount} ${set.load.unit}`} × {set.reps} reps
+                          {completedSetDescription(set)}
                           {set.notes ? ` — ${set.notes}` : ""}
+                          <CompletedDropSegments drops={set.drops} />
                         </li>
                       ))}
                     </ol>
