@@ -135,9 +135,11 @@ function WorkoutPage({
     restoredDraftRef.current?.context?.activeSearchExerciseId || null
   );
   const [editingSavedExercise, setEditingSavedExercise] = useState(null);
+  const [activeWorkoutEntryId, setActiveWorkoutEntryId] = useState(null);
   const [searchResetKey, setSearchResetKey] = useState(0);
   const pageTopRef = useRef(null);
   const formRef = useRef(null);
+  const workoutEntryRefs = useRef(new Map());
   const startedAtRef = useRef(
     restoredDraftRef.current?.startedAt ||
       new Date(`${initialDateTime.date}T${initialDateTime.time}`).toISOString()
@@ -426,7 +428,8 @@ function WorkoutPage({
 
     function finishSave(saved) {
       if (!saved) return;
-      resetForm({ clearDraft: editingEntryId === null });
+      const savedEditingEntryId = editingEntryId;
+      resetForm({ clearDraft: savedEditingEntryId === null });
       const messages = [];
       if (conflicts.length > 0) {
         messages.push(
@@ -441,7 +444,18 @@ function WorkoutPage({
       setStatusMessage(
         messages.length > 0 ? `Workout logged. ${messages.join(" ")}` : ""
       );
-      pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
+      if (savedEditingEntryId === null) {
+        setActiveWorkoutEntryId(null);
+        pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
+      } else {
+        setActiveWorkoutEntryId(savedEditingEntryId);
+        window.requestAnimationFrame(() => {
+          workoutEntryRefs.current.get(savedEditingEntryId)?.scrollIntoView?.({
+            behavior: "smooth",
+            block: "center",
+          });
+        });
+      }
     }
 
     if (saveResult && typeof saveResult.then === "function") {
@@ -486,6 +500,7 @@ function WorkoutPage({
     );
     setPhotos((entry.photos || []).map((photo) => ({ ...photo })));
     setEditingEntryId(entry.id);
+    setActiveWorkoutEntryId(entry.id);
     setIsDirty(false);
     setFormError("");
     setStatusMessage("");
@@ -843,15 +858,6 @@ function WorkoutPage({
         buttonStyle={buttonStyle}
       />
 
-      <ExerciseHistory
-        workoutEntries={workoutEntries}
-        trophyEntries={trophyEntries}
-        addTrophyCaseEntry={addTrophyCaseEntry}
-        buttonStyle={buttonStyle}
-        trophySourceTarget={trophySourceTarget}
-        onReturnToTrophyCase={onReturnToTrophyCase}
-      />
-
       <section style={{ marginTop: "36px", maxWidth: "760px", textAlign: "left", width: "100%" }}>
         <h2>Workout History</h2>
         {sortedEntries.length === 0 ? (
@@ -859,7 +865,15 @@ function WorkoutPage({
         ) : (
           <div style={{ display: "grid", gap: "14px" }}>
             {sortedEntries.map((entry) => (
-              <article key={entry.id} style={{ background: "#1f2937", borderRadius: "12px", padding: "18px" }}>
+              <article
+                key={entry.id}
+                ref={(node) => {
+                  if (node) workoutEntryRefs.current.set(entry.id, node);
+                  else workoutEntryRefs.current.delete(entry.id);
+                }}
+                aria-current={activeWorkoutEntryId === entry.id ? "true" : undefined}
+                style={{ background: "#1f2937", borderRadius: "12px", maxWidth: "100%", overflowWrap: "anywhere", padding: "18px" }}
+              >
                 <h3 style={{ marginTop: 0 }}>{entry.title}</h3>
                 <p>{new Date(entry.occurredAt).toLocaleString()}</p>
                 <WorkoutTiming entry={entry} />
@@ -887,6 +901,15 @@ function WorkoutPage({
           </div>
         )}
       </section>
+
+      <ExerciseHistory
+        workoutEntries={workoutEntries}
+        trophyEntries={trophyEntries}
+        addTrophyCaseEntry={addTrophyCaseEntry}
+        buttonStyle={buttonStyle}
+        trophySourceTarget={trophySourceTarget}
+        onReturnToTrophyCase={onReturnToTrophyCase}
+      />
 
       <button type="button" onClick={onBack} style={{ ...backButtonStyle, marginTop: "24px" }}>Back to Timeline</button>
     </div>

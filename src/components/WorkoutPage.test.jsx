@@ -403,6 +403,31 @@ test("restores and updates a complete historical snapshot", () => {
       ],
     })
   );
+  const savedWorkout = screen.getByText("Chest Day").closest("article");
+  expect(savedWorkout).toHaveAttribute("aria-current", "true");
+  expect(savedWorkout.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "smooth",
+    block: "center",
+  });
+});
+
+test("failed historical edit stays in the editor without scrolling away", () => {
+  const saved = entry();
+  const props = renderPage({
+    workoutEntries: [saved],
+    updateWorkoutEntry: jest.fn(() => false),
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.change(screen.getByLabelText("Workout title"), {
+    target: { value: "Unsaved historical edit" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+  expect(props.updateWorkoutEntry).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("heading", { name: "Edit Workout" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Workout title")).toHaveValue("Unsaved historical edit");
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
 });
 
 test("shows completion timing while legacy workouts render without fabricated timing", () => {
@@ -522,6 +547,18 @@ test("integrates a browsable Exercise History summary", () => {
   const history = historyHeading.closest("section");
   expect(within(history).getAllByText("70.5 lb × 10 reps")).toHaveLength(2);
   expect(screen.getByText("Controlled")).toBeInTheDocument();
+});
+
+test("places Workout History before Exercise History without duplicating either section", () => {
+  renderPage({ workoutEntries: [entry()] });
+  const workoutHeading = screen.getByRole("heading", { name: "Workout History" });
+  const exerciseHeading = screen.getByRole("heading", { name: "Exercise History" });
+  expect(screen.getAllByRole("heading", { name: "Workout History" })).toHaveLength(1);
+  expect(screen.getAllByRole("heading", { name: "Exercise History" })).toHaveLength(1);
+  expect(
+    workoutHeading.compareDocumentPosition(exerciseHeading) &
+      Node.DOCUMENT_POSITION_FOLLOWING
+  ).toBeTruthy();
 });
 
 test("places an empty curated Trophy Case before Exercise History while PRs remain candidates", () => {
