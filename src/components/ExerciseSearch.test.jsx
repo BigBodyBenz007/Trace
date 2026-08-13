@@ -6,6 +6,23 @@ function savedExercise() {
   return createExerciseDefinition({ name: "Dips", defaultLoadMode: "bodyweight", defaultWeightUnit: "lb" });
 }
 
+test("focuses its search input when requested without changing the query", () => {
+  const props = {
+    exercises: [],
+    onSelectExercise: jest.fn(),
+    onSelectBuiltInExercise: jest.fn(),
+    onEditExercise: jest.fn(),
+    inputStyle: {},
+    resetKey: 0,
+  };
+  const { rerender } = render(<ExerciseSearch {...props} />);
+  const input = screen.getByLabelText("Exercise search");
+  fireEvent.change(input, { target: { value: "squat" } });
+  rerender(<ExerciseSearch {...props} autoFocus />);
+  expect(input).toHaveFocus();
+  expect(input).toHaveValue("squat");
+});
+
 test("searches, selects, and offers explicit editing", () => {
   const exercise = savedExercise();
   const onSelectExercise = jest.fn();

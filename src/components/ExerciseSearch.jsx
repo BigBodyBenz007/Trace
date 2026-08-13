@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { searchUnifiedExercises } from "../services/exerciseSearch";
 
 function loadLabel(exercise) {
@@ -15,8 +15,10 @@ function ExerciseSearch({
   onEditExercise,
   inputStyle,
   resetKey,
+  autoFocus = false,
 }) {
   const [query, setQuery] = useState("");
+  const searchInputRef = useRef(null);
   const results = useMemo(
     () => searchUnifiedExercises(query, exercises),
     [query, exercises]
@@ -25,11 +27,17 @@ function ExerciseSearch({
 
   useEffect(() => setQuery(""), [resetKey]);
 
+  useLayoutEffect(() => {
+    if (!autoFocus) return;
+    searchInputRef.current?.focus({ preventScroll: true });
+  }, [autoFocus]);
+
   return (
     <div style={{ border: "1px solid #4b5563", borderRadius: "10px", marginBottom: "14px", padding: "14px" }}>
       <label style={{ display: "block" }}>
         Exercise search
         <input
+          ref={searchInputRef}
           type="search"
           value={query}
           onChange={(event) => setQuery(event.target.value)}

@@ -1,12 +1,14 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import WorkoutPage from "./WorkoutPage";
 import { createExerciseDefinition } from "../services/exerciseCatalog";
+import { WORKOUT_DRAFT_STORAGE_KEY } from "../services/workoutDraft";
 
 const originalRequestAnimationFrame = window.requestAnimationFrame;
 const originalCreateObjectURL = URL.createObjectURL;
 const originalRevokeObjectURL = URL.revokeObjectURL;
 
 beforeEach(() => {
+  localStorage.clear();
   window.requestAnimationFrame = (callback) => {
     callback();
     return 1;
@@ -14,6 +16,87 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = jest.fn();
   URL.createObjectURL = jest.fn((file) => `blob:${file.name}`);
   URL.revokeObjectURL = jest.fn();
+});
+
+async function storedDraft() {
+  await waitFor(() =>
+    expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).not.toBeNull()
+  );
+  return JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+}
+
+test("persists new-workout changes and restores the original start and form state", async () => {
+  const first = render(<WorkoutPage {...renderPageProps()} />);
+  const originalDate = screen.getByLabelText("Date").value;
+  const originalTime = screen.getByLabelText("Time").value;
+  fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Survives reload" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Squat" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 notes"), { target: { value: "Deep" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), { target: { value: "225" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "5" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 notes"), { target: { value: "Solid" } });
+
+  await waitFor(() =>
+    expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).form.exercises[0].sets[0].notes).toBe("Solid")
+  );
+  const draft = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+  expect(draft).toMatchObject({
+    schemaVersion: 1,
+    form: { title: "Survives reload", date: originalDate, time: originalTime },
+  });
+  expect(draft.form.exercises[0]).toMatchObject({
+    name: "Squat", notes: "Deep", sets: [expect.objectContaining({ reps: "5", weightAmount: "225", notes: "Solid" })],
+  });
+
+  first.unmount();
+  render(<WorkoutPage {...renderPageProps()} />);
+  expect(screen.getByLabelText("Workout title")).toHaveValue("Survives reload");
+  expect(screen.getByLabelText("Date")).toHaveValue(originalDate);
+  expect(screen.getByLabelText("Time")).toHaveValue(originalTime);
+  expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(225);
+});
+
+test("ordinary unmount keeps a draft while explicit discard clears it", async () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  const view = render(<WorkoutPage {...renderPageProps()} />);
+  fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Keep me" } });
+  await storedDraft();
+  view.unmount();
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).not.toBeNull();
+
+  render(<WorkoutPage {...renderPageProps()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(confirm).toHaveBeenCalled();
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
+});
+
+test("successful save clears a restored draft and does not duplicate the workout", async () => {
+  const initial = render(<WorkoutPage {...renderPageProps()} />);
+  fillFirstSet();
+  await storedDraft();
+  initial.unmount();
+
+  const props = renderPageProps();
+  render(<WorkoutPage {...props} />);
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(props.saveWorkoutEntry).toHaveBeenCalledTimes(1);
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
+});
+
+test("editing a saved workout neither restores into nor clears the new-workout draft", async () => {
+  const initial = render(<WorkoutPage {...renderPageProps()} />);
+  fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "New draft" } });
+  await storedDraft();
+  initial.unmount();
+
+  const props = renderPageProps({ workoutEntries: [entry()] });
+  render(<WorkoutPage {...props} />);
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Edited history" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(props.updateWorkoutEntry).toHaveBeenCalledTimes(1);
+  expect(props.saveWorkoutEntry).not.toHaveBeenCalled();
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).form.title).toBe("New draft");
 });
 
 afterEach(() => {
@@ -106,6 +189,30 @@ test("starts with one empty exercise containing one external-load set", () => {
   );
 });
 
+test("focuses the exercise search input at a mobile viewport when Find an Exercise opens it", () => {
+  const originalWidth = window.innerWidth;
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+  try {
+    renderPage();
+    fireEvent.click(screen.getByRole("button", { name: "Find an exercise for exercise 1" }));
+    expect(screen.getByLabelText("Exercise search")).toHaveFocus();
+  } finally {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth });
+  }
+});
+
+test("focuses the search belonging to the activated exercise", () => {
+  renderPage();
+  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
+  fireEvent.click(screen.getByRole("button", { name: "Find an exercise for exercise 2" }));
+
+  const searchInput = screen.getByLabelText("Exercise search");
+  expect(searchInput).toHaveFocus();
+  expect(searchInput.closest('section[aria-label="Exercise 2"]')).not.toBeNull();
+  expect(screen.getByRole("button", { name: "Find an exercise for exercise 2" })).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getByRole("button", { name: "Find an exercise for exercise 1" })).toHaveAttribute("aria-expanded", "false");
+});
+
 test("saves decimal external load and optional notes then resets", () => {
   const props = renderPage();
   fillFirstSet();
@@ -114,6 +221,9 @@ test("saves decimal external load and optional notes then resets", () => {
   });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 notes"), {
     target: { value: "  Controlled  " },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 notes"), {
+    target: { value: "  Keep shoulders down  " },
   });
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
 
@@ -125,6 +235,7 @@ test("saves decimal external load and optional notes then resets", () => {
       exercises: [
         expect.objectContaining({
           name: "Incline Press",
+          notes: "Keep shoulders down",
           sets: [
             expect.objectContaining({
               reps: 10,

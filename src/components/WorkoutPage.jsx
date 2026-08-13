@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ExerciseSearch from "./ExerciseSearch";
 import SavedExerciseEditor from "./SavedExerciseEditor";
 import ExerciseHistory from "./ExerciseHistory";
@@ -14,6 +14,12 @@ import {
   getWorkoutEntryError,
 } from "../services/workoutEntry";
 import { getExerciseDefinitionError } from "../services/exerciseCatalog";
+import {
+  clearWorkoutDraft,
+  readWorkoutDraft,
+  writeWorkoutDraft,
+  WORKOUT_DRAFT_SCHEMA_VERSION,
+} from "../services/workoutDraft";
 
 function currentLocalDateTime() {
   const now = new Date();
@@ -52,6 +58,7 @@ function emptyExercise() {
     saveAsReusable: false,
     defaultLoadMode: "external",
     defaultWeightUnit: "lb",
+    notes: "",
     sets: [emptySet()],
   };
 }
@@ -86,21 +93,58 @@ function WorkoutPage({
   onReturnToTrophyCase = null,
 }) {
   const initialDateTime = currentLocalDateTime();
-  const [title, setTitle] = useState("");
-  const [date, setDate] = useState(initialDateTime.date);
-  const [time, setTime] = useState(initialDateTime.time);
-  const [notes, setNotes] = useState("");
-  const [exercises, setExercises] = useState(() => [emptyExercise()]);
+  const restoredDraftRef = useRef(readWorkoutDraft());
+  const restoredForm = restoredDraftRef.current?.form;
+  const [title, setTitle] = useState(restoredForm?.title || "");
+  const [date, setDate] = useState(restoredForm?.date || initialDateTime.date);
+  const [time, setTime] = useState(restoredForm?.time || initialDateTime.time);
+  const [notes, setNotes] = useState(restoredForm?.notes || "");
+  const [exercises, setExercises] = useState(() => restoredForm?.exercises || [emptyExercise()]);
   const [editingEntryId, setEditingEntryId] = useState(null);
-  const [isDirty, setIsDirty] = useState(false);
+  const [isDirty, setIsDirty] = useState(Boolean(restoredForm));
   const [formError, setFormError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [photos, setPhotos] = useState([]);
-  const [activeSearchExerciseId, setActiveSearchExerciseId] = useState(null);
+  const [activeSearchExerciseId, setActiveSearchExerciseId] = useState(
+    restoredDraftRef.current?.context?.activeSearchExerciseId || null
+  );
   const [editingSavedExercise, setEditingSavedExercise] = useState(null);
   const [searchResetKey, setSearchResetKey] = useState(0);
   const pageTopRef = useRef(null);
   const formRef = useRef(null);
+  const startedAtRef = useRef(
+    restoredDraftRef.current?.startedAt ||
+      new Date(`${initialDateTime.date}T${initialDateTime.time}`).toISOString()
+  );
+  const draftPersistenceEnabledRef = useRef(Boolean(restoredForm));
+
+  useEffect(() => {
+    if (editingEntryId !== null || !isDirty) return undefined;
+    const persistedDraft = {
+      schemaVersion: WORKOUT_DRAFT_SCHEMA_VERSION,
+      startedAt: startedAtRef.current,
+      updatedAt: new Date().toISOString(),
+      form: { title, date, time, notes, exercises },
+      context: { activeSearchExerciseId },
+    };
+    const persist = () => {
+      if (!draftPersistenceEnabledRef.current) return;
+      try {
+        writeWorkoutDraft(localStorage, persistedDraft);
+      } catch (error) {
+        // Completed workout persistence reports storage failures globally. A
+        // draft failure must not interrupt or discard the in-memory workout.
+      }
+    };
+    const timeout = window.setTimeout(persist, 200);
+    const flush = () => persist();
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.clearTimeout(timeout);
+      window.removeEventListener("pagehide", flush);
+      persist();
+    };
+  }, [title, date, time, notes, exercises, activeSearchExerciseId, editingEntryId, isDirty]);
 
   const sortedEntries = [...workoutEntries].sort(
     (first, second) => new Date(second.occurredAt) - new Date(first.occurredAt)
@@ -124,6 +168,7 @@ function WorkoutPage({
 
 
   function markChanged() {
+    draftPersistenceEnabledRef.current = true;
     setIsDirty(true);
     setFormError("");
   }
@@ -190,7 +235,8 @@ function WorkoutPage({
     }));
   }
 
-  function resetForm() {
+  function resetForm({ clearDraft = false } = {}) {
+    if (clearDraft) draftPersistenceEnabledRef.current = false;
     const current = currentLocalDateTime();
     setTitle("");
     setDate(current.date);
@@ -206,6 +252,8 @@ function WorkoutPage({
     photos.filter(({ isDraft }) => isDraft).forEach(({ url }) => url && URL.revokeObjectURL(url));
     setPhotos([]);
     setSearchResetKey((current) => current + 1);
+    startedAtRef.current = new Date(`${current.date}T${current.time}`).toISOString();
+    if (clearDraft) clearWorkoutDraft();
   }
 
   function draft() {
@@ -344,7 +392,7 @@ function WorkoutPage({
 
     function finishSave(saved) {
       if (!saved) return;
-      resetForm();
+      resetForm({ clearDraft: editingEntryId === null });
       const messages = [];
       if (conflicts.length > 0) {
         messages.push(
@@ -389,6 +437,7 @@ function WorkoutPage({
           exercise.sets[0]?.load.mode === "external"
             ? exercise.sets[0].load.unit
             : "lb",
+        notes: exercise.notes || "",
         sets: exercise.sets.map((set) => ({
           id: set.id,
           reps: String(set.reps),
@@ -418,7 +467,7 @@ function WorkoutPage({
     ) {
       return;
     }
-    resetForm();
+    resetForm({ clearDraft: editingEntryId === null });
     window.requestAnimationFrame(() => {
       pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
     });
@@ -538,6 +587,7 @@ function WorkoutPage({
             </button>
             {activeSearchExerciseId === exercise.id && (
               <ExerciseSearch
+                autoFocus
                 exercises={savedExercises}
                 onSelectExercise={(savedExercise) =>
                   selectSavedExercise(exercise.id, savedExercise)
@@ -573,6 +623,21 @@ function WorkoutPage({
                   changeExerciseName(exercise.id, event.target.value)
                 }
                 maxLength={120}
+                style={formInputStyle}
+              />
+            </label>
+            <label style={{ display: "block", marginTop: "10px" }}>
+              Exercise notes (optional)
+              <textarea
+                aria-label={`Exercise ${exerciseIndex + 1} notes`}
+                value={exercise.notes || ""}
+                onChange={(event) =>
+                  updateExercise(exercise.id, (current) => ({
+                    ...current,
+                    notes: event.target.value,
+                  }))
+                }
+                rows={2}
                 style={formInputStyle}
               />
             </label>

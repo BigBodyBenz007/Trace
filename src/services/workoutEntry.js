@@ -117,6 +117,7 @@ export function createWorkoutEntry(draft, existingEntry = null, now = new Date()
         ...(exercise.exerciseReference
           ? { exerciseReference: { ...exercise.exerciseReference } }
           : {}),
+        ...(cleanText(exercise.notes) ? { notes: cleanText(exercise.notes) } : {}),
         sets: exercise.sets.map((set) => ({
         id: set.id,
         reps: Number(set.reps),
