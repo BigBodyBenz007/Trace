@@ -97,6 +97,7 @@ function HomePage({
   onOpenProtocols,
   onOpenWorkouts,
   onOpenTrophyCase,
+  onOpenBackup,
   deleteMemory,
   editMemory,
   trophyEntries = [],
@@ -577,6 +578,13 @@ function HomePage({
         onClick={onOpenTrophyCase}
       >
         Open Trophy Case
+      </button>
+
+      <button
+        style={{ ...buttonStyle, backgroundColor: "#475569" }}
+        onClick={onOpenBackup}
+      >
+        Backup & Restore
       </button>
 
       {memoryAchievementSuggestion &&

@@ -7,6 +7,7 @@ import ProtocolsPage from "./components/ProtocolsPage";
 import WorkoutPage from "./components/WorkoutPage";
 import TrophyPlacementCeremony from "./components/TrophyPlacementCeremony";
 import TrophyCasePage from "./components/TrophyCasePage";
+import BackupPage from "./components/BackupPage";
 import { detectMemoryAchievement } from "./services/memoryAchievement";
 import {
   addExerciseDefinition,
@@ -1178,6 +1179,7 @@ function App() {
           onOpenProtocols={() => setPage("protocols")}
           onOpenWorkouts={() => setPage("workouts")}
           onOpenTrophyCase={() => setPage("trophy-case")}
+          onOpenBackup={() => setPage("backup")}
           deleteMemory={deleteMemory}
           editMemory={editMemory}
           trophyEntries={trophyCaseEntries}
@@ -1253,6 +1255,12 @@ function App() {
           deleteProtocol={deleteProtocol}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
+          containerStyle={containerStyle}
+        />
+      ) : page === "backup" ? (
+        <BackupPage
+          onBack={() => setPage("home")}
+          buttonStyle={buttonStyle}
           containerStyle={containerStyle}
         />
       ) : page === "trophy-case" ? (

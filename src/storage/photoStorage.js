@@ -162,6 +162,19 @@ export async function getPhoto(database, id) {
   return requestResult(transaction.objectStore(PHOTO_STORE).get(id));
 }
 
+export async function getAllPhotos(database) {
+  const transaction = database.transaction(PHOTO_STORE, "readonly");
+  return requestResult(transaction.objectStore(PHOTO_STORE).getAll());
+}
+
+export async function replaceAllPhotos(database, photos) {
+  const transaction = database.transaction(PHOTO_STORE, "readwrite");
+  const store = transaction.objectStore(PHOTO_STORE);
+  store.clear();
+  photos.forEach((photo) => store.put(photo));
+  await transactionComplete(transaction);
+}
+
 export async function deletePhotos(database, ids) {
   if (ids.length === 0) return;
   const transaction = database.transaction(PHOTO_STORE, "readwrite");

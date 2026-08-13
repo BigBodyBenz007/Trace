@@ -11,6 +11,7 @@ const baseProps = {
   onOpenProtocols: jest.fn(),
   onOpenWorkouts: jest.fn(),
   onOpenTrophyCase: jest.fn(),
+  onOpenBackup: jest.fn(),
   deleteMemory: jest.fn(),
   editMemory: jest.fn(),
   addTrophyCaseEntry: jest.fn(),
@@ -52,6 +53,12 @@ test("opens the dedicated Trophy Case from the Timeline", () => {
   render(<HomePage {...baseProps} memories={[]} trophyEntries={[]} />);
   fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
   expect(baseProps.onOpenTrophyCase).toHaveBeenCalledTimes(1);
+});
+
+test("opens Backup & Restore from the Timeline without changing existing action order", () => {
+  render(<HomePage {...baseProps} memories={[]} trophyEntries={[]} />);
+  fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
+  expect(baseProps.onOpenBackup).toHaveBeenCalledTimes(1);
 });
 
 test("renders Life Current from full source data independently of Memory filters", () => {

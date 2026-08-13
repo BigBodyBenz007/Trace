@@ -9,11 +9,13 @@ jest.mock("./storage/photoStorage", () => ({
   dataUrlToBlob: jest.fn(),
   deletePhotos: jest.fn(),
   getPhoto: jest.fn(),
+  getAllPhotos: jest.fn(),
   hasLegacyPhotos: jest.fn(() => false),
   markLegacyMigrationComplete: jest.fn(),
   migrateLegacyPhotos: jest.fn(),
   openPhotoDatabase: jest.fn(() => new Promise(() => {})),
   putPhotos: jest.fn(),
+  replaceAllPhotos: jest.fn(),
 }));
 
 let originalRequestAnimationFrame;
@@ -115,6 +117,17 @@ test("Timeline opens Protocols and returns to Timeline at the top", () => {
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
   expectDestinationScrolledToTop();
+});
+
+test("Timeline opens Backup & Restore and returns without changing data", () => {
+  localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 2100 }));
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
+  expect(screen.getByRole("heading", { name: "Backup & Restore" })).toBeInTheDocument();
+  expectDestinationScrolledToTop();
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("nutritionGoals"))).toEqual({ calories: 2100 });
 });
 
 test("ending and deleting a protocol never changes medication history", async () => {
