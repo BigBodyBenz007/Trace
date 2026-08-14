@@ -126,6 +126,7 @@ test("expands details directly below their summary and toggles one exercise at a
   expect(document.getElementById(benchSummary.getAttribute("aria-controls"))).not.toBeInTheDocument();
 
   fireEvent.click(benchSummary);
+  fireEvent.mouseDown(squatSummary);
   fireEvent.click(squatSummary);
   const squatDetail = document.getElementById(
     squatSummary.getAttribute("aria-controls")
@@ -134,7 +135,22 @@ test("expands details directly below their summary and toggles one exercise at a
   expect(squatSummary).toHaveAttribute("aria-expanded", "true");
   expect(squatSummary.nextElementSibling).toBe(squatDetail);
   expect(within(squatDetail).getByRole("heading", { name: "Barbell Back Squat" })).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Barbell Back Squat Estimated 1RM" })).toBeInTheDocument();
   expect(screen.getAllByRole("article")).toHaveLength(1);
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "smooth",
+    block: "start",
+  });
+  expect(scrollTargets).toEqual([squatSummary]);
+
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(squatSummary);
+  expect(squatSummary).toHaveAttribute("aria-expanded", "false");
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+
+  fireEvent.click(squatSummary);
+  expect(squatSummary).toHaveAttribute("aria-expanded", "true");
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
 
   expect(screen.getAllByRole("button", { name: "Close History" })).toHaveLength(2);
   fireEvent.click(screen.getAllByRole("button", { name: "Close History" })[0]);
@@ -509,7 +525,7 @@ test("dismisses Exercise History from both controls, outside clicks, and layered
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   expect(edit).toHaveBeenCalledTimes(1);
   expect(summary).toHaveAttribute("aria-expanded", "false");
-  expect(summary.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+  expect(summary.scrollIntoView).not.toHaveBeenCalled();
 
   fireEvent.click(summary);
   summary.scrollIntoView.mockClear();
@@ -517,7 +533,7 @@ test("dismisses Exercise History from both controls, outside clicks, and layered
   fireEvent.click(screen.getByRole("button", { name: "Delete" }));
   expect(remove).toHaveBeenCalledTimes(1);
   expect(summary).toHaveAttribute("aria-expanded", "false");
-  expect(summary.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+  expect(summary.scrollIntoView).not.toHaveBeenCalled();
   expect(workouts).toEqual(snapshot);
 });
 

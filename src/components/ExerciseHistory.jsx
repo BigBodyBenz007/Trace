@@ -353,6 +353,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
   const prTimelineRef = useRef(null);
   const exerciseHistoryDetailRef = useRef(null);
   const exerciseSummaryRefs = useRef(new Map());
+  const pendingSwitchScrollIdentityRef = useRef(null);
   const performanceRefs = useRef(new Map());
   const trophySourceKeys = useMemo(
     () => new Set(trophyEntries.map(({ sourceKey }) => sourceKey)),
@@ -369,11 +370,22 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
     padding: "10px 14px",
   };
 
-  const closeExerciseHistory = useCallback(() => {
+  const closeExerciseHistory = useCallback(({ restoreContext = true } = {}) => {
     const summary = exerciseSummaryRefs.current.get(selectedIdentityKey);
     setIsPrTimelineOpen(false);
     setSelectedIdentityKey(null);
-    summary?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    if (restoreContext) {
+      summary?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+    }
+  }, [selectedIdentityKey]);
+
+  useEffect(() => {
+    if (pendingSwitchScrollIdentityRef.current !== selectedIdentityKey) return;
+    pendingSwitchScrollIdentityRef.current = null;
+    exerciseSummaryRefs.current.get(selectedIdentityKey)?.scrollIntoView?.({
+      behavior: "smooth",
+      block: "start",
+    });
   }, [selectedIdentityKey]);
 
   useEffect(() => {
@@ -422,8 +434,8 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
     function handlePointerDown(event) {
       if (isModalInteraction(event.target)) return;
       if (exerciseHistoryDetailRef.current?.contains(event.target)) return;
-      if (exerciseSummaryRefs.current.get(selectedIdentityKey)?.contains(event.target)) return;
-      closeExerciseHistory();
+      if ([...exerciseSummaryRefs.current.values()].some((summary) => summary.contains(event.target))) return;
+      closeExerciseHistory({ restoreContext: false });
     }
 
     function handleKeyDown(event) {
@@ -473,8 +485,11 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                     aria-expanded={isExpanded}
                     onClick={() => {
                       if (isExpanded) {
-                        closeExerciseHistory();
+                        closeExerciseHistory({ restoreContext: false });
                       } else {
+                        if (selectedIdentityKey) {
+                          pendingSwitchScrollIdentityRef.current = exercise.identityKey;
+                        }
                         setIsPrTimelineOpen(false);
                         setSelectedIdentityKey(exercise.identityKey);
                       }
