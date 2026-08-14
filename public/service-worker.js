@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "trace-app-shell-";
-const CACHE_NAME = `${CACHE_PREFIX}v2`;
+const CACHE_NAME = `${CACHE_PREFIX}v3`;
 const scopeUrl = new URL(self.registration.scope);
 const shellUrl = new URL("./", scopeUrl).href;
 const indexUrl = new URL("./index.html", scopeUrl).href;
@@ -8,9 +8,9 @@ const shellAssets = [
   shellUrl,
   indexUrl,
   new URL("./manifest.json", scopeUrl).href,
-  new URL("./favicon.ico", scopeUrl).href,
-  new URL("./logo192.png", scopeUrl).href,
-  new URL("./logo512.png", scopeUrl).href,
+  new URL("./trace-icon-192.png", scopeUrl).href,
+  new URL("./trace-icon-512.png", scopeUrl).href,
+  new URL("./trace-apple-touch-icon.png", scopeUrl).href,
 ];
 
 async function cacheApplicationShell() {
