@@ -187,6 +187,49 @@ test("renders ordered drops nested beneath one numbered parent set", () => {
   expect(within(performance).getByText("Second drop")).toBeInTheDocument();
 });
 
+test("shows the highest Estimated 1RM with its performed source set and date", () => {
+  const exercise = builtInExercise("trace:bench", "Bench Press", 8, "source-set");
+  exercise.sets = [
+    { id: "lower", reps: 5, load: { mode: "external", amount: 200, unit: "lb" }, notes: "" },
+    { id: "source-set", reps: 8, load: { mode: "external", amount: 225, unit: "lb" }, notes: "" },
+  ];
+  render(<ExerciseHistory workoutEntries={[workout("w", "Chest Day", "2026-08-10T12:00:00.000Z", exercise)]} buttonStyle={{}} />);
+  fireEvent.click(screen.getByRole("button", { name: /Bench Press/ }));
+  const analytics = screen.getByRole("region", { name: "Bench Press Estimated 1RM" });
+  expect(within(analytics).getByRole("heading", { name: "Estimated 1RM" })).toBeInTheDocument();
+  expect(within(analytics).getByText("~285 lb")).toBeInTheDocument();
+  expect(within(analytics).getByText("Based on 225 lb × 8")).toBeInTheDocument();
+  expect(within(analytics).getByText("August 10, 2026 · Chest Day")).toBeInTheDocument();
+  expect(within(analytics).queryByRole("button", { name: /Trophy/i })).not.toBeInTheDocument();
+});
+
+test("keeps mixed units separate and does not show drop-only or malformed estimates", () => {
+  const exercise = builtInExercise("trace:press", "Press", 8, "lb");
+  exercise.sets = [
+    { id: "lb", reps: 8, load: { mode: "external", amount: 100, unit: "lb" }, notes: "" },
+    { id: "kg", reps: 9, load: { mode: "external", amount: 100, unit: "kg" }, notes: "" },
+    { id: "high-rep", reps: 13, load: { mode: "external", amount: 500, unit: "lb" }, notes: "" },
+    { id: "legacy", reps: "bad", load: null, drops: [{ id: "drop", reps: 8, load: { mode: "external", amount: 900, unit: "lb" } }] },
+  ];
+  render(<ExerciseHistory workoutEntries={[workout("w", "Mixed Day", "2026-08-10T12:00:00.000Z", exercise)]} buttonStyle={{}} />);
+  fireEvent.click(screen.getByRole("button", { name: /Press/ }));
+  const analytics = screen.getByRole("region", { name: "Press Estimated 1RM" });
+  expect(within(analytics).getByText("~130 kg")).toBeInTheDocument();
+  expect(within(analytics).getByText("~127 lb")).toBeInTheDocument();
+  expect(within(analytics).queryByText(/500|900/)).not.toBeInTheDocument();
+});
+
+test("legacy and bodyweight-only exercise history renders without an Estimated 1RM", () => {
+  render(<ExerciseHistory workoutEntries={[workout("w", "Legacy Day", "2026-08-10T12:00:00.000Z", {
+    id: "legacy",
+    name: "Legacy Move",
+    sets: [{ id: "bodyweight", reps: 10, load: { mode: "bodyweight" }, notes: "" }, { id: "broken" }],
+  })]} buttonStyle={{}} />);
+  fireEvent.click(screen.getByRole("button", { name: /Legacy Move/ }));
+  expect(screen.getByText("Bodyweight × 10 reps")).toBeInTheDocument();
+  expect(screen.queryByText("Estimated 1RM")).not.toBeInTheDocument();
+});
+
 test("renders separate lb and kg records with sources and limits reps-at-weight per unit", () => {
   const sets = [
     { id: "50", reps: 15, load: { mode: "external", amount: 50, unit: "lb" }, notes: "" },

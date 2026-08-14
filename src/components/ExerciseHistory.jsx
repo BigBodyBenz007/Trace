@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { deriveExerciseHistory } from "../services/exerciseHistory";
 import { deriveExercisePrs } from "../services/exercisePr";
+import { deriveEstimatedOneRepMaxes, formatEstimatedOneRepMax } from "../services/estimatedOneRepMax";
 import { createWorkoutPrCandidate } from "../services/trophyCase";
 import {
   describeExerciseRecord,
@@ -303,6 +304,31 @@ function CurrentRecords({ exercisePr, trophySourceKeys, addTrophyCaseEntry, butt
   );
 }
 
+function EstimatedOneRepMax({ exerciseName, estimates }) {
+  if (!Array.isArray(estimates) || estimates.length === 0) return null;
+  return (
+    <section
+      aria-label={`${exerciseName} Estimated 1RM`}
+      style={{ background: "#111827", border: "1px solid #374151", borderRadius: "12px", marginTop: "14px", padding: "14px" }}
+    >
+      <h4 style={{ margin: "0 0 10px" }}>Estimated 1RM</h4>
+      <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+        {estimates.map((estimate) => (
+          <div key={estimate.unit} style={{ background: "#1f2937", borderRadius: "10px", overflowWrap: "anywhere", padding: "12px" }}>
+            <strong style={{ display: "block", fontSize: "20px" }}>{formatEstimatedOneRepMax(estimate)}</strong>
+            <span style={{ display: "block", marginTop: "4px" }}>
+              Based on {estimate.performedWeight} {estimate.unit} × {estimate.reps}
+            </span>
+            <span style={{ color: "#9ca3af", display: "block", marginTop: "2px" }}>
+              {formatDate(estimate.performedAt)} · {estimate.workoutTitle}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntry = () => false, buttonStyle, trophySourceTarget = null, onReturnToTrophyCase = null }) {
   const history = useMemo(
     () => deriveExerciseHistory(workoutEntries),
@@ -316,6 +342,10 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
           exercisePr,
         ])
       ),
+    [workoutEntries]
+  );
+  const estimatesByIdentity = useMemo(
+    () => new Map(deriveEstimatedOneRepMaxes(workoutEntries).map(({ identityKey, estimates }) => [identityKey, estimates])),
     [workoutEntries]
   );
   const [selectedIdentityKey, setSelectedIdentityKey] = useState(null);
@@ -486,6 +516,10 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                         trophySourceKeys={trophySourceKeys}
                         addTrophyCaseEntry={addTrophyCaseEntry}
                         buttonStyle={buttonStyle}
+                      />
+                      <EstimatedOneRepMax
+                        exerciseName={exercise.displayName}
+                        estimates={estimatesByIdentity.get(exercise.identityKey)}
                       />
                       {isPrTimelineOpen ? (
                         <PrTimeline
