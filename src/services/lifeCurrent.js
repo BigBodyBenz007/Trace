@@ -2,12 +2,13 @@ export const LIFE_CURRENT_TUNING = Object.freeze({
   memory: Object.freeze({ first: 1, additional: 0.25, dailyCap: 1.5 }),
   workout: Object.freeze({ first: 0.65, additional: 0.15, dailyCap: 0.8 }),
   nutrition: Object.freeze({ dailyPresence: 0.3 }),
+  health: Object.freeze({ dailyPresence: 0.3 }),
   medication: Object.freeze({ dailyPresence: 0.3 }),
   trophy: Object.freeze({ each: 0.2, dailyCap: 0.4 }),
   intensitySaturation: 2,
 });
 
-const DOMAIN_KEYS = ["memory", "workout", "nutrition", "medication", "trophy"];
+const DOMAIN_KEYS = ["memory", "workout", "nutrition", "health", "medication", "trophy"];
 
 function compareText(first, second) {
   return first < second ? -1 : first > second ? 1 : 0;
@@ -81,6 +82,7 @@ function calculateContributions(sources) {
     memory: cappedProgression(counts.memory, LIFE_CURRENT_TUNING.memory),
     workout: cappedProgression(counts.workout, LIFE_CURRENT_TUNING.workout),
     nutrition: counts.nutrition > 0 ? LIFE_CURRENT_TUNING.nutrition.dailyPresence : 0,
+    health: counts.health > 0 ? LIFE_CURRENT_TUNING.health.dailyPresence : 0,
     medication: counts.medication > 0 ? LIFE_CURRENT_TUNING.medication.dailyPresence : 0,
     trophy: Math.min(
       LIFE_CURRENT_TUNING.trophy.dailyCap,
@@ -230,6 +232,7 @@ function arrayOrEmpty(value) {
 export function deriveLifeCurrent({
   memories = [],
   nutritionEntries = [],
+  healthMeasurementEntries = [],
   workoutEntries = [],
   medicationEntries = [],
   trophyCaseEntries = [],
@@ -237,6 +240,7 @@ export function deriveLifeCurrent({
   const sources = {
     memories: arrayOrEmpty(memories),
     nutritionEntries: arrayOrEmpty(nutritionEntries),
+    healthMeasurementEntries: arrayOrEmpty(healthMeasurementEntries),
     workoutEntries: arrayOrEmpty(workoutEntries),
     medicationEntries: arrayOrEmpty(medicationEntries),
     trophyCaseEntries: arrayOrEmpty(trophyCaseEntries),
@@ -257,6 +261,7 @@ export function deriveLifeCurrent({
   const timestampDomains = [
     ["workout", sources.workoutEntries, "occurredAt"],
     ["nutrition", sources.nutritionEntries, "loggedAt"],
+    ["health", sources.healthMeasurementEntries, "occurredAt"],
     ["medication", sources.medicationEntries, "occurredAt"],
   ];
   timestampDomains.forEach(([domain, entries, timestampField]) => {

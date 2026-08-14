@@ -7,11 +7,13 @@ const baseProps = {
   toggleFavorite: jest.fn(),
   onAddMemory: jest.fn(),
   onOpenNutrition: jest.fn(),
+  onOpenHealth: jest.fn(),
   onOpenMedications: jest.fn(),
   onOpenProtocols: jest.fn(),
   onOpenWorkouts: jest.fn(),
   onOpenTrophyCase: jest.fn(),
   onOpenBackup: jest.fn(),
+  onOpenSettings: jest.fn(),
   deleteMemory: jest.fn(),
   editMemory: jest.fn(),
   addTrophyCaseEntry: jest.fn(),
@@ -26,19 +28,23 @@ test("renders primary Timeline actions in the intended order", () => {
     .map((button) => button.textContent.trim())
     .filter((name) => [
       "Add Memory",
-      "Health & Nutrition",
+      "Nutrition",
+      "Health",
       "Workouts",
       "Medications & Supplements",
       "Protocols",
       "Open Trophy Case",
+      "Settings",
     ].includes(name));
   expect(names).toEqual([
     "Add Memory",
-    "Health & Nutrition",
+    "Nutrition",
+    "Health",
     "Workouts",
     "Medications & Supplements",
     "Protocols",
     "Open Trophy Case",
+    "Settings",
   ]);
 });
 

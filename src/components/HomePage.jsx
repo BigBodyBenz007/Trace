@@ -93,6 +93,8 @@ function HomePage({
   toggleFavorite,
   onAddMemory,
   onOpenNutrition,
+  onOpenHealth,
+  onOpenSettings,
   onOpenMedications,
   onOpenProtocols,
   onOpenWorkouts,
@@ -102,6 +104,7 @@ function HomePage({
   editMemory,
   trophyEntries = [],
   nutritionEntries = [],
+  healthMeasurementEntries = [],
   workoutEntries = [],
   medicationEntries = [],
   addTrophyCaseEntry = () => false,
@@ -143,11 +146,12 @@ function HomePage({
       deriveLifeCurrent({
         memories,
         nutritionEntries,
+        healthMeasurementEntries,
         workoutEntries,
         medicationEntries,
         trophyCaseEntries: trophyEntries,
       }),
-    [memories, nutritionEntries, workoutEntries, medicationEntries, trophyEntries]
+    [memories, nutritionEntries, healthMeasurementEntries, workoutEntries, medicationEntries, trophyEntries]
   );
   const lifeCurrentLayout = useMemo(
     () => deriveLifeCurrentLayout(lifeCurrent),
@@ -537,7 +541,17 @@ function HomePage({
         }}
         onClick={onOpenNutrition}
       >
-        Health & Nutrition
+        Nutrition
+      </button>
+
+      <button
+        style={{
+          ...buttonStyle,
+          backgroundColor: "#0e7490",
+        }}
+        onClick={onOpenHealth}
+      >
+        Health
       </button>
 
       <button
@@ -585,6 +599,13 @@ function HomePage({
         onClick={onOpenBackup}
       >
         Backup & Restore
+      </button>
+
+      <button
+        style={{ ...buttonStyle, backgroundColor: "#3f3f46" }}
+        onClick={onOpenSettings}
+      >
+        Settings
       </button>
 
       {memoryAchievementSuggestion &&

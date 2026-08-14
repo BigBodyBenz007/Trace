@@ -12,6 +12,8 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
   "nutritionGoals",
   "userFoods",
   "nutritionEntries",
+  "healthMeasurementEntries",
+  "appSettings",
   "medicationEntries",
   "medicationCompounds",
   "protocols",
@@ -20,7 +22,8 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
   "trophyCaseEntries",
 ]);
 
-const ARRAY_KEYS = new Set(TRACE_STORAGE_KEYS.filter((key) => key !== "nutritionGoals"));
+const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
+const ARRAY_KEYS = new Set(TRACE_STORAGE_KEYS.filter((key) => !OBJECT_KEYS.has(key)));
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
@@ -103,12 +106,12 @@ function validateStructuredData(structuredData) {
   }
   TRACE_STORAGE_KEYS.forEach((key) => {
     const value = structuredData[key];
-    if (value === null) return;
+    if (value === null || (["healthMeasurementEntries", "appSettings"].includes(key) && value === undefined)) return;
     if (ARRAY_KEYS.has(key) && !Array.isArray(value)) {
       throw new Error(`The backup contains invalid ${key} data.`);
     }
-    if (key === "nutritionGoals" && (typeof value !== "object" || Array.isArray(value))) {
-      throw new Error("The backup contains invalid nutritionGoals data.");
+    if (OBJECT_KEYS.has(key) && (typeof value !== "object" || Array.isArray(value))) {
+      throw new Error(`The backup contains invalid ${key} data.`);
     }
   });
 }
@@ -135,6 +138,7 @@ export function summarizeTraceBackup(backup) {
     memories: data.memories?.length || 0,
     photos: backup.data.photos.length,
     nutritionEntries: data.nutritionEntries?.length || 0,
+    healthMeasurementEntries: data.healthMeasurementEntries?.length || 0,
     workouts: data.workoutEntries?.length || 0,
     medicationEntries: data.medicationEntries?.length || 0,
     protocols: data.protocols?.length || 0,
@@ -214,7 +218,7 @@ export async function restoreTraceBackup(value, {
   const restoredPhotos = backup.data.photos.map(decodePhoto);
   try {
     restoreStructuredSnapshot(storage, Object.fromEntries(
-      TRACE_STORAGE_KEYS.map((key) => [key, backup.data.structured[key] === null
+      TRACE_STORAGE_KEYS.map((key) => [key, backup.data.structured[key] == null
         ? null
         : JSON.stringify(backup.data.structured[key])])
     ));

@@ -100,12 +100,48 @@ function fillBodyweightWorkout(title = "Push Day") {
 test("Timeline to Nutrition lands at the top after rendering", () => {
   renderAppAtTimeline();
 
-  fireEvent.click(screen.getByRole("button", { name: "Health & Nutrition" }));
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
 
   expect(
-    screen.getByRole("heading", { name: "Health & Nutrition" })
+    screen.getByRole("heading", { name: "Nutrition" })
   ).toBeInTheDocument();
   expectDestinationScrolledToTop();
+});
+
+test("Timeline opens the first-class Health page and Health measurements survive remount", async () => {
+  const first = render(<App />);
+  const navigation = screen.getAllByRole("button").map((button) => button.textContent.trim());
+  expect(navigation.indexOf("Nutrition")).toBeLessThan(navigation.indexOf("Health"));
+  expect(navigation.indexOf("Health")).toBeLessThan(navigation.indexOf("Workouts"));
+  fireEvent.click(screen.getByRole("button", { name: "Health" }));
+  expect(screen.getByRole("heading", { name: "Health" })).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Weight"), { target: { value: "255" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Measurement" }));
+  const stored = JSON.parse(localStorage.getItem("healthMeasurementEntries"));
+  expect(stored).toHaveLength(1);
+  expect(stored[0]).toMatchObject({ schemaVersion: 1, measurements: { weight: { value: 255, unit: "lb" } } });
+  expect(stored[0].id).toBeTruthy();
+  first.unmount();
+
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Health" }));
+  expect(await screen.findByText("255 lb")).toBeInTheDocument();
+});
+
+test("Settings opens and global unit preferences survive remount into a fresh Health form", () => {
+  const first = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
+  fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' }));
+  fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' }));
+  expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" } });
+  first.unmount();
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Health" }));
+  expect(screen.getByLabelText("Weight unit")).toHaveTextContent("kg");
+  expect(screen.getByLabelText("Waist unit")).toHaveTextContent("cm");
+  expect(screen.getByLabelText("Height centimeters")).toBeInTheDocument();
 });
 
 test("Timeline opens Protocols and returns to Timeline at the top", () => {
@@ -209,7 +245,7 @@ test("Timeline opens the empty Trophy Case and returns at the top without replay
 
 test("Nutrition to Timeline lands at the top after rendering", () => {
   renderAppAtTimeline();
-  fireEvent.click(screen.getByRole("button", { name: "Health & Nutrition" }));
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
   window.scrollTo.mockClear();
 
   fireEvent.click(

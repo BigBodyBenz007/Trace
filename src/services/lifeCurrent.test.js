@@ -104,10 +104,11 @@ test("counts workouts at workout level with diminishing capped daily contributio
   expect(several.value).toBe(LIFE_CURRENT_TUNING.workout.dailyCap);
 });
 
-test("uses capped daily presence for nutrition and medications", () => {
+test("uses capped daily presence for nutrition, Health measurements, and medications", () => {
   const timestamp = localIso(2026, 8, 11);
   const result = deriveLifeCurrent({
     nutritionEntries: Array.from({ length: 20 }, (_, index) => nutrition(`n${index}`, timestamp)),
+    healthMeasurementEntries: Array.from({ length: 20 }, (_, index) => ({ id: `h${index}`, occurredAt: timestamp, measurements: { weight: { value: index + 1, unit: "lb" } } })),
     medicationEntries: Array.from({ length: 20 }, (_, index) =>
       medication(`d${index}`, timestamp, { dose: { amount: index + 1, unit: "custom" }, route: { code: `route-${index}` } })
     ),
@@ -120,6 +121,19 @@ test("uses capped daily presence for nutrition and medications", () => {
     count: 20,
     value: LIFE_CURRENT_TUNING.medication.dailyPresence,
   });
+  expect(result.days[0].contributions.health).toMatchObject({
+    count: 20,
+    value: LIFE_CURRENT_TUNING.health.dailyPresence,
+  });
+});
+
+test("a height-only Health record is one activity and Settings are not activity sources", () => {
+  const timestamp = localIso(2026, 8, 11);
+  const result = deriveLifeCurrent({
+    healthMeasurementEntries: [{ id: "height", occurredAt: timestamp, measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 16.5, unit: "in" } } }],
+    appSettings: { schemaVersion: 1, units: { height: "cm" } },
+  });
+  expect(result.days[0].contributions.health).toEqual({ count: 1, value: LIFE_CURRENT_TUNING.health.dailyPresence, sourceIds: ["height"] });
 });
 
 test("keeps domain contributions independent and applies fixed saturation", () => {

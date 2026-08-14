@@ -507,7 +507,7 @@ function NutritionPage({
 
   return (
     <div ref={nutritionPageTopRef} data-testid="nutrition-page" style={containerStyle}>
-      <h1 style={{ marginBottom: "10px" }}>Health & Nutrition</h1>
+      <h1 style={{ marginBottom: "10px" }}>Nutrition</h1>
 
       <p style={{ color: "#bbb", marginBottom: "30px" }}>
         Track your food and nutrition here.

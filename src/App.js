@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
+import HealthPage from "./components/HealthPage";
+import SettingsPage from "./components/SettingsPage";
 import MedicationPage from "./components/MedicationPage";
 import ProtocolsPage from "./components/ProtocolsPage";
 import WorkoutPage from "./components/WorkoutPage";
@@ -54,6 +56,13 @@ import {
   writeProtocols,
 } from "./services/protocol";
 import { resolveTrophySource } from "./services/trophySourceNavigation";
+import {
+  createHealthMeasurementEntry,
+  readHealthMeasurementEntries,
+  updateHealthMeasurementEntry,
+  writeHealthMeasurementEntries,
+} from "./services/healthMeasurements";
+import { readAppSettings, writeAppSettings } from "./services/appSettings";
 
 const DEFAULT_NUTRITION_GOALS = {
   calories: 0,
@@ -118,6 +127,8 @@ function App() {
   const [memories, setMemories] = useState([]);
   const [memoryCount, setMemoryCount] = useState(0);
   const [nutritionEntries, setNutritionEntries] = useState([]);
+  const [healthMeasurementEntries, setHealthMeasurementEntries] = useState([]);
+  const [appSettings, setAppSettings] = useState(() => readAppSettings(localStorage));
   const [medicationEntries, setMedicationEntries] = useState([]);
   const [protocols, setProtocols] = useState([]);
   const [workoutEntries, setWorkoutEntries] = useState([]);
@@ -306,6 +317,14 @@ function App() {
       setNutritionEntries(parsedEntries);
     } catch (error) {
       setStorageError("Trace couldn't read the saved nutrition entries. The stored value was left unchanged.");
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setHealthMeasurementEntries(readHealthMeasurementEntries(localStorage));
+    } catch (error) {
+      setStorageError("Trace couldn't read the saved Health measurements. The stored value was left unchanged.");
     }
   }, []);
 
@@ -642,6 +661,65 @@ function App() {
       return true;
     } catch (error) {
       setStorageError(storageMessage("save this nutrition entry"));
+      return false;
+    }
+  }
+
+  function saveHealthMeasurement(draft) {
+    const result = createHealthMeasurementEntry(draft, {
+      id: createId(new Set(healthMeasurementEntries.map((entry) => entry.id))),
+    });
+    if (result.error) return false;
+    const updatedEntries = [...healthMeasurementEntries, result.value];
+    try {
+      writeHealthMeasurementEntries(localStorage, updatedEntries);
+      setHealthMeasurementEntries(updatedEntries);
+      setStorageError("");
+      return result.value;
+    } catch (error) {
+      setStorageError(storageMessage("save this Health measurement"));
+      return false;
+    }
+  }
+
+  function updateAppSettings(settings) {
+    try {
+      const saved = writeAppSettings(localStorage, settings);
+      setAppSettings(saved);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("save Settings"));
+      return false;
+    }
+  }
+
+  function updateHealthMeasurement(id, draft) {
+    const existing = healthMeasurementEntries.find((entry) => entry.id === id);
+    if (!existing) return false;
+    const result = updateHealthMeasurementEntry(existing, draft);
+    if (result.error) return false;
+    const updatedEntries = healthMeasurementEntries.map((entry) => entry.id === id ? result.value : entry);
+    try {
+      writeHealthMeasurementEntries(localStorage, updatedEntries);
+      setHealthMeasurementEntries(updatedEntries);
+      setStorageError("");
+      return result.value;
+    } catch (error) {
+      setStorageError(storageMessage("update this Health measurement"));
+      return false;
+    }
+  }
+
+  function deleteHealthMeasurement(id) {
+    const updatedEntries = healthMeasurementEntries.filter((entry) => entry.id !== id);
+    try {
+      writeHealthMeasurementEntries(localStorage, updatedEntries);
+      setHealthMeasurementEntries(updatedEntries);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this Health measurement"));
       return false;
     }
   }
@@ -1175,6 +1253,8 @@ function App() {
           toggleFavorite={toggleFavorite}
           onAddMemory={() => setPage("new")}
           onOpenNutrition={() => setPage("nutrition")}
+          onOpenHealth={() => setPage("health")}
+          onOpenSettings={() => setPage("settings")}
           onOpenMedications={() => setPage("medications")}
           onOpenProtocols={() => setPage("protocols")}
           onOpenWorkouts={() => setPage("workouts")}
@@ -1184,6 +1264,7 @@ function App() {
           editMemory={editMemory}
           trophyEntries={trophyCaseEntries}
           nutritionEntries={nutritionEntries}
+          healthMeasurementEntries={healthMeasurementEntries}
           workoutEntries={workoutEntries}
           medicationEntries={medicationEntries}
           addTrophyCaseEntry={addTrophyCaseEntry}
@@ -1209,6 +1290,26 @@ function App() {
           saveNutritionGoals={saveNutritionGoals}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
+          containerStyle={containerStyle}
+        />
+      ) : page === "health" ? (
+        <HealthPage
+          onBack={() => setPage("home")}
+          entries={healthMeasurementEntries}
+          settings={appSettings}
+          saveEntry={saveHealthMeasurement}
+          updateEntry={updateHealthMeasurement}
+          deleteEntry={deleteHealthMeasurement}
+          buttonStyle={buttonStyle}
+          inputStyle={inputStyle}
+          containerStyle={containerStyle}
+        />
+      ) : page === "settings" ? (
+        <SettingsPage
+          settings={appSettings}
+          updateSettings={updateAppSettings}
+          onBack={() => setPage("home")}
+          buttonStyle={buttonStyle}
           containerStyle={containerStyle}
         />
       ) : page === "medications" ? (

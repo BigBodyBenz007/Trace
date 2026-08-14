@@ -59,7 +59,7 @@ function makePhotoDatabase(initial = [], { failWriteCount = 0 } = {}) {
 function emptyStructured(overrides = {}) {
   return Object.fromEntries(TRACE_STORAGE_KEYS.map((key) => [
     key,
-    key === "nutritionGoals" ? null : [],
+    ["nutritionGoals", "appSettings"].includes(key) ? null : [],
   ]).concat(Object.entries(overrides)));
 }
 
@@ -124,11 +124,11 @@ test("exports structured data and multiple photos without mutating sources", asy
 test("validates summaries and rejects corrupt, future, and missing-reference backups", () => {
   const valid = backup({ data: { structured: emptyStructured({
     memories: [{ id: "memory-1", date: "2026-01-02", images: ["photo-1"] }],
-    nutritionEntries: [{ id: "meal" }], workoutEntries: [{ id: "workout" }],
+    nutritionEntries: [{ id: "meal" }], healthMeasurementEntries: [{ id: "health" }], workoutEntries: [{ id: "workout" }],
     medicationEntries: [{ id: "dose" }], protocols: [{ id: "protocol" }],
     trophyCaseEntries: [{ id: "trophy" }],
   }), photos: [encodedPhoto()] } });
-  expect(validateTraceBackup(valid).summary).toMatchObject({ memories: 1, photos: 1, nutritionEntries: 1, workouts: 1, medicationEntries: 1, protocols: 1, trophyCaseEntries: 1 });
+  expect(validateTraceBackup(valid).summary).toMatchObject({ memories: 1, photos: 1, nutritionEntries: 1, healthMeasurementEntries: 1, workouts: 1, medicationEntries: 1, protocols: 1, trophyCaseEntries: 1 });
   expect(() => parseTraceBackupText("not json")).toThrow("not valid JSON");
   expect(() => validateTraceBackup({ ...valid, schemaVersion: 2 })).toThrow("newer");
   expect(() => validateTraceBackup({ ...valid, data: { ...valid.data, photos: [] } })).toThrow("missing referenced photo");
@@ -162,7 +162,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   };
   const structured = emptyStructured({
     memories: [{ id: "memory-1", date: "1999-06-12", categories: ["Family"], tags: ["legacy"], images: ["photo-1"] }],
-    nutritionEntries: [{ id: "meal-1" }], workoutEntries: [workoutWithDrops],
+    nutritionEntries: [{ id: "meal-1" }], healthMeasurementEntries: [{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }], appSettings: { schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" } }, workoutEntries: [workoutWithDrops],
     medicationEntries: [{ id: "dose-1" }], medicationCompounds: [{ id: "compound-1" }],
     protocols: [{ id: "protocol-1" }], trophyCaseEntries: [{ id: "trophy-1" }],
     savedExercises: [{ id: "exercise-1" }], userFoods: [{ id: "food-1" }],
@@ -175,6 +175,8 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(summary).toMatchObject({ memories: 1, photos: 1, workouts: 1 });
   expect(JSON.parse(storage.value("memories"))[0]).toMatchObject({ id: "memory-1", date: "1999-06-12", images: ["photo-1"] });
   expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1" }]);
+  expect(JSON.parse(storage.value("healthMeasurementEntries"))).toEqual([{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }]);
+  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" } });
   expect(JSON.parse(storage.value("workoutEntries"))).toEqual([workoutWithDrops]);
   expect(JSON.parse(storage.value("medicationEntries"))).toEqual([{ id: "dose-1" }]);
   expect(JSON.parse(storage.value("protocols"))).toEqual([{ id: "protocol-1" }]);
@@ -184,6 +186,23 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(database.records()[0].blob.type).toBe("image/webp");
   expect(database.records()[0].blob.size).toBe(5);
   await expect(readBlobText(database.records()[0].blob)).resolves.toBe("hello");
+});
+
+test("restores pre-Health backups with Health history empty", async () => {
+  const structured = emptyStructured();
+  delete structured.healthMeasurementEntries;
+  const value = backup({ data: { structured, photos: [] } });
+  const storage = makeStorage({ healthMeasurementEntries: JSON.stringify([{ id: "current-health" }]) });
+  await restoreTraceBackup(value, { confirmed: true, storage, openDatabase: async () => makePhotoDatabase() });
+  expect(storage.value("healthMeasurementEntries")).toBeNull();
+});
+
+test("restores pre-Settings backups with default Settings storage fallback", async () => {
+  const structured = emptyStructured();
+  delete structured.appSettings;
+  const storage = makeStorage({ appSettings: JSON.stringify({ units: { weight: "kg" } }) });
+  await restoreTraceBackup(backup({ data: { structured, photos: [] } }), { confirmed: true, storage, openDatabase: async () => makePhotoDatabase() });
+  expect(storage.value("appSettings")).toBeNull();
 });
 
 test("storage failure rolls structured data and photos back instead of leaving a mixed dataset", async () => {
