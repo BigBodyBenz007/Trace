@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useCallback, useState, useEffect, useRef } from "react";
 import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
@@ -63,6 +63,7 @@ import {
   writeHealthMeasurementEntries,
 } from "./services/healthMeasurements";
 import { readAppSettings, writeAppSettings } from "./services/appSettings";
+import SuccessToast from "./components/SuccessToast";
 
 const DEFAULT_NUTRITION_GOALS = {
   calories: 0,
@@ -142,11 +143,16 @@ function App() {
     DEFAULT_NUTRITION_GOALS
   );
   const [storageError, setStorageError] = useState("");
+  const [successNotification, setSuccessNotification] = useState(null);
   const [trophySourceNavigation, setTrophySourceNavigation] = useState(null);
   const photoDatabaseRef = useRef(null);
   const initializationStartedRef = useRef(false);
   const activeObjectUrlsRef = useRef(new Set());
   const skipNextPageTopScrollRef = useRef(false);
+  const traceSuccess = useCallback((message) => {
+    setSuccessNotification({ id: `${Date.now()}-${Math.random()}`, message });
+  }, []);
+  const dismissSuccess = useCallback(() => setSuccessNotification(null), []);
 
   useEffect(() => {
     if (initializationStartedRef.current) return;
@@ -489,6 +495,7 @@ function App() {
     if (title.trim() === "") return false;
 
     try {
+      const isNewMemory = editingId === null;
       const memoryId =
         editingId || createId(new Set(memories.map((item) => item.id)));
       const { preparedImages, newPhotoIds } = await prepareMemoryImages(
@@ -581,6 +588,7 @@ function App() {
       setImages([]);
       setCategories([]);
       setPage("home");
+      if (isNewMemory) traceSuccess("Memory traced");
       return true;
     } catch (error) {
       setStorageError(storageMessage("save this memory"));
@@ -658,6 +666,7 @@ function App() {
       localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
       setNutritionEntries(updatedEntries);
       setStorageError("");
+      traceSuccess("Meal traced");
       return true;
     } catch (error) {
       setStorageError(storageMessage("save this nutrition entry"));
@@ -675,6 +684,7 @@ function App() {
       writeHealthMeasurementEntries(localStorage, updatedEntries);
       setHealthMeasurementEntries(updatedEntries);
       setStorageError("");
+      traceSuccess("Health entry traced");
       return result.value;
     } catch (error) {
       setStorageError(storageMessage("save this Health measurement"));
@@ -687,6 +697,7 @@ function App() {
       const saved = writeAppSettings(localStorage, settings);
       setAppSettings(saved);
       setStorageError("");
+      traceSuccess("Settings saved");
       return true;
     } catch (error) {
       setStorageError(storageMessage("save Settings"));
@@ -795,6 +806,7 @@ function App() {
       localStorage.setItem("nutritionGoals", JSON.stringify(updatedGoals));
       setNutritionGoals(updatedGoals);
       setStorageError("");
+      traceSuccess("Calorie goal saved");
       return true;
     } catch (error) {
       setStorageError(storageMessage("save these nutrition goals"));
@@ -816,6 +828,7 @@ function App() {
       );
       setMedicationEntries(updatedEntries);
       setStorageError("");
+      traceSuccess("Protocol traced");
       return true;
     } catch (error) {
       setStorageError(storageMessage("save this medication entry"));
@@ -923,6 +936,7 @@ function App() {
       writeProtocols(localStorage, updatedProtocols);
       setProtocols(updatedProtocols);
       setStorageError("");
+      traceSuccess("Protocol traced");
       return { status: "saved", protocol };
     } catch (error) {
       setStorageError(storageMessage("save this protocol"));
@@ -1019,6 +1033,7 @@ function App() {
         localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
         setWorkoutEntries(updatedEntries);
         setStorageError("");
+        traceSuccess("Workout traced");
         return true;
       } catch (error) {
         if (photoResult.newIds.length) {
@@ -1035,6 +1050,7 @@ function App() {
         localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
         setWorkoutEntries(updatedEntries);
         setStorageError("");
+        traceSuccess("Workout traced");
         return true;
       } catch (error) {
         setStorageError(storageMessage("save this workout"));
@@ -1363,6 +1379,7 @@ function App() {
           onBack={() => setPage("home")}
           buttonStyle={buttonStyle}
           containerStyle={containerStyle}
+          onExportSuccess={() => traceSuccess("Backup ready")}
         />
       ) : page === "trophy-case" ? (
         <TrophyCasePage
@@ -1403,6 +1420,7 @@ function App() {
           onClose={() => setCeremonyEntry(null)}
         />
       )}
+      <SuccessToast notification={successNotification} onDismiss={dismissSuccess} />
     </div>
   );
 }

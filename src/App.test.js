@@ -108,6 +108,43 @@ test("Timeline to Nutrition lands at the top after rendering", () => {
   expectDestinationScrolledToTop();
 });
 
+test("daily goals confirm only after persistence and newer successes replace stale ones", () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  const goals = screen.getByRole("heading", { name: "Daily Goals" }).closest("form");
+  fireEvent.change(within(goals).getByLabelText("Calories"), { target: { value: "2400" } });
+  fireEvent.click(within(goals).getByRole("button", { name: "Save Goals" }));
+  expect(screen.getByRole("status")).toHaveTextContent("Calorie goal saved");
+  expect(JSON.parse(localStorage.getItem("nutritionGoals"))).toMatchObject({ calories: 2400 });
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
+  expect(screen.getAllByRole("status")).toHaveLength(1);
+  expect(screen.getByRole("status")).toHaveTextContent("Settings saved");
+});
+
+test("a successfully persisted nutrition entry reports Meal traced", () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  const entryForm = screen.getByRole("heading", { name: "Add Nutrition Entry" }).closest("form");
+  fireEvent.change(within(entryForm).getByLabelText("Food / meal name"), { target: { value: "Lunch" } });
+  fireEvent.change(within(entryForm).getByLabelText("Calories"), { target: { value: "500" } });
+  fireEvent.click(within(entryForm).getByRole("button", { name: "Save Entry" }));
+  expect(screen.getByRole("status")).toHaveTextContent("Meal traced");
+  expect(JSON.parse(localStorage.getItem("nutritionEntries"))).toHaveLength(1);
+});
+
+test("persistence failure never reports a false calorie-goal success", () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  const goals = screen.getByRole("heading", { name: "Daily Goals" }).closest("form");
+  const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementationOnce(() => { throw new Error("quota"); });
+  fireEvent.click(within(goals).getByRole("button", { name: "Save Goals" }));
+  expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  expect(screen.getByRole("alert")).toHaveTextContent("couldn't save these nutrition goals");
+  setItem.mockRestore();
+});
+
 test("Timeline opens the first-class Health page and Health measurements survive remount", async () => {
   const first = render(<App />);
   const navigation = screen.getAllByRole("button").map((button) => button.textContent.trim());
@@ -121,6 +158,7 @@ test("Timeline opens the first-class Health page and Health measurements survive
   expect(stored).toHaveLength(1);
   expect(stored[0]).toMatchObject({ schemaVersion: 1, measurements: { weight: { value: 255, unit: "lb" } } });
   expect(stored[0].id).toBeTruthy();
+  expect(screen.getByRole("status")).toHaveTextContent("Health entry traced");
   first.unmount();
 
   render(<App />);
@@ -133,6 +171,7 @@ test("Settings opens and global unit preferences survive remount into a fresh He
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
   expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
   fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
+  expect(screen.getByRole("status")).toHaveTextContent("Settings saved");
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' }));
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" } });
@@ -205,6 +244,7 @@ test("creates and persists a protocol without generating medication history", ()
   fireEvent.change(within(itemEditor).getByLabelText("Route"), { target: { value: "oral" } });
   fireEvent.click(within(itemEditor).getByLabelText("Friday"));
   fireEvent.click(screen.getAllByRole("button", { name: "Save Protocol" })[0]);
+  expect(screen.getByRole("status")).toHaveTextContent("Protocol traced");
   const saved = JSON.parse(localStorage.getItem("protocols"));
   expect(saved).toHaveLength(1);
   expect(saved[0]).toMatchObject({ name: "My weekly plan", status: "active" });
@@ -291,6 +331,7 @@ test("new Memory trophies persist, trigger the shared ceremony, preserve snapsho
   fireEvent.change(screen.getByPlaceholderText("Tell your story..."), { target: { value: "Finally finished my degree." } });
   fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: "2026-05-18" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Memory" }));
+  expect(await screen.findByRole("status")).toHaveTextContent("Memory traced");
 
   await screen.findByRole("heading", { name: "Trace" });
   const suggestion = screen.getByRole("region", { name: "Memory achievement suggestion" });
@@ -435,6 +476,7 @@ test("medication entries persist separately in localStorage", () => {
     target: { value: "oral" },
   });
   fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+  expect(screen.getByRole("status")).toHaveTextContent("Protocol traced");
 
   const savedEntries = JSON.parse(localStorage.getItem("medicationEntries"));
   expect(savedEntries).toHaveLength(1);
@@ -644,6 +686,7 @@ test("workouts persist separately and reload as complete snapshots", () => {
   openWorkouts();
   fillBodyweightWorkout("Push Day");
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(screen.getByRole("status")).toHaveTextContent("Workout traced");
 
   const stored = JSON.parse(localStorage.getItem("workoutEntries"));
   expect(stored).toHaveLength(1);

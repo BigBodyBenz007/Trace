@@ -53,7 +53,10 @@ const memories = [
   { id: "memory-b", title: "Same Day", description: "Second", date: "2026-05-19", categories: [], images: [], favorite: false },
 ];
 
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  window.scrollTo = jest.fn();
+});
 
 test("opens the dedicated Trophy Case from the Timeline", () => {
   render(<HomePage {...baseProps} memories={[]} trophyEntries={[]} />);
@@ -548,6 +551,22 @@ test("closing Memory Detail restores the originating horizontal Timeline positio
   }));
   expect(viewport.scrollLeft).toBe(412);
   window.requestAnimationFrame = originalRequestAnimationFrame;
+});
+
+test("Memory Detail and nested photo viewer keep background locked until the final overlay closes", () => {
+  Object.defineProperty(window, "scrollY", { configurable: true, value: 280 });
+  const memory = memoryWithPhotos(1);
+  render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} />);
+  fireEvent.click(screen.getByTestId(`timeline-memory-${memory.id}`));
+  expect(document.body.style.position).toBe("fixed");
+  expect(document.body.style.top).toBe("-280px");
+  fireEvent.click(within(screen.getByRole("dialog")).getAllByAltText("Memory 1")[0]);
+  expect(document.body.style.position).toBe("fixed");
+  fireEvent.click(screen.getByAltText("Full Size"));
+  expect(document.body.style.position).toBe("fixed");
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Close memory details" }));
+  expect(document.body.style.position).toBe("");
+  expect(window.scrollTo).toHaveBeenCalledWith({ left: 0, top: 280, behavior: "auto" });
 });
 
 function memoryWithPhotos(count) {

@@ -16,16 +16,32 @@ function readFileText(file) {
   });
 }
 
-function downloadBackup(backup) {
-  const blob = new Blob([JSON.stringify(backup)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
+export async function handoffTraceBackup(backup, {
+  navigatorObject = navigator,
+  urlApi = URL,
+  documentObject = document,
+  scheduleCleanup = (callback) => setTimeout(callback, 60000),
+} = {}) {
+  const filename = traceBackupFilename(new Date(backup.createdAt));
+  const json = JSON.stringify(backup);
+  const file = typeof File === "function"
+    ? new File([json], filename, { type: "application/json" })
+    : new Blob([json], { type: "application/json" });
+  const isAppleMobile = /iPad|iPhone|iPod/.test(navigatorObject.userAgent || "") ||
+    (navigatorObject.platform === "MacIntel" && navigatorObject.maxTouchPoints > 1);
+  if (isAppleMobile && typeof navigatorObject.share === "function" && typeof navigatorObject.canShare === "function" && navigatorObject.canShare({ files: [file] })) {
+    await navigatorObject.share({ files: [file], title: "Trace Backup" });
+    return { method: "share", file };
+  }
+  const url = urlApi.createObjectURL(file);
+  const link = documentObject.createElement("a");
   link.href = url;
-  link.download = traceBackupFilename(new Date(backup.createdAt));
-  document.body.appendChild(link);
+  link.download = filename;
+  documentObject.body.appendChild(link);
   link.click();
   link.remove();
-  URL.revokeObjectURL(url);
+  scheduleCleanup(() => urlApi.revokeObjectURL(url));
+  return { method: "download", file, url };
 }
 
 export default function BackupPage({
@@ -33,22 +49,29 @@ export default function BackupPage({
   buttonStyle,
   containerStyle,
   onRestoreComplete = () => window.location.reload(),
+  onExportSuccess = () => {},
 }) {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [preview, setPreview] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
   const fileInputRef = useRef(null);
 
   async function exportBackup() {
+    if (isExporting) return;
+    setIsExporting(true);
     setError("");
     setStatus("Preparing backup…");
     try {
       const backup = await createTraceBackup();
-      downloadBackup(backup);
-      setStatus("Trace backup downloaded. Your current data was not changed.");
+      await handoffTraceBackup(backup);
+      setStatus("");
+      onExportSuccess();
     } catch (exportError) {
       setStatus("");
       setError(`Trace could not create the backup: ${exportError.message}`);
+    } finally {
+      setIsExporting(false);
     }
   }
 
@@ -90,7 +113,7 @@ export default function BackupPage({
       <p style={{ color: "#bbb", maxWidth: "700px" }}>
         Download a private copy of your Trace data, including photos, or fully restore a previously created Trace backup.
       </p>
-      <button type="button" style={buttonStyle} onClick={exportBackup}>Download Trace Backup</button>
+      <button type="button" disabled={isExporting} style={buttonStyle} onClick={exportBackup}>{isExporting ? "Preparing Trace Backupâ€¦" : "Download Trace Backup"}</button>
       <button type="button" style={{ ...buttonStyle, backgroundColor: "#475569" }} onClick={() => fileInputRef.current?.click()}>
         Select Backup to Restore
       </button>

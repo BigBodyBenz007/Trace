@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import BackupPage from "./BackupPage";
+import { handoffTraceBackup } from "./BackupPage";
 import {
   createTraceBackup,
   parseTraceBackupText,
@@ -33,15 +34,53 @@ test("explicit export downloads one self-contained backup file", async () => {
   URL.createObjectURL = jest.fn(() => "blob:trace-backup");
   URL.revokeObjectURL = jest.fn();
   const click = jest.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
-  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+  const onExportSuccess = jest.fn();
+  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} onExportSuccess={onExportSuccess} />);
   fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
-  expect(await screen.findByText("Trace backup downloaded. Your current data was not changed.")).toBeInTheDocument();
+  await waitFor(() => expect(onExportSuccess).toHaveBeenCalledTimes(1));
+  expect(screen.queryByText(/backup download started/i)).not.toBeInTheDocument();
   expect(createTraceBackup).toHaveBeenCalledTimes(1);
   expect(click).toHaveBeenCalledTimes(1);
-  expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:trace-backup");
+  expect(URL.revokeObjectURL).not.toHaveBeenCalled();
   click.mockRestore();
   URL.createObjectURL = originalCreateObjectURL;
   URL.revokeObjectURL = originalRevokeObjectURL;
+});
+
+test("fallback download uses a Blob URL and revokes it only through delayed cleanup", async () => {
+  const cleanup = jest.fn();
+  const urlApi = { createObjectURL: jest.fn(() => "blob:safe"), revokeObjectURL: jest.fn() };
+  const link = { click: jest.fn(), remove: jest.fn() };
+  const documentObject = { createElement: () => link, body: { appendChild: jest.fn() } };
+  await handoffTraceBackup({ createdAt: "2026-08-12T00:00:00.000Z", data: { photos: [] } }, { navigatorObject: {}, urlApi, documentObject, scheduleCleanup: cleanup });
+  expect(urlApi.createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
+  expect(link.href).toBe("blob:safe");
+  expect(urlApi.revokeObjectURL).not.toHaveBeenCalled();
+  cleanup.mock.calls[0][0]();
+  expect(urlApi.revokeObjectURL).toHaveBeenCalledWith("blob:safe");
+});
+
+test("uses file sharing when supported without creating a Blob URL", async () => {
+  const share = jest.fn(() => Promise.resolve());
+  const urlApi = { createObjectURL: jest.fn(), revokeObjectURL: jest.fn() };
+  const result = await handoffTraceBackup({ createdAt: "2026-08-12T00:00:00.000Z", data: { photos: [{ id: "photo", blob: { base64: "abc" } }] } }, { navigatorObject: { userAgent: "iPhone", canShare: () => true, share }, urlApi });
+  expect(result.method).toBe("share");
+  expect(share).toHaveBeenCalledWith(expect.objectContaining({ files: [expect.any(Blob)] }));
+  expect(urlApi.createObjectURL).not.toHaveBeenCalled();
+});
+
+test("prevents concurrent exports and recovers controls after failure", async () => {
+  let rejectBackup;
+  createTraceBackup.mockImplementation(() => new Promise((resolve, reject) => { rejectBackup = reject; }));
+  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+  const button = screen.getByRole("button", { name: "Download Trace Backup" });
+  fireEvent.click(button);
+  fireEvent.click(button);
+  expect(createTraceBackup).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("button", { name: /Preparing Trace Backup/ })).toBeDisabled();
+  rejectBackup(new Error("device unavailable"));
+  expect(await screen.findByRole("alert")).toHaveTextContent("device unavailable");
+  expect(screen.getByRole("button", { name: "Download Trace Backup" })).toBeEnabled();
 });
 
 test("validates a selected backup and previews counts without restoring", async () => {

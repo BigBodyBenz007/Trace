@@ -15,6 +15,7 @@ import {
 } from "../services/timelineFocus";
 import LifeCurrent from "./LifeCurrent";
 import { LIFE_CURRENT_TRAIL_TUNING } from "./LifeCurrent";
+import useBackgroundScrollLock from "../hooks/useBackgroundScrollLock";
 
 const CATEGORY_FILTER_OPTIONS = [
   "All",
@@ -136,6 +137,7 @@ function HomePage({
   const hasScrolledToNewest = useRef(false);
   const memoryCardRefs = useRef(new Map());
   const detailPanelRef = useRef(null);
+  useBackgroundScrollLock(Boolean(detailMemoryId || selectedImage));
   const currentDay = useMemo(() => {
     const day = new Date();
     day.setHours(0, 0, 0, 0);
@@ -1218,6 +1220,9 @@ function HomePage({
             alignItems: "center",
             padding: "20px",
             zIndex: 9998,
+            overflowY: "auto",
+            overscrollBehavior: "contain",
+            WebkitOverflowScrolling: "touch",
           }}
         >
           <div
@@ -1558,6 +1563,9 @@ function HomePage({
             alignItems: "center",
             zIndex: 9999,
             cursor: "pointer",
+            overflow: "auto",
+            overscrollBehavior: "contain",
+            WebkitOverflowScrolling: "touch",
           }}
         >
           <img
