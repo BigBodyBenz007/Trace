@@ -9,6 +9,7 @@ import {
   LIFE_CURRENT_WINDOW_TUNING,
 } from "../services/lifeCurrentWindow";
 import { createMemoryTrophyCandidate } from "../services/trophyCase";
+import { formatDateOnly, parseDateOnlyLocal } from "../services/dateOnly";
 import {
   calculateTimelineFocusScale,
   TIMELINE_FOCUS_TUNING,
@@ -33,8 +34,7 @@ function photoSource(photo) {
 function getTimelineDate(memory, currentDay) {
   if (!memory.date) return currentDay;
 
-  const date = new Date(`${memory.date}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? currentDay : date;
+  return parseDateOnlyLocal(memory.date) || currentDay;
 }
 
 function groupMemoriesByDate(memories, currentDay) {
@@ -1005,11 +1005,7 @@ function HomePage({
                       marginBottom: "8px",
                     }}
                   >
-                    {new Date(memory.date).toLocaleDateString("en-US", {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {formatDateOnly(memory.date)}
                   </p>
                 )}
 
@@ -1247,11 +1243,7 @@ function HomePage({
                 <h2 style={{ margin: 0 }}>{detailMemory.title}</h2>
                 {detailMemory.date && (
                   <p style={{ color: "#9ca3af", marginBottom: 0 }}>
-                    {new Date(detailMemory.date).toLocaleDateString("en-US", {
-                      month: "long",
-                      day: "numeric",
-                      year: "numeric",
-                    })}
+                    {formatDateOnly(detailMemory.date)}
                   </p>
                 )}
               </div>

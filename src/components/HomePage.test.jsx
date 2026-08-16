@@ -53,6 +53,15 @@ const memories = [
   { id: "memory-b", title: "Same Day", description: "Second", date: "2026-05-19", categories: [], images: [], favorite: false },
 ];
 
+test.each([
+  ["2007-04-17", "April 17, 2007"],
+  ["2000-01-01", "January 1, 2000"],
+  ["1999-12-31", "December 31, 1999"],
+])("renders date-only Memory %s on its entered calendar day", (date, label) => {
+  render(<HomePage {...baseProps} memories={[{ ...memories[0], date }]} trophyEntries={[]} />);
+  expect(screen.getByText(label)).toBeInTheDocument();
+});
+
 beforeEach(() => jest.clearAllMocks());
 
 test("opens the dedicated Trophy Case from the Timeline", () => {
