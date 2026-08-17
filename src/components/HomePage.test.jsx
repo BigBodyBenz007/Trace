@@ -53,6 +53,88 @@ const memories = [
   { id: "memory-b", title: "Same Day", description: "Second", date: "2026-05-19", categories: [], images: [], favorite: false },
 ];
 
+function mockPageScroll(x, y) {
+  const originalScrollTo = window.scrollTo;
+  const originalScrollX = Object.getOwnPropertyDescriptor(window, "scrollX");
+  const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
+  Object.defineProperty(window, "scrollX", { configurable: true, value: x });
+  Object.defineProperty(window, "scrollY", { configurable: true, value: y });
+  window.scrollTo = jest.fn();
+  return {
+    scrollTo: window.scrollTo,
+    restore() {
+      window.scrollTo = originalScrollTo;
+      if (originalScrollX) Object.defineProperty(window, "scrollX", originalScrollX);
+      else delete window.scrollX;
+      if (originalScrollY) Object.defineProperty(window, "scrollY", originalScrollY);
+      else delete window.scrollY;
+    },
+  };
+}
+
+function memoryWithOnePhoto() {
+  return {
+    ...memories[0],
+    title: "Scrollable memory",
+    description: "A long Memory detail can keep scrolling inside its overlay.",
+    images: [{ id: "detail-photo", url: "blob:detail-photo" }],
+  };
+}
+
+test("Memory detail locks document scrolling while its panel remains scrollable", () => {
+  const pageScroll = mockPageScroll(18, 240);
+  const memory = memoryWithOnePhoto();
+  render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} />);
+
+  fireEvent.click(screen.getByTestId("timeline-memory-" + memory.id));
+
+  expect(document.body).toHaveStyle({
+    left: "-18px",
+    overflow: "hidden",
+    position: "fixed",
+    top: "-240px",
+  });
+  expect(document.documentElement).toHaveStyle({ overflow: "hidden" });
+  const detailPanel = screen.getByTestId("memory-detail-panel");
+  expect(detailPanel.style.overflowY).toBe("auto");
+  expect(detailPanel.style.overscrollBehavior).toBe("contain");
+  detailPanel.scrollTop = 120;
+  fireEvent.scroll(detailPanel);
+  expect(detailPanel.scrollTop).toBe(120);
+  expect(document.body).toHaveStyle({ position: "fixed", top: "-240px" });
+
+  fireEvent.click(screen.getByRole("button", { name: "Close memory details" }));
+  expect(document.body.style.position).toBe("");
+  expect(document.documentElement.style.overflow).toBe("");
+  expect(pageScroll.scrollTo).toHaveBeenCalledWith(18, 240);
+  pageScroll.restore();
+});
+
+test("photo viewer keeps the document locked until the nested detail closes", () => {
+  const pageScroll = mockPageScroll(0, 180);
+  const memory = memoryWithOnePhoto();
+  render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} />);
+
+  fireEvent.click(screen.getByTestId("timeline-memory-" + memory.id));
+  const detail = screen.getByRole("dialog", { name: "Memory details for Scrollable memory" });
+  fireEvent.click(within(detail).getAllByAltText("Memory 1")[0]);
+  const photoViewer = screen.getByRole("dialog", { name: "Memory photo viewer" });
+  expect(photoViewer.style.overflowY).toBe("auto");
+  expect(photoViewer.style.overscrollBehavior).toBe("contain");
+  expect(document.body).toHaveStyle({ position: "fixed", top: "-180px" });
+
+  fireEvent.click(photoViewer);
+  expect(screen.getByRole("dialog", { name: "Memory details for Scrollable memory" }))
+    .toBeInTheDocument();
+  expect(document.body).toHaveStyle({ position: "fixed", top: "-180px" });
+  expect(pageScroll.scrollTo).not.toHaveBeenCalled();
+
+  fireEvent.click(screen.getByRole("button", { name: "Close memory details" }));
+  expect(document.body.style.position).toBe("");
+  expect(pageScroll.scrollTo).toHaveBeenCalledWith(0, 180);
+  pageScroll.restore();
+});
+
 test.each([
   ["2007-04-17", "April 17, 2007"],
   ["2000-01-01", "January 1, 2000"],
@@ -586,6 +668,44 @@ test("closing Memory Detail restores the originating horizontal Timeline positio
   }));
   expect(viewport.scrollLeft).toBe(412);
   window.requestAnimationFrame = originalRequestAnimationFrame;
+});
+
+test("mobile restores the exact Timeline viewport position after nested photo viewing", () => {
+  const originalInnerWidth = window.innerWidth;
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const callbacks = [];
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+  window.requestAnimationFrame = jest.fn((callback) => {
+    callbacks.push(callback);
+    return callbacks.length;
+  });
+  const memory = memoryWithOnePhoto();
+  render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} />);
+  act(() => {
+    while (callbacks.length) callbacks.shift()();
+  });
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  viewport.scrollLeft = 287;
+  viewport.scrollTop = 19;
+
+  fireEvent.click(screen.getByTestId("timeline-memory-" + memory.id));
+  viewport.scrollLeft = 0;
+  viewport.scrollTop = 0;
+  const detail = screen.getByRole("dialog", { name: "Memory details for Scrollable memory" });
+  fireEvent.click(within(detail).getAllByAltText("Memory 1")[0]);
+  fireEvent.click(screen.getByRole("dialog", { name: "Memory photo viewer" }));
+  expect(viewport.scrollLeft).toBe(0);
+
+  fireEvent.click(screen.getByRole("button", { name: "Close memory details" }));
+  expect(viewport.scrollLeft).toBe(0);
+  act(() => {
+    while (callbacks.length) callbacks.shift()();
+  });
+  expect(viewport.scrollLeft).toBe(287);
+  expect(viewport.scrollTop).toBe(19);
+
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: originalInnerWidth });
 });
 
 function memoryWithPhotos(count) {

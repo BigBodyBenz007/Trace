@@ -31,6 +31,44 @@ function photoSource(photo) {
   return typeof photo === "string" ? photo : photo?.url;
 }
 
+function useDocumentScrollLock(locked, scrollOrigin = null) {
+  useEffect(() => {
+    if (!locked) return undefined;
+
+    const body = document.body;
+    const root = document.documentElement;
+    const scrollX = scrollOrigin?.documentScrollX ?? window.scrollX ?? window.pageXOffset ?? 0;
+    const scrollY = scrollOrigin?.documentScrollY ?? window.scrollY ?? window.pageYOffset ?? 0;
+    const originalBodyStyles = {
+      left: body.style.left,
+      overflow: body.style.overflow,
+      position: body.style.position,
+      right: body.style.right,
+      top: body.style.top,
+      width: body.style.width,
+    };
+    const originalRootStyles = {
+      overflow: root.style.overflow,
+      overscrollBehavior: root.style.overscrollBehavior,
+    };
+
+    body.style.left = `-${scrollX}px`;
+    body.style.overflow = "hidden";
+    body.style.position = "fixed";
+    body.style.right = "0";
+    body.style.top = `-${scrollY}px`;
+    body.style.width = "100%";
+    root.style.overflow = "hidden";
+    root.style.overscrollBehavior = "none";
+
+    return () => {
+      Object.assign(body.style, originalBodyStyles);
+      Object.assign(root.style, originalRootStyles);
+      if (scrollX !== 0 || scrollY !== 0) window.scrollTo(scrollX, scrollY);
+    };
+  }, [locked, scrollOrigin]);
+}
+
 function getTimelineDate(memory, currentDay) {
   if (!memory.date) return currentDay;
 
@@ -130,7 +168,7 @@ function HomePage({
   const timelineRef = useRef(null);
   const timelineFocusFrameRef = useRef(null);
   const visibleTimelineCardsRef = useRef(new Set());
-  const detailOriginScrollLeftRef = useRef(null);
+  const detailOriginScrollRef = useRef(null);
   const filterOriginRef = useRef(null);
   const restoreFilterOriginRef = useRef(false);
   const filteredCameraDateRef = useRef(null);
@@ -220,6 +258,7 @@ function HomePage({
     detailMemoryId === null
       ? null
       : memories.find((memory) => memory.id === detailMemoryId);
+  useDocumentScrollLock(Boolean(detailMemory || selectedImage), detailOriginScrollRef.current);
   const trophySourceKeys = new Set(trophyEntries.map(({ sourceKey }) => sourceKey));
 
   function isMemoryInTrophyCase(memory) {
@@ -310,7 +349,13 @@ function HomePage({
   }
 
   function openMemoryDetail(memory) {
-    detailOriginScrollLeftRef.current = timelineRef.current?.scrollLeft ?? null;
+    const viewport = timelineRef.current;
+    detailOriginScrollRef.current = {
+      documentScrollX: window.scrollX || window.pageXOffset || 0,
+      documentScrollY: window.scrollY || window.pageYOffset || 0,
+      timelineScrollLeft: viewport?.scrollLeft ?? 0,
+      timelineScrollTop: viewport?.scrollTop ?? 0,
+    };
     selectMemory(memory);
     setActiveDetailPhotoIndex(0);
     setDetailMemoryId(memory.id);
@@ -318,10 +363,18 @@ function HomePage({
 
   function closeMemoryDetail() {
     setDetailMemoryId(null);
-    if (!trophySourceTarget && detailOriginScrollLeftRef.current !== null) {
-      const scrollLeft = detailOriginScrollLeftRef.current;
+    if (!trophySourceTarget && detailOriginScrollRef.current) {
+      const origin = detailOriginScrollRef.current;
       window.requestAnimationFrame(() => {
-        if (timelineRef.current) timelineRef.current.scrollLeft = scrollLeft;
+        window.requestAnimationFrame(() => {
+          if (detailOriginScrollRef.current !== origin) return;
+          const viewport = timelineRef.current;
+          if (viewport) {
+            viewport.scrollLeft = origin.timelineScrollLeft;
+            viewport.scrollTop = origin.timelineScrollTop;
+          }
+          detailOriginScrollRef.current = null;
+        });
       });
     }
     if (trophySourceTarget && onReturnToTrophyCase) onReturnToTrophyCase();
@@ -1220,6 +1273,7 @@ function HomePage({
         >
           <div
             ref={detailPanelRef}
+            data-testid="memory-detail-panel"
             onClick={(event) => event.stopPropagation()}
             style={{
               background: "#1f2937",
@@ -1228,6 +1282,7 @@ function HomePage({
               maxHeight: "90vh",
               maxWidth: "900px",
               overflowY: "auto",
+              overscrollBehavior: "contain",
               padding: "28px",
               width: "100%",
               overflowWrap: "anywhere",
@@ -1542,6 +1597,9 @@ function HomePage({
 
       {selectedImage && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Memory photo viewer"
           onClick={() => setSelectedImage(null)}
           style={{
             position: "fixed",
@@ -1552,6 +1610,9 @@ function HomePage({
             alignItems: "center",
             zIndex: 9999,
             cursor: "pointer",
+            overflowY: "auto",
+            overscrollBehavior: "contain",
+            padding: "20px",
           }}
         >
           <img
