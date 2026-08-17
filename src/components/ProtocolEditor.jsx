@@ -40,9 +40,11 @@ function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, but
   const addItemRef = useRef(null);
   const itemSectionRef = useRef(null);
   const itemRefs = useRef(new Map());
+  const everyDaySnapshotsRef = useRef(new Map());
 
   useEffect(() => {
     if (!pickerOpen) return undefined;
+    pickerRef.current?.querySelector('input[type="search"]')?.focus();
     const frame = window.requestAnimationFrame(() => {
       pickerRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
     });
@@ -76,6 +78,7 @@ function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, but
   }
 
   function removeItem(id) {
+    everyDaySnapshotsRef.current.delete(id);
     const index = items.findIndex((item) => item.id === id);
     const remaining = items.filter((item) => item.id !== id);
     const fallback = remaining[Math.min(index, remaining.length - 1)]?.id;
@@ -87,19 +90,28 @@ function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, but
   }
 
   function toggleEveryDay(id) {
-    updateItem(id, (current) => {
-      const isEveryDay = current.schedule.weekdays.length === 7;
-      return {
-        ...current,
-        schedule: {
-          type: "weekly-days",
-          weekdays: isEveryDay ? [] : [1, 2, 3, 4, 5, 6, 7],
-        },
-      };
-    });
+    const current = items.find((item) => item.id === id);
+    if (!current) return;
+    const isEveryDay = current.schedule.weekdays.length === 7;
+    const snapshot = everyDaySnapshotsRef.current.get(id);
+    if (isEveryDay && !snapshot) return;
+
+    const weekdays = isEveryDay
+      ? [...snapshot]
+      : [1, 2, 3, 4, 5, 6, 7];
+    if (isEveryDay) {
+      everyDaySnapshotsRef.current.delete(id);
+    } else {
+      everyDaySnapshotsRef.current.set(id, [...current.schedule.weekdays]);
+    }
+    updateItem(id, (item) => ({
+      ...item,
+      schedule: { type: "weekly-days", weekdays },
+    }));
   }
 
   function toggleWeekday(id, value, checked) {
+    everyDaySnapshotsRef.current.delete(id);
     updateItem(id, (current) => ({
       ...current,
       schedule: {

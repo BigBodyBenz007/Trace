@@ -37,8 +37,10 @@ test("renders a user-curated page heading, navigation, and existing empty state"
   expect(screen.getAllByRole("heading", { name: "Trophy Case" })).toHaveLength(1);
   expect(screen.getByText(/personal and user-curated/i)).toBeInTheDocument();
   expect(screen.getByText("No trophies yet. Achievements you choose to celebrate will appear here.")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
-  expect(onBack).toHaveBeenCalledTimes(1);
+  const buttons = screen.getAllByRole("button", { name: "Back to Timeline" });
+  expect(buttons).toHaveLength(2);
+  fireEvent.click(buttons[0]); fireEvent.click(buttons[1]);
+  expect(onBack).toHaveBeenCalledTimes(2);
 });
 
 test("shows mixed sources and delegates membership removal", () => {

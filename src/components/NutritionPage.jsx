@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import FoodSearch from "./FoodSearch";
+import ConfirmationMessage from "./ConfirmationMessage";
 import {
   NUTRIENT_KEYS,
   scaleNutrition,
@@ -186,6 +187,8 @@ function NutritionPage({
   const [saveAsReusableFood, setSaveAsReusableFood] = useState(true);
   const [servingDefinitionError, setServingDefinitionError] = useState("");
   const [entryStatusMessage, setEntryStatusMessage] = useState("");
+  const [confirmationMessage, setConfirmationMessage] = useState("");
+  const confirmationTimerRef = useRef(null);
   const nutritionPageTopRef = useRef(null);
   const todaySectionRef = useRef(null);
   const entryFormRef = useRef(null);
@@ -196,6 +199,14 @@ function NutritionPage({
     carbohydrates: String(nutritionGoals.carbohydrates),
     fat: String(nutritionGoals.fat),
   });
+
+  useEffect(() => () => clearTimeout(confirmationTimerRef.current), []);
+
+  function showConfirmation(message) {
+    setConfirmationMessage(message);
+    clearTimeout(confirmationTimerRef.current);
+    confirmationTimerRef.current = setTimeout(() => setConfirmationMessage(""), 3200);
+  }
 
   useEffect(() => {
     setGoalValues({
@@ -347,6 +358,7 @@ function NutritionPage({
     } else {
       setEntryStatusMessage("");
     }
+    showConfirmation("Meal traced");
 
     resetForm();
     setFoodSearchResetKey((currentKey) => currentKey + 1);
@@ -487,12 +499,12 @@ function NutritionPage({
   function saveGoals(event) {
     event.preventDefault();
 
-    saveNutritionGoals({
+    if (saveNutritionGoals({
       calories: toNutritionNumber(goalValues.calories),
       protein: toNutritionNumber(goalValues.protein),
       carbohydrates: toNutritionNumber(goalValues.carbohydrates),
       fat: toNutritionNumber(goalValues.fat),
-    });
+    })) showConfirmation("Goals traced");
   }
 
   const formInputStyle = {
@@ -508,6 +520,7 @@ function NutritionPage({
   return (
     <div ref={nutritionPageTopRef} data-testid="nutrition-page" style={containerStyle}>
       <h1 style={{ marginBottom: "10px" }}>Nutrition</h1>
+      <ConfirmationMessage message={confirmationMessage} />
 
       <p style={{ color: "#bbb", marginBottom: "30px" }}>
         Track your food and nutrition here.

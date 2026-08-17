@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import App from "./App";
+import App, { localCalendarDateKey } from "./App";
 import { createCompoundDefinition } from "./services/compoundCatalog";
 import { createExerciseDefinition } from "./services/exerciseCatalog";
 import { deletePhotos, openPhotoDatabase, putPhotos } from "./storage/photoStorage";
@@ -161,7 +161,7 @@ test("Timeline opens Backup & Restore and returns without changing data", () => 
   fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
   expect(screen.getByRole("heading", { name: "Backup & Restore" })).toBeInTheDocument();
   expectDestinationScrolledToTop();
-  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("nutritionGoals"))).toEqual({ calories: 2100 });
 });
@@ -238,7 +238,7 @@ test("Timeline opens the empty Trophy Case and returns at the top without replay
   expectDestinationScrolledToTop();
 
   window.scrollTo.mockClear();
-  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
   expectDestinationScrolledToTop();
 });
@@ -269,6 +269,76 @@ test("Timeline to Add Memory resets a previously scrolled position", () => {
     screen.getByRole("heading", { name: "New Memory" })
   ).toBeInTheDocument();
   expectDestinationScrolledToTop();
+});
+
+test("new Memory defaults to today's local calendar date and can be changed", () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+  const dateInput = document.querySelector('input[type="date"]');
+
+  expect(dateInput).toHaveValue(localCalendarDateKey());
+  fireEvent.change(dateInput, { target: { value: "2007-04-17" } });
+  expect(dateInput).toHaveValue("2007-04-17");
+});
+
+test("editing a Memory preserves its saved date exactly", async () => {
+  localStorage.setItem("memories", JSON.stringify([{
+    id: "dated-memory",
+    title: "Original date",
+    description: "Stored date must remain unchanged.",
+    date: "2007-04-17",
+    categories: [],
+    images: [],
+    favorite: false,
+  }]));
+  render(<App />);
+  fireEvent.click(await screen.findByRole("button", { name: "Open memory Original date" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+
+  expect(document.querySelector('input[type="date"]')).toHaveValue("2007-04-17");
+});
+
+test("new Memory date generation uses local calendar fields instead of UTC serialization", () => {
+  const localDateAtUtcBoundary = {
+    getFullYear: () => 2007,
+    getMonth: () => 3,
+    getDate: () => 17,
+    toISOString: () => "2007-04-18T04:30:00.000Z",
+  };
+
+  expect(localCalendarDateKey(localDateAtUtcBoundary)).toBe("2007-04-17");
+});
+
+test("reopening a new Memory after cancel restores today's default date", () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+  fireEvent.change(document.querySelector('input[type="date"]'), {
+    target: { value: "2007-04-17" },
+  });
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+
+  expect(document.querySelector('input[type="date"]')).toHaveValue(localCalendarDateKey());
+  confirm.mockRestore();
+});
+
+test("reopening a new Memory after save restores today's default date", async () => {
+  putPhotos.mockResolvedValue(undefined);
+  deletePhotos.mockResolvedValue(undefined);
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+  fireEvent.change(screen.getByPlaceholderText("Memory title..."), {
+    target: { value: "Saved date reset" },
+  });
+  fireEvent.change(document.querySelector('input[type="date"]'), {
+    target: { value: "2007-04-17" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Memory" }));
+  await screen.findByRole("heading", { name: "Trace" });
+  fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+
+  expect(document.querySelector('input[type="date"]')).toHaveValue(localCalendarDateKey());
 });
 
 test("Add Memory to Timeline lands at the top", () => {
@@ -313,7 +383,7 @@ test("new Memory trophies persist, trigger the shared ceremony, preserve snapsho
   expect(screen.queryByRole("dialog", { name: "Added to Trophy Case" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(JSON.parse(localStorage.getItem("memories"))).toHaveLength(1);
-  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   fireEvent.click(screen.getByRole("button", { name: "Open memory Graduation Day" }));
   fireEvent.click(screen.getByRole("button", { name: "Add to Trophy Case" }));
   const readdedTrophies = JSON.parse(localStorage.getItem("trophyCaseEntries"));
@@ -786,7 +856,7 @@ test("dedicated Trophy Case removal preserves workout history, derived PRs, and 
   expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual([]);
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual(storedWorkouts);
 
-  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   openWorkouts();
   expect(screen.getByText("No trophies yet. Achievements you choose to celebrate will appear here.")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /Dips.*1 performance/ }));

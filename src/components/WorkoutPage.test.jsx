@@ -93,6 +93,7 @@ test("successful save clears a restored draft and does not duplicate the workout
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
   expect(props.saveWorkoutEntry).toHaveBeenCalledTimes(1);
   expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Workout traced");
 });
 
 test("saving a restored draft records its original start and actual finish", () => {

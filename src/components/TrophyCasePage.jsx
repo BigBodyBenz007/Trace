@@ -78,6 +78,7 @@ function TrophyCasePage({
           />
         </div>
       )}
+      <button type="button" onClick={onBack} style={{ ...buttonStyle, backgroundColor: "#666", marginTop: "24px" }}>Back to Timeline</button>
     </div>
   );
 }

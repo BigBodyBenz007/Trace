@@ -47,6 +47,15 @@ test("creates partial histories, preserves units, accumulates, and renders only 
   expect(articles[1]).toHaveTextContent("260 lb");
 });
 
+test("provides Back to Timeline controls above and below Health content", () => {
+  const onBack = jest.fn();
+  render(<HealthPage onBack={onBack} entries={[]} settings={DEFAULT_APP_SETTINGS} saveEntry={jest.fn()} updateEntry={jest.fn()} deleteEntry={jest.fn()} buttonStyle={{}} inputStyle={{}} containerStyle={{}} />);
+  const buttons = screen.getAllByRole("button", { name: "Back to Timeline" });
+  expect(buttons).toHaveLength(2);
+  fireEvent.click(buttons[0]); fireEvent.click(buttons[1]);
+  expect(onBack).toHaveBeenCalledTimes(2);
+});
+
 test("supports body-fat-only and multiple-measurement entries", () => {
   render(<Harness settings={{ ...DEFAULT_APP_SETTINGS, units: { weight: "kg", height: "cm", circumference: "cm" } }} />);
   enter("Body Fat", "27.5");

@@ -120,11 +120,11 @@ test("renders Life Current from full source data independently of Memory filters
     .getAttribute("data-window-points"))).toBeGreaterThan(1);
 });
 
-test("unfiltered Timeline reserves one bounded quiet trailing-river extent", () => {
+test("unfiltered Timeline reserves card-centering space without inventing a trailing river", () => {
   render(<HomePage {...baseProps} memories={memories} trophyEntries={[]} />);
   const canvas = screen.getByTestId("timeline-content-canvas");
-  expect(screen.getByTestId("life-current-quiet-trail")).toBeInTheDocument();
-  expect(canvas).toHaveStyle({ paddingRight: "192px" });
+  expect(screen.queryByTestId("life-current-quiet-trail")).not.toBeInTheDocument();
+  expect(canvas).toHaveStyle({ paddingRight: `${Math.max(32, Math.ceil(window.innerWidth / 2 - 120)) + 160}px` });
   expect(canvas).toHaveAttribute("data-quiet-trail-extent", "160");
 
   fireEvent.change(screen.getByPlaceholderText("Search memories..."), {
@@ -271,10 +271,39 @@ test("initial newest navigation centers the final Memory before the quiet trail"
 
   expect(finalCard.getBoundingClientRect).toHaveBeenCalled();
   expect(viewport.scrollLeft).toBe(225);
-  expect(screen.getByTestId("life-current-quiet-trail")).toBeInTheDocument();
+  expect(screen.queryByTestId("life-current-quiet-trail")).not.toBeInTheDocument();
   unmount();
   window.requestAnimationFrame = originalRequestAnimationFrame;
   window.cancelAnimationFrame = originalCancelAnimationFrame;
+});
+
+test("Past positions the oldest Memory at the start and centers it when possible", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  const { unmount } = render(<HomePage {...baseProps} memories={memories} trophyEntries={[]} />);
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const firstCard = screen.getByTestId("timeline-memory-memory-a");
+  viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 390 }));
+  firstCard.getBoundingClientRect = jest.fn(() => ({ left: 20, width: 240 }));
+  act(() => { while (frames.length) frames.shift()(); });
+  fireEvent.click(screen.getByRole("button", { name: "Past" }));
+  act(() => { while (frames.length) frames.shift()(); });
+  expect(firstCard.getBoundingClientRect).toHaveBeenCalled();
+  expect(viewport.scrollLeft).toBe(0);
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+});
+
+test("reserves responsive edge space so desktop Past and Present cards can center", () => {
+  render(<HomePage {...baseProps} memories={memories} trophyEntries={[]} />);
+  const canvas = screen.getByTestId("timeline-content-canvas");
+  const edgeGutter = Math.max(32, Math.ceil(window.innerWidth / 2 - 120));
+  expect(canvas.style.paddingLeft).toBe(`${edgeGutter}px`);
+  expect(canvas.style.paddingRight).toBe(`${edgeGutter + 160}px`);
 });
 
 test("updates visual focus from viewport-center geometry without changing selection", () => {

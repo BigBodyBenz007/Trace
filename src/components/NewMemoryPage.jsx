@@ -21,6 +21,7 @@ function NewMemoryPage({
   setEditingIndex,
 }) {
   const formTopRef = useRef(null);
+  const initialDateRef = useRef(date);
 
   useEffect(() => {
     if (editingIndex === null) return undefined;
@@ -43,7 +44,7 @@ function NewMemoryPage({
     const hasUnsavedContent =
       title !== "" ||
       description !== "" ||
-      date !== "" ||
+      date !== initialDateRef.current ||
       categories.length > 0 ||
       images.length > 0;
 

@@ -104,6 +104,13 @@ function selectBanana() {
   fireEvent.click(screen.getByRole("button", { name: /Banana/i }));
 }
 
+test("confirms successful daily goal saves", () => {
+  const props = renderNutritionPage();
+  fireEvent.click(screen.getByRole("button", { name: "Save Goals" }));
+  expect(props.saveNutritionGoals).toHaveBeenCalledTimes(1);
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Goals traced");
+});
+
 function entryForm() {
   return within(
     screen
@@ -207,6 +214,7 @@ test("manual-only nutrition entry still saves without reusable metadata", () => 
   expect(props.saveNutritionEntry.mock.calls[0][0]).not.toHaveProperty(
     "foodReference"
   );
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Meal traced");
   expect(props.saveNutritionEntry.mock.calls[0][0]).not.toHaveProperty(
     "portion"
   );

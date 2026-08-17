@@ -21,7 +21,7 @@ export default function SettingsPage({ settings, updateSettings, onBack, buttonS
 
   return <main data-testid="settings-page" style={{ ...containerStyle, justifyContent: "flex-start" }}>
     <h1>Settings</h1>
-    <button type="button" onClick={onBack} style={{ ...buttonStyle, backgroundColor: "#4b5563", fontSize: "16px", minHeight: "44px", padding: "10px 14px" }}>Back to Trace</button>
+    <button type="button" onClick={onBack} style={{ ...buttonStyle, backgroundColor: "#4b5563", fontSize: "16px", minHeight: "44px", padding: "10px 14px" }}>Back to Timeline</button>
     <section aria-labelledby="units-heading" style={{ marginTop: "32px", maxWidth: "620px", textAlign: "left", width: "100%" }}>
       <h2 id="units-heading">Units</h2>
         {status && <p role="status" style={{ background: "#14532d", borderRadius: "10px", color: "white", padding: "10px 12px" }}>{status}</p>}
@@ -30,5 +30,6 @@ export default function SettingsPage({ settings, updateSettings, onBack, buttonS
         <div style={{ display: "grid", gap: "10px" }}>{option.values.map(([value, label]) => <label key={value} style={{ alignItems: "center", display: "flex", gap: "10px", minHeight: "44px" }}><input type="radio" name={option.key} value={value} checked={settings.units[option.key] === value} onChange={() => changeUnit(option.key, value)} />{label}</label>)}</div>
       </fieldset>)}</div>
     </section>
+    <button type="button" onClick={onBack} style={{ ...buttonStyle, backgroundColor: "#4b5563", fontSize: "16px", marginTop: "24px", minHeight: "44px", padding: "10px 14px" }}>Back to Timeline</button>
   </main>;
 }

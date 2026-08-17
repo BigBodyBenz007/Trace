@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import ExerciseSearch from "./ExerciseSearch";
+import ConfirmationMessage from "./ConfirmationMessage";
 import SavedExerciseEditor from "./SavedExerciseEditor";
 import ExerciseHistory from "./ExerciseHistory";
 import TrophyCase from "./TrophyCase";
@@ -163,6 +164,8 @@ function WorkoutPage({
   const [isDirty, setIsDirty] = useState(Boolean(restoredForm));
   const [formError, setFormError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [confirmationMessage, setConfirmationMessage] = useState("");
+  const confirmationTimerRef = useRef(null);
   const [photos, setPhotos] = useState([]);
   const [activeSearchExerciseId, setActiveSearchExerciseId] = useState(
     restoredDraftRef.current?.context?.activeSearchExerciseId || null
@@ -245,6 +248,13 @@ function WorkoutPage({
     dropRemovalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     dropRemovalTimersRef.current.clear();
   }, []);
+  useEffect(() => () => clearTimeout(confirmationTimerRef.current), []);
+
+  function showConfirmation(message) {
+    setConfirmationMessage(message);
+    clearTimeout(confirmationTimerRef.current);
+    confirmationTimerRef.current = setTimeout(() => setConfirmationMessage(""), 3200);
+  }
 
   const sortedEntries = [...workoutEntries].sort(
     (first, second) => new Date(second.occurredAt) - new Date(first.occurredAt)
@@ -634,6 +644,7 @@ function WorkoutPage({
       setStatusMessage(
         messages.length > 0 ? `Workout logged. ${messages.join(" ")}` : ""
       );
+      showConfirmation("Workout traced");
       if (savedEditingEntryId === null) {
         setActiveWorkoutEntryId(null);
         pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
@@ -740,6 +751,7 @@ function WorkoutPage({
   return (
     <div ref={pageTopRef} data-testid="workout-page" style={containerStyle}>
       <h1 style={{ marginBottom: "10px" }}>Workouts</h1>
+      <ConfirmationMessage message={confirmationMessage} />
       <p style={{ color: "#bbb", marginBottom: "24px" }}>
         Record completed strength workouts as entered. Trace does not provide
         training recommendations.

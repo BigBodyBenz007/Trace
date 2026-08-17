@@ -95,7 +95,7 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
     <main style={{ ...containerStyle, justifyContent: "flex-start" }}>
       <h1>Health</h1>
       <p style={{ color: "#bbb", marginTop: 0 }}>Record longitudinal health information without interpretation.</p>
-      <button type="button" onClick={onBack} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Trace</button>
+      <button type="button" onClick={onBack} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Timeline</button>
 
       <section ref={editorRef} aria-labelledby="body-measurements-heading" style={{ marginTop: "32px", maxWidth: "700px", scrollMarginTop: "16px", width: "100%" }}>
         <h2 id="body-measurements-heading">Body Measurements</h2>
@@ -143,6 +143,7 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
           </article>
         ))}</div>}
       </section>
+      <button type="button" onClick={onBack} style={{ ...smallButtonStyle, backgroundColor: "#4b5563", marginTop: "24px" }}>Back to Timeline</button>
     </main>
   );
 }

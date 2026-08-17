@@ -12,6 +12,7 @@ test("renders compact global unit controls and saves each preference", () => {
   expect(screen.getByLabelText("Inches (in)")).toBeChecked();
   fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
   expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ units: expect.objectContaining({ weight: "kg" }) }));
+  expect(screen.getAllByRole("button", { name: "Back to Timeline" })).toHaveLength(2);
 });
 
 test("shows transient confirmation only after Settings save succeeds", () => {

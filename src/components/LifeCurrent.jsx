@@ -4,6 +4,7 @@ const VIEWBOX_WIDTH = 1000;
 const VIEWBOX_HEIGHT = 56;
 const CENTER_Y = VIEWBOX_HEIGHT / 2;
 const MEANDER = 8;
+const MINIMUM_MEANDER = MEANDER / 2;
 const EDGE_INSET = 12;
 
 export const LIFE_CURRENT_TRAIL_TUNING = Object.freeze({
@@ -12,22 +13,23 @@ export const LIFE_CURRENT_TRAIL_TUNING = Object.freeze({
   opacity: 0.24,
 });
 
-function pointCoordinates(points, extendFinalPointToEdge = false) {
+function activityMeander(point) {
+  const intensity = Math.max(0, Math.min(1, Number(point?.intensity) || 0));
+  return MINIMUM_MEANDER + intensity * (MEANDER - MINIMUM_MEANDER);
+}
+
+export function getLifeCurrentPointCoordinates(points, extendFinalPointToEdge = false) {
   return points.map((point, index) => ({
     x:
       EDGE_INSET +
       point.normalizedX *
         (VIEWBOX_WIDTH - EDGE_INSET - (extendFinalPointToEdge ? 0 : EDGE_INSET)),
-    y:
-      CENTER_Y +
-      (index === 0 || index === points.length - 1
-        ? 0
-        : (index % 2 === 0 ? -1 : 1) * MEANDER),
+    y: CENTER_Y + (index % 2 === 0 ? -1 : 1) * activityMeander(point),
   }));
 }
 
 function currentPath(points, extendFinalPointToEdge = false) {
-  const coordinates = pointCoordinates(points, extendFinalPointToEdge);
+  const coordinates = getLifeCurrentPointCoordinates(points, extendFinalPointToEdge);
   if (coordinates.length === 0) return "";
   if (coordinates.length === 1) {
     const [{ x, y }] = coordinates;
@@ -53,7 +55,7 @@ function LifeCurrent({ layout, showQuietTrail = false }) {
       aria-hidden="true"
       data-testid="life-current"
       data-last-activity-date={points[points.length - 1]?.dateKey || ""}
-      data-quiet-trail={showQuietTrail ? "true" : "false"}
+      data-quiet-trail="false"
       data-visible-end-x={showQuietTrail ? VIEWBOX_WIDTH : VIEWBOX_WIDTH - EDGE_INSET}
       preserveAspectRatio="none"
       viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`}
@@ -84,38 +86,8 @@ function LifeCurrent({ layout, showQuietTrail = false }) {
         vectorEffect="non-scaling-stroke"
       />
     </svg>
-    {showQuietTrail && (
-      <svg
-          aria-hidden="true"
-          data-testid="life-current-quiet-trail"
-          preserveAspectRatio="none"
-          data-start-x="0"
-          data-end-x={LIFE_CURRENT_TRAIL_TUNING.extentPixels}
-          viewBox={`0 0 ${LIFE_CURRENT_TRAIL_TUNING.extentPixels} ${VIEWBOX_HEIGHT}`}
-          style={{
-            height: `${VIEWBOX_HEIGHT}px`,
-            overflow: "visible",
-            pointerEvents: "none",
-            position: "absolute",
-            right: "32px",
-            top: "90px",
-            width: `${LIFE_CURRENT_TRAIL_TUNING.extentPixels}px`,
-            zIndex: 0,
-          }}
-        >
-          <path
-            d="M 0 28 C 42 28, 70 24, 104 27 C 126 29, 144 28, 160 28"
-            data-testid="life-current-quiet-trail-path"
-            fill="none"
-            stroke="#60a5fa"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeOpacity={LIFE_CURRENT_TRAIL_TUNING.opacity}
-            strokeWidth={LIFE_CURRENT_TRAIL_TUNING.strokeWidth}
-            vectorEffect="non-scaling-stroke"
-          />
-      </svg>
-    )}
+    {/* The Timeline keeps its end gutter for card centering, but activity must
+        end at the last authoritative point rather than continue as empty waves. */}
     </>
   );
 }

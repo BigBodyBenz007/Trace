@@ -10,6 +10,7 @@ import WorkoutPage from "./components/WorkoutPage";
 import TrophyPlacementCeremony from "./components/TrophyPlacementCeremony";
 import TrophyCasePage from "./components/TrophyCasePage";
 import BackupPage from "./components/BackupPage";
+import ConfirmationMessage from "./components/ConfirmationMessage";
 import { detectMemoryAchievement } from "./services/memoryAchievement";
 import {
   addExerciseDefinition,
@@ -112,6 +113,12 @@ function storageMessage(action) {
   return `Trace couldn't ${action} because browser storage is unavailable or full. Your existing data has not been intentionally removed.`;
 }
 
+export function localCalendarDateKey(value = new Date()) {
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(
+    value.getDate()
+  ).padStart(2, "0")}`;
+}
+
 function App() {
   const [page, setPage] = useState("home");
 
@@ -142,11 +149,19 @@ function App() {
     DEFAULT_NUTRITION_GOALS
   );
   const [storageError, setStorageError] = useState("");
+  const [confirmationMessage, setConfirmationMessage] = useState("");
+  const confirmationTimerRef = useRef(null);
   const [trophySourceNavigation, setTrophySourceNavigation] = useState(null);
   const photoDatabaseRef = useRef(null);
   const initializationStartedRef = useRef(false);
   const activeObjectUrlsRef = useRef(new Set());
   const skipNextPageTopScrollRef = useRef(false);
+
+  function showConfirmation(message) {
+    setConfirmationMessage(message);
+    clearTimeout(confirmationTimerRef.current);
+    confirmationTimerRef.current = setTimeout(() => setConfirmationMessage(""), 3200);
+  }
 
   useEffect(() => {
     if (initializationStartedRef.current) return;
@@ -536,6 +551,7 @@ function App() {
       }
 
       setMemories(updatedMemories);
+      showConfirmation("Memory traced");
       setMemoryCount(updatedMemories.length);
       setEditingId(null);
       setStorageError("");
@@ -647,6 +663,12 @@ function App() {
     setPage("new");
   }
 
+  function openNewMemory() {
+    setEditingId(null);
+    setDate(localCalendarDateKey());
+    setPage("new");
+  }
+
   function saveNutritionEntry(entry) {
     const newEntry = {
       ...entry,
@@ -674,6 +696,7 @@ function App() {
     try {
       writeHealthMeasurementEntries(localStorage, updatedEntries);
       setHealthMeasurementEntries(updatedEntries);
+      showConfirmation("Measurement traced");
       setStorageError("");
       return result.value;
     } catch (error) {
@@ -922,6 +945,7 @@ function App() {
     try {
       writeProtocols(localStorage, updatedProtocols);
       setProtocols(updatedProtocols);
+      showConfirmation("Protocol traced");
       setStorageError("");
       return { status: "saved", protocol };
     } catch (error) {
@@ -943,6 +967,7 @@ function App() {
     try {
       writeProtocols(localStorage, updatedProtocols);
       setProtocols(updatedProtocols);
+      showConfirmation("Protocol updated");
       setStorageError("");
       return { status: "saved", protocol };
     } catch (error) {
@@ -1228,6 +1253,7 @@ function App() {
         fontFamily: "Arial",
       }}
     >
+      <ConfirmationMessage message={confirmationMessage} />
       {storageError && (
         <div
           role="alert"
@@ -1251,7 +1277,7 @@ function App() {
           memories={memories}
           setMemories={setMemories}
           toggleFavorite={toggleFavorite}
-          onAddMemory={() => setPage("new")}
+          onAddMemory={openNewMemory}
           onOpenNutrition={() => setPage("nutrition")}
           onOpenHealth={() => setPage("health")}
           onOpenSettings={() => setPage("settings")}

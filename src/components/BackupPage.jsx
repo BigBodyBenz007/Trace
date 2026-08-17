@@ -90,6 +90,7 @@ export default function BackupPage({
       <p style={{ color: "#bbb", maxWidth: "700px" }}>
         Download a private copy of your Trace data, including photos, or fully restore a previously created Trace backup.
       </p>
+      <button type="button" style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>Back to Timeline</button>
       <button type="button" style={buttonStyle} onClick={exportBackup}>Download Trace Backup</button>
       <button type="button" style={{ ...buttonStyle, backgroundColor: "#475569" }} onClick={() => fileInputRef.current?.click()}>
         Select Backup to Restore

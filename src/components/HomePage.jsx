@@ -121,6 +121,7 @@ function HomePage({
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [favoriteFilter, setFavoriteFilter] = useState("all");
+  const [timelinePosition, setTimelinePosition] = useState("present");
   const [selectedMemory, setSelectedMemory] = useState(null);
   const [detailMemoryId, setDetailMemoryId] = useState(null);
   const [activeDetailPhotoIndex, setActiveDetailPhotoIndex] = useState(0);
@@ -133,7 +134,7 @@ function HomePage({
   const filterOriginRef = useRef(null);
   const restoreFilterOriginRef = useRef(false);
   const filteredCameraDateRef = useRef(null);
-  const hasScrolledToNewest = useRef(false);
+  const timelinePositionRequestRef = useRef(true);
   const memoryCardRefs = useRef(new Map());
   const detailPanelRef = useRef(null);
   const currentDay = useMemo(() => {
@@ -141,6 +142,7 @@ function HomePage({
     day.setHours(0, 0, 0, 0);
     return day;
   }, []);
+  const timelineEdgeGutter = Math.max(32, Math.ceil(window.innerWidth / 2 - 120));
   const lifeCurrent = useMemo(
     () =>
       deriveLifeCurrent({
@@ -490,34 +492,29 @@ function HomePage({
   }, [memories, trophySourceTarget]);
 
   useEffect(() => {
-    if (
-      hasScrolledToNewest.current ||
-      memories.length === 0 ||
-      !timelineRef.current
-    ) {
-      return;
-    }
-
-    const viewport = timelineRef.current;
-    viewport.scrollLeft = Math.max(
-      0,
-      viewport.scrollWidth - viewport.clientWidth
-    );
-    hasScrolledToNewest.current = true;
-    const newestMemory = sortedMemories[sortedMemories.length - 1];
+    if (!timelinePositionRequestRef.current || isMemoryFilterActive || sortedMemories.length === 0) return undefined;
+    timelinePositionRequestRef.current = false;
+    const targetMemory = timelinePosition === "past"
+      ? sortedMemories[0]
+      : sortedMemories[sortedMemories.length - 1];
     const frame = window.requestAnimationFrame(() => {
-      const newestCard = newestMemory
-        ? memoryCardRefs.current.get(getMemorySelectionKey(newestMemory))
+      const viewport = timelineRef.current;
+      if (!viewport) return;
+      viewport.scrollLeft = timelinePosition === "past"
+        ? 0
+        : Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+      const targetCard = targetMemory
+        ? memoryCardRefs.current.get(getMemorySelectionKey(targetMemory))
         : null;
-      if (!newestCard) return;
+      if (!targetCard) return;
       const viewportBounds = viewport.getBoundingClientRect();
-      const cardBounds = newestCard.getBoundingClientRect();
+      const cardBounds = targetCard.getBoundingClientRect();
       if (viewportBounds.width <= 0 || cardBounds.width <= 0) return;
-      viewport.scrollLeft += cardBounds.left - viewportBounds.left -
-        (viewportBounds.width - cardBounds.width) / 2;
+      viewport.scrollLeft = Math.max(0, viewport.scrollLeft + cardBounds.left -
+        viewportBounds.left - (viewportBounds.width - cardBounds.width) / 2);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [memories.length, sortedMemories]);
+  }, [isMemoryFilterActive, sortedMemories, timelinePosition]);
 
   return (
     <div style={containerStyle}>
@@ -654,6 +651,11 @@ function HomePage({
       <br />
       <br />
 
+      <div aria-label="Timeline position" style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
+        <button type="button" aria-pressed={timelinePosition === "past"} onClick={() => { timelinePositionRequestRef.current = true; setTimelinePosition("past"); }} style={{ ...buttonStyle, marginTop: 0 }}>Past</button>
+        <button type="button" aria-pressed={timelinePosition === "present"} onClick={() => { timelinePositionRequestRef.current = true; setTimelinePosition("present"); }} style={{ ...buttonStyle, marginTop: 0 }}>Present</button>
+      </div>
+
       <div
         style={{
           display: "flex",
@@ -753,7 +755,7 @@ function HomePage({
               minWidth: "100%",
               padding: isMemoryFilterActive
                 ? "8px 32px 16px"
-                : `8px ${32 + LIFE_CURRENT_TRAIL_TUNING.extentPixels}px 16px 32px`,
+                : `8px ${timelineEdgeGutter + LIFE_CURRENT_TRAIL_TUNING.extentPixels}px 16px ${timelineEdgeGutter}px`,
               position: "relative",
               width: sortedMemories.length === 0 ? "auto" : "max-content",
             }}

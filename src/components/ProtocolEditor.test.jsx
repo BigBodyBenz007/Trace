@@ -1,13 +1,19 @@
+import { StrictMode } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import ProtocolEditor from "./ProtocolEditor";
 
 let raf;
+let originalInnerWidth;
 beforeEach(() => {
   raf = window.requestAnimationFrame;
+  originalInnerWidth = window.innerWidth;
   window.requestAnimationFrame = (callback) => { callback(); return 1; };
   Element.prototype.scrollIntoView = jest.fn();
 });
-afterEach(() => { window.requestAnimationFrame = raf; });
+afterEach(() => {
+  window.requestAnimationFrame = raf;
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: originalInnerWidth });
+});
 
 function addCustom(name = "My Compound") {
   fireEvent.click(screen.getByRole("button", { name: "Add Protocol Item" }));
@@ -68,17 +74,108 @@ test("removing an item returns to the item section and does not mutate saved def
   expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
 });
 
-test("renders Sunday first and Every day toggles none or partial to all, then all to none", () => {
+test("focuses each newly opened protocol item search input", () => {
+  render(<ProtocolEditor onSave={jest.fn()} onCancel={jest.fn()} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Add Protocol Item" }));
+  const firstSearch = screen.getByLabelText("Protocol compound search");
+  expect(firstSearch).toHaveFocus();
+  fireEvent.change(firstSearch, { target: { value: "First item" } });
+  fireEvent.click(screen.getByRole("button", { name: /Use.*First item.*Custom/ }));
+
+  fireEvent.click(screen.getByRole("button", { name: "Add Protocol Item" }));
+  const secondSearch = screen.getByLabelText("Protocol compound search");
+  expect(secondSearch).not.toBe(firstSearch);
+  expect(secondSearch).toHaveFocus();
+  expect(firstSearch).not.toHaveFocus();
+});
+
+test("renders Sunday first and Every day restores the exact prior weekday selection", () => {
   render(<ProtocolEditor onSave={jest.fn()} onCancel={jest.fn()} />);
   const item = addCustom("Schedule item");
   const labels = within(item).getAllByRole("checkbox").map((input) => input.parentElement.textContent.trim());
   expect(labels).toEqual(["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]);
   const everyDay = within(item).getByRole("button", { name: "Every day" });
+  fireEvent.click(within(item).getByLabelText("Monday"));
   fireEvent.click(within(item).getByLabelText("Wednesday"));
+  fireEvent.click(within(item).getByLabelText("Friday"));
   fireEvent.click(everyDay);
   expect(within(item).getAllByRole("checkbox").every((input) => input.checked)).toBe(true);
   fireEvent.click(everyDay);
-  expect(within(item).getAllByRole("checkbox").every((input) => !input.checked)).toBe(true);
+  expect(within(item).getByLabelText("Monday")).toBeChecked();
+  expect(within(item).getByLabelText("Wednesday")).toBeChecked();
+  expect(within(item).getByLabelText("Friday")).toBeChecked();
+  ["Sunday", "Tuesday", "Thursday", "Saturday"].forEach((day) => {
+    expect(within(item).getByLabelText(day)).not.toBeChecked();
+  });
   fireEvent.click(everyDay);
   expect(within(item).getAllByRole("checkbox").every((input) => input.checked)).toBe(true);
+  fireEvent.click(everyDay);
+  expect(within(item).getByLabelText("Monday")).toBeChecked();
+  expect(within(item).getByLabelText("Wednesday")).toBeChecked();
+  expect(within(item).getByLabelText("Friday")).toBeChecked();
+});
+
+test("manual weekday changes discard an Every day restore snapshot", () => {
+  render(<ProtocolEditor onSave={jest.fn()} onCancel={jest.fn()} />);
+  const item = addCustom("Schedule reset item");
+  const everyDay = within(item).getByRole("button", { name: "Every day" });
+  fireEvent.click(within(item).getByLabelText("Monday"));
+  fireEvent.click(everyDay);
+  fireEvent.click(within(item).getByLabelText("Tuesday"));
+  fireEvent.click(everyDay);
+  fireEvent.click(everyDay);
+
+  expect(within(item).getByLabelText("Monday")).toBeChecked();
+  expect(within(item).getByLabelText("Tuesday")).not.toBeChecked();
+});
+
+test.each([
+  ["desktop", 1440],
+  ["phone", 390],
+])("Every day has identical undo transitions in %s conditions under Strict Mode", (_, width) => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+  render(
+    <StrictMode>
+      <ProtocolEditor onSave={jest.fn()} onCancel={jest.fn()} />
+    </StrictMode>
+  );
+  const item = addCustom(`Responsive schedule ${width}`);
+  ["Monday", "Wednesday", "Friday"].forEach((day) => {
+    fireEvent.click(within(item).getByLabelText(day));
+  });
+  const everyDay = within(item).getByRole("button", { name: "Every day" });
+
+  fireEvent.click(everyDay);
+  expect(within(item).getAllByRole("checkbox").every(({ checked }) => checked)).toBe(true);
+
+  fireEvent.click(everyDay);
+  expect(within(item).getAllByRole("checkbox").filter(({ checked }) => checked)
+    .map((input) => input.parentElement.textContent.trim()))
+    .toEqual(["Monday", "Wednesday", "Friday"]);
+
+  fireEvent.click(everyDay);
+  expect(within(item).getAllByRole("checkbox").every(({ checked }) => checked)).toBe(true);
+});
+
+test.each([
+  ["desktop", 1440],
+  ["phone", 390],
+])("manual weekday edits invalidate the Every day snapshot in %s conditions", (_, width) => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+  render(
+    <StrictMode>
+      <ProtocolEditor onSave={jest.fn()} onCancel={jest.fn()} />
+    </StrictMode>
+  );
+  const item = addCustom(`Manual schedule ${width}`);
+  fireEvent.click(within(item).getByLabelText("Monday"));
+  const everyDay = within(item).getByRole("button", { name: "Every day" });
+  fireEvent.click(everyDay);
+  fireEvent.click(within(item).getByLabelText("Tuesday"));
+  fireEvent.click(everyDay);
+  fireEvent.click(everyDay);
+
+  expect(within(item).getByLabelText("Monday")).toBeChecked();
+  expect(within(item).getByLabelText("Tuesday")).not.toBeChecked();
 });
