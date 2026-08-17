@@ -158,7 +158,7 @@ test("photo viewer navigates a Memory gallery with boundaries, position, and swi
   const viewer = screen.getByRole("dialog", { name: "Memory photo viewer" });
 
   expect(within(viewer).getByAltText("Memory 1 enlarged")).toHaveStyle({
-    maxWidth: "calc(100vw - 144px)",
+    maxWidth: "100%",
   });
   expect(screen.getByText("1 of 3")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Previous photo" })).toBeDisabled();
