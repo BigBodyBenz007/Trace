@@ -93,9 +93,19 @@ export function getWorkoutEntryError(draft) {
 }
 
 function getSetSegmentError(segment, location) {
-  const reps = Number(segment?.reps);
-  if (!Number.isFinite(reps) || !Number.isInteger(reps) || reps <= 0) {
-    return `Enter positive whole-number reps for ${location}.`;
+  const repsBlank = String(segment?.reps ?? "").trim() === "";
+  if (repsBlank && !segment?.toFailure) {
+    return `Enter a whole-number reps count for ${location}.`;
+  }
+  const reps = repsBlank ? 0 : Number(segment?.reps);
+  if (!Number.isFinite(reps) || !Number.isInteger(reps) || reps < 0) {
+    return `Enter a whole-number reps count for ${location}.`;
+  }
+  if (segment?.toFailure && String(segment.actualRepsAtFailure ?? "").trim() !== "") {
+    const actualReps = Number(segment.actualRepsAtFailure);
+    if (!Number.isFinite(actualReps) || !Number.isInteger(actualReps) || actualReps < 0) {
+      return `Enter a whole-number actual failure count for ${location}.`;
+    }
   }
   if (!LOAD_MODES.has(segment?.loadMode)) {
     return `Choose a valid load mode for ${location}.`;
@@ -113,9 +123,23 @@ function getSetSegmentError(segment, location) {
 }
 
 function completedSetSegment(segment) {
+  const toFailure = Boolean(segment.toFailure);
+  const actualRepsAtFailure = Number(segment.actualRepsAtFailure);
+  const reps = String(segment.reps ?? "").trim() === "" && toFailure
+    ? 0
+    : Number(segment.reps);
   return {
     id: segment.id,
-    reps: Number(segment.reps),
+    reps,
+    ...(toFailure
+      ? {
+          toFailure: true,
+          actualRepsAtFailure:
+            String(segment.actualRepsAtFailure ?? "").trim() === ""
+              ? null
+              : actualRepsAtFailure,
+        }
+      : {}),
     load:
       segment.loadMode === "bodyweight"
         ? { mode: "bodyweight" }

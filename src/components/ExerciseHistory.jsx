@@ -21,6 +21,16 @@ function formatDate(timestamp) {
 }
 
 function setDescription(set) {
+  const load = set?.load?.mode === "bodyweight"
+    ? "Bodyweight"
+    : set?.load?.mode === "external"
+      ? `${set.load.amount} ${set.load.unit}`
+      : (set?.load?.mode || "Load");
+  if (set?.toFailure) {
+    return set.actualRepsAtFailure === null || set.actualRepsAtFailure === undefined
+      ? `${load} × ${set.reps} goal → to failure`
+      : `${load} × ${set.reps} goal → failure at ${set.actualRepsAtFailure}`;
+  }
   if (set?.load?.mode === "bodyweight") {
     return `Bodyweight × ${set.reps} reps`;
   }

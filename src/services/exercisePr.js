@@ -32,6 +32,11 @@ function validReps(value) {
     : null;
 }
 
+function effectiveReps(set) {
+  if (!set?.toFailure) return validReps(set?.reps);
+  return validReps(set?.actualRepsAtFailure);
+}
+
 function sourceFrom(exerciseHistory, performance, set, setIndex) {
   return {
     identityKey: exerciseHistory.identityKey,
@@ -52,7 +57,7 @@ function candidatesForExercise(exerciseHistory) {
 
   exerciseHistory.performances.forEach((performance) => {
     performance.sets.forEach((set, setIndex) => {
-      const reps = validReps(set?.reps);
+      const reps = effectiveReps(set);
       if (reps === null) return;
 
       const source = sourceFrom(

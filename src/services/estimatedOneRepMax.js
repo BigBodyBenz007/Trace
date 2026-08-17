@@ -30,14 +30,15 @@ export function formatEstimatedOneRepMax(estimate) {
 
 function candidateFrom(exercise, performance, set, setIndex) {
   if (set?.load?.mode !== "external" || !SUPPORTED_WEIGHT_UNITS.has(set?.load?.unit)) return null;
-  const estimatedWeight = calculateEstimatedOneRepMax(set.load.amount, set.reps);
+  const reps = set?.toFailure ? set.actualRepsAtFailure : set.reps;
+  const estimatedWeight = calculateEstimatedOneRepMax(set.load.amount, reps);
   if (estimatedWeight === null) return null;
   return {
     identityKey: exercise.identityKey,
     estimatedWeight,
     unit: set.load.unit,
     performedWeight: Number(set.load.amount),
-    reps: Number(set.reps),
+    reps: Number(reps),
     workoutId: performance.workoutId,
     workoutTitle: performance.workoutTitle,
     performedAt: performance.performedAt,

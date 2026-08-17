@@ -47,6 +47,24 @@ test("derives heaviest external weight with reps and complete source traceabilit
   });
 });
 
+test("uses known to-failure actual reps for rep PRs and excludes unknown or zero actuals", () => {
+  const prs = deriveExercisePrs([
+    { id: "known", title: "Known", occurredAt: "2026-08-01", exercises: [{ id: "e", name: "Bench", exerciseId: "bench", sets: [{ id: "s1", reps: 10, toFailure: true, actualRepsAtFailure: 13, load: { mode: "external", amount: 100, unit: "lb" } }] }] },
+    { id: "unknown", title: "Unknown", occurredAt: "2026-08-02", exercises: [{ id: "e", name: "Bench", exerciseId: "bench", sets: [{ id: "s2", reps: 20, toFailure: true, actualRepsAtFailure: null, load: { mode: "external", amount: 100, unit: "lb" } }] }] },
+    { id: "zero", title: "Zero", occurredAt: "2026-08-03", exercises: [{ id: "e", name: "Bench", exerciseId: "bench", sets: [{ id: "s3", reps: 0, toFailure: true, actualRepsAtFailure: 0, load: { mode: "external", amount: 110, unit: "lb" } }] }] },
+  ])[0];
+  expect(prs.records.repsAtWeight[0]).toMatchObject({ weight: 100, reps: 13, setId: "s1" });
+  expect(prs.records.heaviestWeight[0]).toMatchObject({ weight: 100, reps: 13, setId: "s1" });
+  expect(prs.records.repsAtWeight).toHaveLength(1);
+});
+
+test("does not create a positive rep PR for a blank-goal failed attempt normalized to zero", () => {
+  const prs = deriveExercisePrs([
+    { id: "failed", title: "Failed", occurredAt: "2026-08-01", exercises: [{ id: "e", name: "Bench", exerciseId: "bench", sets: [{ id: "s1", reps: 0, toFailure: true, actualRepsAtFailure: null, load: { mode: "external", amount: 225, unit: "lb" } }] }] },
+  ]);
+  expect(prs).toEqual([]);
+});
+
 test("derives a rep record for every distinct external weight", () => {
   const records = deriveExercisePrs([
     workout("w", "2026-08-01T10:00:00.000Z", [

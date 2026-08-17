@@ -109,7 +109,6 @@ test("omits empty or malformed drops and accepts legacy sets", () => {
 });
 
 test.each([
-  ["reps", { reps: "0", loadMode: "external", weightAmount: "50", weightUnit: "lb" }, /drop 1/],
   ["load mode", { reps: "8", loadMode: "invalid", weightAmount: "50", weightUnit: "lb" }, /valid load mode/],
   ["weight", { reps: "8", loadMode: "external", weightAmount: "0", weightUnit: "lb" }, /greater than zero/],
   ["unit", { reps: "8", loadMode: "external", weightAmount: "50", weightUnit: "stone" }, /lb or kg/],
@@ -137,14 +136,55 @@ test("requires meaningful exercise names and at least one set", () => {
   expect(getWorkoutEntryError(noSets)).toBe("Add at least one set to exercise 1.");
 });
 
-test.each(["", "0", "-1", "1.5", "Infinity"])(
-  "requires positive integer reps: %s",
+test.each(["", "-1", "1.5", "Infinity"])(
+  "requires non-negative integer reps: %s",
   (reps) => {
     const draft = validDraft();
     draft.exercises[0].sets[0].reps = reps;
-    expect(getWorkoutEntryError(draft)).toMatch(/positive whole-number reps/);
+    expect(getWorkoutEntryError(draft)).toMatch(/whole-number reps/);
   }
 );
+
+test("accepts zero reps and preserves failure fields", () => {
+  const draft = validDraft();
+  draft.exercises[0].sets[0] = {
+    ...draft.exercises[0].sets[0],
+    reps: "0",
+    toFailure: true,
+    actualRepsAtFailure: "0",
+  };
+  expect(createWorkoutEntry(draft).exercises[0].sets[0]).toMatchObject({
+    reps: 0,
+    toFailure: true,
+    actualRepsAtFailure: 0,
+  });
+});
+
+test("allows an unknown actual failure count", () => {
+  const draft = validDraft();
+  draft.exercises[0].sets[0].toFailure = true;
+  draft.exercises[0].sets[0].actualRepsAtFailure = "";
+  expect(createWorkoutEntry(draft).exercises[0].sets[0]).toMatchObject({
+    reps: 10,
+    toFailure: true,
+    actualRepsAtFailure: null,
+  });
+});
+
+test("normalizes blank goal reps to zero only for a to-failure set", () => {
+  const draft = validDraft();
+  draft.exercises[0].sets[0].reps = "";
+  draft.exercises[0].sets[0].toFailure = true;
+  expect(createWorkoutEntry(draft).exercises[0].sets[0]).toMatchObject({
+    reps: 0,
+    toFailure: true,
+    actualRepsAtFailure: null,
+  });
+
+  const normal = validDraft();
+  normal.exercises[0].sets[0].reps = "";
+  expect(getWorkoutEntryError(normal)).toMatch(/whole-number reps/);
+});
 
 test("validates external load amount, controlled unit, and load mode", () => {
   const zeroWeight = validDraft();

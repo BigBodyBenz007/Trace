@@ -691,8 +691,75 @@ test("shows mechanical validation errors", () => {
   });
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
   expect(screen.getByRole("alert")).toHaveTextContent(
-    "positive whole-number reps"
+    "whole-number reps"
   );
+});
+
+test("logs a to-failure set with an optional actual count and preserves exact zero", () => {
+  const props = renderPage();
+  fillFirstSet();
+  expect(screen.getByText("Reps", { selector: "label" })).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "0" } });
+  fireEvent.click(screen.getByLabelText("Exercise 1 set 1 to failure"));
+  expect(screen.getByText("Goal reps", { selector: "label" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Exercise 1 set 1 actual reps at failure")).toHaveStyle({ maxWidth: "140px" });
+  fireEvent.click(screen.getByLabelText("Exercise 1 set 1 to failure"));
+  expect(screen.getByText("Reps", { selector: "label" })).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText("Exercise 1 set 1 to failure"));
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].sets[0]).toMatchObject({
+    reps: 0,
+    toFailure: true,
+    actualRepsAtFailure: null,
+  });
+});
+
+test("saves a blank to-failure goal as a zero-rep attempted set", () => {
+  const props = renderPage();
+  fillFirstSet();
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "" } });
+  fireEvent.click(screen.getByLabelText("Exercise 1 set 1 to failure"));
+  expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(null);
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].sets[0]).toMatchObject({
+    reps: 0,
+    toFailure: true,
+    actualRepsAtFailure: null,
+  });
+});
+
+test("editing a to-failure workout restores and updates the actual failure count", () => {
+  const saved = entry({
+    exercises: [{
+      ...entry().exercises[0],
+      sets: [{ ...entry().exercises[0].sets[0], reps: 10, toFailure: true, actualRepsAtFailure: null }],
+    }],
+  });
+  const props = renderPage({ workoutEntries: [saved] });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(screen.getByLabelText("Exercise 1 set 1 to failure")).toBeChecked();
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 actual reps at failure"), { target: { value: "13" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(props.updateWorkoutEntry.mock.calls[0][1].exercises[0].sets[0]).toMatchObject({
+    reps: 10,
+    toFailure: true,
+    actualRepsAtFailure: 13,
+  });
+});
+
+test("displays known and unknown failure totals in workout history", () => {
+  const saved = entry({ exercises: [{
+    ...entry().exercises[0],
+    sets: [
+      { ...entry().exercises[0].sets[0], id: "known", toFailure: true, actualRepsAtFailure: 13 },
+      { ...entry().exercises[0].sets[0], id: "unknown", toFailure: true, actualRepsAtFailure: null },
+      { ...entry().exercises[0].sets[0], id: "failed", reps: 0, toFailure: true, actualRepsAtFailure: null },
+    ],
+  }] });
+  renderPage({ workoutEntries: [saved] });
+  expect(screen.getByText(/10 goal.*failure at 13/)).toBeInTheDocument();
+  expect(screen.getByText(/10 goal.*to failure/)).toBeInTheDocument();
+  expect(screen.getByText(/ 0 goal.*to failure/)).toBeInTheDocument();
 });
 
 test("restores and updates a complete historical snapshot", () => {
