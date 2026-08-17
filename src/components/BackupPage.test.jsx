@@ -4,6 +4,7 @@ import {
   createTraceBackup,
   parseTraceBackupText,
   restoreTraceBackup,
+  traceBackupFilename,
 } from "../services/traceBackup";
 
 jest.mock("../services/traceBackup", () => ({
@@ -22,8 +23,33 @@ const parsed = { backup: { createdAt: "2026-08-12T00:00:00.000Z" }, summary };
 
 beforeEach(() => {
   jest.clearAllMocks();
+  traceBackupFilename.mockReturnValue("trace-backup-test.json");
   window.confirm = jest.fn(() => true);
 });
+
+function mockNavigator(values) {
+  const originals = Object.fromEntries(
+    Object.keys(values).map((key) => [key, Object.getOwnPropertyDescriptor(navigator, key)])
+  );
+  Object.entries(values).forEach(([key, value]) => {
+    Object.defineProperty(navigator, key, { configurable: true, value });
+  });
+  return () => {
+    Object.entries(originals).forEach(([key, descriptor]) => {
+      if (descriptor) Object.defineProperty(navigator, key, descriptor);
+      else delete navigator[key];
+    });
+  };
+}
+
+function readFileText(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsText(file);
+  });
+}
 
 test("explicit export downloads one self-contained backup file", async () => {
   const backup = { createdAt: "2026-08-12T00:00:00.000Z", data: { structured: {}, photos: [] } };
@@ -42,6 +68,97 @@ test("explicit export downloads one self-contained backup file", async () => {
   click.mockRestore();
   URL.createObjectURL = originalCreateObjectURL;
   URL.revokeObjectURL = originalRevokeObjectURL;
+});
+
+test("desktop export retains the complete JSON backup filename and MIME type", async () => {
+  const backup = {
+    createdAt: "2026-08-12T00:00:00.000Z",
+    data: {
+      structured: { memories: [{ id: "memory-1" }], workouts: [{ id: "workout-1" }], settings: { theme: "dark" } },
+      photos: [{ id: "photo-1", memoryId: "memory-1", data: "complete-photo-data" }],
+    },
+  };
+  createTraceBackup.mockResolvedValue(backup);
+  const originalCreateObjectURL = URL.createObjectURL;
+  const originalRevokeObjectURL = URL.revokeObjectURL;
+  URL.createObjectURL = jest.fn(() => "blob:complete-backup");
+  URL.revokeObjectURL = jest.fn();
+  const click = jest.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
+  await screen.findByText("Trace backup downloaded. Your current data was not changed.");
+
+  const file = URL.createObjectURL.mock.calls[0][0];
+  expect(file.name).toBe("trace-backup-test.json");
+  expect(file.type).toBe("application/json");
+  expect(JSON.parse(await readFileText(file))).toEqual(backup);
+  expect(click).toHaveBeenCalledTimes(1);
+  click.mockRestore();
+  URL.createObjectURL = originalCreateObjectURL;
+  URL.revokeObjectURL = originalRevokeObjectURL;
+});
+
+test("iPhone export opens the native file share sheet with the complete JSON file", async () => {
+  const backup = {
+    createdAt: "2026-08-12T00:00:00.000Z",
+    data: { structured: { memories: [{ id: "memory-1" }], settings: { units: "metric" } }, photos: [{ id: "photo-1", data: "full-photo" }] },
+  };
+  createTraceBackup.mockResolvedValue(backup);
+  const share = jest.fn().mockResolvedValue(undefined);
+  const canShare = jest.fn(() => true);
+  const restoreNavigator = mockNavigator({
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)",
+    platform: "iPhone",
+    maxTouchPoints: 5,
+    canShare,
+    share,
+  });
+  const originalCreateObjectURL = URL.createObjectURL;
+  URL.createObjectURL = jest.fn();
+  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
+  expect(await screen.findByText(/Tap Save Backup to Files/)).toBeInTheDocument();
+  expect(screen.queryByText("Trace backup downloaded. Your current data was not changed.")).not.toBeInTheDocument();
+  expect(URL.createObjectURL).not.toHaveBeenCalled();
+  expect(share).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Save Backup to Files" }));
+  expect(await screen.findByText(/Choose Save to Files/)).toBeInTheDocument();
+
+  const [{ files }] = share.mock.calls[0];
+  expect(canShare).toHaveBeenCalledWith({ files });
+  expect(files).toHaveLength(1);
+  expect(files[0].name).toBe("trace-backup-test.json");
+  expect(files[0].type).toBe("application/json");
+  expect(JSON.parse(await readFileText(files[0]))).toEqual(backup);
+  expect(URL.createObjectURL).not.toHaveBeenCalled();
+  URL.createObjectURL = originalCreateObjectURL;
+  restoreNavigator();
+});
+
+test("iPhone export clearly explains when file sharing is unavailable", async () => {
+  createTraceBackup.mockResolvedValue({ createdAt: "2026-08-12T00:00:00.000Z", data: { structured: {}, photos: [] } });
+  const share = jest.fn();
+  const restoreNavigator = mockNavigator({
+    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)",
+    platform: "iPhone",
+    maxTouchPoints: 5,
+    canShare: jest.fn(() => false),
+    share,
+  });
+  const originalCreateObjectURL = URL.createObjectURL;
+  URL.createObjectURL = jest.fn();
+  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
+  await screen.findByText(/Tap Save Backup to Files/);
+  fireEvent.click(screen.getByRole("button", { name: "Save Backup to Files" }));
+  expect(await screen.findByText(/cannot open the Save to Files sheet/)).toBeInTheDocument();
+  expect(share).not.toHaveBeenCalled();
+  expect(URL.createObjectURL).not.toHaveBeenCalled();
+  URL.createObjectURL = originalCreateObjectURL;
+  restoreNavigator();
 });
 
 test("validates a selected backup and previews counts without restoring", async () => {

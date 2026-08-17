@@ -16,12 +16,29 @@ function readFileText(file) {
   });
 }
 
-function downloadBackup(backup) {
-  const blob = new Blob([JSON.stringify(backup)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
+function isIOSDevice(browserNavigator = navigator) {
+  const userAgent = browserNavigator.userAgent || "";
+  return /iPad|iPhone|iPod/.test(userAgent) || (
+    browserNavigator.platform === "MacIntel" && browserNavigator.maxTouchPoints > 1
+  );
+}
+
+function createBackupFile(backup) {
+  const filename = traceBackupFilename(new Date(backup.createdAt));
+  const file = typeof File === "function"
+    ? new File([JSON.stringify(backup)], filename, { type: "application/json" })
+    : new Blob([JSON.stringify(backup)], { type: "application/json" });
+  if (file.name !== filename) {
+    Object.defineProperty(file, "name", { configurable: true, value: filename });
+  }
+  return file;
+}
+
+function downloadWithAnchor(file) {
+  const url = URL.createObjectURL(file);
   const link = document.createElement("a");
   link.href = url;
-  link.download = traceBackupFilename(new Date(backup.createdAt));
+  link.download = file.name;
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -37,6 +54,7 @@ export default function BackupPage({
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [preview, setPreview] = useState(null);
+  const [iosBackup, setIosBackup] = useState(null);
   const fileInputRef = useRef(null);
 
   async function exportBackup() {
@@ -44,11 +62,43 @@ export default function BackupPage({
     setStatus("Preparing backup…");
     try {
       const backup = await createTraceBackup();
-      downloadBackup(backup);
-      setStatus("Trace backup downloaded. Your current data was not changed.");
+      if (isIOSDevice()) {
+        setIosBackup(backup);
+        setStatus("Backup is ready. Tap Save Backup to Files to open the iPhone share sheet.");
+      } else {
+        downloadWithAnchor(createBackupFile(backup));
+        setStatus("Trace backup downloaded. Your current data was not changed.");
+      }
     } catch (exportError) {
       setStatus("");
       setError(`Trace could not create the backup: ${exportError.message}`);
+    }
+  }
+
+  async function saveBackupToFiles() {
+    if (!iosBackup) return;
+    const file = createBackupFile(iosBackup);
+    const shareData = { files: [file] };
+    if (
+      typeof navigator.share !== "function" ||
+      typeof navigator.canShare !== "function" ||
+      !navigator.canShare(shareData)
+    ) {
+      setStatus("This iPhone browser cannot open the Save to Files sheet. Open Trace in Safari and try again.");
+      return;
+    }
+    setError("");
+    try {
+      await navigator.share(shareData);
+      setIosBackup(null);
+      setStatus("Trace backup is ready in the share sheet. Choose Save to Files to keep it.");
+    } catch (shareError) {
+      if (shareError?.name === "AbortError") {
+        setStatus("Trace backup sharing was canceled. Your current data was not changed.");
+      } else {
+        setStatus("");
+        setError(`Trace could not open the Save to Files sheet: ${shareError.message}`);
+      }
     }
   }
 
@@ -92,6 +142,7 @@ export default function BackupPage({
       </p>
       <button type="button" style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>Back to Timeline</button>
       <button type="button" style={buttonStyle} onClick={exportBackup}>Download Trace Backup</button>
+      {iosBackup && <button type="button" style={buttonStyle} onClick={saveBackupToFiles}>Save Backup to Files</button>}
       <button type="button" style={{ ...buttonStyle, backgroundColor: "#475569" }} onClick={() => fileInputRef.current?.click()}>
         Select Backup to Restore
       </button>
