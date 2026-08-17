@@ -186,18 +186,37 @@ test("requires explicit browser confirmation before applying a full restore", as
   expect(restoreTraceBackup).not.toHaveBeenCalled();
 });
 
-test("confirmed restore applies the validated backup and reloads Trace", async () => {
+test("confirmed restore shows success only after the complete restore resolves", async () => {
   parseTraceBackupText.mockReturnValue(parsed);
-  restoreTraceBackup.mockResolvedValue(summary);
-  const onRestoreComplete = jest.fn();
-  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} onRestoreComplete={onRestoreComplete} />);
+  let finishRestore;
+  restoreTraceBackup.mockReturnValue(new Promise((resolve) => { finishRestore = resolve; }));
+  const onBack = jest.fn();
+  render(<BackupPage onBack={onBack} buttonStyle={{}} containerStyle={{}} />);
   fireEvent.change(document.querySelector('input[type="file"]'), {
     target: { files: [new File(["backup"], "trace.json")] },
   });
   await screen.findByRole("heading", { name: "Review Backup" });
   fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
   await waitFor(() => expect(restoreTraceBackup).toHaveBeenCalledWith(parsed.backup, { confirmed: true }));
-  expect(onRestoreComplete).toHaveBeenCalled();
+  expect(screen.queryByRole("heading", { name: "✓ Trace restored successfully" })).not.toBeInTheDocument();
+  finishRestore(summary);
+  expect(await screen.findByRole("heading", { name: "✓ Trace restored successfully" })).toBeInTheDocument();
+  expect(screen.getByText("Your backup has been completely restored.")).toBeInTheDocument();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" }).at(-1));
+  expect(onBack).toHaveBeenCalled();
+});
+
+test("failed restore shows persistent failure and no success state", async () => {
+  parseTraceBackupText.mockReturnValue(parsed);
+  restoreTraceBackup.mockRejectedValue(new Error("Trace restore failed and the previous data was restored: photo write failed"));
+  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["backup"], "trace.json")] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Trace restore could not be completed. Trace restore failed and the previous data was restored");
+  expect(screen.queryByRole("heading", { name: "✓ Trace restored successfully" })).not.toBeInTheDocument();
 });
 
 test("invalid selected files show an error and never expose confirmation", async () => {

@@ -49,12 +49,12 @@ export default function BackupPage({
   onBack,
   buttonStyle,
   containerStyle,
-  onRestoreComplete = () => window.location.reload(),
 }) {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [preview, setPreview] = useState(null);
   const [iosBackup, setIosBackup] = useState(null);
+  const [restoreComplete, setRestoreComplete] = useState(false);
   const fileInputRef = useRef(null);
 
   async function exportBackup() {
@@ -88,6 +88,7 @@ export default function BackupPage({
       return;
     }
     setError("");
+    setRestoreComplete(false);
     try {
       await navigator.share(shareData);
       setIosBackup(null);
@@ -125,11 +126,13 @@ export default function BackupPage({
     setStatus("Restoring Trace…");
     try {
       await restoreTraceBackup(preview.backup, { confirmed: true });
-      setStatus("Restore complete. Trace will reload now.");
-      onRestoreComplete();
+      setPreview(null);
+      setStatus("");
+      setRestoreComplete(true);
     } catch (restoreError) {
       setStatus("");
-      setError(restoreError.message);
+      setRestoreComplete(false);
+      setError(`Trace restore could not be completed. ${restoreError.message}`);
     }
   }
 
@@ -149,6 +152,13 @@ export default function BackupPage({
       <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={selectBackup} hidden />
       {status && <p role="status">{status}</p>}
       {error && <p role="alert" style={{ color: "#fca5a5" }}>{error}</p>}
+      {restoreComplete && (
+        <section role="status" aria-label="Restore complete" style={{ background: "#14532d", borderRadius: "12px", marginTop: "24px", padding: "18px" }}>
+          <h2>✓ Trace restored successfully</h2>
+          <p>Your backup has been completely restored.</p>
+          <button type="button" style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>Back to Timeline</button>
+        </section>
+      )}
       {summary && (
         <section aria-label="Restore preview" style={{ background: "#1f2937", borderRadius: "12px", marginTop: "24px", padding: "18px" }}>
           <h2>Review Backup</h2>
@@ -164,7 +174,6 @@ export default function BackupPage({
           <button type="button" style={{ ...buttonStyle, backgroundColor: "#4b5563" }} onClick={() => setPreview(null)}>Cancel Restore</button>
         </section>
       )}
-      <button type="button" style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>Back to Timeline</button>
     </main>
   );
 }
