@@ -158,6 +158,9 @@ function HomePage({
   onExitTrophySource = null,
 }) {
   const [selectedImageIndex, setSelectedImageIndex] = useState(null);
+  const [isNarrowPhotoViewport, setIsNarrowPhotoViewport] = useState(
+    () => window.innerWidth <= 600 && window.innerHeight >= window.innerWidth
+  );
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [favoriteFilter, setFavoriteFilter] = useState("all");
@@ -177,6 +180,15 @@ function HomePage({
   const timelinePositionRequestRef = useRef(true);
   const memoryCardRefs = useRef(new Map());
   const detailPanelRef = useRef(null);
+  useEffect(() => {
+    const updatePhotoViewerLayout = () => {
+      setIsNarrowPhotoViewport(
+        window.innerWidth <= 600 && window.innerHeight >= window.innerWidth
+      );
+    };
+    window.addEventListener("resize", updatePhotoViewerLayout);
+    return () => window.removeEventListener("resize", updatePhotoViewerLayout);
+  }, []);
   const currentDay = useMemo(() => {
     const day = new Date();
     day.setHours(0, 0, 0, 0);
@@ -1652,13 +1664,14 @@ function HomePage({
           }}
         >
           <button type="button" aria-label="Close photo viewer" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setSelectedImageIndex(null); }} style={{ background: "#374151", border: 0, borderRadius: "50%", color: "white", cursor: "pointer", fontSize: "32px", height: "52px", position: "fixed", right: "max(20px, calc(env(safe-area-inset-right) + 16px))", top: "calc(env(safe-area-inset-top) + 24px)", touchAction: "manipulation", width: "52px", zIndex: 2 }}>×</button>
-          <div data-testid="memory-photo-viewer-content" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => { event.currentTarget.dataset.touchX = event.clientX; }} onPointerUp={(event) => { const start = Number(event.currentTarget.dataset.touchX); const delta = event.clientX - start; if (Math.abs(delta) < 50) return; setSelectedImageIndex((index) => Math.max(0, Math.min(detailMemory.images.length - 1, index + (delta < 0 ? 1 : -1)))); }} style={{ alignItems: "center", boxSizing: "border-box", display: "flex", gap: "12px", maxWidth: "100%", width: "100%" }}>
-            {detailMemory.images.length > 1 && <button type="button" aria-label="Previous photo" disabled={selectedImageIndex === 0} onClick={() => setSelectedImageIndex((index) => index - 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", flex: "0 0 auto", opacity: selectedImageIndex === 0 ? 0.45 : 1, padding: "12px" }}>Previous</button>}
-            <div style={{ flex: "1 1 0", minWidth: 0, textAlign: "center" }}>
+          <div data-testid="memory-photo-viewer-content" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => { event.currentTarget.dataset.touchX = event.clientX; }} onPointerUp={(event) => { const start = Number(event.currentTarget.dataset.touchX); const delta = event.clientX - start; if (Math.abs(delta) < 50) return; setSelectedImageIndex((index) => Math.max(0, Math.min(detailMemory.images.length - 1, index + (delta < 0 ? 1 : -1)))); }} style={{ alignItems: "center", boxSizing: "border-box", display: "flex", flexDirection: isNarrowPhotoViewport ? "column" : "row", gap: "12px", maxWidth: "100%", width: "100%" }}>
+            {!isNarrowPhotoViewport && detailMemory.images.length > 1 && <button type="button" aria-label="Previous photo" disabled={selectedImageIndex === 0} onClick={() => setSelectedImageIndex((index) => index - 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", flex: "0 0 auto", opacity: selectedImageIndex === 0 ? 0.45 : 1, padding: "12px" }}>Previous</button>}
+            <div style={{ flex: "1 1 0", minWidth: 0, textAlign: "center", width: isNarrowPhotoViewport ? "100%" : undefined }}>
               <img src={photoSource(detailMemory.images[selectedImageIndex])} alt={`Memory ${selectedImageIndex + 1} enlarged`} style={{ borderRadius: "12px", maxHeight: "85vh", maxWidth: "100%" }} />
-              {detailMemory.images.length > 1 && <p aria-live="polite" style={{ color: "white", margin: "10px 0 0" }}>{selectedImageIndex + 1} of {detailMemory.images.length}</p>}
+              {!isNarrowPhotoViewport && detailMemory.images.length > 1 && <p aria-live="polite" style={{ color: "white", margin: "10px 0 0" }}>{selectedImageIndex + 1} of {detailMemory.images.length}</p>}
             </div>
-            {detailMemory.images.length > 1 && <button type="button" aria-label="Next photo" disabled={selectedImageIndex === detailMemory.images.length - 1} onClick={() => setSelectedImageIndex((index) => index + 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", flex: "0 0 auto", opacity: selectedImageIndex === detailMemory.images.length - 1 ? 0.45 : 1, padding: "12px" }}>Next</button>}
+            {!isNarrowPhotoViewport && detailMemory.images.length > 1 && <button type="button" aria-label="Next photo" disabled={selectedImageIndex === detailMemory.images.length - 1} onClick={() => setSelectedImageIndex((index) => index + 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", flex: "0 0 auto", opacity: selectedImageIndex === detailMemory.images.length - 1 ? 0.45 : 1, padding: "12px" }}>Next</button>}
+            {isNarrowPhotoViewport && detailMemory.images.length > 1 && <div style={{ alignItems: "center", display: "flex", justifyContent: "space-between", width: "100%" }}><button type="button" aria-label="Previous photo" disabled={selectedImageIndex === 0} onClick={() => setSelectedImageIndex((index) => index - 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", opacity: selectedImageIndex === 0 ? 0.45 : 1, padding: "12px" }}>Previous</button><p aria-live="polite" style={{ color: "white", margin: 0 }}>{selectedImageIndex + 1} of {detailMemory.images.length}</p><button type="button" aria-label="Next photo" disabled={selectedImageIndex === detailMemory.images.length - 1} onClick={() => setSelectedImageIndex((index) => index + 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", opacity: selectedImageIndex === detailMemory.images.length - 1 ? 0.45 : 1, padding: "12px" }}>Next</button></div>}
           </div>
         </div>
       )}
