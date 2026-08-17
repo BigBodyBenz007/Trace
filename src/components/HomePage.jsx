@@ -157,7 +157,7 @@ function HomePage({
   onReturnToTrophyCase = null,
   onExitTrophySource = null,
 }) {
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImageIndex, setSelectedImageIndex] = useState(null);
   const [search, setSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [favoriteFilter, setFavoriteFilter] = useState("all");
@@ -260,7 +260,7 @@ function HomePage({
     detailMemoryId === null
       ? null
       : memories.find((memory) => memory.id === detailMemoryId);
-  useDocumentScrollLock(Boolean(detailMemory || selectedImage), detailOriginScrollRef.current);
+  useDocumentScrollLock(Boolean(detailMemory || selectedImageIndex !== null), detailOriginScrollRef.current);
   const trophySourceKeys = new Set(trophyEntries.map(({ sourceKey }) => sourceKey));
 
   function isMemoryInTrophyCase(memory) {
@@ -1409,9 +1409,7 @@ function HomePage({
                   alt={`Memory ${activeDetailPhotoIndex + 1}`}
                   onClick={(event) => {
                     event.stopPropagation();
-                    setSelectedImage(
-                      photoSource(detailMemory.images[activeDetailPhotoIndex])
-                    );
+                    setSelectedImageIndex(activeDetailPhotoIndex);
                   }}
                   style={{
                     borderRadius: "12px",
@@ -1633,12 +1631,12 @@ function HomePage({
         </div>
       )}
 
-      {selectedImage && (
+      {selectedImageIndex !== null && detailMemory && (
         <div
           role="dialog"
           aria-modal="true"
           aria-label="Memory photo viewer"
-          onClick={() => setSelectedImage(null)}
+          onClick={() => setSelectedImageIndex(null)}
           style={{
             position: "fixed",
             inset: 0,
@@ -1653,15 +1651,15 @@ function HomePage({
             padding: "20px",
           }}
         >
-          <img
-            src={selectedImage}
-            alt="Full Size"
-            style={{
-              maxWidth: "95%",
-              maxHeight: "95%",
-              borderRadius: "12px",
-            }}
-          />
+          <button type="button" aria-label="Close photo viewer" onClick={(event) => { event.stopPropagation(); setSelectedImageIndex(null); }} style={{ background: "#374151", border: 0, borderRadius: "50%", color: "white", cursor: "pointer", fontSize: "28px", height: "44px", position: "fixed", right: "20px", top: "20px", width: "44px", zIndex: 1 }}>×</button>
+          <div data-testid="memory-photo-viewer-content" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => { event.currentTarget.dataset.touchX = event.clientX; }} onPointerUp={(event) => { const start = Number(event.currentTarget.dataset.touchX); const delta = event.clientX - start; if (Math.abs(delta) < 50) return; setSelectedImageIndex((index) => Math.max(0, Math.min(detailMemory.images.length - 1, index + (delta < 0 ? 1 : -1)))); }} style={{ alignItems: "center", display: "flex", gap: "16px", maxWidth: "100%" }}>
+            {detailMemory.images.length > 1 && <button type="button" aria-label="Previous photo" disabled={selectedImageIndex === 0} onClick={() => setSelectedImageIndex((index) => index - 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", opacity: selectedImageIndex === 0 ? 0.45 : 1, padding: "12px" }}>Previous</button>}
+            <div style={{ textAlign: "center" }}>
+              <img src={photoSource(detailMemory.images[selectedImageIndex])} alt={`Memory ${selectedImageIndex + 1} enlarged`} style={{ borderRadius: "12px", maxHeight: "85vh", maxWidth: "85vw" }} />
+              {detailMemory.images.length > 1 && <p aria-live="polite" style={{ color: "white", margin: "10px 0 0" }}>{selectedImageIndex + 1} of {detailMemory.images.length}</p>}
+            </div>
+            {detailMemory.images.length > 1 && <button type="button" aria-label="Next photo" disabled={selectedImageIndex === detailMemory.images.length - 1} onClick={() => setSelectedImageIndex((index) => index + 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", opacity: selectedImageIndex === detailMemory.images.length - 1 ? 0.45 : 1, padding: "12px" }}>Next</button>}
+          </div>
         </div>
       )}
     </div>

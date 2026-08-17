@@ -135,6 +135,44 @@ test("photo viewer keeps the document locked until the nested detail closes", ()
   pageScroll.restore();
 });
 
+test("photo viewer has an explicit close control and hides navigation for one photo", () => {
+  const memory = memoryWithOnePhoto();
+  render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} />);
+  fireEvent.click(screen.getByTestId("timeline-memory-" + memory.id));
+  fireEvent.click(within(screen.getByRole("dialog", { name: /Memory details/ })).getAllByAltText("Memory 1")[0]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Close photo viewer" }));
+  expect(screen.queryByRole("dialog", { name: "Memory photo viewer" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Previous photo" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Next photo" })).not.toBeInTheDocument();
+});
+
+test("photo viewer navigates a Memory gallery with boundaries, position, and swipe", () => {
+  const memory = {
+    ...memoryWithOnePhoto(),
+    images: ["blob:first", "blob:second", "blob:third"],
+  };
+  render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} />);
+  fireEvent.click(screen.getByTestId("timeline-memory-" + memory.id));
+  fireEvent.click(within(screen.getByRole("dialog", { name: /Memory details/ })).getAllByAltText("Memory 1")[0]);
+  const viewer = screen.getByRole("dialog", { name: "Memory photo viewer" });
+
+  expect(screen.getByText("1 of 3")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Previous photo" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Next photo" }));
+  expect(screen.getByText("2 of 3")).toBeInTheDocument();
+  const swipeStart = new Event("pointerdown", { bubbles: true });
+  Object.defineProperty(swipeStart, "clientX", { value: 200 });
+  const swipeEnd = new Event("pointerup", { bubbles: true });
+  Object.defineProperty(swipeEnd, "clientX", { value: 100 });
+  fireEvent(screen.getByTestId("memory-photo-viewer-content"), swipeStart);
+  fireEvent(screen.getByTestId("memory-photo-viewer-content"), swipeEnd);
+  expect(screen.getByText("3 of 3")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Next photo" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Previous photo" }));
+  expect(screen.getByText("2 of 3")).toBeInTheDocument();
+});
+
 test.each([
   ["2007-04-17", "April 17, 2007"],
   ["2000-01-01", "January 1, 2000"],
