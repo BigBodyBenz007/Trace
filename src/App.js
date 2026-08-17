@@ -130,6 +130,7 @@ function App() {
   const [editingId, setEditingId] = useState(null);
 
   const [images, setImages] = useState([]);
+  const [timelineTargetMemoryId, setTimelineTargetMemoryId] = useState(null);
 
   const [memories, setMemories] = useState([]);
   const [memoryCount, setMemoryCount] = useState(0);
@@ -596,6 +597,8 @@ function App() {
       setDate("");
       setImages([]);
       setCategories([]);
+      setTimelineTargetMemoryId(memoryId);
+      skipNextPageTopScrollRef.current = true;
       setPage("home");
       return true;
     } catch (error) {
@@ -1275,6 +1278,8 @@ function App() {
         <HomePage
           memoryCount={memoryCount}
           memories={memories}
+          timelineTargetMemoryId={timelineTargetMemoryId}
+          onTimelineTargetShown={() => setTimelineTargetMemoryId(null)}
           setMemories={setMemories}
           toggleFavorite={toggleFavorite}
           onAddMemory={openNewMemory}

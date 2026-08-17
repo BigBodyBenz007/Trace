@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import App, { localCalendarDateKey } from "./App";
 import { createCompoundDefinition } from "./services/compoundCatalog";
 import { createExerciseDefinition } from "./services/exerciseCatalog";
@@ -271,6 +271,57 @@ test("Timeline to Add Memory resets a previously scrolled position", () => {
   expectDestinationScrolledToTop();
 });
 
+test("returning from a section initializes the offscreen timeline at Present after it becomes visible", async () => {
+  openPhotoDatabase.mockResolvedValue({});
+  localStorage.setItem("memories", JSON.stringify([
+    { id: "oldest", title: "Oldest", description: "", date: "1999-01-01", categories: [], images: [], favorite: false },
+    { id: "newest", title: "Newest", description: "", date: "2026-08-17", categories: [], images: [], favorite: false },
+  ]));
+  render(<App />);
+  await screen.findByRole("button", { name: "Open memory Newest" });
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  window.cancelAnimationFrame = jest.fn();
+  window.scrollTo.mockClear();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
+
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const newest = screen.getByTestId("timeline-memory-newest");
+  viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 0 }));
+  newest.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 0 }));
+  Object.defineProperty(viewport, "scrollWidth", { configurable: true, value: 400 });
+  Object.defineProperty(viewport, "clientWidth", { configurable: true, value: 400 });
+
+  act(() => {
+    while (frames.length) frames.shift()();
+  });
+  expectDestinationScrolledToTop();
+  expect(viewport.scrollLeft).toBe(0);
+
+  viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 400 }));
+  newest.getBoundingClientRect = jest.fn(() => ({
+    left: 1000 - viewport.scrollLeft,
+    width: 200,
+  }));
+  Object.defineProperty(viewport, "scrollWidth", { configurable: true, value: 1200 });
+  fireEvent.scroll(window);
+  act(() => {
+    while (frames.length) frames.shift()();
+  });
+
+  expect(viewport.scrollLeft).toBe(900);
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.cancelAnimationFrame = originalCancelAnimationFrame;
+});
+
 test("new Memory defaults to today's local calendar date and can be changed", () => {
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
@@ -339,6 +390,125 @@ test("reopening a new Memory after save restores today's default date", async ()
   fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
 
   expect(document.querySelector('input[type="date"]')).toHaveValue(localCalendarDateKey());
+});
+
+test("saving a Memory returns to and centers the newly saved Memory", async () => {
+  openPhotoDatabase.mockResolvedValue({});
+  putPhotos.mockResolvedValue(undefined);
+  deletePhotos.mockResolvedValue(undefined);
+  localStorage.setItem("memories", JSON.stringify([{
+    id: "existing-newest",
+    title: "Existing newest Memory",
+    description: "",
+    date: "2026-08-17",
+    categories: [],
+    images: [],
+    favorite: false,
+  }]));
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  window.cancelAnimationFrame = jest.fn();
+
+  render(<App />);
+  fireEvent.click(await screen.findByRole("button", { name: "Add Memory" }));
+  fireEvent.change(screen.getByPlaceholderText("Memory title..."), {
+    target: { value: "Saved historical Memory" },
+  });
+  fireEvent.change(document.querySelector('input[type="date"]'), {
+    target: { value: "1999-01-01" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Memory" }));
+  await screen.findByRole("heading", { name: "Trace" });
+
+  const saved = JSON.parse(localStorage.getItem("memories")).find(
+    ({ title }) => title === "Saved historical Memory"
+  );
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const savedCard = screen.getByTestId("timeline-memory-" + saved.id);
+  viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 400 }));
+  savedCard.getBoundingClientRect = jest.fn(() => ({
+    left: 100 - viewport.scrollLeft,
+    width: 200,
+  }));
+  Object.defineProperty(viewport, "scrollWidth", { configurable: true, value: 1200 });
+  Object.defineProperty(viewport, "clientWidth", { configurable: true, value: 400 });
+
+  act(() => {
+    while (frames.length) frames.shift()();
+  });
+
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "auto",
+    block: "start",
+  });
+  expect(viewport.scrollLeft).toBe(0);
+  expect(savedCard.querySelector("[data-timeline-card-visual]")).toHaveStyle({
+    boxShadow: "0 0 0 2px #5ec8ff, 0 8px 20px rgba(94, 200, 255, 0.2)",
+  });
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.cancelAnimationFrame = originalCancelAnimationFrame;
+});
+
+test("editing a Memory returns to its timeline card", async () => {
+  openPhotoDatabase.mockResolvedValue({});
+  putPhotos.mockResolvedValue(undefined);
+  deletePhotos.mockResolvedValue(undefined);
+  localStorage.setItem("memories", JSON.stringify([{
+    id: "edited-memory",
+    title: "Original Memory",
+    description: "",
+    date: "1999-01-01",
+    categories: [],
+    images: [],
+    favorite: false,
+  }]));
+  render(<App />);
+  fireEvent.click(await screen.findByRole("button", { name: "Open memory Original Memory" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  window.cancelAnimationFrame = jest.fn();
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.change(screen.getByPlaceholderText("Memory title..."), {
+    target: { value: "Edited Memory" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  await screen.findByRole("heading", { name: "Trace" });
+
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const editedCard = screen.getByTestId("timeline-memory-edited-memory");
+  viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 400 }));
+  editedCard.getBoundingClientRect = jest.fn(() => ({
+    left: 100 - viewport.scrollLeft,
+    width: 200,
+  }));
+  Object.defineProperty(viewport, "scrollWidth", { configurable: true, value: 1200 });
+  Object.defineProperty(viewport, "clientWidth", { configurable: true, value: 400 });
+
+  act(() => {
+    while (frames.length) frames.shift()();
+  });
+
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "auto",
+    block: "start",
+  });
+  expect(editedCard.querySelector("[data-timeline-card-visual]")).toHaveStyle({
+    boxShadow: "0 0 0 2px #5ec8ff, 0 8px 20px rgba(94, 200, 255, 0.2)",
+  });
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.cancelAnimationFrame = originalCancelAnimationFrame;
 });
 
 test("Add Memory to Timeline lands at the top", () => {

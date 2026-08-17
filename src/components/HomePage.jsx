@@ -128,6 +128,8 @@ function MemorySearchInput({ search, setSearch, style }) {
 function HomePage({
   memoryCount,
   memories,
+  timelineTargetMemoryId = null,
+  onTimelineTargetShown = () => {},
   toggleFavorite,
   onAddMemory,
   onOpenNutrition,
@@ -546,28 +548,64 @@ function HomePage({
 
   useEffect(() => {
     if (!timelinePositionRequestRef.current || isMemoryFilterActive || sortedMemories.length === 0) return undefined;
-    timelinePositionRequestRef.current = false;
     const targetMemory = timelinePosition === "past"
       ? sortedMemories[0]
       : sortedMemories[sortedMemories.length - 1];
-    const frame = window.requestAnimationFrame(() => {
+    let frame = null;
+    const positionTimeline = () => {
       const viewport = timelineRef.current;
-      if (!viewport) return;
-      viewport.scrollLeft = timelinePosition === "past"
-        ? 0
-        : Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+      if (!viewport) return false;
       const targetCard = targetMemory
         ? memoryCardRefs.current.get(getMemorySelectionKey(targetMemory))
         : null;
-      if (!targetCard) return;
+      const viewportBounds = viewport.getBoundingClientRect();
+      const cardBounds = targetCard?.getBoundingClientRect();
+      if (viewportBounds.width <= 0 || !cardBounds || cardBounds.width <= 0) {
+        return false;
+      }
+      timelinePositionRequestRef.current = false;
+      viewport.scrollLeft = timelinePosition === "past"
+        ? 0
+        : Math.max(0, viewport.scrollWidth - viewport.clientWidth);
+      const positionedCardBounds = targetCard.getBoundingClientRect();
+      viewport.scrollLeft = Math.max(0, viewport.scrollLeft + positionedCardBounds.left -
+        viewportBounds.left - (viewportBounds.width - cardBounds.width) / 2);
+      return true;
+    };
+    const schedulePosition = () => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        if (positionTimeline()) window.removeEventListener("scroll", schedulePosition);
+      });
+    };
+    schedulePosition();
+    window.addEventListener("scroll", schedulePosition, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", schedulePosition);
+      if (frame !== null) window.cancelAnimationFrame(frame);
+    };
+  }, [isMemoryFilterActive, sortedMemories, timelinePosition]);
+
+  useEffect(() => {
+    if (!timelineTargetMemoryId) return undefined;
+    const targetMemory = memories.find(({ id }) => id === timelineTargetMemoryId);
+    if (!targetMemory) return undefined;
+    const frame = window.requestAnimationFrame(() => {
+      const viewport = timelineRef.current;
+      const targetCard = memoryCardRefs.current.get(timelineTargetMemoryId);
+      if (!viewport || !targetCard) return;
       const viewportBounds = viewport.getBoundingClientRect();
       const cardBounds = targetCard.getBoundingClientRect();
       if (viewportBounds.width <= 0 || cardBounds.width <= 0) return;
+      setSelectedMemory(getMemorySelectionKey(targetMemory));
+      viewport.scrollIntoView({ behavior: "auto", block: "start" });
       viewport.scrollLeft = Math.max(0, viewport.scrollLeft + cardBounds.left -
         viewportBounds.left - (viewportBounds.width - cardBounds.width) / 2);
+      onTimelineTargetShown();
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [isMemoryFilterActive, sortedMemories, timelinePosition]);
+  }, [memories, onTimelineTargetShown, timelineTargetMemoryId]);
 
   return (
     <div style={containerStyle}>
