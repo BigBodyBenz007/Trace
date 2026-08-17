@@ -157,6 +157,9 @@ test("photo viewer navigates a Memory gallery with boundaries, position, and swi
   fireEvent.click(within(screen.getByRole("dialog", { name: /Memory details/ })).getAllByAltText("Memory 1")[0]);
   const viewer = screen.getByRole("dialog", { name: "Memory photo viewer" });
 
+  expect(within(viewer).getByAltText("Memory 1 enlarged")).toHaveStyle({
+    maxWidth: "calc(100vw - 144px)",
+  });
   expect(screen.getByText("1 of 3")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Previous photo" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "Next photo" }));
@@ -171,6 +174,19 @@ test("photo viewer navigates a Memory gallery with boundaries, position, and swi
   expect(screen.getByRole("button", { name: "Next photo" })).toBeDisabled();
   fireEvent.click(screen.getByRole("button", { name: "Previous photo" }));
   expect(screen.getByText("2 of 3")).toBeInTheDocument();
+});
+
+test("photo viewer close control handles its own pointer and click without backdrop closing", () => {
+  const memory = memoryWithOnePhoto();
+  render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} />);
+  fireEvent.click(screen.getByTestId("timeline-memory-" + memory.id));
+  fireEvent.click(within(screen.getByRole("dialog", { name: /Memory details/ })).getAllByAltText("Memory 1")[0]);
+  const close = screen.getByRole("button", { name: "Close photo viewer" });
+
+  fireEvent.pointerDown(close);
+  expect(screen.getByRole("dialog", { name: "Memory photo viewer" })).toBeInTheDocument();
+  fireEvent.click(close);
+  expect(screen.queryByRole("dialog", { name: "Memory photo viewer" })).not.toBeInTheDocument();
 });
 
 test.each([
