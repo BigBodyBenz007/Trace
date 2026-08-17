@@ -228,7 +228,8 @@ function NewMemoryPage({
               isDraft: true,
               url: URL.createObjectURL(file),
             }));
-            setImages([...images, ...newImages]);
+            setImages((current) => [...current, ...newImages]);
+            e.target.value = "";
           }}
         />
       </label>
@@ -269,7 +270,7 @@ function NewMemoryPage({
                 <button
                   onClick={() => {
                     releaseDraftPhoto(img);
-                    setImages(images.filter((_, i) => i !== index));
+                    setImages((current) => current.filter((_, i) => i !== index));
                   }}
                   style={{
                     position: "absolute",
