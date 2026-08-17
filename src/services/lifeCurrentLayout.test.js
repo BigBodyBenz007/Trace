@@ -94,7 +94,7 @@ test("guarantees minimum separation for consecutive populated days", () => {
   });
 });
 
-test("larger elapsed intervals always produce larger visual gaps", () => {
+test("larger elapsed intervals expand until the bounded visual gap", () => {
   const oneDay = gapForDays(1);
   const sevenDays = gapForDays(7);
   const thirtyDays = gapForDays(30);
@@ -102,18 +102,18 @@ test("larger elapsed intervals always produce larger visual gaps", () => {
   const tenYears = gapForDays(3650);
   expect(oneDay).toBeLessThan(sevenDays);
   expect(sevenDays).toBeLessThan(thirtyDays);
-  expect(thirtyDays).toBeLessThan(oneYear);
-  expect(oneYear).toBeLessThan(tenYears);
+  expect(thirtyDays).toBe(LIFE_CURRENT_LAYOUT_TUNING.maximumGap);
+  expect(oneYear).toBe(LIFE_CURRENT_LAYOUT_TUNING.maximumGap);
+  expect(tenYears).toBe(LIFE_CURRENT_LAYOUT_TUNING.maximumGap);
 });
 
-test("long gaps expand with strong diminishing returns", () => {
+test("long empty periods cannot collapse the remaining activity range", () => {
   const oneYear = gapForDays(365);
   const tenYears = gapForDays(3650);
   const thirtyYears = gapForDays(10950);
-  expect(tenYears / oneYear).toBeLessThan(10);
-  expect(thirtyYears / tenYears).toBeLessThan(3);
-  expect(thirtyYears).toBeLessThan(oneYear * 3);
-  expect(thirtyYears).toBeGreaterThan(tenYears);
+  expect(oneYear).toBe(LIFE_CURRENT_LAYOUT_TUNING.maximumGap);
+  expect(tenYears).toBe(oneYear);
+  expect(thirtyYears).toBe(oneYear);
 });
 
 test("uses calendar-safe day arithmetic across month and year boundaries", () => {
@@ -141,7 +141,7 @@ test("DST-adjacent local date keys remain exactly one calendar day apart", () =>
 });
 
 test("accumulates compressed intervals rather than transforming absolute epochs", () => {
-  const result = layout(["1998-01-01", "2010-01-01", "2011-01-01"]);
+  const result = layout(["1998-01-01", "2010-01-01", "2010-01-02"]);
   const firstGap = result.points[1].visualGapFromPrevious;
   const secondGap = result.points[2].visualGapFromPrevious;
   expect(result.points[0].x).toBe(0);

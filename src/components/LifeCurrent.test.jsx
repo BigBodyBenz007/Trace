@@ -124,6 +124,62 @@ test("ends at the latest activity for sparse older and recent Memory data", () =
   expect(screen.queryByTestId("life-current-quiet-trail")).not.toBeInTheDocument();
 });
 
+test("distributes historical and recent bends across the full rendered range", () => {
+  const source = deriveLifeCurrent({
+    memories: [
+      { id: "1983", date: "1983-06-16" },
+      { id: "2001", date: "2001-06-16" },
+      { id: "2024", date: "2024-08-06" },
+      { id: "recent-start", date: "2026-08-01" },
+      ...Array.from({ length: 12 }, (_, index) => ({
+        id: `recent-${index}`,
+        date: `2026-08-${String(index + 5).padStart(2, "0")}`,
+      })),
+    ],
+  });
+  const currentLayout = deriveLifeCurrentLayout(source);
+  const activityCoordinates = getLifeCurrentPointCoordinates(currentLayout.points, true);
+  const historicalSpan = activityCoordinates[3].x - activityCoordinates[0].x;
+  const recentSpan = activityCoordinates.at(-1).x - activityCoordinates[3].x;
+
+  expect(historicalSpan).toBeGreaterThan(400);
+  expect(recentSpan).toBeGreaterThan(400);
+  expect(activityCoordinates.slice(0, 4).every(({ y }) => y !== 28)).toBe(true);
+  expect(new Set(activityCoordinates.slice(0, 4).map(({ y }) => y)).size)
+    .toBeGreaterThan(1);
+  expect(activityCoordinates.at(-1).x).toBe(1000);
+});
+
+test("consolidates same-day memories while preserving their combined intensity", () => {
+  const source = deriveLifeCurrent({
+    memories: [
+      { id: "first", date: "2007-04-17" },
+      { id: "second", date: "2007-04-17" },
+      { id: "single", date: "2008-01-01" },
+    ],
+  });
+  const currentLayout = deriveLifeCurrentLayout(source);
+  const coordinates = getLifeCurrentPointCoordinates(currentLayout.points, true);
+
+  expect(currentLayout.points).toHaveLength(2);
+  expect(currentLayout.points[0].rawActivity).toBe(1.25);
+  expect(Math.abs(coordinates[0].y - 28))
+    .toBeGreaterThan(Math.abs(coordinates[1].y - 28));
+});
+
+test("uses the same generated geometry at laptop and phone container widths", () => {
+  const points = [point("2000-01-01", 0), point("2010-01-01", 0.5), point("2026-01-01", 1)];
+  const { rerender } = render(
+    <div style={{ width: "1440px" }}><LifeCurrent layout={layout(points)} showQuietTrail /></div>
+  );
+  const laptopPath = screen.getByTestId("life-current").querySelector("path").getAttribute("d");
+  rerender(
+    <div style={{ width: "390px" }}><LifeCurrent layout={layout(points)} showQuietTrail /></div>
+  );
+  expect(screen.getByTestId("life-current").querySelector("path"))
+    .toHaveAttribute("d", laptopPath);
+});
+
 test("does not add a quiet trail to camera-window rendering by default", () => {
   render(<LifeCurrent layout={layout([
     point("2026-01-01", 0),

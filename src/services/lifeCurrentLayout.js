@@ -1,5 +1,6 @@
 export const LIFE_CURRENT_LAYOUT_TUNING = Object.freeze({
   minimumGap: 1,
+  maximumGap: 4,
   logarithmicScale: 4,
   compressionScaleDays: 7,
 });
@@ -61,10 +62,11 @@ function canonicalDays(days) {
 function compressedGap(elapsedDays) {
   if (!Number.isFinite(elapsedDays) || elapsedDays <= 0) return 0;
   const additionalDays = Math.max(0, elapsedDays - 1);
-  return (
+  return Math.min(
+    LIFE_CURRENT_LAYOUT_TUNING.maximumGap,
     LIFE_CURRENT_LAYOUT_TUNING.minimumGap +
-    LIFE_CURRENT_LAYOUT_TUNING.logarithmicScale *
-      Math.log1p(additionalDays / LIFE_CURRENT_LAYOUT_TUNING.compressionScaleDays)
+      LIFE_CURRENT_LAYOUT_TUNING.logarithmicScale *
+        Math.log1p(additionalDays / LIFE_CURRENT_LAYOUT_TUNING.compressionScaleDays)
   );
 }
 
