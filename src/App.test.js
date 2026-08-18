@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import App, { localCalendarDateKey } from "./App";
 import { createCompoundDefinition } from "./services/compoundCatalog";
 import { createExerciseDefinition } from "./services/exerciseCatalog";
-import { deletePhotos, openPhotoDatabase, putPhotos } from "./storage/photoStorage";
+import { deletePhotos, getPhoto, openPhotoDatabase, putPhotos } from "./storage/photoStorage";
 import {
   createTraceBackup,
   parseTraceBackupText,
@@ -905,6 +905,298 @@ test("legacy Memories receive a compatibility-safe stable ID and remain trophy-e
   });
   openPhotoDatabase.mockImplementation(() => new Promise(() => {}));
 });
+
+test("renders stable metadata-first geometry for 21 Memories while 51 photos hydrate with bounded priority", async () => {
+  const photoCounts = [
+    ...Array(9).fill(3),
+    ...Array(10).fill(2),
+    0,
+    4,
+  ];
+  const storedMemories = photoCounts.map((photoCount, index) => ({
+    id: `startup-memory-${index}`,
+    title: `Startup Memory ${index}`,
+    description: `Metadata for Memory ${index}`,
+    date: `${2000 + index}-01-01`,
+    categories: [],
+    images: Array.from(
+      { length: photoCount },
+      (_, photoIndex) => `startup-photo-${index}-${photoIndex}`
+    ),
+    favorite: false,
+  }));
+  expect(storedMemories.flatMap(({ images }) => images)).toHaveLength(51);
+  localStorage.setItem("memories", JSON.stringify(storedMemories));
+  openPhotoDatabase.mockResolvedValue({ name: "startup-photo-database" });
+  const completions = new Map();
+  getPhoto.mockImplementation((database, id) => new Promise((resolve) => {
+    completions.set(id, resolve);
+  }));
+
+  const { unmount } = render(<App />);
+
+  expect(await screen.findByText("Memories Added: 21")).toBeInTheDocument();
+  const cards = storedMemories.map(({ id }) =>
+    screen.getByTestId(`timeline-memory-${id}`)
+  );
+  expect(screen.getByRole("heading", { name: "2000" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "2020" })).toBeInTheDocument();
+  const canvas = screen.getByTestId("timeline-content-canvas");
+  const lifeCurrent = screen.getByTestId("life-current");
+  const newestGallery = screen.getByTestId(
+    "timeline-photo-gallery-startup-memory-20"
+  );
+  const newestSlots = [
+    ...newestGallery.querySelectorAll("[data-timeline-photo-slot]"),
+  ];
+  expect(newestSlots).toHaveLength(3);
+  expect(newestGallery.querySelectorAll("[data-timeline-photo-placeholder]"))
+    .toHaveLength(3);
+
+  await waitFor(() => expect(getPhoto).toHaveBeenCalledTimes(3));
+  expect(getPhoto.mock.calls.map(([, id]) => id)).toEqual([
+    "startup-photo-20-0",
+    "startup-photo-20-1",
+    "startup-photo-20-2",
+  ]);
+
+  await act(async () => {
+    completions.get("startup-photo-20-1")({
+      id: "startup-photo-20-1",
+      blob: new Blob(["second"], { type: "image/jpeg" }),
+    });
+    completions.get("startup-photo-20-0")({
+      id: "startup-photo-20-0",
+      blob: new Blob(["first"], { type: "image/jpeg" }),
+    });
+    completions.get("startup-photo-20-2")({
+      id: "startup-photo-20-2",
+      blob: new Blob(["third"], { type: "image/jpeg" }),
+    });
+    await Promise.resolve();
+  });
+
+  expect(storedMemories.map(({ id }) => id))
+    .toEqual(cards.map((card) => card.dataset.memoryId));
+  storedMemories.forEach(({ id }, index) => {
+    expect(screen.getByTestId(`timeline-memory-${id}`)).toBe(cards[index]);
+  });
+  expect(screen.getByTestId("timeline-content-canvas")).toBe(canvas);
+  expect(screen.getByTestId("life-current")).toBe(lifeCurrent);
+  expect(newestGallery.querySelectorAll("[data-timeline-photo-slot]")[0])
+    .toBe(newestSlots[0]);
+  expect(newestGallery.querySelectorAll("[data-timeline-gallery-thumbnail]"))
+    .toHaveLength(3);
+  expect(JSON.parse(localStorage.getItem("memories"))).toEqual(storedMemories);
+
+  unmount();
+  openPhotoDatabase.mockImplementation(() => new Promise(() => {}));
+});
+
+test.each([
+  ["river", "river-current"],
+  ["haunted-forest", "forest-path"],
+])("Edit Cancel retains four-photo Detail and restores the exact original %s timeline position", async (themeId, rendererId) => {
+  const storedMemories = [
+    {
+      id: "route-oldest",
+      title: "Oldest route Memory",
+      description: "Before the target",
+      date: "2000-01-01",
+      categories: [],
+      images: [],
+      favorite: false,
+    },
+    {
+      id: "route-target",
+      title: "Four photo route Memory",
+      description: "Retain this exact Detail",
+      date: "2012-06-15",
+      categories: [],
+      images: ["route-photo-1", "route-photo-2", "route-photo-3", "route-photo-4"],
+      favorite: false,
+    },
+    {
+      id: "route-present",
+      title: "Present route Memory",
+      description: "After the target",
+      date: "2026-08-18",
+      categories: [],
+      images: [],
+      favorite: false,
+    },
+  ];
+  localStorage.setItem("memories", JSON.stringify(storedMemories));
+  localStorage.setItem("appSettings", JSON.stringify({
+    schemaVersion: 1,
+    units: { weight: "lb", height: "ft-in", circumference: "in" },
+    lifeCurrentThemeId: themeId,
+  }));
+  openPhotoDatabase.mockResolvedValue({ name: "edit-cancel-photo-database" });
+  getPhoto.mockImplementation(async (database, id) => ({
+    id,
+    blob: new Blob([id], { type: "image/jpeg" }),
+  }));
+  let objectUrlSequence = 0;
+  URL.createObjectURL.mockImplementation(() => `blob:route-${++objectUrlSequence}`);
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  window.cancelAnimationFrame = jest.fn();
+  const originalScrollX = Object.getOwnPropertyDescriptor(window, "scrollX");
+  const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
+  Object.defineProperty(window, "scrollX", { configurable: true, value: 37 });
+  Object.defineProperty(window, "scrollY", { configurable: true, value: 240 });
+
+  try {
+    render(<App />);
+    const targetCard = await screen.findByTestId("timeline-memory-route-target");
+    const home = screen.getByTestId("home-page");
+    const viewport = screen.getByTestId("memory-timeline-viewport");
+    const gallery = screen.getByTestId("timeline-photo-gallery-route-target");
+    const targetVisual = targetCard.querySelector("[data-timeline-card-visual]");
+    viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, right: 400, width: 400 }));
+    viewport.scrollBy = jest.fn();
+    targetCard.getBoundingClientRect = jest.fn(() => ({
+      left: 150,
+      right: 250,
+      width: 100,
+    }));
+    screen.getByTestId("timeline-memory-route-oldest").getBoundingClientRect =
+      jest.fn(() => ({ left: 10, right: 110, width: 100 }));
+    screen.getByTestId("timeline-memory-route-present").getBoundingClientRect =
+      jest.fn(() => ({ left: 290, right: 390, width: 100 }));
+    act(() => {
+      while (frames.length) frames.shift()();
+    });
+    fireEvent.scroll(viewport);
+    act(() => {
+      while (frames.length) frames.shift()();
+    });
+    expect(targetCard).toHaveAttribute("data-timeline-focused", "true");
+
+    await waitFor(() => {
+      expect(gallery.querySelectorAll("[data-timeline-gallery-thumbnail]"))
+        .toHaveLength(3);
+    });
+    expect(getPhoto).toHaveBeenCalledTimes(3);
+    viewport.scrollLeft = 417;
+    viewport.scrollTop = 23;
+    const previewNodes = [...gallery.querySelectorAll("[data-timeline-gallery-thumbnail]")];
+    const previewSources = previewNodes.map(({ src }) => src);
+    const themedRenderer = screen.getByTestId("life-current")
+      .querySelector(`[data-life-current-renderer="${rendererId}"]`);
+    const themedGeometry = themedRenderer.outerHTML;
+
+    fireEvent.click(targetCard);
+    const detail = screen.getByRole("dialog", {
+      name: "Memory details for Four photo route Memory",
+    });
+    await waitFor(() => {
+      expect(within(detail).getAllByAltText("Memory 4").length).toBeGreaterThan(0);
+    });
+    expect(getPhoto).toHaveBeenCalledTimes(4);
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(4);
+
+    fireEvent.click(within(detail).getAllByAltText("Memory 1")[0]);
+    expect(screen.getByText("1 of 4")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Next photo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next photo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Next photo" }));
+    expect(screen.getByText("4 of 4")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Close photo viewer" }));
+    const targetVisualStyle = targetVisual.getAttribute("style");
+
+    fireEvent.click(within(detail).getByRole("button", { name: "Edit" }));
+    const editHeading = screen.getByRole("heading", { name: "Edit Memory" });
+    const editor = editHeading.parentElement;
+    await waitFor(() => {
+      expect(within(editor).getAllByAltText(/Memory \d/)).toHaveLength(4);
+    });
+    act(() => {
+      while (frames.length) frames.shift()();
+    });
+    expect(home).toHaveAttribute("hidden");
+    expect(home).toHaveAttribute("inert");
+    expect(home).toHaveAttribute("aria-hidden", "true");
+    expect(editHeading).toBeVisible();
+    expect(screen.queryByTestId("memory-detail-panel")).not.toBeInTheDocument();
+    expect(screen.queryByRole("dialog", {
+      name: "Memory details for Four photo route Memory",
+    })).not.toBeInTheDocument();
+    expect(detail).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Close memory details" }))
+      .not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Add Favorite" }))
+      .not.toBeInTheDocument();
+    const titleInput = within(editor).getByPlaceholderText("Memory title...");
+    const cancelButton = within(editor).getByRole("button", { name: "Cancel" });
+    expect(titleInput).toBeVisible();
+    expect(titleInput).toBeEnabled();
+    expect(titleInput.closest("[inert]")).toBeNull();
+    expect(cancelButton).toBeVisible();
+    expect(cancelButton).toBeEnabled();
+    expect(document.body.style.position).toBe("");
+    expect(getPhoto).toHaveBeenCalledTimes(4);
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(4);
+
+    jest.spyOn(window, "confirm").mockReturnValue(true);
+    fireEvent.change(titleInput, { target: { value: "Editor remains interactive" } });
+    expect(titleInput).toHaveValue("Editor remains interactive");
+    fireEvent.click(cancelButton);
+    act(() => {
+      while (frames.length) frames.shift()();
+    });
+
+    expect(screen.queryByRole("heading", { name: "Edit Memory" })).not.toBeInTheDocument();
+    const returnedDetail = screen.getByRole("dialog", {
+      name: "Memory details for Four photo route Memory",
+    });
+    expect(returnedDetail).toBeVisible();
+    expect(returnedDetail).not.toHaveAttribute("aria-hidden");
+    expect(returnedDetail).not.toHaveAttribute("inert");
+    expect(returnedDetail).not.toBe(detail);
+    await waitFor(() => {
+      expect(within(returnedDetail).getAllByAltText(/Memory \d/)).toHaveLength(5);
+    });
+    expect(screen.getByTestId("home-page")).toBe(home);
+    expect(screen.getByTestId("memory-timeline-viewport")).toBe(viewport);
+    expect(screen.getByTestId("timeline-memory-route-target")).toBe(targetCard);
+    expect(screen.getByTestId("timeline-photo-gallery-route-target")).toBe(gallery);
+    expect([...gallery.querySelectorAll("[data-timeline-gallery-thumbnail]")])
+      .toEqual(previewNodes);
+    expect(previewNodes.map(({ src }) => src)).toEqual(previewSources);
+    expect(gallery.querySelector("[data-timeline-photo-placeholder]"))
+      .not.toBeInTheDocument();
+    expect(targetCard).toHaveAttribute("data-timeline-focused", "true");
+    expect(targetVisual.getAttribute("style")).toBe(targetVisualStyle);
+    expect(screen.getByTestId("life-current")
+      .querySelector(`[data-life-current-renderer="${rendererId}"]`)).toBe(themedRenderer);
+    expect(themedRenderer.outerHTML).toBe(themedGeometry);
+    expect(getPhoto).toHaveBeenCalledTimes(4);
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(4);
+
+    window.scrollTo.mockClear();
+    fireEvent.click(within(returnedDetail).getByRole("button", { name: "Close memory details" }));
+    act(() => {
+      while (frames.length) frames.shift()();
+    });
+    expect(viewport.scrollLeft).toBe(417);
+    expect(viewport.scrollTop).toBe(23);
+    expect(window.scrollTo).toHaveBeenLastCalledWith(37, 240);
+    expect(targetCard).toHaveAttribute("data-timeline-focused", "true");
+    expect(getPhoto).toHaveBeenCalledTimes(4);
+    expect(URL.createObjectURL).toHaveBeenCalledTimes(4);
+  } finally {
+    if (originalScrollX) Object.defineProperty(window, "scrollX", originalScrollX);
+    else delete window.scrollX;
+    if (originalScrollY) Object.defineProperty(window, "scrollY", originalScrollY);
+    else delete window.scrollY;
+    openPhotoDatabase.mockImplementation(() => new Promise(() => {}));
+  }
+}, 15000);
 
 test("edited Memories are re-evaluated and declining keeps manual trophy addition available", async () => {
   putPhotos.mockResolvedValue(undefined);

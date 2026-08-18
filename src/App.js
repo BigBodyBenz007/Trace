@@ -65,6 +65,7 @@ import {
   writeHealthMeasurementEntries,
 } from "./services/healthMeasurements";
 import { readAppSettings, writeAppSettings } from "./services/appSettings";
+import { createPhotoUrlLoader } from "./services/photoUrlLoader";
 import {
   createJournalEntry,
   readJournalEntries,
@@ -121,6 +122,19 @@ function storageMessage(action) {
   return `Trace couldn't ${action} because browser storage is unavailable or full. Your existing data has not been intentionally removed.`;
 }
 
+function memoryDisplayMetadata(memories) {
+  return memories.map((memory) => ({
+    ...memory,
+    images: (Array.isArray(memory.images) ? memory.images : []).map((image) => {
+      if (typeof image !== "string") return image;
+      if (image.startsWith("data:")) {
+        return { id: null, legacyDataUrl: image, url: image };
+      }
+      return { id: image };
+    }),
+  }));
+}
+
 export function localCalendarDateKey(value = new Date()) {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(
     value.getDate()
@@ -136,6 +150,8 @@ function App() {
   const [categories, setCategories] = useState([]);
 
   const [editingId, setEditingId] = useState(null);
+  const [retainHomeDuringMemoryEdit, setRetainHomeDuringMemoryEdit] = useState(false);
+  const [homePageGeneration, setHomePageGeneration] = useState(0);
 
   const [images, setImages] = useState([]);
   const [timelineTargetMemoryId, setTimelineTargetMemoryId] = useState(null);
@@ -164,9 +180,39 @@ function App() {
   const confirmationIdRef = useRef(0);
   const [trophySourceNavigation, setTrophySourceNavigation] = useState(null);
   const photoDatabaseRef = useRef(null);
+  const photoDatabasePromiseRef = useRef(null);
   const initializationStartedRef = useRef(false);
   const activeObjectUrlsRef = useRef(new Set());
+  const photoUrlLoaderRef = useRef(null);
   const skipNextPageTopScrollRef = useRef(false);
+
+  function ensurePhotoDatabase() {
+    if (photoDatabaseRef.current) return Promise.resolve(photoDatabaseRef.current);
+    if (!photoDatabasePromiseRef.current) {
+      photoDatabasePromiseRef.current = openPhotoDatabase()
+        .then((database) => {
+          photoDatabaseRef.current = database;
+          return database;
+        })
+        .catch((error) => {
+          photoDatabasePromiseRef.current = null;
+          throw error;
+        });
+    }
+    return photoDatabasePromiseRef.current;
+  }
+
+  if (!photoUrlLoaderRef.current) {
+    photoUrlLoaderRef.current = createPhotoUrlLoader({
+      readPhoto: async (id) => getPhoto(await ensurePhotoDatabase(), id),
+      onCreateUrl: (url) => activeObjectUrlsRef.current.add(url),
+      onRevokeUrl: (url) => activeObjectUrlsRef.current.delete(url),
+      onUnavailable: () => setStorageError(
+        "One or more saved photos could not be loaded. Trace kept their references and did not delete them."
+      ),
+    });
+  }
+  const photoUrlLoader = photoUrlLoaderRef.current;
 
   function showConfirmation(message) {
     confirmationIdRef.current += 1;
@@ -198,10 +244,7 @@ function App() {
 
       try {
         rawMemories = localStorage.getItem("memories");
-        if (!rawMemories) {
-          photoDatabaseRef.current = await openPhotoDatabase();
-          return;
-        }
+        if (!rawMemories) return;
         parsedMemories = JSON.parse(rawMemories);
         if (!Array.isArray(parsedMemories)) throw new Error("Invalid memories data.");
       } catch (error) {
@@ -225,9 +268,11 @@ function App() {
         return { ...memory, id };
       });
 
+      setMemories(memoryDisplayMetadata(memoriesWithIds));
+      setMemoryCount(memoriesWithIds.length);
+
       try {
-        const database = await openPhotoDatabase();
-        photoDatabaseRef.current = database;
+        const database = await ensurePhotoDatabase();
         let compactMemories = memoriesWithIds;
 
         if (hasLegacyPhotos(memoriesWithIds)) {
@@ -237,6 +282,7 @@ function App() {
             memoriesWithIds
           );
           localStorage.setItem("memories", JSON.stringify(compactMemories));
+          setMemories(memoryDisplayMetadata(compactMemories));
           await markLegacyMigrationComplete(database).catch(() => {
             setStorageError(
               "Trace migrated the saved photos, but couldn't finalize its migration backup yet. It will safely retry later."
@@ -248,49 +294,10 @@ function App() {
           }
         }
 
-        let hasMissingPhoto = false;
-        const hydratedMemories = await Promise.all(
-          compactMemories.map(async (memory) => ({
-            ...memory,
-            images: await Promise.all(
-              (Array.isArray(memory.images) ? memory.images : []).map(
-                async (imageId) => {
-                  const photo = await getPhoto(database, imageId);
-                  if (!photo?.blob) {
-                    hasMissingPhoto = true;
-                    return { id: imageId, url: "", unavailable: true };
-                  }
-                  const url = URL.createObjectURL(photo.blob);
-                  activeObjectUrlsRef.current.add(url);
-                  return { id: imageId, url };
-                }
-              )
-            ),
-          }))
-        );
-
-        setMemories(hydratedMemories);
-        setMemoryCount(hydratedMemories.length);
         if (!hasLegacyPhotos(memoriesWithIds)) {
           await clearCompletedMigrationBackup(database).catch(() => {});
         }
-        if (hasMissingPhoto) {
-          setStorageError(
-            "One or more saved photos could not be loaded. Trace kept their references and did not delete them."
-          );
-        }
       } catch (error) {
-        setMemories(
-          memoriesWithIds.map((memory) => ({
-            ...memory,
-            images: (memory.images || []).map((image) => ({
-              id: null,
-              url: image,
-              legacyDataUrl: image,
-            })),
-          }))
-        );
-        setMemoryCount(memoriesWithIds.length);
         setStorageError(
           "Trace couldn't migrate saved photos to device photo storage. The original saved memories were left unchanged."
         );
@@ -304,10 +311,11 @@ function App() {
     const activeObjectUrls = activeObjectUrlsRef.current;
 
     return () => {
+      photoUrlLoader.dispose();
       activeObjectUrls.forEach((url) => URL.revokeObjectURL(url));
       activeObjectUrls.clear();
     };
-  }, []);
+  }, [photoUrlLoader]);
 
   useEffect(() => {
     if (skipNextPageTopScrollRef.current) {
@@ -406,8 +414,7 @@ function App() {
         setWorkoutEntries(parsedEntries);
         return;
       }
-      const database = photoDatabaseRef.current || await openPhotoDatabase();
-      photoDatabaseRef.current = database;
+      const database = await ensurePhotoDatabase();
       const hydrated = await Promise.all(parsedEntries.map(async (entry) => ({
         ...entry,
         ...(Array.isArray(entry.photos) ? { photos: (await Promise.all(entry.photos.map(async (value) => {
@@ -527,7 +534,9 @@ function App() {
       return { id, url: image.url };
     });
 
-    await putPhotos(photoDatabaseRef.current, photosToStore);
+    if (photosToStore.length > 0) {
+      await putPhotos(await ensurePhotoDatabase(), photosToStore);
+    }
     return {
       preparedImages,
       newPhotoIds: photosToStore.map((photo) => photo.id),
@@ -587,7 +596,11 @@ function App() {
       setMemories(updatedMemories);
       showConfirmation("Memory traced");
       setMemoryCount(updatedMemories.length);
+      if (editingId !== null) {
+        setHomePageGeneration((generation) => generation + 1);
+      }
       setEditingId(null);
+      setRetainHomeDuringMemoryEdit(false);
       setStorageError("");
 
       const retainedIds = new Set(preparedImages.map((image) => image.id));
@@ -602,6 +615,7 @@ function App() {
       );
 
       removedImages.forEach((image) => {
+        photoUrlLoader.evict(image);
         if (image.url) {
           URL.revokeObjectURL(image.url);
           activeObjectUrlsRef.current.delete(image.url);
@@ -672,6 +686,7 @@ function App() {
         setStorageError("The memory was deleted, but Trace couldn't finish cleaning up its photo data.")
       );
       (deletedMemory?.images || []).forEach((image) => {
+        photoUrlLoader.evict(image);
         if (image.url) {
           URL.revokeObjectURL(image.url);
           activeObjectUrlsRef.current.delete(image.url);
@@ -684,7 +699,7 @@ function App() {
     }
   }
 
-  function editMemory(idToEdit) {
+  function editMemory(idToEdit, { retainHome = true } = {}) {
     const memory = memories.find((item) => item.id === idToEdit);
 
     if (!memory) return;
@@ -695,14 +710,22 @@ function App() {
     setImages(memory.images || []);
     setCategories(Array.isArray(memory.categories) ? memory.categories : []);
 
+    setRetainHomeDuringMemoryEdit(retainHome);
     setEditingId(idToEdit);
     setPage("new");
   }
 
   function openNewMemory() {
+    setRetainHomeDuringMemoryEdit(false);
     setEditingId(null);
     setDate(localCalendarDateKey());
     setPage("new");
+  }
+
+  function cancelExistingMemoryEdit() {
+    skipNextPageTopScrollRef.current = true;
+    setRetainHomeDuringMemoryEdit(false);
+    setPage("home");
   }
 
   function saveNutritionEntry(entry) {
@@ -1059,8 +1082,7 @@ function App() {
     if (incomingPhotos.length === 0 && existingPhotos.length === 0) {
       return { prepared: [], newIds: [], removed: [] };
     }
-    const database = photoDatabaseRef.current || await openPhotoDatabase();
-    photoDatabaseRef.current = database;
+    const database = await ensurePhotoDatabase();
     const existingById = new Map(existingPhotos.filter(({ id }) => id).map((photo) => [photo.id, photo]));
     const newRecords = [];
     const prepared = [];
@@ -1361,10 +1383,15 @@ function App() {
           {storageError}
         </div>
       )}
-      {page === "home" ? (
+      {(page === "home" || (
+        page === "new" && editingId !== null && retainHomeDuringMemoryEdit
+      )) && (
         <HomePage
+          key={`home-${homePageGeneration}`}
+          active={page === "home"}
           memoryCount={memoryCount}
           memories={memories}
+          photoLoader={photoUrlLoader}
           timelineTargetMemoryId={timelineTargetMemoryId}
           onTimelineTargetShown={() => setTimelineTargetMemoryId(null)}
           setMemories={setMemories}
@@ -1398,7 +1425,8 @@ function App() {
           onReturnToTrophyCase={returnToTrophyCase}
           onExitTrophySource={() => setTrophySourceNavigation(null)}
         />
-      ) : page === "nutrition" ? (
+      )}
+      {page !== "home" && (page === "nutrition" ? (
         <NutritionPage
           onBack={() => setPage("home")}
           nutritionEntries={nutritionEntries}
@@ -1521,6 +1549,7 @@ function App() {
           setCategories={setCategories}
           images={images}
           setImages={setImages}
+          photoLoader={photoUrlLoader}
           saveMemory={saveMemory}
           inputStyle={inputStyle}
           buttonStyle={buttonStyle}
@@ -1528,8 +1557,9 @@ function App() {
           setPage={setPage}
           editingIndex={editingId}
           setEditingIndex={setEditingId}
+          onCancelExistingMemory={cancelExistingMemoryEdit}
         />
-      )}
+      ))}
       {ceremonyEntry && (
         <TrophyPlacementCeremony
           entry={ceremonyEntry}

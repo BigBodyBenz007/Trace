@@ -466,6 +466,102 @@ test.each([
   expect(screen.getByRole("dialog", { name: "Memory details for Same Day" })).toBeInTheDocument();
 });
 
+test.each([
+  ["river", "river-current"],
+  ["haunted-forest", "forest-path"],
+])("inactive retained %s Home pauses behavior without resetting its timeline", (themeId, renderer) => {
+  const originalObserver = global.IntersectionObserver;
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const observers = [];
+  const frames = [];
+  global.IntersectionObserver = jest.fn(function () {
+    this.observe = jest.fn();
+    this.disconnect = jest.fn();
+    observers.push(this);
+  });
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  window.cancelAnimationFrame = jest.fn();
+  const pageScroll = mockPageScroll(12, 180);
+  const retainedMemories = [
+    { ...memories[0], images: [{ id: "retained-photo", url: "blob:retained-photo" }] },
+    { ...memories[0], id: "memory-c", title: "Middle C", date: "2026-05-18" },
+    { ...memories[0], id: "memory-d", title: "Middle D", date: "2026-05-19" },
+    { ...memories[1], title: "Retained target", date: "2026-05-20" },
+  ];
+  const props = {
+    ...baseProps,
+    active: true,
+    lifeCurrentThemeId: themeId,
+    memories: retainedMemories,
+    trophyEntries: [],
+  };
+  const { rerender, unmount } = render(<HomePage {...props} />);
+  const home = screen.getByTestId("home-page");
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const firstCard = screen.getByTestId("timeline-memory-memory-a");
+  const targetCard = screen.getByTestId("timeline-memory-memory-b");
+  viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 400 }));
+  viewport.scrollBy = jest.fn();
+  firstCard.getBoundingClientRect = jest.fn(() => ({ left: 10, width: 100 }));
+  targetCard.getBoundingClientRect = jest.fn(() => ({ left: 150, width: 100 }));
+  act(() => {
+    while (frames.length) frames.shift()();
+  });
+  expect(targetCard).toHaveAttribute("data-timeline-focused", "true");
+  fireEvent.click(targetCard);
+  const detail = screen.getByRole("dialog", { name: "Memory details for Retained target" });
+  const themedRenderer = screen.getByTestId("life-current")
+    .querySelector(`[data-life-current-renderer="${renderer}"]`);
+  const geometry = themedRenderer.outerHTML;
+
+  rerender(<HomePage {...props} active={false} />);
+
+  expect(screen.getByTestId("home-page")).toBe(home);
+  expect(home).toHaveAttribute("hidden");
+  expect(home).toHaveAttribute("inert");
+  expect(home).toHaveAttribute("aria-hidden", "true");
+  expect(screen.queryByRole("button", { name: "Add Memory" })).not.toBeInTheDocument();
+  expect(screen.queryByTestId("memory-detail-panel")).not.toBeInTheDocument();
+  expect(screen.queryByRole("dialog", { name: "Memory details for Retained target" }))
+    .not.toBeInTheDocument();
+  expect(detail).not.toBeInTheDocument();
+  expect(document.body.style.position).toBe("");
+  expect(observers.length).toBeGreaterThanOrEqual(2);
+  expect(observers.every(({ disconnect }) => disconnect.mock.calls.length > 0)).toBe(true);
+  expect(targetCard).toHaveAttribute("data-timeline-focused", "true");
+
+  rerender(<HomePage {...props} active />);
+  act(() => {
+    while (frames.length) frames.shift()();
+  });
+
+  const returnedDetail = screen.getByRole("dialog", {
+    name: "Memory details for Retained target",
+  });
+  expect(returnedDetail).toBeVisible();
+  expect(returnedDetail).not.toHaveAttribute("aria-hidden");
+  expect(returnedDetail).not.toHaveAttribute("inert");
+  expect(returnedDetail).not.toBe(detail);
+  expect(screen.getByTestId("memory-timeline-viewport")).toBe(viewport);
+  expect(screen.getByTestId("timeline-memory-memory-b")).toBe(targetCard);
+  expect(targetCard).toHaveAttribute("data-timeline-focused", "true");
+  expect(screen.getByTestId("life-current")
+    .querySelector(`[data-life-current-renderer="${renderer}"]`)).toBe(themedRenderer);
+  expect(themedRenderer.outerHTML).toBe(geometry);
+  fireEvent.click(within(returnedDetail).getByRole("button", { name: "Add Favorite" }));
+  expect(baseProps.toggleFavorite).toHaveBeenCalledWith("memory-b");
+
+  unmount();
+  pageScroll.restore();
+  global.IntersectionObserver = originalObserver;
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.cancelAnimationFrame = originalCancelAnimationFrame;
+});
+
 test("Past positions the oldest Memory at the start and centers it when possible", () => {
   const originalRequestAnimationFrame = window.requestAnimationFrame;
   const frames = [];
@@ -884,6 +980,73 @@ test("large galleries render only preview metadata and thumbnails are not separa
   });
   expect(within(detail).getAllByRole("button", { name: /Show photo/ }))
     .toHaveLength(137);
+});
+
+test("keeps card and Life Current geometry stable while preview photos hydrate", async () => {
+  const completions = new Map();
+  const photoLoader = {
+    load: jest.fn((id) => new Promise((resolve) => completions.set(id, resolve))),
+  };
+  const memory = {
+    ...memories[0],
+    id: "metadata-first",
+    title: "Metadata first",
+    images: Array.from({ length: 4 }, (_, index) => ({ id: `stored-${index}` })),
+  };
+  render(
+    <HomePage
+      {...baseProps}
+      memories={[memory]}
+      photoLoader={photoLoader}
+      trophyEntries={[]}
+    />
+  );
+
+  const card = screen.getByTestId("timeline-memory-metadata-first");
+  const canvas = screen.getByTestId("timeline-content-canvas");
+  const lifeCurrent = screen.getByTestId("life-current");
+  const gallery = screen.getByTestId("timeline-photo-gallery-metadata-first");
+  const slots = [...gallery.querySelectorAll("[data-timeline-photo-slot]")];
+  expect(slots).toHaveLength(3);
+  expect(slots.every((slot) => slot.classList.contains("timeline-photo-slot")))
+    .toBe(true);
+  expect(gallery.querySelectorAll("[data-timeline-photo-placeholder]"))
+    .toHaveLength(3);
+  expect(photoLoader.load).toHaveBeenCalledTimes(3);
+  expect(photoLoader.load).not.toHaveBeenCalledWith("stored-3", expect.anything());
+
+  await act(async () => {
+    completions.get("stored-0")({
+      id: "stored-0",
+      unavailable: false,
+      url: "blob:stored-0",
+    });
+    await Promise.resolve();
+  });
+
+  await act(async () => {
+    completions.get("stored-1")({
+      id: "stored-1",
+      unavailable: true,
+      url: "",
+    });
+    await Promise.resolve();
+  });
+
+  expect(screen.getByTestId("timeline-memory-metadata-first")).toBe(card);
+  expect(screen.getByTestId("timeline-content-canvas")).toBe(canvas);
+  expect(screen.getByTestId("life-current")).toBe(lifeCurrent);
+  expect(gallery.querySelectorAll("[data-timeline-photo-slot]")[0]).toBe(slots[0]);
+  expect(slots[0]).toHaveClass("timeline-photo-slot");
+  expect(gallery.querySelectorAll("[data-timeline-photo-slot]")[1]).toBe(slots[1]);
+  expect(gallery.querySelectorAll("[data-timeline-photo-placeholder]")).toHaveLength(2);
+  expect(within(gallery).getByAltText("")).toHaveAttribute("src", "blob:stored-0");
+
+  fireEvent.click(card);
+  expect(photoLoader.load).toHaveBeenCalledWith(
+    "stored-3",
+    0
+  );
 });
 
 test("cancels a pending Timeline focus frame when Home unmounts", () => {

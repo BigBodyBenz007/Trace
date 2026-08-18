@@ -17,6 +17,8 @@ import {
 } from "../services/timelineFocus";
 import LifeCurrent, { LifeCurrentScenery } from "./LifeCurrent";
 import { LIFE_CURRENT_TRAIL_TUNING } from "./LifeCurrent";
+import StoredPhoto, { storedPhotoId } from "./StoredPhoto";
+import { PHOTO_LOAD_PRIORITY } from "../services/photoUrlLoader";
 
 const CATEGORY_FILTER_OPTIONS = [
   "All",
@@ -27,10 +29,6 @@ const TIMELINE_FOCUS_CONTAINMENT_WIDTH = Math.ceil(
 );
 const TIMELINE_FOCUS_CONTAINMENT_GUTTER =
   (TIMELINE_FOCUS_CONTAINMENT_WIDTH - TIMELINE_FOCUS_TUNING.baseCardWidth) / 2;
-
-function photoSource(photo) {
-  return typeof photo === "string" ? photo : photo?.url;
-}
 
 function useDocumentScrollLock(locked, scrollOrigin = null) {
   useEffect(() => {
@@ -127,9 +125,132 @@ function MemorySearchInput({ className, search, setSearch, style }) {
   );
 }
 
+function TimelinePhotoGallery({
+  active,
+  eager,
+  memory,
+  photoLoader,
+  priority,
+  timelineRef,
+}) {
+  const galleryRef = useRef(null);
+  const [shouldLoad, setShouldLoad] = useState(eager);
+  const previewPhotos = (memory.images || []).slice(0, 3);
+  const photoCount = memory.images?.length || 0;
+  const remainingPhotoCount = Math.max(0, photoCount - 3);
+
+  useEffect(() => {
+    if (!active) return undefined;
+    if (eager || shouldLoad) {
+      if (eager) setShouldLoad(true);
+      return undefined;
+    }
+
+    const gallery = galleryRef.current;
+    const viewport = timelineRef.current;
+    if (!gallery || !viewport || typeof IntersectionObserver === "undefined") {
+      setShouldLoad(true);
+      return undefined;
+    }
+
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some(({ isIntersecting }) => isIntersecting)) {
+        setShouldLoad(true);
+        observer.disconnect();
+      }
+    }, { root: viewport, rootMargin: "0px 480px" });
+    observer.observe(gallery);
+    return () => observer.disconnect();
+  }, [active, eager, shouldLoad, timelineRef]);
+
+  if (previewPhotos.length === 0) return null;
+
+  return (
+    <div
+      aria-label={photoCount + " photo preview"}
+      data-testid={"timeline-photo-gallery-" + memory.id}
+      ref={galleryRef}
+      style={{
+        display: "grid",
+        gap: "4px",
+        gridTemplateColumns:
+          photoCount === 1
+            ? "1fr"
+            : photoCount === 2
+              ? "repeat(2, 1fr)"
+              : photoCount === 3
+                ? "repeat(3, 1fr)"
+                : "repeat(2, 1fr)",
+        gridTemplateRows: photoCount >= 4 ? "repeat(2, 39px)" : "82px",
+        marginTop: "10px",
+      }}
+    >
+      {previewPhotos.map((photo, index) => (
+        <div
+          className="timeline-photo-slot"
+          data-timeline-photo-slot="true"
+          key={storedPhotoId(photo) || index}
+          style={{
+            background: "#24384a",
+            borderRadius: "6px",
+            height: "100%",
+            minWidth: 0,
+            overflow: "hidden",
+            width: "100%",
+          }}
+        >
+          <StoredPhoto
+            aria-hidden="true"
+            alt=""
+            data-timeline-gallery-thumbnail="true"
+            enabled={shouldLoad}
+            loader={photoLoader}
+            photo={photo}
+            placeholder={(
+              <span
+                aria-hidden="true"
+                data-timeline-photo-placeholder="true"
+                style={{ display: "block", height: "100%", width: "100%" }}
+              />
+            )}
+            priority={priority}
+            style={{
+              borderRadius: "6px",
+              display: "block",
+              height: "100%",
+              objectFit: "cover",
+              width: "100%",
+            }}
+          />
+        </div>
+      ))}
+      {remainingPhotoCount > 0 && (
+        <div
+          aria-label={remainingPhotoCount + " more photos"}
+          data-testid="timeline-photo-overflow"
+          style={{
+            alignItems: "center",
+            background: "#374151",
+            borderRadius: "6px",
+            color: "#f3f4f6",
+            display: "flex",
+            fontSize: "13px",
+            fontWeight: 700,
+            justifyContent: "center",
+          }}
+        >
+          +{remainingPhotoCount}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function HomePage({
+  active = true,
   memoryCount,
   memories,
+  photoLoader,
   timelineTargetMemoryId = null,
   onTimelineTargetShown = () => {},
   toggleFavorite,
@@ -187,6 +308,7 @@ function HomePage({
   const memoryCardRefs = useRef(new Map());
   const detailPanelRef = useRef(null);
   useEffect(() => {
+    if (!active) return undefined;
     const updatePhotoViewerLayout = () => {
       setIsNarrowPhotoViewport(
         window.innerWidth <= 600 && window.innerHeight >= window.innerWidth
@@ -194,7 +316,7 @@ function HomePage({
     };
     window.addEventListener("resize", updatePhotoViewerLayout);
     return () => window.removeEventListener("resize", updatePhotoViewerLayout);
-  }, []);
+  }, [active]);
   const currentDay = useMemo(() => {
     const day = new Date();
     day.setHours(0, 0, 0, 0);
@@ -274,12 +396,26 @@ function HomePage({
     ),
     [currentDay, filteredMemories, isMemoryFilterActive, sortedMemories]
   );
+  const timelineMemories = isMemoryFilterActive ? filteredMemories : sortedMemories;
+  const timelineMemoryIndexById = useMemo(
+    () => new Map(timelineMemories.map((memory, index) => [memory.id, index])),
+    [timelineMemories]
+  );
+  const photoPriorityAnchorId = timelineTargetMemoryId || (
+    isMemoryFilterActive
+      ? timelineMemories[0]?.id
+      : timelineMemories[timelinePosition === "past" ? 0 : timelineMemories.length - 1]?.id
+  );
+  const photoPriorityAnchorIndex = timelineMemoryIndexById.get(photoPriorityAnchorId);
   const timelineFocusKey = filteredMemories.map(({ id }) => id).join("|");
   const detailMemory =
     detailMemoryId === null
       ? null
       : memories.find((memory) => memory.id === detailMemoryId);
-  useDocumentScrollLock(Boolean(detailMemory || selectedImageIndex !== null), detailOriginScrollRef.current);
+  useDocumentScrollLock(
+    active && Boolean(detailMemory || selectedImageIndex !== null),
+    detailOriginScrollRef.current
+  );
   const trophySourceKeys = new Set(trophyEntries.map(({ sourceKey }) => sourceKey));
 
   function isMemoryInTrophyCase(memory) {
@@ -418,6 +554,7 @@ function HomePage({
   }
 
   useEffect(() => {
+    if (!active) return undefined;
     const viewport = timelineRef.current;
     if (!viewport) return undefined;
     const visibleCards = visibleTimelineCardsRef.current;
@@ -500,26 +637,24 @@ function HomePage({
       window.removeEventListener("resize", scheduleTimelineFocusUpdate);
       observer?.disconnect();
       visibleCards.clear();
-      timelineFocusedCardRef.current?.removeAttribute("data-timeline-focused");
-      timelineFocusedCardRef.current = null;
       if (timelineFocusFrameRef.current !== null) {
         window.cancelAnimationFrame(timelineFocusFrameRef.current);
         timelineFocusFrameRef.current = null;
       }
     };
-  }, [isMemoryFilterActive, timelineFocusKey]);
+  }, [active, isMemoryFilterActive, timelineFocusKey]);
 
   useEffect(() => {
-    if (!isMemoryFilterActive || filteredMemories.length === 0) return;
+    if (!active || !isMemoryFilterActive || filteredMemories.length === 0) return;
     const firstDated = filteredMemories.find(({ date }) => /^\d{4}-\d{2}-\d{2}$/.test(String(date || "")));
     if (firstDated && !filteredCameraDateRef.current) {
       filteredCameraDateRef.current = firstDated.date;
       setFilteredCameraDate(firstDated.date);
     }
-  }, [filteredMemories, isMemoryFilterActive]);
+  }, [active, filteredMemories, isMemoryFilterActive]);
 
   useEffect(() => {
-    if (isMemoryFilterActive || !restoreFilterOriginRef.current) return undefined;
+    if (!active || isMemoryFilterActive || !restoreFilterOriginRef.current) return undefined;
     restoreFilterOriginRef.current = false;
     const origin = filterOriginRef.current;
     filterOriginRef.current = null;
@@ -543,10 +678,10 @@ function HomePage({
       }
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [isMemoryFilterActive, timelineFocusKey]);
+  }, [active, isMemoryFilterActive, timelineFocusKey]);
 
   useEffect(() => {
-    if (!/^\d{4}$/.test(search.trim())) return undefined;
+    if (!active || !/^\d{4}$/.test(search.trim())) return undefined;
     const year = search.trim();
     const earliest = filteredMemories.find((memory) =>
       String(memory.date || "").startsWith(year + "-")
@@ -563,10 +698,10 @@ function HomePage({
         (viewportBounds.width - cardBounds.width) / 2;
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [filteredMemories, search]);
+  }, [active, filteredMemories, search]);
 
   useEffect(() => {
-    if (!trophySourceTarget?.memoryId) return undefined;
+    if (!active || !trophySourceTarget?.memoryId) return undefined;
     const memory = memories.find(({ id }) => id === trophySourceTarget.memoryId);
     if (!memory) return undefined;
     setSelectedMemory(memory.id);
@@ -576,10 +711,10 @@ function HomePage({
       detailPanelRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [memories, trophySourceTarget]);
+  }, [active, memories, trophySourceTarget]);
 
   useEffect(() => {
-    if (!timelinePositionRequestRef.current || isMemoryFilterActive || sortedMemories.length === 0) return undefined;
+    if (!active || !timelinePositionRequestRef.current || isMemoryFilterActive || sortedMemories.length === 0) return undefined;
     const targetMemory = timelinePosition === "past"
       ? sortedMemories[0]
       : sortedMemories[sortedMemories.length - 1];
@@ -617,10 +752,10 @@ function HomePage({
       window.removeEventListener("scroll", schedulePosition);
       if (frame !== null) window.cancelAnimationFrame(frame);
     };
-  }, [isMemoryFilterActive, sortedMemories, timelinePosition]);
+  }, [active, isMemoryFilterActive, sortedMemories, timelinePosition]);
 
   useEffect(() => {
-    if (!timelineTargetMemoryId) return undefined;
+    if (!active || !timelineTargetMemoryId) return undefined;
     const targetMemory = memories.find(({ id }) => id === timelineTargetMemoryId);
     if (!targetMemory) return undefined;
     const frame = window.requestAnimationFrame(() => {
@@ -637,10 +772,17 @@ function HomePage({
       onTimelineTargetShown();
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [memories, onTimelineTargetShown, timelineTargetMemoryId]);
+  }, [active, memories, onTimelineTargetShown, timelineTargetMemoryId]);
 
   return (
-    <div className="trace-home-page" style={{ ...containerStyle, fontFamily: "var(--trace-font-sans)" }}>
+    <div
+      aria-hidden={active ? undefined : "true"}
+      className="trace-home-page"
+      data-testid="home-page"
+      hidden={!active}
+      inert={!active}
+      style={{ ...containerStyle, fontFamily: "var(--trace-font-sans)" }}
+    >
       <div className="trace-home-intro" data-safe-area-context="body-inset">
         <header className="trace-home-top" data-layout="centered-branding">
           <div className="trace-home-identity">
@@ -923,13 +1065,16 @@ function HomePage({
                           const photoCount = Array.isArray(memory.images)
                             ? memory.images.length
                             : 0;
-                          const previewPhotos = (memory.images || [])
-                            .slice(0, 3)
-                            .filter((photo) => photoSource(photo));
-                          const remainingPhotoCount = Math.max(
-                            0,
-                            photoCount - 3
-                          );
+                          const memoryIndex = timelineMemoryIndexById.get(memory.id);
+                          const photoDistance = Number.isInteger(memoryIndex) &&
+                            Number.isInteger(photoPriorityAnchorIndex)
+                            ? Math.abs(memoryIndex - photoPriorityAnchorIndex)
+                            : Number.POSITIVE_INFINITY;
+                          const photoPriority = photoDistance === 0
+                            ? PHOTO_LOAD_PRIORITY.centered
+                            : photoDistance <= 2
+                              ? PHOTO_LOAD_PRIORITY.nearby
+                              : PHOTO_LOAD_PRIORITY.visible;
 
                           return (
                             <div
@@ -964,8 +1109,6 @@ function HomePage({
                               tabIndex={0}
                               style={{
                                 contain: "layout paint style",
-                                containIntrinsicSize: `${TIMELINE_FOCUS_CONTAINMENT_WIDTH}px 236px`,
-                                contentVisibility: "auto",
                                 flexShrink: 0,
                                 marginLeft: `-${TIMELINE_FOCUS_CONTAINMENT_GUTTER}px`,
                                 marginRight: `-${TIMELINE_FOCUS_CONTAINMENT_GUTTER}px`,
@@ -1140,60 +1283,15 @@ function HomePage({
                     </div>
                   )}
 
-                {previewPhotos.length > 0 && (
-                  <div
-                    aria-label={photoCount + " photo preview"}
-                    data-testid={"timeline-photo-gallery-" + memory.id}
-                    style={{
-                      display: "grid",
-                      gap: "4px",
-                      gridTemplateColumns:
-                        photoCount === 1
-                          ? "1fr"
-                          : photoCount === 2
-                            ? "repeat(2, 1fr)"
-                            : photoCount === 3
-                              ? "repeat(3, 1fr)"
-                              : "repeat(2, 1fr)",
-                      gridTemplateRows:
-                        photoCount >= 4 ? "repeat(2, 39px)" : "82px",
-                      marginTop: "10px",
-                    }}
-                  >
-                    {previewPhotos.map((img, i) => (
-                      <img
-                        aria-hidden="true"
-                        alt=""
-                        data-timeline-gallery-thumbnail="true"
-                        key={img.id || i}
-                        src={photoSource(img)}
-                        style={{
-                          borderRadius: "6px",
-                          height: "100%",
-                          objectFit: "cover",
-                          width: "100%",
-                        }}
-                      />
-                    ))}
-                    {remainingPhotoCount > 0 && (
-                      <div
-                        aria-label={remainingPhotoCount + " more photos"}
-                        data-testid="timeline-photo-overflow"
-                        style={{
-                          alignItems: "center",
-                          background: "#374151",
-                          borderRadius: "6px",
-                          color: "#f3f4f6",
-                          display: "flex",
-                          fontSize: "13px",
-                          fontWeight: 700,
-                          justifyContent: "center",
-                        }}
-                      >
-                        +{remainingPhotoCount}
-                      </div>
-                    )}
-                  </div>
+                {photoCount > 0 && (
+                  <TimelinePhotoGallery
+                    active={active}
+                    eager={photoDistance <= 2}
+                    memory={memory}
+                    photoLoader={photoLoader}
+                    priority={photoPriority}
+                    timelineRef={timelineRef}
+                  />
                 )}
 
                 <div
@@ -1276,7 +1374,7 @@ function HomePage({
       </div>
       </section>
 
-      {detailMemory && (
+      {active && detailMemory && (
         <div
           role="dialog"
           aria-modal="true"
@@ -1387,13 +1485,28 @@ function HomePage({
                   marginTop: "20px",
                 }}
               >
-                <img
-                  src={photoSource(detailMemory.images[activeDetailPhotoIndex])}
+                <StoredPhoto
                   alt={`Memory ${activeDetailPhotoIndex + 1}`}
+                  enabled
+                  loader={photoLoader}
                   onClick={(event) => {
                     event.stopPropagation();
                     setSelectedImageIndex(activeDetailPhotoIndex);
                   }}
+                  photo={detailMemory.images[activeDetailPhotoIndex]}
+                  placeholder={(
+                    <div
+                      aria-hidden="true"
+                      data-memory-detail-photo-placeholder="true"
+                      style={{
+                        background: "#24384a",
+                        borderRadius: "12px",
+                        height: "360px",
+                        width: "100%",
+                      }}
+                    />
+                  )}
+                  priority={PHOTO_LOAD_PRIORITY.detail}
                   style={{
                     borderRadius: "12px",
                     cursor: "pointer",
@@ -1486,9 +1599,25 @@ function HomePage({
                         padding: 0,
                       }}
                     >
-                      <img
-                        src={photoSource(img)}
+                      <StoredPhoto
                         alt={`Memory ${index + 1}`}
+                        enabled
+                        loader={photoLoader}
+                        photo={img}
+                        placeholder={(
+                          <span
+                            aria-hidden="true"
+                            data-memory-detail-thumbnail-placeholder="true"
+                            style={{
+                              background: "#24384a",
+                              borderRadius: "7px",
+                              display: "block",
+                              height: "72px",
+                              width: "96px",
+                            }}
+                          />
+                        )}
+                        priority={PHOTO_LOAD_PRIORITY.detail}
                         style={{
                           borderRadius: "7px",
                           display: "block",
@@ -1553,9 +1682,14 @@ function HomePage({
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
-                  if (trophySourceTarget) onExitTrophySource?.();
-                  setDetailMemoryId(null);
-                  editMemory(detailMemoryId);
+                  setSelectedImageIndex(null);
+                  if (trophySourceTarget) {
+                    onExitTrophySource?.();
+                    setDetailMemoryId(null);
+                    editMemory(detailMemoryId, { retainHome: false });
+                  } else {
+                    editMemory(detailMemoryId, { retainHome: true });
+                  }
                 }}
                 style={{
                   background: "#2563eb",
@@ -1614,7 +1748,7 @@ function HomePage({
         </div>
       )}
 
-      {selectedImageIndex !== null && detailMemory && (
+      {active && selectedImageIndex !== null && detailMemory && (
         <div
           role="dialog"
           aria-modal="true"
@@ -1638,7 +1772,15 @@ function HomePage({
           <div data-testid="memory-photo-viewer-content" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => { event.currentTarget.dataset.touchX = event.clientX; }} onPointerUp={(event) => { const start = Number(event.currentTarget.dataset.touchX); const delta = event.clientX - start; if (Math.abs(delta) < 50) return; setSelectedImageIndex((index) => Math.max(0, Math.min(detailMemory.images.length - 1, index + (delta < 0 ? 1 : -1)))); }} style={{ alignItems: "center", boxSizing: "border-box", display: "flex", flexDirection: isNarrowPhotoViewport ? "column" : "row", gap: "12px", maxWidth: "100%", width: "100%" }}>
             {!isNarrowPhotoViewport && detailMemory.images.length > 1 && <button type="button" aria-label="Previous photo" disabled={selectedImageIndex === 0} onClick={() => setSelectedImageIndex((index) => index - 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", flex: "0 0 auto", opacity: selectedImageIndex === 0 ? 0.45 : 1, padding: "12px" }}>Previous</button>}
             <div style={{ flex: "1 1 0", minWidth: 0, textAlign: "center", width: isNarrowPhotoViewport ? "100%" : undefined }}>
-              <img src={photoSource(detailMemory.images[selectedImageIndex])} alt={`Memory ${selectedImageIndex + 1} enlarged`} style={{ borderRadius: "12px", maxHeight: "85vh", maxWidth: "100%" }} />
+              <StoredPhoto
+                alt={`Memory ${selectedImageIndex + 1} enlarged`}
+                enabled
+                loader={photoLoader}
+                photo={detailMemory.images[selectedImageIndex]}
+                placeholder={<span aria-hidden="true" data-memory-viewer-photo-placeholder="true" style={{ background: "#24384a", borderRadius: "12px", display: "inline-block", height: "min(70vh, 520px)", width: "min(80vw, 720px)" }} />}
+                priority={PHOTO_LOAD_PRIORITY.detail}
+                style={{ borderRadius: "12px", maxHeight: "85vh", maxWidth: "100%" }}
+              />
               {!isNarrowPhotoViewport && detailMemory.images.length > 1 && <p aria-live="polite" style={{ color: "white", margin: "10px 0 0" }}>{selectedImageIndex + 1} of {detailMemory.images.length}</p>}
             </div>
             {!isNarrowPhotoViewport && detailMemory.images.length > 1 && <button type="button" aria-label="Next photo" disabled={selectedImageIndex === detailMemory.images.length - 1} onClick={() => setSelectedImageIndex((index) => index + 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", flex: "0 0 auto", opacity: selectedImageIndex === detailMemory.images.length - 1 ? 0.45 : 1, padding: "12px" }}>Next</button>}

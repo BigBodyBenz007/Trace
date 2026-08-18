@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import { CATEGORY_OPTIONS } from "../constants/categories";
+import { PHOTO_LOAD_PRIORITY } from "../services/photoUrlLoader";
+import StoredPhoto from "./StoredPhoto";
 
 function NewMemoryPage({
   title,
@@ -12,6 +14,7 @@ function NewMemoryPage({
   setCategories,
   images,
   setImages,
+  photoLoader,
   saveMemory,
   inputStyle,
   buttonStyle,
@@ -19,6 +22,7 @@ function NewMemoryPage({
   setPage,
   editingIndex,
   setEditingIndex,
+  onCancelExistingMemory,
 }) {
   const formTopRef = useRef(null);
   const initialDateRef = useRef(date);
@@ -41,6 +45,7 @@ function NewMemoryPage({
   }
 
   function cancelMemory() {
+    const wasEditingExistingMemory = editingIndex !== null;
     const hasUnsavedContent =
       title !== "" ||
       description !== "" ||
@@ -62,7 +67,11 @@ function NewMemoryPage({
     setCategories([]);
     setImages([]);
     setEditingIndex(null);
-    setPage("home");
+    if (wasEditingExistingMemory && onCancelExistingMemory) {
+      onCancelExistingMemory();
+    } else {
+      setPage("home");
+    }
   }
 
   return (
@@ -256,9 +265,25 @@ function NewMemoryPage({
                   position: "relative",
                 }}
               >
-                <img
-                  src={img.url}
+                <StoredPhoto
                   alt={`Memory ${index + 1}`}
+                  enabled
+                  loader={photoLoader}
+                  photo={img}
+                  placeholder={(
+                    <span
+                      aria-hidden="true"
+                      data-memory-edit-photo-placeholder="true"
+                      style={{
+                        background: "#24384a",
+                        borderRadius: "10px",
+                        display: "block",
+                        height: "140px",
+                        width: "100%",
+                      }}
+                    />
+                  )}
+                  priority={PHOTO_LOAD_PRIORITY.detail}
                   style={{
                     width: "100%",
                     height: "140px",
