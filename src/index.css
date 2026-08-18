@@ -167,6 +167,16 @@ code {
   margin-top: 14px;
 }
 
+.journal-date-time label {
+  min-width: 0;
+}
+
+.journal-date-time input {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+}
+
 .journal-moods {
   border: 0;
   margin: 18px 0 0;
@@ -251,7 +261,7 @@ code {
   }
 }
 
-@media (max-width: 340px) {
+@media (max-width: 360px) {
   .trace-home-identity {
     padding-inline: 76px;
   }
