@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import JournalPage from "./JournalPage";
 
@@ -34,6 +36,17 @@ beforeEach(() => {
   window.confirm = jest.fn(() => true);
   window.requestAnimationFrame = (callback) => { callback(); return 1; };
   Element.prototype.scrollIntoView = jest.fn();
+});
+
+test("keeps native Journal date and time inputs contained without changing the 360px stack breakpoint", () => {
+  const css = fs.readFileSync(path.join(process.cwd(), "src", "index.css"), "utf8");
+  const inputRule = css.match(/\.journal-date-time input\s*\{([^}]*)\}/)?.[1] || "";
+  expect(inputRule).toMatch(/box-sizing:\s*border-box/);
+  expect(inputRule).toMatch(/inline-size:\s*100%/);
+  expect(inputRule).toMatch(/max-inline-size:\s*100%/);
+  expect(inputRule).toMatch(/min-inline-size:\s*0/);
+  expect(css).toMatch(/@media\s*\(max-width:\s*430px\)[\s\S]*?\.journal-date-time input\s*\{[^}]*padding-inline:\s*0\s*!important/);
+  expect(css).toMatch(/@media\s*\(max-width:\s*360px\)[\s\S]*?\.journal-date-time\s*\{\s*grid-template-columns:\s*minmax\(0,\s*1fr\)/);
 });
 
 test("renders the private Journal header, conventional back navigation, and no social controls", () => {
