@@ -1,5 +1,8 @@
 import { render, screen } from "@testing-library/react";
-import LifeCurrent, { getLifeCurrentPointCoordinates } from "./LifeCurrent";
+import LifeCurrent, {
+  getLifeCurrentPointCoordinates,
+  LifeCurrentScenery,
+} from "./LifeCurrent";
 import { deriveLifeCurrent } from "../services/lifeCurrent";
 import { deriveLifeCurrentLayout } from "../services/lifeCurrentLayout";
 
@@ -81,6 +84,71 @@ test("does not invent a wavy path after the final authoritative activity", () =>
   expect(screen.queryByTestId("life-current-quiet-trail")).not.toBeInTheDocument();
   expect(points).toHaveLength(3);
   expect(points.at(-1).dateKey).toBe("2026-08-12");
+});
+
+test("River remains the default renderer and visual theme", () => {
+  render(<>
+    <LifeCurrentScenery />
+    <LifeCurrent layout={layout([point("2025-01-01", 0), point("2026-01-01", 1)])} />
+  </>);
+  expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "river");
+  expect(document.querySelector('[data-life-current-renderer="river-current"]')).toBeInTheDocument();
+  expect(document.querySelector('[data-life-current-renderer="forest-path"]')).not.toBeInTheDocument();
+  expect(screen.queryByTestId("life-current-forest-scenery")).not.toBeInTheDocument();
+});
+
+test("Haunted Forest reuses chronology geometry while mapping engagement to path width", () => {
+  const currentLayout = layout([
+    point("2020-01-01", 0, 0.1, 0.2),
+    point("2021-01-01", 0.45, 0.5, 1),
+    point("2026-01-01", 1, 1, 4),
+  ]);
+  const before = JSON.parse(JSON.stringify(currentLayout));
+  const { rerender } = render(<>
+    <LifeCurrentScenery />
+    <LifeCurrent layout={currentLayout} />
+  </>);
+  const riverPath = screen.getByTestId("life-current").querySelector("path").getAttribute("d");
+
+  rerender(<>
+    <LifeCurrentScenery themeId="haunted-forest" />
+    <LifeCurrent layout={currentLayout} themeId="haunted-forest" />
+  </>);
+
+  const forest = screen.getByTestId("life-current");
+  expect(forest).toHaveAttribute("data-theme-id", "haunted-forest");
+  expect(forest.querySelector('[data-life-current-renderer="forest-path"]')).toBeInTheDocument();
+  expect(forest.querySelector('[data-life-current-renderer="forest-path"] > path'))
+    .toHaveAttribute("d", riverPath);
+  const widths = [...forest.querySelectorAll('[data-forest-path-segment="true"]')]
+    .map((segment) => Number(segment.getAttribute("data-engagement-width")));
+  expect(widths).toHaveLength(2);
+  expect(widths[1]).toBeGreaterThan(widths[0]);
+  expect(forest.querySelector("[stroke-dasharray]")).not.toBeInTheDocument();
+  const scenery = screen.getByTestId("life-current-forest-scenery");
+  expect(screen.getByTestId("life-current-forest-scenery-frame")).toHaveStyle({
+    height: "0",
+    pointerEvents: "none",
+    position: "sticky",
+    width: "100%",
+  });
+  expect(scenery).toHaveAttribute("aria-hidden", "true");
+  expect(scenery).toHaveStyle({ overflow: "hidden", pointerEvents: "none" });
+  const layers = [...scenery.querySelectorAll("[data-forest-layer]")];
+  expect(layers.map((layer) => layer.getAttribute("data-forest-layer"))).toEqual([
+    "distant-trees", "foreground-trees",
+  ]);
+  layers.forEach((layer) => {
+    expect(layer).toHaveAttribute("aria-hidden", "true");
+    expect(layer).toHaveAttribute("pointer-events", "none");
+  });
+  expect(currentLayout).toEqual(before);
+});
+
+test("invalid theme IDs safely render River", () => {
+  render(<LifeCurrent themeId="lost-world" layout={layout([point("2026-01-01", 0)])} />);
+  expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "river");
+  expect(document.querySelector('[data-life-current-renderer="river-current"]')).toBeInTheDocument();
 });
 
 test("ends at the latest activity for sparse older and recent Memory data", () => {

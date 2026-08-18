@@ -1,4 +1,5 @@
 import React from "react";
+import { getLifeCurrentTheme } from "../services/lifeCurrentThemes";
 
 const VIEWBOX_WIDTH = 1000;
 const VIEWBOX_HEIGHT = 56;
@@ -44,16 +45,168 @@ function currentPath(points, extendFinalPointToEdge = false) {
   }, "");
 }
 
-function LifeCurrent({ layout, showQuietTrail = false }) {
+function pathBetween(first, second) {
+  if (!second) return `M ${first.x - 10} ${first.y} L ${first.x + 10} ${first.y}`;
+  const midpoint = (first.x + second.x) / 2;
+  return `M ${first.x} ${first.y} C ${midpoint} ${first.y}, ${midpoint} ${second.y}, ${second.x} ${second.y}`;
+}
+
+function forestPathSegments(points, extendFinalPointToEdge) {
+  const coordinates = getLifeCurrentPointCoordinates(points, extendFinalPointToEdge);
+  if (coordinates.length === 1) {
+    return [{
+      d: pathBetween(coordinates[0]),
+      intensity: Math.max(0, Math.min(1, Number(points[0]?.intensity) || 0)),
+    }];
+  }
+  return coordinates.slice(1).map((coordinate, index) => ({
+    d: pathBetween(coordinates[index], coordinate),
+    intensity: (
+      Math.max(0, Math.min(1, Number(points[index]?.intensity) || 0)) +
+      Math.max(0, Math.min(1, Number(points[index + 1]?.intensity) || 0))
+    ) / 2,
+  }));
+}
+
+function RiverCurrent({ path }) {
+  return (
+    <g data-life-current-renderer="river-current">
+      <path
+        d={path}
+        fill="none"
+        stroke="#60a5fa"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeOpacity="0.42"
+        strokeWidth="6"
+        vectorEffect="non-scaling-stroke"
+      />
+    </g>
+  );
+}
+
+const DISTANT_TREE_POSITIONS = Object.freeze([55, 165, 285, 415, 550, 685, 820, 945]);
+const FOREGROUND_TREE_POSITIONS = Object.freeze([20, 105, 345, 655, 895, 980]);
+const FOREST_TREE_PATH = "M -5 0 V -22 H -22 L -9 -42 H -18 L -6 -63 H -13 L 0 -88 L 13 -63 H 6 L 18 -42 H 9 L 22 -22 H 5 V 0 Z";
+
+const HauntedForestScenery = React.memo(function HauntedForestScenery() {
+  return (
+    <div
+      aria-hidden="true"
+      data-testid="life-current-forest-scenery-frame"
+      style={{
+        height: 0,
+        left: 0,
+        pointerEvents: "none",
+        position: "sticky",
+        top: 0,
+        width: "100%",
+        zIndex: 0,
+      }}
+    >
+    <svg
+      aria-hidden="true"
+      data-testid="life-current-forest-scenery"
+      preserveAspectRatio="none"
+      viewBox="0 0 1000 150"
+      style={{
+        height: "150px",
+        left: 0,
+        overflow: "hidden",
+        pointerEvents: "none",
+        position: "absolute",
+        top: 0,
+        width: "100%",
+      }}
+    >
+      <g
+        aria-hidden="true"
+        data-forest-layer="distant-trees"
+        fill="#26392c"
+        pointerEvents="none"
+        transform="translate(0 140)"
+      >
+        {DISTANT_TREE_POSITIONS.map((x, index) => (
+          <path
+            d={FOREST_TREE_PATH}
+            key={x}
+            transform={`translate(${x} 0) scale(${index % 2 === 0 ? 0.72 : 0.58})`}
+          />
+        ))}
+      </g>
+      <g
+        aria-hidden="true"
+        data-forest-layer="foreground-trees"
+        fill="#08110c"
+        pointerEvents="none"
+        transform="translate(0 150)"
+      >
+        {FOREGROUND_TREE_POSITIONS.map((x, index) => (
+          <path
+            d={FOREST_TREE_PATH}
+            key={x}
+            transform={`translate(${x} 0) scale(${index % 2 === 0 ? 1.18 : 0.96})`}
+          />
+        ))}
+      </g>
+    </svg>
+    </div>
+  );
+});
+
+export function LifeCurrentScenery({ themeId = "river" }) {
+  const theme = getLifeCurrentTheme(themeId);
+  return theme.presentation.renderer === "forest-path"
+    ? <HauntedForestScenery />
+    : null;
+}
+
+function HauntedForestPath({ path, points, showQuietTrail }) {
+  const segments = forestPathSegments(points, showQuietTrail);
+  return (
+    <g data-life-current-renderer="forest-path">
+      <path
+        d={path}
+        fill="none"
+        stroke="#2c241a"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="22"
+        vectorEffect="non-scaling-stroke"
+      />
+      {segments.map((segment, index) => {
+        const engagementWidth = 7 + segment.intensity * 7;
+        return (
+          <path
+            data-engagement-width={engagementWidth.toFixed(2)}
+            data-forest-path-segment="true"
+            d={segment.d}
+            fill="none"
+            key={index}
+            stroke="#765c3b"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={engagementWidth}
+            vectorEffect="non-scaling-stroke"
+          />
+        );
+      })}
+    </g>
+  );
+}
+
+function LifeCurrent({ layout, showQuietTrail = false, themeId = "river" }) {
   const points = Array.isArray(layout?.points) ? layout.points : [];
   const path = currentPath(points, showQuietTrail);
   if (!path) return null;
+  const theme = getLifeCurrentTheme(themeId);
 
   return (
     <>
     <svg
       aria-hidden="true"
       data-testid="life-current"
+      data-theme-id={theme.id}
       data-last-activity-date={points[points.length - 1]?.dateKey || ""}
       data-quiet-trail="false"
       data-visible-end-x={showQuietTrail ? VIEWBOX_WIDTH : VIEWBOX_WIDTH - EDGE_INSET}
@@ -75,16 +228,9 @@ function LifeCurrent({ layout, showQuietTrail = false }) {
         zIndex: 0,
       }}
     >
-      <path
-        d={path}
-        fill="none"
-        stroke="#60a5fa"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeOpacity="0.42"
-        strokeWidth="6"
-        vectorEffect="non-scaling-stroke"
-      />
+      {theme.presentation.renderer === "forest-path"
+        ? <HauntedForestPath path={path} points={points} showQuietTrail={showQuietTrail} />
+        : <RiverCurrent path={path} />}
     </svg>
     {/* The Timeline keeps its end gutter for card centering, but activity must
         end at the last authoritative point rather than continue as empty waves. */}

@@ -122,6 +122,142 @@ code {
   width: 100%;
 }
 
+.life-current-theme-settings {
+  margin-top: 32px;
+  max-width: 620px;
+  text-align: left;
+  width: 100%;
+}
+
+.life-current-theme-settings__intro {
+  color: #cbd5e1;
+  margin: -6px 0 14px;
+}
+
+.life-current-theme-options {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  max-width: 100%;
+}
+
+.life-current-theme-option {
+  align-items: center;
+  background: #1f2937;
+  border: 2px solid #4b5563;
+  border-radius: 12px;
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: auto auto minmax(0, 1fr);
+  min-height: 72px;
+  min-width: 0;
+  padding: 10px 12px;
+}
+
+.life-current-theme-option[data-selected="true"] {
+  border-color: #bae6fd;
+  box-shadow: inset 0 0 0 1px #bae6fd;
+}
+
+.life-current-theme-option:focus-within {
+  outline: 3px solid #93c5fd;
+  outline-offset: 2px;
+}
+
+.life-current-theme-option input {
+  height: 20px;
+  margin: 0;
+  width: 20px;
+}
+
+.life-current-theme-swatch {
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 8px;
+  height: 38px;
+  pointer-events: none;
+  position: relative;
+  width: 44px;
+}
+
+.life-current-theme-swatch--river {
+  background: linear-gradient(150deg, #172554 0 36%, #60a5fa 38% 60%, #1e3a5f 62%);
+}
+
+.life-current-theme-swatch--haunted-forest {
+  background:
+    linear-gradient(104deg, transparent 43%, #c7b98a 45% 57%, transparent 59%),
+    repeating-linear-gradient(90deg, #101a15 0 7px, #26352a 8px 11px, #111b16 12px 20px);
+}
+
+.life-current-theme-option__copy,
+.life-current-theme-option__heading,
+.life-current-theme-option__description {
+  min-width: 0;
+}
+
+.life-current-theme-option__copy {
+  display: block;
+}
+
+.life-current-theme-option__heading {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+}
+
+.life-current-theme-option__selected {
+  color: #bae6fd;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.life-current-theme-option__description {
+  color: #d1d5db;
+  display: block;
+  font-size: 13px;
+  line-height: 1.35;
+  margin-top: 4px;
+  overflow-wrap: anywhere;
+}
+
+.life-current-theme {
+  isolation: isolate;
+}
+
+.life-current-theme--haunted-forest {
+  background: #0a120d;
+  border-radius: 14px;
+  outline: 1px solid #2d4033;
+  outline-offset: -1px;
+}
+
+.life-current-theme--haunted-forest [data-timeline-focused="true"]::before {
+  background: rgba(207, 190, 122, 0.1);
+  border: 1px solid rgba(221, 202, 135, 0.28);
+  border-radius: 18px;
+  content: "";
+  inset: 0 8px 18px;
+  pointer-events: none;
+  position: absolute;
+  z-index: 0;
+}
+
+.life-current-theme--haunted-forest [data-timeline-focused="true"] [data-timeline-card-visual="true"] {
+  outline: 1px solid rgba(225, 207, 143, 0.42);
+  outline-offset: 3px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .life-current-theme * {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 .journal-page__header {
   align-items: center;
   display: flex;
@@ -183,6 +319,14 @@ code {
 }
 
 @media (max-width: 430px) {
+  .life-current-theme-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .life-current-theme-option {
+    min-height: 64px;
+  }
+
   .journal-date-time input {
     /* iOS WebKit miscalculates padded native date/time inputs at width: 100%. */
     padding-inline: 0 !important;
@@ -274,6 +418,15 @@ code {
 }
 
 @media (max-width: 360px) {
+  .life-current-theme-option {
+    gap: 8px;
+    padding-inline: 10px;
+  }
+
+  .life-current-theme-swatch {
+    width: 38px;
+  }
+
   .trace-home-identity {
     padding-inline: 76px;
   }

@@ -4,6 +4,7 @@ import {
   replaceAllPhotos,
 } from "../storage/photoStorage";
 import packageMetadata from "../../package.json";
+import { normalizeAppSettings } from "./appSettings";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
 export const TRACE_BACKUP_SCHEMA_VERSION = 1;
@@ -94,7 +95,8 @@ function readStructuredData(storage) {
     const raw = storage.getItem(key);
     if (raw === null) return [key, null];
     try {
-      return [key, JSON.parse(raw)];
+      const parsed = JSON.parse(raw);
+      return [key, key === "appSettings" ? normalizeAppSettings(parsed) : parsed];
     } catch (error) {
       throw new Error(`Trace could not export malformed ${key} data.`);
     }
@@ -173,6 +175,12 @@ export function validateTraceBackup(value) {
   if (value.schemaVersion !== TRACE_BACKUP_SCHEMA_VERSION) throw new Error("This Trace backup version is unsupported.");
   if (!value.createdAt || Number.isNaN(Date.parse(value.createdAt))) throw new Error("The Trace backup timestamp is invalid.");
   validateStructuredData(value.data?.structured);
+  const normalizedBackup = cloneJson(value);
+  if (normalizedBackup.data.structured.appSettings != null) {
+    normalizedBackup.data.structured.appSettings = normalizeAppSettings(
+      normalizedBackup.data.structured.appSettings
+    );
+  }
   if (!Array.isArray(value.data?.photos)) throw new Error("The backup is missing its photo collection.");
   const photoIds = new Set();
   value.data.photos.forEach((photo) => {
@@ -180,9 +188,9 @@ export function validateTraceBackup(value) {
     photoIds.add(photo.id);
     decodePhoto(photo);
   });
-  const missingReference = photoReferenceIds(value.data.structured).find((id) => !photoIds.has(id));
+  const missingReference = photoReferenceIds(normalizedBackup.data.structured).find((id) => !photoIds.has(id));
   if (missingReference) throw new Error(`The backup is missing referenced photo ${missingReference}.`);
-  return { backup: cloneJson(value), summary: summarizeTraceBackup(value) };
+  return { backup: normalizedBackup, summary: summarizeTraceBackup(normalizedBackup) };
 }
 
 export async function createTraceBackup({
@@ -203,8 +211,7 @@ export async function createTraceBackup({
       photos: await Promise.all(photos.map(encodePhoto)),
     },
   };
-  validateTraceBackup(backup);
-  return backup;
+  return validateTraceBackup(backup).backup;
 }
 
 export function traceBackupFilename(createdAt = new Date()) {

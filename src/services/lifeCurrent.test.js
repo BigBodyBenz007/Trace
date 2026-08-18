@@ -157,11 +157,18 @@ test("saved Journal activity contributes silently by ID and date without leaking
 
 test("a height-only Health record is one activity and Settings are not activity sources", () => {
   const timestamp = localIso(2026, 8, 11);
-  const result = deriveLifeCurrent({
+  const source = {
     healthMeasurementEntries: [{ id: "height", occurredAt: timestamp, measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 16.5, unit: "in" } } }],
-    appSettings: { schemaVersion: 1, units: { height: "cm" } },
+  };
+  const result = deriveLifeCurrent({
+    ...source,
+    appSettings: { schemaVersion: 1, units: { height: "cm" }, lifeCurrentThemeId: "river" },
   });
   expect(result.days[0].contributions.health).toEqual({ count: 1, value: LIFE_CURRENT_TUNING.health.dailyPresence, sourceIds: ["height"] });
+  expect(deriveLifeCurrent({
+    ...source,
+    appSettings: { schemaVersion: 1, units: { height: "cm" }, lifeCurrentThemeId: "haunted-forest" },
+  })).toEqual(result);
 });
 
 test("keeps domain contributions independent and applies fixed saturation", () => {

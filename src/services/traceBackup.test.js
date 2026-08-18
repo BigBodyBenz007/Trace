@@ -7,6 +7,7 @@ import {
   traceBackupFilename,
   validateTraceBackup,
 } from "./traceBackup";
+import { readAppSettings } from "./appSettings";
 
 function makeStorage(initial = {}, failOnSet = null) {
   const values = new Map(Object.entries(initial));
@@ -194,7 +195,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1", sodium: 640 }]);
   expect(JSON.parse(storage.value("nutritionGoals"))).toEqual({ calories: 2000, sodium: 2300 });
   expect(JSON.parse(storage.value("healthMeasurementEntries"))).toEqual([{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }]);
-  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" } });
+  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "river" });
   expect(JSON.parse(storage.value("workoutEntries"))).toEqual([workoutWithDrops]);
   expect(JSON.parse(storage.value("medicationEntries"))).toEqual([{ id: "dose-1" }]);
   expect(JSON.parse(storage.value("protocols"))).toEqual([{ id: "protocol-1" }]);
@@ -221,6 +222,72 @@ test("restores pre-Settings backups with default Settings storage fallback", asy
   const storage = makeStorage({ appSettings: JSON.stringify({ units: { weight: "kg" } }) });
   await restoreTraceBackup(backup({ data: { structured, photos: [] } }), { confirmed: true, storage, openDatabase: async () => makePhotoDatabase() });
   expect(storage.value("appSettings")).toBeNull();
+  expect(readAppSettings(storage).lifeCurrentThemeId).toBe("river");
+});
+
+test("new backups preserve and restore the selected Life Current theme", async () => {
+  const source = makeStorage({
+    appSettings: JSON.stringify({
+      schemaVersion: 1,
+      units: { weight: "kg", height: "cm", circumference: "cm" },
+      lifeCurrentThemeId: "haunted-forest",
+    }),
+  });
+  const value = await createTraceBackup({
+    storage: source,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(value.data.structured.appSettings).toMatchObject({
+    lifeCurrentThemeId: "haunted-forest",
+  });
+
+  const restored = makeStorage();
+  await restoreTraceBackup(value, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(readAppSettings(restored)).toMatchObject({
+    units: { weight: "kg", height: "cm", circumference: "cm" },
+    lifeCurrentThemeId: "haunted-forest",
+  });
+});
+
+test("legacy and invalid backup theme values safely fall back to River without corrupting settings", async () => {
+  const legacySettings = {
+    schemaVersion: 1,
+    units: { weight: "kg", height: "cm", circumference: "cm" },
+  };
+  const invalidSettings = { ...legacySettings, lifeCurrentThemeId: "abandoned-theme" };
+
+  for (const appSettings of [legacySettings, invalidSettings]) {
+    const value = backup({
+      data: {
+        structured: emptyStructured({
+          appSettings,
+          memories: [{ id: "kept-memory", date: "2026-01-01", images: [] }],
+        }),
+        photos: [],
+      },
+    });
+    const validated = validateTraceBackup(value).backup;
+    expect(validated.data.structured.appSettings).toEqual({
+      schemaVersion: 1,
+      units: { weight: "kg", height: "cm", circumference: "cm" },
+      lifeCurrentThemeId: "river",
+    });
+
+    const storage = makeStorage();
+    await restoreTraceBackup(value, {
+      confirmed: true,
+      storage,
+      openDatabase: async () => makePhotoDatabase(),
+    });
+    expect(readAppSettings(storage)).toEqual(validated.data.structured.appSettings);
+    expect(JSON.parse(storage.value("memories"))).toEqual([
+      { id: "kept-memory", date: "2026-01-01", images: [] },
+    ]);
+  }
 });
 
 test("restores Journal entries and accepts older backups with no Journal collection", async () => {

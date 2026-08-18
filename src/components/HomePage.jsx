@@ -10,11 +10,12 @@ import {
 } from "../services/lifeCurrentWindow";
 import { createMemoryTrophyCandidate } from "../services/trophyCase";
 import { formatDateOnly, parseDateOnlyLocal } from "../services/dateOnly";
+import { getLifeCurrentTheme } from "../services/lifeCurrentThemes";
 import {
   calculateTimelineFocusScale,
   TIMELINE_FOCUS_TUNING,
 } from "../services/timelineFocus";
-import LifeCurrent from "./LifeCurrent";
+import LifeCurrent, { LifeCurrentScenery } from "./LifeCurrent";
 import { LIFE_CURRENT_TRAIL_TUNING } from "./LifeCurrent";
 
 const CATEGORY_FILTER_OPTIONS = [
@@ -149,6 +150,7 @@ function HomePage({
   workoutEntries = [],
   medicationEntries = [],
   journalEntries = [],
+  lifeCurrentThemeId = "river",
   addTrophyCaseEntry = () => false,
   memoryAchievementSuggestion = null,
   dismissMemoryAchievementSuggestion = () => {},
@@ -172,8 +174,11 @@ function HomePage({
   const [activeDetailPhotoIndex, setActiveDetailPhotoIndex] = useState(0);
   const [hoveredMemory, setHoveredMemory] = useState(null);
   const [filteredCameraDate, setFilteredCameraDate] = useState(null);
+  const lifeCurrentTheme = getLifeCurrentTheme(lifeCurrentThemeId);
+  const lifeCurrentColors = lifeCurrentTheme.presentation.colors;
   const timelineRef = useRef(null);
   const timelineFocusFrameRef = useRef(null);
+  const timelineFocusedCardRef = useRef(null);
   const visibleTimelineCardsRef = useRef(new Set());
   const detailOriginScrollRef = useRef(null);
   const filterOriginRef = useRef(null);
@@ -427,10 +432,16 @@ function HomePage({
         : memoryCardRefs.current.values();
       let closestDate = null;
       let closestDistance = Infinity;
+      let focusedCard = null;
+      let focusedCardDistance = Infinity;
       Array.from(cards).forEach((card) => {
         const bounds = card.getBoundingClientRect();
         const cardCenter = bounds.left + bounds.width / 2;
         const distance = Math.abs(cardCenter - viewportCenter);
+        if (distance < focusedCardDistance) {
+          focusedCardDistance = distance;
+          focusedCard = card;
+        }
         if (distance < closestDistance && card.dataset.memoryDate) {
           closestDistance = distance;
           closestDate = card.dataset.memoryDate;
@@ -442,6 +453,11 @@ function HomePage({
         }
         card.style.zIndex = String(Math.round(scale * 100));
       });
+      if (timelineFocusedCardRef.current !== focusedCard) {
+        timelineFocusedCardRef.current?.removeAttribute("data-timeline-focused");
+        focusedCard?.setAttribute("data-timeline-focused", "true");
+        timelineFocusedCardRef.current = focusedCard;
+      }
       if (
         isMemoryFilterActive &&
         closestDate &&
@@ -485,6 +501,8 @@ function HomePage({
       window.removeEventListener("resize", scheduleTimelineFocusUpdate);
       observer?.disconnect();
       visibleCards.clear();
+      timelineFocusedCardRef.current?.removeAttribute("data-timeline-focused");
+      timelineFocusedCardRef.current = null;
       if (timelineFocusFrameRef.current !== null) {
         window.cancelAnimationFrame(timelineFocusFrameRef.current);
         timelineFocusFrameRef.current = null;
@@ -824,6 +842,8 @@ function HomePage({
       </h2>
 
       <div
+        className={`life-current-theme ${lifeCurrentTheme.presentation.className}`}
+        data-life-current-theme={lifeCurrentTheme.id}
         data-testid="memory-timeline-viewport"
         ref={timelineRef}
         style={{
@@ -834,6 +854,7 @@ function HomePage({
           position: "relative",
         }}
       >
+        <LifeCurrentScenery themeId={lifeCurrentTheme.id} />
         {isMemoryFilterActive && (
           <div
             data-testid="filtered-life-current-context"
@@ -851,7 +872,7 @@ function HomePage({
               zIndex: 0,
             }}
           >
-            <LifeCurrent layout={filteredLifeCurrentLayout} />
+            <LifeCurrent layout={filteredLifeCurrentLayout} themeId={lifeCurrentTheme.id} />
           </div>
         )}
         <div
@@ -874,12 +895,12 @@ function HomePage({
             }}
           >
             {!isMemoryFilterActive && (
-              <LifeCurrent layout={lifeCurrentLayout} showQuietTrail />
+              <LifeCurrent layout={lifeCurrentLayout} showQuietTrail themeId={lifeCurrentTheme.id} />
             )}
             {lifeCurrentLayout.points.length === 0 && filteredMemories.length > 0 && <div
               aria-hidden="true"
               style={{
-                background: "#6b7280",
+                background: lifeCurrentColors.fallback,
                 height: "3px",
                 left: "32px",
                 position: "absolute",
@@ -909,12 +930,14 @@ function HomePage({
               >
                 <h2
                   style={{
-                    color: "#e5e7eb",
+                    color: lifeCurrentColors.year,
                     fontSize: "34px",
                     fontWeight: 800,
                     lineHeight: "40px",
                     margin: 0,
+                    position: "relative",
                     textAlign: "left",
+                    zIndex: 1,
                   }}
                 >
                   {yearGroup.year}
@@ -939,11 +962,13 @@ function HomePage({
                     >
                       <h3
                         style={{
-                          color: "#9ca3af",
+                          color: lifeCurrentColors.month,
                           fontSize: "18px",
                           lineHeight: "22px",
                           margin: 0,
+                          position: "relative",
                           textAlign: "left",
+                          zIndex: 1,
                         }}
                       >
                         {monthGroup.month}
@@ -1018,7 +1043,7 @@ function HomePage({
                               <div
                                 aria-hidden="true"
                                 style={{
-                                  background: "#6b7280",
+                                  background: lifeCurrentColors.stem,
                                   height: "52px",
                                   left: "50%",
                                   position: "absolute",
@@ -1040,12 +1065,12 @@ function HomePage({
                                 }
                                 onMouseLeave={() => setHoveredMemory(null)}
                                 style={{
-                                  background: isSelected ? "#bae6fd" : "#5ec8ff",
-                                  border: "3px solid #111827",
+                                  background: isSelected ? lifeCurrentColors.selectedNode : lifeCurrentColors.node,
+                                  border: `3px solid ${lifeCurrentColors.nodeBorder}`,
                                   borderRadius: "50%",
                                   boxShadow: isHovered
-                                    ? "0 0 16px rgba(94, 200, 255, 0.8)"
-                                    : "0 0 0 rgba(94, 200, 255, 0)",
+                                    ? `0 0 16px ${lifeCurrentColors.nodeGlow}`
+                                    : "0 0 0 transparent",
                                   cursor: "pointer",
                                   height: "18px",
                                   left: "50%",
@@ -1065,7 +1090,7 @@ function HomePage({
                             <div
                               data-timeline-card-visual="true"
                               style={{
-                                background: "#1f2937",
+                                background: lifeCurrentColors.card,
                                 borderRadius: "14px",
                                 boxSizing: "border-box",
                                 minHeight: "164px",
@@ -1077,7 +1102,7 @@ function HomePage({
                                 textAlign: "left",
                                 overflowWrap: "anywhere",
                                 boxShadow: isSelected
-                                  ? "0 0 0 2px #5ec8ff, 0 8px 20px rgba(94, 200, 255, 0.2)"
+                                  ? `0 0 0 2px ${lifeCurrentColors.selectedCardRing}, 0 8px 20px ${lifeCurrentColors.selectedCardGlow}`
                                   : "0 4px 12px rgba(0,0,0,.25)",
                                 transform:
                                   "scale(var(--timeline-focus-scale, " +

@@ -3,6 +3,12 @@ import App, { localCalendarDateKey } from "./App";
 import { createCompoundDefinition } from "./services/compoundCatalog";
 import { createExerciseDefinition } from "./services/exerciseCatalog";
 import { deletePhotos, openPhotoDatabase, putPhotos } from "./storage/photoStorage";
+import {
+  createTraceBackup,
+  parseTraceBackupText,
+  restoreTraceBackup,
+  traceBackupFilename,
+} from "./services/traceBackup";
 
 jest.mock("./storage/photoStorage", () => ({
   clearCompletedMigrationBackup: jest.fn(),
@@ -18,6 +24,13 @@ jest.mock("./storage/photoStorage", () => ({
   replaceAllPhotos: jest.fn(),
 }));
 
+jest.mock("./services/traceBackup", () => ({
+  createTraceBackup: jest.fn(),
+  parseTraceBackupText: jest.fn(),
+  restoreTraceBackup: jest.fn(),
+  traceBackupFilename: jest.fn(() => "trace-backup-settings.json"),
+}));
+
 let originalRequestAnimationFrame;
 let originalCancelAnimationFrame;
 let originalScrollTo;
@@ -26,7 +39,13 @@ let originalCreateObjectURL;
 let originalRevokeObjectURL;
 
 beforeEach(() => {
+  jest.clearAllMocks();
+  createTraceBackup.mockReset();
+  parseTraceBackupText.mockReset();
+  restoreTraceBackup.mockReset();
+  traceBackupFilename.mockReset();
   localStorage.clear();
+  traceBackupFilename.mockReturnValue("trace-backup-settings.json");
   originalRequestAnimationFrame = window.requestAnimationFrame;
   originalCancelAnimationFrame = window.cancelAnimationFrame;
   originalScrollTo = window.scrollTo;
@@ -162,7 +181,7 @@ test("Settings opens and global unit preferences survive remount into a fresh He
   fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' }));
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' }));
-  expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" } });
+  expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "river" });
   first.unmount();
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "Health" }));
@@ -296,6 +315,111 @@ test("Timeline to Add Memory resets a previously scrolled position", () => {
     screen.getByRole("heading", { name: "New Memory" })
   ).toBeInTheDocument();
   expectDestinationScrolledToTop();
+});
+
+test("successful same-tab restore immediately synchronizes theme and unit settings without reload", async () => {
+  const backedUpSettings = {
+    schemaVersion: 1,
+    units: { weight: "kg", height: "cm", circumference: "cm" },
+    lifeCurrentThemeId: "haunted-forest",
+  };
+  localStorage.setItem("appSettings", JSON.stringify(backedUpSettings));
+  localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 2450 }));
+  let exportedBackup;
+  createTraceBackup.mockImplementation(async () => {
+    exportedBackup = {
+      createdAt: "2026-08-18T12:00:00.000Z",
+      data: {
+        structured: {
+          appSettings: JSON.parse(localStorage.getItem("appSettings")),
+          nutritionGoals: JSON.parse(localStorage.getItem("nutritionGoals")),
+        },
+        photos: [],
+      },
+    };
+    return exportedBackup;
+  });
+  const anchorClick = jest.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByRole("radio", { name: /Haunted Forest/ })).toBeChecked();
+  expect(screen.getByLabelText("Kilograms (kg)")).toBeChecked();
+  expect(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' })).toBeChecked();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
+  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
+  expect(await screen.findByText("Trace backup downloaded. Your current data was not changed.")).toBeInTheDocument();
+  expect(exportedBackup.data.structured.appSettings).toEqual(backedUpSettings);
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  fireEvent.click(screen.getByRole("radio", { name: /River/ }));
+  fireEvent.click(screen.getByLabelText("Pounds (lb)"));
+  fireEvent.click(screen.getByLabelText("Feet + inches (ft/in)"));
+  fireEvent.click(screen.getByLabelText("Inches (in)"));
+  expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
+    units: { weight: "lb", height: "ft-in", circumference: "in" },
+    lifeCurrentThemeId: "river",
+  });
+  localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 1800 }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+
+  parseTraceBackupText.mockReturnValue({
+    backup: exportedBackup,
+    summary: { memories: 0, photos: 0 },
+  });
+  restoreTraceBackup.mockImplementation(async (backup) => {
+    localStorage.setItem("appSettings", JSON.stringify(backup.data.structured.appSettings));
+    localStorage.setItem("nutritionGoals", JSON.stringify(backup.data.structured.nutritionGoals));
+    return { memories: 0, photos: 0 };
+  });
+  window.confirm = jest.fn(() => true);
+  fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File([JSON.stringify(exportedBackup)], "trace-backup-settings.json", { type: "application/json" })] },
+  });
+  expect(await screen.findByRole("heading", { name: "Review Backup" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  expect(await screen.findByRole("heading", { name: /Trace restored successfully/ })).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("nutritionGoals"))).toEqual({ calories: 2450 });
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByRole("radio", { name: /Haunted Forest/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /River/ })).not.toBeChecked();
+  expect(screen.getByLabelText("Kilograms (kg)")).toBeChecked();
+  expect(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' })).toBeChecked();
+  expect(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' })).toBeChecked();
+  anchorClick.mockRestore();
+});
+
+test("Life Current theme selection persists across reload and switches back to River", async () => {
+  localStorage.setItem("nutritionEntries", JSON.stringify([
+    { id: "theme-activity", loggedAt: "2026-05-18T12:00:00" },
+  ]));
+  const first = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  fireEvent.click(screen.getByRole("radio", { name: /Haunted Forest/ }));
+  expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
+    lifeCurrentThemeId: "haunted-forest",
+    units: { weight: "lb", height: "ft-in", circumference: "in" },
+  });
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", "haunted-forest");
+  first.unmount();
+
+  render(<App />);
+  expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", "haunted-forest");
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByRole("radio", { name: /Haunted Forest/ })).toBeChecked();
+  fireEvent.click(screen.getByRole("radio", { name: /River/ }));
+  expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
+    lifeCurrentThemeId: "river",
+  });
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", "river");
 });
 
 test("standalone Journal navigation creates private entries and keeps content inside Journal", async () => {

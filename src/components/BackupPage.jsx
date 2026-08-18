@@ -47,6 +47,7 @@ function downloadWithAnchor(file) {
 
 export default function BackupPage({
   onBack,
+  onRestoreComplete = () => {},
   buttonStyle,
   containerStyle,
 }) {
@@ -125,7 +126,8 @@ export default function BackupPage({
     setError("");
     setStatus("Restoring Trace…");
     try {
-      await restoreTraceBackup(preview.backup, { confirmed: true });
+      const restoredSummary = await restoreTraceBackup(preview.backup, { confirmed: true });
+      onRestoreComplete(restoredSummary);
       setPreview(null);
       setStatus("");
       setRestoreComplete(true);

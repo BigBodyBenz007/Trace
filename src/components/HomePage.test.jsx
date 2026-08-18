@@ -436,6 +436,31 @@ test("initial newest navigation centers the final Memory before the quiet trail"
   window.cancelAnimationFrame = originalCancelAnimationFrame;
 });
 
+test.each([
+  ["river", "river-current"],
+  ["haunted-forest", "forest-path"],
+])("%s keeps Timeline Focus cards and navigation behavior intact", (themeId, renderer) => {
+  render(
+    <HomePage
+      {...baseProps}
+      lifeCurrentThemeId={themeId}
+      memories={memories}
+      trophyEntries={[]}
+    />
+  );
+
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  expect(viewport).toHaveAttribute("data-life-current-theme", themeId);
+  expect(screen.getByTestId("life-current").querySelector(`[data-life-current-renderer="${renderer}"]`))
+    .toBeInTheDocument();
+  expect(screen.getByTestId("timeline-memory-memory-a").querySelector("[data-timeline-card-visual]"))
+    .toHaveStyle({ transformOrigin: "center top" });
+  fireEvent.click(screen.getByRole("button", { name: "Past" }));
+  expect(screen.getByRole("button", { name: "Past" })).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(screen.getByTestId("timeline-memory-memory-a"));
+  expect(screen.getByRole("dialog", { name: "Memory details for Same Day" })).toBeInTheDocument();
+});
+
 test("Past positions the oldest Memory at the start and centers it when possible", () => {
   const originalRequestAnimationFrame = window.requestAnimationFrame;
   const frames = [];
@@ -501,14 +526,31 @@ test("updates visual focus from viewport-center geometry without changing select
   expect(scale(center)).toBe(TIMELINE_FOCUS_TUNING.maximumScale);
   expect(scale(left)).toBeLessThan(scale(center));
   expect(scale(left)).toBeCloseTo(scale(right), 3);
+  expect(center).toHaveAttribute("data-timeline-focused", "true");
+  expect(left).not.toHaveAttribute("data-timeline-focused");
+  expect(right).not.toHaveAttribute("data-timeline-focused");
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
+  const centerRemoveAttribute = jest.spyOn(center, "removeAttribute");
+  const rightSetAttribute = jest.spyOn(right, "setAttribute");
   const callsBeforeScroll = window.requestAnimationFrame.mock.calls.length;
   fireEvent.scroll(viewport);
   fireEvent.scroll(viewport);
   expect(window.requestAnimationFrame).toHaveBeenCalledTimes(callsBeforeScroll + 1);
   act(() => frames.shift()());
+  expect(centerRemoveAttribute).not.toHaveBeenCalledWith("data-timeline-focused");
+  expect(rightSetAttribute).not.toHaveBeenCalledWith("data-timeline-focused", "true");
+  expect(center).toHaveAttribute("data-timeline-focused", "true");
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+  center.getBoundingClientRect = jest.fn(() => ({ left: 290, width: 100 }));
+  right.getBoundingClientRect = jest.fn(() => ({ left: 150, width: 100 }));
+  fireEvent.scroll(viewport);
+  act(() => frames.shift()());
+  expect(centerRemoveAttribute).toHaveBeenCalledWith("data-timeline-focused");
+  expect(rightSetAttribute).toHaveBeenCalledWith("data-timeline-focused", "true");
+  expect(right).toHaveAttribute("data-timeline-focused", "true");
+  expect(center).not.toHaveAttribute("data-timeline-focused");
 
   fireEvent.click(left);
   expect(screen.getByRole("dialog", { name: "Memory details for Left" })).toBeInTheDocument();

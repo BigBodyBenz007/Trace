@@ -753,6 +753,15 @@ function App() {
     }
   }
 
+  function synchronizeRestoredAppSettings() {
+    try {
+      setAppSettings(readAppSettings(localStorage));
+      setStorageError("");
+    } catch (error) {
+      setStorageError(storageMessage("refresh restored Settings"));
+    }
+  }
+
   function updateHealthMeasurement(id, draft) {
     const existing = healthMeasurementEntries.find((entry) => entry.id === id);
     if (!existing) return false;
@@ -1380,6 +1389,7 @@ function App() {
           workoutEntries={workoutEntries}
           medicationEntries={medicationEntries}
           journalEntries={journalEntries}
+          lifeCurrentThemeId={appSettings.lifeCurrentThemeId}
           addTrophyCaseEntry={addTrophyCaseEntry}
           memoryAchievementSuggestion={memoryAchievementSuggestion}
           dismissMemoryAchievementSuggestion={() => setMemoryAchievementSuggestion(null)}
@@ -1474,6 +1484,7 @@ function App() {
       ) : page === "backup" ? (
         <BackupPage
           onBack={() => setPage("home")}
+          onRestoreComplete={synchronizeRestoredAppSettings}
           buttonStyle={buttonStyle}
           containerStyle={containerStyle}
         />
