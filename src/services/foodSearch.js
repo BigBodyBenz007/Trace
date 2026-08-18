@@ -5,7 +5,11 @@ import { normalizeRestaurantFoods } from "./restaurantFoodModel";
 export const DEFAULT_RESULT_LIMIT = 6;
 
 export function normalizeFoodQuery(query) {
-  return String(query || "").trim().replace(/\s+/g, " ").toLowerCase();
+  return String(query || "")
+    .toLowerCase()
+    .replace(/['’]/g, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
 }
 
 export function searchFoods(
@@ -14,11 +18,15 @@ export function searchFoods(
   limit = DEFAULT_RESULT_LIMIT
 ) {
   const normalizedQuery = normalizeFoodQuery(query);
+  const queryTokens = normalizedQuery.split(" ").filter(Boolean);
 
-  if (!normalizedQuery || !/[a-z0-9]/i.test(normalizedQuery)) return [];
+  if (queryTokens.length === 0) return [];
 
   return foods
-    .filter((food) => normalizeFoodQuery([food.name, food.restaurant?.name].filter(Boolean).join(" ")).includes(normalizedQuery))
+    .filter((food) => {
+      const searchableFood = normalizeFoodQuery([food.name, food.restaurant?.name].filter(Boolean).join(" "));
+      return queryTokens.every((token) => searchableFood.includes(token));
+    })
     .sort((firstFood, secondFood) => {
       const firstName = normalizeFoodQuery(`${firstFood.restaurant?.name || ""} ${firstFood.name}`);
       const secondName = normalizeFoodQuery(`${secondFood.restaurant?.name || ""} ${secondFood.name}`);

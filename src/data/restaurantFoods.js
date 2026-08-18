@@ -68,6 +68,133 @@ const cocaCola = {
   provenance: { source: "trusted-third-party", sourceId: "mcdonalds:coca-cola:medium", confidence: "trusted-source", verification: { status: "complete", sourceType: "trusted-third-party", sourceUrl: "https://www.mcdonalds.com/us/en-us/product/coca-cola-medium.html", sourceReference: "Trusted current source matched to McDonald’s official 270-calorie serving; supplied audit" } },
 };
 
+const SONIC_SOURCE = "https://assets.ctfassets.net/whnlxz6bna9d/1Wtr8uYNYWyb2JzoSQg1rF/60a8a009073b4e9319bb7fb138a1f176/August_2026_National_Nutritional_Brochure.pdf";
+const BRAUMS_SOURCE = "https://www.braums.com/wp-content/uploads/2022/08/2018-Nutritional-Chart-for-web.pdf";
+const SOURCE_CHECKED_AT = "2026-08-18";
+
+function officialOption(chainId, id, description, nutrients, amount = 1, sourceUrl, sourceReference) {
+  return {
+    id: `restaurant:${chainId}:${id}`,
+    serving: { amount, unit: "item", description },
+    nutrients: { calories: null, protein: null, carbohydrates: null, fat: null, sodium: null, ...nutrients },
+    provenance: {
+      source: "official-restaurant",
+      sourceId: `${chainId}:${id}`,
+      confidence: "official-source",
+      verification: {
+        status: "complete",
+        sourceType: "official-restaurant",
+        sourceUrl,
+        accessedAt: SOURCE_CHECKED_AT,
+        ...(sourceReference ? { sourceReference } : {}),
+      },
+    },
+  };
+}
+
+function officialFood(chain, id, name, description, nutrients, sourceUrl, sourceReference, servingOptions) {
+  const firstOption = servingOptions?.[0];
+  return {
+    id: `restaurant:${chain.id}:${id}`,
+    restaurant: chain,
+    name,
+    serving: firstOption?.serving || { amount: 1, unit: "item", description },
+    nutrients: firstOption?.nutrients || { calories: null, protein: null, carbohydrates: null, fat: null, sodium: null, ...nutrients },
+    ...(servingOptions ? { servingOptions } : {}),
+    provenance: {
+      source: "official-restaurant",
+      sourceId: firstOption?.provenance.sourceId || `${chain.id}:${id}`,
+      confidence: "official-source",
+      verification: {
+        status: "complete",
+        sourceType: "official-restaurant",
+        sourceUrl,
+        accessedAt: SOURCE_CHECKED_AT,
+        ...(sourceReference ? { sourceReference } : {}),
+      },
+    },
+  };
+}
+
+const sonic = { id: "sonic", name: "Sonic Drive-In" };
+const sonicFood = (id, name, description, nutrients, servingOptions) => officialFood(
+  sonic,
+  id,
+  name,
+  description,
+  nutrients,
+  SONIC_SOURCE,
+  "SONIC August 2026 National Nutritional Brochure",
+  servingOptions
+);
+const sonicOption = (id, description, nutrients, amount = 1) => officialOption(
+  sonic.id,
+  id,
+  description,
+  nutrients,
+  amount,
+  SONIC_SOURCE,
+  "SONIC August 2026 National Nutritional Brochure"
+);
+
+const sonicFoods = [
+  sonicFood("sonic-cheeseburger-ketchup-mayo", "SONIC Cheeseburger with Ketchup & Mayo", "1 cheeseburger", { calories: 700, protein: 30, carbohydrates: 52, fat: 41, sodium: 1360 }),
+  sonicFood("supersonic-double-cheeseburger-ketchup-mayo", "SuperSONIC Double Cheeseburger with Ketchup & Mayo", "1 double cheeseburger", { calories: 1040, protein: 50, carbohydrates: 54, fat: 68, sodium: 1970 }),
+  sonicFood("crispy-chicken-sandwich", "Crispy Chicken Sandwich", "1 sandwich", { calories: 520, protein: 24, carbohydrates: 52, fat: 24, sodium: 1470 }),
+  sonicFood("crispy-tenders", "Crispy Tenders", null, null, [
+    sonicOption("crispy-tenders:3-piece", "3 piece serving", { calories: 260, protein: 21, carbohydrates: 16, fat: 12, sodium: 730 }, 3),
+    sonicOption("crispy-tenders:5-piece", "5 piece serving", { calories: 430, protein: 35, carbohydrates: 27, fat: 20, sodium: 1210 }, 5),
+  ]),
+  sonicFood("all-american-hot-dog", "All-American Hot Dog", "1 hot dog", { calories: 410, protein: 13, carbohydrates: 42, fat: 21, sodium: 1150 }),
+  sonicFood("footlong-quarter-pound-coney", "Footlong Quarter Pound Coney", "1 footlong coney", { calories: 770, protein: 31, carbohydrates: 54, fat: 48, sodium: 2160 }),
+  sonicFood("corn-dog", "Corn Dog", "1 corn dog", { calories: 230, protein: 6, carbohydrates: 23, fat: 13, sodium: 480 }),
+  sonicFood("groovy-fries", "Groovy Fries", null, null, [
+    sonicOption("groovy-fries:small", "Small Groovy Fries", { calories: 260, protein: 2, carbohydrates: 28, fat: 16, sodium: 570 }),
+    sonicOption("groovy-fries:medium", "Medium Groovy Fries", { calories: 370, protein: 3, carbohydrates: 39, fat: 22, sodium: 790 }),
+    sonicOption("groovy-fries:large", "Large Groovy Fries", { calories: 520, protein: 4, carbohydrates: 56, fat: 31, sodium: 1110 }),
+  ]),
+  sonicFood("tots", "Tots", null, null, [
+    sonicOption("tots:small", "Small Tots", { calories: 250, protein: 2, carbohydrates: 30, fat: 13, sodium: 620 }),
+    sonicOption("tots:medium", "Medium Tots", { calories: 360, protein: 3, carbohydrates: 43, fat: 19, sodium: 890 }),
+    sonicOption("tots:large", "Large Tots", { calories: 580, protein: 5, carbohydrates: 69, fat: 31, sodium: 1450 }),
+  ]),
+  sonicFood("mozzarella-sticks", "Mozzarella Sticks", null, null, [
+    sonicOption("mozzarella-sticks:4-piece", "4 piece (Small)", { calories: 370, protein: 15, carbohydrates: 36, fat: 19, sodium: 790 }, 4),
+    sonicOption("mozzarella-sticks:6-piece", "6 piece (Medium)", { calories: 560, protein: 22, carbohydrates: 54, fat: 28, sodium: 1190 }, 6),
+    sonicOption("mozzarella-sticks:8-piece", "8 piece (Large)", { calories: 750, protein: 30, carbohydrates: 72, fat: 38, sodium: 1590 }, 8),
+  ]),
+  sonicFood("breakfast-burrito-bacon", "Breakfast Burrito Bacon", "1 burrito", { calories: 470, protein: 25, carbohydrates: 35, fat: 25, sodium: 1540 }),
+  sonicFood("breakfast-burrito-sausage", "Breakfast Burrito Sausage", "1 burrito", { calories: 490, protein: 23, carbohydrates: 35, fat: 28, sodium: 1450 }),
+];
+
+const braums = { id: "braums", name: "Braum's" };
+const BRAUMS_REFERENCE = "2018 Nutritional Chart (for web), still linked by Braum's current website; current-menu identity checked 2026-08-18";
+const braumsFood = (id, name, description, nutrients, servingOptions) => officialFood(braums, id, name, description, nutrients, BRAUMS_SOURCE, BRAUMS_REFERENCE, servingOptions);
+const braumsOption = (id, description, nutrients, amount = 1) => officialOption(braums.id, id, description, nutrients, amount, BRAUMS_SOURCE, BRAUMS_REFERENCE);
+
+const braumsFoods = [
+  braumsFood("quarter-lb-cheeseburger", "Quarter lb. Cheeseburger", "1 cheeseburger", { calories: 530, protein: 29, carbohydrates: 40, fat: 28, sodium: 1420 }),
+  braumsFood("double-quarter-lb-cheeseburger", "Double Quarter lb. Cheeseburger", "1 double cheeseburger", { calories: 730, protein: 47, carbohydrates: 40, fat: 41, sodium: 1470 }),
+  braumsFood("deluxe-sixth-lb-cheeseburger", "Deluxe ⅙ lb. Cheeseburger", "1 cheeseburger", { calories: 420, protein: 21, carbohydrates: 39, fat: 20, sodium: 1210 }),
+  braumsFood("chicken-sandwich-crispy", "Chicken Sandwich Crispy", "1 sandwich", { calories: 590, protein: 28, carbohydrates: 60, fat: 27, sodium: 1220 }),
+  braumsFood("chicken-sandwich-grilled", "Chicken Sandwich Grilled", "1 sandwich", { calories: 430, protein: 32, carbohydrates: 38, fat: 18, sodium: 1260 }),
+  braumsFood("chicken-strips", "Chicken Strips", null, null, [
+    braumsOption("chicken-strips:4-piece", "4 piece serving", { calories: 490, protein: 28, carbohydrates: 29, fat: 29, sodium: 1350 }, 4),
+    braumsOption("chicken-strips:6-piece", "6 piece serving", { calories: 740, protein: 41, carbohydrates: 44, fat: 44, sodium: 2030 }, 6),
+  ]),
+  braumsFood("french-fries", "French Fries", null, null, [
+    braumsOption("french-fries:small", "Small French Fries", { calories: 210, protein: 3, carbohydrates: 29, fat: 9, sodium: 140 }),
+    braumsOption("french-fries:medium", "Medium French Fries", { calories: 310, protein: 4, carbohydrates: 43, fat: 14, sodium: 220 }),
+    braumsOption("french-fries:large", "Large French Fries", { calories: 420, protein: 5, carbohydrates: 58, fat: 18, sodium: 290 }),
+  ]),
+  braumsFood("grilled-chicken-salad", "Grilled Chicken Salad", "1 salad", { calories: 460, protein: 30, carbohydrates: 33, fat: 24, sodium: 930 }),
+  braumsFood("breakfast-burrito", "Breakfast Burrito", "1 burrito", { calories: 450, protein: 20, carbohydrates: 39, fat: 23, sodium: 840 }),
+  braumsFood("hash-browns", "Hash Browns", null, null, [
+    braumsOption("hash-browns:small-3oz", "Small (3 oz)", { calories: 330, protein: 2, carbohydrates: 24, fat: 25, sodium: 470 }),
+    braumsOption("hash-browns:large-5oz", "Large (5 oz)", { calories: 550, protein: 4, carbohydrates: 40, fat: 42, sodium: 790 }),
+  ]),
+];
+
 const restaurantFoods = [
   mcnuggets,
   foodRecord("big-mac", "Big Mac", "big-mac", 580, { protein: 25, carbohydrates: 45, fat: 34, sodium: 1060 }, "1 sandwich", { status: "complete", sourceType: "official-restaurant" }),
@@ -94,6 +221,8 @@ const restaurantFoods = [
   foodRecord("big-breakfast-with-hotcakes", "Big Breakfast with Hotcakes", "big-breakfast-with-hotcakes", 1340, { protein: 36, carbohydrates: 158, fat: 63, sodium: 2070 }, "1 serving", { source: "trusted-third-party", sourceId: "mcdonalds:big-breakfast-with-hotcakes:trusted-2026", confidence: "trusted-source", status: "complete", sourceType: "trusted-third-party", sourceReference: "Trusted 2026 source matched to current official 1340-calorie item; supplied audit" }),
   foodRecord("hash-browns", "Hash Browns", "hash-browns", 140, { protein: 2, carbohydrates: 18, fat: 8, sodium: 310 }, "1 hash brown patty", { source: "trusted-third-party", sourceId: "mcdonalds:hash-browns:trusted-2026", confidence: "trusted-source", status: "complete", sourceType: "trusted-third-party", sourceReference: "Trusted 2026 source matched to current official 140-calorie Hash Browns; supplied audit" }),
   cocaCola,
+  ...sonicFoods,
+  ...braumsFoods,
   { id: "restaurant:taco-bell:crunchy-taco", restaurant: { id: "taco-bell", name: "Taco Bell" }, name: "Crunchy Taco", serving: { amount: 1, unit: "item", description: "1 taco" }, nutrients: { calories: 170, protein: null, carbohydrates: null, fat: null }, provenance: { source: "official-restaurant", sourceId: "taco-bell:crunchy-taco", confidence: "official-source", verification: { status: "partial", sourceType: "official-restaurant", sourceUrl: "https://www.tacobell.com/food/tacos/crunchy-taco" } } },
   { id: "restaurant:chick-fil-a:chicken-sandwich", restaurant: { id: "chick-fil-a", name: "Chick-fil-A" }, name: "Chicken Sandwich", serving: { amount: 1, unit: "item", description: "1 sandwich" }, nutrients: { calories: 420, protein: 29, carbohydrates: 41, fat: 18 }, provenance: { source: "official-restaurant", sourceId: "chick-fil-a:chicken-sandwich", confidence: "official-source", verification: { status: "complete", sourceType: "official-restaurant", sourceUrl: "https://www.chick-fil-a.com/menu/entrees/chick-fil-a-chicken-sandwich" } } },
   { id: "restaurant:chick-fil-a:spicy-chicken-sandwich", restaurant: { id: "chick-fil-a", name: "Chick-fil-A" }, name: "Spicy Chicken Sandwich", serving: { amount: 1, unit: "item", description: "1 sandwich" }, nutrients: { calories: 450, protein: 28, carbohydrates: 45, fat: 19 }, provenance: { source: "official-restaurant", sourceId: "chick-fil-a:spicy-chicken-sandwich", confidence: "official-source", verification: { status: "complete", sourceType: "official-restaurant", sourceUrl: "https://www.chick-fil-a.com/menu/entrees/spicy-chicken-sandwich" } } },

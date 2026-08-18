@@ -309,6 +309,86 @@ test("number of servings scales the selected official McNuggets menu size", () =
   expect(props.saveNutritionEntry.mock.calls[0][0].sodium).toBe(1500);
 });
 
+test("normal Sonic and Braum's items log with chain identity and known sodium", () => {
+  const props = renderNutritionPage();
+
+  fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "Footlong Quarter Pound Coney" } });
+  fireEvent.click(screen.getByRole("button", { name: /Sonic Drive-In.*Footlong Quarter Pound Coney/i }));
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Footlong Quarter Pound Coney",
+    calories: 770,
+    protein: 31,
+    carbohydrates: 54,
+    fat: 48,
+    sodium: 2160,
+    foodReference: { sourceType: "restaurant", restaurantId: "sonic", restaurantName: "Sonic Drive-In" },
+  });
+
+  fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "Breakfast Burrito" } });
+  fireEvent.click(screen.getByRole("button", { name: /Braum's.*Breakfast Burrito/i }));
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[1][0]).toMatchObject({
+    name: "Breakfast Burrito",
+    calories: 450,
+    protein: 20,
+    carbohydrates: 39,
+    fat: 23,
+    sodium: 840,
+    foodReference: { sourceType: "restaurant", restaurantId: "braums", restaurantName: "Braum's" },
+  });
+});
+
+test("Sonic menu size selection uses exact nutrition before Number of servings scaling", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "Mozzarella Sticks" } });
+  fireEvent.click(screen.getByRole("button", { name: /Sonic Drive-In.*Mozzarella Sticks/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  expect(sizeSelect).toHaveDisplayValue("4 piece (Small)");
+  fireEvent.change(sizeSelect, { target: { value: "restaurant:sonic:mozzarella-sticks:8-piece" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(750);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(1590);
+
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "2" } });
+  expect(sizeSelect).toHaveDisplayValue("8 piece (Large)");
+  expect(form.getByLabelText("Calories")).toHaveValue(1500);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    calories: 1500,
+    sodium: 3180,
+    portion: { amount: 2 },
+    foodReference: { sourceId: "sonic:mozzarella-sticks:8-piece" },
+  });
+});
+
+test("Braum's menu size selection keeps the published size separate from serving count", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "Hash Browns" } });
+  fireEvent.click(screen.getByRole("button", { name: /Braum's.*Hash Browns/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  fireEvent.change(sizeSelect, { target: { value: "restaurant:braums:hash-browns:large-5oz" } });
+  expect(sizeSelect).toHaveDisplayValue("Large (5 oz)");
+  expect(form.getByLabelText("Calories")).toHaveValue(550);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(790);
+
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "0.5" } });
+  expect(sizeSelect).toHaveDisplayValue("Large (5 oz)");
+  expect(form.getByLabelText("Calories")).toHaveValue(275);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    calories: 275,
+    sodium: 395,
+    portion: { amount: 0.5 },
+    foodReference: { sourceId: "braums:hash-browns:large-5oz" },
+  });
+});
+
 test("fractional servings recalculate all nutrients live", () => {
   renderNutritionPage();
   selectBanana();

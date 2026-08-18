@@ -11,6 +11,7 @@ import {
 
 test("normalizes case and whitespace for name searches", () => {
   expect(normalizeFoodQuery("  CHICKEN   breast  ")).toBe("chicken breast");
+  expect(normalizeFoodQuery("Braum’s / McDonald's")).toBe("braums mcdonalds");
   expect(searchFoods("  cHiCkEn   ")[0].id).toBe(
     "chicken-breast-cooked-100g"
   );
@@ -200,7 +201,89 @@ test("searches restaurant catalogs by chain and item while preserving saved-food
 });
 
 test("restaurant food and menu-option IDs are collision-free", () => {
-  const foods = searchFoodCatalog("McDonald's", [], 20).filter((food) => food.restaurant?.id === "mcdonalds");
-  const ids = foods.flatMap((food) => [food.id, ...(food.servingOptions || []).map((option) => option.id)]);
+  const ids = restaurantFoods.flatMap((food) => [food.id, ...(food.servingOptions || []).map((option) => option.id)]);
   expect(new Set(ids).size).toBe(ids.length);
+});
+
+test("searches the Sonic and Braum's batches by chain and item name", () => {
+  const sonicResults = searchFoodCatalog("Sonic Drive-In", [], 30);
+  const braumsResults = searchFoodCatalog("Braum's", [], 30);
+
+  expect(sonicResults).toHaveLength(12);
+  expect(sonicResults.every((food) => food.restaurant?.id === "sonic")).toBe(true);
+  expect(braumsResults).toHaveLength(10);
+  expect(braumsResults.every((food) => food.restaurant?.id === "braums")).toBe(true);
+  expect(searchFoodCatalog("Footlong Quarter Pound Coney")[0]).toMatchObject({ restaurant: { id: "sonic" } });
+  expect(searchFoodCatalog("Grilled Chicken Salad")[0]).toMatchObject({ restaurant: { id: "braums" } });
+});
+
+test("matches non-adjacent chain and item tokens in any searchable-field order", () => {
+  expect(searchFoodCatalog("sonic groovy").map((food) => food.id)).toEqual([
+    "restaurant:sonic:groovy-fries",
+  ]);
+  expect(searchFoodCatalog("sonic fries").map((food) => food.id)).toEqual([
+    "restaurant:sonic:groovy-fries",
+  ]);
+  expect(searchFoodCatalog("braums fries").map((food) => food.id)).toEqual([
+    "restaurant:braums:french-fries",
+  ]);
+  expect(searchFoodCatalog("mcdonalds nuggets").map((food) => food.id)).toEqual([
+    "restaurant:mcdonalds:chicken-mcnuggets",
+  ]);
+  expect(searchFoodCatalog("sonic french")).toEqual([]);
+});
+
+test("keeps partial single-token results, ordering, and saved-food priority", () => {
+  expect(searchFoodCatalog("frie").map((food) => food.id)).toEqual([
+    "restaurant:braums:french-fries",
+    "restaurant:mcdonalds:french-fries",
+    "restaurant:sonic:groovy-fries",
+  ]);
+  expect(searchFoodCatalog("nugget")[0].id).toBe("restaurant:mcdonalds:chicken-mcnuggets");
+  expect(searchFoodCatalog("sonic").every((food) => food.restaurant?.id === "sonic")).toBe(true);
+
+  const savedFries = {
+    id: "user-added:fries",
+    name: "Fries",
+    serving: { amount: 1, unit: "serving", description: "1 serving" },
+    nutrients: { calories: 300, protein: 4, carbohydrates: 40, fat: 14 },
+    provenance: { source: "user-added", sourceId: "fries", confidence: "user-added" },
+  };
+  expect(searchFoodCatalog("fries", [savedFries])[0]).toBe(savedFries);
+  expect(searchFoodCatalog("banana", [savedFries])[0].id).toBe("banana-medium");
+});
+
+test("preserves exact official Sonic and Braum's serving-option nutrition", () => {
+  const sonicFries = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:sonic:groovy-fries"));
+  expect(sonicFries.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients])).toEqual([
+    ["Small Groovy Fries", { calories: 260, protein: 2, carbohydrates: 28, fat: 16, sodium: 570 }],
+    ["Medium Groovy Fries", { calories: 370, protein: 3, carbohydrates: 39, fat: 22, sodium: 790 }],
+    ["Large Groovy Fries", { calories: 520, protein: 4, carbohydrates: 56, fat: 31, sodium: 1110 }],
+  ]);
+
+  const braumsHashBrowns = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:braums:hash-browns"));
+  expect(braumsHashBrowns.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients])).toEqual([
+    ["Small (3 oz)", { calories: 330, protein: 2, carbohydrates: 24, fat: 25, sodium: 470 }],
+    ["Large (5 oz)", { calories: 550, protein: 4, carbohydrates: 40, fat: 42, sodium: 790 }],
+  ]);
+  expect(braumsHashBrowns.provenance.verification).toMatchObject({
+    accessedAt: "2026-08-18",
+    sourceReference: expect.stringContaining("2018 Nutritional Chart"),
+  });
+});
+
+test("every restaurant catalog record follows the normalized data contract", () => {
+  const normalized = restaurantFoods.map(normalizeRestaurantFood);
+  expect(normalized.every(Boolean)).toBe(true);
+
+  normalized.forEach((food) => {
+    expect(food.id).toBe(`restaurant:${food.restaurant.id}:${food.id.split(":").slice(2).join(":")}`);
+    expect(food.serving.description).toBeTruthy();
+    expect(food.provenance.sourceId).toBeTruthy();
+    expect(food.provenance.verification.sourceUrl).toBeTruthy();
+    [food, ...(food.servingOptions || [])].forEach((record) => {
+      expect(Object.keys(record.nutrients).sort()).toEqual(["calories", "carbohydrates", "fat", "protein", "sodium"]);
+      Object.values(record.nutrients).forEach((value) => expect(value === null || (typeof value === "number" && value >= 0)).toBe(true));
+    });
+  });
 });
