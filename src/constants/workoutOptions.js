@@ -1,5 +1,5 @@
 export const WORKOUT_LOAD_MODES = [
-  { value: "external", label: "External weight" },
+  { value: "external", label: "External" },
   { value: "bodyweight", label: "Bodyweight" },
 ];
 

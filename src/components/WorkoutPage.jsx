@@ -770,6 +770,52 @@ function WorkoutPage({
 
   return (
     <div ref={pageTopRef} data-testid="workout-page" style={containerStyle}>
+      <style>{`
+        .workout-set-load-row > label,
+        .workout-set-input-grid > label,
+        .workout-set-entry-row > label,
+        .workout-drop-entry-row > label {
+          min-width: 0;
+        }
+        @media (max-width: 600px) {
+          .workout-set-load-row {
+            grid-template-columns: minmax(0, 1.35fr) minmax(0, 1.35fr) minmax(64px, 0.65fr) !important;
+          }
+          .workout-set-load-row.workout-set-load-row-bodyweight {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+          }
+          .workout-set-entry-row {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+          }
+          .workout-set-input-grid.external {
+            grid-template-areas:
+              "type type type load load load"
+              "weight weight reps reps unit unit" !important;
+            grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+          }
+          .workout-set-input-grid.bodyweight {
+            grid-template-areas:
+              "type type type load load load"
+              "reps reps . . . ." !important;
+            grid-template-columns: repeat(6, minmax(0, 1fr)) !important;
+          }
+          .workout-drop-entry-row {
+            grid-template-areas: "load load load load weight weight weight unit unit reps reps reps";
+            grid-template-columns: repeat(12, minmax(0, 1fr)) !important;
+          }
+          .workout-drop-entry-row.workout-drop-entry-row-bodyweight {
+            grid-template-areas: "load load load load load load reps reps reps reps reps reps";
+          }
+          .workout-set-load-row input,
+          .workout-set-load-row select,
+          .workout-set-entry-row input,
+          .workout-set-entry-row select,
+          .workout-drop-entry-row input,
+          .workout-drop-entry-row select {
+            min-width: 0;
+          }
+        }
+      `}</style>
       <h1 style={{ marginBottom: "10px" }}>Workouts</h1>
       <ConfirmationMessage message={confirmationMessage} />
       <p style={{ color: "#bbb", marginBottom: "24px" }}>
@@ -1001,15 +1047,15 @@ function WorkoutPage({
                 style={{ border: "1px solid #4b5563", borderRadius: "10px", marginTop: "16px", padding: "14px" }}
               >
                 <legend>Set {setIndex + 1}</legend>
-                <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
-                  <label>
+                <div className={`workout-set-input-grid ${set.loadMode === "external" ? "external" : "bodyweight"}`} style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gridTemplateAreas: set.loadMode === "external" ? '"type load unit" "weight reps ."' : '"type load ." "reps reps ."' }}>
+                  <label className="workout-set-type-control" style={{ gridArea: "type" }}>
                     Set type
                     <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} type`} value={set.setType || "working"} onChange={(event) => updateSet(exercise.id, set.id, { setType: event.target.value })} style={formInputStyle}>
-                      <option value="working">Working set</option>
-                      <option value="warm-up">Warm-up set</option>
+                      <option value="working">Working</option>
+                      <option value="warm-up">Warm-up</option>
                     </select>
                   </label>
-                  <label>
+                  <label className="workout-set-load-control" style={{ gridArea: "load" }}>
                     Load mode
                     <select
                       aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} load mode`}
@@ -1021,22 +1067,20 @@ function WorkoutPage({
                     </select>
                   </label>
                   {set.loadMode === "external" && (
-                    <label>
+                    <label className="workout-set-unit-control" style={{ gridArea: "unit" }}>
                       Unit
                       <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} weight unit`} value={set.weightUnit} onChange={(event) => updateSet(exercise.id, set.id, { weightUnit: event.target.value })} style={{ ...formInputStyle, fontSize: "16px", padding: "10px" }}>
                         {WORKOUT_WEIGHT_UNITS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                       </select>
                     </label>
                   )}
-                </div>
-                <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", marginTop: "10px" }}>
                   {set.loadMode === "external" && (
-                    <label>
+                    <label className="workout-set-weight-control" style={{ gridArea: "weight" }}>
                       Weight
                       <input type="number" min="0" step="any" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} weight`} value={set.weightAmount} onChange={(event) => updateSet(exercise.id, set.id, { weightAmount: event.target.value })} style={formInputStyle} />
                     </label>
                   )}
-                  <label>
+                  <label className="workout-set-reps-control" style={{ gridArea: "reps" }}>
                     {set.toFailure ? "Goal reps" : "Reps"}
                     <input type="number" min="0" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} reps`} value={set.reps} onChange={(event) => updateSet(exercise.id, set.id, { reps: event.target.value })} style={formInputStyle} />
                   </label>
@@ -1098,8 +1142,8 @@ function WorkoutPage({
                     style={{ borderLeft: "3px solid #60a5fa", marginTop: "12px", maxWidth: "100%", overflow: "hidden", padding: "10px 0 10px 12px" }}
                   >
                     <strong style={{ display: "block", marginBottom: "8px" }}>↳ Drop {displayNumber}</strong>
-                    <div style={{ display: "grid", gap: "8px", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", maxWidth: "100%" }}>
-                      <label>
+                    <div className={`workout-drop-entry-row${drop.loadMode === "bodyweight" ? " workout-drop-entry-row-bodyweight" : ""}`} style={{ display: "grid", gap: "8px", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", maxWidth: "100%" }}>
+                      <label className="workout-drop-load-control" style={{ gridArea: "load" }}>
                         Load mode
                         <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} load mode`} value={drop.loadMode} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { loadMode: event.target.value })} style={formInputStyle}>
                           {WORKOUT_LOAD_MODES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -1107,11 +1151,11 @@ function WorkoutPage({
                       </label>
                       {drop.loadMode === "external" && (
                         <>
-                          <label>
+                          <label className="workout-drop-weight-control" style={{ gridArea: "weight" }}>
                             Weight
                             <input ref={(node) => { if (node) dropInputRefs.current.set(drop.id, node); else dropInputRefs.current.delete(drop.id); }} type="number" min="0" step="any" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} weight`} value={drop.weightAmount} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { weightAmount: event.target.value })} style={formInputStyle} />
                           </label>
-                          <label>
+                          <label className="workout-drop-unit-control" style={{ gridArea: "unit" }}>
                             Weight unit
                             <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} weight unit`} value={drop.weightUnit} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { weightUnit: event.target.value })} style={formInputStyle}>
                               {WORKOUT_WEIGHT_UNITS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -1119,7 +1163,7 @@ function WorkoutPage({
                           </label>
                         </>
                       )}
-                      <label>
+                      <label className="workout-drop-reps-control" style={{ gridArea: "reps" }}>
                         {drop.toFailure ? "Goal reps" : "Reps"}
                         <input ref={drop.loadMode === "bodyweight" ? (node) => { if (node) dropInputRefs.current.set(drop.id, node); else dropInputRefs.current.delete(drop.id); } : undefined} type="number" min="0" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} reps`} value={drop.reps} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { reps: event.target.value })} style={formInputStyle} />
                       </label>

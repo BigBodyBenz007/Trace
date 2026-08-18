@@ -564,6 +564,7 @@ test.each([375, 390, 430])("keeps drop controls constrained at %ipx", (width) =>
     const drop = screen.getByRole("region", { name: "Exercise 1 set 1 drop 1" });
     expect(drop).toHaveStyle({ maxWidth: "100%", overflow: "hidden" });
     expect(screen.getByLabelText("Exercise 1 set 1 drop 1 weight")).toHaveStyle({ maxWidth: "100%", width: "100%" });
+    expect(screen.getByLabelText("Exercise 1 set 1 drop 1 reps").closest(".workout-drop-entry-row")).toBeInTheDocument();
   } finally {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth });
   }
@@ -693,6 +694,46 @@ test("shows mechanical validation errors", () => {
   expect(screen.getByRole("alert")).toHaveTextContent(
     "whole-number reps"
   );
+});
+
+test("uses compact responsive rows for external and bodyweight set entry", () => {
+  renderPage();
+  expect(screen.getByLabelText("Exercise 1 set 1 type").closest(".workout-set-input-grid")).toHaveClass("external");
+  expect(screen.getByLabelText("Exercise 1 set 1 weight").closest(".workout-set-input-grid")).toHaveClass("external");
+
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 load mode"), { target: { value: "bodyweight" } });
+  expect(screen.getByLabelText("Exercise 1 set 1 type").closest(".workout-set-input-grid")).toHaveClass("bodyweight");
+  expect(screen.getByLabelText("Exercise 1 set 1 reps").closest(".workout-set-input-grid")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Exercise 1 set 1 weight")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Exercise 1 set 1 weight unit")).not.toBeInTheDocument();
+});
+
+test("renders the exact 400px external grid contract with Unit only on row two", () => {
+  const originalWidth = window.innerWidth;
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 400 });
+  try {
+    renderPage();
+    const grid = screen.getByLabelText("Exercise 1 set 1 type").closest(".workout-set-input-grid");
+    expect(grid).toHaveClass("external");
+    expect(grid).toHaveStyle({ gridTemplateAreas: '"type load unit" "weight reps ."' });
+    const responsiveStyle = [...document.querySelectorAll("style")]
+      .map((style) => style.textContent)
+      .find((text) => text.includes('"weight weight reps reps unit unit"'));
+    expect(responsiveStyle).toContain('"type type type load load load"');
+    expect(responsiveStyle).toContain('"weight weight reps reps unit unit" !important');
+  } finally {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: originalWidth });
+  }
+});
+
+test("uses the compact entry-form display labels without changing option values", () => {
+  renderPage();
+  expect(screen.getByRole("option", { name: "Working" })).toHaveValue("working");
+  expect(screen.getByRole("option", { name: "Warm-up" })).toHaveValue("warm-up");
+  expect(screen.getByRole("option", { name: "External" })).toHaveValue("external");
+  expect(screen.getByRole("option", { name: "Bodyweight" })).toHaveValue("bodyweight");
+  expect(screen.queryByRole("option", { name: "Working set" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("option", { name: "External weight" })).not.toBeInTheDocument();
 });
 
 test("logs a to-failure set with an optional actual count and preserves exact zero", () => {
