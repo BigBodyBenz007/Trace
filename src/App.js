@@ -151,8 +151,9 @@ function App() {
     DEFAULT_NUTRITION_GOALS
   );
   const [storageError, setStorageError] = useState("");
-  const [confirmationMessage, setConfirmationMessage] = useState("");
+  const [confirmation, setConfirmation] = useState(null);
   const confirmationTimerRef = useRef(null);
+  const confirmationIdRef = useRef(0);
   const [trophySourceNavigation, setTrophySourceNavigation] = useState(null);
   const photoDatabaseRef = useRef(null);
   const initializationStartedRef = useRef(false);
@@ -160,9 +161,23 @@ function App() {
   const skipNextPageTopScrollRef = useRef(false);
 
   function showConfirmation(message) {
-    setConfirmationMessage(message);
+    confirmationIdRef.current += 1;
+    setConfirmation({ id: confirmationIdRef.current, message });
     clearTimeout(confirmationTimerRef.current);
-    confirmationTimerRef.current = setTimeout(() => setConfirmationMessage(""), 3200);
+    confirmationTimerRef.current = setTimeout(() => setConfirmation(null), 3200);
+  }
+
+  function medicationEntryConfirmation(entry, wasEditing = false) {
+    const reference = entry?.compoundReference;
+    const category =
+      reference?.source === "trace-catalog" && reference.modified === false
+        ? reference.category
+        : null;
+    const action = wasEditing ? "updated" : "traced";
+
+    if (category === "medication") return `Medication ${action}`;
+    if (category === "supplement") return `Supplement ${action}`;
+    return `Compound ${action}`;
   }
 
   useEffect(() => {
@@ -844,6 +859,7 @@ function App() {
         JSON.stringify(updatedEntries)
       );
       setMedicationEntries(updatedEntries);
+      showConfirmation(medicationEntryConfirmation(newEntry));
       setStorageError("");
       return true;
     } catch (error) {
@@ -917,6 +933,7 @@ function App() {
         JSON.stringify(updatedEntries)
       );
       setMedicationEntries(updatedEntries);
+      showConfirmation(medicationEntryConfirmation(entry, true));
       setStorageError("");
       return true;
     } catch (error) {
@@ -1259,7 +1276,10 @@ function App() {
         fontFamily: "Arial",
       }}
     >
-      <ConfirmationMessage message={confirmationMessage} />
+      <ConfirmationMessage
+        key={confirmation?.id}
+        message={confirmation?.message || ""}
+      />
       {storageError && (
         <div
           role="alert"

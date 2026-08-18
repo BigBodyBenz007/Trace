@@ -71,6 +71,33 @@ function openWorkouts() {
   fireEvent.click(screen.getByRole("button", { name: "Workouts" }));
 }
 
+function openMedications() {
+  fireEvent.click(
+    screen.getByRole("button", { name: "Medications & Supplements" })
+  );
+}
+
+function logTraceCompound(search, compoundName, amount = "1") {
+  fireEvent.change(screen.getByLabelText("Compound search"), {
+    target: { value: search },
+  });
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: `Select Trace compound ${compoundName}`,
+    })
+  );
+  fireEvent.change(screen.getByLabelText("Amount / dose"), {
+    target: { value: amount },
+  });
+  fireEvent.change(screen.getByLabelText("Dose unit"), {
+    target: { value: "mg" },
+  });
+  fireEvent.change(screen.getByLabelText("Method / route"), {
+    target: { value: "oral" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+}
+
 test("passes authoritative structured activity to the Home Life Current", async () => {
   localStorage.setItem("nutritionEntries", JSON.stringify([
     { id: "nutrition-current", loggedAt: "2026-05-18T12:00:00" },
@@ -685,6 +712,128 @@ test("medication entries persist separately in localStorage", () => {
     route: { code: "oral" },
   });
   expect(localStorage.getItem("nutritionEntries")).toBeNull();
+});
+
+test("successful categorized medication and supplement logs show exact confirmations", () => {
+  renderAppAtTimeline();
+  openMedications();
+
+  logTraceCompound("metformin", "Metformin");
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent(
+    "Medication traced"
+  );
+
+  logTraceCompound("creatine", "Creatine Monohydrate", "5");
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent(
+    "Supplement traced"
+  );
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toHaveLength(2);
+});
+
+test("an unclassified name is confirmed as a compound without guessing from its text", () => {
+  renderAppAtTimeline();
+  openMedications();
+  fireEvent.change(screen.getByLabelText("Name"), {
+    target: { value: "Supplement C" },
+  });
+  fireEvent.change(screen.getByLabelText("Amount / dose"), {
+    target: { value: "1" },
+  });
+  fireEvent.change(screen.getByLabelText("Dose unit"), {
+    target: { value: "capsule" },
+  });
+  fireEvent.change(screen.getByLabelText("Method / route"), {
+    target: { value: "oral" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent(
+    "Compound traced"
+  );
+});
+
+test("validation and medication persistence failures do not show success", () => {
+  renderAppAtTimeline();
+  openMedications();
+  fireEvent.change(screen.getByLabelText("Name"), {
+    target: { value: "Invalid medication" },
+  });
+  fireEvent.submit(screen.getByRole("button", { name: "Save Entry" }).closest("form"));
+
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Enter a dose amount greater than zero."
+  );
+  expect(screen.queryByTestId("save-confirmation")).not.toBeInTheDocument();
+
+  const originalSetItem = Storage.prototype.setItem;
+  const setItemSpy = jest
+    .spyOn(Storage.prototype, "setItem")
+    .mockImplementation(function setItem(key, value) {
+      if (key === "medicationEntries") throw new Error("Storage unavailable");
+      return originalSetItem.call(this, key, value);
+    });
+
+  try {
+    fireEvent.change(screen.getByLabelText("Amount / dose"), {
+      target: { value: "1" },
+    });
+    fireEvent.change(screen.getByLabelText("Dose unit"), {
+      target: { value: "mg" },
+    });
+    fireEvent.change(screen.getByLabelText("Method / route"), {
+      target: { value: "oral" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+    expect(screen.queryByTestId("save-confirmation")).not.toBeInTheDocument();
+    expect(localStorage.getItem("medicationEntries")).toBeNull();
+  } finally {
+    setItemSpy.mockRestore();
+  }
+});
+
+test("repeated medication logs remount compact polite feedback and expire", () => {
+  jest.useFakeTimers();
+  try {
+    renderAppAtTimeline();
+    openMedications();
+
+    logTraceCompound("metformin", "Metformin");
+    const firstConfirmation = screen.getByTestId("save-confirmation");
+    expect(firstConfirmation).toHaveAttribute("aria-live", "polite");
+    expect(firstConfirmation).toHaveStyle({
+      boxSizing: "border-box",
+      maxWidth: "min(700px, calc(100vw - 24px))",
+      width: "max-content",
+    });
+
+    logTraceCompound("metformin", "Metformin", "2");
+    const secondConfirmation = screen.getByTestId("save-confirmation");
+    expect(secondConfirmation).toHaveTextContent("Medication traced");
+    expect(secondConfirmation).not.toBe(firstConfirmation);
+
+    act(() => jest.advanceTimersByTime(3200));
+    expect(screen.queryByTestId("save-confirmation")).not.toBeInTheDocument();
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("editing a categorized medication follows the existing updated convention", () => {
+  renderAppAtTimeline();
+  openMedications();
+  logTraceCompound("metformin", "Metformin");
+
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Amount / dose"), {
+    target: { value: "2" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent(
+    "Medication updated"
+  );
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))[0].dose.amount).toBe(2);
 });
 
 test("Trace catalog logging persists a self-contained identity snapshot", () => {
