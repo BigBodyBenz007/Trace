@@ -12,10 +12,6 @@ function foodRecord(id, name, slug, calories, nutrients = {}, serving = "1 sandw
   };
 }
 
-function partialFood(id, name, slug, calories, serving = "1 sandwich") {
-  return foodRecord(id, name, slug, calories, {}, serving);
-}
-
 function menuOption(id, description, calories, sourceUrl, nutrients = {}, amount = 1, status = "partial", sourceType = "official-restaurant", source = "official-restaurant", sourceReference) {
   return {
     id: `restaurant:mcdonalds:${id}`,
