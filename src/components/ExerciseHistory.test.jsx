@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import ExerciseHistory from "./ExerciseHistory";
 import { deriveExercisePrs } from "../services/exercisePr";
 import { createWorkoutPrCandidate } from "../services/trophyCase";
@@ -537,7 +537,7 @@ test("dismisses Exercise History from both controls, outside clicks, and layered
   expect(workouts).toEqual(snapshot);
 });
 
-test("displays PR progression newest-first with current, former, and matched track status", () => {
+test("displays PR progression newest-first with current, former, and matched track status", async () => {
   const makeExercise = (instanceId, setId, weight, reps) => ({
     id: instanceId,
     name: "Bench Press",
@@ -563,18 +563,33 @@ test("displays PR progression newest-first with current, former, and matched tra
     expect.stringContaining("Match Day"),
     expect.stringContaining("Match Day"),
     expect.stringContaining("Heavy Day"),
+  ]);
+  expect(within(timeline).getByRole("button", { name: "View full PR history" })).toBeInTheDocument();
+  const scrollTo = jest.spyOn(window, "scrollTo").mockImplementation(() => {});
+  Object.defineProperty(window, "scrollY", { configurable: true, value: 480 });
+  fireEvent.click(within(timeline).getByRole("button", { name: "View full PR history" }));
+  await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 480));
+  const fullEvents = within(timeline).getAllByRole("listitem");
+  expect(fullEvents).toHaveLength(6);
+  expect(fullEvents.map((event) => event.textContent)).toEqual([
+    expect.stringContaining("Match Day"),
+    expect.stringContaining("Match Day"),
+    expect.stringContaining("Heavy Day"),
     expect.stringContaining("Heavy Day"),
     expect.stringContaining("First Day"),
     expect.stringContaining("First Day"),
   ]);
-  expect(events.filter((event) => event.dataset.achievement === "new")).toHaveLength(4);
-  expect(events.filter((event) => event.dataset.achievement === "matched")).toHaveLength(2);
+  expect(fullEvents.filter((event) => event.dataset.achievement === "new")).toHaveLength(4);
+  expect(fullEvents.filter((event) => event.dataset.achievement === "matched")).toHaveLength(2);
   expect(within(timeline).getAllByText(/^Matched .* Record$/)).toHaveLength(2);
-  expect(events.filter((event) => event.dataset.recordStatus === "current")).toHaveLength(3);
-  expect(events.filter((event) => event.dataset.recordStatus === "former")).toHaveLength(1);
+  expect(fullEvents.filter((event) => event.dataset.recordStatus === "current")).toHaveLength(3);
+  expect(fullEvents.filter((event) => event.dataset.recordStatus === "former")).toHaveLength(1);
   expect(within(timeline).getByText("Current Heaviest Weight Record")).toBeInTheDocument();
   expect(within(timeline).getByText("Former Heaviest Weight Record")).toBeInTheDocument();
   expect(within(timeline).getAllByText("Current Reps-at-Weight Record")).toHaveLength(2);
+  fireEvent.click(within(timeline).getByRole("button", { name: "Show recent PR history" }));
+  await waitFor(() => expect(scrollTo).toHaveBeenCalledWith(0, 480));
+  scrollTo.mockRestore();
   expect(timeline).toHaveTextContent("Heaviest Weight · 80 lb × 8 reps");
   expect(timeline).toHaveTextContent("Reps at Weight · 80 lb × 8 reps");
 });
@@ -627,6 +642,7 @@ test("keeps lb, kg, and bodyweight current/former status independent", () => {
   fireEvent.click(screen.getByRole("button", { name: /Mixed Press/ }));
   expandPrTimeline();
   const timeline = screen.getByRole("region", { name: "Mixed Press PR timeline" });
+  fireEvent.click(within(timeline).getByRole("button", { name: "View full PR history" }));
   const eventFor = (text) => within(timeline).getByText(text).closest("li");
 
   expect(eventFor("Heaviest Weight · 120 lb × 5 reps")).toHaveAttribute("data-record-status", "current");

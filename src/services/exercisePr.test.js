@@ -262,6 +262,14 @@ test("excludes nested drops from every PR type while keeping the parent eligible
   expect(JSON.stringify(prs)).not.toMatch(/heavy-drop|rep-drop|bodyweight-drop/);
 });
 
+test("excludes warm-up sets from PR candidates while retaining working sets", () => {
+  const prs = deriveExercisePrs([
+    { id: "w1", title: "Warm-up", occurredAt: "2026-08-01", exercises: [{ id: "e", name: "Bench", exerciseId: "bench", sets: [{ id: "warm", setType: "warm-up", reps: 20, load: { mode: "external", amount: 200, unit: "lb" } }, { id: "work", reps: 8, load: { mode: "external", amount: 100, unit: "lb" } }] }] },
+  ]);
+  expect(prs[0].records.heaviestWeight[0]).toMatchObject({ setId: "work", weight: 100 });
+  expect(JSON.stringify(prs)).not.toContain("warm");
+});
+
 test("recalculates independent progressions by workout chronology rather than insertion order", () => {
   const prs = deriveExercisePrs([
     workout("created-first", "2026-08-10T10:00:00.000Z", [

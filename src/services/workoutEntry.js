@@ -122,7 +122,7 @@ function getSetSegmentError(segment, location) {
   return "";
 }
 
-function completedSetSegment(segment) {
+function completedSetSegment(segment, includeClassification = false) {
   const toFailure = Boolean(segment.toFailure);
   const actualRepsAtFailure = Number(segment.actualRepsAtFailure);
   const reps = String(segment.reps ?? "").trim() === "" && toFailure
@@ -131,6 +131,9 @@ function completedSetSegment(segment) {
   return {
     id: segment.id,
     reps,
+    ...(includeClassification && segment.setType === "warm-up"
+      ? { setType: "warm-up" }
+      : {}),
     ...(toFailure
       ? {
           toFailure: true,
@@ -181,7 +184,7 @@ export function createWorkoutEntry(draft, existingEntry = null, now = new Date()
           : {}),
         ...(cleanText(exercise.notes) ? { notes: cleanText(exercise.notes) } : {}),
         sets: exercise.sets.map((set) => {
-          const completed = completedSetSegment(set);
+          const completed = completedSetSegment(set, true);
           const drops = Array.isArray(set.drops) ? set.drops : [];
           return drops.length > 0
             ? { ...completed, drops: drops.map(completedSetSegment) }

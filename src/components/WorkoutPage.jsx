@@ -43,6 +43,7 @@ function emptySet(defaultLoadMode = "external", defaultWeightUnit = "lb") {
   return {
     id: createWorkoutItemId("set"),
     reps: "",
+    setType: "working",
     toFailure: false,
     actualRepsAtFailure: "",
     loadMode: defaultLoadMode,
@@ -72,6 +73,8 @@ function emptyDrop(loadMode = "external", weightUnit = "lb") {
   return {
     id: createWorkoutItemId("drop"),
     reps: "",
+    toFailure: false,
+    actualRepsAtFailure: "",
     loadMode,
     weightAmount: "",
     weightUnit,
@@ -117,12 +120,12 @@ function completedSetDescription(set) {
   const load = set.load.mode === "bodyweight"
     ? "Bodyweight"
     : `${set.load.amount} ${set.load.unit}`;
-  if (set.toFailure) {
-    return set.actualRepsAtFailure === null || set.actualRepsAtFailure === undefined
+  const description = set.toFailure
+    ? (set.actualRepsAtFailure === null || set.actualRepsAtFailure === undefined
       ? `${load} × ${set.reps} goal → to failure`
-      : `${load} × ${set.reps} goal → failure at ${set.actualRepsAtFailure}`;
-  }
-  return `${load} × ${set.reps} reps`;
+      : `${load} × ${set.reps} goal → failure at ${set.actualRepsAtFailure}`)
+    : `${load} × ${set.reps} reps`;
+  return set.setType === "warm-up" ? `Warm-up · ${description}` : description;
 }
 
 function CompletedDropSegments({ drops }) {
@@ -699,6 +702,7 @@ function WorkoutPage({
         sets: exercise.sets.map((set) => ({
           id: set.id,
           reps: String(set.reps),
+          setType: set.setType === "warm-up" ? "warm-up" : "working",
           toFailure: Boolean(set.toFailure),
           actualRepsAtFailure: set.toFailure && set.actualRepsAtFailure !== null && set.actualRepsAtFailure !== undefined
             ? String(set.actualRepsAtFailure)
@@ -712,6 +716,10 @@ function WorkoutPage({
           drops: (Array.isArray(set.drops) ? set.drops : []).map((drop) => ({
             id: drop.id,
             reps: String(drop.reps),
+            toFailure: Boolean(drop.toFailure),
+            actualRepsAtFailure: drop.toFailure && drop.actualRepsAtFailure !== null && drop.actualRepsAtFailure !== undefined
+              ? String(drop.actualRepsAtFailure)
+              : "",
             loadMode: drop.load?.mode || "external",
             weightAmount:
               drop.load?.mode === "external" ? String(drop.load.amount) : "",
@@ -993,7 +1001,14 @@ function WorkoutPage({
                 style={{ border: "1px solid #4b5563", borderRadius: "10px", marginTop: "16px", padding: "14px" }}
               >
                 <legend>Set {setIndex + 1}</legend>
-                <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))" }}>
+                <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))" }}>
+                  <label>
+                    Set type
+                    <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} type`} value={set.setType || "working"} onChange={(event) => updateSet(exercise.id, set.id, { setType: event.target.value })} style={formInputStyle}>
+                      <option value="working">Working set</option>
+                      <option value="warm-up">Warm-up set</option>
+                    </select>
+                  </label>
                   <label>
                     Load mode
                     <select
@@ -1006,18 +1021,20 @@ function WorkoutPage({
                     </select>
                   </label>
                   {set.loadMode === "external" && (
-                    <>
-                      <label>
-                        Weight
-                        <input type="number" min="0" step="any" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} weight`} value={set.weightAmount} onChange={(event) => updateSet(exercise.id, set.id, { weightAmount: event.target.value })} style={formInputStyle} />
-                      </label>
-                      <label>
-                        Weight unit
-                        <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} weight unit`} value={set.weightUnit} onChange={(event) => updateSet(exercise.id, set.id, { weightUnit: event.target.value })} style={formInputStyle}>
-                          {WORKOUT_WEIGHT_UNITS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
-                        </select>
-                      </label>
-                    </>
+                    <label>
+                      Unit
+                      <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} weight unit`} value={set.weightUnit} onChange={(event) => updateSet(exercise.id, set.id, { weightUnit: event.target.value })} style={{ ...formInputStyle, fontSize: "16px", padding: "10px" }}>
+                        {WORKOUT_WEIGHT_UNITS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                      </select>
+                    </label>
+                  )}
+                </div>
+                <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", marginTop: "10px" }}>
+                  {set.loadMode === "external" && (
+                    <label>
+                      Weight
+                      <input type="number" min="0" step="any" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} weight`} value={set.weightAmount} onChange={(event) => updateSet(exercise.id, set.id, { weightAmount: event.target.value })} style={formInputStyle} />
+                    </label>
                   )}
                   <label>
                     {set.toFailure ? "Goal reps" : "Reps"}
@@ -1103,10 +1120,20 @@ function WorkoutPage({
                         </>
                       )}
                       <label>
-                        Reps
+                        {drop.toFailure ? "Goal reps" : "Reps"}
                         <input ref={drop.loadMode === "bodyweight" ? (node) => { if (node) dropInputRefs.current.set(drop.id, node); else dropInputRefs.current.delete(drop.id); } : undefined} type="number" min="0" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} reps`} value={drop.reps} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { reps: event.target.value })} style={formInputStyle} />
                       </label>
                     </div>
+                    <label style={{ display: "block", marginTop: "8px" }}>
+                      <input type="checkbox" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} to failure`} checked={Boolean(drop.toFailure)} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { toFailure: event.target.checked, actualRepsAtFailure: event.target.checked ? drop.actualRepsAtFailure : "" })} />
+                      {" To failure"}
+                    </label>
+                    {drop.toFailure && (
+                      <label style={{ display: "block", marginTop: "8px" }}>
+                        Actual reps at failure (optional)
+                        <input type="number" min="0" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} actual reps at failure`} value={drop.actualRepsAtFailure} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { actualRepsAtFailure: event.target.value })} style={{ ...formInputStyle, maxWidth: "140px" }} />
+                      </label>
+                    )}
                     <label style={{ display: "block", marginTop: "8px" }}>
                       Drop notes (optional)
                       <input aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} notes`} value={drop.notes} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { notes: event.target.value })} style={formInputStyle} />

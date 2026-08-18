@@ -29,6 +29,7 @@ export function formatEstimatedOneRepMax(estimate) {
 }
 
 function candidateFrom(exercise, performance, set, setIndex) {
+  if (set?.setType === "warm-up") return null;
   if (set?.load?.mode !== "external" || !SUPPORTED_WEIGHT_UNITS.has(set?.load?.unit)) return null;
   const reps = set?.toFailure ? set.actualRepsAtFailure : set.reps;
   const estimatedWeight = calculateEstimatedOneRepMax(set.load.amount, reps);

@@ -186,6 +186,33 @@ test("normalizes blank goal reps to zero only for a to-failure set", () => {
   expect(getWorkoutEntryError(normal)).toMatch(/whole-number reps/);
 });
 
+test("persists warm-up classification while legacy and working sets remain compatible", () => {
+  const warmup = validDraft();
+  warmup.exercises[0].sets[0].setType = "warm-up";
+  expect(createWorkoutEntry(warmup).exercises[0].sets[0]).toHaveProperty("setType", "warm-up");
+  expect(createWorkoutEntry(validDraft()).exercises[0].sets[0]).not.toHaveProperty("setType");
+});
+
+test.each([
+  ["known", "8", "11", { reps: 8, toFailure: true, actualRepsAtFailure: 11 }],
+  ["unknown", "8", "", { reps: 8, toFailure: true, actualRepsAtFailure: null }],
+  ["blank goal", "", "", { reps: 0, toFailure: true, actualRepsAtFailure: null }],
+  ["explicit zero", "0", "0", { reps: 0, toFailure: true, actualRepsAtFailure: 0 }],
+])("normalizes drop to-failure %s", (_label, reps, actualRepsAtFailure, expected) => {
+  const draft = validDraft();
+  draft.exercises[0].sets[0].drops = [{
+    id: "drop-1",
+    reps,
+    toFailure: true,
+    actualRepsAtFailure,
+    loadMode: "external",
+    weightAmount: "55",
+    weightUnit: "lb",
+    notes: "",
+  }];
+  expect(createWorkoutEntry(draft).exercises[0].sets[0].drops[0]).toMatchObject(expected);
+});
+
 test("validates external load amount, controlled unit, and load mode", () => {
   const zeroWeight = validDraft();
   zeroWeight.exercises[0].sets[0].weightAmount = "0";

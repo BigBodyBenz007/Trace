@@ -26,18 +26,12 @@ function setDescription(set) {
     : set?.load?.mode === "external"
       ? `${set.load.amount} ${set.load.unit}`
       : (set?.load?.mode || "Load");
-  if (set?.toFailure) {
-    return set.actualRepsAtFailure === null || set.actualRepsAtFailure === undefined
+  const description = set?.toFailure
+    ? (set.actualRepsAtFailure === null || set.actualRepsAtFailure === undefined
       ? `${load} × ${set.reps} goal → to failure`
-      : `${load} × ${set.reps} goal → failure at ${set.actualRepsAtFailure}`;
-  }
-  if (set?.load?.mode === "bodyweight") {
-    return `Bodyweight × ${set.reps} reps`;
-  }
-  if (set?.load?.mode === "external") {
-    return `${set.load.amount} ${set.load.unit} × ${set.reps} reps`;
-  }
-  return `${set?.load?.mode || "Load"} × ${set?.reps} reps`;
+      : `${load} × ${set.reps} goal → failure at ${set.actualRepsAtFailure}`)
+    : `${load} × ${set?.reps} reps`;
+  return set?.setType === "warm-up" ? `Warm-up · ${description}` : description;
 }
 
 function DropSegments({ drops }) {
@@ -115,6 +109,8 @@ function PrTimeline({
   buttonStyle,
   panelRef,
   onCollapse,
+  isFullHistoryOpen,
+  onToggleFullHistory,
 }) {
   if (!exercisePr) return null;
   const currentSourceKeyByTrack = new Map();
@@ -131,6 +127,8 @@ function PrTimeline({
     .flat()
     .sort(compareProgressionEventsForDisplay);
   if (events.length === 0) return null;
+
+  const visibleEvents = isFullHistoryOpen ? events : events.slice(0, 3);
 
   return (
     <section
@@ -155,7 +153,7 @@ function PrTimeline({
         Hide PR Timeline
       </button>
       <ol style={{ display: "grid", gap: "12px", listStyle: "none", margin: 0, padding: 0 }}>
-        {events.map((event) => {
+        {visibleEvents.map((event) => {
           const candidate = createWorkoutPrCandidate(exercisePr, event);
           const presentationStatus = event.achievement === "matched"
             ? "matched"
@@ -200,6 +198,15 @@ function PrTimeline({
           );
         })}
       </ol>
+      {events.length > 3 && (
+        <button
+          type="button"
+          onClick={onToggleFullHistory}
+          style={{ ...buttonStyle, backgroundColor: "#374151", fontSize: "16px", minHeight: "44px", padding: "10px 14px" }}
+        >
+          {isFullHistoryOpen ? "Show recent PR history" : "View full PR history"}
+        </button>
+      )}
       <button
         type="button"
         onClick={onCollapse}
@@ -360,6 +367,8 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
   );
   const [selectedIdentityKey, setSelectedIdentityKey] = useState(null);
   const [isPrTimelineOpen, setIsPrTimelineOpen] = useState(false);
+  const [isFullPrHistoryOpen, setIsFullPrHistoryOpen] = useState(false);
+  const prHistoryScrollYRef = useRef(null);
   const prTimelineRef = useRef(null);
   const exerciseHistoryDetailRef = useRef(null);
   const exerciseSummaryRefs = useRef(new Map());
@@ -383,11 +392,23 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
   const closeExerciseHistory = useCallback(({ restoreContext = true } = {}) => {
     const summary = exerciseSummaryRefs.current.get(selectedIdentityKey);
     setIsPrTimelineOpen(false);
+    setIsFullPrHistoryOpen(false);
     setSelectedIdentityKey(null);
     if (restoreContext) {
       summary?.scrollIntoView?.({ behavior: "smooth", block: "center" });
     }
   }, [selectedIdentityKey]);
+
+  function toggleFullPrHistory() {
+    prHistoryScrollYRef.current = window.scrollY;
+    setIsFullPrHistoryOpen((current) => !current);
+    window.requestAnimationFrame(() => {
+      if (prHistoryScrollYRef.current !== null) {
+        window.scrollTo(0, prHistoryScrollYRef.current);
+        prHistoryScrollYRef.current = null;
+      }
+    });
+  }
 
   useEffect(() => {
     if (pendingSwitchScrollIdentityRef.current !== selectedIdentityKey) return;
@@ -401,6 +422,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
   useEffect(() => {
     if (!trophySourceTarget?.exerciseIdentityKey) return undefined;
     setIsPrTimelineOpen(false);
+    setIsFullPrHistoryOpen(false);
     setSelectedIdentityKey(trophySourceTarget.exerciseIdentityKey);
     return undefined;
   }, [trophySourceTarget]);
@@ -420,6 +442,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
     if (selectedIdentityKey && !selectedHistory) {
       setSelectedIdentityKey(null);
       setIsPrTimelineOpen(false);
+      setIsFullPrHistoryOpen(false);
     }
   }, [selectedHistory, selectedIdentityKey]);
 
@@ -430,6 +453,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
       if (isModalInteraction(event.target)) return;
       if (prTimelineRef.current?.contains(event.target)) return;
       setIsPrTimelineOpen(false);
+      setIsFullPrHistoryOpen(false);
     }
 
     document.addEventListener("mousedown", handlePointerDown);
@@ -452,6 +476,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
       if (event.key !== "Escape") return;
       if (isPrTimelineOpen) {
         setIsPrTimelineOpen(false);
+        setIsFullPrHistoryOpen(false);
         return;
       }
       closeExerciseHistory();
@@ -501,6 +526,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                           pendingSwitchScrollIdentityRef.current = exercise.identityKey;
                         }
                         setIsPrTimelineOpen(false);
+                        setIsFullPrHistoryOpen(false);
                         setSelectedIdentityKey(exercise.identityKey);
                       }
                     }}
@@ -553,7 +579,12 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                           addTrophyCaseEntry={addTrophyCaseEntry}
                           buttonStyle={buttonStyle}
                           panelRef={prTimelineRef}
-                          onCollapse={() => setIsPrTimelineOpen(false)}
+                          onCollapse={() => {
+                            setIsPrTimelineOpen(false);
+                            setIsFullPrHistoryOpen(false);
+                          }}
+                          isFullHistoryOpen={isFullPrHistoryOpen}
+                          onToggleFullHistory={toggleFullPrHistory}
                         />
                       ) : (
                         <button

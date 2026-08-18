@@ -92,3 +92,10 @@ test("deriving Estimated 1RM neither changes PR records nor creates Trophy candi
   expect(estimates[0].estimates[0]).not.toHaveProperty("recordType");
   expect(estimates[0].estimates[0]).not.toHaveProperty("achievement");
 });
+
+test("excludes warm-up sets from estimated 1RM", () => {
+  const result = deriveEstimatedOneRepMaxes([
+    { id: "w1", occurredAt: "2026-08-01", exercises: [{ id: "e", name: "Bench", exerciseId: "bench", sets: [{ id: "warm", setType: "warm-up", reps: 5, load: { mode: "external", amount: 300, unit: "lb" } }, { id: "work", reps: 5, load: { mode: "external", amount: 100, unit: "lb" } }] }] },
+  ]);
+  expect(result[0].estimates[0]).toMatchObject({ setId: "work", performedWeight: 100 });
+});

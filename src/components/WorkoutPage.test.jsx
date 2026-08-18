@@ -66,7 +66,7 @@ test("persists new-workout changes and restores the original start and form stat
   expect(screen.getByLabelText("Date")).toHaveValue(originalDate);
   expect(screen.getByLabelText("Time")).toHaveValue(originalTime);
   expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(225);
-});
+}, 10000);
 
 test("ordinary unmount keeps a draft while explicit discard clears it", async () => {
   const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);

@@ -57,6 +57,7 @@ function candidatesForExercise(exerciseHistory) {
 
   exerciseHistory.performances.forEach((performance) => {
     performance.sets.forEach((set, setIndex) => {
+      if (set?.setType === "warm-up") return;
       const reps = effectiveReps(set);
       if (reps === null) return;
 
