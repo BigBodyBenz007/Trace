@@ -35,6 +35,7 @@ test("renders primary Timeline actions in the intended order", () => {
       "Medications & Supplements",
       "Protocols",
       "Open Trophy Case",
+      "Backup & Restore",
     ].includes(name));
   expect(names).toEqual([
     "Add Memory",
@@ -44,7 +45,11 @@ test("renders primary Timeline actions in the intended order", () => {
     "Medications & Supplements",
     "Protocols",
     "Open Trophy Case",
+    "Backup & Restore",
   ]);
+  expect(screen.getByRole("button", { name: "Add Memory" })).toHaveClass("trace-feature-action--primary");
+  expect(screen.getByRole("button", { name: "Nutrition" })).toHaveClass("trace-feature-action--core");
+  expect(screen.getByRole("button", { name: "Health" })).toHaveClass("trace-feature-action--core");
 });
 
 test("frames centered branding with independent accessible Settings and Journal controls", () => {
@@ -57,7 +62,7 @@ test("frames centered branding with independent accessible Settings and Journal 
   const journal = within(personalArea).getByRole("button", { name: "Open Journal" });
   expect(branding).toHaveAttribute("data-layout", "centered-branding");
   expect(within(branding).getByRole("heading", { name: "Trace" })).toBeInTheDocument();
-  expect(within(branding).getByText("Your story. Your timeline.")).toBeInTheDocument();
+  expect(within(branding).getByText("Your timeline. Your story.")).toBeInTheDocument();
   expect(branding).not.toContainElement(personalArea);
   expect(personalArea.parentElement).toBe(intro);
   expect(intro).toHaveAttribute("data-safe-area-context", "body-inset");

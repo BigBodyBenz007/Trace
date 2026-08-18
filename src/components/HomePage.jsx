@@ -105,7 +105,7 @@ function getMemorySelectionKey(memory) {
   return memory.id;
 }
 
-function MemorySearchInput({ search, setSearch, style }) {
+function MemorySearchInput({ className, search, setSearch, style }) {
   const [inputValue, setInputValue] = useState(search);
   const [, startTransition] = useTransition();
 
@@ -113,6 +113,7 @@ function MemorySearchInput({ search, setSearch, style }) {
 
   return (
     <input
+      className={className}
       style={style}
       type="text"
       placeholder="Search memories..."
@@ -154,8 +155,6 @@ function HomePage({
   addTrophyCaseEntry = () => false,
   memoryAchievementSuggestion = null,
   dismissMemoryAchievementSuggestion = () => {},
-  buttonStyle,
-  inputStyle,
   containerStyle,
   trophySourceTarget = null,
   onReturnToTrophyCase = null,
@@ -641,12 +640,13 @@ function HomePage({
   }, [memories, onTimelineTargetShown, timelineTargetMemoryId]);
 
   return (
-    <div style={containerStyle}>
+    <div className="trace-home-page" style={{ ...containerStyle, fontFamily: "var(--trace-font-sans)" }}>
       <div className="trace-home-intro" data-safe-area-context="body-inset">
         <header className="trace-home-top" data-layout="centered-branding">
           <div className="trace-home-identity">
-            <h1 style={{ marginBottom: "10px" }}>Trace</h1>
-            <p style={{ color: "#bbb", marginBottom: "4px" }}>Your story. Your timeline.</p>
+            <p className="trace-home-kicker">A record of a life in motion</p>
+            <h1>Trace</h1>
+            <p className="trace-home-tagline">Your timeline. Your story.</p>
           </div>
         </header>
         <aside className="trace-home-utilities" aria-label="Personal and settings" data-layout="independent-utility-frame">
@@ -661,117 +661,70 @@ function HomePage({
       </div>
 
       <nav className="trace-feature-navigation" aria-label="Trace features">
-      <button
-        style={buttonStyle}
-        onClick={onAddMemory}
-      >
-        Add Memory
-      </button>
+        <div className="trace-feature-navigation__primary">
+          <button className="trace-feature-action trace-feature-action--primary" type="button" onClick={onAddMemory}>
+            Add Memory
+          </button>
+        </div>
 
-      <button
-        style={{
-          ...buttonStyle,
-          backgroundColor: "#374151",
-        }}
-        onClick={onOpenNutrition}
-      >
-        Nutrition
-      </button>
+        <div className="trace-feature-navigation__core">
+          <button className="trace-feature-action trace-feature-action--core" type="button" onClick={onOpenNutrition}>
+            Nutrition
+          </button>
 
-      <button
-        style={{
-          ...buttonStyle,
-          backgroundColor: "#0e7490",
-        }}
-        onClick={onOpenHealth}
-      >
-        Health
-      </button>
+          <button className="trace-feature-action trace-feature-action--core" type="button" onClick={onOpenHealth}>
+            Health
+          </button>
+        </div>
 
-      <button
-        style={{
-          ...buttonStyle,
-          backgroundColor: "#334155",
-        }}
-        onClick={onOpenWorkouts}
-      >
-        Workouts
-      </button>
+        <div className="trace-feature-navigation__secondary">
+          <button className="trace-feature-action" type="button" onClick={onOpenWorkouts}>
+            Workouts
+          </button>
 
-      <button
-        style={{
-          ...buttonStyle,
-          backgroundColor: "#4b5563",
-        }}
-        onClick={onOpenMedications}
-      >
-        Medications & Supplements
-      </button>
+          <button className="trace-feature-action" type="button" onClick={onOpenMedications}>
+            Medications & Supplements
+          </button>
 
-      <button
-        style={{
-          ...buttonStyle,
-          backgroundColor: "#0f766e",
-        }}
-        onClick={onOpenProtocols}
-      >
-        Protocols
-      </button>
+          <button className="trace-feature-action" type="button" onClick={onOpenProtocols}>
+            Protocols
+          </button>
 
-      <button
-        style={{
-          ...buttonStyle,
-          backgroundColor: "#a16207",
-        }}
-        onClick={onOpenTrophyCase}
-      >
-        Open Trophy Case
-      </button>
+          <button className="trace-feature-action trace-feature-action--brass" type="button" onClick={onOpenTrophyCase}>
+            Open Trophy Case
+          </button>
 
-      <button
-        style={{ ...buttonStyle, backgroundColor: "#475569" }}
-        onClick={onOpenBackup}
-      >
-        Backup & Restore
-      </button>
+          <button className="trace-feature-action" type="button" onClick={onOpenBackup}>
+            Backup & Restore
+          </button>
+        </div>
       </nav>
 
       {memoryAchievementSuggestion &&
         !isMemoryInTrophyCase(memoryAchievementSuggestion.memory) && (
           <section
+            className="trace-achievement-suggestion"
             aria-label="Memory achievement suggestion"
             aria-live="polite"
-            style={{
-              background: "#1f2937",
-              border: "1px solid #a16207",
-              borderRadius: "12px",
-              boxSizing: "border-box",
-              marginTop: "20px",
-              maxWidth: "700px",
-              minWidth: 0,
-              padding: "16px",
-              textAlign: "left",
-              width: "100%",
-            }}
           >
             <strong style={{ display: "block" }}>
               This sounds like an achievement. Would you like to add it to your Trophy Case?
             </strong>
-            <span style={{ color: "#d1d5db", display: "block", marginTop: "6px", overflowWrap: "anywhere" }}>
+            <span className="trace-achievement-suggestion__memory">
               {memoryAchievementSuggestion.memory.title}
             </span>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "14px" }}>
+            <div className="trace-achievement-suggestion__actions">
               <button
+                className="trace-small-action trace-small-action--brass"
                 type="button"
                 onClick={() => addMemoryToTrophyCase(memoryAchievementSuggestion.memory)}
-                style={{ background: "#a16207", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", minHeight: "44px", padding: "10px 16px" }}
               >
                 Add to Trophy Case
               </button>
               <button
+                className="trace-small-action"
                 type="button"
                 onClick={dismissMemoryAchievementSuggestion}
-                style={{ background: "#4b5563", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", minHeight: "44px", padding: "10px 16px" }}
               >
                 Not this time
               </button>
@@ -779,67 +732,49 @@ function HomePage({
           </section>
         )}
 
-      <br />
-      <br />
+      <section className="trace-timeline-section" aria-labelledby="trace-timeline-heading">
+        <div className="trace-timeline-section__heading">
+          <p>Your archive</p>
+          <h2 id="trace-timeline-heading">Memories Added: {memoryCount}</h2>
+        </div>
 
-      <div aria-label="Timeline position" style={{ display: "flex", gap: "10px", marginBottom: "16px" }}>
-        <button type="button" aria-pressed={timelinePosition === "past"} onClick={() => { timelinePositionRequestRef.current = true; setTimelinePosition("past"); }} style={{ ...buttonStyle, marginTop: 0 }}>Past</button>
-        <button type="button" aria-pressed={timelinePosition === "present"} onClick={() => { timelinePositionRequestRef.current = true; setTimelinePosition("present"); }} style={{ ...buttonStyle, marginTop: 0 }}>Present</button>
-      </div>
+        <div className="trace-timeline-toolbar">
+          <div className="trace-timeline-position" aria-label="Timeline position">
+            <button className="trace-position-button" type="button" aria-pressed={timelinePosition === "past"} onClick={() => { timelinePositionRequestRef.current = true; setTimelinePosition("past"); }}>Past</button>
+            <button className="trace-position-button" type="button" aria-pressed={timelinePosition === "present"} onClick={() => { timelinePositionRequestRef.current = true; setTimelinePosition("present"); }}>Present</button>
+          </div>
 
-      <div
-        style={{
-          display: "flex",
-          flexWrap: "wrap",
-          gap: "10px",
-          justifyContent: "center",
-          maxWidth: "700px",
-          width: "100%",
-        }}
-      >
-        <MemorySearchInput
-          style={{ ...inputStyle, flex: "1 1 280px" }}
-          search={search}
-          setSearch={updateSearch}
-        />
+          <div className="trace-memory-filters">
+            <MemorySearchInput
+              className="trace-memory-filter trace-memory-filter--search"
+              search={search}
+              setSearch={updateSearch}
+            />
 
-        <select
-          aria-label="Filter memories by category"
-          value={selectedCategory}
-          onChange={(e) => updateCategory(e.target.value)}
-          style={{
-            ...inputStyle,
-            cursor: "pointer",
-            flex: "1 1 160px",
-            width: "100%",
-          }}
-        >
-          {CATEGORY_FILTER_OPTIONS.map((category) => (
-            <option key={category} value={category}>
-              {category}
-            </option>
-          ))}
-        </select>
+            <select
+              className="trace-memory-filter"
+              aria-label="Filter memories by category"
+              value={selectedCategory}
+              onChange={(e) => updateCategory(e.target.value)}
+            >
+              {CATEGORY_FILTER_OPTIONS.map((category) => (
+                <option key={category} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
 
-        <select
-          aria-label="Filter memories by favorites"
-          value={favoriteFilter}
-          onChange={(e) => updateFavoriteFilter(e.target.value)}
-          style={{
-            ...inputStyle,
-            cursor: "pointer",
-            flex: "1 1 180px",
-            width: "100%",
-          }}
-        >
-          <option value="all">All Memories</option>
-          <option value="favorites">Favorites Only</option>
-        </select>
-      </div>
-
-      <h2 style={{ marginTop: "40px" }}>
-        Memories Added: {memoryCount}
-      </h2>
+            <select
+              className="trace-memory-filter"
+              aria-label="Filter memories by favorites"
+              value={favoriteFilter}
+              onChange={(e) => updateFavoriteFilter(e.target.value)}
+            >
+              <option value="all">All Memories</option>
+              <option value="favorites">Favorites Only</option>
+            </select>
+          </div>
+        </div>
 
       <div
         className={`life-current-theme ${lifeCurrentTheme.presentation.className}`}
@@ -849,7 +784,7 @@ function HomePage({
         style={{
           width: "100%",
           maxWidth: "100%",
-          marginTop: "20px",
+          marginTop: "var(--trace-space-5)",
           overflowX: "auto",
           position: "relative",
         }}
@@ -1339,6 +1274,7 @@ function HomePage({
             )}
           </div>
       </div>
+      </section>
 
       {detailMemory && (
         <div

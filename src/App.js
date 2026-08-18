@@ -1331,15 +1331,13 @@ function App() {
 
   return (
     <div
+      className="trace-app-shell"
       style={{
-        background: "#111827",
-        color: "white",
         minHeight: "100vh",
         display: "flex",
         justifyContent: "center",
         alignItems: "stretch",
         flexDirection: "column",
-        fontFamily: "Arial",
       }}
     >
       <ConfirmationMessage
