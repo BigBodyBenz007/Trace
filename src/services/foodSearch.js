@@ -9,6 +9,8 @@ export function normalizeFoodQuery(query) {
     .toLowerCase()
     .replace(/['’]/g, "")
     .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .replace(/\btacobell\b/g, "taco bell")
+    .replace(/\bchickfila\b/g, "chick fil a")
     .trim();
 }
 
@@ -24,7 +26,7 @@ export function searchFoods(
 
   return foods
     .filter((food) => {
-      const searchableFood = normalizeFoodQuery([food.name, food.restaurant?.name].filter(Boolean).join(" "));
+      const searchableFood = normalizeFoodQuery([food.name, food.restaurant?.name, ...(food.searchAliases || [])].filter(Boolean).join(" "));
       return queryTokens.every((token) => searchableFood.includes(token));
     })
     .sort((firstFood, secondFood) => {

@@ -274,10 +274,81 @@ test("restaurant food uses the existing serving flow and logs scaled macros", ()
   });
 });
 
-test("food search shows Unknown sodium explicitly when the catalog value is unavailable", () => {
+test("food search continues to show Unknown sodium explicitly when a catalog value is unavailable", () => {
   renderNutritionPage();
-  fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "Crunchy Taco" } });
-  expect(screen.getByRole("button", { name: /Taco Bell.*Crunchy Taco/i })).toHaveTextContent("Sodium Unknown");
+  fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "Sausage, Egg & Cheese McGriddles" } });
+  expect(screen.getByRole("button", { name: /McDonald's.*Sausage, Egg & Cheese McGriddles/i })).toHaveTextContent("Sodium Unknown");
+});
+
+test("creates a scaled Taco Bell entry from its exact official serving", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "tacobell crunchy taco" } });
+  fireEvent.click(screen.getByRole("button", { name: /Taco Bell.*Crunchy Taco/i }));
+
+  const form = entryForm();
+  expect(form.getByText("One serving: 1 taco")).toBeInTheDocument();
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(310);
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "2" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Crunchy Taco",
+    calories: 340,
+    protein: 14,
+    carbohydrates: 26,
+    fat: 18,
+    sodium: 620,
+    portion: { amount: 2 },
+    foodReference: { sourceType: "restaurant", restaurantId: "taco-bell", restaurantName: "Taco Bell" },
+  });
+});
+
+test("uses exact Chick-fil-A nugget counts before serving scaling", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "chick fil a nuggets" } });
+  fireEvent.click(screen.getByRole("button", { name: /Chick-fil-A · Chick-fil-A® Nuggets/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  expect(sizeSelect).toHaveDisplayValue("8 count (113 g)");
+  fireEvent.change(sizeSelect, { target: { value: "restaurant:chick-fil-a:nuggets:12-count" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(380);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(1820);
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "0.5" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    calories: 190,
+    protein: 20,
+    carbohydrates: 8,
+    fat: 8.5,
+    sodium: 910,
+    foodReference: { restaurantId: "chick-fil-a", sourceId: "chick-fil-a:nuggets:12-count" },
+  });
+});
+
+test("uses exact Whataburger fry sizes before serving scaling", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "whataburger fries" } });
+  fireEvent.click(screen.getByRole("button", { name: /Whataburger.*French Fries/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  expect(sizeSelect).toHaveDisplayValue("Small French Fries");
+  fireEvent.change(sizeSelect, { target: { value: "restaurant:whataburger:french-fries:medium" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(420);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(260);
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "2" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    calories: 840,
+    protein: 10,
+    carbohydrates: 104,
+    fat: 42,
+    sodium: 520,
+    foodReference: { restaurantId: "whataburger", sourceId: "whataburger:french-fries:medium" },
+  });
 });
 
 test("McNuggets exposes verified official menu sizes without deriving nutrition", () => {

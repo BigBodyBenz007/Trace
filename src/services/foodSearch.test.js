@@ -12,6 +12,7 @@ import {
 test("normalizes case and whitespace for name searches", () => {
   expect(normalizeFoodQuery("  CHICKEN   breast  ")).toBe("chicken breast");
   expect(normalizeFoodQuery("Braum’s / McDonald's")).toBe("braums mcdonalds");
+  expect(normalizeFoodQuery("tacobell chickfila")).toBe("taco bell chick fil a");
   expect(searchFoods("  cHiCkEn   ")[0].id).toBe(
     "chicken-breast-cooked-100g"
   );
@@ -217,6 +218,58 @@ test("searches the Sonic and Braum's batches by chain and item name", () => {
   expect(searchFoodCatalog("Grilled Chicken Salad")[0]).toMatchObject({ restaurant: { id: "braums" } });
 });
 
+test("searches the Taco Bell, Chick-fil-A, and Whataburger batches with punctuation variants", () => {
+  expect(searchFoodCatalog("Taco Bell", [], 30)).toHaveLength(15);
+  expect(searchFoodCatalog("Chick-fil-A", [], 30)).toHaveLength(14);
+  expect(searchFoodCatalog("Whataburger", [], 30)).toHaveLength(15);
+
+  expect(searchFoodCatalog("taco bell crunchwrap").map((food) => food.id)).toEqual(["restaurant:taco-bell:crunchwrap-supreme"]);
+  expect(searchFoodCatalog("tacobell crunchy taco").map((food) => food.id)).toEqual(["restaurant:taco-bell:crunchy-taco"]);
+  expect(searchFoodCatalog("chick fil a nuggets")[0].id).toBe("restaurant:chick-fil-a:nuggets");
+  expect(searchFoodCatalog("chick fil a nuggets").map((food) => food.id)).toEqual(expect.arrayContaining([
+    "restaurant:chick-fil-a:nuggets",
+    "restaurant:chick-fil-a:grilled-nuggets",
+  ]));
+  expect(searchFoodCatalog("chickfila fries").map((food) => food.id)).toEqual(["restaurant:chick-fil-a:waffle-potato-fries"]);
+  expect(searchFoodCatalog("chick-fil-a sauce").map((food) => food.id)).toContain("restaurant:chick-fil-a:chick-fil-a-sauce");
+  expect(searchFoodCatalog("whataburger double").map((food) => food.id)).toContain("restaurant:whataburger:double-meat-whataburger");
+  expect(searchFoodCatalog("whata chicken sandwich")[0].id).toBe("restaurant:whataburger:premium-whatachickn-sandwich");
+});
+
+test("preserves official metadata and exact published servings for the three new chains", () => {
+  const sourceUrls = {
+    "taco-bell": "https://www.tacobell.com/nutrition/info",
+    "chick-fil-a": "https://www.chick-fil-a.com/nutrition-allergens",
+    whataburger: "https://whataburger.com/menu",
+  };
+
+  Object.entries(sourceUrls).forEach(([restaurantId, sourceUrl]) => {
+    restaurantFoods.filter((food) => food.restaurant.id === restaurantId).forEach((record) => {
+      const food = normalizeRestaurantFood(record);
+      expect(food.provenance).toMatchObject({
+        source: "official-restaurant",
+        confidence: "official-source",
+        completeness: "complete",
+        verification: { status: "complete", sourceType: "official-restaurant", sourceUrl, accessedAt: "2026-08-18" },
+      });
+      food.servingOptions?.forEach((option) => expect(option.provenance.verification).toMatchObject({ sourceUrl, accessedAt: "2026-08-18" }));
+    });
+  });
+
+  expect(normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:taco-bell:crunchy-taco"))).toMatchObject({
+    serving: { description: "1 taco" },
+    nutrients: { calories: 170, protein: 7, carbohydrates: 13, fat: 9, sodium: 310 },
+  });
+  expect(restaurantFoods.find((food) => food.id === "restaurant:chick-fil-a:nuggets").servingOptions).toEqual(expect.arrayContaining([
+    expect.objectContaining({ serving: { amount: 8, unit: "item", description: "8 count (113 g)" }, nutrients: { calories: 250, protein: 27, carbohydrates: 11, fat: 11, sodium: 1210 } }),
+    expect.objectContaining({ serving: { amount: 12, unit: "item", description: "12 count (170 g)" }, nutrients: { calories: 380, protein: 40, carbohydrates: 16, fat: 17, sodium: 1820 } }),
+  ]));
+  expect(restaurantFoods.find((food) => food.id === "restaurant:whataburger:french-fries").servingOptions).toEqual(expect.arrayContaining([
+    expect.objectContaining({ serving: { amount: 1, unit: "item", description: "Small French Fries" }, nutrients: { calories: 280, protein: 3, carbohydrates: 35, fat: 14, sodium: 170 } }),
+    expect.objectContaining({ serving: { amount: 1, unit: "item", description: "Large French Fries" }, nutrients: { calories: 560, protein: 7, carbohydrates: 70, fat: 28, sodium: 350 } }),
+  ]));
+});
+
 test("matches non-adjacent chain and item tokens in any searchable-field order", () => {
   expect(searchFoodCatalog("sonic groovy").map((food) => food.id)).toEqual([
     "restaurant:sonic:groovy-fries",
@@ -236,10 +289,12 @@ test("matches non-adjacent chain and item tokens in any searchable-field order",
 test("keeps partial single-token results, ordering, and saved-food priority", () => {
   expect(searchFoodCatalog("frie").map((food) => food.id)).toEqual([
     "restaurant:braums:french-fries",
+    "restaurant:chick-fil-a:waffle-potato-fries",
     "restaurant:mcdonalds:french-fries",
     "restaurant:sonic:groovy-fries",
+    "restaurant:whataburger:french-fries",
   ]);
-  expect(searchFoodCatalog("nugget")[0].id).toBe("restaurant:mcdonalds:chicken-mcnuggets");
+  expect(searchFoodCatalog("nugget").map((food) => food.id)).toContain("restaurant:mcdonalds:chicken-mcnuggets");
   expect(searchFoodCatalog("sonic").every((food) => food.restaurant?.id === "sonic")).toBe(true);
 
   const savedFries = {
