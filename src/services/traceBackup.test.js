@@ -162,11 +162,11 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   };
   const structured = emptyStructured({
     memories: [{ id: "memory-1", date: "1999-06-12", categories: ["Family"], tags: ["legacy"], images: ["photo-1"] }],
-    nutritionEntries: [{ id: "meal-1" }], healthMeasurementEntries: [{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }], appSettings: { schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" } }, workoutEntries: [workoutWithDrops],
+    nutritionEntries: [{ id: "meal-1", sodium: 640 }], healthMeasurementEntries: [{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }], appSettings: { schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" } }, workoutEntries: [workoutWithDrops],
     medicationEntries: [{ id: "dose-1" }], medicationCompounds: [{ id: "compound-1" }],
     protocols: [{ id: "protocol-1" }], trophyCaseEntries: [{ id: "trophy-1" }],
     savedExercises: [{ id: "exercise-1" }], userFoods: [{ id: "food-1" }],
-    nutritionGoals: { calories: 2000 },
+    nutritionGoals: { calories: 2000, sodium: 2300 },
   });
   const value = backup({ data: { structured, photos: [encodedPhoto("photo-1", "hello", "image/webp")] } });
   const storage = makeStorage({ memories: JSON.stringify([{ id: "old" }]) });
@@ -174,7 +174,8 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   const summary = await restoreTraceBackup(value, { confirmed: true, storage, openDatabase: async () => database });
   expect(summary).toMatchObject({ memories: 1, photos: 1, workouts: 1 });
   expect(JSON.parse(storage.value("memories"))[0]).toMatchObject({ id: "memory-1", date: "1999-06-12", images: ["photo-1"] });
-  expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1" }]);
+  expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1", sodium: 640 }]);
+  expect(JSON.parse(storage.value("nutritionGoals"))).toEqual({ calories: 2000, sodium: 2300 });
   expect(JSON.parse(storage.value("healthMeasurementEntries"))).toEqual([{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }]);
   expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" } });
   expect(JSON.parse(storage.value("workoutEntries"))).toEqual([workoutWithDrops]);

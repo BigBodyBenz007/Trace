@@ -6,9 +6,30 @@ function localTimestamp(year, month, day, hour = 12) {
   return new Date(year, month, day, hour).toISOString();
 }
 
-function entry(loggedAt, calories, protein, carbohydrates, fat) {
-  return { loggedAt, calories, protein, carbohydrates, fat };
+function entry(loggedAt, calories, protein, carbohydrates, fat, sodium) {
+  return {
+    loggedAt,
+    calories,
+    protein,
+    carbohydrates,
+    fat,
+    ...(sodium === undefined ? {} : { sodium }),
+  };
 }
+
+test("aggregates known sodium and marks averages incomplete when sodium is unknown", () => {
+  const now = new Date(2026, 7, 8, 9);
+  const averages = calculateNutritionAverages([
+    entry(localTimestamp(2026, 7, 8), 500, 20, 40, 15, 700),
+    entry(localTimestamp(2026, 7, 3), 600, 25, 50, 20, null),
+  ], now);
+
+  expect(averages.lastSevenDays).toMatchObject({
+    loggedDays: 2,
+    sodium: 350,
+    incompleteNutrients: ["sodium"],
+  });
+});
 
 test("averages daily totals over only logged local days", () => {
   const now = new Date(2026, 7, 8, 9);
@@ -28,6 +49,8 @@ test("averages daily totals over only logged local days", () => {
     protein: 45,
     carbohydrates: 100,
     fat: 30,
+    sodium: 0,
+    incompleteNutrients: ["sodium"],
   });
   expect(averages.thisMonth).toEqual({
     loggedDays: 3,
@@ -35,6 +58,8 @@ test("averages daily totals over only logged local days", () => {
     protein: 190 / 3,
     carbohydrates: 400 / 3,
     fat: 50,
+    sodium: 0,
+    incompleteNutrients: ["sodium"],
   });
 });
 
@@ -46,6 +71,7 @@ test("returns zero averages when a period has no logged days", () => {
     protein: 0,
     carbohydrates: 0,
     fat: 0,
+    sodium: 0,
   };
 
   expect(averages.lastSevenDays).toEqual(emptyPeriod);
@@ -111,6 +137,73 @@ test("confirms successful daily goal saves", () => {
   expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Goals traced");
 });
 
+test("saves an optional sodium goal", () => {
+  const props = renderNutritionPage();
+  const goalsForm = screen.getByRole("heading", { name: "Daily Goals" }).closest("form");
+  fireEvent.change(within(goalsForm).getByLabelText("Sodium (mg)"), { target: { value: "2300" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Goals" }));
+  expect(props.saveNutritionGoals).toHaveBeenCalledWith(expect.objectContaining({ sodium: 2300 }));
+});
+
+test("shows today's sodium total and an incomplete warning", () => {
+  renderNutritionPage({
+    nutritionEntries: [
+      { id: "known", loggedAt: new Date().toISOString(), calories: 100, protein: 5, carbohydrates: 10, fat: 2, sodium: 400 },
+      { id: "unknown", loggedAt: new Date().toISOString(), calories: 100, protein: 5, carbohydrates: 10, fat: 2, sodium: null },
+    ],
+  });
+
+  expect(screen.getByText("400mg · Incomplete: one or more logged foods had unknown sodium.")).toBeInTheDocument();
+});
+
+test("shows sodium goal progress in a standard nutrient-sized grid item", () => {
+  renderNutritionPage({
+    nutritionGoals: { calories: 0, protein: 0, carbohydrates: 0, fat: 0, sodium: 2300 },
+    nutritionEntries: [entry(new Date().toISOString(), 0, 0, 0, 0, 2045)],
+  });
+
+  expect(screen.getByText("2045 / 2300 mg")).toBeInTheDocument();
+  expect(screen.getByLabelText("Sodium progress")).toBeInTheDocument();
+  expect(screen.getByText("89%")).toBeInTheDocument();
+  expect(screen.getByLabelText("Sodium progress").parentElement.parentElement.style.gridTemplateColumns)
+    .toBe(screen.getByLabelText("Calories progress").parentElement.parentElement.style.gridTemplateColumns);
+});
+
+test("shows sodium total without progress when no sodium goal is set", () => {
+  renderNutritionPage({
+    nutritionEntries: [entry(new Date().toISOString(), 0, 0, 0, 0, 2045)],
+  });
+
+  expect(screen.getAllByText("2045mg").length).toBeGreaterThan(0);
+  expect(screen.queryByLabelText("Sodium progress")).not.toBeInTheDocument();
+  expect(screen.queryByText("89%")).not.toBeInTheDocument();
+});
+
+test("caps sodium bar width when the goal is exceeded", () => {
+  renderNutritionPage({
+    nutritionGoals: { calories: 0, protein: 0, carbohydrates: 0, fat: 0, sodium: 2000 },
+    nutritionEntries: [entry(new Date().toISOString(), 0, 0, 0, 0, 2500)],
+  });
+
+  expect(screen.getByText("2500 / 2000 mg")).toBeInTheDocument();
+  expect(screen.getByText("125%")).toBeInTheDocument();
+  expect(screen.getByLabelText("Sodium progress").firstElementChild).toHaveStyle({ width: "100%" });
+});
+
+test("warns that sodium goal progress may be incomplete", () => {
+  renderNutritionPage({
+    nutritionGoals: { calories: 0, protein: 0, carbohydrates: 0, fat: 0, sodium: 2300 },
+    nutritionEntries: [
+      entry(new Date().toISOString(), 0, 0, 0, 0, 400),
+      entry(new Date().toISOString(), 0, 0, 0, 0, null),
+    ],
+  });
+
+  expect(screen.getByText(/400 \/ 2300 mg/)).toBeInTheDocument();
+  expect(screen.getByText(/Progress may be incomplete because one or more logged foods had unknown sodium/)).toBeInTheDocument();
+  expect(screen.getByText("17%")).toBeInTheDocument();
+});
+
 function entryForm() {
   return within(
     screen
@@ -142,8 +235,78 @@ test("selecting a search result populates the existing form", () => {
   expect(form.getByLabelText("Protein (g)")).toHaveValue(1.3);
   expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(27);
   expect(form.getByLabelText("Fat (g)")).toHaveValue(0.4);
+  expect(form.getByText("Unknown")).toBeInTheDocument();
   expect(form.getByLabelText("Number of servings")).toHaveValue(1);
   expect(form.getByText("One serving: 1 medium banana")).toBeInTheDocument();
+});
+
+test("restaurant food uses the existing serving flow and logs scaled macros", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "McNuggets" },
+  });
+  const result = screen.getByRole("button", { name: /McDonald's.*Chicken McNuggets/i });
+  expect(result).toHaveTextContent("McDonald's · Chicken McNuggets");
+  expect(result).toHaveTextContent("Official restaurant source");
+  expect(result).toHaveTextContent("Protein 9 g");
+  expect(result).toHaveTextContent("Sodium 340 mg");
+  expect(result).not.toHaveTextContent("Unknown g");
+  fireEvent.click(result);
+  const form = entryForm();
+
+  expect(form.getByLabelText("Food / meal name")).toHaveValue("Chicken McNuggets");
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "2" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Chicken McNuggets",
+    calories: 340,
+    protein: 18,
+    carbohydrates: 20,
+    fat: 20,
+    sodium: 680,
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "mcdonalds",
+      restaurantName: "McDonald's",
+    },
+    portion: { amount: 2 },
+  });
+});
+
+test("food search shows Unknown sodium explicitly when the catalog value is unavailable", () => {
+  renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "Crunchy Taco" } });
+  expect(screen.getByRole("button", { name: /Taco Bell.*Crunchy Taco/i })).toHaveTextContent("Sodium Unknown");
+});
+
+test("McNuggets exposes verified official menu sizes without deriving nutrition", () => {
+  renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "McNuggets" } });
+  fireEvent.click(screen.getByRole("button", { name: /McDonald's.*Chicken McNuggets/i }));
+
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  const form = entryForm();
+  expect(sizeSelect).toHaveDisplayValue("4 piece serving");
+  expect(screen.getAllByRole("option")).toHaveLength(5);
+  fireEvent.change(sizeSelect, { target: { value: "restaurant:mcdonalds:chicken-mcnuggets:20-piece" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(830);
+  expect(form.getAllByRole("spinbutton")[2]).toHaveValue(44);
+  expect(form.getAllByRole("spinbutton")[3]).toHaveValue(54);
+  expect(form.getAllByRole("spinbutton")[4]).toHaveValue(50);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(1560);
+});
+
+test("number of servings scales the selected official McNuggets menu size", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "McNuggets" } });
+  fireEvent.click(screen.getByRole("button", { name: /McDonald's.*Chicken McNuggets/i }));
+  fireEvent.change(screen.getByLabelText("Menu serving size"), { target: { value: "restaurant:mcdonalds:chicken-mcnuggets:10-piece" } });
+  fireEvent.change(entryForm().getByLabelText("Number of servings"), { target: { value: "2" } });
+  expect(entryForm().getByLabelText("Calories")).toHaveValue(820);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({ calories: 820, foodReference: { sourceId: "mcdonalds:chicken-mcnuggets:10-piece" } });
+  expect(props.saveNutritionEntry.mock.calls[0][0].sodium).toBe(1500);
 });
 
 test("fractional servings recalculate all nutrients live", () => {
@@ -338,6 +501,7 @@ test("successfully saving a manual food clears search and requests persistence",
       protein: 22,
       carbohydrates: 18,
       fat: 20,
+      sodium: null,
     },
     serving: {
       amount: 1,
@@ -366,6 +530,7 @@ test("successfully saving a manual food clears search and requests persistence",
       protein: 22,
       carbohydrates: 18,
       fat: 20,
+      sodium: null,
     },
   });
   expect(screen.getByLabelText("Food search")).toHaveValue("");

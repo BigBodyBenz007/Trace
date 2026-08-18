@@ -1,4 +1,6 @@
 import starterFoods from "../data/starterFoods";
+import restaurantFoods from "../data/restaurantFoods";
+import { normalizeRestaurantFoods } from "./restaurantFoodModel";
 
 export const DEFAULT_RESULT_LIMIT = 6;
 
@@ -16,10 +18,10 @@ export function searchFoods(
   if (!normalizedQuery || !/[a-z0-9]/i.test(normalizedQuery)) return [];
 
   return foods
-    .filter((food) => normalizeFoodQuery(food.name).includes(normalizedQuery))
+    .filter((food) => normalizeFoodQuery([food.name, food.restaurant?.name].filter(Boolean).join(" ")).includes(normalizedQuery))
     .sort((firstFood, secondFood) => {
-      const firstName = normalizeFoodQuery(firstFood.name);
-      const secondName = normalizeFoodQuery(secondFood.name);
+      const firstName = normalizeFoodQuery(`${firstFood.restaurant?.name || ""} ${firstFood.name}`);
+      const secondName = normalizeFoodQuery(`${secondFood.restaurant?.name || ""} ${secondFood.name}`);
       const firstStartsWith = firstName.startsWith(normalizedQuery);
       const secondStartsWith = secondName.startsWith(normalizedQuery);
 
@@ -34,5 +36,5 @@ export function searchFoodCatalog(
   userFoods = [],
   limit = DEFAULT_RESULT_LIMIT
 ) {
-  return searchFoods(query, [...starterFoods, ...userFoods], limit);
+  return searchFoods(query, [...starterFoods, ...normalizeRestaurantFoods(restaurantFoods), ...userFoods], limit);
 }

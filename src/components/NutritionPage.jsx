@@ -3,6 +3,7 @@ import FoodSearch from "./FoodSearch";
 import ConfirmationMessage from "./ConfirmationMessage";
 import {
   NUTRIENT_KEYS,
+  TRACKED_NUTRIENT_KEYS,
   scaleNutrition,
 } from "../services/nutritionCalculation";
 import {
@@ -15,6 +16,10 @@ function toNutritionNumber(value) {
   const number = Number(value);
 
   return Number.isFinite(number) ? Math.max(0, number) : 0;
+}
+
+function formatNutrient(value, unit = "") {
+  return value === null || value === undefined ? "Unknown" : `${value}${unit}`;
 }
 
 function getCurrentLocalDateTime() {
@@ -89,12 +94,16 @@ export function calculateNutritionAverages(nutritionEntries, now = new Date()) {
       protein: 0,
       carbohydrates: 0,
       fat: 0,
+      sodium: 0,
     };
 
-    totals.calories += toNutritionNumber(entry.calories);
-    totals.protein += toNutritionNumber(entry.protein);
-    totals.carbohydrates += toNutritionNumber(entry.carbohydrates);
-    totals.fat += toNutritionNumber(entry.fat);
+    TRACKED_NUTRIENT_KEYS.forEach((nutrient) => {
+      if (entry[nutrient] === null || entry[nutrient] === undefined) {
+        totals.incompleteNutrients = [...new Set([...(totals.incompleteNutrients || []), nutrient])];
+      } else {
+        totals[nutrient] += toNutritionNumber(entry[nutrient]);
+      }
+    });
     dailyTotals.set(dayKey, totals);
   });
 
@@ -114,17 +123,22 @@ export function calculateNutritionAverages(nutritionEntries, now = new Date()) {
         protein: sum.protein + day.protein,
         carbohydrates: sum.carbohydrates + day.carbohydrates,
         fat: sum.fat + day.fat,
+        sodium: sum.sodium + day.sodium,
       }),
-      { calories: 0, protein: 0, carbohydrates: 0, fat: 0 }
+      { calories: 0, protein: 0, carbohydrates: 0, fat: 0, sodium: 0 }
     );
 
-    return {
+    const result = {
       loggedDays,
       calories: loggedDays ? totals.calories / loggedDays : 0,
       protein: loggedDays ? totals.protein / loggedDays : 0,
       carbohydrates: loggedDays ? totals.carbohydrates / loggedDays : 0,
       fat: loggedDays ? totals.fat / loggedDays : 0,
+      sodium: loggedDays ? totals.sodium / loggedDays : 0,
     };
+    const incompleteNutrients = [...new Set(dayTotals.flatMap((day) => day.incompleteNutrients || []))];
+    if (incompleteNutrients.length) result.incompleteNutrients = incompleteNutrients;
+    return result;
   };
 
   const lastSevenDays = [];
@@ -171,6 +185,7 @@ function NutritionPage({
   const [protein, setProtein] = useState("");
   const [carbohydrates, setCarbohydrates] = useState("");
   const [fat, setFat] = useState("");
+  const [sodium, setSodium] = useState("");
   const [date, setDate] = useState(initialDateTime.date);
   const [time, setTime] = useState(initialDateTime.time);
   const [notes, setNotes] = useState("");
@@ -180,6 +195,9 @@ function NutritionPage({
   const [servingQuantity, setServingQuantity] = useState("1");
   const [portionBasis, setPortionBasis] = useState(null);
   const [nutritionBasis, setNutritionBasis] = useState(null);
+  const [unknownNutritionKeys, setUnknownNutritionKeys] = useState(new Set());
+  const [restaurantServingOptions, setRestaurantServingOptions] = useState([]);
+  const [selectedRestaurantServingId, setSelectedRestaurantServingId] = useState("");
   const [foodSearchResetKey, setFoodSearchResetKey] = useState(0);
   const [manualServingAmount, setManualServingAmount] = useState("1");
   const [manualServingUnit, setManualServingUnit] = useState("serving");
@@ -198,6 +216,7 @@ function NutritionPage({
     protein: String(nutritionGoals.protein),
     carbohydrates: String(nutritionGoals.carbohydrates),
     fat: String(nutritionGoals.fat),
+    sodium: String(nutritionGoals.sodium ?? 0),
   });
 
   useEffect(() => () => clearTimeout(confirmationTimerRef.current), []);
@@ -214,6 +233,7 @@ function NutritionPage({
       protein: String(nutritionGoals.protein),
       carbohydrates: String(nutritionGoals.carbohydrates),
       fat: String(nutritionGoals.fat),
+      sodium: String(nutritionGoals.sodium ?? 0),
     });
   }, [nutritionGoals]);
 
@@ -228,14 +248,15 @@ function NutritionPage({
       }
 
       return {
-        calories: totals.calories + toNutritionNumber(entry.calories),
-        protein: totals.protein + toNutritionNumber(entry.protein),
-        carbohydrates:
-          totals.carbohydrates + toNutritionNumber(entry.carbohydrates),
-        fat: totals.fat + toNutritionNumber(entry.fat),
+        calories: entry.calories == null ? totals.calories : totals.calories + toNutritionNumber(entry.calories),
+        protein: entry.protein == null ? totals.protein : totals.protein + toNutritionNumber(entry.protein),
+        carbohydrates: entry.carbohydrates == null ? totals.carbohydrates : totals.carbohydrates + toNutritionNumber(entry.carbohydrates),
+        fat: entry.fat == null ? totals.fat : totals.fat + toNutritionNumber(entry.fat),
+        sodium: entry.sodium == null ? totals.sodium : totals.sodium + toNutritionNumber(entry.sodium),
+        incompleteNutrients: [...new Set([...(totals.incompleteNutrients || []), ...TRACKED_NUTRIENT_KEYS.filter((nutrient) => entry[nutrient] == null)])],
       };
     },
-    { calories: 0, protein: 0, carbohydrates: 0, fat: 0 }
+    { calories: 0, protein: 0, carbohydrates: 0, fat: 0, sodium: 0 }
   );
   const nutritionMetrics = [
     { key: "calories", label: "Calories", unit: "" },
@@ -243,7 +264,14 @@ function NutritionPage({
     { key: "carbohydrates", label: "Carbohydrates", unit: "g" },
     { key: "fat", label: "Fat", unit: "g" },
   ];
+  const sodiumMetric = { key: "sodium", label: "Sodium", unit: "mg" };
+  const averageMetrics = [...nutritionMetrics, sodiumMetric];
   const nutritionAverages = calculateNutritionAverages(nutritionEntries, today);
+  const sodiumGoal = toNutritionNumber(nutritionGoals.sodium);
+  const hasSodiumGoal = sodiumGoal > 0;
+  const sodiumProgress = hasSodiumGoal
+    ? (todayTotals.sodium / sodiumGoal) * 100
+    : 0;
   const averagePeriods = [
     { key: "lastSevenDays", label: "Last 7 Days" },
     { key: "thisMonth", label: "This Month" },
@@ -259,7 +287,7 @@ function NutritionPage({
     : null;
 
   function formatAverage(value, metricKey) {
-    return metricKey === "calories"
+    return ["calories", "sodium"].includes(metricKey)
       ? Math.round(value)
       : Number(value.toFixed(1));
   }
@@ -270,12 +298,13 @@ function NutritionPage({
     if (name.trim() === "") return;
 
     const fallbackDateTime = getCurrentLocalDateTime();
-    const enteredNutrition = {
-      calories: toNutritionNumber(calories),
-      protein: toNutritionNumber(protein),
-      carbohydrates: toNutritionNumber(carbohydrates),
-      fat: toNutritionNumber(fat),
-    };
+    const nutritionInputs = { calories, protein, carbohydrates, fat, sodium };
+    const enteredNutrition = Object.fromEntries(TRACKED_NUTRIENT_KEYS.map((nutrient) => [
+      nutrient,
+      (unknownNutritionKeys.has(nutrient) || nutrient === "sodium") && nutritionInputs[nutrient] === ""
+        ? null
+        : toNutritionNumber(nutritionInputs[nutrient]),
+    ]));
     let entryFoodReference = foodReference;
     let entryPortionBasis = portionBasis;
     let entryNutritionBasis = nutritionBasis;
@@ -318,6 +347,7 @@ function NutritionPage({
       }
     }
 
+    const completenessNutrition = entryNutritionBasis || enteredNutrition;
     const entry = {
       name: name.trim(),
       ...enteredNutrition,
@@ -337,6 +367,9 @@ function NutritionPage({
             },
             nutritionBasis: { ...entryNutritionBasis },
           }
+        : {}),
+      ...(TRACKED_NUTRIENT_KEYS.some((nutrient) => completenessNutrition[nutrient] == null)
+        ? { nutritionCompleteness: { status: "partial", unknownNutrients: TRACKED_NUTRIENT_KEYS.filter((nutrient) => completenessNutrition[nutrient] == null) } }
         : {}),
     };
 
@@ -373,6 +406,7 @@ function NutritionPage({
     setProtein("");
     setCarbohydrates("");
     setFat("");
+    setSodium("");
     setDate(currentDateTime.date);
     setTime(currentDateTime.time);
     setNotes("");
@@ -382,6 +416,9 @@ function NutritionPage({
     setServingQuantity("1");
     setPortionBasis(null);
     setNutritionBasis(null);
+    setUnknownNutritionKeys(new Set());
+    setRestaurantServingOptions([]);
+    setSelectedRestaurantServingId("");
     setManualServingAmount("1");
     setManualServingUnit("serving");
     setCustomServingDescription("");
@@ -398,25 +435,39 @@ function NutritionPage({
   }
 
   function selectFood(food) {
-    const selectedNutritionBasis = { ...food.nutrients };
+    const servingOptions = food.servingOptions?.length ? food.servingOptions : [{ id: food.id, serving: food.serving, nutrients: food.nutrients, provenance: food.provenance }];
+    const selectedOption = servingOptions[0];
+    const selectedNutritionBasis = { sodium: null, ...selectedOption.nutrients };
     const selectedPortionBasis = {
-      amount: food.serving.amount,
-      unit: food.serving.unit,
-      description: food.serving.description,
-      ...(food.serving.grams === undefined
+      amount: selectedOption.serving.amount,
+      unit: selectedOption.serving.unit,
+      description: selectedOption.serving.description,
+      ...(selectedOption.serving.grams === undefined
         ? {}
-        : { grams: food.serving.grams }),
+        : { grams: selectedOption.serving.grams }),
     };
 
     setName(food.name);
-    setCalories(String(selectedNutritionBasis.calories));
-    setProtein(String(selectedNutritionBasis.protein));
-    setCarbohydrates(String(selectedNutritionBasis.carbohydrates));
-    setFat(String(selectedNutritionBasis.fat));
+    setCalories(selectedNutritionBasis.calories === null ? "" : String(selectedNutritionBasis.calories));
+    setProtein(selectedNutritionBasis.protein === null ? "" : String(selectedNutritionBasis.protein));
+    setCarbohydrates(selectedNutritionBasis.carbohydrates === null ? "" : String(selectedNutritionBasis.carbohydrates));
+    setFat(selectedNutritionBasis.fat === null ? "" : String(selectedNutritionBasis.fat));
+    setSodium(selectedNutritionBasis.sodium === null ? "" : String(selectedNutritionBasis.sodium));
+    setUnknownNutritionKeys(new Set(TRACKED_NUTRIENT_KEYS.filter((nutrient) => selectedNutritionBasis[nutrient] === null)));
+    setRestaurantServingOptions(servingOptions);
+    setSelectedRestaurantServingId(selectedOption.id);
     setFoodReference({
       source: food.provenance.source,
       sourceId: food.provenance.sourceId,
       confidence: food.provenance.confidence,
+      ...(food.provenance.completeness ? { completeness: food.provenance.completeness } : {}),
+      ...(food.sourceType === "restaurant"
+        ? {
+            sourceType: "restaurant",
+            restaurantId: food.restaurant.id,
+            restaurantName: food.restaurant.name,
+          }
+        : {}),
       modified: false,
     });
     setServingQuantity("1");
@@ -432,14 +483,32 @@ function NutritionPage({
     });
   }
 
+  function selectRestaurantServing(optionId) {
+    const option = restaurantServingOptions.find((candidate) => candidate.id === optionId);
+    if (!option) return;
+    setSelectedRestaurantServingId(option.id);
+    setCalories(option.nutrients.calories === null ? "" : String(option.nutrients.calories));
+    setProtein(option.nutrients.protein === null ? "" : String(option.nutrients.protein));
+    setCarbohydrates(option.nutrients.carbohydrates === null ? "" : String(option.nutrients.carbohydrates));
+    setFat(option.nutrients.fat === null ? "" : String(option.nutrients.fat));
+    setSodium(option.nutrients.sodium === null ? "" : String(option.nutrients.sodium));
+    setUnknownNutritionKeys(new Set(TRACKED_NUTRIENT_KEYS.filter((nutrient) => option.nutrients[nutrient] === null)));
+    setPortionBasis({ ...option.serving });
+    setNutritionBasis({ ...option.nutrients });
+    const completeness = NUTRIENT_KEYS.every((nutrient) => option.nutrients[nutrient] !== null) ? "complete" : "partial";
+    setFoodReference((current) => current ? { ...current, sourceId: option.provenance.sourceId, completeness } : current);
+    setIsDraftDirty(true);
+  }
+
   function editEntry(entry) {
     const localDateTime = getLocalDateTimeFromTimestamp(entry.loggedAt);
 
     setName(entry.name);
-    setCalories(String(entry.calories));
-    setProtein(String(entry.protein));
-    setCarbohydrates(String(entry.carbohydrates));
-    setFat(String(entry.fat));
+    setCalories(entry.calories === null ? "" : String(entry.calories));
+    setProtein(entry.protein === null ? "" : String(entry.protein));
+    setCarbohydrates(entry.carbohydrates === null ? "" : String(entry.carbohydrates));
+    setFat(entry.fat === null ? "" : String(entry.fat));
+    setSodium(entry.sodium === null || entry.sodium === undefined ? "" : String(entry.sodium));
     setDate(localDateTime.date);
     setTime(localDateTime.time);
     setNotes(entry.notes);
@@ -452,6 +521,8 @@ function NutritionPage({
       setServingQuantity(String(entry.portion.amount));
       setPortionBasis({ ...entry.portion.basis });
       setNutritionBasis({ ...entry.nutritionBasis });
+      setSodium(entry.nutritionBasis.sodium == null ? "" : String(entry.nutritionBasis.sodium));
+      setUnknownNutritionKeys(new Set(TRACKED_NUTRIENT_KEYS.filter((nutrient) => entry.nutritionBasis[nutrient] == null)));
     } else {
       setServingQuantity("1");
       setPortionBasis(null);
@@ -464,10 +535,11 @@ function NutritionPage({
     const scaledNutrition = scaleNutrition(nutritionBasis, value);
 
     setServingQuantity(value);
-    setCalories(String(scaledNutrition.calories));
-    setProtein(String(scaledNutrition.protein));
-    setCarbohydrates(String(scaledNutrition.carbohydrates));
-    setFat(String(scaledNutrition.fat));
+    setCalories(scaledNutrition.calories === null ? "" : String(scaledNutrition.calories));
+    setProtein(scaledNutrition.protein === null ? "" : String(scaledNutrition.protein));
+    setCarbohydrates(scaledNutrition.carbohydrates === null ? "" : String(scaledNutrition.carbohydrates));
+    setFat(scaledNutrition.fat === null ? "" : String(scaledNutrition.fat));
+    setSodium(scaledNutrition.sodium === null ? "" : String(scaledNutrition.sodium));
     setIsDraftDirty(true);
   }
 
@@ -504,6 +576,7 @@ function NutritionPage({
       protein: toNutritionNumber(goalValues.protein),
       carbohydrates: toNutritionNumber(goalValues.carbohydrates),
       fat: toNutritionNumber(goalValues.fat),
+      sodium: toNutritionNumber(goalValues.sodium),
     })) showConfirmation("Goals traced");
   }
 
@@ -577,6 +650,7 @@ function NutritionPage({
                     ? `${current}${metric.unit} / ${goal}${metric.unit}`
                     : `${current}${metric.unit} · No goal set`}
                 </p>
+                {todayTotals.incompleteNutrients?.includes(metric.key) && <p style={{ color: "#fbbf24", margin: "-4px 0 8px" }}>Incomplete: one or more logged foods had an unknown value.</p>}
 
                 <div
                   aria-label={`${metric.label} progress`}
@@ -605,6 +679,60 @@ function NutritionPage({
               </div>
             );
           })}
+        </div>
+        <div
+          style={{
+            borderTop: "1px solid #374151",
+            display: "grid",
+            gap: "12px",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(130px, 100%), 1fr))",
+            marginTop: "18px",
+            paddingTop: "18px",
+          }}
+        >
+          <div>
+          <strong>Sodium (mg)</strong>
+          <p style={{ marginBottom: hasSodiumGoal ? "8px" : 0 }}>
+            {hasSodiumGoal
+              ? `${todayTotals.sodium} / ${sodiumGoal} mg`
+              : `${todayTotals.sodium}mg`}
+            {todayTotals.incompleteNutrients?.includes("sodium") && " · Incomplete: one or more logged foods had unknown sodium."}
+          </p>
+          {todayTotals.incompleteNutrients?.includes("sodium") && (
+            <p style={{ color: "#fbbf24", margin: "-4px 0 8px" }}>
+              Progress may be incomplete because one or more logged foods had unknown sodium.
+            </p>
+          )}
+          {hasSodiumGoal && (
+            <>
+              <div
+                aria-label="Sodium progress"
+                style={{
+                  background: "#374151",
+                  borderRadius: "999px",
+                  height: "8px",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    background: "#5ec8ff",
+                    borderRadius: "999px",
+                    height: "100%",
+                    width: `${Math.min(sodiumProgress, 100)}%`,
+                  }}
+                />
+              </div>
+              <p style={{ color: "#9ca3af", marginBottom: 0 }}>
+                {Math.round(sodiumProgress)}%
+              </p>
+            </>
+          )}
+        </div>
+        <div aria-hidden="true" />
+        <div aria-hidden="true" />
+        <div aria-hidden="true" />
         </div>
       </section>
 
@@ -647,12 +775,13 @@ function NutritionPage({
                 </p>
 
                 <div style={{ display: "grid", gap: "10px" }}>
-                  {nutritionMetrics.map((metric) => (
+                  {averageMetrics.map((metric) => (
                     <div key={metric.key}>
                       <strong>Average {metric.label}</strong>
                       <div>
                         {formatAverage(averages[metric.key], metric.key)}
                         {metric.unit}
+                        {averages.incompleteNutrients?.includes(metric.key) ? " (incomplete)" : ""}
                       </div>
                     </div>
                   ))}
@@ -685,7 +814,7 @@ function NutritionPage({
               "repeat(auto-fit, minmax(min(140px, 100%), 1fr))",
           }}
         >
-          {nutritionMetrics.map((metric) => (
+          {averageMetrics.map((metric) => (
             <label key={metric.key} style={{ display: "block" }}>
               {metric.label}
               {metric.unit ? ` (${metric.unit})` : ""}
@@ -746,6 +875,15 @@ function NutritionPage({
             : "Edit Nutrition Entry"}
         </h2>
 
+        {restaurantServingOptions.length > 1 && (
+          <label style={{ display: "block", marginBottom: "16px" }}>
+            Menu serving size
+            <select value={selectedRestaurantServingId} onChange={(event) => selectRestaurantServing(event.target.value)} style={formInputStyle}>
+              {restaurantServingOptions.map((option) => <option key={option.id} value={option.id}>{option.serving.description}</option>)}
+            </select>
+          </label>
+        )}
+
         {portionBasis && nutritionBasis && (
           <div style={{ marginBottom: "16px" }}>
             <label style={{ display: "block" }}>
@@ -796,11 +934,12 @@ function NutritionPage({
           }}
         >
           {[
-            ["Calories", calories, setCalories],
-            ["Protein (g)", protein, setProtein],
-            ["Carbohydrates (g)", carbohydrates, setCarbohydrates],
-            ["Fat (g)", fat, setFat],
-          ].map(([label, value, setValue]) => (
+            ["calories", "Calories", calories, setCalories],
+            ["protein", "Protein (g)", protein, setProtein],
+            ["carbohydrates", "Carbohydrates (g)", carbohydrates, setCarbohydrates],
+            ["fat", "Fat (g)", fat, setFat],
+            ["sodium", "Sodium (mg)", sodium, setSodium],
+          ].map(([nutrient, label, value, setValue]) => (
             <label key={label} style={{ display: "block" }}>
               {label}
               <input
@@ -811,10 +950,16 @@ function NutritionPage({
                 value={value}
                 onChange={(event) => {
                   setValue(event.target.value);
+                  setUnknownNutritionKeys((current) => {
+                    const next = new Set(current);
+                    next.delete(nutrient);
+                    return next;
+                  });
                   setIsDraftDirty(true);
                   markSelectedFoodModified();
                 }}
               />
+              {unknownNutritionKeys.has(nutrient) && <span style={{ color: "#fbbf24", display: "block", fontSize: "13px", marginTop: "4px" }}>Unknown</span>}
             </label>
           ))}
         </div>
@@ -1050,8 +1195,8 @@ function NutritionPage({
                 </div>
 
                 <p style={{ lineHeight: "1.6", marginBottom: 0 }}>
-                  {entry.calories} calories · Protein {entry.protein}g ·
-                  Carbohydrates {entry.carbohydrates}g · Fat {entry.fat}g
+                  {formatNutrient(entry.calories)} calories · Protein {formatNutrient(entry.protein, " g")} ·
+                  Carbohydrates {formatNutrient(entry.carbohydrates, " g")} · Fat {formatNutrient(entry.fat, " g")} · Sodium {formatNutrient(entry.sodium, " mg")}
                 </p>
 
                 {entry.portion?.basis && (

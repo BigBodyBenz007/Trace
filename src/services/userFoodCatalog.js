@@ -9,6 +9,11 @@ function toNonNegativeNumber(value) {
   return Number.isFinite(number) ? Math.max(0, number) : 0;
 }
 
+function toOptionalNonNegativeNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  return toNonNegativeNumber(value);
+}
+
 export function createUserFood(
   name,
   nutrients,
@@ -29,6 +34,7 @@ export function createUserFood(
       protein: toNonNegativeNumber(nutrients?.protein),
       carbohydrates: toNonNegativeNumber(nutrients?.carbohydrates),
       fat: toNonNegativeNumber(nutrients?.fat),
+      sodium: toOptionalNonNegativeNumber(nutrients?.sodium),
     },
     provenance: {
       source: "user-added",
@@ -40,7 +46,7 @@ export function createUserFood(
 
 function foodDefinitionsMatch(firstFood, secondFood) {
   const servingFields = ["amount", "unit", "description", "grams"];
-  const nutrientFields = ["calories", "protein", "carbohydrates", "fat"];
+  const nutrientFields = ["calories", "protein", "carbohydrates", "fat", "sodium"];
 
   return (
     servingFields.every(

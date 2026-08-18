@@ -26,7 +26,7 @@ test("creates a reusable one-serving food with user-added provenance", () => {
       unit: "serving",
       description: "1 serving",
     },
-    nutrients,
+    nutrients: { ...nutrients, sodium: null },
     provenance: {
       source: "user-added",
       sourceId: "meatloaf",
@@ -43,6 +43,14 @@ test("creates a reusable food with a richer canonical serving", () => {
       description: "4 oz",
     }).serving
   ).toEqual({ amount: 4, unit: "oz", description: "4 oz" });
+});
+
+test("supports optional known sodium on reusable foods", () => {
+  expect(createUserFood("Soup", { ...nutrients, sodium: 640 }).nutrients).toEqual({
+    ...nutrients,
+    sodium: 640,
+  });
+  expect(createUserFood("Soup", nutrients).nutrients.sodium).toBeNull();
 });
 
 test("persists and reads user foods from their own storage key", () => {

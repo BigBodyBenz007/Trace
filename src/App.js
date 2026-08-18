@@ -70,6 +70,7 @@ const DEFAULT_NUTRITION_GOALS = {
   protein: 0,
   carbohydrates: 0,
   fat: 0,
+  sodium: 0,
 };
 
 function toNonNegativeNumber(value) {
@@ -308,6 +309,7 @@ function App() {
         protein: toNonNegativeNumber(savedGoals.protein),
         carbohydrates: toNonNegativeNumber(savedGoals.carbohydrates),
         fat: toNonNegativeNumber(savedGoals.fat),
+        sodium: toNonNegativeNumber(savedGoals.sodium),
       });
     } catch (error) {
       setStorageError("Trace couldn't read the saved nutrition goals. The stored value was left unchanged.");
@@ -815,6 +817,7 @@ function App() {
       protein: toNonNegativeNumber(goals.protein),
       carbohydrates: toNonNegativeNumber(goals.carbohydrates),
       fat: toNonNegativeNumber(goals.fat),
+      sodium: toNonNegativeNumber(goals.sodium),
     };
 
     try {

@@ -29,17 +29,27 @@ test("scales nutrition for multiple servings", () => {
   });
 });
 
-test("treats invalid or negative amounts and nutrient values as zero", () => {
+test("scales optional known nutrients and preserves optional unknown nutrients", () => {
+  expect(scaleNutrition({ calories: 170, protein: 9, carbohydrates: 10, fat: 10, sodium: 340 }, 2)).toMatchObject({ sodium: 680 });
+  expect(scaleNutrition({ calories: 170, protein: null, carbohydrates: null, fat: null, sodium: null }, 2)).toMatchObject({ protein: null, carbohydrates: null, fat: null, sodium: null });
+});
+
+test("scales true-zero sodium without converting unknown sodium", () => {
+  expect(scaleNutrition({ calories: 100, protein: 5, carbohydrates: 10, fat: 2, sodium: 0 }, 3).sodium).toBe(0);
+  expect(scaleNutrition({ calories: 100, protein: 5, carbohydrates: 10, fat: 2, sodium: null }, 3).sodium).toBeNull();
+});
+
+test("treats invalid or negative amounts as zero but preserves unknown nutrients", () => {
   expect(scaleNutrition({ calories: "invalid", protein: -2 }, -1)).toEqual({
-    calories: 0,
+    calories: null,
     protein: 0,
-    carbohydrates: 0,
-    fat: 0,
+    carbohydrates: null,
+    fat: null,
   });
   expect(scaleNutrition(null, "invalid")).toEqual({
-    calories: 0,
-    protein: 0,
-    carbohydrates: 0,
-    fat: 0,
+    calories: null,
+    protein: null,
+    carbohydrates: null,
+    fat: null,
   });
 });
