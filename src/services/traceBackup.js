@@ -20,6 +20,7 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
   "workoutEntries",
   "savedExercises",
   "trophyCaseEntries",
+  "journalEntries",
 ]);
 
 const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
@@ -106,7 +107,7 @@ function validateStructuredData(structuredData) {
   }
   TRACE_STORAGE_KEYS.forEach((key) => {
     const value = structuredData[key];
-    if (value === null || (["healthMeasurementEntries", "appSettings"].includes(key) && value === undefined)) return;
+    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries"].includes(key) && value === undefined)) return;
     if (ARRAY_KEYS.has(key) && !Array.isArray(value)) {
       throw new Error(`The backup contains invalid ${key} data.`);
     }
@@ -114,6 +115,19 @@ function validateStructuredData(structuredData) {
       throw new Error(`The backup contains invalid ${key} data.`);
     }
   });
+  if (Array.isArray(structuredData.journalEntries)) {
+    const ids = new Set();
+    structuredData.journalEntries.forEach((entry) => {
+      if (!entry || typeof entry !== "object" || Array.isArray(entry) ||
+        !entry.id || ids.has(String(entry.id)) || entry.visibility !== "private" ||
+        !String(entry.body || "").trim() || !/^\d{4}-\d{2}-\d{2}$/.test(entry.date || "") ||
+        !/^\d{2}:\d{2}$/.test(entry.time || "") || !entry.createdAt || Number.isNaN(Date.parse(entry.createdAt)) ||
+        !entry.updatedAt || Number.isNaN(Date.parse(entry.updatedAt))) {
+        throw new Error("The backup contains invalid Journal data.");
+      }
+      ids.add(String(entry.id));
+    });
+  }
 }
 
 function photoReferenceIds(structuredData) {
@@ -146,6 +160,7 @@ export function summarizeTraceBackup(backup) {
     savedExercises: data.savedExercises?.length || 0,
     savedCompounds: data.medicationCompounds?.length || 0,
     userFoods: data.userFoods?.length || 0,
+    journalEntries: data.journalEntries?.length || 0,
   };
 }
 

@@ -121,6 +121,23 @@ test("exports structured data and multiple photos without mutating sources", asy
   expect(memories[0].images).toEqual(["photo-1", "photo-2"]);
 });
 
+test("backs up saved private Journal entries but excludes unfinished drafts", async () => {
+  const journalEntry = {
+    id: "journal-1", schemaVersion: 1, visibility: "private", title: "", body: "Kept privately",
+    date: "2026-08-18", time: "21:00", createdAt: "2026-08-19T02:00:00.000Z",
+    updatedAt: "2026-08-19T02:00:00.000Z", mood: "Calm", tags: ["Reflection"],
+  };
+  const storage = makeStorage({
+    journalEntries: JSON.stringify([journalEntry]),
+    journalDraft: JSON.stringify({ form: { body: "unfinished" } }),
+  });
+  const result = await createTraceBackup({ storage, openDatabase: async () => makePhotoDatabase() });
+  expect(result.data.structured.journalEntries).toEqual([journalEntry]);
+  expect(result.data.structured).not.toHaveProperty("journalDraft");
+  expect(result.data.structured.journalEntries[0].visibility).toBe("private");
+  expect(result.data.structured.journalEntries[0]).toMatchObject({ id: "journal-1", body: "Kept privately", mood: "Calm", tags: ["Reflection"] });
+});
+
 test("validates summaries and rejects corrupt, future, and missing-reference backups", () => {
   const valid = backup({ data: { structured: emptyStructured({
     memories: [{ id: "memory-1", date: "2026-01-02", images: ["photo-1"] }],
@@ -204,6 +221,38 @@ test("restores pre-Settings backups with default Settings storage fallback", asy
   const storage = makeStorage({ appSettings: JSON.stringify({ units: { weight: "kg" } }) });
   await restoreTraceBackup(backup({ data: { structured, photos: [] } }), { confirmed: true, storage, openDatabase: async () => makePhotoDatabase() });
   expect(storage.value("appSettings")).toBeNull();
+});
+
+test("restores Journal entries and accepts older backups with no Journal collection", async () => {
+  const journalEntry = {
+    id: "journal-1", schemaVersion: 1, visibility: "private", body: "Restored",
+    title: "", date: "2026-08-18", time: "21:00", createdAt: "2026-08-19T02:00:00.000Z",
+    updatedAt: "2026-08-19T02:00:00.000Z", tags: [],
+  };
+  const storage = makeStorage();
+  await restoreTraceBackup(backup({ data: { structured: emptyStructured({ journalEntries: [journalEntry] }), photos: [] } }), {
+    confirmed: true, storage, openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(JSON.parse(storage.value("journalEntries"))).toEqual([journalEntry]);
+
+  const legacyStructured = emptyStructured();
+  delete legacyStructured.journalEntries;
+  const legacyStorage = makeStorage({ journalEntries: JSON.stringify([journalEntry]) });
+  await restoreTraceBackup(backup({ data: { structured: legacyStructured, photos: [] } }), {
+    confirmed: true, storage: legacyStorage, openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(legacyStorage.value("journalEntries")).toBeNull();
+});
+
+test("Journal backup validation enforces private visibility while optional fields may be absent", () => {
+  const minimal = {
+    id: "journal-minimal", schemaVersion: 1, visibility: "private", body: "Required body",
+    date: "2026-08-18", time: "21:00", createdAt: "2026-08-19T02:00:00.000Z",
+    updatedAt: "2026-08-19T02:00:00.000Z",
+  };
+  expect(validateTraceBackup(backup({ data: { structured: emptyStructured({ journalEntries: [minimal] }), photos: [] } })).summary.journalEntries).toBe(1);
+  expect(() => validateTraceBackup(backup({ data: { structured: emptyStructured({ journalEntries: [{ ...minimal, visibility: "public" }] }), photos: [] } })))
+    .toThrow("invalid Journal data");
 });
 
 test("storage failure rolls structured data and photos back instead of leaving a mixed dataset", async () => {

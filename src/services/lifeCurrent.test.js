@@ -127,6 +127,34 @@ test("uses capped daily presence for nutrition, Health measurements, and medicat
   });
 });
 
+test("saved Journal activity contributes silently by ID and date without leaking content", () => {
+  const journalEntry = {
+    id: "journal-private",
+    visibility: "private",
+    title: "Never expose this title",
+    body: "Never expose this body",
+    mood: "Anxious",
+    tags: ["secret-tag"],
+    date: "2026-08-11",
+    time: "23:55",
+  };
+  const result = deriveLifeCurrent({
+    journalEntries: [journalEntry],
+    journalDraft: { form: { ...journalEntry, id: undefined } },
+  });
+  expect(result.days).toHaveLength(1);
+  expect(result.days[0].contributions.journal).toEqual({
+    count: 1,
+    value: LIFE_CURRENT_TUNING.journal.dailyPresence,
+    sourceIds: ["journal-private"],
+  });
+  expect(JSON.stringify(result)).not.toMatch(/Never expose|Anxious|secret-tag/);
+
+  const edited = deriveLifeCurrent({ journalEntries: [{ ...journalEntry, body: "Edited private content" }] });
+  expect(edited.days[0].contributions.journal.count).toBe(1);
+  expect(deriveLifeCurrent({ journalEntries: [] }).days).toEqual([]);
+});
+
 test("a height-only Health record is one activity and Settings are not activity sources", () => {
   const timestamp = localIso(2026, 8, 11);
   const result = deriveLifeCurrent({

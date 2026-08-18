@@ -298,6 +298,154 @@ test("Timeline to Add Memory resets a previously scrolled position", () => {
   expectDestinationScrolledToTop();
 });
 
+test("standalone Journal navigation creates private entries and keeps content inside Journal", async () => {
+  renderAppAtTimeline();
+  const featureNavigation = screen.getByRole("navigation", { name: "Trace features" });
+  expect(within(featureNavigation).queryByRole("button", { name: "Open Journal" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Open Journal" }));
+  expect(screen.getByRole("heading", { name: "Journal" })).toBeInTheDocument();
+  expectDestinationScrolledToTop();
+
+  fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Journal-only phrase" } });
+  fireEvent.change(screen.getByLabelText("Entry"), { target: { value: "Content that must never become a Memory preview" } });
+  fireEvent.click(screen.getByRole("button", { name: "Calm" }));
+  fireEvent.change(screen.getByLabelText("Tags"), { target: { value: "Private Tag" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Journal Entry" }));
+
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Journal entry traced");
+  const stored = JSON.parse(localStorage.getItem("journalEntries"));
+  expect(stored).toHaveLength(1);
+  expect(stored[0]).toMatchObject({ visibility: "private", title: "Journal-only phrase", mood: "Calm", tags: ["Private Tag"] });
+  expect(localStorage.getItem("journalDraft")).toBeNull();
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
+  fireEvent.change(screen.getByPlaceholderText("Search memories..."), { target: { value: "Journal-only phrase" } });
+  expect(screen.getByText("No memories found.")).toBeInTheDocument();
+  expect(screen.queryByText("Content that must never become a Memory preview")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
+  expect(screen.queryByText("Journal-only phrase")).not.toBeInTheDocument();
+});
+
+test("Journal editing preserves identity, updates timestamps, and repeated confirmations remount", () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Open Journal" }));
+  fireEvent.change(screen.getByLabelText("Entry"), { target: { value: "First entry" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Journal Entry" }));
+  const firstConfirmation = screen.getByTestId("save-confirmation");
+  const original = JSON.parse(localStorage.getItem("journalEntries"))[0];
+
+  fireEvent.change(screen.getByLabelText("Entry"), { target: { value: "Second entry" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Journal Entry" }));
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Journal entry traced");
+  expect(screen.getByTestId("save-confirmation")).not.toBe(firstConfirmation);
+
+  const firstCard = document.querySelector(`[data-journal-entry-id="${original.id}"]`);
+  fireEvent.click(within(firstCard).getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Entry"), { target: { value: "Edited entry" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Journal entry updated");
+  const edited = JSON.parse(localStorage.getItem("journalEntries")).find(({ id }) => id === original.id);
+  expect(edited.id).toBe(original.id);
+  expect(edited.createdAt).toBe(original.createdAt);
+  expect(edited.updatedAt).not.toBeUndefined();
+  expect(edited.body).toBe("Edited entry");
+});
+
+test("Journal storage failure keeps the draft and does not show success", () => {
+  const originalSetItem = Storage.prototype.setItem;
+  const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (key, value) {
+    if (key === "journalEntries") throw new Error("quota full");
+    return originalSetItem.call(this, key, value);
+  });
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Open Journal" }));
+  fireEvent.change(screen.getByLabelText("Entry"), { target: { value: "Preserve after failure" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Journal Entry" }));
+  expect(screen.queryByTestId("save-confirmation")).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Entry")).toHaveValue("Preserve after failure");
+  expect(JSON.parse(localStorage.getItem("journalDraft")).form.body).toBe("Preserve after failure");
+  expect(screen.getByRole("alert")).toHaveTextContent("save this Journal entry");
+  setItem.mockRestore();
+});
+
+test("deleting a Journal entry leaves Memories and other records unchanged", () => {
+  const memories = [{ id: "memory-safe", title: "Keep me", description: "", date: "2026-08-18", images: [], categories: [] }];
+  const journalEntries = [{
+    id: "journal-delete", schemaVersion: 1, visibility: "private", title: "Delete me", body: "Only this entry",
+    date: "2026-08-18", time: "20:00", createdAt: "2026-08-19T01:00:00.000Z",
+    updatedAt: "2026-08-19T01:00:00.000Z", tags: [],
+  }];
+  localStorage.setItem("journalEntries", JSON.stringify(journalEntries));
+  window.confirm = jest.fn(() => true);
+  renderAppAtTimeline();
+  localStorage.setItem("memories", JSON.stringify(memories));
+  fireEvent.click(screen.getByRole("button", { name: "Open Journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Journal entry deleted");
+  expect(localStorage.getItem("journalEntries")).toBe("[]");
+  expect(JSON.parse(localStorage.getItem("memories"))).toEqual(memories);
+});
+
+test("canceled Journal deletion does not show success confirmation", () => {
+  const journalEntries = [{
+    id: "journal-cancel", schemaVersion: 1, visibility: "private", title: "Do not delete", body: "Keep this",
+    date: "2026-08-18", time: "20:00", createdAt: "2026-08-19T01:00:00.000Z",
+    updatedAt: "2026-08-19T01:00:00.000Z", tags: [],
+  }];
+  localStorage.setItem("journalEntries", JSON.stringify(journalEntries));
+  window.confirm = jest.fn(() => false);
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Open Journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+  expect(screen.queryByTestId("save-confirmation")).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("journalEntries"))).toEqual(journalEntries);
+});
+
+test("failed Journal deletion does not show success confirmation", () => {
+  const journalEntries = [{
+    id: "journal-fail", schemaVersion: 1, visibility: "private", title: "Persistence fail", body: "Keep this too",
+    date: "2026-08-18", time: "20:00", createdAt: "2026-08-19T01:00:00.000Z",
+    updatedAt: "2026-08-19T01:00:00.000Z", tags: [],
+  }];
+  localStorage.setItem("journalEntries", JSON.stringify(journalEntries));
+  const originalSetItem = Storage.prototype.setItem;
+  const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (key, value) {
+    if (key === "journalEntries") throw new Error("quota full");
+    return originalSetItem.call(this, key, value);
+  });
+  window.confirm = jest.fn(() => true);
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Open Journal" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+  expect(screen.queryByTestId("save-confirmation")).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("journalEntries"))).toEqual(journalEntries);
+  setItem.mockRestore();
+});
+
+test("successful Journal deletions remount the confirmation for each delete", () => {
+  const journalEntries = [{
+    id: "journal-first", schemaVersion: 1, visibility: "private", title: "First", body: "Keep first alive",
+    date: "2026-08-18", time: "20:00", createdAt: "2026-08-19T01:00:00.000Z", updatedAt: "2026-08-19T01:00:00.000Z", tags: [],
+  }, {
+    id: "journal-second", schemaVersion: 1, visibility: "private", title: "Second", body: "Keep second alive",
+    date: "2026-08-18", time: "20:01", createdAt: "2026-08-19T01:01:00.000Z", updatedAt: "2026-08-19T01:01:00.000Z", tags: [],
+  }];
+  localStorage.setItem("journalEntries", JSON.stringify(journalEntries));
+  window.confirm = jest.fn(() => true);
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Open Journal" }));
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]);
+  const firstConfirmation = screen.getByTestId("save-confirmation");
+  expect(firstConfirmation).toHaveTextContent("Journal entry deleted");
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Delete" })[0]);
+  const secondConfirmation = screen.getByTestId("save-confirmation");
+  expect(secondConfirmation).toHaveTextContent("Journal entry deleted");
+  expect(secondConfirmation).not.toBe(firstConfirmation);
+});
+
 test("returning from a section initializes the offscreen timeline at Present after it becomes visible", async () => {
   openPhotoDatabase.mockResolvedValue({});
   localStorage.setItem("memories", JSON.stringify([

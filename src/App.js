@@ -10,6 +10,7 @@ import WorkoutPage from "./components/WorkoutPage";
 import TrophyPlacementCeremony from "./components/TrophyPlacementCeremony";
 import TrophyCasePage from "./components/TrophyCasePage";
 import BackupPage from "./components/BackupPage";
+import JournalPage from "./components/JournalPage";
 import ConfirmationMessage from "./components/ConfirmationMessage";
 import { detectMemoryAchievement } from "./services/memoryAchievement";
 import {
@@ -64,6 +65,12 @@ import {
   writeHealthMeasurementEntries,
 } from "./services/healthMeasurements";
 import { readAppSettings, writeAppSettings } from "./services/appSettings";
+import {
+  createJournalEntry,
+  readJournalEntries,
+  updateJournalEntry,
+  writeJournalEntries,
+} from "./services/journalEntry";
 
 const DEFAULT_NUTRITION_GOALS = {
   calories: 0,
@@ -141,6 +148,7 @@ function App() {
   const [medicationEntries, setMedicationEntries] = useState([]);
   const [protocols, setProtocols] = useState([]);
   const [workoutEntries, setWorkoutEntries] = useState([]);
+  const [journalEntries, setJournalEntries] = useState([]);
   const [trophyCaseEntries, setTrophyCaseEntries] = useState([]);
   const [ceremonyEntry, setCeremonyEntry] = useState(null);
   const [memoryAchievementSuggestion, setMemoryAchievementSuggestion] = useState(null);
@@ -425,6 +433,14 @@ function App() {
       setTrophyCaseEntries(readTrophyCaseEntries(localStorage));
     } catch (error) {
       setStorageError("Trace couldn't read the Trophy Case because its stored data is malformed. The stored value was left unchanged.");
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setJournalEntries(readJournalEntries(localStorage));
+    } catch (error) {
+      setStorageError("Trace couldn't read the saved Journal entries because their stored data is malformed. The stored value was left unchanged.");
     }
   }, []);
 
@@ -1214,6 +1230,47 @@ function App() {
     }
   }
 
+  function saveJournalEntry(draft, editingJournalId = null) {
+    const existingEntry = editingJournalId
+      ? journalEntries.find((entry) => entry.id === editingJournalId)
+      : null;
+    if (editingJournalId && !existingEntry) return false;
+    const result = existingEntry
+      ? updateJournalEntry(existingEntry, draft)
+      : createJournalEntry(draft, {
+          id: createId(new Set(journalEntries.map((entry) => entry.id))),
+        });
+    if (result.error) return false;
+    const updatedEntries = existingEntry
+      ? journalEntries.map((entry) => entry.id === existingEntry.id ? result.value : entry)
+      : [...journalEntries, result.value];
+    try {
+      writeJournalEntries(localStorage, updatedEntries);
+      setJournalEntries(updatedEntries);
+      setStorageError("");
+      showConfirmation(existingEntry ? "Journal entry updated" : "Journal entry traced");
+      return result.value;
+    } catch (error) {
+      setStorageError(storageMessage(existingEntry ? "update this Journal entry" : "save this Journal entry"));
+      return false;
+    }
+  }
+
+  function deleteJournalEntry(id) {
+    const updatedEntries = journalEntries.filter((entry) => entry.id !== id);
+    if (updatedEntries.length === journalEntries.length) return false;
+    try {
+      writeJournalEntries(localStorage, updatedEntries);
+      setJournalEntries(updatedEntries);
+      setStorageError("");
+      showConfirmation("Journal entry deleted");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this Journal entry"));
+      return false;
+    }
+  }
+
   function addTrophyCaseEntry(candidate) {
     const result = addCuratedTrophy(trophyCaseEntries, candidate, {
       id: createId(new Set(trophyCaseEntries.map((entry) => entry.id))),
@@ -1314,6 +1371,7 @@ function App() {
           onOpenWorkouts={() => setPage("workouts")}
           onOpenTrophyCase={() => setPage("trophy-case")}
           onOpenBackup={() => setPage("backup")}
+          onOpenJournal={() => setPage("journal")}
           deleteMemory={deleteMemory}
           editMemory={editMemory}
           trophyEntries={trophyCaseEntries}
@@ -1321,6 +1379,7 @@ function App() {
           healthMeasurementEntries={healthMeasurementEntries}
           workoutEntries={workoutEntries}
           medicationEntries={medicationEntries}
+          journalEntries={journalEntries}
           addTrophyCaseEntry={addTrophyCaseEntry}
           memoryAchievementSuggestion={memoryAchievementSuggestion}
           dismissMemoryAchievementSuggestion={() => setMemoryAchievementSuggestion(null)}
@@ -1416,6 +1475,17 @@ function App() {
         <BackupPage
           onBack={() => setPage("home")}
           buttonStyle={buttonStyle}
+          containerStyle={containerStyle}
+        />
+      ) : page === "journal" ? (
+        <JournalPage
+          entries={journalEntries}
+          onBack={() => setPage("home")}
+          saveEntry={saveJournalEntry}
+          deleteEntry={deleteJournalEntry}
+          onDraftStorageError={() => setStorageError(storageMessage("save this unfinished Journal draft"))}
+          buttonStyle={buttonStyle}
+          inputStyle={inputStyle}
           containerStyle={containerStyle}
         />
       ) : page === "trophy-case" ? (

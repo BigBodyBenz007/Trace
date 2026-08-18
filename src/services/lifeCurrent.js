@@ -5,10 +5,11 @@ export const LIFE_CURRENT_TUNING = Object.freeze({
   health: Object.freeze({ dailyPresence: 0.3 }),
   medication: Object.freeze({ dailyPresence: 0.3 }),
   trophy: Object.freeze({ each: 0.2, dailyCap: 0.4 }),
+  journal: Object.freeze({ dailyPresence: 0.15 }),
   intensitySaturation: 2,
 });
 
-const DOMAIN_KEYS = ["memory", "workout", "nutrition", "health", "medication", "trophy"];
+const DOMAIN_KEYS = ["memory", "workout", "nutrition", "health", "medication", "trophy", "journal"];
 
 function compareText(first, second) {
   return first < second ? -1 : first > second ? 1 : 0;
@@ -88,6 +89,7 @@ function calculateContributions(sources) {
       LIFE_CURRENT_TUNING.trophy.dailyCap,
       counts.trophy * LIFE_CURRENT_TUNING.trophy.each
     ),
+    journal: counts.journal > 0 ? LIFE_CURRENT_TUNING.journal.dailyPresence : 0,
   };
 }
 
@@ -236,6 +238,7 @@ export function deriveLifeCurrent({
   workoutEntries = [],
   medicationEntries = [],
   trophyCaseEntries = [],
+  journalEntries = [],
 } = {}) {
   const sources = {
     memories: arrayOrEmpty(memories),
@@ -244,6 +247,7 @@ export function deriveLifeCurrent({
     workoutEntries: arrayOrEmpty(workoutEntries),
     medicationEntries: arrayOrEmpty(medicationEntries),
     trophyCaseEntries: arrayOrEmpty(trophyCaseEntries),
+    journalEntries: arrayOrEmpty(journalEntries),
   };
   const dayMap = new Map();
   const unbucketed = { memories: [], trophies: [] };
@@ -256,6 +260,12 @@ export function deriveLifeCurrent({
       return;
     }
     addSource(dayMap, parts, "memory", sourceId);
+  });
+
+  sources.journalEntries.forEach((entry) => {
+    const parts = validLocalDateParts(entry?.date);
+    if (!parts) return;
+    addSource(dayMap, parts, "journal", stableSourceId("journal", { id: entry?.id }, parts.dateKey));
   });
 
   const timestampDomains = [

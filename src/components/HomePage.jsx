@@ -140,6 +140,7 @@ function HomePage({
   onOpenWorkouts,
   onOpenTrophyCase,
   onOpenBackup,
+  onOpenJournal,
   deleteMemory,
   editMemory,
   trophyEntries = [],
@@ -147,6 +148,7 @@ function HomePage({
   healthMeasurementEntries = [],
   workoutEntries = [],
   medicationEntries = [],
+  journalEntries = [],
   addTrophyCaseEntry = () => false,
   memoryAchievementSuggestion = null,
   dismissMemoryAchievementSuggestion = () => {},
@@ -203,9 +205,10 @@ function HomePage({
         healthMeasurementEntries,
         workoutEntries,
         medicationEntries,
+        journalEntries,
         trophyCaseEntries: trophyEntries,
       }),
-    [memories, nutritionEntries, healthMeasurementEntries, workoutEntries, medicationEntries, trophyEntries]
+    [memories, nutritionEntries, healthMeasurementEntries, workoutEntries, medicationEntries, journalEntries, trophyEntries]
   );
   const lifeCurrentLayout = useMemo(
     () => deriveLifeCurrentLayout(lifeCurrent),
@@ -621,12 +624,25 @@ function HomePage({
 
   return (
     <div style={containerStyle}>
-      <h1 style={{ marginBottom: "10px" }}>Trace</h1>
+      <div className="trace-home-intro" data-safe-area-context="body-inset">
+        <header className="trace-home-top" data-layout="centered-branding">
+          <div className="trace-home-identity">
+            <h1 style={{ marginBottom: "10px" }}>Trace</h1>
+            <p style={{ color: "#bbb", marginBottom: "4px" }}>Your story. Your timeline.</p>
+          </div>
+        </header>
+        <aside className="trace-home-utilities" aria-label="Personal and settings" data-layout="independent-utility-frame">
+          <button type="button" className="trace-settings-button" data-utility-position="left" aria-label="Settings" onClick={onOpenSettings} title="Settings">⚙</button>
+          <div className="trace-journal-shelf" data-utility-position="right">
+            <button type="button" className="trace-journal-button" aria-label="Open Journal" onClick={onOpenJournal}>
+              <svg aria-hidden="true" viewBox="0 0 32 32" width="25" height="25" fill="none"><path d="M6 4.5h17.5A2.5 2.5 0 0 1 26 7v20H8.5A3.5 3.5 0 0 1 5 23.5V5.5A1 1 0 0 1 6 4.5Z" fill="#5b432f" stroke="#ead8b8" strokeWidth="1.5"/><path d="M9 4.5v22.4M8.5 21.5H26" stroke="#ead8b8" strokeWidth="1.5"/></svg>
+              <span>Journal</span>
+            </button>
+          </div>
+        </aside>
+      </div>
 
-      <p style={{ color: "#bbb", marginBottom: "30px" }}>
-        Your story. Your timeline.
-      </p>
-
+      <nav className="trace-feature-navigation" aria-label="Trace features">
       <button
         style={buttonStyle}
         onClick={onAddMemory}
@@ -700,13 +716,7 @@ function HomePage({
       >
         Backup & Restore
       </button>
-
-      <button
-        style={{ ...buttonStyle, backgroundColor: "#3f3f46" }}
-        onClick={onOpenSettings}
-      >
-        Settings
-      </button>
+      </nav>
 
       {memoryAchievementSuggestion &&
         !isMemoryInTrophyCase(memoryAchievementSuggestion.memory) && (

@@ -13,6 +13,7 @@ const baseProps = {
   onOpenWorkouts: jest.fn(),
   onOpenTrophyCase: jest.fn(),
   onOpenBackup: jest.fn(),
+  onOpenJournal: jest.fn(),
   onOpenSettings: jest.fn(),
   deleteMemory: jest.fn(),
   editMemory: jest.fn(),
@@ -34,7 +35,6 @@ test("renders primary Timeline actions in the intended order", () => {
       "Medications & Supplements",
       "Protocols",
       "Open Trophy Case",
-      "Settings",
     ].includes(name));
   expect(names).toEqual([
     "Add Memory",
@@ -44,8 +44,31 @@ test("renders primary Timeline actions in the intended order", () => {
     "Medications & Supplements",
     "Protocols",
     "Open Trophy Case",
-    "Settings",
   ]);
+});
+
+test("frames centered branding with independent accessible Settings and Journal controls", () => {
+  render(<HomePage {...baseProps} memories={[]} trophyEntries={[]} />);
+  const featureNavigation = screen.getByRole("navigation", { name: "Trace features" });
+  const personalArea = screen.getByRole("complementary", { name: "Personal and settings" });
+  const branding = screen.getByRole("banner");
+  const intro = branding.parentElement;
+  const settings = within(personalArea).getByRole("button", { name: "Settings" });
+  const journal = within(personalArea).getByRole("button", { name: "Open Journal" });
+  expect(branding).toHaveAttribute("data-layout", "centered-branding");
+  expect(within(branding).getByRole("heading", { name: "Trace" })).toBeInTheDocument();
+  expect(within(branding).getByText("Your story. Your timeline.")).toBeInTheDocument();
+  expect(branding).not.toContainElement(personalArea);
+  expect(personalArea.parentElement).toBe(intro);
+  expect(intro).toHaveAttribute("data-safe-area-context", "body-inset");
+  expect(personalArea).toHaveAttribute("data-layout", "independent-utility-frame");
+  expect(settings).toHaveAttribute("data-utility-position", "left");
+  expect(journal.closest("[data-utility-position]")).toHaveAttribute("data-utility-position", "right");
+  expect(within(featureNavigation).queryByRole("button", { name: /Journal/ })).not.toBeInTheDocument();
+  fireEvent.click(journal);
+  expect(baseProps.onOpenJournal).toHaveBeenCalledTimes(1);
+  fireEvent.click(settings);
+  expect(baseProps.onOpenSettings).toHaveBeenCalledTimes(1);
 });
 
 const memories = [

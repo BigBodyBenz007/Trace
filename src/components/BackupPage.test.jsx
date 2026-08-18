@@ -17,7 +17,7 @@ jest.mock("../services/traceBackup", () => ({
 const summary = {
   memories: 2, photos: 3, nutritionEntries: 4, healthMeasurementEntries: 12, workouts: 5,
   medicationEntries: 6, protocols: 7, trophyCaseEntries: 8,
-  savedExercises: 9, savedCompounds: 10, userFoods: 11,
+  savedExercises: 9, savedCompounds: 10, userFoods: 11, journalEntries: 12,
 };
 const parsed = { backup: { createdAt: "2026-08-12T00:00:00.000Z" }, summary };
 
