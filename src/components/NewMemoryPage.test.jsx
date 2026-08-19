@@ -12,10 +12,19 @@ afterEach(() => {
   URL.createObjectURL = originalCreateObjectURL;
 });
 
-function renderPage({ images = [], photoLoader, setImages = jest.fn() } = {}) {
-  render(
+function renderPage({
+  editingIndex = null,
+  images = [],
+  onCancelExistingMemory,
+  photoLoader,
+  setEditingIndex = jest.fn(),
+  setImages = jest.fn(),
+  setPage = jest.fn(),
+  title = "",
+} = {}) {
+  return render(
     <NewMemoryPage
-      title=""
+      title={title}
       setTitle={jest.fn()}
       description=""
       setDescription={jest.fn()}
@@ -30,12 +39,97 @@ function renderPage({ images = [], photoLoader, setImages = jest.fn() } = {}) {
       inputStyle={{}}
       buttonStyle={{}}
       containerStyle={{}}
-      setPage={jest.fn()}
-      editingIndex={null}
-      setEditingIndex={jest.fn()}
+      setPage={setPage}
+      editingIndex={editingIndex}
+      setEditingIndex={setEditingIndex}
+      onCancelExistingMemory={onCancelExistingMemory}
     />
   );
 }
+
+test("uses isolated Modern Heirloom hierarchy for Add and Edit Memory", () => {
+  const first = renderPage();
+  const addHeading = screen.getByRole("heading", { name: "Add Memory" });
+  const addEditor = addHeading.closest(".trace-memory-editor");
+  expect(addEditor).toHaveAttribute("data-memory-editor-mode", "add");
+  expect(addHeading).toHaveClass("trace-memory-editor__title");
+  expect(screen.getByRole("heading", { name: "Categories" })).toHaveClass(
+    "trace-memory-editor__section-title"
+  );
+  expect(screen.getByRole("heading", { name: "Photographs" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Save Memory" })).toHaveClass(
+    "trace-memory-editor__action--primary"
+  );
+  expect(screen.getByRole("button", { name: "Cancel" })).toHaveClass(
+    "trace-memory-editor__action--secondary"
+  );
+  expect(screen.getByRole("button", { name: "Close Add Memory" })).toHaveClass(
+    "trace-memory-editor__close"
+  );
+  expect(screen.getByLabelText("Choose Photos")).toHaveAttribute("multiple");
+  first.unmount();
+
+  renderPage({ editingIndex: "memory-edit", title: "Existing Memory" });
+  const editHeading = screen.getByRole("heading", { name: "Edit Memory" });
+  expect(editHeading.closest(".trace-memory-editor")).toHaveAttribute(
+    "data-memory-editor-mode",
+    "edit"
+  );
+  expect(screen.getByRole("button", { name: "Save Changes" })).toHaveClass(
+    "trace-memory-editor__action--primary"
+  );
+  expect(screen.getByRole("button", { name: "Close Edit Memory" })).toHaveClass(
+    "trace-memory-editor__close"
+  );
+});
+
+test.each(["Close Add Memory", "Cancel"])(
+  "%s uses the existing Add Memory cancellation path",
+  (controlName) => {
+    const setEditingIndex = jest.fn();
+    const setPage = jest.fn();
+    renderPage({ setEditingIndex, setPage });
+
+    fireEvent.click(screen.getByRole("button", { name: controlName }));
+
+    expect(setEditingIndex).toHaveBeenCalledWith(null);
+    expect(setPage).toHaveBeenCalledWith("home");
+  }
+);
+
+test.each(["Close Edit Memory", "Cancel"])(
+  "%s uses the existing Edit Memory cancellation callback",
+  (controlName) => {
+    const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+    const onCancelExistingMemory = jest.fn();
+    const setPage = jest.fn();
+    renderPage({
+      editingIndex: "memory-edit",
+      onCancelExistingMemory,
+      setPage,
+      title: "Existing Memory",
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: controlName }));
+
+    expect(confirm).toHaveBeenCalledWith(
+      "Discard your changes? Your unsaved changes will be lost."
+    );
+    expect(onCancelExistingMemory).toHaveBeenCalledTimes(1);
+    expect(setPage).not.toHaveBeenCalled();
+    confirm.mockRestore();
+  }
+);
+
+test("keeps editor photo wrappers stable with an accessible touch-target removal control", () => {
+  renderPage({ images: [{ id: "styled-photo", url: "blob:styled-photo" }] });
+  expect(screen.getByAltText("Memory 1")).toHaveClass(
+    "trace-memory-editor__photo-image"
+  );
+  expect(screen.getByRole("button", { name: "Remove photo 1" })).toHaveClass(
+    "trace-memory-editor__photo-remove"
+  );
+});
 
 test("loads every stored photo when editing while preserving photo IDs", async () => {
   const images = [

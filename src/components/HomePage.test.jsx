@@ -217,6 +217,63 @@ test("photo viewer close control handles its own pointer and click without backd
   expect(screen.queryByRole("dialog", { name: "Memory photo viewer" })).not.toBeInTheDocument();
 });
 
+test("applies isolated archival structure to gallery, Detail, and viewer controls", () => {
+  const memory = {
+    ...memoryWithOnePhoto(),
+    categories: ["Milestone"],
+    images: ["blob:first", "blob:second", "blob:third", "blob:fourth"],
+  };
+  render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} />);
+
+  const card = screen.getByTestId("timeline-memory-" + memory.id);
+  const gallery = within(card).getByTestId("timeline-photo-gallery-" + memory.id);
+  expect(gallery).toHaveClass("trace-timeline-photo-gallery");
+  expect(
+    [...gallery.querySelectorAll("[data-timeline-photo-slot]")]
+      .every((slot) => slot.classList.contains("trace-timeline-photo-slot"))
+  ).toBe(true);
+  expect(within(gallery).getByTestId("timeline-photo-overflow")).toHaveClass(
+    "trace-timeline-photo-overflow"
+  );
+
+  fireEvent.click(card);
+  const detail = screen.getByRole("dialog", {
+    name: "Memory details for Scrollable memory",
+  });
+  expect(detail).toHaveClass("trace-memory-detail");
+  expect(screen.getByTestId("memory-detail-panel")).toHaveClass(
+    "trace-memory-detail__folio"
+  );
+  expect(within(detail).getByRole("heading", { name: "Scrollable memory" }))
+    .toHaveClass("trace-memory-detail__title");
+  expect(within(detail).getByText("Milestone")).toHaveClass(
+    "trace-memory-detail__category"
+  );
+  expect(within(detail).getByRole("button", { name: "Edit" })).toHaveClass(
+    "trace-memory-detail__action--edit"
+  );
+  expect(within(detail).getByRole("button", { name: "Delete" })).toHaveClass(
+    "trace-memory-detail__action--delete"
+  );
+
+  const heroPhoto = within(detail).getAllByAltText("Memory 1")[0];
+  expect(heroPhoto).toHaveClass("trace-memory-detail__hero-photo");
+  fireEvent.click(heroPhoto);
+  const viewer = screen.getByRole("dialog", { name: "Memory photo viewer" });
+  expect(viewer).toHaveClass("trace-memory-viewer");
+  expect(screen.getByTestId("memory-photo-viewer-content")).toHaveClass(
+    "trace-memory-viewer__content"
+  );
+  expect(within(viewer).getByRole("button", { name: "Close photo viewer" }))
+    .toHaveClass("trace-memory-viewer__close");
+  expect(within(viewer).getByRole("button", { name: "Next photo" })).toHaveClass(
+    "trace-memory-viewer__step"
+  );
+  expect(within(viewer).getByAltText("Memory 1 enlarged")).toHaveClass(
+    "trace-memory-viewer__photo"
+  );
+});
+
 test.each([
   ["2007-04-17", "April 17, 2007"],
   ["2000-01-01", "January 1, 2000"],

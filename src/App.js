@@ -185,6 +185,7 @@ function App() {
   const activeObjectUrlsRef = useRef(new Set());
   const photoUrlLoaderRef = useRef(null);
   const skipNextPageTopScrollRef = useRef(false);
+  const memoryEditorFolioRef = useRef(null);
 
   function ensurePhotoDatabase() {
     if (photoDatabaseRef.current) return Promise.resolve(photoDatabaseRef.current);
@@ -710,6 +711,7 @@ function App() {
     setImages(memory.images || []);
     setCategories(Array.isArray(memory.categories) ? memory.categories : []);
 
+    if (retainHome) skipNextPageTopScrollRef.current = true;
     setRetainHomeDuringMemoryEdit(retainHome);
     setEditingId(idToEdit);
     setPage("new");
@@ -1389,6 +1391,9 @@ function App() {
         <HomePage
           key={`home-${homePageGeneration}`}
           active={page === "home"}
+          inactiveScrollTargetRef={
+            retainHomeDuringMemoryEdit ? memoryEditorFolioRef : null
+          }
           memoryCount={memoryCount}
           memories={memories}
           photoLoader={photoUrlLoader}
@@ -1558,6 +1563,11 @@ function App() {
           editingIndex={editingId}
           setEditingIndex={setEditingId}
           onCancelExistingMemory={cancelExistingMemoryEdit}
+          folioRef={
+            editingId !== null && retainHomeDuringMemoryEdit
+              ? memoryEditorFolioRef
+              : null
+          }
         />
       ))}
       {ceremonyEntry && (

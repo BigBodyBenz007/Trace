@@ -30,7 +30,14 @@ const TIMELINE_FOCUS_CONTAINMENT_WIDTH = Math.ceil(
 const TIMELINE_FOCUS_CONTAINMENT_GUTTER =
   (TIMELINE_FOCUS_CONTAINMENT_WIDTH - TIMELINE_FOCUS_TUNING.baseCardWidth) / 2;
 
-function useDocumentScrollLock(locked, scrollOrigin = null) {
+function useDocumentScrollLock(
+  locked,
+  scrollOrigin = null,
+  unlockScrollTargetRef = null
+) {
+  const latestUnlockScrollTargetRef = useRef(unlockScrollTargetRef);
+  latestUnlockScrollTargetRef.current = unlockScrollTargetRef;
+
   useEffect(() => {
     if (!locked) return undefined;
 
@@ -63,7 +70,12 @@ function useDocumentScrollLock(locked, scrollOrigin = null) {
     return () => {
       Object.assign(body.style, originalBodyStyles);
       Object.assign(root.style, originalRootStyles);
-      if (scrollX !== 0 || scrollY !== 0) window.scrollTo(scrollX, scrollY);
+      const unlockScrollTarget = latestUnlockScrollTargetRef.current?.current;
+      if (unlockScrollTarget) {
+        unlockScrollTarget.scrollIntoView({ behavior: "auto", block: "start" });
+      } else if (scrollX !== 0 || scrollY !== 0) {
+        window.scrollTo(scrollX, scrollY);
+      }
     };
   }, [locked, scrollOrigin]);
 }
@@ -168,6 +180,7 @@ function TimelinePhotoGallery({
   return (
     <div
       aria-label={photoCount + " photo preview"}
+      className="trace-timeline-photo-gallery"
       data-testid={"timeline-photo-gallery-" + memory.id}
       ref={galleryRef}
       style={{
@@ -187,7 +200,7 @@ function TimelinePhotoGallery({
     >
       {previewPhotos.map((photo, index) => (
         <div
-          className="timeline-photo-slot"
+          className="timeline-photo-slot trace-timeline-photo-slot"
           data-timeline-photo-slot="true"
           key={storedPhotoId(photo) || index}
           style={{
@@ -209,6 +222,7 @@ function TimelinePhotoGallery({
             placeholder={(
               <span
                 aria-hidden="true"
+                className="trace-timeline-photo-placeholder"
                 data-timeline-photo-placeholder="true"
                 style={{ display: "block", height: "100%", width: "100%" }}
               />
@@ -227,6 +241,7 @@ function TimelinePhotoGallery({
       {remainingPhotoCount > 0 && (
         <div
           aria-label={remainingPhotoCount + " more photos"}
+          className="trace-timeline-photo-overflow"
           data-testid="timeline-photo-overflow"
           style={{
             alignItems: "center",
@@ -248,6 +263,7 @@ function TimelinePhotoGallery({
 
 function HomePage({
   active = true,
+  inactiveScrollTargetRef = null,
   memoryCount,
   memories,
   photoLoader,
@@ -414,7 +430,8 @@ function HomePage({
       : memories.find((memory) => memory.id === detailMemoryId);
   useDocumentScrollLock(
     active && Boolean(detailMemory || selectedImageIndex !== null),
-    detailOriginScrollRef.current
+    detailOriginScrollRef.current,
+    !active && detailMemory ? inactiveScrollTargetRef : null
   );
   const trophySourceKeys = new Set(trophyEntries.map(({ sourceKey }) => sourceKey));
 
@@ -1376,117 +1393,69 @@ function HomePage({
 
       {active && detailMemory && (
         <div
+          className="trace-memory-detail"
           role="dialog"
           aria-modal="true"
           aria-label={`Memory details for ${detailMemory.title}`}
-          style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,.8)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: "20px",
-            zIndex: 9998,
-          }}
         >
           <div
+            className="trace-memory-detail__folio"
             ref={detailPanelRef}
             data-testid="memory-detail-panel"
             onClick={(event) => event.stopPropagation()}
             style={{
-              background: "#1f2937",
-              borderRadius: "16px",
-              boxShadow: "0 12px 32px rgba(0,0,0,.45)",
-              maxHeight: "90vh",
-              maxWidth: "900px",
               overflowY: "auto",
               overscrollBehavior: "contain",
-              padding: "28px",
-              width: "100%",
-              overflowWrap: "anywhere",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "flex-start",
-                gap: "20px",
-              }}
-            >
-              <div>
-                <h2 style={{ margin: 0 }}>{detailMemory.title}</h2>
+            <div className="trace-memory-detail__header">
+              <div className="trace-memory-detail__identity">
+                <p className="trace-memory-detail__kicker">Memory record</p>
+                <h2 className="trace-memory-detail__title">{detailMemory.title}</h2>
                 {detailMemory.date && (
-                  <p style={{ color: "#9ca3af", marginBottom: 0 }}>
+                  <p className="trace-memory-detail__date">
                     {formatDateOnly(detailMemory.date)}
                   </p>
                 )}
               </div>
 
               <button
+                className="trace-memory-detail__dismiss"
                 type="button"
                 aria-label={trophySourceTarget ? "Back to Trophy Case" : "Close memory details"}
                 onClick={(event) => {
                   event.stopPropagation();
                   closeMemoryDetail();
                 }}
-                style={{
-                  background: "none",
-                  border: "none",
-                  color: "white",
-                  cursor: "pointer",
-                  fontSize: "28px",
-                  lineHeight: 1,
-                }}
               >
                 {trophySourceTarget ? "Back to Trophy Case" : "×"}
               </button>
             </div>
 
-            <p style={{ lineHeight: "1.7", whiteSpace: "pre-wrap" }}>
+            <p className="trace-memory-detail__description">
               {detailMemory.description}
             </p>
 
             {Array.isArray(detailMemory.categories) &&
               detailMemory.categories.length > 0 && (
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "8px",
-                    marginTop: "16px",
-                  }}
-                >
+                <div className="trace-memory-detail__categories">
                   {detailMemory.categories.map((category) => (
-                    <span
-                      key={category}
-                      style={{
-                        background: "#374151",
-                        borderRadius: "999px",
-                        color: "#d1d5db",
-                        fontSize: "14px",
-                        padding: "6px 10px",
-                      }}
-                    >
+                    <span className="trace-memory-detail__category" key={category}>
                       {category}
                     </span>
                   ))}
                 </div>
               )}
 
-            <p style={{ color: "#facc15", marginTop: "20px" }}>
+            <p className="trace-memory-detail__favorite-state">
               Favorite: {detailMemory.favorite ? "Yes" : "No"}
             </p>
 
             {detailMemory.images && detailMemory.images.length > 0 && (
-              <div
-                style={{
-                  marginTop: "20px",
-                }}
-              >
+              <section className="trace-memory-detail__photos" aria-label="Memory photographs">
                 <StoredPhoto
                   alt={`Memory ${activeDetailPhotoIndex + 1}`}
+                  className="trace-memory-detail__hero-photo"
                   enabled
                   loader={photoLoader}
                   onClick={(event) => {
@@ -1497,35 +1466,16 @@ function HomePage({
                   placeholder={(
                     <div
                       aria-hidden="true"
+                      className="trace-memory-detail__hero-photo trace-memory-detail__photo-placeholder"
                       data-memory-detail-photo-placeholder="true"
-                      style={{
-                        background: "#24384a",
-                        borderRadius: "12px",
-                        height: "360px",
-                        width: "100%",
-                      }}
                     />
                   )}
                   priority={PHOTO_LOAD_PRIORITY.detail}
-                  style={{
-                    borderRadius: "12px",
-                    cursor: "pointer",
-                    display: "block",
-                    height: "360px",
-                    objectFit: "contain",
-                    width: "100%",
-                  }}
                 />
 
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    gap: "10px",
-                    marginTop: "14px",
-                  }}
-                >
+                <div className="trace-memory-detail__photo-navigation">
                   <button
+                    className="trace-memory-detail__photo-step"
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
@@ -1535,19 +1485,12 @@ function HomePage({
                           detailMemory.images.length
                       );
                     }}
-                    style={{
-                      background: "#374151",
-                      border: "none",
-                      borderRadius: "8px",
-                      color: "white",
-                      cursor: "pointer",
-                      padding: "8px 16px",
-                    }}
                   >
                     Previous
                   </button>
 
                   <button
+                    className="trace-memory-detail__photo-step"
                     type="button"
                     onClick={(event) => {
                       event.stopPropagation();
@@ -1556,30 +1499,15 @@ function HomePage({
                           (currentIndex + 1) % detailMemory.images.length
                       );
                     }}
-                    style={{
-                      background: "#374151",
-                      border: "none",
-                      borderRadius: "8px",
-                      color: "white",
-                      cursor: "pointer",
-                      padding: "8px 16px",
-                    }}
                   >
                     Next
                   </button>
                 </div>
 
-                <div
-                  style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    gap: "10px",
-                    justifyContent: "center",
-                    marginTop: "14px",
-                  }}
-                >
+                <div className="trace-memory-detail__thumbnails">
                   {detailMemory.images.map((img, index) => (
                     <button
+                      className="trace-memory-detail__thumbnail-button"
                       key={index}
                       type="button"
                       aria-label={`Show photo ${index + 1}`}
@@ -1588,97 +1516,54 @@ function HomePage({
                         event.stopPropagation();
                         setActiveDetailPhotoIndex(index);
                       }}
-                      style={{
-                        background: "none",
-                        border:
-                          activeDetailPhotoIndex === index
-                            ? "3px solid #5ec8ff"
-                            : "3px solid transparent",
-                        borderRadius: "10px",
-                        cursor: "pointer",
-                        padding: 0,
-                      }}
                     >
                       <StoredPhoto
                         alt={`Memory ${index + 1}`}
+                        className="trace-memory-detail__thumbnail"
                         enabled
                         loader={photoLoader}
                         photo={img}
                         placeholder={(
                           <span
                             aria-hidden="true"
+                            className="trace-memory-detail__thumbnail trace-memory-detail__thumbnail-placeholder"
                             data-memory-detail-thumbnail-placeholder="true"
-                            style={{
-                              background: "#24384a",
-                              borderRadius: "7px",
-                              display: "block",
-                              height: "72px",
-                              width: "96px",
-                            }}
                           />
                         )}
                         priority={PHOTO_LOAD_PRIORITY.detail}
-                        style={{
-                          borderRadius: "7px",
-                          display: "block",
-                          height: "72px",
-                          objectFit: "cover",
-                          width: "96px",
-                        }}
                       />
                     </button>
                   ))}
                 </div>
-              </div>
+              </section>
             )}
 
-            <div
-              style={{
-                display: "flex",
-                flexWrap: "wrap",
-                gap: "10px",
-                marginTop: "24px",
-              }}
-            >
+            <div className="trace-memory-detail__actions">
               <button
+                className="trace-memory-detail__action trace-memory-detail__action--trophy"
                 type="button"
                 disabled={isMemoryInTrophyCase(detailMemory)}
                 onClick={(event) => {
                   event.stopPropagation();
                   addMemoryToTrophyCase(detailMemory);
                 }}
-                style={{
-                  background: isMemoryInTrophyCase(detailMemory) ? "#4b5563" : "#a16207",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "white",
-                  cursor: isMemoryInTrophyCase(detailMemory) ? "default" : "pointer",
-                  minHeight: "44px",
-                  padding: "8px 16px",
-                }}
               >
                 {isMemoryInTrophyCase(detailMemory) ? "In Trophy Case" : "Add to Trophy Case"}
               </button>
 
               <button
+                className="trace-memory-detail__action trace-memory-detail__action--favorite"
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
                   toggleFavorite(detailMemoryId);
-                }}
-                style={{
-                  background: "#374151",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "white",
-                  cursor: "pointer",
-                  padding: "8px 16px",
                 }}
               >
                 {detailMemory.favorite ? "Remove Favorite" : "Add Favorite"}
               </button>
 
               <button
+                className="trace-memory-detail__action trace-memory-detail__action--edit"
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
@@ -1691,19 +1576,12 @@ function HomePage({
                     editMemory(detailMemoryId, { retainHome: true });
                   }
                 }}
-                style={{
-                  background: "#2563eb",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "white",
-                  cursor: "pointer",
-                  padding: "8px 16px",
-                }}
               >
                 Edit
               </button>
 
               <button
+                className="trace-memory-detail__action trace-memory-detail__action--delete"
                 type="button"
                 onClick={async (event) => {
                   event.stopPropagation();
@@ -1714,31 +1592,16 @@ function HomePage({
                     }
                   }
                 }}
-                style={{
-                  background: "#dc2626",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "white",
-                  cursor: "pointer",
-                  padding: "8px 16px",
-                }}
               >
                 Delete
               </button>
 
               {!trophySourceTarget && <button
+                className="trace-memory-detail__action trace-memory-detail__action--close"
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation();
                   closeMemoryDetail();
-                }}
-                style={{
-                  background: "#4b5563",
-                  border: "none",
-                  borderRadius: "8px",
-                  color: "white",
-                  cursor: "pointer",
-                  padding: "8px 16px",
                 }}
               >
                 Close
@@ -1750,41 +1613,34 @@ function HomePage({
 
       {active && selectedImageIndex !== null && detailMemory && (
         <div
+          className="trace-memory-viewer"
           role="dialog"
           aria-modal="true"
           aria-label="Memory photo viewer"
           onClick={() => setSelectedImageIndex(null)}
           style={{
-            position: "fixed",
-            inset: 0,
-            background: "rgba(0,0,0,.9)",
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            zIndex: 9999,
-            cursor: "pointer",
             overflowY: "auto",
             overscrollBehavior: "contain",
-            padding: "20px",
           }}
         >
-          <button type="button" aria-label="Close photo viewer" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setSelectedImageIndex(null); }} style={{ background: "#374151", border: 0, borderRadius: "50%", color: "white", cursor: "pointer", fontSize: "32px", height: "52px", position: "fixed", right: "max(20px, calc(env(safe-area-inset-right) + 16px))", top: "calc(env(safe-area-inset-top) + 24px)", touchAction: "manipulation", width: "52px", zIndex: 2 }}>×</button>
-          <div data-testid="memory-photo-viewer-content" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => { event.currentTarget.dataset.touchX = event.clientX; }} onPointerUp={(event) => { const start = Number(event.currentTarget.dataset.touchX); const delta = event.clientX - start; if (Math.abs(delta) < 50) return; setSelectedImageIndex((index) => Math.max(0, Math.min(detailMemory.images.length - 1, index + (delta < 0 ? 1 : -1)))); }} style={{ alignItems: "center", boxSizing: "border-box", display: "flex", flexDirection: isNarrowPhotoViewport ? "column" : "row", gap: "12px", maxWidth: "100%", width: "100%" }}>
-            {!isNarrowPhotoViewport && detailMemory.images.length > 1 && <button type="button" aria-label="Previous photo" disabled={selectedImageIndex === 0} onClick={() => setSelectedImageIndex((index) => index - 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", flex: "0 0 auto", opacity: selectedImageIndex === 0 ? 0.45 : 1, padding: "12px" }}>Previous</button>}
-            <div style={{ flex: "1 1 0", minWidth: 0, textAlign: "center", width: isNarrowPhotoViewport ? "100%" : undefined }}>
+          <button className="trace-memory-viewer__close" type="button" aria-label="Close photo viewer" onPointerDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); setSelectedImageIndex(null); }}>×</button>
+          <div className="trace-memory-viewer__content" data-testid="memory-photo-viewer-content" onClick={(event) => event.stopPropagation()} onPointerDown={(event) => { event.currentTarget.dataset.touchX = event.clientX; }} onPointerUp={(event) => { const start = Number(event.currentTarget.dataset.touchX); const delta = event.clientX - start; if (Math.abs(delta) < 50) return; setSelectedImageIndex((index) => Math.max(0, Math.min(detailMemory.images.length - 1, index + (delta < 0 ? 1 : -1)))); }} style={{ flexDirection: isNarrowPhotoViewport ? "column" : "row" }}>
+            {!isNarrowPhotoViewport && detailMemory.images.length > 1 && <button className="trace-memory-viewer__step" type="button" aria-label="Previous photo" disabled={selectedImageIndex === 0} onClick={() => setSelectedImageIndex((index) => index - 1)}>Previous</button>}
+            <div className="trace-memory-viewer__photo-frame" style={{ width: isNarrowPhotoViewport ? "100%" : undefined }}>
               <StoredPhoto
                 alt={`Memory ${selectedImageIndex + 1} enlarged`}
+                className="trace-memory-viewer__photo"
                 enabled
                 loader={photoLoader}
                 photo={detailMemory.images[selectedImageIndex]}
-                placeholder={<span aria-hidden="true" data-memory-viewer-photo-placeholder="true" style={{ background: "#24384a", borderRadius: "12px", display: "inline-block", height: "min(70vh, 520px)", width: "min(80vw, 720px)" }} />}
+                placeholder={<span aria-hidden="true" className="trace-memory-viewer__photo trace-memory-viewer__placeholder" data-memory-viewer-photo-placeholder="true" />}
                 priority={PHOTO_LOAD_PRIORITY.detail}
-                style={{ borderRadius: "12px", maxHeight: "85vh", maxWidth: "100%" }}
+                style={{ maxWidth: "100%" }}
               />
-              {!isNarrowPhotoViewport && detailMemory.images.length > 1 && <p aria-live="polite" style={{ color: "white", margin: "10px 0 0" }}>{selectedImageIndex + 1} of {detailMemory.images.length}</p>}
+              {!isNarrowPhotoViewport && detailMemory.images.length > 1 && <p className="trace-memory-viewer__position" aria-live="polite">{selectedImageIndex + 1} of {detailMemory.images.length}</p>}
             </div>
-            {!isNarrowPhotoViewport && detailMemory.images.length > 1 && <button type="button" aria-label="Next photo" disabled={selectedImageIndex === detailMemory.images.length - 1} onClick={() => setSelectedImageIndex((index) => index + 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", flex: "0 0 auto", opacity: selectedImageIndex === detailMemory.images.length - 1 ? 0.45 : 1, padding: "12px" }}>Next</button>}
-            {isNarrowPhotoViewport && detailMemory.images.length > 1 && <div style={{ alignItems: "center", display: "flex", justifyContent: "space-between", width: "100%" }}><button type="button" aria-label="Previous photo" disabled={selectedImageIndex === 0} onClick={() => setSelectedImageIndex((index) => index - 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", opacity: selectedImageIndex === 0 ? 0.45 : 1, padding: "12px" }}>Previous</button><p aria-live="polite" style={{ color: "white", margin: 0 }}>{selectedImageIndex + 1} of {detailMemory.images.length}</p><button type="button" aria-label="Next photo" disabled={selectedImageIndex === detailMemory.images.length - 1} onClick={() => setSelectedImageIndex((index) => index + 1)} style={{ background: "#374151", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", opacity: selectedImageIndex === detailMemory.images.length - 1 ? 0.45 : 1, padding: "12px" }}>Next</button></div>}
+            {!isNarrowPhotoViewport && detailMemory.images.length > 1 && <button className="trace-memory-viewer__step" type="button" aria-label="Next photo" disabled={selectedImageIndex === detailMemory.images.length - 1} onClick={() => setSelectedImageIndex((index) => index + 1)}>Next</button>}
+            {isNarrowPhotoViewport && detailMemory.images.length > 1 && <div className="trace-memory-viewer__mobile-navigation"><button className="trace-memory-viewer__step" type="button" aria-label="Previous photo" disabled={selectedImageIndex === 0} onClick={() => setSelectedImageIndex((index) => index - 1)}>Previous</button><p className="trace-memory-viewer__position" aria-live="polite">{selectedImageIndex + 1} of {detailMemory.images.length}</p><button className="trace-memory-viewer__step" type="button" aria-label="Next photo" disabled={selectedImageIndex === detailMemory.images.length - 1} onClick={() => setSelectedImageIndex((index) => index + 1)}>Next</button></div>}
           </div>
         </div>
       )}

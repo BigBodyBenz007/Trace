@@ -312,7 +312,7 @@ test("Timeline to Add Memory resets a previously scrolled position", () => {
   fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
 
   expect(
-    screen.getByRole("heading", { name: "New Memory" })
+    screen.getByRole("heading", { name: "Add Memory" })
   ).toBeInTheDocument();
   expectDestinationScrolledToTop();
 });
@@ -994,9 +994,10 @@ test("renders stable metadata-first geometry for 21 Memories while 51 photos hyd
 });
 
 test.each([
-  ["river", "river-current"],
-  ["haunted-forest", "forest-path"],
-])("Edit Cancel retains four-photo Detail and restores the exact original %s timeline position", async (themeId, rendererId) => {
+  ["river", "river-current", "Close Edit Memory"],
+  ["haunted-forest", "forest-path", "Close Edit Memory"],
+  ["river", "river-current", "Cancel"],
+])("Edit Cancel retains four-photo Detail and restores the exact original %s timeline position (%s) via %s", async (themeId, rendererId, cancelControlName) => {
   const storedMemories = [
     {
       id: "route-oldest",
@@ -1047,8 +1048,34 @@ test.each([
   window.cancelAnimationFrame = jest.fn();
   const originalScrollX = Object.getOwnPropertyDescriptor(window, "scrollX");
   const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
-  Object.defineProperty(window, "scrollX", { configurable: true, value: 37 });
-  Object.defineProperty(window, "scrollY", { configurable: true, value: 240 });
+  let documentScrollX = 37;
+  let documentScrollY = 240;
+  Object.defineProperty(window, "scrollX", {
+    configurable: true,
+    get: () => documentScrollX,
+  });
+  Object.defineProperty(window, "scrollY", {
+    configurable: true,
+    get: () => documentScrollY,
+  });
+  window.scrollTo.mockImplementation((leftOrOptions, top) => {
+    if (typeof leftOrOptions === "object") {
+      documentScrollX = leftOrOptions.left ?? documentScrollX;
+      documentScrollY = leftOrOptions.top ?? documentScrollY;
+    } else {
+      documentScrollX = leftOrOptions;
+      documentScrollY = top;
+    }
+  });
+  const editorFolioDocumentTop = 48;
+  const editorFolioViewportInset = 16;
+  const editorFolioScrollTargets = [];
+  Element.prototype.scrollIntoView.mockImplementation(function scrollIntoView(options) {
+    if (this.matches?.(".trace-memory-editor__folio")) {
+      editorFolioScrollTargets.push({ element: this, options });
+      documentScrollY = editorFolioDocumentTop - editorFolioViewportInset;
+    }
+  });
 
   try {
     render(<App />);
@@ -1090,6 +1117,8 @@ test.each([
       .querySelector(`[data-life-current-renderer="${rendererId}"]`);
     const themedGeometry = themedRenderer.outerHTML;
 
+    documentScrollX = 37;
+    documentScrollY = 240;
     fireEvent.click(targetCard);
     const detail = screen.getByRole("dialog", {
       name: "Memory details for Four photo route Memory",
@@ -1109,9 +1138,26 @@ test.each([
     fireEvent.click(screen.getByRole("button", { name: "Close photo viewer" }));
     const targetVisualStyle = targetVisual.getAttribute("style");
 
+    window.scrollTo.mockClear();
     fireEvent.click(within(detail).getByRole("button", { name: "Edit" }));
     const editHeading = screen.getByRole("heading", { name: "Edit Memory" });
-    const editor = editHeading.parentElement;
+    const editor = editHeading.closest(".trace-memory-editor");
+    const editorFolio = screen.getByTestId("memory-editor-folio");
+    editorFolio.getBoundingClientRect = jest.fn(() => ({
+      top: editorFolioDocumentTop - documentScrollY,
+    }));
+    expect(editorFolioScrollTargets).toEqual([{
+      element: editorFolio,
+      options: { behavior: "auto", block: "start" },
+    }]);
+    expect(editorFolio.getBoundingClientRect().top).toBe(editorFolioViewportInset);
+    expect(window.scrollY).toBe(editorFolioDocumentTop - editorFolioViewportInset);
+    expect(window.scrollY).not.toBe(0);
+    expect(window.scrollTo).not.toHaveBeenCalledWith({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
     await waitFor(() => {
       expect(within(editor).getAllByAltText(/Memory \d/)).toHaveLength(4);
     });
@@ -1133,11 +1179,16 @@ test.each([
       .not.toBeInTheDocument();
     const titleInput = within(editor).getByPlaceholderText("Memory title...");
     const cancelButton = within(editor).getByRole("button", { name: "Cancel" });
+    const closeEditorButton = within(editor).getByRole("button", {
+      name: "Close Edit Memory",
+    });
     expect(titleInput).toBeVisible();
     expect(titleInput).toBeEnabled();
     expect(titleInput.closest("[inert]")).toBeNull();
     expect(cancelButton).toBeVisible();
     expect(cancelButton).toBeEnabled();
+    expect(closeEditorButton).toBeVisible();
+    expect(closeEditorButton).toBeEnabled();
     expect(document.body.style.position).toBe("");
     expect(getPhoto).toHaveBeenCalledTimes(4);
     expect(URL.createObjectURL).toHaveBeenCalledTimes(4);
@@ -1145,7 +1196,7 @@ test.each([
     jest.spyOn(window, "confirm").mockReturnValue(true);
     fireEvent.change(titleInput, { target: { value: "Editor remains interactive" } });
     expect(titleInput).toHaveValue("Editor remains interactive");
-    fireEvent.click(cancelButton);
+    fireEvent.click(within(editor).getByRole("button", { name: cancelControlName }));
     act(() => {
       while (frames.length) frames.shift()();
     });
@@ -1186,6 +1237,8 @@ test.each([
     expect(viewport.scrollLeft).toBe(417);
     expect(viewport.scrollTop).toBe(23);
     expect(window.scrollTo).toHaveBeenLastCalledWith(37, 240);
+    expect(window.scrollX).toBe(37);
+    expect(window.scrollY).toBe(240);
     expect(targetCard).toHaveAttribute("data-timeline-focused", "true");
     expect(getPhoto).toHaveBeenCalledTimes(4);
     expect(URL.createObjectURL).toHaveBeenCalledTimes(4);

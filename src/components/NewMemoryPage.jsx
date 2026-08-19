@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useRef } from "react";
 import { CATEGORY_OPTIONS } from "../constants/categories";
 import { PHOTO_LOAD_PRIORITY } from "../services/photoUrlLoader";
 import StoredPhoto from "./StoredPhoto";
@@ -16,29 +16,13 @@ function NewMemoryPage({
   setImages,
   photoLoader,
   saveMemory,
-  inputStyle,
-  buttonStyle,
-  containerStyle,
   setPage,
   editingIndex,
   setEditingIndex,
   onCancelExistingMemory,
+  folioRef = null,
 }) {
-  const formTopRef = useRef(null);
   const initialDateRef = useRef(date);
-
-  useEffect(() => {
-    if (editingIndex === null) return undefined;
-
-    const frameId = window.requestAnimationFrame(() => {
-      formTopRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
-
-    return () => window.cancelAnimationFrame(frameId);
-  }, [editingIndex]);
 
   function releaseDraftPhoto(image) {
     if (image?.isDraft && image.url) URL.revokeObjectURL(image.url);
@@ -75,273 +59,193 @@ function NewMemoryPage({
   }
 
   return (
-    <div style={containerStyle}>
-      <h1
-        ref={formTopRef}
-        style={{ marginBottom: "10px", scrollMarginTop: "12px" }}
+    <main
+      className="trace-memory-editor"
+      data-memory-editor-mode={editingIndex !== null ? "edit" : "add"}
+    >
+      <article
+        className="trace-memory-editor__folio"
+        data-testid="memory-editor-folio"
+        ref={folioRef}
       >
-        {editingIndex !== null ? "Edit Memory" : "New Memory"}
-      </h1>
-
-      <p style={{ color: "#bbb", marginBottom: "30px" }}>
-        Capture a moment you'll want to remember.
-      </p>
-
-      <input
-        style={inputStyle}
-        placeholder="Memory title..."
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-      />
-
-      <br />
-      <br />
-
-      <textarea
-        style={{
-          ...inputStyle,
-          height: "180px",
-          resize: "vertical",
-        }}
-        placeholder="Tell your story..."
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-      />
-
-      <br />
-      <br />
-
-      <label
-        style={{
-          display: "block",
-          textAlign: "left",
-          width: "min(500px, 100%)",
-        }}
-      >
-        Date
-        <div style={{ position: "relative" }}>
-          <input
-            style={{
-              ...inputStyle,
-              backgroundColor: "white",
-              color: date ? "#111827" : "transparent",
-              WebkitTextFillColor: date ? "#111827" : "transparent",
-              colorScheme: "light",
-              display: "block",
-              marginTop: "8px",
-            }}
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-          {!date && (
-            <span
-              aria-hidden="true"
-              style={{
-                color: "#6b7280",
-                left: "16px",
-                pointerEvents: "none",
-                position: "absolute",
-                top: "50%",
-                transform: "translateY(-50%)",
-              }}
-            >
-              Select a date
-            </span>
-          )}
-        </div>
-      </label>
-
-      <br />
-      <br />
-
-      <div
-        style={{
-          width: "min(500px, 100%)",
-          maxWidth: "100%",
-          textAlign: "left",
-        }}
-      >
-        <p style={{ marginBottom: "10px", fontSize: "18px" }}>
-          Categories
-        </p>
-
-        <div
-          aria-label="Memory categories"
-          style={{
-            display: "flex",
-            flexWrap: "wrap",
-            gap: "10px",
-          }}
-        >
-          {CATEGORY_OPTIONS.map((category) => {
-            const isSelected = categories.includes(category);
-
-            return (
-              <button
-                key={category}
-                type="button"
-                aria-pressed={isSelected}
-                onClick={() => {
-                  setCategories(
-                    isSelected
-                      ? categories.filter((item) => item !== category)
-                      : [...categories, category]
-                  );
-                }}
-                style={{
-                  background: isSelected ? "#5ec8ff" : "#374151",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "999px",
-                  padding: "8px 14px",
-                  cursor: "pointer",
-                  fontSize: "16px",
-                }}
-              >
-                {category}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      <br />
-      <br />
-
-      <label
-        style={{
-          background: "#374151",
-          color: "white",
-          padding: "14px 22px",
-          borderRadius: "10px",
-          cursor: "pointer",
-          display: "inline-block",
-          marginTop: "15px",
-        }}
-      >
-        {images.length ? "Add More Photos" : "Choose Photos"}
-
-        <input
-          type="file"
-          accept="image/*"
-          multiple
-          style={{ display: "none" }}
-          onChange={(e) => {
-            const files = Array.from(e.target.files);
-
-            if (!files.length) return;
-
-            const newImages = files.map((file) => ({
-              blob: file,
-              isDraft: true,
-              url: URL.createObjectURL(file),
-            }));
-            setImages((current) => [...current, ...newImages]);
-            e.target.value = "";
-          }}
-        />
-      </label>
-
-      {images.length > 0 && (
-        <>
-          <br />
-          <br />
-
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(auto-fill, minmax(140px, 1fr))",
-              gap: "12px",
-              maxWidth: "700px",
-              margin: "0 auto",
-              width: "100%",
-            }}
+        <header className="trace-memory-editor__header">
+          <button
+            aria-label={`Close ${editingIndex !== null ? "Edit Memory" : "Add Memory"}`}
+            className="trace-memory-editor__close"
+            type="button"
+            onClick={cancelMemory}
           >
-            {images.map((img, index) => (
-              <div
-                key={index}
-                style={{
-                  position: "relative",
-                }}
-              >
-                <StoredPhoto
-                  alt={`Memory ${index + 1}`}
-                  enabled
-                  loader={photoLoader}
-                  photo={img}
-                  placeholder={(
-                    <span
-                      aria-hidden="true"
-                      data-memory-edit-photo-placeholder="true"
-                      style={{
-                        background: "#24384a",
-                        borderRadius: "10px",
-                        display: "block",
-                        height: "140px",
-                        width: "100%",
-                      }}
-                    />
-                  )}
-                  priority={PHOTO_LOAD_PRIORITY.detail}
-                  style={{
-                    width: "100%",
-                    height: "140px",
-                    objectFit: "cover",
-                    borderRadius: "10px",
-                  }}
-                />
+            ×
+          </button>
+          <p className="trace-memory-editor__kicker">Memory archive</p>
+          <h1 className="trace-memory-editor__title">
+            {editingIndex !== null ? "Edit Memory" : "Add Memory"}
+          </h1>
+          <p className="trace-memory-editor__supporting-copy">
+            Capture a moment you'll want to remember.
+          </p>
+        </header>
 
+        <div className="trace-memory-editor__primary-fields">
+          <input
+            className="trace-memory-editor__field trace-memory-editor__field--title"
+            placeholder="Memory title..."
+            value={title}
+            onChange={(event) => setTitle(event.target.value)}
+          />
+
+          <label className="trace-memory-editor__date-field">
+            <span className="trace-memory-editor__field-label">Date</span>
+            <span className="trace-memory-editor__date-control">
+              <input
+                className="trace-memory-editor__field trace-memory-editor__field--date"
+                type="date"
+                value={date}
+                onChange={(event) => setDate(event.target.value)}
+              />
+              {!date && (
+                <span
+                  aria-hidden="true"
+                  className="trace-memory-editor__date-placeholder"
+                >
+                  Select a date
+                </span>
+              )}
+            </span>
+          </label>
+
+          <textarea
+            className="trace-memory-editor__field trace-memory-editor__field--story"
+            placeholder="Tell your story..."
+            value={description}
+            onChange={(event) => setDescription(event.target.value)}
+          />
+        </div>
+
+        <section
+          className="trace-memory-editor__section"
+          aria-labelledby="memory-categories-heading"
+        >
+          <h2 id="memory-categories-heading" className="trace-memory-editor__section-title">
+            Categories
+          </h2>
+          <div aria-label="Memory categories" className="trace-memory-editor__categories">
+            {CATEGORY_OPTIONS.map((category) => {
+              const isSelected = categories.includes(category);
+
+              return (
                 <button
+                  className="trace-memory-editor__category"
+                  key={category}
+                  type="button"
+                  aria-pressed={isSelected}
                   onClick={() => {
-                    releaseDraftPhoto(img);
-                    setImages((current) => current.filter((_, i) => i !== index));
-                  }}
-                  style={{
-                    position: "absolute",
-                    top: "6px",
-                    right: "6px",
-                    background: "#dc2626",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "50%",
-                    width: "28px",
-                    height: "28px",
-                    cursor: "pointer",
-                    fontWeight: "bold",
+                    setCategories(
+                      isSelected
+                        ? categories.filter((item) => item !== category)
+                        : [...categories, category]
+                    );
                   }}
                 >
-                  ×
+                  {category}
                 </button>
-              </div>
-            ))}
+              );
+            })}
           </div>
-        </>
-      )}
+        </section>
 
-      <br />
-      <br />
+        <section
+          className="trace-memory-editor__section trace-memory-editor__photos"
+          aria-labelledby="memory-photos-heading"
+        >
+          <div className="trace-memory-editor__photo-heading">
+            <div>
+              <h2 id="memory-photos-heading" className="trace-memory-editor__section-title">
+                Photographs
+              </h2>
+              <p className="trace-memory-editor__section-note">
+                {images.length > 0
+                  ? `${images.length} selected`
+                  : "Choose the images that belong with this Memory."}
+              </p>
+            </div>
 
-      <button
-        style={buttonStyle}
-        onClick={saveMemory}
-      >
-        {editingIndex !== null ? "Save Changes" : "Save Memory"}
-      </button>
+            <label className="trace-memory-editor__photo-picker">
+              {images.length ? "Add More Photos" : "Choose Photos"}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(event) => {
+                  const files = Array.from(event.target.files);
 
-      <br />
-      <br />
+                  if (!files.length) return;
 
-      <button
-        style={{
-          ...buttonStyle,
-          backgroundColor: "#666",
-        }}
-        onClick={cancelMemory}
-      >
-        Cancel
-      </button>
-    </div>
+                  const newImages = files.map((file) => ({
+                    blob: file,
+                    isDraft: true,
+                    url: URL.createObjectURL(file),
+                  }));
+                  setImages((current) => [...current, ...newImages]);
+                  event.target.value = "";
+                }}
+              />
+            </label>
+          </div>
+
+          {images.length > 0 && (
+            <div className="trace-memory-editor__photo-grid">
+              {images.map((image, index) => (
+                <div className="trace-memory-editor__photo" key={index}>
+                  <StoredPhoto
+                    alt={`Memory ${index + 1}`}
+                    className="trace-memory-editor__photo-image"
+                    enabled
+                    loader={photoLoader}
+                    photo={image}
+                    placeholder={(
+                      <span
+                        aria-hidden="true"
+                        className="trace-memory-editor__photo-image trace-memory-editor__photo-placeholder"
+                        data-memory-edit-photo-placeholder="true"
+                      />
+                    )}
+                    priority={PHOTO_LOAD_PRIORITY.detail}
+                  />
+
+                  <button
+                    aria-label={`Remove photo ${index + 1}`}
+                    className="trace-memory-editor__photo-remove"
+                    type="button"
+                    onClick={() => {
+                      releaseDraftPhoto(image);
+                      setImages((current) => current.filter((_, itemIndex) => itemIndex !== index));
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <div className="trace-memory-editor__actions">
+          <button
+            className="trace-memory-editor__action trace-memory-editor__action--primary"
+            onClick={saveMemory}
+          >
+            {editingIndex !== null ? "Save Changes" : "Save Memory"}
+          </button>
+          <button
+            className="trace-memory-editor__action trace-memory-editor__action--secondary"
+            onClick={cancelMemory}
+          >
+            Cancel
+          </button>
+        </div>
+      </article>
+    </main>
   );
 }
 
