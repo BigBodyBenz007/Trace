@@ -44,6 +44,17 @@ test("uses the scoped reflective presentation while retaining the Journal paper"
   expect(screen.getByRole("heading", { name: "New Journal Entry" }).nextElementSibling).toHaveClass("journal-paper");
 });
 
+test("separates the decorative book icon from the centered Journal header copy", () => {
+  render(<JournalPage {...baseProps} />);
+  const heading = screen.getByRole("heading", { name: "Journal" });
+  const copy = heading.parentElement;
+  const header = copy.parentElement;
+  expect(header).toHaveClass("journal-page__header");
+  expect(copy).toHaveClass("journal-page__header-copy");
+  expect(header.firstElementChild).toMatchObject({ tagName: "svg" });
+  expect(header.firstElementChild).toHaveAttribute("aria-hidden", "true");
+});
+
 test("keeps native Journal date and time inputs contained without changing the 360px stack breakpoint", () => {
   const css = fs.readFileSync(path.join(process.cwd(), "src", "index.css"), "utf8");
   const inputRule = css.match(/\.journal-date-time input\s*\{([^}]*)\}/)?.[1] || "";

@@ -130,15 +130,56 @@ function selectBanana() {
   fireEvent.click(screen.getByRole("button", { name: /Banana/i }));
 }
 
+function expandNutritionGoals() {
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition Goals" }));
+}
+
 test("uses the scoped Nutrition ledger presentation without changing semantic controls", () => {
   renderNutritionPage();
   expect(screen.getByTestId("nutrition-page")).toHaveClass("trace-feature-page", "trace-feature-page--nutrition");
-  expect(screen.getByRole("heading", { name: "Today" }).closest("section")).toHaveClass("trace-nutrition-today");
+  expect(screen.getByRole("heading", { name: "Daily Totals" }).closest("section")).toHaveClass("trace-nutrition-today");
+  expandNutritionGoals();
   expect(screen.getByRole("button", { name: "Save Goals" })).toHaveClass("trace-action--primary");
+});
+
+test("collapses Nutrition Goals by default and preserves edits across disclosure toggles", () => {
+  renderNutritionPage();
+  const toggle = screen.getByRole("button", { name: "Nutrition Goals" });
+
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(toggle).toHaveAttribute("aria-controls", "nutrition-goals-panel");
+  expect(screen.queryByRole("heading", { name: "Daily Goals" })).not.toBeInTheDocument();
+
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute("aria-expanded", "true");
+  const goalsForm = screen.getByRole("heading", { name: "Daily Goals" }).closest("form");
+  expect(goalsForm).toHaveAttribute("id", "nutrition-goals-panel");
+  fireEvent.change(within(goalsForm).getByLabelText("Calories"), { target: { value: "2100" } });
+
+  fireEvent.click(toggle);
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("heading", { name: "Daily Goals" })).not.toBeInTheDocument();
+  fireEvent.click(toggle);
+  expect(within(screen.getByRole("heading", { name: "Daily Goals" }).closest("form")).getByLabelText("Calories")).toHaveValue(2100);
+});
+
+test("places food logging before daily, weekly, and monthly totals in semantic DOM order", () => {
+  renderNutritionPage();
+  const foodSearch = screen.getByRole("heading", { name: "Find a Food" });
+  const addFood = screen.getByRole("heading", { name: "Add Nutrition Entry" });
+  const totals = ["Daily Totals", "Weekly Totals", "Monthly Totals"].map((name) =>
+    screen.getByRole("heading", { name })
+  );
+
+  for (const total of totals) {
+    expect(foodSearch.compareDocumentPosition(total) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+    expect(addFood.compareDocumentPosition(total) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+  }
 });
 
 test("confirms successful daily goal saves", () => {
   const props = renderNutritionPage();
+  expandNutritionGoals();
   fireEvent.click(screen.getByRole("button", { name: "Save Goals" }));
   expect(props.saveNutritionGoals).toHaveBeenCalledTimes(1);
   expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Goals traced");
@@ -146,6 +187,7 @@ test("confirms successful daily goal saves", () => {
 
 test("saves an optional sodium goal", () => {
   const props = renderNutritionPage();
+  expandNutritionGoals();
   const goalsForm = screen.getByRole("heading", { name: "Daily Goals" }).closest("form");
   fireEvent.change(within(goalsForm).getByLabelText("Sodium (mg)"), { target: { value: "2300" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Goals" }));

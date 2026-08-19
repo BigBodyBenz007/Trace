@@ -206,6 +206,7 @@ function NutritionPage({
   const [servingDefinitionError, setServingDefinitionError] = useState("");
   const [entryStatusMessage, setEntryStatusMessage] = useState("");
   const [confirmationMessage, setConfirmationMessage] = useState("");
+  const [goalsExpanded, setGoalsExpanded] = useState(false);
   const confirmationTimerRef = useRef(null);
   const nutritionPageTopRef = useRef(null);
   const todaySectionRef = useRef(null);
@@ -273,8 +274,8 @@ function NutritionPage({
     ? (todayTotals.sodium / sodiumGoal) * 100
     : 0;
   const averagePeriods = [
-    { key: "lastSevenDays", label: "Last 7 Days" },
-    { key: "thisMonth", label: "This Month" },
+    { key: "lastSevenDays", label: "Weekly Totals" },
+    { key: "thisMonth", label: "Monthly Totals" },
   ];
   const isCreatingManualFood =
     editingEntryId === null && !foodReference && !portionBasis;
@@ -616,237 +617,72 @@ function NutritionPage({
         Back to Timeline
       </button>
 
-      <section
-        className="trace-feature-surface trace-nutrition-today"
-        ref={todaySectionRef}
-        style={{
-          background: "#1f2937",
-          borderRadius: "16px",
-          maxWidth: "700px",
-          padding: "24px",
-          textAlign: "left",
-          width: "100%",
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>Today</h2>
-
-        <div
-          style={{
-            display: "grid",
-            gap: "12px",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(min(130px, 100%), 1fr))",
-          }}
+      <section className="trace-nutrition-goals-disclosure" aria-labelledby="nutrition-goals-toggle">
+        <button
+          aria-controls="nutrition-goals-panel"
+          aria-expanded={goalsExpanded}
+          className="trace-action trace-action--secondary trace-nutrition-goals-toggle"
+          id="nutrition-goals-toggle"
+          type="button"
+          onClick={() => setGoalsExpanded((expanded) => !expanded)}
         >
-          {nutritionMetrics.map((metric) => {
-            const current = todayTotals[metric.key];
-            const goal = toNutritionNumber(nutritionGoals[metric.key]);
-            const hasGoal = goal > 0;
-            const progress = hasGoal ? (current / goal) * 100 : 0;
-
-            return (
-              <div className="trace-stat-card" key={metric.key}>
-                <strong>
-                  {metric.label}
-                  {metric.unit ? ` (${metric.unit})` : ""}
-                </strong>
-                <p style={{ marginBottom: hasGoal ? "8px" : 0 }}>
-                  {hasGoal
-                    ? `${current}${metric.unit} / ${goal}${metric.unit}`
-                    : `${current}${metric.unit} · No goal set`}
-                </p>
-                {todayTotals.incompleteNutrients?.includes(metric.key) && <p style={{ color: "#fbbf24", margin: "-4px 0 8px" }}>Incomplete: one or more logged foods had an unknown value.</p>}
-
-                <div
-                  aria-label={`${metric.label} progress`}
-                  style={{
-                    background: "#374151",
-                    borderRadius: "999px",
-                    height: "8px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      background: "#5ec8ff",
-                      borderRadius: "999px",
-                      height: "100%",
-                      width: `${hasGoal ? Math.min(progress, 100) : 0}%`,
-                    }}
-                  />
-                </div>
-
-                {hasGoal && (
-                  <p style={{ color: "#9ca3af", marginBottom: 0 }}>
-                    {Math.round(progress)}%
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <div
-          style={{
-            borderTop: "1px solid #374151",
-            display: "grid",
-            gap: "12px",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(min(130px, 100%), 1fr))",
-            marginTop: "18px",
-            paddingTop: "18px",
-          }}
-        >
-          <div className="trace-stat-card">
-          <strong>Sodium (mg)</strong>
-          <p style={{ marginBottom: hasSodiumGoal ? "8px" : 0 }}>
-            {hasSodiumGoal
-              ? `${todayTotals.sodium} / ${sodiumGoal} mg`
-              : `${todayTotals.sodium}mg`}
-            {todayTotals.incompleteNutrients?.includes("sodium") && " · Incomplete: one or more logged foods had unknown sodium."}
-          </p>
-          {todayTotals.incompleteNutrients?.includes("sodium") && (
-            <p style={{ color: "#fbbf24", margin: "-4px 0 8px" }}>
-              Progress may be incomplete because one or more logged foods had unknown sodium.
-            </p>
-          )}
-          {hasSodiumGoal && (
-            <>
-              <div
-                aria-label="Sodium progress"
-                style={{
-                  background: "#374151",
-                  borderRadius: "999px",
-                  height: "8px",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    background: "#5ec8ff",
-                    borderRadius: "999px",
-                    height: "100%",
-                    width: `${Math.min(sodiumProgress, 100)}%`,
-                  }}
-                />
-              </div>
-              <p style={{ color: "#9ca3af", marginBottom: 0 }}>
-                {Math.round(sodiumProgress)}%
-              </p>
-            </>
-          )}
-        </div>
-        <div aria-hidden="true" />
-        <div aria-hidden="true" />
-        <div aria-hidden="true" />
-        </div>
-      </section>
-
-      <section
-        className="trace-feature-surface trace-nutrition-averages"
-        style={{
-          background: "#1f2937",
-          borderRadius: "16px",
-          marginTop: "24px",
-          maxWidth: "700px",
-          padding: "24px",
-          textAlign: "left",
-          width: "100%",
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>Nutrition Averages</h2>
-
-        <div
-          style={{
-            display: "grid",
-            gap: "16px",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(min(240px, 100%), 1fr))",
-          }}
-        >
-          {averagePeriods.map((period) => {
-            const averages = nutritionAverages[period.key];
-
-            return (
-              <article
-                className="trace-data-card trace-data-card--subtle"
-                key={period.key}
-                style={{
-                  background: "#111827",
-                  borderRadius: "12px",
-                  padding: "18px",
-                }}
-              >
-                <h3 style={{ marginTop: 0 }}>{period.label}</h3>
-                <p style={{ color: "#9ca3af" }}>
-                  Based on {averages.loggedDays} logged {averages.loggedDays === 1 ? "day" : "days"}
-                </p>
-
-                <div style={{ display: "grid", gap: "10px" }}>
-                  {averageMetrics.map((metric) => (
-                    <div key={metric.key}>
-                      <strong>Average {metric.label}</strong>
-                      <div>
-                        {formatAverage(averages[metric.key], metric.key)}
-                        {metric.unit}
-                        {averages.incompleteNutrients?.includes(metric.key) ? " (incomplete)" : ""}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </article>
-            );
-          })}
-        </div>
-      </section>
-
-      <form
-        className="trace-feature-surface trace-feature-form trace-nutrition-goals"
-        onSubmit={saveGoals}
-        style={{
-          background: "#1f2937",
-          borderRadius: "16px",
-          marginTop: "24px",
-          maxWidth: "700px",
-          padding: "24px",
-          textAlign: "left",
-          width: "100%",
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>Daily Goals</h2>
-
-        <div
-          style={{
-            display: "grid",
-            gap: "12px",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(min(140px, 100%), 1fr))",
-          }}
-        >
-          {averageMetrics.map((metric) => (
-            <label key={metric.key} style={{ display: "block" }}>
-              {metric.label}
-              {metric.unit ? ` (${metric.unit})` : ""}
-              <input
-                type="number"
-                min="0"
-                step="any"
-                style={formInputStyle}
-                value={goalValues[metric.key]}
-                onChange={(event) =>
-                  setGoalValues({
-                    ...goalValues,
-                    [metric.key]: event.target.value,
-                  })
-                }
-              />
-            </label>
-          ))}
-        </div>
-
-        <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
-          Save Goals
+          <span>Nutrition Goals</span>
+          <span aria-hidden="true" className="trace-nutrition-goals-toggle__indicator">
+            {goalsExpanded ? "\u2212" : "+"}
+          </span>
         </button>
-      </form>
+
+        <form
+          hidden={!goalsExpanded}
+          id="nutrition-goals-panel"
+          className="trace-feature-surface trace-feature-form trace-nutrition-goals"
+          onSubmit={saveGoals}
+          style={{
+            background: "#1f2937",
+            borderRadius: "16px",
+            marginTop: "12px",
+            maxWidth: "700px",
+            padding: "24px",
+            textAlign: "left",
+            width: "100%",
+          }}
+        >
+          <h2 style={{ marginTop: 0 }}>Daily Goals</h2>
+
+          <div
+            style={{
+              display: "grid",
+              gap: "12px",
+              gridTemplateColumns:
+                "repeat(auto-fit, minmax(min(140px, 100%), 1fr))",
+            }}
+          >
+            {averageMetrics.map((metric) => (
+              <label key={metric.key} style={{ display: "block" }}>
+                {metric.label}
+                {metric.unit ? ` (${metric.unit})` : ""}
+                <input
+                  type="number"
+                  min="0"
+                  step="any"
+                  style={formInputStyle}
+                  value={goalValues[metric.key]}
+                  onChange={(event) =>
+                    setGoalValues({
+                      ...goalValues,
+                      [metric.key]: event.target.value,
+                    })
+                  }
+                />
+              </label>
+            ))}
+          </div>
+
+          <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
+            Save Goals
+          </button>
+        </form>
+      </section>
 
       <FoodSearch
         onSelectFood={selectFood}
@@ -1165,6 +1001,190 @@ function NutritionPage({
           </button>
         </div>
       </form>
+
+      <section
+        className="trace-feature-surface trace-nutrition-today"
+        ref={todaySectionRef}
+        style={{
+          background: "#1f2937",
+          borderRadius: "16px",
+          marginTop: "24px",
+          maxWidth: "700px",
+          padding: "24px",
+          textAlign: "left",
+          width: "100%",
+        }}
+      >
+        <h2 style={{ marginTop: 0 }}>Daily Totals</h2>
+
+        <div
+          style={{
+            display: "grid",
+            gap: "12px",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(130px, 100%), 1fr))",
+          }}
+        >
+          {nutritionMetrics.map((metric) => {
+            const current = todayTotals[metric.key];
+            const goal = toNutritionNumber(nutritionGoals[metric.key]);
+            const hasGoal = goal > 0;
+            const progress = hasGoal ? (current / goal) * 100 : 0;
+
+            return (
+              <div className="trace-stat-card" key={metric.key}>
+                <strong>
+                  {metric.label}
+                  {metric.unit ? ` (${metric.unit})` : ""}
+                </strong>
+                <p style={{ marginBottom: hasGoal ? "8px" : 0 }}>
+                  {hasGoal
+                    ? `${current}${metric.unit} / ${goal}${metric.unit}`
+                    : `${current}${metric.unit} · No goal set`}
+                </p>
+                {todayTotals.incompleteNutrients?.includes(metric.key) && <p style={{ color: "#fbbf24", margin: "-4px 0 8px" }}>Incomplete: one or more logged foods had an unknown value.</p>}
+
+                <div
+                  aria-label={`${metric.label} progress`}
+                  style={{
+                    background: "#374151",
+                    borderRadius: "999px",
+                    height: "8px",
+                    overflow: "hidden",
+                  }}
+                >
+                  <div
+                    style={{
+                      background: "#5ec8ff",
+                      borderRadius: "999px",
+                      height: "100%",
+                      width: `${hasGoal ? Math.min(progress, 100) : 0}%`,
+                    }}
+                  />
+                </div>
+
+                {hasGoal && (
+                  <p style={{ color: "#9ca3af", marginBottom: 0 }}>
+                    {Math.round(progress)}%
+                  </p>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div
+          style={{
+            borderTop: "1px solid #374151",
+            display: "grid",
+            gap: "12px",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(130px, 100%), 1fr))",
+            marginTop: "18px",
+            paddingTop: "18px",
+          }}
+        >
+          <div className="trace-stat-card">
+          <strong>Sodium (mg)</strong>
+          <p style={{ marginBottom: hasSodiumGoal ? "8px" : 0 }}>
+            {hasSodiumGoal
+              ? `${todayTotals.sodium} / ${sodiumGoal} mg`
+              : `${todayTotals.sodium}mg`}
+            {todayTotals.incompleteNutrients?.includes("sodium") && " · Incomplete: one or more logged foods had unknown sodium."}
+          </p>
+          {todayTotals.incompleteNutrients?.includes("sodium") && (
+            <p style={{ color: "#fbbf24", margin: "-4px 0 8px" }}>
+              Progress may be incomplete because one or more logged foods had unknown sodium.
+            </p>
+          )}
+          {hasSodiumGoal && (
+            <>
+              <div
+                aria-label="Sodium progress"
+                style={{
+                  background: "#374151",
+                  borderRadius: "999px",
+                  height: "8px",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    background: "#5ec8ff",
+                    borderRadius: "999px",
+                    height: "100%",
+                    width: `${Math.min(sodiumProgress, 100)}%`,
+                  }}
+                />
+              </div>
+              <p style={{ color: "#9ca3af", marginBottom: 0 }}>
+                {Math.round(sodiumProgress)}%
+              </p>
+            </>
+          )}
+        </div>
+        <div aria-hidden="true" />
+        <div aria-hidden="true" />
+        <div aria-hidden="true" />
+        </div>
+      </section>
+
+      <section
+        className="trace-feature-surface trace-nutrition-averages"
+        style={{
+          background: "#1f2937",
+          borderRadius: "16px",
+          marginTop: "24px",
+          maxWidth: "700px",
+          padding: "24px",
+          textAlign: "left",
+          width: "100%",
+        }}
+      >
+        <h2 style={{ marginTop: 0 }}>Nutrition Averages</h2>
+
+        <div
+          style={{
+            display: "grid",
+            gap: "16px",
+            gridTemplateColumns:
+              "repeat(auto-fit, minmax(min(240px, 100%), 1fr))",
+          }}
+        >
+          {averagePeriods.map((period) => {
+            const averages = nutritionAverages[period.key];
+
+            return (
+              <article
+                className="trace-data-card trace-data-card--subtle"
+                key={period.key}
+                style={{
+                  background: "#111827",
+                  borderRadius: "12px",
+                  padding: "18px",
+                }}
+              >
+                <h3 style={{ marginTop: 0 }}>{period.label}</h3>
+                <p style={{ color: "#9ca3af" }}>
+                  Based on {averages.loggedDays} logged {averages.loggedDays === 1 ? "day" : "days"}
+                </p>
+
+                <div style={{ display: "grid", gap: "10px" }}>
+                  {averageMetrics.map((metric) => (
+                    <div key={metric.key}>
+                      <strong>Average {metric.label}</strong>
+                      <div>
+                        {formatAverage(averages[metric.key], metric.key)}
+                        {metric.unit}
+                        {averages.incompleteNutrients?.includes(metric.key) ? " (incomplete)" : ""}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
 
       <section
         className="trace-feature-section trace-feature-history"

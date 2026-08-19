@@ -1445,11 +1445,24 @@ code {
 .journal-page__header {
   align-items: center;
   display: flex;
-  gap: 12px;
   justify-content: center;
   margin: 12px 0 18px;
   max-width: 700px;
-  text-align: left;
+  position: relative;
+  width: 100%;
+}
+
+.journal-page__header > svg {
+  inset-inline-start: 0;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.journal-page__header-copy {
+  box-sizing: border-box;
+  padding-inline: 50px;
+  text-align: center;
   width: 100%;
 }
 
@@ -1877,6 +1890,34 @@ code {
 .trace-feature-page--nutrition .trace-feature-section,
 .trace-feature-page--nutrition .trace-food-search {
   max-width: 780px;
+}
+
+.trace-nutrition-goals-disclosure {
+  max-width: 700px;
+  text-align: left;
+  width: 100%;
+}
+
+.trace-nutrition-goals-toggle {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin: 0 !important;
+  padding: 10px 14px;
+  width: 100%;
+}
+
+.trace-nutrition-goals-toggle__indicator {
+  align-items: center;
+  border: 1px solid var(--trace-border);
+  border-radius: 50%;
+  display: inline-flex;
+  flex: 0 0 28px;
+  font-size: 1.25rem;
+  height: 28px;
+  justify-content: center;
+  line-height: 1;
+  margin-left: 12px;
 }
 
 .trace-nutrition-today > div,

@@ -196,7 +196,7 @@ export default function JournalPage({
     <main className="trace-feature-page trace-feature-page--journal journal-page" style={{ ...containerStyle, justifyContent: "flex-start" }}>
       <header className="trace-feature-page__identity journal-page__header">
         <BookIcon size={38} />
-        <div>
+        <div className="journal-page__header-copy">
           <h1 style={{ margin: 0 }}>Journal</h1>
           <p style={{ color: "#c8b99f", margin: "5px 0 0" }}>Private reflections in Trace. Entries are never shared.</p>
         </div>
