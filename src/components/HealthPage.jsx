@@ -92,14 +92,17 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
   }
 
   return (
-    <main style={{ ...containerStyle, justifyContent: "flex-start" }}>
-      <h1>Health</h1>
-      <p style={{ color: "#bbb", marginTop: 0 }}>Record longitudinal health information without interpretation.</p>
-      <button type="button" onClick={onBack} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Timeline</button>
+    <main className="trace-feature-page trace-feature-page--health" style={{ ...containerStyle, justifyContent: "flex-start" }}>
+      <header className="trace-feature-page__identity">
+        <p className="trace-feature-page__kicker">Personal record</p>
+        <h1>Health</h1>
+        <p className="trace-feature-page__lede" style={{ color: "#bbb", marginTop: 0 }}>Record longitudinal health information without interpretation.</p>
+      </header>
+      <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Timeline</button>
 
-      <section ref={editorRef} aria-labelledby="body-measurements-heading" style={{ marginTop: "32px", maxWidth: "700px", scrollMarginTop: "16px", width: "100%" }}>
+      <section className="trace-feature-section" ref={editorRef} aria-labelledby="body-measurements-heading" style={{ marginTop: "32px", maxWidth: "700px", scrollMarginTop: "16px", width: "100%" }}>
         <h2 id="body-measurements-heading">Body Measurements</h2>
-        <form onSubmit={submit} noValidate style={{ background: "#111827", border: "1px solid #374151", borderRadius: "12px", boxSizing: "border-box", padding: "16px", width: "100%" }}>
+        <form className="trace-feature-surface trace-feature-form" onSubmit={submit} noValidate style={{ background: "#111827", border: "1px solid #374151", borderRadius: "12px", boxSizing: "border-box", padding: "16px", width: "100%" }}>
           <div data-testid="measurement-header" style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
             <label>Date<input aria-label="Date" type="date" required value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} style={fieldInputStyle} /></label>
             <label>Time<input aria-label="Time" type="time" required value={draft.time} onChange={(e) => setDraft({ ...draft, time: e.target.value })} style={fieldInputStyle} /></label>
@@ -125,25 +128,25 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
           <label style={{ display: "block", marginTop: "12px" }}>Notes<textarea aria-label="Notes" value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} style={{ ...fieldInputStyle, minHeight: "90px", resize: "vertical" }} /></label>
           {error && <p role="alert" style={{ color: "#fca5a5" }}>{error}</p>}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "14px" }}>
-            <button type="submit" style={{ ...smallButtonStyle, backgroundColor: "#2563eb" }}>{editingId ? "Save Changes" : "Save Measurement"}</button>
-            {editingId && <button type="button" onClick={resetDraft} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Cancel Edit</button>}
+            <button className="trace-action trace-action--primary" type="submit" style={{ ...smallButtonStyle, backgroundColor: "#2563eb" }}>{editingId ? "Save Changes" : "Save Measurement"}</button>
+            {editingId && <button className="trace-action trace-action--secondary" type="button" onClick={resetDraft} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Cancel Edit</button>}
           </div>
         </form>
       </section>
 
-      <section aria-labelledby="measurement-history-heading" style={{ marginTop: "32px", maxWidth: "700px", width: "100%" }}>
+      <section className="trace-feature-section trace-feature-history" aria-labelledby="measurement-history-heading" style={{ marginTop: "32px", maxWidth: "700px", width: "100%" }}>
         <h2 id="measurement-history-heading">Body Measurement History</h2>
         {sortedEntries.length === 0 ? <p style={{ color: "#bbb" }}>No body measurements yet.</p> : <div style={{ display: "grid", gap: "12px" }}>{sortedEntries.map((entry) => (
-          <article key={entry.id} ref={(node) => { if (node) entryRefs.current.set(entry.id, node); else entryRefs.current.delete(entry.id); }} data-entry-id={entry.id} style={{ background: "#111827", border: "1px solid #374151", borderRadius: "12px", boxSizing: "border-box", overflowWrap: "anywhere", padding: "16px", scrollMarginTop: "16px", width: "100%" }}>
+          <article className="trace-data-card" key={entry.id} ref={(node) => { if (node) entryRefs.current.set(entry.id, node); else entryRefs.current.delete(entry.id); }} data-entry-id={entry.id} style={{ background: "#111827", border: "1px solid #374151", borderRadius: "12px", boxSizing: "border-box", overflowWrap: "anywhere", padding: "16px", scrollMarginTop: "16px", width: "100%" }}>
             <h3 style={{ marginTop: 0 }}>{new Date(entry.occurredAt).toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })}</h3>
             <p style={{ color: "#bbb" }}>{new Date(entry.occurredAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}</p>
             <dl>{HEALTH_MEASUREMENT_FIELDS.filter((field) => entry.measurements?.[field.key]).map((field) => <div key={field.key} style={{ display: "flex", gap: "8px", marginBottom: "6px" }}><dt>{field.label}:</dt><dd style={{ margin: 0 }}>{entry.measurements[field.key].value} {entry.measurements[field.key].unit}</dd></div>)}{entry.measurements?.height && <div style={{ display: "flex", gap: "8px", marginBottom: "6px" }}><dt>Height:</dt><dd style={{ margin: 0 }}>{entry.measurements.height.unit === "ft-in" ? `${entry.measurements.height.feet} ft ${entry.measurements.height.inches} in` : `${entry.measurements.height.value} cm`}</dd></div>}</dl>
             {entry.notes && <p style={{ whiteSpace: "pre-wrap" }}>{entry.notes}</p>}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}><button type="button" onClick={() => beginEdit(entry)} style={{ ...smallButtonStyle, backgroundColor: "#374151" }}>Edit</button><button type="button" onClick={() => remove(entry)} style={{ ...smallButtonStyle, backgroundColor: "#b91c1c" }}>Delete</button></div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}><button className="trace-action trace-action--secondary" type="button" onClick={() => beginEdit(entry)} style={{ ...smallButtonStyle, backgroundColor: "#374151" }}>Edit</button><button className="trace-action trace-action--danger" type="button" onClick={() => remove(entry)} style={{ ...smallButtonStyle, backgroundColor: "#b91c1c" }}>Delete</button></div>
           </article>
         ))}</div>}
       </section>
-      <button type="button" onClick={onBack} style={{ ...smallButtonStyle, backgroundColor: "#4b5563", marginTop: "24px" }}>Back to Timeline</button>
+      <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...smallButtonStyle, backgroundColor: "#4b5563", marginTop: "24px" }}>Back to Timeline</button>
     </main>
   );
 }

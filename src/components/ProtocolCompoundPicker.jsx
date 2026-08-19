@@ -101,7 +101,7 @@ function ProtocolCompoundPicker({ compounds = [], onSelect, onCancel, inputStyle
   }
 
   return (
-    <section aria-label="Protocol compound picker" style={{ background: "#111827", border: "1px solid #4b5563", borderRadius: "12px", padding: "16px" }}>
+    <section className="trace-feature-surface trace-protocol-picker" aria-label="Protocol compound picker" style={{ background: "#111827", border: "1px solid #4b5563", borderRadius: "12px", padding: "16px" }}>
       <h3 style={{ marginTop: 0 }}>Add Protocol Item</h3>
       <p style={{ color: "#d1d5db" }}>
         Saved values are your logging defaults. Trace Database results provide identity only.
@@ -124,13 +124,13 @@ function ProtocolCompoundPicker({ compounds = [], onSelect, onCancel, inputStyle
         <section aria-label="Protocol Saved Compounds" style={{ marginTop: "16px" }}>
           <h4>Your Saved Compounds</h4>
           {saved.map(({ compound }) => (
-            <div key={compound.id} style={{ background: "#1f2937", borderRadius: "8px", marginTop: "8px", padding: "12px" }}>
+            <div className="trace-search-result" key={compound.id} style={{ background: "#1f2937", borderRadius: "8px", marginTop: "8px", padding: "12px" }}>
               <strong>{compound.name}</strong>
               <span style={{ color: "#9ca3af", display: "block", marginTop: "4px" }}>
                 Your saved defaults: {compound.defaults.dose.amount ?? "No amount"}{" "}
                 {formatDoseUnit(compound.defaults.dose)} · {formatRoute(compound.defaults.route)}
               </span>
-              <button type="button" aria-label={`Select saved protocol compound ${compound.name}`} onClick={() => selectSaved(compound)}>
+              <button className="trace-action trace-action--primary" type="button" aria-label={`Select saved protocol compound ${compound.name}`} onClick={() => selectSaved(compound)}>
                 Select Saved Compound
               </button>
             </div>
@@ -142,13 +142,13 @@ function ProtocolCompoundPicker({ compounds = [], onSelect, onCancel, inputStyle
         <section aria-label="Protocol Trace Compound Database" style={{ marginTop: "16px" }}>
           <h4>Trace Compound Database</h4>
           {trace.map(({ compound, matchedAlias }) => (
-            <div key={compound.id} style={{ background: "#1f2937", borderRadius: "8px", marginTop: "8px", padding: "12px" }}>
+            <div className="trace-search-result" key={compound.id} style={{ background: "#1f2937", borderRadius: "8px", marginTop: "8px", padding: "12px" }}>
               <strong>{compound.name}</strong>
               <span style={{ color: "#9ca3af", display: "block" }}>
                 {formatCompoundCategory(compound.category)}
               </span>
               {matchedAlias && <span style={{ color: "#9ca3af", display: "block" }}>Matched alias: {matchedAlias}</span>}
-              <button type="button" aria-label={`Select Trace protocol compound ${compound.name}`} onClick={() => selectTrace(compound)}>
+              <button className="trace-action trace-action--primary" type="button" aria-label={`Select Trace protocol compound ${compound.name}`} onClick={() => selectTrace(compound)}>
                 Select Trace Compound
               </button>
             </div>
@@ -157,11 +157,11 @@ function ProtocolCompoundPicker({ compounds = [], onSelect, onCancel, inputStyle
       )}
 
       {meaningful && (
-        <button type="button" onClick={() => onSelect(blankItem(customName))} style={{ marginTop: "16px" }}>
+        <button className="trace-action trace-action--secondary" type="button" onClick={() => onSelect(blankItem(customName))} style={{ marginTop: "16px" }}>
           Use “{customName}” as Custom Compound
         </button>
       )}
-      <button type="button" onClick={onCancel} style={{ marginLeft: "8px", marginTop: "16px" }}>
+      <button className="trace-action trace-action--secondary" type="button" onClick={onCancel} style={{ marginLeft: "8px", marginTop: "16px" }}>
         Cancel Add Item
       </button>
     </section>

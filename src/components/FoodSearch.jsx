@@ -11,7 +11,7 @@ function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
   useEffect(() => setQuery(""), [resetKey]);
 
   return (
-    <section style={{ background: "#1f2937", borderRadius: "16px", marginTop: "24px", maxWidth: "700px", padding: "24px", textAlign: "left", width: "100%" }}>
+    <section className="trace-feature-surface trace-food-search" style={{ background: "#1f2937", borderRadius: "16px", marginTop: "24px", maxWidth: "700px", padding: "24px", textAlign: "left", width: "100%" }}>
       <h2 style={{ marginTop: 0 }}>Find a Food</h2>
       <p style={{ color: "#d1d5db" }}>Search starter, restaurant, or saved foods, or use the manual entry form below.</p>
       <label style={{ display: "block" }}>
@@ -21,10 +21,10 @@ function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
       {results.length > 0 && (
         <div aria-label="Food search results" style={{ display: "grid", gap: "10px", marginTop: "16px" }}>
           {results.map((food) => (
-            <button key={food.id} type="button" onClick={() => onSelectFood(food)} style={{ background: "#111827", border: "1px solid #4b5563", borderRadius: "12px", color: "white", cursor: "pointer", overflowWrap: "anywhere", padding: "14px", textAlign: "left", width: "100%" }}>
+            <button className="trace-search-result" key={food.id} type="button" onClick={() => onSelectFood(food)} style={{ background: "#111827", border: "1px solid #4b5563", borderRadius: "12px", color: "white", cursor: "pointer", overflowWrap: "anywhere", padding: "14px", textAlign: "left", width: "100%" }}>
               <span style={{ alignItems: "baseline", display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "space-between" }}>
                 <strong>{food.restaurant ? `${food.restaurant.name} · ${food.name}` : food.name}</strong>
-                <span style={{ background: "#374151", borderRadius: "999px", color: "#d1d5db", fontSize: "13px", padding: "4px 8px" }}>
+                <span className="trace-badge" style={{ background: "#374151", borderRadius: "999px", color: "#d1d5db", fontSize: "13px", padding: "4px 8px" }}>
                   {food.provenance.completeness === "partial" ? "Partial nutrition" : CONFIDENCE_LABELS[food.provenance.confidence] || food.provenance.confidence}
                 </span>
               </span>

@@ -33,7 +33,7 @@ function ExerciseSearch({
   }, [autoFocus]);
 
   return (
-    <div style={{ border: "1px solid #4b5563", borderRadius: "10px", marginBottom: "14px", padding: "14px" }}>
+    <div className="trace-feature-surface trace-exercise-search" style={{ border: "1px solid #4b5563", borderRadius: "10px", marginBottom: "14px", padding: "14px" }}>
       <label style={{ display: "block" }}>
         Exercise search
         <input
@@ -48,8 +48,8 @@ function ExerciseSearch({
       {results.length > 0 && (
         <div aria-label="Exercise search results" style={{ display: "grid", gap: "8px", marginTop: "12px" }}>
           {results.map(({ source, exercise }) => (
-            <div key={`${source}:${exercise.id}`} style={{ background: "#111827", borderRadius: "8px", overflowWrap: "anywhere", padding: "12px", width: "100%" }}>
-              <span style={{ background: source === "trace" ? "#1e3a5f" : "#374151", borderRadius: "999px", color: "#dbeafe", display: "inline-block", fontSize: "12px", marginBottom: "6px", padding: "3px 8px" }}>
+            <div className="trace-search-result" key={`${source}:${exercise.id}`} style={{ background: "#111827", borderRadius: "8px", overflowWrap: "anywhere", padding: "12px", width: "100%" }}>
+              <span className="trace-badge" style={{ background: source === "trace" ? "#1e3a5f" : "#374151", borderRadius: "999px", color: "#dbeafe", display: "inline-block", fontSize: "12px", marginBottom: "6px", padding: "3px 8px" }}>
                 {source === "trace" ? "Trace Exercise" : "Saved Exercise"}
               </span>
               <strong style={{ display: "block" }}>{exercise.name}</strong>
@@ -59,8 +59,8 @@ function ExerciseSearch({
                   : `Default: ${loadLabel(exercise)}`}
               </span>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }}>
-                <button type="button" aria-label={`Select ${source === "trace" ? "Trace" : "saved"} exercise ${exercise.name}`} onClick={() => source === "trace" ? onSelectBuiltInExercise(exercise) : onSelectExercise(exercise)} style={{ background: "#2563eb", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", minHeight: "38px", padding: "8px 14px" }}>Select</button>
-                {source === "saved" && <button type="button" aria-label={`Edit saved exercise ${exercise.name}`} onClick={() => onEditExercise(exercise)} style={{ background: "#4b5563", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", minHeight: "38px", padding: "8px 14px" }}>Edit Saved Exercise</button>}
+                <button className="trace-action trace-action--primary" type="button" aria-label={`Select ${source === "trace" ? "Trace" : "saved"} exercise ${exercise.name}`} onClick={() => source === "trace" ? onSelectBuiltInExercise(exercise) : onSelectExercise(exercise)} style={{ background: "#2563eb", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", minHeight: "38px", padding: "8px 14px" }}>Select</button>
+                {source === "saved" && <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit saved exercise ${exercise.name}`} onClick={() => onEditExercise(exercise)} style={{ background: "#4b5563", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", minHeight: "38px", padding: "8px 14px" }}>Edit Saved Exercise</button>}
               </div>
             </div>
           ))}

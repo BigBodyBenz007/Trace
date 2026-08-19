@@ -2,6 +2,12 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import SettingsPage from "./SettingsPage";
 import { DEFAULT_APP_SETTINGS } from "../services/appSettings";
 
+test("uses the scoped quiet-utility presentation and selected-state controls", () => {
+  render(<SettingsPage settings={DEFAULT_APP_SETTINGS} updateSettings={jest.fn()} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+  expect(screen.getByTestId("settings-page")).toHaveClass("trace-feature-page--settings");
+  expect(screen.getByRole("radio", { name: /River/ }).closest("label")).toHaveAttribute("data-selected", "true");
+});
+
 test("renders compact global unit controls and saves each preference", () => {
   const updateSettings = jest.fn();
   render(<SettingsPage settings={DEFAULT_APP_SETTINGS} updateSettings={updateSettings} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);

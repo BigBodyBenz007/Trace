@@ -193,15 +193,15 @@ export default function JournalPage({
   }
 
   return (
-    <main className="journal-page" style={{ ...containerStyle, justifyContent: "flex-start" }}>
-      <header className="journal-page__header">
+    <main className="trace-feature-page trace-feature-page--journal journal-page" style={{ ...containerStyle, justifyContent: "flex-start" }}>
+      <header className="trace-feature-page__identity journal-page__header">
         <BookIcon size={38} />
         <div>
           <h1 style={{ margin: 0 }}>Journal</h1>
           <p style={{ color: "#c8b99f", margin: "5px 0 0" }}>Private reflections in Trace. Entries are never shared.</p>
         </div>
       </header>
-      <button type="button" onClick={backToTimeline} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Timeline</button>
+      <button className="trace-action trace-action--secondary" type="button" onClick={backToTimeline} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Timeline</button>
 
       <section ref={editorRef} aria-labelledby="journal-composer-heading" className="journal-section journal-composer">
         <h2 id="journal-composer-heading">{editingId ? "Edit Journal Entry" : "New Journal Entry"}</h2>
@@ -228,9 +228,9 @@ export default function JournalPage({
           </label>
           {error && <p role="alert" className="journal-error">{error}</p>}
           <div className="journal-actions">
-            <button type="submit" style={{ ...smallButtonStyle, backgroundColor: "#75583d" }}>{editingId ? "Save Changes" : "Save Journal Entry"}</button>
-            {editingId && <button type="button" onClick={cancelEdit} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Cancel Edit</button>}
-            {draftActive && <button type="button" onClick={discardDraft} style={{ ...smallButtonStyle, backgroundColor: "#6b3f3f" }}>Discard draft</button>}
+            <button className="trace-action trace-action--brass" type="submit" style={{ ...smallButtonStyle, backgroundColor: "#75583d" }}>{editingId ? "Save Changes" : "Save Journal Entry"}</button>
+            {editingId && <button className="trace-action trace-action--secondary" type="button" onClick={cancelEdit} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Cancel Edit</button>}
+            {draftActive && <button className="trace-action trace-action--danger" type="button" onClick={discardDraft} style={{ ...smallButtonStyle, backgroundColor: "#6b3f3f" }}>Discard draft</button>}
           </div>
         </form>
       </section>
@@ -254,10 +254,10 @@ export default function JournalPage({
                   <p className="journal-card__date">{formatSelectedDate(entry)}</p>
                   <p className="journal-card__body">{body}</p>
                   {(entry.mood || entry.tags.length > 0) && <p className="journal-card__meta">{[entry.mood, ...entry.tags.map((tag) => `#${tag}`)].filter(Boolean).join(" · ")}</p>}
-                  {needsPreview && <button type="button" onClick={() => setExpandedIds((current) => { const next = new Set(current); if (expanded) next.delete(entry.id); else next.add(entry.id); return next; })} style={{ ...smallButtonStyle, backgroundColor: "#5b4634" }}>{expanded ? "Show less" : "Read full entry"}</button>}
+                  {needsPreview && <button className="trace-action trace-action--brass" type="button" onClick={() => setExpandedIds((current) => { const next = new Set(current); if (expanded) next.delete(entry.id); else next.add(entry.id); return next; })} style={{ ...smallButtonStyle, backgroundColor: "#5b4634" }}>{expanded ? "Show less" : "Read full entry"}</button>}
                   <div className="journal-actions">
-                    <button type="button" onClick={() => beginEdit(entry)} style={{ ...smallButtonStyle, backgroundColor: "#374151" }}>Edit</button>
-                    <button type="button" onClick={() => remove(entry)} style={{ ...smallButtonStyle, backgroundColor: "#991b1b" }}>Delete</button>
+                    <button className="trace-action trace-action--secondary" type="button" onClick={() => beginEdit(entry)} style={{ ...smallButtonStyle, backgroundColor: "#374151" }}>Edit</button>
+                    <button className="trace-action trace-action--danger" type="button" onClick={() => remove(entry)} style={{ ...smallButtonStyle, backgroundColor: "#991b1b" }}>Delete</button>
                   </div>
                 </article>
               );
@@ -265,7 +265,7 @@ export default function JournalPage({
           </div>
         )}
       </section>
-      <button type="button" onClick={backToTimeline} style={{ ...smallButtonStyle, backgroundColor: "#4b5563", marginTop: "24px" }}>Back to Timeline</button>
+      <button className="trace-action trace-action--secondary" type="button" onClick={backToTimeline} style={{ ...smallButtonStyle, backgroundColor: "#4b5563", marginTop: "24px" }}>Back to Timeline</button>
     </main>
   );
 }

@@ -90,6 +90,40 @@ function openWorkouts() {
   fireEvent.click(screen.getByRole("button", { name: "Workouts" }));
 }
 
+function mockWindowScrollPosition(scrollX, scrollY) {
+  const originalScrollX = Object.getOwnPropertyDescriptor(window, "scrollX");
+  const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
+  Object.defineProperty(window, "scrollX", { configurable: true, value: scrollX });
+  Object.defineProperty(window, "scrollY", { configurable: true, value: scrollY });
+  return () => {
+    if (originalScrollX) Object.defineProperty(window, "scrollX", originalScrollX);
+    else delete window.scrollX;
+    if (originalScrollY) Object.defineProperty(window, "scrollY", originalScrollY);
+    else delete window.scrollY;
+  };
+}
+
+function captureCeremonyTimers() {
+  const callbacks = new Map();
+  const ceremonyDelays = new Set([350, 1750, 2850, 3000, 3800]);
+  const nativeSetTimeout = window.setTimeout.bind(window);
+  const timerSpy = jest.spyOn(window, "setTimeout").mockImplementation((callback, delay, ...args) => {
+    if (!ceremonyDelays.has(delay)) return nativeSetTimeout(callback, delay, ...args);
+    callbacks.set(delay, () => callback(...args));
+    return 100000 + delay;
+  });
+  return {
+    run(delay) {
+      const callback = callbacks.get(delay);
+      if (!callback) throw new Error(`No ceremony timer captured for ${delay}ms`);
+      act(callback);
+    },
+    restore() {
+      timerSpy.mockRestore();
+    },
+  };
+}
+
 function openMedications() {
   fireEvent.click(
     screen.getByRole("button", { name: "Medications & Supplements" })
@@ -821,6 +855,73 @@ test("Add Memory to Timeline lands at the top", () => {
   expectDestinationScrolledToTop();
 });
 
+test("Memory Detail keeps its route, lock, and exact origin beneath the full ceremony lifecycle", () => {
+  const memory = {
+    id: "memory-ceremony-route",
+    title: "Graduation Day",
+    description: "Finally finished my degree.",
+    date: "2026-05-18",
+    categories: ["Milestone"],
+    images: [],
+    favorite: false,
+  };
+  localStorage.setItem("memories", JSON.stringify([memory]));
+  const restoreScrollPosition = mockWindowScrollPosition(18, 240);
+  render(<App />);
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  viewport.scrollLeft = 412;
+  viewport.scrollTop = 19;
+  fireEvent.click(screen.getByTestId(`timeline-memory-${memory.id}`));
+  const detail = screen.getByRole("dialog", { name: "Memory details for Graduation Day" });
+  const detailPanel = screen.getByTestId("memory-detail-panel");
+  const trophyControl = within(detail).getByRole("button", { name: "Add to Trophy Case" });
+  trophyControl.focus();
+  const storageWrite = jest.spyOn(Storage.prototype, "setItem");
+  const ceremonyTimers = captureCeremonyTimers();
+
+  fireEvent.click(trophyControl);
+  const ceremony = screen.getByRole("dialog", { name: "Added to Trophy Case" });
+  expect(ceremony).toHaveAttribute("data-phase", "closed");
+  expect(detail).toBeInTheDocument();
+  expect(document.querySelector(".trace-app-shell")).toHaveAttribute("inert");
+  expect(document.querySelector(".trace-app-shell")).toHaveAttribute("aria-hidden", "true");
+  expect(storageWrite.mock.calls.filter(([key]) => key === "trophyCaseEntries")).toHaveLength(1);
+  expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toHaveLength(1);
+
+  ceremonyTimers.run(350);
+  expect(ceremony).toHaveAttribute("data-phase", "opening");
+  ceremonyTimers.run(1750);
+  expect(ceremony).toHaveAttribute("data-phase", "placing");
+  ceremonyTimers.run(2850);
+  expect(ceremony).toHaveAttribute("data-phase", "settled");
+  ceremonyTimers.run(3000);
+  expect(ceremony).toHaveAttribute("data-phase", "plaque");
+  ceremonyTimers.run(3800);
+  expect(ceremony).toHaveAttribute("data-phase", "complete");
+
+  fireEvent.keyDown(document, { key: "Escape" });
+  ceremonyTimers.restore();
+  expect(screen.queryByRole("dialog", { name: "Added to Trophy Case" })).not.toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "Memory details for Graduation Day" })).toBeInTheDocument();
+  expect(document.querySelector(".trace-app-shell")).not.toHaveAttribute("inert");
+  expect(detailPanel).toHaveFocus();
+  expect(document.body).toHaveStyle({ position: "fixed", top: "-240px", overflow: "hidden" });
+  expect(within(detail).getByRole("button", { name: "In Trophy Case" })).toBeDisabled();
+
+  viewport.scrollLeft = 0;
+  viewport.scrollTop = 0;
+  fireEvent.click(within(detail).getByRole("button", { name: "Close memory details" }));
+  expect(viewport.scrollLeft).toBe(412);
+  expect(viewport.scrollTop).toBe(19);
+  expect(document.body.style.position).toBe("");
+  expect(document.body.style.overflow).toBe("");
+  expect(document.documentElement.style.overflow).toBe("");
+  expect(window.scrollTo).toHaveBeenCalledWith(18, 240);
+
+  storageWrite.mockRestore();
+  restoreScrollPosition();
+});
+
 test("new Memory trophies persist, trigger the shared ceremony, preserve snapshots, and can be re-added", async () => {
   putPhotos.mockResolvedValue(undefined);
   deletePhotos.mockResolvedValue(undefined);
@@ -833,10 +934,14 @@ test("new Memory trophies persist, trigger the shared ceremony, preserve snapsho
 
   await screen.findByRole("heading", { name: "Trace" });
   const suggestion = screen.getByRole("region", { name: "Memory achievement suggestion" });
+  const storageWrite = jest.spyOn(Storage.prototype, "setItem");
   fireEvent.click(within(suggestion).getByRole("button", { name: "Add to Trophy Case" }));
   const ceremony = screen.getByRole("dialog", { name: "Added to Trophy Case" });
   expect(ceremony).toHaveTextContent("Graduation Day");
-  expect(ceremony).toHaveTextContent("Finally finished my degree.");
+  expect(ceremony).toHaveTextContent("May 18, 2026");
+  expect(ceremony).not.toHaveTextContent("Finally finished my degree.");
+  expect(storageWrite.mock.calls.filter(([key]) => key === "trophyCaseEntries")).toHaveLength(1);
+  storageWrite.mockRestore();
   const originalTrophies = JSON.parse(localStorage.getItem("trophyCaseEntries"));
   expect(originalTrophies).toHaveLength(1);
   expect(originalTrophies[0]).toMatchObject({
@@ -848,8 +953,9 @@ test("new Memory trophies persist, trigger the shared ceremony, preserve snapsho
   expect(screen.getByLabelText("In Trophy Case")).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
-  expect(screen.getByRole("group", { name: "Graduation Day trophy" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Open achievement: Graduation Day" })).toBeInTheDocument();
   expect(screen.queryByRole("dialog", { name: "Added to Trophy Case" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Open achievement: Graduation Day" }));
   fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(JSON.parse(localStorage.getItem("memories"))).toHaveLength(1);
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
@@ -1739,8 +1845,8 @@ test("refreshes a resolvable curated PR after correction and freezes it after so
   const currentRecords = screen.getByRole("region", { name: "Dips current records" });
   fireEvent.click(within(currentRecords).getByRole("button", { name: "Add to Trophy Case" }));
   expect(screen.getByRole("dialog", { name: "Added to Trophy Case" })).toHaveTextContent("6 reps");
-  expect(screen.getAllByRole("button", { name: "In Trophy Case" }).every((button) => button.disabled)).toBe(true);
-  expect(screen.getByRole("group", { name: "Dips trophy" })).toHaveTextContent("6 reps");
+  expect(screen.getAllByRole("button", { name: "In Trophy Case", hidden: true }).every((button) => button.disabled)).toBe(true);
+  expect(screen.getByRole("group", { name: "Dips trophy", hidden: true })).toHaveTextContent("6 reps");
   const curatedSnapshot = JSON.parse(localStorage.getItem("trophyCaseEntries"));
   expect(curatedSnapshot).toHaveLength(1);
   expect(curatedSnapshot[0]).toMatchObject({
@@ -1788,6 +1894,7 @@ test("dedicated Trophy Case removal preserves workout history, derived PRs, and 
 
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
+  fireEvent.click(screen.getByRole("button", { name: /Open workout achievement: Dips/i }));
   fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual([]);
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual(storedWorkouts);
@@ -1801,6 +1908,7 @@ test("dedicated Trophy Case removal preserves workout history, derived PRs, and 
 });
 
 test("adding a PR Timeline achievement keeps both Timeline and Exercise History expanded", () => {
+  const restoreScrollPosition = mockWindowScrollPosition(0, 180);
   render(<App />);
   openWorkouts();
   fillBodyweightWorkout("Push Day");
@@ -1809,16 +1917,37 @@ test("adding a PR Timeline achievement keeps both Timeline and Exercise History 
   fireEvent.click(summary);
   fireEvent.click(screen.getByRole("button", { name: "View PR Timeline" }));
   const timeline = screen.getByRole("region", { name: "Dips PR timeline" });
+  const storageWrite = jest.spyOn(Storage.prototype, "setItem");
+  const ceremonyTimers = captureCeremonyTimers();
   fireEvent.click(within(timeline).getByRole("button", { name: "Add to Trophy Case" }));
 
-  expect(screen.getByRole("dialog", { name: "Added to Trophy Case" })).toBeInTheDocument();
+  const ceremony = screen.getByRole("dialog", { name: "Added to Trophy Case" });
+  expect(ceremony).toHaveAttribute("data-phase", "closed");
+  expect(storageWrite.mock.calls.filter(([key]) => key === "trophyCaseEntries")).toHaveLength(1);
+  expect(document.body.style.overflow).toBe("hidden");
+  ceremonyTimers.run(350);
+  expect(ceremony).toHaveAttribute("data-phase", "opening");
+  ceremonyTimers.run(1750);
+  expect(ceremony).toHaveAttribute("data-phase", "placing");
+  ceremonyTimers.run(2850);
+  expect(ceremony).toHaveAttribute("data-phase", "settled");
+  ceremonyTimers.run(3000);
+  expect(ceremony).toHaveAttribute("data-phase", "plaque");
+  ceremonyTimers.run(3800);
+  expect(ceremony).toHaveAttribute("data-phase", "complete");
   const closeCeremony = screen.getByRole("button", { name: "Close Trophy Case ceremony" });
   fireEvent.mouseDown(closeCeremony);
   fireEvent.click(closeCeremony);
+  ceremonyTimers.restore();
+  expect(document.body.style.overflow).toBe("");
+  expect(document.documentElement.style.overflow).toBe("");
+  expect(window.scrollY).toBe(180);
   expect(screen.getByRole("region", { name: "Dips PR timeline" })).toBeInTheDocument();
   expect(summary).toHaveAttribute("aria-expanded", "true");
   expect(within(screen.getByRole("region", { name: "Dips PR timeline" }))
     .getByRole("button", { name: "In Trophy Case" })).toBeDisabled();
+  storageWrite.mockRestore();
+  restoreScrollPosition();
 });
 
 test("loading or removing an existing trophy never replays its ceremony", () => {

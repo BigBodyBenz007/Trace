@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import BackupPage from "./BackupPage";
 import {
   createTraceBackup,
@@ -41,6 +41,29 @@ function mockNavigator(values) {
     });
   };
 }
+
+test("separates navigation from the paired archive actions without changing handlers", () => {
+  const onBack = jest.fn();
+  render(<BackupPage onBack={onBack} buttonStyle={{}} containerStyle={{}} />);
+  expect(screen.getByRole("heading", { name: "Backup & Restore" }).closest("main")).toHaveClass("trace-feature-page--backup");
+  const navigation = screen.getByRole("navigation", { name: "Backup navigation" });
+  const archiveActions = screen.getByRole("region", { name: "Archive actions" });
+  const back = within(navigation).getByRole("button", { name: "Back to Timeline" });
+  const download = within(archiveActions).getByRole("button", { name: "Download Trace Backup" });
+  const select = within(archiveActions).getByRole("button", { name: "Select Backup to Restore" });
+  expect(within(navigation).queryByRole("button", { name: "Download Trace Backup" })).not.toBeInTheDocument();
+  expect(within(navigation).queryByRole("button", { name: "Select Backup to Restore" })).not.toBeInTheDocument();
+  expect(download).toHaveClass("trace-action--primary");
+  expect(select).toHaveClass("trace-action--brass");
+
+  const fileInput = document.querySelector('input[type="file"]');
+  const inputClick = jest.spyOn(fileInput, "click");
+  fireEvent.click(back);
+  fireEvent.click(select);
+  expect(onBack).toHaveBeenCalledTimes(1);
+  expect(inputClick).toHaveBeenCalledTimes(1);
+  inputClick.mockRestore();
+});
 
 function readFileText(file) {
   return new Promise((resolve, reject) => {

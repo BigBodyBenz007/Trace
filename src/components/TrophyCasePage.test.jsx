@@ -22,6 +22,13 @@ function trophy(overrides = {}) {
   };
 }
 
+test("uses the scoped celebratory presentation without changing Trophy semantics", () => {
+  render(<TrophyCasePage onBack={jest.fn()} trophyEntries={[trophy()]} buttonStyle={{}} containerStyle={{}} />);
+  expect(screen.getByRole("heading", { level: 1, name: "Trophy Case" }).closest(".trace-feature-page")).toHaveClass("trace-feature-page--trophy-case");
+  expect(screen.getByTestId("trophy-cabinet")).toHaveClass("trace-trophy-cabinet");
+  expect(screen.getByRole("button", { name: "Open workout achievement: Bench Press, heaviest weight" })).toHaveAttribute("data-award-variant", "championship-cup");
+});
+
 test("renders a user-curated page heading, navigation, and existing empty state", () => {
   const onBack = jest.fn();
   render(
@@ -68,11 +75,12 @@ test("shows mixed sources and delegates membership removal", () => {
 
   const life = screen.getByRole("region", { name: "Life Achievements" });
   const workouts = screen.getByRole("region", { name: "Workout Achievements" });
-  expect(within(life).getByRole("group", { name: "Graduation Day trophy" })).toBeInTheDocument();
-  expect(within(life).queryByRole("group", { name: "Bench Press trophy" })).not.toBeInTheDocument();
-  expect(within(workouts).getByRole("group", { name: "Bench Press trophy" })).toBeInTheDocument();
-  expect(screen.getByTestId("trophy-source-groups")).toHaveStyle({ display: "grid" });
-  fireEvent.click(screen.getAllByRole("button", { name: "Remove from Trophy Case" })[0]);
+  expect(within(life).getByRole("button", { name: "Open achievement: Graduation Day" })).toBeInTheDocument();
+  expect(within(life).queryByRole("button", { name: /Bench Press/ })).not.toBeInTheDocument();
+  expect(within(workouts).getByRole("button", { name: /Open workout achievement: Bench Press/ })).toBeInTheDocument();
+  expect(screen.getByTestId("trophy-source-groups")).toHaveClass("trace-trophy-cabinet__interior");
+  fireEvent.click(within(life).getByRole("button", { name: "Open achievement: Graduation Day" }));
+  fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(remove).toHaveBeenCalledWith("memory-trophy");
 });
 
@@ -102,10 +110,10 @@ test("preserves existing ordering within each source group", () => {
   );
 
   const labelsIn = (regionName) => within(screen.getByRole("region", { name: regionName }))
-    .getAllByRole("group", { name: /trophy$/ })
-    .map((card) => card.getAttribute("aria-label"));
-  expect(labelsIn("Life Achievements")).toEqual(["Newer Life trophy", "Older Life trophy"]);
-  expect(labelsIn("Workout Achievements")).toEqual(["Newer Workout trophy", "Older Workout trophy"]);
+    .getAllByRole("button", { name: /^Open/ })
+    .map((button) => button.getAttribute("aria-label"));
+  expect(labelsIn("Life Achievements")).toEqual(["Open achievement: Newer Life", "Open achievement: Older Life"]);
+  expect(labelsIn("Workout Achievements")).toEqual(["Open workout achievement: Newer Workout, heaviest weight", "Open workout achievement: Older Workout, heaviest weight"]);
 });
 
 test("renders intentional empty-group copy when only one source is present", () => {
@@ -118,15 +126,39 @@ test("renders intentional empty-group copy when only one source is present", () 
   );
   expect(screen.getByRole("heading", { name: "Life Achievements" })).toBeInTheDocument();
   expect(screen.getByText("No Life Achievements curated yet.")).toBeInTheDocument();
-  expect(screen.getByRole("group", { name: "Bench Press trophy" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Open workout achievement: Bench Press/ })).toBeInTheDocument();
   expect(screen.queryByText("No trophies yet. Achievements you choose to celebrate will appear here.")).not.toBeInTheDocument();
 });
 
 test("shows disabled unavailable source behavior without affecting removal", () => {
   const remove = jest.fn();
   render(<TrophyCasePage trophyEntries={[trophy()]} onViewSource={jest.fn()} sourceAvailable={() => false} removeTrophyCaseEntry={remove} />);
+  fireEvent.click(screen.getByRole("button", { name: /Open workout achievement: Bench Press/ }));
   expect(screen.getByRole("button", { name: "View Workout" })).toBeDisabled();
   expect(screen.getByText("Source no longer available")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(remove).toHaveBeenCalledWith("workout-trophy");
+});
+
+test("delegates both source-navigation actions from the selected award detail", () => {
+  const view = jest.fn();
+  const memory = trophy({ id: "memory-trophy", sourceType: "memory", sourceKey: "memory|logo", sourceRecordType: null, title: "Logo in effect", sourceSnapshot: { description: "A meaningful launch." } });
+  render(<TrophyCasePage trophyEntries={[trophy(), memory]} onViewSource={view} sourceAvailable={() => true} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Open achievement: Logo in effect" }));
+  fireEvent.click(screen.getByRole("button", { name: "View Memory" }));
+  expect(view).toHaveBeenLastCalledWith(expect.objectContaining({ id: "memory-trophy" }));
+
+  fireEvent.click(screen.getByRole("button", { name: /Open workout achievement: Bench Press/ }));
+  fireEvent.click(screen.getByRole("button", { name: "View Workout" }));
+  expect(view).toHaveBeenLastCalledWith(expect.objectContaining({ id: "workout-trophy" }));
+});
+
+test("keeps long titles available to assistive technology and reveals them in full", () => {
+  const longTitle = "A very long personal achievement title that must remain represented safely inside the cabinet";
+  render(<TrophyCasePage trophyEntries={[trophy({ title: longTitle })]} />);
+  const trigger = screen.getByRole("button", { name: `Open workout achievement: ${longTitle}, heaviest weight` });
+  expect(within(trigger).getByTitle(longTitle)).toBeInTheDocument();
+  fireEvent.click(trigger);
+  expect(screen.getByRole("heading", { name: longTitle })).toBeInTheDocument();
 });

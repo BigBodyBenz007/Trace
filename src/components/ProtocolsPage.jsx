@@ -154,6 +154,7 @@ function ProtocolsPage({
         <div style={{ display: "grid", gap: "12px" }}>
           {entries.map((protocol) => (
             <article
+              className="trace-data-card trace-protocol-card"
               key={protocol.id}
               ref={(element) => {
                 if (element) rowRefs.current.set(protocol.id, element);
@@ -165,7 +166,7 @@ function ProtocolsPage({
               <h3 style={{ marginTop: 0 }}>{protocol.name}</h3>
               <p>Start: {formatDate(protocol.startDate)}{protocol.endDate ? ` · End: ${formatDate(protocol.endDate)}` : " · Open-ended"}</p>
               <p>{protocol.items.length} {protocol.items.length === 1 ? "compound" : "compounds"} · {protocolScheduleSummary(protocol)}</p>
-              <button type="button" onClick={() => openDetail(protocol.id)}>View Protocol</button>
+              <button className="trace-action trace-action--secondary" type="button" onClick={() => openDetail(protocol.id)}>View Protocol</button>
             </article>
           ))}
         </div>
@@ -175,7 +176,7 @@ function ProtocolsPage({
 
   if (editorMode) {
     return (
-      <div ref={pageTopRef} data-testid="protocols-page" style={containerStyle}>
+      <div className="trace-feature-page trace-feature-page--protocols" ref={pageTopRef} data-testid="protocols-page" style={containerStyle}>
         <div ref={editorRef} data-testid="protocol-editor-context" style={{ display: "flex", justifyContent: "center", scrollMarginTop: "24px", width: "100%" }}>
           <ProtocolEditor
             protocol={editorMode === "edit" ? selected : null}
@@ -193,15 +194,15 @@ function ProtocolsPage({
   if (selected) {
     const actions = (position) => (
       <div aria-label={`${position} protocol detail actions`} style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "16px" }}>
-        <button type="button" onClick={closeDetail} style={backStyle}>Back to Protocols</button>
-        {selected.status === "active" && <button type="button" onClick={openEdit}>Edit Protocol</button>}
-        {selected.status === "active" && <button type="button" onClick={finishProtocol}>End Protocol</button>}
-        <button type="button" onClick={removeProtocol}>Delete Protocol</button>
+        <button className="trace-action trace-action--secondary" type="button" onClick={closeDetail} style={backStyle}>Back to Protocols</button>
+        {selected.status === "active" && <button className="trace-action trace-action--primary" type="button" onClick={openEdit}>Edit Protocol</button>}
+        {selected.status === "active" && <button className="trace-action trace-action--brass" type="button" onClick={finishProtocol}>End Protocol</button>}
+        <button className="trace-action trace-action--danger" type="button" onClick={removeProtocol}>Delete Protocol</button>
       </div>
     );
     return (
-      <div data-testid="protocols-page" style={containerStyle}>
-        <article ref={detailRef} data-testid="protocol-detail" style={{ background: "#1f2937", borderRadius: "16px", maxWidth: "800px", padding: "24px", scrollMarginTop: "24px", textAlign: "left", width: "100%" }}>
+      <div className="trace-feature-page trace-feature-page--protocols" data-testid="protocols-page" style={containerStyle}>
+        <article className="trace-feature-surface trace-protocol-detail" ref={detailRef} data-testid="protocol-detail" style={{ background: "#1f2937", borderRadius: "16px", maxWidth: "800px", padding: "24px", scrollMarginTop: "24px", textAlign: "left", width: "100%" }}>
           <h1 style={{ marginTop: 0 }}>{selected.name}</h1>
           {actions("Top")}
           <p><strong>Status:</strong> {selected.status === "active" ? "Current / Upcoming" : "Ended"}</p>
@@ -211,7 +212,7 @@ function ProtocolsPage({
           <section aria-label="Protocol detail items">
             <h2>Protocol Items</h2>
             {selected.items.map((item) => (
-              <article key={item.id} style={{ background: "#111827", borderRadius: "10px", marginTop: "12px", padding: "14px" }}>
+              <article className="trace-data-card trace-data-card--subtle" key={item.id} style={{ background: "#111827", borderRadius: "10px", marginTop: "12px", padding: "14px" }}>
                 <h3 style={{ marginTop: 0 }}>{item.compound.name}</h3>
                 <p>{item.dose.amount} {formatDoseUnit(item.dose)} · {formatRoute(item.route)}</p>
                 <p>{formatProtocolSchedule(item.schedule)}</p>
@@ -226,18 +227,21 @@ function ProtocolsPage({
   }
 
   return (
-    <div ref={pageTopRef} data-testid="protocols-page" style={containerStyle}>
+    <div className="trace-feature-page trace-feature-page--protocols" ref={pageTopRef} data-testid="protocols-page" style={containerStyle}>
+      <header className="trace-feature-page__identity">
+      <p className="trace-feature-page__kicker">Ongoing plans</p>
       <h1>Protocols</h1>
-      <p style={{ color: "#d1d5db", maxWidth: "800px" }}>
+      <p className="trace-feature-page__lede" style={{ color: "#d1d5db", maxWidth: "800px" }}>
         Record a protocol you chose. Trace stores and displays what you enter; it does not recommend protocols, compounds, doses, routes, or schedules.
       </p>
-      <button type="button" onClick={onBack} style={backStyle}>Back to Timeline</button>
-      <button ref={createRef} type="button" onClick={openCreate} style={buttonStyle}>Create Protocol</button>
+      </header>
+      <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={backStyle}>Back to Timeline</button>
+      <button className="trace-action trace-action--primary" ref={createRef} type="button" onClick={openCreate} style={buttonStyle}>Create Protocol</button>
       <div ref={listRef} style={{ width: "100%" }}>
         {renderList("Current & Upcoming Protocols", current, "No current or upcoming protocols yet.")}
         {renderList("Ended Protocols", ended, "No ended protocols yet.")}
       </div>
-      <button type="button" onClick={onBack} style={backStyle}>Back to Timeline</button>
+      <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={backStyle}>Back to Timeline</button>
     </div>
   );
 }

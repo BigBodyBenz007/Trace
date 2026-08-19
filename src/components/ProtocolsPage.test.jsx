@@ -17,6 +17,12 @@ function renderPage(overrides = {}) {
   return props;
 }
 
+test("uses the scoped ongoing-plan presentation and explicit primary action", () => {
+  renderPage();
+  expect(screen.getByTestId("protocols-page")).toHaveClass("trace-feature-page--protocols");
+  expect(screen.getByRole("button", { name: "Create Protocol" })).toHaveClass("trace-action--primary");
+});
+
 test("shows tracking-only copy, intentional empty states, and Timeline navigation", () => {
   const props = renderPage();
   expect(screen.getByRole("heading", { name: "Protocols" })).toBeInTheDocument();

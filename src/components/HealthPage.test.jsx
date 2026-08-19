@@ -32,6 +32,13 @@ function enter(label, value) {
   fireEvent.change(screen.getByLabelText(label), { target: { value } });
 }
 
+test("uses the scoped calm-record presentation and explicit action hierarchy", () => {
+  render(<Harness />);
+  expect(screen.getByRole("heading", { name: "Health" }).closest("main")).toHaveClass("trace-feature-page--health");
+  expect(screen.getByRole("heading", { name: "Body Measurements" }).closest("section")).toHaveClass("trace-feature-section");
+  expect(screen.getByRole("button", { name: "Save Measurement" })).toHaveClass("trace-action--primary");
+});
+
 test("creates partial histories, preserves units, accumulates, and renders only populated values newest first", () => {
   render(<Harness settings={{ ...DEFAULT_APP_SETTINGS, units: { ...DEFAULT_APP_SETTINGS.units, circumference: "cm" } }} />);
   enter("Date", "2026-08-01"); enter("Time", "08:00"); enter("Weight", "260");

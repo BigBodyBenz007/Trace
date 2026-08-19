@@ -140,29 +140,36 @@ export default function BackupPage({
 
   const summary = preview?.summary;
   return (
-    <main style={containerStyle}>
+    <main className="trace-feature-page trace-feature-page--backup" style={containerStyle}>
+      <header className="trace-feature-page__identity">
+      <p className="trace-feature-page__kicker">Private archive</p>
       <h1>Backup & Restore</h1>
-      <p style={{ color: "#bbb", maxWidth: "700px" }}>
+      <p className="trace-feature-page__lede" style={{ color: "#bbb", maxWidth: "700px" }}>
         Download a private copy of your Trace data, including photos, or fully restore a previously created Trace backup.
       </p>
-      <button type="button" style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>Back to Timeline</button>
-      <button type="button" style={buttonStyle} onClick={exportBackup}>Download Trace Backup</button>
-      {iosBackup && <button type="button" style={buttonStyle} onClick={saveBackupToFiles}>Save Backup to Files</button>}
-      <button type="button" style={{ ...buttonStyle, backgroundColor: "#475569" }} onClick={() => fileInputRef.current?.click()}>
-        Select Backup to Restore
-      </button>
-      <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={selectBackup} hidden />
-      {status && <p role="status">{status}</p>}
-      {error && <p role="alert" style={{ color: "#fca5a5" }}>{error}</p>}
+      </header>
+      <nav aria-label="Backup navigation" className="trace-backup-navigation">
+        <button className="trace-action trace-action--secondary" type="button" style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>Back to Timeline</button>
+      </nav>
+      <section aria-label="Archive actions" className="trace-backup-actions">
+        <button className="trace-action trace-action--primary" type="button" style={buttonStyle} onClick={exportBackup}>Download Trace Backup</button>
+        <button className="trace-action trace-action--brass" type="button" style={{ ...buttonStyle, backgroundColor: "#475569" }} onClick={() => fileInputRef.current?.click()}>
+          Select Backup to Restore
+        </button>
+        {iosBackup && <button className="trace-action trace-action--primary trace-backup-actions__save" type="button" style={buttonStyle} onClick={saveBackupToFiles}>Save Backup to Files</button>}
+        <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={selectBackup} hidden />
+      </section>
+      {status && <p className="trace-status" role="status">{status}</p>}
+      {error && <p className="trace-status trace-status--error" role="alert" style={{ color: "#fca5a5" }}>{error}</p>}
       {restoreComplete && (
-        <section role="status" aria-label="Restore complete" style={{ background: "#14532d", borderRadius: "12px", marginTop: "24px", padding: "18px" }}>
+        <section className="trace-feature-surface trace-backup-success" role="status" aria-label="Restore complete" style={{ background: "#14532d", borderRadius: "12px", marginTop: "24px", padding: "18px" }}>
           <h2>✓ Trace restored successfully</h2>
           <p>Your backup has been completely restored.</p>
-          <button type="button" style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>Back to Timeline</button>
+          <button className="trace-action trace-action--secondary" type="button" style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>Back to Timeline</button>
         </section>
       )}
       {summary && (
-        <section aria-label="Restore preview" style={{ background: "#1f2937", borderRadius: "12px", marginTop: "24px", padding: "18px" }}>
+        <section className="trace-feature-surface trace-backup-preview" aria-label="Restore preview" style={{ background: "#1f2937", borderRadius: "12px", marginTop: "24px", padding: "18px" }}>
           <h2>Review Backup</h2>
           <p>No Trace data has been changed yet.</p>
           <ul>
@@ -172,8 +179,8 @@ export default function BackupPage({
             <li>Trophy Case entries: {summary.trophyCaseEntries}</li><li>Saved exercises: {summary.savedExercises}</li>
             <li>Saved compounds: {summary.savedCompounds}</li><li>Saved foods: {summary.userFoods}</li><li>Journal entries: {summary.journalEntries || 0}</li>
           </ul>
-          <button type="button" style={{ ...buttonStyle, backgroundColor: "#b91c1c" }} onClick={confirmRestore}>Confirm Full Restore</button>
-          <button type="button" style={{ ...buttonStyle, backgroundColor: "#4b5563" }} onClick={() => setPreview(null)}>Cancel Restore</button>
+          <button className="trace-action trace-action--danger" type="button" style={{ ...buttonStyle, backgroundColor: "#b91c1c" }} onClick={confirmRestore}>Confirm Full Restore</button>
+          <button className="trace-action trace-action--secondary" type="button" style={{ ...buttonStyle, backgroundColor: "#4b5563" }} onClick={() => setPreview(null)}>Cancel Restore</button>
         </section>
       )}
     </main>

@@ -68,6 +68,7 @@ function CandidateAction({ candidate, trophySourceKeys, addTrophyCaseEntry, butt
   const isCurated = trophySourceKeys.has(candidate.sourceKey);
   return (
     <button
+      className={`trace-action ${isCurated ? "trace-action--secondary" : "trace-action--brass"}`}
       type="button"
       disabled={isCurated}
       onClick={() => addTrophyCaseEntry(candidate)}
@@ -492,6 +493,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
 
   return (
     <section
+      className="trace-feature-section trace-exercise-history"
       aria-labelledby="exercise-history-heading"
       style={{ marginTop: "36px", maxWidth: "760px", textAlign: "left", width: "100%" }}
     >

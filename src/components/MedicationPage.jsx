@@ -412,17 +412,21 @@ function MedicationPage({
   };
 
   return (
-    <div ref={pageTopRef} data-testid="medication-page" style={containerStyle}>
+    <div className="trace-feature-page trace-feature-page--medications" ref={pageTopRef} data-testid="medication-page" style={containerStyle}>
+      <header className="trace-feature-page__identity">
+      <p className="trace-feature-page__kicker">Personal regimen</p>
       <h1 style={{ marginBottom: "10px" }}>Medications & Supplements</h1>
-      <p style={{ color: "#bbb", marginBottom: "12px" }}>
+      <p className="trace-feature-page__lede" style={{ color: "#bbb", marginBottom: "12px" }}>
         Log medications, peptides, supplements, and similar compounds.
       </p>
       <p style={{ color: "#d1d5db", marginBottom: "24px" }}>
         Trace records the information you enter. It does not provide dosing or
         medical advice.
       </p>
+      </header>
 
       <button
+        className="trace-action trace-action--secondary"
         type="button"
         onClick={onBack}
         style={{ ...backButtonStyle, marginBottom: "24px", marginTop: 0 }}
@@ -474,6 +478,7 @@ function MedicationPage({
       )}
 
       <form
+        className="trace-feature-surface trace-feature-form trace-medication-entry"
         onSubmit={saveEntry}
         style={{
           background: "#1f2937",
@@ -693,16 +698,17 @@ function MedicationPage({
         )}
 
         <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-          <button type="submit" style={buttonStyle}>
+          <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
             {editingEntryId === null ? "Save Entry" : "Save Changes"}
           </button>
-          <button type="button" onClick={cancelEntry} style={backButtonStyle}>
+          <button className="trace-action trace-action--secondary" type="button" onClick={cancelEntry} style={backButtonStyle}>
             Cancel Entry
           </button>
         </div>
       </form>
 
       <section
+        className="trace-feature-section trace-feature-history trace-medication-history"
         ref={historyTopRef}
         data-testid="medication-history"
         style={{ marginTop: "30px", maxWidth: "700px", textAlign: "left", width: "100%" }}
@@ -757,6 +763,7 @@ function MedicationPage({
                     <div style={{ display: "grid", gap: "12px" }}>
                       {group.entries.map((entry) => (
                         <article
+                          className="trace-data-card"
                           key={entry.id}
                           ref={(element) => {
                             if (element) {
@@ -798,6 +805,7 @@ function MedicationPage({
                 )}
                 <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
                   <button
+                    className="trace-action trace-action--secondary"
                     type="button"
                     onClick={() => editEntry(entry)}
                     style={{
@@ -812,6 +820,7 @@ function MedicationPage({
                     Edit
                   </button>
                   <button
+                    className="trace-action trace-action--danger"
                     type="button"
                     onClick={() => deleteEntry(entry.id)}
                     style={{
@@ -838,6 +847,7 @@ function MedicationPage({
       </section>
 
       <button
+        className="trace-action trace-action--secondary"
         type="button"
         onClick={onBack}
         style={{ ...backButtonStyle, marginTop: "24px" }}

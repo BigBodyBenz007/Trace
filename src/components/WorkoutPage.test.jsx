@@ -218,6 +218,13 @@ function renderPage(overrides = {}) {
   return props;
 }
 
+test("uses the scoped performance-log presentation and nested workout surfaces", () => {
+  renderPage();
+  expect(screen.getByTestId("workout-page")).toHaveClass("trace-feature-page--workouts");
+  expect(screen.getByRole("heading", { name: "Log Workout" }).closest("form")).toHaveClass("trace-workout-form");
+  expect(screen.getByRole("region", { name: "Exercise 1" })).toHaveClass("trace-workout-exercise");
+});
+
 function fillFirstSet({ bodyweight = false } = {}) {
   fireEvent.change(screen.getByLabelText("Workout title"), {
     target: { value: "Chest Day" },

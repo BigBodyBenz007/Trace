@@ -38,6 +38,12 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = jest.fn();
 });
 
+test("uses the scoped reflective presentation while retaining the Journal paper", () => {
+  render(<JournalPage {...baseProps} />);
+  expect(screen.getByRole("heading", { name: "Journal" }).closest("main")).toHaveClass("trace-feature-page--journal", "journal-page");
+  expect(screen.getByRole("heading", { name: "New Journal Entry" }).nextElementSibling).toHaveClass("journal-paper");
+});
+
 test("keeps native Journal date and time inputs contained without changing the 360px stack breakpoint", () => {
   const css = fs.readFileSync(path.join(process.cwd(), "src", "index.css"), "utf8");
   const inputRule = css.match(/\.journal-date-time input\s*\{([^}]*)\}/)?.[1] || "";

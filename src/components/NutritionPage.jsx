@@ -591,15 +591,19 @@ function NutritionPage({
   };
 
   return (
-    <div ref={nutritionPageTopRef} data-testid="nutrition-page" style={containerStyle}>
+    <div className="trace-feature-page trace-feature-page--nutrition" ref={nutritionPageTopRef} data-testid="nutrition-page" style={containerStyle}>
+      <header className="trace-feature-page__identity">
+      <p className="trace-feature-page__kicker">Daily ledger</p>
       <h1 style={{ marginBottom: "10px" }}>Nutrition</h1>
       <ConfirmationMessage message={confirmationMessage} />
 
-      <p style={{ color: "#bbb", marginBottom: "30px" }}>
+      <p className="trace-feature-page__lede" style={{ color: "#bbb", marginBottom: "30px" }}>
         Track your food and nutrition here.
       </p>
+      </header>
 
       <button
+        className="trace-action trace-action--secondary"
         type="button"
         onClick={onBack}
         style={{
@@ -613,6 +617,7 @@ function NutritionPage({
       </button>
 
       <section
+        className="trace-feature-surface trace-nutrition-today"
         ref={todaySectionRef}
         style={{
           background: "#1f2937",
@@ -640,7 +645,7 @@ function NutritionPage({
             const progress = hasGoal ? (current / goal) * 100 : 0;
 
             return (
-              <div key={metric.key}>
+              <div className="trace-stat-card" key={metric.key}>
                 <strong>
                   {metric.label}
                   {metric.unit ? ` (${metric.unit})` : ""}
@@ -691,7 +696,7 @@ function NutritionPage({
             paddingTop: "18px",
           }}
         >
-          <div>
+          <div className="trace-stat-card">
           <strong>Sodium (mg)</strong>
           <p style={{ marginBottom: hasSodiumGoal ? "8px" : 0 }}>
             {hasSodiumGoal
@@ -737,6 +742,7 @@ function NutritionPage({
       </section>
 
       <section
+        className="trace-feature-surface trace-nutrition-averages"
         style={{
           background: "#1f2937",
           borderRadius: "16px",
@@ -762,6 +768,7 @@ function NutritionPage({
 
             return (
               <article
+                className="trace-data-card trace-data-card--subtle"
                 key={period.key}
                 style={{
                   background: "#111827",
@@ -793,6 +800,7 @@ function NutritionPage({
       </section>
 
       <form
+        className="trace-feature-surface trace-feature-form trace-nutrition-goals"
         onSubmit={saveGoals}
         style={{
           background: "#1f2937",
@@ -835,7 +843,7 @@ function NutritionPage({
           ))}
         </div>
 
-        <button type="submit" style={buttonStyle}>
+        <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
           Save Goals
         </button>
       </form>
@@ -857,6 +865,7 @@ function NutritionPage({
       )}
 
       <form
+        className="trace-feature-surface trace-feature-form trace-nutrition-entry"
         ref={entryFormRef}
         onSubmit={saveFood}
         style={{
@@ -1127,11 +1136,12 @@ function NutritionPage({
             gap: "10px",
           }}
         >
-          <button type="submit" style={buttonStyle}>
+          <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
             {editingEntryId === null ? "Save Entry" : "Save Changes"}
           </button>
 
           <button
+            className="trace-action trace-action--secondary"
             type="button"
             onClick={cancelEntry}
             style={{
@@ -1143,6 +1153,7 @@ function NutritionPage({
           </button>
 
           <button
+            className="trace-action trace-action--secondary"
             type="button"
             onClick={onBack}
             style={{
@@ -1156,6 +1167,7 @@ function NutritionPage({
       </form>
 
       <section
+        className="trace-feature-section trace-feature-history"
         style={{
           marginTop: "30px",
           maxWidth: "700px",
@@ -1171,6 +1183,7 @@ function NutritionPage({
           <div style={{ display: "grid", gap: "12px" }}>
             {sortedEntries.map((entry) => (
               <article
+                className="trace-data-card"
                 key={entry.id}
                 style={{
                   background: "#1f2937",
@@ -1214,6 +1227,7 @@ function NutritionPage({
 
                 <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
                   <button
+                    className="trace-action trace-action--secondary"
                     type="button"
                     onClick={() => editEntry(entry)}
                     style={{
@@ -1229,6 +1243,7 @@ function NutritionPage({
                   </button>
 
                   <button
+                    className="trace-action trace-action--danger"
                     type="button"
                     onClick={() => deleteEntry(entry.id)}
                     style={{

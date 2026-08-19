@@ -28,6 +28,7 @@ function CompoundSearch({
 
   return (
     <section
+      className="trace-feature-surface trace-compound-search"
       style={{
         background: "#1f2937",
         borderRadius: "16px",
@@ -69,8 +70,8 @@ function CompoundSearch({
             {savedResults.map(({ compound }) => {
               const defaultDose = compound.defaults.dose;
               return (
-                <div key={compound.id} style={{ background: "#111827", border: "1px solid #4b5563", borderRadius: "12px", overflowWrap: "anywhere", padding: "14px" }}>
-                  <span style={{ background: "#374151", borderRadius: "999px", color: "#dbeafe", display: "inline-block", fontSize: "12px", marginBottom: "6px", padding: "3px 8px" }}>
+                <div className="trace-search-result" key={compound.id} style={{ background: "#111827", border: "1px solid #4b5563", borderRadius: "12px", overflowWrap: "anywhere", padding: "14px" }}>
+                  <span className="trace-badge" style={{ background: "#374151", borderRadius: "999px", color: "#dbeafe", display: "inline-block", fontSize: "12px", marginBottom: "6px", padding: "3px 8px" }}>
                     Saved Compound
                   </span>
                   <strong style={{ display: "block" }}>{compound.name}</strong>
@@ -79,10 +80,10 @@ function CompoundSearch({
                     {formatDoseUnit(defaultDose)} · {formatRoute(compound.defaults.route)}
                   </span>
                   <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "10px" }}>
-                    <button type="button" aria-label={`Select saved compound ${compound.name}`} onClick={() => onSelectCompound(compound)} style={{ background: "#2563eb", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", padding: "8px 16px" }}>
+                    <button className="trace-action trace-action--primary" type="button" aria-label={`Select saved compound ${compound.name}`} onClick={() => onSelectCompound(compound)} style={{ background: "#2563eb", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", padding: "8px 16px" }}>
                       Select
                     </button>
-                    <button type="button" aria-label={`Edit saved compound ${compound.name}`} onClick={() => onEditCompound(compound)} style={{ background: "#4b5563", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", padding: "8px 16px" }}>
+                    <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit saved compound ${compound.name}`} onClick={() => onEditCompound(compound)} style={{ background: "#4b5563", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", padding: "8px 16px" }}>
                       Edit Saved Compound
                     </button>
                   </div>
@@ -98,8 +99,8 @@ function CompoundSearch({
           <h3>Trace Compound Database</h3>
           <div style={{ display: "grid", gap: "10px" }}>
             {builtInResults.map(({ compound, matchedAlias }) => (
-              <div key={compound.id} style={{ background: "#111827", border: "1px solid #1e3a5f", borderRadius: "12px", overflowWrap: "anywhere", padding: "14px" }}>
-                <span style={{ background: "#1e3a5f", borderRadius: "999px", color: "#dbeafe", display: "inline-block", fontSize: "12px", marginBottom: "6px", padding: "3px 8px" }}>
+              <div className="trace-search-result" key={compound.id} style={{ background: "#111827", border: "1px solid #1e3a5f", borderRadius: "12px", overflowWrap: "anywhere", padding: "14px" }}>
+                <span className="trace-badge" style={{ background: "#1e3a5f", borderRadius: "999px", color: "#dbeafe", display: "inline-block", fontSize: "12px", marginBottom: "6px", padding: "3px 8px" }}>
                   Trace Database
                 </span>
                 <strong style={{ display: "block" }}>{compound.name}</strong>
@@ -111,7 +112,7 @@ function CompoundSearch({
                     Matched alias: {matchedAlias}
                   </span>
                 )}
-                <button type="button" aria-label={`Select Trace compound ${compound.name}`} onClick={() => onSelectBuiltInCompound(compound)} style={{ background: "#2563eb", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", marginTop: "10px", padding: "8px 16px" }}>
+                <button className="trace-action trace-action--primary" type="button" aria-label={`Select Trace compound ${compound.name}`} onClick={() => onSelectBuiltInCompound(compound)} style={{ background: "#2563eb", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", marginTop: "10px", padding: "8px 16px" }}>
                   Select
                 </button>
               </div>
@@ -130,7 +131,7 @@ function CompoundSearch({
           <p style={{ color: "#d1d5db" }}>
             Continue with your own entry. Nothing is created or saved automatically.
           </p>
-          <button type="button" onClick={() => onUseCustomCompound(customName)} style={{ background: "#4b5563", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", padding: "8px 16px" }}>
+          <button className="trace-action trace-action--secondary" type="button" onClick={() => onUseCustomCompound(customName)} style={{ background: "#4b5563", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", padding: "8px 16px" }}>
             Use “{customName}” as Custom Compound
           </button>
         </section>

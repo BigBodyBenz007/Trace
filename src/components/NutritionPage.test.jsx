@@ -130,6 +130,13 @@ function selectBanana() {
   fireEvent.click(screen.getByRole("button", { name: /Banana/i }));
 }
 
+test("uses the scoped Nutrition ledger presentation without changing semantic controls", () => {
+  renderNutritionPage();
+  expect(screen.getByTestId("nutrition-page")).toHaveClass("trace-feature-page", "trace-feature-page--nutrition");
+  expect(screen.getByRole("heading", { name: "Today" }).closest("section")).toHaveClass("trace-nutrition-today");
+  expect(screen.getByRole("button", { name: "Save Goals" })).toHaveClass("trace-action--primary");
+});
+
 test("confirms successful daily goal saves", () => {
   const props = renderNutritionPage();
   fireEvent.click(screen.getByRole("button", { name: "Save Goals" }));

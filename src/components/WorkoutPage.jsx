@@ -769,7 +769,7 @@ function WorkoutPage({
   }
 
   return (
-    <div ref={pageTopRef} data-testid="workout-page" style={containerStyle}>
+    <div className="trace-feature-page trace-feature-page--workouts" ref={pageTopRef} data-testid="workout-page" style={containerStyle}>
       <style>{`
         .workout-set-load-row > label,
         .workout-set-input-grid > label,
@@ -816,13 +816,17 @@ function WorkoutPage({
           }
         }
       `}</style>
+      <header className="trace-feature-page__identity">
+      <p className="trace-feature-page__kicker">Performance log</p>
       <h1 style={{ marginBottom: "10px" }}>Workouts</h1>
       <ConfirmationMessage message={confirmationMessage} />
-      <p style={{ color: "#bbb", marginBottom: "24px" }}>
+      <p className="trace-feature-page__lede" style={{ color: "#bbb", marginBottom: "24px" }}>
         Record completed strength workouts as entered. Trace does not provide
         training recommendations.
       </p>
+      </header>
       <button
+        className="trace-action trace-action--secondary"
         type="button"
         onClick={onBack}
         style={{ ...backButtonStyle, marginBottom: "24px", marginTop: 0 }}
@@ -837,6 +841,7 @@ function WorkoutPage({
       )}
 
       <form
+        className="trace-feature-surface trace-feature-form trace-workout-form"
         ref={formRef}
         onSubmit={saveWorkout}
         style={{ maxWidth: "760px", textAlign: "left", width: "100%" }}
@@ -891,6 +896,7 @@ function WorkoutPage({
         <h3>Exercises</h3>
         {exercises.map((exercise, exerciseIndex) => (
           <section
+            className="trace-workout-exercise"
             key={exercise.id}
             aria-label={`Exercise ${exerciseIndex + 1}`}
             style={{
@@ -900,7 +906,8 @@ function WorkoutPage({
               padding: "18px",
             }}
           >
-            <button
+              <button
+                className="trace-action trace-action--secondary"
               type="button"
               onClick={() => {
                 setActiveSearchExerciseId((current) =>
@@ -1036,13 +1043,14 @@ function WorkoutPage({
               </div>
             )}
             <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "12px" }}>
-              <button type="button" onClick={() => reorderExercise(exerciseIndex, -1)} disabled={exerciseIndex === 0} aria-label={`Move exercise ${exerciseIndex + 1} up`} style={smallButtonStyle}>Move Up</button>
-              <button type="button" onClick={() => reorderExercise(exerciseIndex, 1)} disabled={exerciseIndex === exercises.length - 1} aria-label={`Move exercise ${exerciseIndex + 1} down`} style={smallButtonStyle}>Move Down</button>
-              <button type="button" onClick={() => removeExercise(exercise.id)} aria-label={`Remove exercise ${exerciseIndex + 1}`} style={{ ...smallButtonStyle, backgroundColor: "#b91c1c" }}>Remove Exercise</button>
+              <button className="trace-action trace-action--secondary" type="button" onClick={() => reorderExercise(exerciseIndex, -1)} disabled={exerciseIndex === 0} aria-label={`Move exercise ${exerciseIndex + 1} up`} style={smallButtonStyle}>Move Up</button>
+              <button className="trace-action trace-action--secondary" type="button" onClick={() => reorderExercise(exerciseIndex, 1)} disabled={exerciseIndex === exercises.length - 1} aria-label={`Move exercise ${exerciseIndex + 1} down`} style={smallButtonStyle}>Move Down</button>
+              <button className="trace-action trace-action--danger" type="button" onClick={() => removeExercise(exercise.id)} aria-label={`Remove exercise ${exerciseIndex + 1}`} style={{ ...smallButtonStyle, backgroundColor: "#b91c1c" }}>Remove Exercise</button>
             </div>
 
             {exercise.sets.map((set, setIndex) => (
               <fieldset
+                className="trace-workout-set"
                 key={set.id}
                 style={{ border: "1px solid #4b5563", borderRadius: "10px", marginTop: "16px", padding: "14px" }}
               >
@@ -1130,12 +1138,13 @@ function WorkoutPage({
                       style={{ alignItems: "center", background: "#374151", borderLeft: "3px solid #f59e0b", borderRadius: "8px", display: "flex", flexWrap: "wrap", gap: "10px", justifyContent: "space-between", marginTop: "12px", maxWidth: "100%", padding: "10px 12px" }}
                     >
                       <span>Drop removed</span>
-                      <button type="button" onClick={() => undoDropRemoval(parentKey)} aria-label={`Undo removed drop from exercise ${exerciseIndex + 1} set ${setIndex + 1}`} style={{ ...smallButtonStyle, backgroundColor: "#b45309", minHeight: "44px" }}>Undo</button>
+                      <button className="trace-action trace-action--brass" type="button" onClick={() => undoDropRemoval(parentKey)} aria-label={`Undo removed drop from exercise ${exerciseIndex + 1} set ${setIndex + 1}`} style={{ ...smallButtonStyle, backgroundColor: "#b45309", minHeight: "44px" }}>Undo</button>
                     </div>
                   ) : (() => {
                     const { drop, displayNumber } = row;
                     return (
                   <section
+                    className="trace-workout-drop"
                     key={drop.id}
                     data-drop-id={drop.id}
                     aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber}`}
@@ -1182,29 +1191,29 @@ function WorkoutPage({
                       Drop notes (optional)
                       <input aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} notes`} value={drop.notes} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { notes: event.target.value })} style={formInputStyle} />
                     </label>
-                    <button type="button" onClick={() => removeDrop(exercise.id, set.id, drop.id)} aria-label={`Remove exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber}`} style={{ ...smallButtonStyle, backgroundColor: "#9f1239", marginTop: "10px" }}>Remove Drop</button>
+                    <button className="trace-action trace-action--danger" type="button" onClick={() => removeDrop(exercise.id, set.id, drop.id)} aria-label={`Remove exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber}`} style={{ ...smallButtonStyle, backgroundColor: "#9f1239", marginTop: "10px" }}>Remove Drop</button>
                   </section>
                     );
                   })());
                 })()}
-                <button type="button" onClick={() => addDrop(exercise.id, set.id)} aria-label={`Add drop to exercise ${exerciseIndex + 1} set ${setIndex + 1}`} style={{ ...smallButtonStyle, backgroundColor: "#1d4ed8", marginTop: "12px" }}>
+                <button className="trace-action trace-action--primary" type="button" onClick={() => addDrop(exercise.id, set.id)} aria-label={`Add drop to exercise ${exerciseIndex + 1} set ${setIndex + 1}`} style={{ ...smallButtonStyle, backgroundColor: "#1d4ed8", marginTop: "12px" }}>
                   {(Array.isArray(set.drops) ? set.drops : []).length > 0 ? "+ Add Another Drop" : "+ Add Drop"}
                 </button>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "12px" }}>
-                  <button type="button" disabled={setIndex === 0} onClick={() => reorderSet(exercise.id, setIndex, -1)} aria-label={`Move exercise ${exerciseIndex + 1} set ${setIndex + 1} up`} style={smallButtonStyle}>Move Up</button>
-                  <button type="button" disabled={setIndex === exercise.sets.length - 1} onClick={() => reorderSet(exercise.id, setIndex, 1)} aria-label={`Move exercise ${exerciseIndex + 1} set ${setIndex + 1} down`} style={smallButtonStyle}>Move Down</button>
-                  <button type="button" onClick={() => removeSet(exercise.id, set.id)} aria-label={`Remove exercise ${exerciseIndex + 1} set ${setIndex + 1}`} style={{ ...smallButtonStyle, backgroundColor: "#b91c1c" }}>Remove Set</button>
+                  <button className="trace-action trace-action--secondary" type="button" disabled={setIndex === 0} onClick={() => reorderSet(exercise.id, setIndex, -1)} aria-label={`Move exercise ${exerciseIndex + 1} set ${setIndex + 1} up`} style={smallButtonStyle}>Move Up</button>
+                  <button className="trace-action trace-action--secondary" type="button" disabled={setIndex === exercise.sets.length - 1} onClick={() => reorderSet(exercise.id, setIndex, 1)} aria-label={`Move exercise ${exerciseIndex + 1} set ${setIndex + 1} down`} style={smallButtonStyle}>Move Down</button>
+                  <button className="trace-action trace-action--danger" type="button" onClick={() => removeSet(exercise.id, set.id)} aria-label={`Remove exercise ${exerciseIndex + 1} set ${setIndex + 1}`} style={{ ...smallButtonStyle, backgroundColor: "#b91c1c" }}>Remove Set</button>
                 </div>
               </fieldset>
             ))}
-            <button type="button" onClick={() => addSet(exercise.id)} aria-label={`Add set to exercise ${exerciseIndex + 1}`} style={{ ...smallButtonStyle, marginTop: "14px" }}>Add Set</button>
+            <button className="trace-action trace-action--secondary" type="button" onClick={() => addSet(exercise.id)} aria-label={`Add set to exercise ${exerciseIndex + 1}`} style={{ ...smallButtonStyle, marginTop: "14px" }}>Add Set</button>
           </section>
         ))}
-        <button type="button" onClick={addExercise} style={smallButtonStyle}>Add Exercise</button>
+        <button className="trace-action trace-action--primary" type="button" onClick={addExercise} style={smallButtonStyle}>Add Exercise</button>
 
         <section aria-label="Workout photo attachments" style={{ marginTop: "22px" }}>
           <h3>Photos (optional)</h3>
-          <label style={{ ...smallButtonStyle, cursor: "pointer", display: "inline-block" }}>
+          <label className="trace-action trace-action--secondary" style={{ ...smallButtonStyle, cursor: "pointer", display: "inline-block" }}>
             {photos.length ? "Add More Photos" : "Choose Photos"}
             <input
               type="file"
@@ -1226,7 +1235,7 @@ function WorkoutPage({
                   {false && (
                   <button type="button" aria-label={`Remove workout photo ${index + 1}`} onClick={() => { if (photo.isDraft && photo.url) URL.revokeObjectURL(photo.url); setPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index)); markChanged(); }} style={{ background: "#b91c1c", border: 0, borderRadius: "50%", color: "white", cursor: "pointer", position: "absolute", right: "5px", top: "5px" }}>Ã—</button>
                   )}
-                  <button type="button" aria-label={`Remove workout photo ${index + 1}`} onClick={() => { if (photo.isDraft && photo.url) URL.revokeObjectURL(photo.url); setPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index)); markChanged(); }} style={{ background: "#b91c1c", border: 0, borderRadius: "50%", color: "white", cursor: "pointer", position: "absolute", right: "5px", top: "5px" }}>{"\u00d7"}</button>
+                  <button className="trace-action--danger" type="button" aria-label={`Remove workout photo ${index + 1}`} onClick={() => { if (photo.isDraft && photo.url) URL.revokeObjectURL(photo.url); setPhotos((current) => current.filter((_, photoIndex) => photoIndex !== index)); markChanged(); }} style={{ background: "#b91c1c", border: 0, borderRadius: "50%", color: "white", cursor: "pointer", position: "absolute", right: "5px", top: "5px" }}>{"\u00d7"}</button>
                 </div>
               ))}
             </div>
@@ -1235,8 +1244,8 @@ function WorkoutPage({
 
         {formError && <p role="alert" style={{ color: "#fca5a5" }}>{formError}</p>}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-          <button type="submit" style={buttonStyle}>{editingEntryId === null ? "Save Workout" : "Save Changes"}</button>
-          <button type="button" onClick={cancelWorkout} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel</button>
+          <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>{editingEntryId === null ? "Save Workout" : "Save Changes"}</button>
+          <button className="trace-action trace-action--secondary" type="button" onClick={cancelWorkout} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel</button>
         </div>
       </form>
 
@@ -1246,7 +1255,7 @@ function WorkoutPage({
         buttonStyle={buttonStyle}
       />
 
-      <section style={{ marginTop: "36px", maxWidth: "760px", textAlign: "left", width: "100%" }}>
+      <section className="trace-feature-section trace-feature-history trace-workout-history" style={{ marginTop: "36px", maxWidth: "760px", textAlign: "left", width: "100%" }}>
         <h2>Workout History</h2>
         {sortedEntries.length === 0 ? (
           <p style={{ color: "#bbb" }}>No workouts logged yet.</p>
@@ -1254,6 +1263,7 @@ function WorkoutPage({
           <div style={{ display: "grid", gap: "14px" }}>
             {sortedEntries.map((entry) => (
               <article
+                className="trace-data-card trace-workout-history-card"
                 key={entry.id}
                 ref={(node) => {
                   if (node) workoutEntryRefs.current.set(entry.id, node);
@@ -1282,8 +1292,8 @@ function WorkoutPage({
                   </div>
                 ))}
                 <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "16px" }}>
-                  <button type="button" onClick={() => editWorkout(entry)} style={smallButtonStyle}>Edit</button>
-                  <button type="button" onClick={() => removeWorkout(entry.id)} style={{ ...smallButtonStyle, backgroundColor: "#b91c1c" }}>Delete</button>
+                  <button className="trace-action trace-action--secondary" type="button" onClick={() => editWorkout(entry)} style={smallButtonStyle}>Edit</button>
+                  <button className="trace-action trace-action--danger" type="button" onClick={() => removeWorkout(entry.id)} style={{ ...smallButtonStyle, backgroundColor: "#b91c1c" }}>Delete</button>
                 </div>
               </article>
             ))}
@@ -1300,7 +1310,7 @@ function WorkoutPage({
         onReturnToTrophyCase={onReturnToTrophyCase}
       />
 
-      <button type="button" onClick={onBack} style={{ ...backButtonStyle, marginTop: "24px" }}>Back to Timeline</button>
+      <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...backButtonStyle, marginTop: "24px" }}>Back to Timeline</button>
     </div>
   );
 }

@@ -147,13 +147,13 @@ function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, but
   const formInput = { ...inputStyle, boxSizing: "border-box", marginTop: "8px", padding: "10px", width: "100%" };
   const actions = (position) => (
     <div aria-label={`${position} protocol editor actions`} style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "16px" }}>
-      <button type="submit" style={buttonStyle}>Save Protocol</button>
-      <button type="button" onClick={onCancel} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel Protocol</button>
+      <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>Save Protocol</button>
+      <button className="trace-action trace-action--secondary" type="button" onClick={onCancel} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel Protocol</button>
     </div>
   );
 
   return (
-    <form onSubmit={submit} style={{ background: "#1f2937", borderRadius: "16px", maxWidth: "800px", padding: "24px", textAlign: "left", width: "100%" }}>
+    <form className="trace-feature-surface trace-feature-form trace-protocol-editor" onSubmit={submit} style={{ background: "#1f2937", borderRadius: "16px", maxWidth: "800px", padding: "24px", textAlign: "left", width: "100%" }}>
       <h2 style={{ marginTop: 0 }}>{protocol ? "Edit Protocol" : "Create Protocol"}</h2>
       {actions("Top")}
       <label style={{ display: "block", marginTop: "16px" }}>
@@ -174,6 +174,7 @@ function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, but
         {items.length === 0 && <p style={{ color: "#bbb" }}>No protocol items added yet.</p>}
         {items.map((item, index) => (
           <article
+            className="trace-data-card trace-protocol-item"
             key={item.id}
             ref={(element) => {
               if (element) itemRefs.current.set(item.id, element);
@@ -209,11 +210,11 @@ function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, but
               </div>
             </fieldset>
             <label style={{ display: "block", marginTop: "12px" }}>Item notes (optional)<textarea value={item.notes} onChange={(event) => updateItem(item.id, (current) => ({ ...current, notes: event.target.value }))} style={{ ...formInput, minHeight: "70px" }} /></label>
-            <button type="button" onClick={() => removeItem(item.id)} style={{ marginTop: "12px" }}>Remove Item</button>
+            <button className="trace-action trace-action--danger" type="button" onClick={() => removeItem(item.id)} style={{ marginTop: "12px" }}>Remove Item</button>
           </article>
         ))}
 
-        {!pickerOpen && <button ref={addItemRef} type="button" onClick={() => setPickerOpen(true)} style={{ ...buttonStyle, marginTop: "16px" }}>Add Protocol Item</button>}
+        {!pickerOpen && <button className="trace-action trace-action--primary" ref={addItemRef} type="button" onClick={() => setPickerOpen(true)} style={{ ...buttonStyle, marginTop: "16px" }}>Add Protocol Item</button>}
         {pickerOpen && <div ref={pickerRef} style={{ marginTop: "16px", scrollMarginTop: "24px" }}><ProtocolCompoundPicker compounds={compounds} onSelect={selectCompound} onCancel={cancelPicker} inputStyle={inputStyle} /></div>}
       </section>
       {error && <p role="alert" style={{ color: "#fca5a5" }}>{error}</p>}

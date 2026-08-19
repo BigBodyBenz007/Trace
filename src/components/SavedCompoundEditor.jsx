@@ -72,6 +72,7 @@ function SavedCompoundEditor({
 
   return (
     <form
+      className="trace-feature-surface trace-feature-form trace-saved-compound-editor"
       onSubmit={save}
       style={{
         background: "#1f2937",
@@ -188,10 +189,11 @@ function SavedCompoundEditor({
       )}
 
       <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-        <button type="submit" style={buttonStyle}>
+        <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
           Save Saved Compound
         </button>
         <button
+          className="trace-action trace-action--secondary"
           type="button"
           onClick={onCancel}
           style={{ ...buttonStyle, backgroundColor: "#666" }}

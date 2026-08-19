@@ -51,6 +51,13 @@ function renderMedicationPage(overrides = {}) {
   return props;
 }
 
+test("uses the scoped regimen presentation with distinct search and entry surfaces", () => {
+  renderMedicationPage();
+  expect(screen.getByTestId("medication-page")).toHaveClass("trace-feature-page--medications");
+  expect(screen.getByRole("heading", { name: "Search Compounds" }).closest("section")).toHaveClass("trace-compound-search");
+  expect(screen.getByRole("heading", { name: "Add Entry" }).closest("form")).toHaveClass("trace-medication-entry");
+});
+
 function historyEntry(id) {
   return document.querySelector(`[data-entry-id="${id}"]`);
 }

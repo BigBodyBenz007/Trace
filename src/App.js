@@ -1355,7 +1355,9 @@ function App() {
 
   return (
     <div
+      aria-hidden={ceremonyEntry ? "true" : undefined}
       className="trace-app-shell"
+      inert={Boolean(ceremonyEntry)}
       style={{
         minHeight: "100vh",
         display: "flex",

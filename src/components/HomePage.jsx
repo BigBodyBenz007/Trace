@@ -19,6 +19,7 @@ import LifeCurrent, { LifeCurrentScenery } from "./LifeCurrent";
 import { LIFE_CURRENT_TRAIL_TUNING } from "./LifeCurrent";
 import StoredPhoto, { storedPhotoId } from "./StoredPhoto";
 import { PHOTO_LOAD_PRIORITY } from "../services/photoUrlLoader";
+import { acquireDocumentScrollLock } from "../services/documentScrollLock";
 
 const CATEGORY_FILTER_OPTIONS = [
   "All",
@@ -41,35 +42,12 @@ function useDocumentScrollLock(
   useEffect(() => {
     if (!locked) return undefined;
 
-    const body = document.body;
-    const root = document.documentElement;
     const scrollX = scrollOrigin?.documentScrollX ?? window.scrollX ?? window.pageXOffset ?? 0;
     const scrollY = scrollOrigin?.documentScrollY ?? window.scrollY ?? window.pageYOffset ?? 0;
-    const originalBodyStyles = {
-      left: body.style.left,
-      overflow: body.style.overflow,
-      position: body.style.position,
-      right: body.style.right,
-      top: body.style.top,
-      width: body.style.width,
-    };
-    const originalRootStyles = {
-      overflow: root.style.overflow,
-      overscrollBehavior: root.style.overscrollBehavior,
-    };
-
-    body.style.left = `-${scrollX}px`;
-    body.style.overflow = "hidden";
-    body.style.position = "fixed";
-    body.style.right = "0";
-    body.style.top = `-${scrollY}px`;
-    body.style.width = "100%";
-    root.style.overflow = "hidden";
-    root.style.overscrollBehavior = "none";
+    const releaseLock = acquireDocumentScrollLock({ mode: "fixed", scrollX, scrollY });
 
     return () => {
-      Object.assign(body.style, originalBodyStyles);
-      Object.assign(root.style, originalRootStyles);
+      releaseLock();
       const unlockScrollTarget = latestUnlockScrollTargetRef.current?.current;
       if (unlockScrollTarget) {
         unlockScrollTarget.scrollIntoView({ behavior: "auto", block: "start" });
@@ -1402,6 +1380,7 @@ function HomePage({
             className="trace-memory-detail__folio"
             ref={detailPanelRef}
             data-testid="memory-detail-panel"
+            tabIndex="-1"
             onClick={(event) => event.stopPropagation()}
             style={{
               overflowY: "auto",

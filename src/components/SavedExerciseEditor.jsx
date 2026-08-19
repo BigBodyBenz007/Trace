@@ -32,7 +32,7 @@ function SavedExerciseEditor({ exercise, onSave, onCancel, inputStyle, buttonSty
   }
 
   return (
-    <div style={{ background: "#111827", border: "1px solid #6b7280", borderRadius: "10px", marginBottom: "14px", padding: "14px" }}>
+    <div className="trace-feature-surface trace-saved-exercise-editor" style={{ background: "#111827", border: "1px solid #6b7280", borderRadius: "10px", marginBottom: "14px", padding: "14px" }}>
       <h4 style={{ marginTop: 0 }}>Edit Saved Exercise</h4>
       <p style={{ color: "#d1d5db" }}>Changes affect only this reusable definition. Historical workouts are not changed.</p>
       <label style={{ display: "block" }}>
@@ -55,8 +55,8 @@ function SavedExerciseEditor({ exercise, onSave, onCancel, inputStyle, buttonSty
       )}
       {error && <p role="alert" style={{ color: "#fca5a5" }}>{error}</p>}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "12px" }}>
-        <button type="button" onClick={save} style={{ ...buttonStyle, fontSize: "16px", marginTop: 0, padding: "8px 12px" }}>Save Saved Exercise</button>
-        <button type="button" onClick={onCancel} style={{ ...buttonStyle, background: "#666", fontSize: "16px", marginTop: 0, padding: "8px 12px" }}>Cancel Saved Exercise Edit</button>
+        <button className="trace-action trace-action--primary" type="button" onClick={save} style={{ ...buttonStyle, fontSize: "16px", marginTop: 0, padding: "8px 12px" }}>Save Saved Exercise</button>
+        <button className="trace-action trace-action--secondary" type="button" onClick={onCancel} style={{ ...buttonStyle, background: "#666", fontSize: "16px", marginTop: 0, padding: "8px 12px" }}>Cancel Saved Exercise Edit</button>
       </div>
     </div>
   );
