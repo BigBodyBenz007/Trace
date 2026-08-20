@@ -591,6 +591,21 @@ function NutritionPage({
     width: "100%",
   };
 
+  const renderBackToTimelineButton = ({ style } = {}) => (
+    <button
+      className="trace-action trace-action--secondary"
+      type="button"
+      onClick={onBack}
+      style={{
+        ...buttonStyle,
+        backgroundColor: "#666",
+        ...style,
+      }}
+    >
+      Back to Timeline
+    </button>
+  );
+
   return (
     <div className="trace-feature-page trace-feature-page--nutrition" ref={nutritionPageTopRef} data-testid="nutrition-page" style={containerStyle}>
       <header className="trace-feature-page__identity">
@@ -603,19 +618,17 @@ function NutritionPage({
       </p>
       </header>
 
-      <button
-        className="trace-action trace-action--secondary"
-        type="button"
-        onClick={onBack}
+      <div
+        data-testid="nutrition-top-back-row"
         style={{
-          ...buttonStyle,
-          backgroundColor: "#666",
+          display: "grid",
+          justifyItems: "center",
           marginBottom: "24px",
           marginTop: 0,
         }}
       >
-        Back to Timeline
-      </button>
+        {renderBackToTimelineButton({ marginTop: 0 })}
+      </div>
 
       <section className="trace-nutrition-goals-disclosure" aria-labelledby="nutrition-goals-toggle">
         <button
@@ -987,18 +1000,6 @@ function NutritionPage({
           >
             Cancel Entry
           </button>
-
-          <button
-            className="trace-action trace-action--secondary"
-            type="button"
-            onClick={onBack}
-            style={{
-              ...buttonStyle,
-              backgroundColor: "#666",
-            }}
-          >
-            Back to Timeline
-          </button>
         </div>
       </form>
 
@@ -1283,6 +1284,8 @@ function NutritionPage({
           </div>
         )}
       </section>
+
+      {renderBackToTimelineButton({ marginTop: "24px" })}
 
     </div>
   );

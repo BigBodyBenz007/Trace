@@ -268,9 +268,22 @@ test("provides matching timeline navigation controls at the top and bottom", () 
   });
 
   expect(navigationButtons).toHaveLength(2);
-  fireEvent.click(navigationButtons[0]);
-  fireEvent.click(navigationButtons[1]);
 
+  const topBackButton = navigationButtons[0];
+  const bottomBackButton = navigationButtons[1];
+  const savedEntriesSection = screen.getByRole("heading", { name: "Saved Entries" }).closest("section");
+  expect(savedEntriesSection).not.toBeNull();
+  expect(screen.getByText("No food entries yet.")).toBeInTheDocument();
+  const topBackButtonRow = screen.getByTestId("nutrition-top-back-row");
+
+  expect(topBackButtonRow).toHaveStyle("display: grid");
+  expect(topBackButtonRow).toHaveStyle("marginBottom: 24px");
+  expect(topBackButtonRow).toHaveTextContent("Back to Timeline");
+  expect(topBackButtonRow).toContainElement(topBackButton);
+
+  expect(savedEntriesSection.compareDocumentPosition(bottomBackButton) & Node.DOCUMENT_POSITION_FOLLOWING).toBeGreaterThan(0);
+  fireEvent.click(topBackButton);
+  fireEvent.click(bottomBackButton);
   expect(props.onBack).toHaveBeenCalledTimes(2);
 });
 
