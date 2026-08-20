@@ -2551,7 +2551,8 @@ code {
 /* Settings: conventional choices with unmistakable selected states. */
 .trace-feature-page--settings .life-current-theme-settings,
 .trace-feature-page--settings .motion-preference-settings,
-.trace-settings-units {
+.trace-settings-units,
+.trace-settings-data-backup {
   max-width: 680px;
 }
 
@@ -2567,6 +2568,38 @@ code {
 .trace-settings-units fieldset:has(input:checked) {
   background: rgba(27, 111, 106, 0.16);
   border-color: var(--trace-teal-soft) !important;
+}
+
+.trace-settings-data-backup {
+  align-items: center;
+  background: linear-gradient(135deg, rgba(27, 111, 106, 0.16), rgba(189, 147, 98, 0.08));
+  border: 1px solid var(--trace-border-warm);
+  border-radius: 16px;
+  box-sizing: border-box;
+  display: flex;
+  gap: var(--trace-space-4);
+  justify-content: space-between;
+  margin-top: var(--trace-space-6);
+  padding: clamp(18px, 4vw, 24px);
+  text-align: left;
+  width: 100%;
+}
+
+.trace-settings-data-backup h2,
+.trace-settings-data-backup p {
+  margin: 0;
+}
+
+.trace-settings-data-backup p {
+  color: var(--trace-text-muted);
+  line-height: 1.55;
+  margin-top: 6px;
+}
+
+.trace-settings-data-backup .trace-action {
+  flex: 0 0 auto;
+  margin-top: 0 !important;
+  min-height: 44px;
 }
 
 /* Backup: archival workflow with review and destructive restore separated. */
@@ -2695,6 +2728,15 @@ code {
 
   .trace-backup-actions {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trace-settings-data-backup {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trace-settings-data-backup .trace-action {
+    width: 100%;
   }
 
   .trace-backup-preview .trace-action,

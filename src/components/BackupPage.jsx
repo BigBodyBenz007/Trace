@@ -47,6 +47,7 @@ function downloadWithAnchor(file) {
 
 export default function BackupPage({
   onBack,
+  backLabel = "Back to Timeline",
   onRestoreComplete = () => {},
   buttonStyle,
   containerStyle,
@@ -149,7 +150,7 @@ export default function BackupPage({
       </p>
       </header>
       <nav aria-label="Backup navigation" className="trace-backup-navigation">
-        <button className="trace-action trace-action--secondary" type="button" style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>Back to Timeline</button>
+        <button className="trace-action trace-action--secondary" type="button" style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>{backLabel}</button>
       </nav>
       <section aria-label="Archive actions" className="trace-backup-actions">
         <button className="trace-action trace-action--primary" type="button" style={buttonStyle} onClick={exportBackup}>Download Trace Backup</button>
@@ -165,7 +166,7 @@ export default function BackupPage({
         <section className="trace-feature-surface trace-backup-success" role="status" aria-label="Restore complete" style={{ background: "#14532d", borderRadius: "12px", marginTop: "24px", padding: "18px" }}>
           <h2>✓ Trace restored successfully</h2>
           <p>Your backup has been completely restored.</p>
-          <button className="trace-action trace-action--secondary" type="button" style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>Back to Timeline</button>
+          <button className="trace-action trace-action--secondary" type="button" style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>{backLabel}</button>
         </section>
       )}
       {summary && (

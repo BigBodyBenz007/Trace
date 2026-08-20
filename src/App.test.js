@@ -437,6 +437,18 @@ test("successful same-tab restore immediately synchronizes theme, units, and mot
   anchorClick.mockRestore();
 });
 
+test("Settings opens the established Backup & Restore experience and returns to Settings", () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  fireEvent.click(screen.getByRole("button", { name: "Manage Backup & Restore" }));
+  expect(screen.getByRole("heading", { name: "Backup & Restore" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Download Trace Backup" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Select Backup to Restore" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Back to Settings" }));
+  expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Data & Backup" })).toBeInTheDocument();
+});
+
 test("a genuine Motion preference change shows the established toast while initial loading does not", () => {
   const first = render(<App />);
   expect(document.querySelector(".trace-app-shell")).toHaveAttribute("data-motion", "standard");

@@ -32,6 +32,15 @@ test("renders compact global unit controls and saves each preference", () => {
   expect(screen.getAllByRole("button", { name: "Back to Timeline" })).toHaveLength(2);
 });
 
+test("renders Data & Backup and opens the established backup experience", () => {
+  const onOpenBackup = jest.fn();
+  render(<SettingsPage settings={DEFAULT_APP_SETTINGS} updateSettings={jest.fn()} onBack={jest.fn()} onOpenBackup={onOpenBackup} buttonStyle={{}} containerStyle={{}} />);
+  expect(screen.getByRole("heading", { name: "Data & Backup" })).toBeInTheDocument();
+  expect(screen.getByText("Download a copy of your Trace data or restore a previous backup.")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Manage Backup & Restore" }));
+  expect(onOpenBackup).toHaveBeenCalledTimes(1);
+});
+
 test("motion controls form an accessible keyboard-operable radio group and preserve unrelated settings", () => {
   const updateSettings = jest.fn(() => true);
   const onMotionPreferenceSaved = jest.fn();

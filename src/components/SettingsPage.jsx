@@ -18,6 +18,7 @@ export default function SettingsPage({
   settings,
   updateSettings,
   onBack,
+  onOpenBackup = () => {},
   onMotionPreferenceSaved = () => {},
   buttonStyle,
   containerStyle,
@@ -143,6 +144,13 @@ export default function SettingsPage({
           );
         })}
       </div>
+    </section>
+    <section aria-labelledby="data-backup-heading" className="trace-feature-section trace-settings-data-backup">
+      <div className="trace-settings-data-backup__copy">
+        <h2 id="data-backup-heading">Data &amp; Backup</h2>
+        <p>Download a copy of your Trace data or restore a previous backup.</p>
+      </div>
+      <button className="trace-action trace-action--primary" type="button" onClick={onOpenBackup} style={buttonStyle}>Manage Backup &amp; Restore</button>
     </section>
     <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...buttonStyle, backgroundColor: "#4b5563", fontSize: "16px", marginTop: "24px", minHeight: "44px", padding: "10px 14px" }}>Back to Timeline</button>
   </main>;

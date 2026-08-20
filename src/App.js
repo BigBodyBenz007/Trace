@@ -143,6 +143,7 @@ export function localCalendarDateKey(value = new Date()) {
 
 function App() {
   const [page, setPage] = useState("home");
+  const [backupReturnPage, setBackupReturnPage] = useState("home");
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -1412,7 +1413,10 @@ function App() {
           onOpenProtocols={() => setPage("protocols")}
           onOpenWorkouts={() => setPage("workouts")}
           onOpenTrophyCase={() => setPage("trophy-case")}
-          onOpenBackup={() => setPage("backup")}
+          onOpenBackup={() => {
+            setBackupReturnPage("home");
+            setPage("backup");
+          }}
           onOpenJournal={() => setPage("journal")}
           deleteMemory={deleteMemory}
           editMemory={editMemory}
@@ -1468,6 +1472,10 @@ function App() {
           updateSettings={updateAppSettings}
           onMotionPreferenceSaved={() => showConfirmation("Settings saved")}
           onBack={() => setPage("home")}
+          onOpenBackup={() => {
+            setBackupReturnPage("settings");
+            setPage("backup");
+          }}
           buttonStyle={buttonStyle}
           containerStyle={containerStyle}
         />
@@ -1519,7 +1527,8 @@ function App() {
         />
       ) : page === "backup" ? (
         <BackupPage
-          onBack={() => setPage("home")}
+          backLabel={backupReturnPage === "settings" ? "Back to Settings" : "Back to Timeline"}
+          onBack={() => setPage(backupReturnPage)}
           onRestoreComplete={synchronizeRestoredAppSettings}
           buttonStyle={buttonStyle}
           containerStyle={containerStyle}
