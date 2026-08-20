@@ -195,7 +195,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1", sodium: 640 }]);
   expect(JSON.parse(storage.value("nutritionGoals"))).toEqual({ calories: 2000, sodium: 2300 });
   expect(JSON.parse(storage.value("healthMeasurementEntries"))).toEqual([{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }]);
-  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "river" });
+  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "river", motionPreference: "standard" });
   expect(JSON.parse(storage.value("workoutEntries"))).toEqual([workoutWithDrops]);
   expect(JSON.parse(storage.value("medicationEntries"))).toEqual([{ id: "dose-1" }]);
   expect(JSON.parse(storage.value("protocols"))).toEqual([{ id: "protocol-1" }]);
@@ -223,14 +223,16 @@ test("restores pre-Settings backups with default Settings storage fallback", asy
   await restoreTraceBackup(backup({ data: { structured, photos: [] } }), { confirmed: true, storage, openDatabase: async () => makePhotoDatabase() });
   expect(storage.value("appSettings")).toBeNull();
   expect(readAppSettings(storage).lifeCurrentThemeId).toBe("river");
+  expect(readAppSettings(storage).motionPreference).toBe("standard");
 });
 
-test("new backups preserve and restore the selected Life Current theme", async () => {
+test("new backups preserve and restore the selected Life Current theme and motion preference", async () => {
   const source = makeStorage({
     appSettings: JSON.stringify({
       schemaVersion: 1,
       units: { weight: "kg", height: "cm", circumference: "cm" },
       lifeCurrentThemeId: "haunted-forest",
+      motionPreference: "reduced",
     }),
   });
   const value = await createTraceBackup({
@@ -239,6 +241,7 @@ test("new backups preserve and restore the selected Life Current theme", async (
   });
   expect(value.data.structured.appSettings).toMatchObject({
     lifeCurrentThemeId: "haunted-forest",
+    motionPreference: "reduced",
   });
 
   const restored = makeStorage();
@@ -250,6 +253,7 @@ test("new backups preserve and restore the selected Life Current theme", async (
   expect(readAppSettings(restored)).toMatchObject({
     units: { weight: "kg", height: "cm", circumference: "cm" },
     lifeCurrentThemeId: "haunted-forest",
+    motionPreference: "reduced",
   });
 });
 
@@ -275,6 +279,7 @@ test("legacy and invalid backup theme values safely fall back to River without c
       schemaVersion: 1,
       units: { weight: "kg", height: "cm", circumference: "cm" },
       lifeCurrentThemeId: "river",
+      motionPreference: "standard",
     });
 
     const storage = makeStorage();

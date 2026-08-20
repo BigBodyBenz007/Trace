@@ -215,7 +215,7 @@ test("Settings opens and global unit preferences survive remount into a fresh He
   fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' }));
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' }));
-  expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "river" });
+  expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "river", motionPreference: "standard" });
   first.unmount();
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "Health" }));
@@ -351,11 +351,12 @@ test("Timeline to Add Memory resets a previously scrolled position", () => {
   expectDestinationScrolledToTop();
 });
 
-test("successful same-tab restore immediately synchronizes theme and unit settings without reload", async () => {
+test("successful same-tab restore immediately synchronizes theme, units, and motion without reload", async () => {
   const backedUpSettings = {
     schemaVersion: 1,
     units: { weight: "kg", height: "cm", circumference: "cm" },
     lifeCurrentThemeId: "haunted-forest",
+    motionPreference: "reduced",
   };
   localStorage.setItem("appSettings", JSON.stringify(backedUpSettings));
   localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 2450 }));
@@ -378,6 +379,8 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
   expect(screen.getByRole("radio", { name: /Haunted Forest/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /Reduced motion/ })).toBeChecked();
+  expect(document.querySelector(".trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   expect(screen.getByLabelText("Kilograms (kg)")).toBeChecked();
   expect(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' })).toBeChecked();
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
@@ -390,13 +393,16 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
 
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
   fireEvent.click(screen.getByRole("radio", { name: /River/ }));
+  fireEvent.click(screen.getByRole("radio", { name: /Standard motion/ }));
   fireEvent.click(screen.getByLabelText("Pounds (lb)"));
   fireEvent.click(screen.getByLabelText("Feet + inches (ft/in)"));
   fireEvent.click(screen.getByLabelText("Inches (in)"));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
     units: { weight: "lb", height: "ft-in", circumference: "in" },
     lifeCurrentThemeId: "river",
+    motionPreference: "standard",
   });
+  expect(document.querySelector(".trace-app-shell")).toHaveAttribute("data-motion", "standard");
   localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 1800 }));
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
 
@@ -418,15 +424,41 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
   fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
   expect(await screen.findByRole("heading", { name: /Trace restored successfully/ })).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("nutritionGoals"))).toEqual({ calories: 2450 });
+  expect(document.querySelector(".trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
 
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
   expect(screen.getByRole("radio", { name: /Haunted Forest/ })).toBeChecked();
   expect(screen.getByRole("radio", { name: /River/ })).not.toBeChecked();
+  expect(screen.getByRole("radio", { name: /Reduced motion/ })).toBeChecked();
   expect(screen.getByLabelText("Kilograms (kg)")).toBeChecked();
   expect(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' })).toBeChecked();
   expect(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' })).toBeChecked();
   anchorClick.mockRestore();
+});
+
+test("a genuine Motion preference change shows the established toast while initial loading does not", () => {
+  const first = render(<App />);
+  expect(document.querySelector(".trace-app-shell")).toHaveAttribute("data-motion", "standard");
+  expect(screen.queryByTestId("save-confirmation")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByRole("radio", { name: /Standard motion/ })).toBeChecked();
+  expect(screen.queryByTestId("save-confirmation")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("radio", { name: /Reduced motion/ }));
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Settings saved");
+  expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({ motionPreference: "reduced" });
+  expect(document.querySelector(".trace-app-shell")).toHaveAttribute("data-motion", "reduced");
+  first.unmount();
+
+  createTraceBackup.mockReturnValue(new Promise(() => {}));
+  render(<App />);
+  expect(document.querySelector(".trace-app-shell")).toHaveAttribute("data-motion", "reduced");
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByRole("radio", { name: /Reduced motion/ })).toBeChecked();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
+  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
+  expect(screen.getByRole("status")).toHaveTextContent("Preparing backup");
 });
 
 test("Life Current theme selection persists across reload and switches back to River", async () => {

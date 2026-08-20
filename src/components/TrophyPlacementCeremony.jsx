@@ -39,10 +39,11 @@ function TrophyPlacementCeremony({
   onClose,
   onCeremonyStart = NOOP,
   onTrophySettle = NOOP,
+  reduceMotion = false,
 }) {
   const closeRef = useRef(null);
   const settledEntryRef = useRef(null);
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useReducedMotion() || reduceMotion;
   const [phase, setPhase] = useState(reducedMotion ? "complete" : "closed");
 
   useEffect(() => {

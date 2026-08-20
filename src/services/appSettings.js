@@ -5,13 +5,24 @@ import {
 
 export const APP_SETTINGS_STORAGE_KEY = "appSettings";
 export const APP_SETTINGS_SCHEMA_VERSION = 1;
+export const MOTION_PREFERENCES = Object.freeze({
+  STANDARD: "standard",
+  REDUCED: "reduced",
+});
 export const DEFAULT_APP_SETTINGS = Object.freeze({
   schemaVersion: APP_SETTINGS_SCHEMA_VERSION,
   units: Object.freeze({ weight: "lb", height: "ft-in", circumference: "in" }),
   lifeCurrentThemeId: DEFAULT_LIFE_CURRENT_THEME_ID,
+  motionPreference: MOTION_PREFERENCES.STANDARD,
 });
 
 const VALID_UNITS = { weight: ["lb", "kg"], height: ["ft-in", "cm"], circumference: ["in", "cm"] };
+
+export function normalizeMotionPreference(value) {
+  return Object.values(MOTION_PREFERENCES).includes(value)
+    ? value
+    : MOTION_PREFERENCES.STANDARD;
+}
 
 export function normalizeAppSettings(value) {
   const units = value?.units || {};
@@ -22,6 +33,7 @@ export function normalizeAppSettings(value) {
       choices.includes(units[key]) ? units[key] : DEFAULT_APP_SETTINGS.units[key],
     ])),
     lifeCurrentThemeId: normalizeLifeCurrentThemeId(value?.lifeCurrentThemeId),
+    motionPreference: normalizeMotionPreference(value?.motionPreference),
   };
 }
 

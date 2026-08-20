@@ -1,14 +1,20 @@
 import { DEFAULT_APP_SETTINGS, normalizeAppSettings, readAppSettings, writeAppSettings } from "./appSettings";
 
-test("defaults to lb, ft/in, inches, and the River Life Current theme", () => {
+test("legacy settings default to standard motion alongside the existing defaults", () => {
   expect(readAppSettings({ getItem: () => null })).toEqual(DEFAULT_APP_SETTINGS);
   expect(DEFAULT_APP_SETTINGS.lifeCurrentThemeId).toBe("river");
+  expect(DEFAULT_APP_SETTINGS.motionPreference).toBe("standard");
+  expect(normalizeAppSettings({
+    schemaVersion: 1,
+    units: { weight: "kg", height: "cm", circumference: "cm" },
+    lifeCurrentThemeId: "haunted-forest",
+  })).toMatchObject({ motionPreference: "standard" });
 });
 
 test("persists versioned preferences and safely normalizes malformed values", () => {
   const storage = { raw: null, getItem() { return this.raw; }, setItem(key, value) { this.raw = value; } };
-  writeAppSettings(storage, { units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "haunted-forest" });
-  expect(readAppSettings(storage)).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "haunted-forest" });
+  writeAppSettings(storage, { units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "haunted-forest", motionPreference: "reduced" });
+  expect(readAppSettings(storage)).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "haunted-forest", motionPreference: "reduced" });
   storage.raw = "not-json";
   expect(readAppSettings(storage)).toEqual(DEFAULT_APP_SETTINGS);
   expect(normalizeAppSettings({ units: { weight: "stones" } })).toEqual(DEFAULT_APP_SETTINGS);
@@ -20,6 +26,7 @@ test("invalid stored themes fall back to River while preserving valid unrelated 
       schemaVersion: 1,
       units: { weight: "kg", height: "cm", circumference: "cm" },
       lifeCurrentThemeId: { obsolete: true },
+      motionPreference: "excessive",
     }),
     getItem() { return this.raw; },
     setItem(key, value) { this.raw = value; },
@@ -29,6 +36,7 @@ test("invalid stored themes fall back to River while preserving valid unrelated 
     schemaVersion: 1,
     units: { weight: "kg", height: "cm", circumference: "cm" },
     lifeCurrentThemeId: "river",
+    motionPreference: "standard",
   });
 });
 

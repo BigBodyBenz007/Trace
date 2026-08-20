@@ -267,6 +267,7 @@ function HomePage({
   medicationEntries = [],
   journalEntries = [],
   lifeCurrentThemeId = "river",
+  motionPreference = "standard",
   addTrophyCaseEntry = () => false,
   memoryAchievementSuggestion = null,
   dismissMemoryAchievementSuggestion = () => {},
@@ -290,6 +291,7 @@ function HomePage({
   const [filteredCameraDate, setFilteredCameraDate] = useState(null);
   const lifeCurrentTheme = getLifeCurrentTheme(lifeCurrentThemeId);
   const lifeCurrentColors = lifeCurrentTheme.presentation.colors;
+  const reducedMotion = motionPreference === "reduced";
   const timelineRef = useRef(null);
   const timelineFocusFrameRef = useRef(null);
   const timelineFocusedCardRef = useRef(null);
@@ -446,7 +448,7 @@ function HomePage({
         cardBounds.left -
         viewportBounds.left -
         (viewportBounds.width - cardBounds.width) / 2,
-      behavior: "smooth",
+      behavior: reducedMotion ? "auto" : "smooth",
     });
   }
 
@@ -703,10 +705,10 @@ function HomePage({
     setActiveDetailPhotoIndex(0);
     setDetailMemoryId(memory.id);
     const frame = window.requestAnimationFrame(() => {
-      detailPanelRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      detailPanelRef.current?.scrollIntoView?.({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [active, memories, trophySourceTarget]);
+  }, [active, memories, reducedMotion, trophySourceTarget]);
 
   useEffect(() => {
     if (!active || !timelinePositionRequestRef.current || isMemoryFilterActive || sortedMemories.length === 0) return undefined;
@@ -1128,6 +1130,7 @@ function HomePage({
 
                               <button
                                 aria-label={`Select ${memory.title}`}
+                                data-timeline-node="true"
                                 type="button"
                                 onClick={(event) => {
                                   event.stopPropagation();

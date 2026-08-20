@@ -64,7 +64,7 @@ import {
   updateHealthMeasurementEntry,
   writeHealthMeasurementEntries,
 } from "./services/healthMeasurements";
-import { readAppSettings, writeAppSettings } from "./services/appSettings";
+import { MOTION_PREFERENCES, readAppSettings, writeAppSettings } from "./services/appSettings";
 import { createPhotoUrlLoader } from "./services/photoUrlLoader";
 import {
   createJournalEntry,
@@ -1357,6 +1357,7 @@ function App() {
     <div
       aria-hidden={ceremonyEntry ? "true" : undefined}
       className="trace-app-shell"
+      data-motion={appSettings.motionPreference}
       inert={Boolean(ceremonyEntry)}
       style={{
         minHeight: "100vh",
@@ -1422,6 +1423,7 @@ function App() {
           medicationEntries={medicationEntries}
           journalEntries={journalEntries}
           lifeCurrentThemeId={appSettings.lifeCurrentThemeId}
+          motionPreference={appSettings.motionPreference}
           addTrophyCaseEntry={addTrophyCaseEntry}
           memoryAchievementSuggestion={memoryAchievementSuggestion}
           dismissMemoryAchievementSuggestion={() => setMemoryAchievementSuggestion(null)}
@@ -1464,6 +1466,7 @@ function App() {
         <SettingsPage
           settings={appSettings}
           updateSettings={updateAppSettings}
+          onMotionPreferenceSaved={() => showConfirmation("Settings saved")}
           onBack={() => setPage("home")}
           buttonStyle={buttonStyle}
           containerStyle={containerStyle}
@@ -1575,6 +1578,7 @@ function App() {
       {ceremonyEntry && (
         <TrophyPlacementCeremony
           entry={ceremonyEntry}
+          reduceMotion={appSettings.motionPreference === MOTION_PREFERENCES.REDUCED}
           onClose={() => setCeremonyEntry(null)}
         />
       )}
