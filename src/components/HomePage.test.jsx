@@ -109,6 +109,13 @@ function memoryWithOnePhoto() {
   };
 }
 
+function getLifeCurrentRenderer(renderer) {
+  const current = screen.getByTestId("life-current");
+  return current.matches(`[data-life-current-renderer="${renderer}"]`)
+    ? current
+    : current.querySelector(`[data-life-current-renderer="${renderer}"]`);
+}
+
 test("Memory detail locks document scrolling while its panel remains scrollable", () => {
   const pageScroll = mockPageScroll(18, 240);
   const memory = memoryWithOnePhoto();
@@ -297,7 +304,7 @@ test("opens Backup & Restore from the Timeline without changing existing action 
   expect(baseProps.onOpenBackup).toHaveBeenCalledTimes(1);
 });
 
-test("renders Life Current from full source data independently of Memory filters", () => {
+test("filters Timeline cards without recreating or expanding River scenery", () => {
   const fullMemories = [
     { ...memories[0], title: "Mountain trip" },
     { ...memories[1], title: "Quiet evening", date: "2026-08-19" },
@@ -313,7 +320,7 @@ test("renders Life Current from full source data independently of Memory filters
     />
   );
   const current = screen.getByTestId("life-current");
-  const pathBeforeFilter = current.querySelector("path").getAttribute("d");
+  const initialPictures = current.querySelectorAll("picture").length;
   const canvas = screen.getByTestId("timeline-content-canvas");
   expect(canvas).toHaveAttribute("data-full-memory-count", "2");
 
@@ -323,8 +330,9 @@ test("renders Life Current from full source data independently of Memory filters
 
   expect(screen.getByText("Mountain trip")).toBeInTheDocument();
   expect(screen.queryByText("Quiet evening")).not.toBeInTheDocument();
-  expect(screen.getByTestId("life-current").querySelector("path").getAttribute("d"))
-    .not.toBe(pathBeforeFilter);
+  expect(screen.getByTestId("life-current")).toBe(current);
+  expect(current.querySelectorAll("picture")).toHaveLength(initialPictures);
+  expect(initialPictures).toBeLessThanOrEqual(3);
   expect(screen.getByTestId("timeline-content-canvas")).toBe(canvas);
   expect(canvas).toHaveAttribute("data-full-memory-count", "2");
   expect(canvas).toHaveAttribute("data-visible-memory-count", "1");
@@ -513,8 +521,7 @@ test.each([
 
   const viewport = screen.getByTestId("memory-timeline-viewport");
   expect(viewport).toHaveAttribute("data-life-current-theme", themeId);
-  expect(screen.getByTestId("life-current").querySelector(`[data-life-current-renderer="${renderer}"]`))
-    .toBeInTheDocument();
+  expect(getLifeCurrentRenderer(renderer)).toBeInTheDocument();
   expect(screen.getByTestId("timeline-memory-memory-a").querySelector("[data-timeline-card-visual]"))
     .toHaveStyle({ transformOrigin: "center top" });
   fireEvent.click(screen.getByRole("button", { name: "Past" }));
@@ -571,9 +578,9 @@ test.each([
   expect(targetCard).toHaveAttribute("data-timeline-focused", "true");
   fireEvent.click(targetCard);
   const detail = screen.getByRole("dialog", { name: "Memory details for Retained target" });
-  const themedRenderer = screen.getByTestId("life-current")
-    .querySelector(`[data-life-current-renderer="${renderer}"]`);
-  const geometry = themedRenderer.outerHTML;
+  const themedRenderer = getLifeCurrentRenderer(renderer);
+  const currentSection = themedRenderer.getAttribute("data-current-river-section");
+  const loadedSections = themedRenderer.getAttribute("data-loaded-river-sections");
 
   rerender(<HomePage {...props} active={false} />);
 
@@ -606,9 +613,13 @@ test.each([
   expect(screen.getByTestId("memory-timeline-viewport")).toBe(viewport);
   expect(screen.getByTestId("timeline-memory-memory-b")).toBe(targetCard);
   expect(targetCard).toHaveAttribute("data-timeline-focused", "true");
-  expect(screen.getByTestId("life-current")
-    .querySelector(`[data-life-current-renderer="${renderer}"]`)).toBe(themedRenderer);
-  expect(themedRenderer.outerHTML).toBe(geometry);
+  expect(getLifeCurrentRenderer(renderer)).toBe(themedRenderer);
+  if (themeId === "river") {
+    expect(themedRenderer).toHaveAttribute("data-current-river-section", currentSection);
+    expect(themedRenderer).toHaveAttribute("data-loaded-river-sections", loadedSections);
+  } else {
+    expect(themedRenderer).toHaveAttribute("data-life-current-renderer", renderer);
+  }
   fireEvent.click(within(returnedDetail).getByRole("button", { name: "Add Favorite" }));
   expect(baseProps.toggleFavorite).toHaveBeenCalledWith("memory-b");
 
@@ -694,7 +705,7 @@ test("updates visual focus from viewport-center geometry without changing select
   const callsBeforeScroll = window.requestAnimationFrame.mock.calls.length;
   fireEvent.scroll(viewport);
   fireEvent.scroll(viewport);
-  expect(window.requestAnimationFrame).toHaveBeenCalledTimes(callsBeforeScroll + 1);
+  expect(window.requestAnimationFrame).toHaveBeenCalledTimes(callsBeforeScroll + 2);
   act(() => frames.shift()());
   expect(centerRemoveAttribute).not.toHaveBeenCalledWith("data-timeline-focused");
   expect(rightSetAttribute).not.toHaveBeenCalledWith("data-timeline-focused", "true");
@@ -850,7 +861,8 @@ test("filtered browsing moves the authoritative Current camera with the centered
   act(() => { while (frames.length) frames.shift()(); });
   const context = screen.getByTestId("filtered-life-current-context");
   const earlyStart = context.getAttribute("data-window-start");
-  const earlyPath = screen.getByTestId("life-current").querySelector("path").getAttribute("d");
+  const earlyLastActivity = screen.getByTestId("life-current")
+    .getAttribute("data-last-activity-date");
 
   early.getBoundingClientRect = jest.fn(() => ({ left: -550, width: 100 }));
   middle.getBoundingClientRect = jest.fn(() => ({ left: -200, width: 100 }));
@@ -859,8 +871,8 @@ test("filtered browsing moves the authoritative Current camera with the centered
   act(() => { while (frames.length) frames.shift()(); });
 
   expect(context.getAttribute("data-window-start")).not.toBe(earlyStart);
-  expect(screen.getByTestId("life-current").querySelector("path").getAttribute("d"))
-    .not.toBe(earlyPath);
+  expect(screen.getByTestId("life-current").getAttribute("data-last-activity-date"))
+    .not.toBe(earlyLastActivity);
   expect(context).toHaveAttribute("data-authoritative-points", "7");
   unmount();
   window.requestAnimationFrame = originalRequestAnimationFrame;

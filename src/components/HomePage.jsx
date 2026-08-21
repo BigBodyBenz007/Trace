@@ -926,7 +926,12 @@ function HomePage({
           position: "relative",
         }}
       >
-        <LifeCurrentScenery themeId={lifeCurrentTheme.id} />
+        <LifeCurrentScenery
+          active={active}
+          layout={filteredLifeCurrentLayout}
+          themeId={lifeCurrentTheme.id}
+          viewportRef={timelineRef}
+        />
         {isMemoryFilterActive && (
           <div
             data-testid="filtered-life-current-context"

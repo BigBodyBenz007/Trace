@@ -1,4 +1,5 @@
 import React from "react";
+import RiverCurrent from "./RiverCurrent";
 import { getLifeCurrentTheme } from "../services/lifeCurrentThemes";
 
 const VIEWBOX_WIDTH = 1000;
@@ -66,23 +67,6 @@ function forestPathSegments(points, extendFinalPointToEdge) {
       Math.max(0, Math.min(1, Number(points[index + 1]?.intensity) || 0))
     ) / 2,
   }));
-}
-
-function RiverCurrent({ path }) {
-  return (
-    <g data-life-current-renderer="river-current">
-      <path
-        d={path}
-        fill="none"
-        stroke="#60a5fa"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        strokeOpacity="0.42"
-        strokeWidth="6"
-        vectorEffect="non-scaling-stroke"
-      />
-    </g>
-  );
 }
 
 const DISTANT_TREE_POSITIONS = Object.freeze([55, 165, 285, 415, 550, 685, 820, 945]);
@@ -154,11 +138,25 @@ const HauntedForestScenery = React.memo(function HauntedForestScenery() {
   );
 });
 
-export function LifeCurrentScenery({ themeId = "river" }) {
+export function LifeCurrentScenery({
+  active = true,
+  layout,
+  themeId = "river",
+  viewportRef,
+}) {
   const theme = getLifeCurrentTheme(themeId);
-  return theme.presentation.renderer === "forest-path"
-    ? <HauntedForestScenery />
-    : null;
+  if (theme.presentation.renderer === "forest-path") {
+    return <HauntedForestScenery />;
+  }
+  const points = Array.isArray(layout?.points) ? layout.points : [];
+  return points.length > 0 ? (
+    <RiverCurrent
+      active={active}
+      points={points}
+      themeId={theme.id}
+      viewportRef={viewportRef}
+    />
+  ) : null;
 }
 
 function HauntedForestPath({ path, points, showQuietTrail }) {
@@ -197,10 +195,13 @@ function HauntedForestPath({ path, points, showQuietTrail }) {
 
 function LifeCurrent({ layout, showQuietTrail = false, themeId = "river" }) {
   const points = Array.isArray(layout?.points) ? layout.points : [];
-  const path = currentPath(points, showQuietTrail);
-  if (!path) return null;
+  if (points.length === 0) return null;
   const theme = getLifeCurrentTheme(themeId);
+  const isForest = theme.presentation.renderer === "forest-path";
 
+  if (!isForest) return null;
+
+  const path = currentPath(points, showQuietTrail);
   return (
     <>
     <svg
@@ -228,9 +229,7 @@ function LifeCurrent({ layout, showQuietTrail = false, themeId = "river" }) {
         zIndex: 0,
       }}
     >
-      {theme.presentation.renderer === "forest-path"
-        ? <HauntedForestPath path={path} points={points} showQuietTrail={showQuietTrail} />
-        : <RiverCurrent path={path} />}
+      <HauntedForestPath path={path} points={points} showQuietTrail={showQuietTrail} />
     </svg>
     {/* The Timeline keeps its end gutter for card centering, but activity must
         end at the last authoritative point rather than continue as empty waves. */}

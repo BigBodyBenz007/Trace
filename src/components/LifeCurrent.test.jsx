@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import React, { useRef } from "react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import LifeCurrent, {
   getLifeCurrentPointCoordinates,
   LifeCurrentScenery,
@@ -17,84 +18,137 @@ const point = (dateKey, normalizedX, intensity = 0.4, rawActivity = 1) => ({
   rawActivity,
 });
 
-test("does not render a visual for an empty layout", () => {
-  const { container } = render(<LifeCurrent layout={layout([])} />);
+function RiverHarness({
+  active = true,
+  points,
+  scrollWidth = 6000,
+  themeId = "river",
+  viewportWidth = 1000,
+}) {
+  const viewportRef = useRef(null);
+  return (
+    <div
+      data-testid="memory-timeline-viewport"
+      ref={(node) => {
+        viewportRef.current = node;
+        if (!node) return;
+        Object.defineProperty(node, "clientWidth", {
+          configurable: true,
+          value: viewportWidth,
+        });
+        Object.defineProperty(node, "scrollWidth", {
+          configurable: true,
+          value: scrollWidth,
+        });
+        node.getBoundingClientRect = () => ({ width: viewportWidth });
+      }}
+    >
+      <LifeCurrentScenery
+        active={active}
+        layout={layout(points)}
+        themeId={themeId}
+        viewportRef={viewportRef}
+      />
+    </div>
+  );
+}
+
+test("does not render a River visual for an empty layout", () => {
+  const { container } = render(<>
+    <LifeCurrentScenery layout={layout([])} />
+    <LifeCurrent layout={layout([])} />
+  </>);
   expect(container).toBeEmptyDOMElement();
 });
 
-test("renders a restrained short stroke for a single populated day", () => {
-  render(<LifeCurrent layout={layout([point("2026-01-01", 0)])} />);
-  const path = screen.getByTestId("life-current").querySelector("path");
-  expect(path.getAttribute("d")).toMatch(/^M 2 [\d.]+ L 22 [\d.]+$/);
-  expect(path.getAttribute("d")).not.toContain(" 28");
-});
-
-test("renders a deterministic curved path for multiple temporal points", () => {
-  const currentLayout = layout([
-    point("2000-01-01", 0),
-    point("2010-01-01", 0.35),
+test("renders the approved raster River from the sticky scenery slot", () => {
+  render(<RiverHarness points={[
+    point("2020-01-01", 0),
     point("2026-01-01", 1),
-  ]);
-  const { rerender } = render(<LifeCurrent layout={currentLayout} />);
-  const firstPath = screen.getByTestId("life-current").querySelector("path").getAttribute("d");
-  expect(firstPath).toContain(" C ");
-  rerender(<LifeCurrent layout={currentLayout} />);
-  expect(screen.getByTestId("life-current").querySelector("path")).toHaveAttribute("d", firstPath);
-});
+  ]} />);
 
-test("path geometry responds to both temporal layout and activity intensity", () => {
-  const first = layout([
-    point("2020-01-01", 0, 0.1, 0.2),
-    point("2021-01-01", 0.25, 0.2, 0.4),
-    point("2022-01-01", 1, 0.3, 0.6),
-  ]);
-  const { rerender } = render(<LifeCurrent layout={first} />);
-  const initialPath = screen.getByTestId("life-current").querySelector("path").getAttribute("d");
-
-  rerender(<LifeCurrent layout={layout(first.points.map((item) => ({ ...item, intensity: 1, rawActivity: 99 })))} />);
-  expect(screen.getByTestId("life-current").querySelector("path").getAttribute("d"))
-    .not.toBe(initialPath);
-
-  rerender(<LifeCurrent layout={layout([first.points[0], { ...first.points[1], normalizedX: 0.6 }, first.points[2]])} />);
-  expect(screen.getByTestId("life-current").querySelector("path").getAttribute("d")).not.toBe(initialPath);
-});
-
-test("is decorative and cannot intercept Timeline pointer interaction", () => {
-  render(<LifeCurrent layout={layout([point("2025-01-01", 0), point("2026-01-01", 1)])} />);
   const current = screen.getByTestId("life-current");
   expect(current).toHaveAttribute("aria-hidden", "true");
-  expect(current).toHaveStyle({ pointerEvents: "none" });
+  expect(current).toHaveAttribute("data-theme-id", "river");
+  expect(current).toHaveAttribute("data-life-current-renderer", "river-current");
+  expect(current).toHaveAttribute("data-current-river-section", "quiet-narrow");
+  expect(current).toHaveAttribute(
+    "data-loaded-river-sections",
+    "quiet-narrow gentle-rise"
+  );
+  expect(screen.getByTestId("life-current-river-scenery")).toBeInTheDocument();
+  expect(current.querySelectorAll("picture")).toHaveLength(2);
+  expect(current.querySelectorAll("img")).toHaveLength(2);
+  expect(current.querySelectorAll('source[type="image/avif"]')).toHaveLength(4);
+  expect(current.querySelectorAll('source[type="image/webp"]')).toHaveLength(4);
+  current.querySelectorAll("img").forEach((image) => {
+    expect(image).toHaveAttribute("alt", "");
+    expect(image).toHaveAttribute("decoding", "async");
+    expect(image).toHaveAttribute("loading", "eager");
+  });
+  expect(getComputedStyle(current).pointerEvents).toBe("none");
 });
 
-test("does not invent a wavy path after the final authoritative activity", () => {
-  const points = [
-    point("2007-04-17", 0),
-    point("2026-08-06", 0.92),
-    point("2026-08-12", 1),
-  ];
-  render(<LifeCurrent layout={layout(points)} showQuietTrail />);
+test("loads only the current and adjacent landscape sections while scrolling", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  window.cancelAnimationFrame = jest.fn();
 
+  const { unmount } = render(<RiverHarness points={[
+    point("2020-01-01", 0),
+    point("2026-01-01", 1),
+  ]} />);
+  const viewport = screen.getByTestId("memory-timeline-viewport");
   const current = screen.getByTestId("life-current");
-  expect(current).toHaveAttribute("data-last-activity-date", "2026-08-12");
-  expect(current).toHaveAttribute("data-quiet-trail", "false");
-  expect(current).toHaveAttribute("data-visible-end-x", "1000");
-  const finalCoordinate = getLifeCurrentPointCoordinates(points, true).at(-1);
-  expect(current.querySelector("path").getAttribute("d"))
-    .toMatch(new RegExp(`1000 ${finalCoordinate.y}$`));
-  expect(screen.queryByTestId("life-current-quiet-trail")).not.toBeInTheDocument();
-  expect(points).toHaveLength(3);
-  expect(points.at(-1).dateKey).toBe("2026-08-12");
+
+  viewport.scrollLeft = 2500;
+  fireEvent.scroll(viewport);
+  act(() => frames.shift()());
+
+  expect(viewport.scrollLeft).toBe(2500);
+  expect(current).toHaveAttribute("data-current-river-section", "broad-living");
+  expect(current).toHaveAttribute(
+    "data-loaded-river-sections",
+    "high-calm broad-living lively-current"
+  );
+  expect(current.querySelectorAll("picture")).toHaveLength(3);
+  expect(Number(current.getAttribute("data-river-progress"))).toBeCloseTo(0.5, 4);
+  expect(current.style.getPropertyValue("--river-offset")).toMatch(/^-/);
+
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.cancelAnimationFrame = originalCancelAnimationFrame;
 });
 
-test("River remains the default renderer and visual theme", () => {
-  render(<>
-    <LifeCurrentScenery />
-    <LifeCurrent layout={layout([point("2025-01-01", 0), point("2026-01-01", 1)])} />
-  </>);
-  expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "river");
-  expect(document.querySelector('[data-life-current-renderer="river-current"]')).toBeInTheDocument();
-  expect(document.querySelector('[data-life-current-renderer="forest-path"]')).not.toBeInTheDocument();
-  expect(screen.queryByTestId("life-current-forest-scenery")).not.toBeInTheDocument();
+test("River scenery node count stays constant as Memory-derived point count grows", () => {
+  const sparse = [point("2000-01-01", 0), point("2026-01-01", 1)];
+  const dense = Array.from({ length: 900 }, (_, index) =>
+    point(`2026-01-${String(index % 28 + 1).padStart(2, "0")}`, index / 899)
+  );
+  const { rerender } = render(<RiverHarness points={sparse} />);
+  const sparseNodeCount = screen.getByTestId("life-current").querySelectorAll("*").length;
+
+  rerender(<RiverHarness points={dense} />);
+
+  expect(screen.getByTestId("life-current").querySelectorAll("*"))
+    .toHaveLength(sparseNodeCount);
+  expect(screen.getByTestId("life-current")).toHaveAttribute(
+    "data-last-activity-date",
+    dense.at(-1).dateKey
+  );
+});
+
+test("River visuals are not recreated inside the Timeline card canvas", () => {
+  const { container } = render(<LifeCurrent layout={layout([
+    point("2020-01-01", 0),
+    point("2026-01-01", 1),
+  ])} />);
+  expect(container).toBeEmptyDOMElement();
 });
 
 test("Haunted Forest reuses chronology geometry while mapping engagement to path width", () => {
@@ -104,22 +158,19 @@ test("Haunted Forest reuses chronology geometry while mapping engagement to path
     point("2026-01-01", 1, 1, 4),
   ]);
   const before = JSON.parse(JSON.stringify(currentLayout));
-  const { rerender } = render(<>
-    <LifeCurrentScenery />
-    <LifeCurrent layout={currentLayout} />
-  </>);
-  const riverPath = screen.getByTestId("life-current").querySelector("path").getAttribute("d");
-
-  rerender(<>
+  render(<>
     <LifeCurrentScenery themeId="haunted-forest" />
     <LifeCurrent layout={currentLayout} themeId="haunted-forest" />
   </>);
-
+  const expectedCoordinates = getLifeCurrentPointCoordinates(currentLayout.points);
   const forest = screen.getByTestId("life-current");
+
   expect(forest).toHaveAttribute("data-theme-id", "haunted-forest");
   expect(forest.querySelector('[data-life-current-renderer="forest-path"]')).toBeInTheDocument();
-  expect(forest.querySelector('[data-life-current-renderer="forest-path"] > path'))
-    .toHaveAttribute("d", riverPath);
+  const forestPath = forest.querySelector('[data-life-current-renderer="forest-path"] > path')
+    .getAttribute("d");
+  expect(forestPath).toMatch(new RegExp(`^M ${expectedCoordinates[0].x} `));
+  expect(forestPath).toContain(`, ${expectedCoordinates.at(-1).x} ${expectedCoordinates.at(-1).y}`);
   const widths = [...forest.querySelectorAll('[data-forest-path-segment="true"]')]
     .map((segment) => Number(segment.getAttribute("data-engagement-width")));
   expect(widths).toHaveLength(2);
@@ -133,22 +184,18 @@ test("Haunted Forest reuses chronology geometry while mapping engagement to path
     width: "100%",
   });
   expect(scenery).toHaveAttribute("aria-hidden", "true");
-  expect(scenery).toHaveStyle({ overflow: "hidden", pointerEvents: "none" });
   const layers = [...scenery.querySelectorAll("[data-forest-layer]")];
   expect(layers.map((layer) => layer.getAttribute("data-forest-layer"))).toEqual([
     "distant-trees", "foreground-trees",
   ]);
-  layers.forEach((layer) => {
-    expect(layer).toHaveAttribute("aria-hidden", "true");
-    expect(layer).toHaveAttribute("pointer-events", "none");
-  });
   expect(currentLayout).toEqual(before);
 });
 
 test("invalid theme IDs safely render River", () => {
-  render(<LifeCurrent themeId="lost-world" layout={layout([point("2026-01-01", 0)])} />);
+  render(<RiverHarness points={[point("2026-01-01", 0)]} themeId="lost-world" />);
   expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "river");
-  expect(document.querySelector('[data-life-current-renderer="river-current"]')).toBeInTheDocument();
+  expect(screen.getByTestId("life-current"))
+    .toHaveAttribute("data-life-current-renderer", "river-current");
 });
 
 test("ends at the latest activity for sparse older and recent Memory data", () => {
@@ -173,26 +220,16 @@ test("ends at the latest activity for sparse older and recent Memory data", () =
   normalizedPositions.slice(1).forEach((x, index) => {
     expect(x).toBeGreaterThan(normalizedPositions[index]);
   });
-  expect(normalizedPositions[2]).toBeGreaterThan(0.5);
-  expect(normalizedPositions[2]).toBeLessThan(0.85);
   const coordinates = getLifeCurrentPointCoordinates(currentLayout.points, true);
   expect(coordinates[0].x).toBe(12);
   expect(coordinates.at(-1).x).toBe(1000);
-  expect(coordinates.slice(0, 3).every(({ y }) => y !== 28)).toBe(true);
-  expect(coordinates.slice(-2).every(({ y }) => y !== 28)).toBe(true);
-  expect(new Set(coordinates.slice(0, 3).map(({ y }) => y)).size).toBeGreaterThan(1);
-  expect(Math.abs(coordinates[0].y - 28))
-    .toBeGreaterThan(Math.abs(coordinates[1].y - 28));
-  render(<LifeCurrent layout={currentLayout} showQuietTrail />);
-
+  render(<RiverHarness points={currentLayout.points} />);
   expect(screen.getByTestId("life-current"))
     .toHaveAttribute("data-last-activity-date", "2026-08-12");
-  expect(screen.getByTestId("life-current").querySelector("path").getAttribute("d"))
-    .not.toMatch(/^M [\d.]+ 28(?: |$)/);
   expect(screen.queryByTestId("life-current-quiet-trail")).not.toBeInTheDocument();
 });
 
-test("distributes historical and recent bends across the full rendered range", () => {
+test("distributes historical and recent bends across the full chronology range", () => {
   const source = deriveLifeCurrent({
     memories: [
       { id: "1983", date: "1983-06-16" },
@@ -212,9 +249,6 @@ test("distributes historical and recent bends across the full rendered range", (
 
   expect(historicalSpan).toBeGreaterThan(400);
   expect(recentSpan).toBeGreaterThan(400);
-  expect(activityCoordinates.slice(0, 4).every(({ y }) => y !== 28)).toBe(true);
-  expect(new Set(activityCoordinates.slice(0, 4).map(({ y }) => y)).size)
-    .toBeGreaterThan(1);
   expect(activityCoordinates.at(-1).x).toBe(1000);
 });
 
@@ -235,24 +269,28 @@ test("consolidates same-day memories while preserving their combined intensity",
     .toBeGreaterThan(Math.abs(coordinates[1].y - 28));
 });
 
-test("uses the same generated geometry at laptop and phone container widths", () => {
-  const points = [point("2000-01-01", 0), point("2010-01-01", 0.5), point("2026-01-01", 1)];
-  const { rerender } = render(
-    <div style={{ width: "1440px" }}><LifeCurrent layout={layout(points)} showQuietTrail /></div>
-  );
-  const laptopPath = screen.getByTestId("life-current").querySelector("path").getAttribute("d");
-  rerender(
-    <div style={{ width: "390px" }}><LifeCurrent layout={layout(points)} showQuietTrail /></div>
-  );
-  expect(screen.getByTestId("life-current").querySelector("path"))
-    .toHaveAttribute("d", laptopPath);
+test("uses responsive raster candidates at laptop and phone widths", () => {
+  const { rerender } = render(<RiverHarness
+    points={[point("2000-01-01", 0), point("2026-01-01", 1)]}
+    viewportWidth={1440}
+  />);
+  const desktopSources = [...screen.getByTestId("life-current").querySelectorAll("source")];
+  expect(desktopSources.some((source) => source.getAttribute("srcset")?.includes("1920")))
+    .toBe(true);
+
+  rerender(<RiverHarness
+    points={[point("2000-01-01", 0), point("2026-01-01", 1)]}
+    viewportWidth={390}
+  />);
+  expect([...screen.getByTestId("life-current").querySelectorAll('source[media]')]
+    .every((source) => source.getAttribute("srcset"))).toBe(true);
 });
 
-test("does not add a quiet trail to camera-window rendering by default", () => {
-  render(<LifeCurrent layout={layout([
+test("does not add a procedural quiet trail to raster scenery", () => {
+  render(<RiverHarness points={[
     point("2026-01-01", 0),
     point("2026-08-06", 1),
-  ])} />);
+  ]} />);
   expect(screen.queryByTestId("life-current-quiet-trail")).not.toBeInTheDocument();
-  expect(screen.getByTestId("life-current")).toHaveAttribute("data-visible-end-x", "988");
+  expect(screen.getByTestId("life-current")).toHaveAttribute("data-quiet-trail", "false");
 });

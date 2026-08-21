@@ -1,0 +1,470 @@
+:root {
+  color-scheme: dark;
+  --page: #07131f;
+  --surface: #102538;
+  --surface-raised: #163044;
+  --text: #f2eadc;
+  --muted: #b9b0a2;
+  --border: #314859;
+  --brass: #d2ad78;
+  --focus: #83d8cf;
+  --scene-height: 360px;
+  --section-overlap: 144px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  background: linear-gradient(180deg, #050d15, var(--page));
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  overflow-x: hidden;
+}
+
+button,
+select {
+  font: inherit;
+}
+
+.proof-page {
+  margin: 0 auto;
+  max-width: 1520px;
+  min-width: 0;
+  padding: 28px clamp(14px, 3vw, 40px) 42px;
+  width: 100%;
+}
+
+.proof-header,
+.proof-stage-heading,
+.proof-footer {
+  align-items: center;
+  display: flex;
+  gap: 24px;
+  justify-content: space-between;
+}
+
+.proof-header {
+  margin: 0 auto 24px;
+  max-width: 1360px;
+}
+
+.proof-kicker {
+  color: var(--brass);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  margin: 0 0 6px;
+  text-transform: uppercase;
+}
+
+h1,
+h2,
+p {
+  margin-top: 0;
+}
+
+h1,
+h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-weight: 600;
+}
+
+h1 {
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  line-height: 1;
+  margin-bottom: 10px;
+}
+
+h2 {
+  font-size: clamp(1.3rem, 3vw, 1.8rem);
+  margin-bottom: 0;
+}
+
+.proof-summary,
+.proof-help,
+.proof-notes {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.proof-summary {
+  margin-bottom: 0;
+}
+
+.proof-metrics {
+  display: grid;
+  flex: 0 0 auto;
+  gap: 8px;
+  grid-template-columns: repeat(3, auto);
+  margin: 0;
+}
+
+.proof-metrics div {
+  background: rgba(22, 48, 68, 0.76);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  min-width: 108px;
+  padding: 10px 12px;
+}
+
+.proof-metrics dt {
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
+.proof-metrics dd {
+  font-weight: 800;
+  margin: 3px 0 0;
+}
+
+.proof-stage {
+  background: rgba(10, 26, 40, 0.86);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  padding: 18px;
+}
+
+.proof-stage-heading {
+  margin: 0 auto 16px;
+  max-width: 1360px;
+}
+
+.proof-controls {
+  align-items: end;
+  display: flex;
+  gap: 8px;
+}
+
+.proof-controls button,
+.proof-controls select {
+  background: var(--surface-raised);
+  border: 1px solid #5c7585;
+  border-radius: 9px;
+  color: var(--text);
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+.proof-controls button {
+  cursor: pointer;
+  font-weight: 750;
+}
+
+.proof-controls label span {
+  color: var(--muted);
+  display: block;
+  font-size: 0.7rem;
+  margin: 0 0 3px 2px;
+}
+
+.proof-controls :focus-visible,
+.river-viewport:focus-visible,
+.memory-card:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.river-viewport {
+  background: #101b18;
+  border: 1px solid #465847;
+  border-radius: 14px;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-color: #52746d #0a1720;
+  touch-action: pan-x pan-y;
+  width: 100%;
+}
+
+.river-track {
+  height: var(--scene-height);
+  isolation: isolate;
+  min-width: 100%;
+  position: relative;
+  width: max-content;
+}
+
+.river-sections {
+  display: flex;
+  height: 100%;
+  min-width: 100%;
+  pointer-events: none;
+  position: relative;
+  z-index: 0;
+}
+
+.river-section {
+  contain: layout paint style;
+  flex: 0 0 var(--section-width);
+  height: 100%;
+  overflow: hidden;
+  position: relative;
+  scroll-snap-align: center;
+}
+
+.river-section:not(:first-child) {
+  margin-left: calc(-1 * var(--section-overlap));
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    rgba(0, 0, 0, 0.28) calc(var(--section-overlap) * 0.28),
+    #000 var(--section-overlap)
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    rgba(0, 0, 0, 0.28) calc(var(--section-overlap) * 0.28),
+    #000 var(--section-overlap)
+  );
+}
+
+.river-section img {
+  display: block;
+  height: var(--image-height, 100%);
+  left: 0;
+  max-width: none;
+  object-fit: cover;
+  object-position: var(--image-x, 50%) 50%;
+  position: absolute;
+  top: var(--image-top, 0);
+  width: 100%;
+}
+
+.river-section::after {
+  background: linear-gradient(180deg, rgba(4, 12, 9, 0.06), transparent 34%, transparent 70%, rgba(4, 12, 9, 0.12));
+  content: "";
+  inset: 0;
+  position: absolute;
+}
+
+.memory-track {
+  inset: 0;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 2;
+}
+
+.memory-fixture {
+  left: var(--memory-x);
+  pointer-events: auto;
+  position: absolute;
+  top: var(--memory-y, 176px);
+  transform: translateX(-50%);
+}
+
+.memory-fixture::before {
+  background: rgba(222, 239, 230, 0.8);
+  content: "";
+  height: 48px;
+  left: 50%;
+  position: absolute;
+  top: -48px;
+  transform: translateX(-50%);
+  width: 2px;
+}
+
+.memory-fixture::after {
+  background: #bfe7db;
+  border: 3px solid #12393b;
+  border-radius: 50%;
+  box-shadow: 0 0 0 3px rgba(191, 231, 219, 0.24);
+  content: "";
+  height: 14px;
+  left: 50%;
+  position: absolute;
+  top: -58px;
+  transform: translateX(-50%);
+  width: 14px;
+}
+
+.memory-card {
+  background: rgba(11, 29, 34, 0.92);
+  border: 1px solid rgba(189, 147, 98, 0.72);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
+  color: var(--text);
+  cursor: pointer;
+  min-height: 108px;
+  padding: 12px;
+  text-align: left;
+  transition: transform 160ms ease, border-color 160ms ease;
+  width: 190px;
+}
+
+.memory-card:hover {
+  border-color: #efd2a4;
+  transform: translateY(-2px) scale(1.015);
+}
+
+.memory-card strong,
+.memory-card time,
+.memory-card span {
+  display: block;
+}
+
+.memory-card strong {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.memory-card time {
+  color: #b8c4c4;
+  font-size: 0.72rem;
+  margin-top: 7px;
+}
+
+.memory-card span {
+  color: #e1c495;
+  font-size: 0.72rem;
+  margin-top: 8px;
+}
+
+.proof-footer {
+  margin: 12px auto 0;
+  max-width: 1360px;
+}
+
+.proof-footer p {
+  margin-bottom: 0;
+}
+
+.proof-position {
+  color: var(--brass);
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.proof-notes {
+  margin: 26px auto 0;
+  max-width: 1080px;
+}
+
+.proof-notes ul {
+  padding-left: 20px;
+}
+
+.proof-notes li + li {
+  margin-top: 8px;
+}
+
+@media (max-width: 720px) {
+  :root {
+    --scene-height: 300px;
+    --section-overlap: 88px;
+  }
+
+  .proof-page {
+    max-width: 100vw;
+    padding: 14px 10px 28px;
+  }
+
+  .proof-header > *,
+  .proof-stage-heading > *,
+  .proof-footer > * {
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .proof-header,
+  .proof-stage-heading,
+  .proof-footer {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .proof-metrics {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .proof-metrics div {
+    min-width: 0;
+    padding: 8px;
+  }
+
+  .proof-stage {
+    border-radius: 14px;
+    max-width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    padding: 10px;
+    width: 100%;
+  }
+
+  .proof-metrics dd {
+    overflow-wrap: anywhere;
+  }
+
+  .proof-controls {
+    align-items: end;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  .proof-controls label,
+  .proof-controls select {
+    max-width: 100%;
+    min-width: 0;
+    width: 100%;
+  }
+
+  h1 {
+    font-size: clamp(1.85rem, 9vw, 2.45rem);
+  }
+
+  .river-section {
+    flex-basis: var(--section-width-mobile);
+  }
+
+  .memory-fixture {
+    top: 142px;
+  }
+
+  .memory-card {
+    min-height: 100px;
+    width: 176px;
+  }
+}
+
+html[data-capture-mode="mobile"] .proof-page {
+  margin-left: 0;
+  margin-right: 0;
+  max-width: 390px;
+  width: 390px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .river-viewport {
+    scroll-behavior: auto;
+  }
+
+  .memory-card {
+    transition: none;
+  }
+
+  .memory-card:hover {
+    transform: none;
+  }
+}

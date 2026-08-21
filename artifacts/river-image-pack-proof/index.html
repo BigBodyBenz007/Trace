@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Trace River image-pack proof</title>
+    <link rel="stylesheet" href="./river-proof.css" />
+  </head>
+  <body>
+    <main class="proof-page">
+      <header class="proof-header">
+        <div>
+          <p class="proof-kicker">Standalone visual proof &middot; production River unchanged</p>
+          <h1>River Life Current image pack</h1>
+          <p class="proof-summary">
+            Six approved raster sections, joined with crop-safe overlaps beneath a separate Timeline layer.
+          </p>
+        </div>
+        <dl class="proof-metrics" aria-label="Proof architecture summary">
+          <div><dt>Scenery nodes</dt><dd>6 constant</dd></div>
+          <div><dt>Join</dt><dd>alpha overlap</dd></div>
+          <div><dt>Scale</dt><dd>uniform crop</dd></div>
+        </dl>
+      </header>
+
+      <section class="proof-stage" aria-labelledby="proof-stage-heading">
+        <div class="proof-stage-heading">
+          <div>
+            <p class="proof-kicker">Representative chronology</p>
+            <h2 id="proof-stage-heading">Continuous River with preserved Memory controls</h2>
+          </div>
+          <div class="proof-controls" role="group" aria-label="River proof navigation">
+            <button data-scroll-direction="-1" type="button">Earlier</button>
+            <label>
+              <span>Section</span>
+              <select id="section-jump" aria-label="Jump to River section"></select>
+            </label>
+            <button data-scroll-direction="1" type="button">Later</button>
+          </div>
+        </div>
+
+        <div
+          aria-describedby="proof-help"
+          aria-label="River Life Current visual proof"
+          class="river-viewport"
+          id="river-viewport"
+          role="region"
+          tabindex="0"
+        >
+          <div class="river-track" id="river-track">
+            <div aria-hidden="true" class="river-sections" id="river-sections"></div>
+            <ol aria-label="Representative memories" class="memory-track" id="memory-track"></ol>
+          </div>
+        </div>
+
+        <div class="proof-footer">
+          <p id="proof-help">Scroll horizontally or use Earlier and Later. Memory cards remain keyboard reachable.</p>
+          <p aria-live="polite" class="proof-position" id="proof-position">Section 1 of 6</p>
+        </div>
+      </section>
+
+      <section class="proof-notes" aria-labelledby="proof-notes-heading">
+        <h2 id="proof-notes-heading">What this proof isolates</h2>
+        <ul>
+          <li>No CSS or SVG landscape is drawn; every visible terrain and water detail comes from the approved PNGs.</li>
+          <li>Sections vary in width without changing image aspect ratio.</li>
+          <li>Memory count changes only the semantic card layer, not scenery complexity.</li>
+        </ul>
+      </section>
+    </main>
+    <script src="./river-proof.js"></script>
+  </body>
+</html>

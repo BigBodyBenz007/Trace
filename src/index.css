@@ -1214,7 +1214,7 @@ code {
 }
 
 .life-current-theme-swatch--river {
-  background: linear-gradient(150deg, #172554 0 36%, #60a5fa 38% 60%, #1e3a5f 62%);
+  background: linear-gradient(145deg, #53653e, #2a6265 48%, #174951 67%, #6b6148 82%, #3d5338);
 }
 
 .life-current-theme-swatch--haunted-forest {
@@ -1257,6 +1257,166 @@ code {
 
 .life-current-theme {
   isolation: isolate;
+}
+
+.life-current-theme--river {
+  background: #0c1c18;
+  border-radius: 14px;
+  outline: 1px solid #344f43;
+  outline-offset: -1px;
+}
+
+.river-current-frame {
+  --river-offset: 0px;
+  --river-strip-width: 1000px;
+  height: 0;
+  left: 0;
+  pointer-events: none;
+  position: sticky;
+  top: 0;
+  width: 100%;
+  z-index: 0;
+}
+
+.river-current-scene {
+  background: #0c1c18;
+  contain: layout paint style;
+  height: 260px;
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+.river-current-scene::after {
+  background: linear-gradient(
+    180deg,
+    rgba(4, 12, 9, 0.05),
+    transparent 34%,
+    transparent 70%,
+    rgba(4, 12, 9, 0.14)
+  );
+  content: "";
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 3;
+}
+
+.river-current-section {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    rgba(0, 0, 0, 0.22) calc(var(--river-section-join) * 0.34),
+    #000 var(--river-section-join),
+    #000 100%
+  );
+  contain: layout paint style;
+  height: 100%;
+  left: var(--river-section-left);
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    rgba(0, 0, 0, 0.22) calc(var(--river-section-join) * 0.34),
+    #000 var(--river-section-join),
+    #000 100%
+  );
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  transform: translate3d(var(--river-offset), 0, 0);
+  width: var(--river-section-width);
+  will-change: transform;
+  z-index: var(--river-section-index);
+}
+
+.river-current-section[data-river-section="quiet-narrow"] {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.river-current-section::before {
+  background: linear-gradient(
+    to right,
+    rgba(6, 18, 14, 0.2),
+    transparent var(--river-section-join)
+  );
+  content: "";
+  inset: 0 auto 0 0;
+  pointer-events: none;
+  position: absolute;
+  width: var(--river-section-join);
+  z-index: 1;
+}
+
+.river-current-section[data-river-section="quiet-narrow"]::before {
+  content: none;
+}
+
+.river-current-section--current {
+  z-index: var(--river-section-index);
+}
+
+.river-current-section--next {
+  z-index: var(--river-section-index);
+}
+
+.river-current-section--previous {
+  z-index: var(--river-section-index);
+}
+
+.river-current-picture {
+  display: block;
+  height: 100%;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+.river-current-picture img {
+  display: block;
+  height: var(--river-image-height, 100%);
+  left: 0;
+  max-width: none;
+  object-fit: cover;
+  object-position: var(--river-image-x, 50%) 50%;
+  position: absolute;
+  top: var(--river-image-top, 0);
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .river-current-section {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      rgba(0, 0, 0, 0.22) calc(var(--river-section-join-mobile) * 0.34),
+      #000 var(--river-section-join-mobile),
+      #000 100%
+    );
+    left: var(--river-section-left-mobile);
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      rgba(0, 0, 0, 0.22) calc(var(--river-section-join-mobile) * 0.34),
+      #000 var(--river-section-join-mobile),
+      #000 100%
+    );
+    width: var(--river-section-width-mobile);
+  }
+
+  .river-current-section::before {
+    background: linear-gradient(
+      to right,
+      rgba(6, 18, 14, 0.2),
+      transparent var(--river-section-join-mobile)
+    );
+    width: var(--river-section-join-mobile);
+  }
 }
 
 .life-current-theme--haunted-forest {
