@@ -1324,6 +1324,7 @@ code {
     #000 100%
   );
   overflow: hidden;
+  opacity: 0;
   pointer-events: none;
   position: absolute;
   top: 0;
@@ -1333,7 +1334,15 @@ code {
   z-index: var(--river-section-index);
 }
 
-.river-current-section[data-river-section="quiet-narrow"] {
+.river-current-section[data-image-ready="true"] {
+  opacity: 1;
+  transition: opacity 180ms ease-out;
+}
+
+.river-current-section:is(
+  [data-river-section="quiet-narrow"],
+  [data-river-section="narrow-calm"]
+) {
   -webkit-mask-image: none;
   mask-image: none;
 }
@@ -1352,7 +1361,10 @@ code {
   z-index: 1;
 }
 
-.river-current-section[data-river-section="quiet-narrow"]::before {
+.river-current-section:is(
+  [data-river-section="quiet-narrow"],
+  [data-river-section="narrow-calm"]
+)::before {
   content: none;
 }
 
@@ -1386,7 +1398,14 @@ code {
   object-position: var(--river-image-x, 50%) 50%;
   position: absolute;
   top: var(--river-image-top, 0);
+  transform: scaleX(var(--river-image-scale-x, 1));
   width: 100%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .river-current-section[data-image-ready="true"] {
+    transition: none;
+  }
 }
 
 @media (max-width: 720px) {

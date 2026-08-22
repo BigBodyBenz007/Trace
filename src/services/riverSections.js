@@ -22,6 +22,7 @@ import quietNarrowAvifLarge from "../assets/life-current/river/sections/quiet-na
 import quietNarrowAvifSmall from "../assets/life-current/river/sections/quiet-narrow-960w.avif";
 import quietNarrowWebpLarge from "../assets/life-current/river/sections/quiet-narrow-1920w.webp";
 import quietNarrowWebpSmall from "../assets/life-current/river/sections/quiet-narrow-960w.webp";
+import { RIVER_CATALOG_SECTIONS } from "./riverCatalog";
 
 function sources(
   avifSmall,
@@ -39,14 +40,14 @@ function sources(
   });
 }
 
-export const RIVER_SECTIONS = Object.freeze([
+export const RIVER_FALLBACK_SECTIONS = Object.freeze([
   Object.freeze({
     id: "quiet-narrow",
     label: "Quiet narrow",
     weight: 680,
     mobileWeight: 560,
     join: Object.freeze({ desktop: 0, mobile: 0 }),
-    crop: Object.freeze({ height: "111%", top: "-5%", x: "44%" }),
+    crop: Object.freeze({ height: "100%", top: "0%", x: "44%" }),
     sources: sources(
       quietNarrowAvifSmall,
       quietNarrowAvifLarge,
@@ -57,10 +58,10 @@ export const RIVER_SECTIONS = Object.freeze([
   Object.freeze({
     id: "gentle-rise",
     label: "Gentle rise",
-    weight: 960,
-    mobileWeight: 720,
+    weight: 780,
+    mobileWeight: 600,
     join: Object.freeze({ desktop: 184, mobile: 104 }),
-    crop: Object.freeze({ height: "111%", top: "-8%", x: "50%" }),
+    crop: Object.freeze({ height: "100%", top: "0%", x: "50%" }),
     sources: sources(
       gentleRiseAvifSmall,
       gentleRiseAvifLarge,
@@ -74,7 +75,7 @@ export const RIVER_SECTIONS = Object.freeze([
     weight: 760,
     mobileWeight: 600,
     join: Object.freeze({ desktop: 216, mobile: 120 }),
-    crop: Object.freeze({ height: "139%", top: "-40%", x: "48%" }),
+    crop: Object.freeze({ height: "100%", top: "0%", x: "48%" }),
     sources: sources(
       highCalmAvifSmall,
       highCalmAvifLarge,
@@ -85,10 +86,10 @@ export const RIVER_SECTIONS = Object.freeze([
   Object.freeze({
     id: "broad-living",
     label: "Broad living",
-    weight: 980,
-    mobileWeight: 680,
+    weight: 780,
+    mobileWeight: 600,
     join: Object.freeze({ desktop: 248, mobile: 136 }),
-    crop: Object.freeze({ height: "122%", top: "-32%", x: "48%" }),
+    crop: Object.freeze({ height: "100%", top: "0%", x: "48%" }),
     sources: sources(
       broadLivingAvifSmall,
       broadLivingAvifLarge,
@@ -99,10 +100,10 @@ export const RIVER_SECTIONS = Object.freeze([
   Object.freeze({
     id: "lively-current",
     label: "Lively current",
-    weight: 820,
-    mobileWeight: 620,
+    weight: 780,
+    mobileWeight: 600,
     join: Object.freeze({ desktop: 224, mobile: 124 }),
-    crop: Object.freeze({ height: "122%", top: "-32%", x: "52%" }),
+    crop: Object.freeze({ height: "100%", top: "0%", x: "52%" }),
     sources: sources(
       livelyCurrentAvifSmall,
       livelyCurrentAvifLarge,
@@ -113,10 +114,10 @@ export const RIVER_SECTIONS = Object.freeze([
   Object.freeze({
     id: "gradual-descent",
     label: "Gradual descent",
-    weight: 900,
-    mobileWeight: 700,
+    weight: 520,
+    mobileWeight: 520,
     join: Object.freeze({ desktop: 216, mobile: 120 }),
-    crop: Object.freeze({ height: "122%", top: "-28%", x: "50%" }),
+    crop: Object.freeze({ height: "100%", top: "0%", x: "50%" }),
     sources: sources(
       gradualDescentAvifSmall,
       gradualDescentAvifLarge,
@@ -128,9 +129,18 @@ export const RIVER_SECTIONS = Object.freeze([
   }),
 ]);
 
-function buildStripLayout(mobile) {
+export function resolveRiverSections(candidate = RIVER_CATALOG_SECTIONS) {
+  const validCatalog = Array.isArray(candidate)
+    && candidate.length === 10
+    && candidate.every((section) => section?.id && section?.sources);
+  return validCatalog ? candidate : RIVER_FALLBACK_SECTIONS;
+}
+
+export const RIVER_SECTIONS = resolveRiverSections();
+
+function buildStripLayout(mobile, riverSections) {
   let start = 0;
-  const sections = RIVER_SECTIONS.map((section) => {
+  const sections = riverSections.map((section) => {
     const width = mobile ? section.mobileWeight : section.weight;
     const join = mobile ? section.join.mobile : section.join.desktop;
     start -= join;
@@ -141,28 +151,36 @@ function buildStripLayout(mobile) {
   return Object.freeze({ sections: Object.freeze(sections), totalWidth: start });
 }
 
-const DESKTOP_STRIP_LAYOUT = buildStripLayout(false);
-const MOBILE_STRIP_LAYOUT = buildStripLayout(true);
+const DESKTOP_STRIP_LAYOUT = buildStripLayout(false, RIVER_SECTIONS);
+const MOBILE_STRIP_LAYOUT = buildStripLayout(true, RIVER_SECTIONS);
+const FALLBACK_DESKTOP_STRIP_LAYOUT = buildStripLayout(false, RIVER_FALLBACK_SECTIONS);
+const FALLBACK_MOBILE_STRIP_LAYOUT = buildStripLayout(true, RIVER_FALLBACK_SECTIONS);
 
-export function getRiverStripLayout(viewportWidth) {
-  return viewportWidth <= 720 ? MOBILE_STRIP_LAYOUT : DESKTOP_STRIP_LAYOUT;
+export function getRiverStripLayout(viewportWidth, riverSections = RIVER_SECTIONS) {
+  const mobile = viewportWidth <= 720;
+  if (riverSections === RIVER_SECTIONS) {
+    return mobile ? MOBILE_STRIP_LAYOUT : DESKTOP_STRIP_LAYOUT;
+  }
+  if (riverSections === RIVER_FALLBACK_SECTIONS) {
+    return mobile ? FALLBACK_MOBILE_STRIP_LAYOUT : FALLBACK_DESKTOP_STRIP_LAYOUT;
+  }
+  return buildStripLayout(mobile, riverSections);
 }
 
-const TOTAL_SECTION_WEIGHT = RIVER_SECTIONS.reduce(
-  (total, section) => total + section.weight,
-  0
-);
-
-export function locateRiverSection(progress) {
+export function locateRiverSection(progress, riverSections = RIVER_SECTIONS) {
   const normalizedProgress = Math.max(0, Math.min(1, Number(progress) || 0));
   if (normalizedProgress === 1) {
-    return { index: RIVER_SECTIONS.length - 1, localProgress: 1 };
+    return { index: riverSections.length - 1, localProgress: 1 };
   }
 
-  const position = normalizedProgress * TOTAL_SECTION_WEIGHT;
+  const totalSectionWeight = riverSections.reduce(
+    (total, section) => total + section.weight,
+    0
+  );
+  const position = normalizedProgress * totalSectionWeight;
   let sectionStart = 0;
-  for (let index = 0; index < RIVER_SECTIONS.length; index += 1) {
-    const section = RIVER_SECTIONS[index];
+  for (let index = 0; index < riverSections.length; index += 1) {
+    const section = riverSections[index];
     const sectionEnd = sectionStart + section.weight;
     if (position < sectionEnd) {
       return {
@@ -173,10 +191,43 @@ export function locateRiverSection(progress) {
     sectionStart = sectionEnd;
   }
 
-  return { index: RIVER_SECTIONS.length - 1, localProgress: 1 };
+  return { index: riverSections.length - 1, localProgress: 1 };
 }
 
-export function neighboringRiverSectionIndexes(index) {
+export function neighboringRiverSectionIndexes(index, riverSections = RIVER_SECTIONS) {
   return [index - 1, index, index + 1]
-    .filter((candidate) => candidate >= 0 && candidate < RIVER_SECTIONS.length);
+    .filter((candidate) => candidate >= 0 && candidate < riverSections.length);
+}
+
+export function nearbyRiverSectionIndexes(
+  index,
+  viewportWidth,
+  riverSections = RIVER_SECTIONS
+) {
+  const indexes = neighboringRiverSectionIndexes(index, riverSections);
+  const layout = getRiverStripLayout(viewportWidth, riverSections);
+  let firstIndex = indexes[0];
+  let lastIndex = indexes[indexes.length - 1];
+  const coveredWidth = () => {
+    const first = layout.sections[firstIndex];
+    const last = layout.sections[lastIndex];
+    return last.start + last.width - first.start;
+  };
+
+  while (coveredWidth() < viewportWidth) {
+    if (lastIndex < riverSections.length - 1) {
+      lastIndex += 1;
+      continue;
+    }
+    if (firstIndex > 0) {
+      firstIndex -= 1;
+      continue;
+    }
+    break;
+  }
+
+  return Array.from(
+    { length: lastIndex - firstIndex + 1 },
+    (_, offset) => firstIndex + offset
+  );
 }
