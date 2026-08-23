@@ -1,8 +1,192 @@
 import { normalizePlannedWorkout } from "./plannedWorkout";
-import { createWorkoutItemId } from "./workoutEntry";
+import {
+  createWorkoutItemId,
+  workoutLocalDateTimeToIso,
+} from "./workoutEntry";
+import {
+  WORKOUT_LOAD_MODES,
+  WORKOUT_WEIGHT_UNITS,
+} from "../constants/workoutOptions";
 
 export const WORKOUT_DRAFT_STORAGE_KEY = "workoutDraft";
 export const WORKOUT_DRAFT_SCHEMA_VERSION = 1;
+
+const LOAD_MODES = new Set(WORKOUT_LOAD_MODES.map(({ value }) => value));
+const WEIGHT_UNITS = new Set(WORKOUT_WEIGHT_UNITS.map(({ value }) => value));
+
+function isObject(value) {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function validId(value) {
+  return typeof value === "string" && value.trim() !== "";
+}
+
+function validTimestamp(value) {
+  return typeof value === "string" && !Number.isNaN(Date.parse(value));
+}
+
+function optionalString(value, fallback = "") {
+  if (value === undefined) return fallback;
+  return typeof value === "string" ? value : null;
+}
+
+function normalizeExerciseReference(value) {
+  if (value === undefined || value === null) return value;
+  if (!isObject(value) || !validId(value.sourceId)) return null;
+  if (value.source !== undefined && !validId(value.source)) return null;
+  if (value.modified !== undefined && typeof value.modified !== "boolean") return null;
+  return {
+    ...(value.source === undefined ? {} : { source: value.source.trim() }),
+    sourceId: value.sourceId.trim(),
+    ...(value.modified === undefined ? {} : { modified: value.modified }),
+  };
+}
+
+function normalizeDraftSegment(segment, usedIds, { includeSetFields = false } = {}) {
+  if (!isObject(segment) || !validId(segment.id) || usedIds.has(segment.id.trim())) {
+    return null;
+  }
+  if (
+    typeof segment.reps !== "string" ||
+    !LOAD_MODES.has(segment.loadMode) ||
+    typeof segment.weightAmount !== "string" ||
+    !WEIGHT_UNITS.has(segment.weightUnit) ||
+    (segment.toFailure !== undefined && typeof segment.toFailure !== "boolean") ||
+    (segment.isUntouched !== undefined && typeof segment.isUntouched !== "boolean")
+  ) {
+    return null;
+  }
+  const actualRepsAtFailure = optionalString(segment.actualRepsAtFailure);
+  const notes = optionalString(segment.notes);
+  if (actualRepsAtFailure === null || notes === null) return null;
+  if (
+    includeSetFields &&
+    segment.setType !== undefined &&
+    !["working", "warm-up"].includes(segment.setType)
+  ) {
+    return null;
+  }
+
+  usedIds.add(segment.id.trim());
+  const normalized = {
+    id: segment.id.trim(),
+    reps: segment.reps,
+    ...(includeSetFields ? { setType: segment.setType || "working" } : {}),
+    toFailure: segment.toFailure ?? false,
+    actualRepsAtFailure,
+    loadMode: segment.loadMode,
+    weightAmount: segment.weightAmount,
+    weightUnit: segment.weightUnit,
+    notes,
+    isUntouched: segment.isUntouched ?? false,
+  };
+
+  if (!includeSetFields) return normalized;
+  if (segment.drops !== undefined && !Array.isArray(segment.drops)) return null;
+  const drops = [];
+  for (const drop of segment.drops || []) {
+    const normalizedDrop = normalizeDraftSegment(drop, usedIds);
+    if (!normalizedDrop) return null;
+    drops.push(normalizedDrop);
+  }
+  return { ...normalized, drops };
+}
+
+function normalizeDraftExercise(exercise, usedIds) {
+  if (
+    !isObject(exercise) ||
+    !validId(exercise.id) ||
+    usedIds.has(exercise.id.trim()) ||
+    typeof exercise.name !== "string" ||
+    !Array.isArray(exercise.sets) ||
+    (exercise.exerciseId !== undefined && exercise.exerciseId !== null && !validId(exercise.exerciseId)) ||
+    (exercise.saveAsReusable !== undefined && typeof exercise.saveAsReusable !== "boolean")
+  ) {
+    return null;
+  }
+  const notes = optionalString(exercise.notes);
+  const hasReference = exercise.exerciseReference !== undefined && exercise.exerciseReference !== null;
+  const reference = normalizeExerciseReference(exercise.exerciseReference);
+  if (notes === null || (hasReference && !reference)) return null;
+
+  usedIds.add(exercise.id.trim());
+  const sets = [];
+  for (const set of exercise.sets) {
+    const normalizedSet = normalizeDraftSegment(set, usedIds, { includeSetFields: true });
+    if (!normalizedSet) return null;
+    sets.push(normalizedSet);
+  }
+  const defaultLoadMode = exercise.defaultLoadMode || sets[0]?.loadMode || "external";
+  const defaultWeightUnit = exercise.defaultWeightUnit || sets[0]?.weightUnit || "lb";
+  if (!LOAD_MODES.has(defaultLoadMode) || !WEIGHT_UNITS.has(defaultWeightUnit)) return null;
+
+  return {
+    id: exercise.id.trim(),
+    name: exercise.name,
+    ...(exercise.exerciseId === undefined || exercise.exerciseId === null
+      ? {}
+      : { exerciseId: exercise.exerciseId.trim() }),
+    ...(reference ? { exerciseReference: reference } : {}),
+    saveAsReusable: exercise.saveAsReusable ?? false,
+    defaultLoadMode,
+    defaultWeightUnit,
+    notes,
+    sets,
+  };
+}
+
+export function normalizeWorkoutDraft(value) {
+  if (
+    !isObject(value) ||
+    value.schemaVersion !== WORKOUT_DRAFT_SCHEMA_VERSION ||
+    !validTimestamp(value.startedAt) ||
+    !validTimestamp(value.updatedAt) ||
+    !isObject(value.form) ||
+    typeof value.form.title !== "string" ||
+    typeof value.form.date !== "string" ||
+    typeof value.form.time !== "string" ||
+    typeof value.form.notes !== "string" ||
+    !workoutLocalDateTimeToIso(value.form.date, value.form.time) ||
+    !Array.isArray(value.form.exercises) ||
+    (
+      value.plannedWorkoutId !== undefined &&
+      !validId(value.plannedWorkoutId)
+    )
+  ) {
+    return null;
+  }
+
+  const usedIds = new Set();
+  const exercises = [];
+  for (const exercise of value.form.exercises) {
+    const normalizedExercise = normalizeDraftExercise(exercise, usedIds);
+    if (!normalizedExercise) return null;
+    exercises.push(normalizedExercise);
+  }
+
+  const context = value.context === undefined ? {} : value.context;
+  if (!isObject(context)) return null;
+  const activeSearchExerciseId = context.activeSearchExerciseId ?? null;
+  if (activeSearchExerciseId !== null && !validId(activeSearchExerciseId)) return null;
+
+  return {
+    schemaVersion: WORKOUT_DRAFT_SCHEMA_VERSION,
+    ...(value.plannedWorkoutId === undefined
+      ? {}
+      : { plannedWorkoutId: value.plannedWorkoutId.trim() }),
+    startedAt: value.startedAt,
+    updatedAt: value.updatedAt,
+    form: {
+      title: value.form.title,
+      date: value.form.date,
+      time: value.form.time,
+      notes: value.form.notes,
+      exercises,
+    },
+    context: { activeSearchExerciseId },
+  };
+}
 
 function localDateTime(value) {
   return {
@@ -92,24 +276,7 @@ export function createWorkoutDraftFromPlannedWorkout(
 export function readWorkoutDraft(storage = localStorage) {
   try {
     const value = JSON.parse(storage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
-    if (
-      value?.schemaVersion !== WORKOUT_DRAFT_SCHEMA_VERSION ||
-      !value.form ||
-      !Array.isArray(value.form.exercises) ||
-      typeof value.startedAt !== "string" ||
-      (
-        value.plannedWorkoutId !== undefined &&
-        (
-          typeof value.plannedWorkoutId !== "string" ||
-          value.plannedWorkoutId.trim() === ""
-        )
-      )
-    ) {
-      return null;
-    }
-    return value.plannedWorkoutId === undefined
-      ? value
-      : { ...value, plannedWorkoutId: value.plannedWorkoutId.trim() };
+    return normalizeWorkoutDraft(value);
   } catch (error) {
     return null;
   }

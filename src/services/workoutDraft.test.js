@@ -1,6 +1,7 @@
 import { createPlannedWorkout } from "./plannedWorkout";
 import {
   createWorkoutDraftFromPlannedWorkout,
+  normalizeWorkoutDraft,
   readWorkoutDraft,
   WORKOUT_DRAFT_SCHEMA_VERSION,
   WORKOUT_DRAFT_STORAGE_KEY,
@@ -148,4 +149,65 @@ test("reads and normalizes an optional planned-workout backlink", () => {
     plannedWorkoutId: " ",
   }));
   expect(readWorkoutDraft()).toBeNull();
+});
+
+test("normalizes every nested active-draft field while preserving entered set values", () => {
+  const draft = createWorkoutDraftFromPlannedWorkout(
+    plannedWorkout(),
+    new Date(2026, 7, 22, 9, 5)
+  );
+  draft.plannedWorkoutId = "  planned-workout:orphaned  ";
+  draft.form.exercises[0].sets[0] = {
+    ...draft.form.exercises[0].sets[0],
+    reps: "11",
+    weightAmount: "72.5",
+    drops: [{
+      id: "drop:restored",
+      reps: "7",
+      toFailure: true,
+      actualRepsAtFailure: "8",
+      loadMode: "external",
+      weightAmount: "55",
+      weightUnit: "kg",
+      notes: "Preserve this drop",
+      isUntouched: false,
+    }],
+  };
+
+  const normalized = normalizeWorkoutDraft(draft);
+  expect(normalized.plannedWorkoutId).toBe("planned-workout:orphaned");
+  expect(normalized.form.exercises[0].sets[0]).toMatchObject({
+    reps: "11",
+    weightAmount: "72.5",
+    drops: [expect.objectContaining({
+      reps: "7",
+      actualRepsAtFailure: "8",
+      weightAmount: "55",
+    })],
+  });
+});
+
+test("rejects malformed nested active-draft data", () => {
+  const draft = createWorkoutDraftFromPlannedWorkout(
+    plannedWorkout(),
+    new Date(2026, 7, 22, 9, 5)
+  );
+  draft.form.exercises[0].sets[0].drops = [{
+    id: "drop:invalid",
+    reps: 7,
+    loadMode: "external",
+    weightAmount: "55",
+    weightUnit: "kg",
+  }];
+
+  expect(normalizeWorkoutDraft(draft)).toBeNull();
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  expect(readWorkoutDraft()).toBeNull();
+
+  const invalidReference = createWorkoutDraftFromPlannedWorkout(
+    plannedWorkout(),
+    new Date(2026, 7, 22, 9, 5)
+  );
+  invalidReference.form.exercises[0].exerciseReference = "";
+  expect(normalizeWorkoutDraft(invalidReference)).toBeNull();
 });

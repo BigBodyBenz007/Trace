@@ -16,7 +16,7 @@ jest.mock("../services/traceBackup", () => ({
 
 const summary = {
   memories: 2, photos: 3, nutritionEntries: 4, healthMeasurementEntries: 12, workouts: 5,
-  plannedWorkouts: 13,
+  plannedWorkouts: 13, activeWorkoutDraft: true,
   medicationEntries: 6, protocols: 7, trophyCaseEntries: 8,
   savedExercises: 9, savedCompounds: 10, userFoods: 11, journalEntries: 12,
 };
@@ -194,6 +194,7 @@ test("validates a selected backup and previews counts without restoring", async 
   expect(screen.getByText("Memories: 2")).toBeInTheDocument();
   expect(screen.getByText("Photos: 3")).toBeInTheDocument();
   expect(screen.getByText("Planned workouts: 13")).toBeInTheDocument();
+  expect(screen.getByText("Active workout draft: Included — it will replace any current active workout draft")).toBeInTheDocument();
   expect(screen.getByText("No Trace data has been changed yet.")).toBeInTheDocument();
   expect(restoreTraceBackup).not.toHaveBeenCalled();
 });
@@ -207,7 +208,28 @@ test("requires explicit browser confirmation before applying a full restore", as
   });
   await screen.findByRole("heading", { name: "Review Backup" });
   fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
-  expect(window.confirm).toHaveBeenCalled();
+  expect(window.confirm).toHaveBeenCalledWith(
+    "Replace all current Trace data with this backup? Any current active workout draft will be replaced by the active draft in this backup. This cannot be merged."
+  );
+  expect(restoreTraceBackup).not.toHaveBeenCalled();
+});
+
+test("preview and confirmation explain that a backup without a draft removes the current draft", async () => {
+  parseTraceBackupText.mockReturnValue({
+    ...parsed,
+    summary: { ...summary, activeWorkoutDraft: false },
+  });
+  window.confirm.mockReturnValue(false);
+  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["backup"], "trace.json")] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  expect(screen.getByText("Active workout draft: None — any current active workout draft will be removed")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  expect(window.confirm).toHaveBeenCalledWith(
+    "Replace all current Trace data with this backup? Any current active workout draft will be removed because this backup has none. This cannot be merged."
+  );
   expect(restoreTraceBackup).not.toHaveBeenCalled();
 });
 

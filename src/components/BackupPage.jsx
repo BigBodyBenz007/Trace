@@ -122,7 +122,11 @@ export default function BackupPage({
   }
 
   async function confirmRestore() {
-    if (!preview || !window.confirm("Replace all current Trace data with this backup? This cannot be merged.")) return;
+    if (!preview) return;
+    const draftEffect = preview.summary.activeWorkoutDraft
+      ? "Any current active workout draft will be replaced by the active draft in this backup."
+      : "Any current active workout draft will be removed because this backup has none.";
+    if (!window.confirm(`Replace all current Trace data with this backup? ${draftEffect} This cannot be merged.`)) return;
     setError("");
     setStatus("Restoring Trace…");
     try {
@@ -175,6 +179,7 @@ export default function BackupPage({
           <ul>
             <li>Memories: {summary.memories}</li><li>Photos: {summary.photos}</li>
             <li>Nutrition entries: {summary.nutritionEntries}</li><li>Health measurements: {summary.healthMeasurementEntries || 0}</li><li>Planned workouts: {summary.plannedWorkouts || 0}</li><li>Workouts: {summary.workouts}</li>
+            <li>Active workout draft: {summary.activeWorkoutDraft ? "Included — it will replace any current active workout draft" : "None — any current active workout draft will be removed"}</li>
             <li>Medication & supplement entries: {summary.medicationEntries}</li><li>Protocols: {summary.protocols}</li>
             <li>Trophy Case entries: {summary.trophyCaseEntries}</li><li>Saved exercises: {summary.savedExercises}</li>
             <li>Saved compounds: {summary.savedCompounds}</li><li>Saved foods: {summary.userFoods}</li><li>Journal entries: {summary.journalEntries || 0}</li>

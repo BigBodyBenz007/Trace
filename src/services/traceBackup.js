@@ -6,6 +6,7 @@ import {
 import packageMetadata from "../../package.json";
 import { normalizeAppSettings } from "./appSettings";
 import { normalizePlannedWorkouts } from "./plannedWorkout";
+import { normalizeWorkoutDraft } from "./workoutDraft";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
 export const TRACE_BACKUP_SCHEMA_VERSION = 1;
@@ -20,6 +21,7 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
   "medicationCompounds",
   "protocols",
   "plannedWorkouts",
+  "workoutDraft",
   "workoutEntries",
   "savedExercises",
   "trophyCaseEntries",
@@ -27,7 +29,10 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
 ]);
 
 const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
-const ARRAY_KEYS = new Set(TRACE_STORAGE_KEYS.filter((key) => !OBJECT_KEYS.has(key)));
+const SPECIAL_KEYS = new Set(["workoutDraft"]);
+const ARRAY_KEYS = new Set(TRACE_STORAGE_KEYS.filter(
+  (key) => !OBJECT_KEYS.has(key) && !SPECIAL_KEYS.has(key)
+));
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
@@ -98,6 +103,12 @@ function readStructuredData(storage) {
     if (raw === null) return [key, null];
     try {
       const parsed = JSON.parse(raw);
+      if (key === "workoutDraft") {
+        if (parsed === null) return [key, null];
+        const normalized = normalizeWorkoutDraft(parsed);
+        if (!normalized) throw new Error("Invalid workout draft data.");
+        return [key, normalized];
+      }
       return [key, key === "appSettings" ? normalizeAppSettings(parsed) : parsed];
     } catch (error) {
       throw new Error(`Trace could not export malformed ${key} data.`);
@@ -111,7 +122,7 @@ function validateStructuredData(structuredData) {
   }
   TRACE_STORAGE_KEYS.forEach((key) => {
     const value = structuredData[key];
-    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", "plannedWorkouts"].includes(key) && value === undefined)) return;
+    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", "plannedWorkouts", "workoutDraft"].includes(key) && value === undefined)) return;
     if (ARRAY_KEYS.has(key) && !Array.isArray(value)) {
       throw new Error(`The backup contains invalid ${key} data.`);
     }
@@ -139,6 +150,13 @@ function validateStructuredData(structuredData) {
   ) {
     throw new Error("The backup contains invalid planned workout data.");
   }
+  if (
+    structuredData.workoutDraft !== undefined &&
+    structuredData.workoutDraft !== null &&
+    !normalizeWorkoutDraft(structuredData.workoutDraft)
+  ) {
+    throw new Error("The backup contains invalid active workout draft data.");
+  }
 }
 
 function photoReferenceIds(structuredData) {
@@ -165,6 +183,7 @@ export function summarizeTraceBackup(backup) {
     nutritionEntries: data.nutritionEntries?.length || 0,
     healthMeasurementEntries: data.healthMeasurementEntries?.length || 0,
     plannedWorkouts: data.plannedWorkouts?.length || 0,
+    activeWorkoutDraft: Boolean(data.workoutDraft),
     workouts: data.workoutEntries?.length || 0,
     medicationEntries: data.medicationEntries?.length || 0,
     protocols: data.protocols?.length || 0,
@@ -194,6 +213,11 @@ export function validateTraceBackup(value) {
   if (normalizedBackup.data.structured.plannedWorkouts != null) {
     normalizedBackup.data.structured.plannedWorkouts = normalizePlannedWorkouts(
       normalizedBackup.data.structured.plannedWorkouts
+    );
+  }
+  if (normalizedBackup.data.structured.workoutDraft != null) {
+    normalizedBackup.data.structured.workoutDraft = normalizeWorkoutDraft(
+      normalizedBackup.data.structured.workoutDraft
     );
   }
   if (!Array.isArray(value.data?.photos)) throw new Error("The backup is missing its photo collection.");

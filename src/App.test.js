@@ -245,6 +245,58 @@ test("successful same-tab restore immediately refreshes planned-workout App stat
   expect(localStorage.getItem("workoutEntries")).toBeNull();
 });
 
+test("same-tab restore leaves navigation unchanged and resumes an orphaned active draft with entered sets", async () => {
+  const restoredDraft = createWorkoutDraftFromPlannedWorkout(
+    plannedWorkout("planned-workout:deleted", "Restored Active Workout"),
+    new Date(2026, 7, 22, 18, 0)
+  );
+  restoredDraft.form.exercises[0].sets[0] = {
+    ...restoredDraft.form.exercises[0].sets[0],
+    reps: "9",
+    weightAmount: "185",
+    notes: "Preserved from backup",
+    isUntouched: false,
+  };
+  const restoredBackup = {
+    createdAt: "2026-08-22T19:00:00.000Z",
+    data: { structured: { plannedWorkouts: [], workoutDraft: restoredDraft }, photos: [] },
+  };
+  const restoredSummary = {
+    memories: 0,
+    photos: 0,
+    plannedWorkouts: 0,
+    activeWorkoutDraft: true,
+  };
+  parseTraceBackupText.mockReturnValue({ backup: restoredBackup, summary: restoredSummary });
+  restoreTraceBackup.mockImplementation(async () => {
+    localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(restoredDraft));
+    return restoredSummary;
+  });
+  window.confirm = jest.fn(() => true);
+
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["backup"], "trace-backup.json", { type: "application/json" })] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+
+  expect(await screen.findByRole("heading", { name: /Trace restored successfully/ })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Backup & Restore" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Workouts" })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" }).at(-1));
+  openWorkouts();
+  expect(screen.getByLabelText("Workout title")).toHaveValue("Restored Active Workout");
+  expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(185);
+  expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(9);
+  expect(screen.getByLabelText("Exercise 1 set 1 notes")).toHaveValue("Preserved from backup");
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY))).toMatchObject({
+    plannedWorkoutId: "planned-workout:deleted",
+  });
+});
+
 function fillBodyweightWorkout(title = "Push Day") {
   fireEvent.change(screen.getByLabelText("Workout title"), {
     target: { value: title },
