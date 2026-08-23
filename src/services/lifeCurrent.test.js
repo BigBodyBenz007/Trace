@@ -31,7 +31,7 @@ function day(result, dateKey) {
   return result.days.find((bucket) => bucket.dateKey === dateKey);
 }
 
-test("returns sparse empty output and ignores protocol plans", () => {
+test("returns sparse empty output and ignores protocol and planned-workout intentions", () => {
   const empty = deriveLifeCurrent();
   expect(empty).toEqual({
     days: [],
@@ -41,6 +41,13 @@ test("returns sparse empty output and ignores protocol plans", () => {
     unbucketed: { memories: [], trophies: [] },
   });
   expect(deriveLifeCurrent({ protocols: [{ id: "plan", items: new Array(100).fill({}) }] })).toEqual(empty);
+  expect(deriveLifeCurrent({
+    plannedWorkouts: [{
+      id: "planned-workout:today",
+      scheduledDate: "2026-08-22",
+      exercises: new Array(100).fill({}),
+    }],
+  })).toEqual(empty);
 });
 
 test("buckets a dated Memory and minimizes copied source data", () => {

@@ -160,6 +160,39 @@ test("accepts zero reps and preserves failure fields", () => {
   });
 });
 
+test("adds a planned-workout backlink without changing normal completion fields", () => {
+  const now = new Date("2026-08-10T00:00:00.000Z");
+  const entry = createWorkoutEntry(
+    validDraft({
+      plannedWorkoutId: "planned-workout:execution",
+      startedAt: "2026-08-09T23:15:00.000Z",
+    }),
+    null,
+    now
+  );
+
+  expect(entry).toMatchObject({
+    plannedWorkoutId: "planned-workout:execution",
+    startedAt: "2026-08-09T23:15:00.000Z",
+    finishedAt: now.toISOString(),
+  });
+});
+
+test("preserves an existing planned-workout backlink while editing history", () => {
+  const entry = createWorkoutEntry(
+    validDraft({ plannedWorkoutId: "planned-workout:wrong" }),
+    {
+      plannedWorkoutId: "planned-workout:original",
+      createdAt: "2026-08-09T20:00:00.000Z",
+      startedAt: "2026-08-09T18:30:00.000Z",
+      finishedAt: "2026-08-09T19:30:00.000Z",
+    },
+    new Date("2026-08-10T00:00:00.000Z")
+  );
+
+  expect(entry.plannedWorkoutId).toBe("planned-workout:original");
+});
+
 test("allows an unknown actual failure count", () => {
   const draft = validDraft();
   draft.exercises[0].sets[0].toFailure = true;

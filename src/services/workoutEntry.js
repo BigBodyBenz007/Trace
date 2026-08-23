@@ -161,11 +161,15 @@ export function createWorkoutEntry(draft, existingEntry = null, now = new Date()
   const timestamp = now.toISOString();
   const occurredAt = workoutLocalDateTimeToIso(draft.date, draft.time);
   const startedAt = existingEntry?.startedAt || draft.startedAt || occurredAt;
+  const plannedWorkoutId = cleanText(
+    existingEntry?.plannedWorkoutId || draft.plannedWorkoutId
+  );
   return {
     schemaVersion: 1,
     type: "strength",
     title: cleanText(draft.title),
     occurredAt,
+    ...(plannedWorkoutId ? { plannedWorkoutId } : {}),
     ...(!existingEntry || existingEntry.startedAt ? { startedAt } : {}),
     ...(!existingEntry
       ? { finishedAt: timestamp }

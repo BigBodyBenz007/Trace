@@ -254,6 +254,7 @@ function HomePage({
   onOpenSettings,
   onOpenMedications,
   onOpenProtocols,
+  onOpenToday,
   onOpenWorkouts,
   onOpenTrophyCase,
   onOpenBackup,
@@ -805,6 +806,10 @@ function HomePage({
         </div>
 
         <div className="trace-feature-navigation__core">
+          <button className="trace-feature-action trace-feature-action--core" type="button" onClick={onOpenToday}>
+            Today&apos;s Schedule
+          </button>
+
           <button className="trace-feature-action trace-feature-action--core" type="button" onClick={onOpenNutrition}>
             Nutrition
           </button>

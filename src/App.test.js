@@ -2,6 +2,10 @@ import { act, fireEvent, render, screen, waitFor, within } from "@testing-librar
 import App, { localCalendarDateKey } from "./App";
 import { createCompoundDefinition } from "./services/compoundCatalog";
 import { createExerciseDefinition } from "./services/exerciseCatalog";
+import {
+  createWorkoutDraftFromPlannedWorkout,
+  WORKOUT_DRAFT_STORAGE_KEY,
+} from "./services/workoutDraft";
 import { deletePhotos, getPhoto, openPhotoDatabase, putPhotos } from "./storage/photoStorage";
 import {
   createTraceBackup,
@@ -90,6 +94,26 @@ function openWorkouts() {
   fireEvent.click(screen.getByRole("button", { name: "Workouts" }));
 }
 
+function plannedWorkout(id, title = "Upper Body") {
+  return {
+    id,
+    schemaVersion: 1,
+    type: "strength",
+    scheduledDate: "2026-08-22",
+    title,
+    notes: "Plan only",
+    exercises: [{
+      id: `${id}:exercise`,
+      name: "Dumbbell Bench Press",
+      exerciseId: "trace:chest-db-bench-002",
+      notes: "",
+      targetSets: [],
+    }],
+    createdAt: "2026-08-20T12:00:00.000Z",
+    updatedAt: "2026-08-20T12:00:00.000Z",
+  };
+}
+
 function mockWindowScrollPosition(scrollX, scrollY) {
   const originalScrollX = Object.getOwnPropertyDescriptor(window, "scrollX");
   const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
@@ -160,6 +184,65 @@ test("passes authoritative structured activity to the Home Life Current", async 
 
   expect(await screen.findByTestId("life-current")).toBeInTheDocument();
   expect(screen.getByText("No memories found.")).toBeInTheDocument();
+});
+
+test("loads and preserves planned workouts separately from completed workout storage", async () => {
+  const plans = [plannedWorkout("planned-workout:loaded")];
+  const serialized = JSON.stringify(plans);
+  localStorage.setItem("plannedWorkouts", serialized);
+
+  const first = render(<App />);
+  await waitFor(() => expect(screen.getByTestId("trace-app-shell"))
+    .toHaveAttribute("data-planned-workout-count", "1"));
+  expect(localStorage.getItem("plannedWorkouts")).toBe(serialized);
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+  first.unmount();
+
+  render(<App />);
+  await waitFor(() => expect(screen.getByTestId("trace-app-shell"))
+    .toHaveAttribute("data-planned-workout-count", "1"));
+  expect(localStorage.getItem("plannedWorkouts")).toBe(serialized);
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+});
+
+test("successful same-tab restore immediately refreshes planned-workout App state", async () => {
+  const originalPlans = [plannedWorkout("planned-workout:original")];
+  const restoredPlans = [
+    plannedWorkout("planned-workout:restored-one", "Push"),
+    plannedWorkout("planned-workout:restored-two", "Pull"),
+  ];
+  localStorage.setItem("plannedWorkouts", JSON.stringify(originalPlans));
+  const restoredBackup = {
+    createdAt: "2026-08-22T18:00:00.000Z",
+    data: { structured: { plannedWorkouts: restoredPlans }, photos: [] },
+  };
+  parseTraceBackupText.mockReturnValue({
+    backup: restoredBackup,
+    summary: { memories: 0, photos: 0, plannedWorkouts: 2 },
+  });
+  restoreTraceBackup.mockImplementation(async () => {
+    localStorage.setItem("plannedWorkouts", JSON.stringify(restoredPlans));
+    return { memories: 0, photos: 0, plannedWorkouts: 2 };
+  });
+  window.confirm = jest.fn(() => true);
+
+  render(<App />);
+  await waitFor(() => expect(screen.getByTestId("trace-app-shell"))
+    .toHaveAttribute("data-planned-workout-count", "1"));
+  fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["backup"], "trace-backup.json", { type: "application/json" })] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+
+  expect(await screen.findByRole("heading", { name: /Trace restored successfully/ })).toBeInTheDocument();
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute(
+    "data-planned-workout-count",
+    "2"
+  );
+  expect(JSON.parse(localStorage.getItem("plannedWorkouts"))).toEqual(restoredPlans);
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
 });
 
 function fillBodyweightWorkout(title = "Push Day") {
@@ -233,6 +316,323 @@ test("Timeline opens Protocols and returns to Timeline at the top", () => {
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
   expectDestinationScrolledToTop();
+});
+
+test("Timeline opens Today's Schedule and returns to Timeline at the top", () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(screen.getByRole("heading", { name: "Today's Schedule" })).toBeInTheDocument();
+  expectDestinationScrolledToTop();
+  expect(screen.getByRole("heading", { name: "No workout planned for today." })).toBeInTheDocument();
+
+  window.scrollTo.mockClear();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
+  expectDestinationScrolledToTop();
+});
+
+test("Today creates, edits, and deletes plans without creating completed workouts", async () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Create planned workout" }));
+  fireEvent.change(screen.getByLabelText("Planned workout title"), { target: { value: "Today's Push" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Bench Press" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add exercise" }));
+  fireEvent.change(screen.getByLabelText("Exercise 2 name"), { target: { value: "Triceps Extension" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save planned workout" }));
+
+  let stored = JSON.parse(localStorage.getItem("plannedWorkouts"));
+  expect(stored).toHaveLength(1);
+  expect(stored[0]).toMatchObject({
+    schemaVersion: 1,
+    type: "strength",
+    scheduledDate: localCalendarDateKey(),
+    title: "Today's Push",
+  });
+  expect(stored[0].exercises.map(({ name }) => name)).toEqual([
+    "Bench Press",
+    "Triceps Extension",
+  ]);
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-planned-workout-count", "1");
+
+  fireEvent.click(screen.getByRole("button", { name: "Edit planned workout Today's Push" }));
+  fireEvent.change(screen.getByLabelText("Planned workout title"), { target: { value: "Push and Arms" } });
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  stored = JSON.parse(localStorage.getItem("plannedWorkouts"));
+  expect(stored[0].title).toBe("Push and Arms");
+  expect(stored[0].exercises.map(({ name }) => name)).toEqual(["Triceps Extension"]);
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "Delete planned workout Push and Arms" }));
+  await waitFor(() => expect(JSON.parse(localStorage.getItem("plannedWorkouts"))).toEqual([]));
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-planned-workout-count", "0");
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+  confirm.mockRestore();
+});
+
+test("executes a plan through WorkoutPage and reflects completion and deletion in Today", async () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  const plan = {
+    ...plannedWorkout("planned-workout:execute", "Planned Push"),
+    scheduledDate: localCalendarDateKey(),
+    notes: "Plan notes",
+    exercises: [{
+      id: "planned-exercise:bench",
+      name: "Dumbbell Bench Press",
+      exerciseId: "trace:chest-db-bench-002",
+      notes: "Exercise notes",
+      targetSets: [{
+        id: "planned-set:bench",
+        setType: "warm-up",
+        reps: 8,
+        load: { mode: "external", amount: 60, unit: "kg" },
+        notes: "Target notes",
+      }],
+    }],
+  };
+  const savedPlan = JSON.stringify([plan]);
+  localStorage.setItem("plannedWorkouts", savedPlan);
+  const startedAfter = Date.now();
+
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Start planned workout Planned Push" }));
+
+  expect(screen.getByRole("heading", { name: "Workouts" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Workout title")).toHaveValue("Planned Push");
+  expect(screen.getByLabelText("Date")).toHaveValue(localCalendarDateKey());
+  expect(screen.getByLabelText("Workout notes (optional)")).toHaveValue("Plan notes");
+  expect(screen.getByLabelText("Exercise 1 name")).toHaveValue("Dumbbell Bench Press");
+  expect(screen.getByLabelText("Exercise 1 notes")).toHaveValue("Exercise notes");
+  expect(screen.getByLabelText("Exercise 1 set 1 type")).toHaveValue("warm-up");
+  expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(8);
+  expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(60);
+  expect(screen.getByLabelText("Exercise 1 set 1 weight unit")).toHaveValue("kg");
+  expect(screen.getByLabelText("Exercise 1 set 1 notes")).toHaveValue("Target notes");
+
+  const activeDraft = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+  expect(activeDraft.plannedWorkoutId).toBe(plan.id);
+  expect(new Date(activeDraft.startedAt).getTime()).toBeGreaterThanOrEqual(startedAfter);
+  expect(activeDraft).not.toHaveProperty("finishedAt");
+  expect(activeDraft.form.exercises[0].id).not.toBe(plan.exercises[0].id);
+  expect(activeDraft.form.exercises[0].sets[0].id).not.toBe(
+    plan.exercises[0].targetSets[0].id
+  );
+
+  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
+  fireEvent.change(screen.getByLabelText("Exercise 2 name"), {
+    target: { value: "Remembered Curl" },
+  });
+  expect(localStorage.getItem("plannedWorkouts")).toBe(savedPlan);
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 2" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  await waitFor(() => {
+    expect(JSON.parse(localStorage.getItem("workoutEntries"))).toHaveLength(1);
+  });
+  const completed = JSON.parse(localStorage.getItem("workoutEntries"))[0];
+  expect(completed).toMatchObject({
+    plannedWorkoutId: plan.id,
+    title: "Planned Push",
+    exercises: [expect.objectContaining({
+      name: "Dumbbell Bench Press",
+      sets: [expect.objectContaining({
+        reps: 8,
+        load: { mode: "external", amount: 60, unit: "kg" },
+        notes: "Target notes",
+      })],
+    })],
+  });
+  expect(completed.finishedAt).toBeTruthy();
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
+  expect(localStorage.getItem("plannedWorkouts")).toBe(savedPlan);
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(screen.getByText("Plan · completed")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Start planned workout Planned Push" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Open completed workout Planned Push" }));
+  expect(screen.getByRole("heading", { name: "Workout History" })).toBeInTheDocument();
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "smooth",
+    block: "center",
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+  await waitFor(() => expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]));
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(screen.getByText("Plan · not completed")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Start planned workout Planned Push" })).toBeInTheDocument();
+  confirm.mockRestore();
+});
+
+test("does not replace an unrelated draft and can resume it from the collision choice", () => {
+  const plan = {
+    ...plannedWorkout("planned-workout:collision", "Collision Plan"),
+    scheduledDate: localCalendarDateKey(),
+  };
+  const unrelatedDraft = {
+    schemaVersion: 1,
+    startedAt: "2026-08-22T16:00:00.000Z",
+    updatedAt: "2026-08-22T16:00:00.000Z",
+    form: {
+      title: "Unrelated workout",
+      date: localCalendarDateKey(),
+      time: "11:00",
+      notes: "",
+      exercises: [{
+        id: "exercise:unrelated",
+        name: "Squat",
+        notes: "",
+        sets: [{
+          id: "set:unrelated",
+          reps: "5",
+          loadMode: "bodyweight",
+          weightAmount: "",
+          weightUnit: "lb",
+          notes: "",
+        }],
+      }],
+    },
+    context: { activeSearchExerciseId: null },
+  };
+  const serializedDraft = JSON.stringify(unrelatedDraft);
+  localStorage.setItem("plannedWorkouts", JSON.stringify([plan]));
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, serializedDraft);
+
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Start planned workout Collision Plan" }));
+  expect(screen.getByRole("dialog", { name: "Workout already in progress" })).toBeInTheDocument();
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBe(serializedDraft);
+
+  fireEvent.click(screen.getByRole("button", { name: "Resume current workout" }));
+  expect(screen.getByRole("heading", { name: "Workouts" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Workout title")).toHaveValue("Unrelated workout");
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBe(serializedDraft);
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+});
+
+test("explicit discard replaces an unrelated draft with the selected plan", () => {
+  const plan = {
+    ...plannedWorkout("planned-workout:discard", "Discard Choice Plan"),
+    scheduledDate: localCalendarDateKey(),
+  };
+  localStorage.setItem("plannedWorkouts", JSON.stringify([plan]));
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify({
+    schemaVersion: 1,
+    startedAt: "2026-08-22T16:00:00.000Z",
+    updatedAt: "2026-08-22T16:00:00.000Z",
+    form: {
+      title: "Replace me deliberately",
+      date: localCalendarDateKey(),
+      time: "11:00",
+      notes: "",
+      exercises: [{ id: "exercise:old", name: "Squat", sets: [] }],
+    },
+  }));
+
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Start planned workout Discard Choice Plan" }));
+  fireEvent.click(screen.getByRole("button", { name: "Discard and start plan" }));
+
+  expect(screen.getByRole("heading", { name: "Workouts" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Workout title")).toHaveValue("Discard Choice Plan");
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY))).toMatchObject({
+    plannedWorkoutId: plan.id,
+    form: { title: "Discard Choice Plan" },
+  });
+});
+
+test("abandons and resumes the same plan draft without marking the plan complete", () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  const plan = {
+    ...plannedWorkout("planned-workout:resume", "Resume Plan"),
+    scheduledDate: localCalendarDateKey(),
+  };
+  localStorage.setItem("plannedWorkouts", JSON.stringify([plan]));
+
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Start planned workout Resume Plan" }));
+  fireEvent.change(screen.getByLabelText("Workout notes (optional)"), {
+    target: { value: "In progress" },
+  });
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(screen.getByText("Plan · not completed")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Start planned workout Resume Plan" }));
+  expect(screen.queryByRole("dialog", { name: "Workout already in progress" })).not.toBeInTheDocument();
+  expect(screen.getByLabelText("Workout notes (optional)")).toHaveValue("In progress");
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(screen.getByText("Plan · not completed")).toBeInTheDocument();
+  confirm.mockRestore();
+});
+
+test("prevents a second completed entry for the same planned workout", async () => {
+  const plan = {
+    ...plannedWorkout("planned-workout:duplicate", "Duplicate Guard"),
+    scheduledDate: localCalendarDateKey(),
+    exercises: [{
+      id: "planned-exercise:dips",
+      name: "Dips",
+      notes: "",
+      targetSets: [{
+        id: "planned-set:dips",
+        reps: 6,
+        load: { mode: "bodyweight" },
+        notes: "",
+      }],
+    }],
+  };
+  const existingEntry = {
+    id: "workout:existing-completion",
+    schemaVersion: 1,
+    type: "strength",
+    plannedWorkoutId: plan.id,
+    title: plan.title,
+    occurredAt: "2026-08-22T16:00:00.000Z",
+    startedAt: "2026-08-22T16:00:00.000Z",
+    finishedAt: "2026-08-22T17:00:00.000Z",
+    notes: "",
+    exercises: [{
+      id: "exercise:existing",
+      name: "Dips",
+      sets: [{
+        id: "set:existing",
+        reps: 6,
+        load: { mode: "bodyweight" },
+        notes: "",
+      }],
+    }],
+    createdAt: "2026-08-22T17:00:00.000Z",
+    updatedAt: "2026-08-22T17:00:00.000Z",
+  };
+  localStorage.setItem("plannedWorkouts", JSON.stringify([plan]));
+  localStorage.setItem("workoutEntries", JSON.stringify([existingEntry]));
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(
+    createWorkoutDraftFromPlannedWorkout(plan, new Date(2026, 7, 22, 18, 0))
+  ));
+
+  renderAppAtTimeline();
+  openWorkouts();
+  await screen.findByText("Duplicate Guard");
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([existingEntry]);
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).not.toBeNull();
+  expect(screen.getByText(/already linked to a completed workout/)).toBeInTheDocument();
 });
 
 test("Timeline opens Backup & Restore and returns without changing data", () => {
@@ -883,8 +1283,8 @@ test("Memory Detail keeps its route, lock, and exact origin beneath the full cer
   const ceremony = screen.getByRole("dialog", { name: "Added to Trophy Case" });
   expect(ceremony).toHaveAttribute("data-phase", "closed");
   expect(detail).toBeInTheDocument();
-  expect(document.querySelector(".trace-app-shell")).toHaveAttribute("inert");
-  expect(document.querySelector(".trace-app-shell")).toHaveAttribute("aria-hidden", "true");
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("inert");
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("aria-hidden", "true");
   expect(storageWrite.mock.calls.filter(([key]) => key === "trophyCaseEntries")).toHaveLength(1);
   expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toHaveLength(1);
 
@@ -903,7 +1303,7 @@ test("Memory Detail keeps its route, lock, and exact origin beneath the full cer
   ceremonyTimers.restore();
   expect(screen.queryByRole("dialog", { name: "Added to Trophy Case" })).not.toBeInTheDocument();
   expect(screen.getByRole("dialog", { name: "Memory details for Graduation Day" })).toBeInTheDocument();
-  expect(document.querySelector(".trace-app-shell")).not.toHaveAttribute("inert");
+  expect(screen.getByTestId("trace-app-shell")).not.toHaveAttribute("inert");
   expect(detailPanel).toHaveFocus();
   expect(document.body).toHaveStyle({ position: "fixed", top: "-240px", overflow: "hidden" });
   expect(within(detail).getByRole("button", { name: "In Trophy Case" })).toBeDisabled();

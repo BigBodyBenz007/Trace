@@ -5,6 +5,7 @@ import {
 } from "../storage/photoStorage";
 import packageMetadata from "../../package.json";
 import { normalizeAppSettings } from "./appSettings";
+import { normalizePlannedWorkouts } from "./plannedWorkout";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
 export const TRACE_BACKUP_SCHEMA_VERSION = 1;
@@ -18,6 +19,7 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
   "medicationEntries",
   "medicationCompounds",
   "protocols",
+  "plannedWorkouts",
   "workoutEntries",
   "savedExercises",
   "trophyCaseEntries",
@@ -109,7 +111,7 @@ function validateStructuredData(structuredData) {
   }
   TRACE_STORAGE_KEYS.forEach((key) => {
     const value = structuredData[key];
-    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries"].includes(key) && value === undefined)) return;
+    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", "plannedWorkouts"].includes(key) && value === undefined)) return;
     if (ARRAY_KEYS.has(key) && !Array.isArray(value)) {
       throw new Error(`The backup contains invalid ${key} data.`);
     }
@@ -129,6 +131,13 @@ function validateStructuredData(structuredData) {
       }
       ids.add(String(entry.id));
     });
+  }
+  if (
+    structuredData.plannedWorkouts !== undefined &&
+    structuredData.plannedWorkouts !== null &&
+    !normalizePlannedWorkouts(structuredData.plannedWorkouts)
+  ) {
+    throw new Error("The backup contains invalid planned workout data.");
   }
 }
 
@@ -155,6 +164,7 @@ export function summarizeTraceBackup(backup) {
     photos: backup.data.photos.length,
     nutritionEntries: data.nutritionEntries?.length || 0,
     healthMeasurementEntries: data.healthMeasurementEntries?.length || 0,
+    plannedWorkouts: data.plannedWorkouts?.length || 0,
     workouts: data.workoutEntries?.length || 0,
     medicationEntries: data.medicationEntries?.length || 0,
     protocols: data.protocols?.length || 0,
@@ -179,6 +189,11 @@ export function validateTraceBackup(value) {
   if (normalizedBackup.data.structured.appSettings != null) {
     normalizedBackup.data.structured.appSettings = normalizeAppSettings(
       normalizedBackup.data.structured.appSettings
+    );
+  }
+  if (normalizedBackup.data.structured.plannedWorkouts != null) {
+    normalizedBackup.data.structured.plannedWorkouts = normalizePlannedWorkouts(
+      normalizedBackup.data.structured.plannedWorkouts
     );
   }
   if (!Array.isArray(value.data?.photos)) throw new Error("The backup is missing its photo collection.");

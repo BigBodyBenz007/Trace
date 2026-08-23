@@ -60,7 +60,7 @@ function ExerciseSearch({
               </span>
               <div style={{ display: "flex", flexWrap: "wrap", gap: "8px", marginTop: "8px" }}>
                 <button className="trace-action trace-action--primary" type="button" aria-label={`Select ${source === "trace" ? "Trace" : "saved"} exercise ${exercise.name}`} onClick={() => source === "trace" ? onSelectBuiltInExercise(exercise) : onSelectExercise(exercise)} style={{ background: "#2563eb", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", minHeight: "38px", padding: "8px 14px" }}>Select</button>
-                {source === "saved" && <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit saved exercise ${exercise.name}`} onClick={() => onEditExercise(exercise)} style={{ background: "#4b5563", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", minHeight: "38px", padding: "8px 14px" }}>Edit Saved Exercise</button>}
+                {source === "saved" && onEditExercise && <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit saved exercise ${exercise.name}`} onClick={() => onEditExercise(exercise)} style={{ background: "#4b5563", border: 0, borderRadius: "8px", color: "white", cursor: "pointer", minHeight: "38px", padding: "8px 14px" }}>Edit Saved Exercise</button>}
               </div>
             </div>
           ))}

@@ -11,6 +11,7 @@ import TrophyPlacementCeremony from "./components/TrophyPlacementCeremony";
 import TrophyCasePage from "./components/TrophyCasePage";
 import BackupPage from "./components/BackupPage";
 import JournalPage from "./components/JournalPage";
+import TodayPage from "./components/TodayPage";
 import ConfirmationMessage from "./components/ConfirmationMessage";
 import { detectMemoryAchievement } from "./services/memoryAchievement";
 import {
@@ -72,6 +73,20 @@ import {
   updateJournalEntry,
   writeJournalEntries,
 } from "./services/journalEntry";
+import {
+  appendPlannedWorkoutExercise as appendExerciseToPlannedWorkout,
+  createPlannedWorkout as createPlannedWorkoutRecord,
+  getPlannedWorkoutError,
+  readPlannedWorkouts,
+  removePlannedWorkoutExercise as removeExerciseFromPlannedWorkout,
+  updatePlannedWorkout as updatePlannedWorkoutRecord,
+  writePlannedWorkouts,
+} from "./services/plannedWorkout";
+import {
+  createWorkoutDraftFromPlannedWorkout,
+  readWorkoutDraft,
+  writeWorkoutDraft,
+} from "./services/workoutDraft";
 
 const DEFAULT_NUTRITION_GOALS = {
   calories: 0,
@@ -163,7 +178,9 @@ function App() {
   const [appSettings, setAppSettings] = useState(() => readAppSettings(localStorage));
   const [medicationEntries, setMedicationEntries] = useState([]);
   const [protocols, setProtocols] = useState([]);
+  const [plannedWorkouts, setPlannedWorkouts] = useState([]);
   const [workoutEntries, setWorkoutEntries] = useState([]);
+  const [workoutEntryTargetId, setWorkoutEntryTargetId] = useState(null);
   const [journalEntries, setJournalEntries] = useState([]);
   const [trophyCaseEntries, setTrophyCaseEntries] = useState([]);
   const [ceremonyEntry, setCeremonyEntry] = useState(null);
@@ -186,6 +203,8 @@ function App() {
   const photoUrlLoaderRef = useRef(null);
   const skipNextPageTopScrollRef = useRef(false);
   const memoryEditorFolioRef = useRef(null);
+  const completedPlannedWorkoutIdsRef = useRef(new Set());
+  const pendingPlannedWorkoutIdsRef = useRef(new Set());
 
   function ensurePhotoDatabase() {
     if (photoDatabaseRef.current) return Promise.resolve(photoDatabaseRef.current);
@@ -405,6 +424,16 @@ function App() {
   }, []);
 
   useEffect(() => {
+    try {
+      setPlannedWorkouts(readPlannedWorkouts(localStorage));
+    } catch (error) {
+      setStorageError(
+        "Trace couldn't read the saved planned workouts. The stored value was left unchanged."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
     async function loadWorkouts() {
       try {
       const savedWorkoutEntries = localStorage.getItem("workoutEntries");
@@ -435,6 +464,14 @@ function App() {
     }
     loadWorkouts();
   }, []);
+
+  useEffect(() => {
+    completedPlannedWorkoutIdsRef.current = new Set(
+      workoutEntries
+        .map(({ plannedWorkoutId }) => plannedWorkoutId)
+        .filter(Boolean)
+    );
+  }, [workoutEntries]);
 
   useEffect(() => {
     try {
@@ -778,12 +815,15 @@ function App() {
     }
   }
 
-  function synchronizeRestoredAppSettings() {
+  function synchronizeRestoredAppState() {
     try {
-      setAppSettings(readAppSettings(localStorage));
+      const restoredAppSettings = readAppSettings(localStorage);
+      const restoredPlannedWorkouts = readPlannedWorkouts(localStorage);
+      setAppSettings(restoredAppSettings);
+      setPlannedWorkouts(restoredPlannedWorkouts);
       setStorageError("");
     } catch (error) {
-      setStorageError(storageMessage("refresh restored Settings"));
+      setStorageError(storageMessage("refresh restored data"));
     }
   }
 
@@ -1078,6 +1118,191 @@ function App() {
     }
   }
 
+  function createPlannedWorkout(draft) {
+    const plannedWorkout = createPlannedWorkoutRecord(draft);
+    if (!plannedWorkout) {
+      return { status: "invalid", message: getPlannedWorkoutError(draft) };
+    }
+    if (plannedWorkouts.some(({ id }) => id === plannedWorkout.id)) {
+      return {
+        status: "invalid",
+        message: "A planned workout already uses that ID.",
+      };
+    }
+    try {
+      const saved = writePlannedWorkouts(localStorage, [
+        ...plannedWorkouts,
+        plannedWorkout,
+      ]);
+      setPlannedWorkouts(saved);
+      setStorageError("");
+      return { status: "saved", plannedWorkout };
+    } catch (error) {
+      setStorageError(storageMessage("save this planned workout"));
+      return {
+        status: "error",
+        message: "The planned workout could not be saved.",
+      };
+    }
+  }
+
+  function updatePlannedWorkout(id, draft) {
+    const existing = plannedWorkouts.find((plannedWorkout) => plannedWorkout.id === id);
+    const plannedWorkout = updatePlannedWorkoutRecord(existing, draft);
+    if (!plannedWorkout) {
+      return { status: "invalid", message: getPlannedWorkoutError(draft) };
+    }
+    const updated = plannedWorkouts.map((item) =>
+      item.id === id ? plannedWorkout : item
+    );
+    try {
+      const saved = writePlannedWorkouts(localStorage, updated);
+      setPlannedWorkouts(saved);
+      setStorageError("");
+      return { status: "saved", plannedWorkout };
+    } catch (error) {
+      setStorageError(storageMessage("update this planned workout"));
+      return {
+        status: "error",
+        message: "The planned workout could not be updated.",
+      };
+    }
+  }
+
+  function appendPlannedWorkoutExercise(id, exerciseDraft) {
+    const existing = plannedWorkouts.find((plannedWorkout) => plannedWorkout.id === id);
+    const plannedWorkout = appendExerciseToPlannedWorkout(existing, exerciseDraft);
+    if (!plannedWorkout) {
+      return {
+        status: "invalid",
+        message: "The exercise could not be added to this planned workout.",
+      };
+    }
+    const updated = plannedWorkouts.map((item) =>
+      item.id === id ? plannedWorkout : item
+    );
+    try {
+      const saved = writePlannedWorkouts(localStorage, updated);
+      setPlannedWorkouts(saved);
+      setStorageError("");
+      return { status: "saved", plannedWorkout };
+    } catch (error) {
+      setStorageError(storageMessage("add this planned exercise"));
+      return {
+        status: "error",
+        message: "The exercise could not be added to this planned workout.",
+      };
+    }
+  }
+
+  function removePlannedWorkoutExercise(id, exerciseId) {
+    const existing = plannedWorkouts.find((plannedWorkout) => plannedWorkout.id === id);
+    const plannedWorkout = removeExerciseFromPlannedWorkout(existing, exerciseId);
+    if (!plannedWorkout) {
+      return {
+        status: "invalid",
+        message: "The exercise could not be removed from this planned workout.",
+      };
+    }
+    const updated = plannedWorkouts.map((item) =>
+      item.id === id ? plannedWorkout : item
+    );
+    try {
+      const saved = writePlannedWorkouts(localStorage, updated);
+      setPlannedWorkouts(saved);
+      setStorageError("");
+      return { status: "saved", plannedWorkout };
+    } catch (error) {
+      setStorageError(storageMessage("remove this planned exercise"));
+      return {
+        status: "error",
+        message: "The exercise could not be removed from this planned workout.",
+      };
+    }
+  }
+
+  function deletePlannedWorkout(id) {
+    if (!plannedWorkouts.some((plannedWorkout) => plannedWorkout.id === id)) {
+      return false;
+    }
+    const updated = plannedWorkouts.filter((plannedWorkout) => plannedWorkout.id !== id);
+    try {
+      const saved = writePlannedWorkouts(localStorage, updated);
+      setPlannedWorkouts(saved);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this planned workout"));
+      return false;
+    }
+  }
+
+  function startPlannedWorkout(id, conflictAction = null) {
+    const plannedWorkout = plannedWorkouts.find((plan) => plan.id === id);
+    if (!plannedWorkout) {
+      return {
+        status: "error",
+        message: "The planned workout could not be found.",
+      };
+    }
+    const completedWorkout = workoutEntries.find(
+      (entry) => entry.plannedWorkoutId === id
+    );
+    if (completedWorkout) {
+      return { status: "completed", workoutEntry: completedWorkout };
+    }
+
+    const existingDraft = readWorkoutDraft(localStorage);
+    if (existingDraft?.plannedWorkoutId === id) {
+      setWorkoutEntryTargetId(null);
+      setPage("workouts");
+      return { status: "resumed", plannedWorkout };
+    }
+    if (existingDraft && conflictAction === null) {
+      return {
+        status: "draft-conflict",
+        existingDraftTitle: existingDraft.form.title || "Untitled workout",
+      };
+    }
+    if (existingDraft && conflictAction === "resume") {
+      setWorkoutEntryTargetId(null);
+      setPage("workouts");
+      return { status: "resumed-existing" };
+    }
+    if (existingDraft && conflictAction !== "discard") {
+      return { status: "cancelled" };
+    }
+
+    const workoutDraft = createWorkoutDraftFromPlannedWorkout(plannedWorkout);
+    if (!workoutDraft) {
+      return {
+        status: "error",
+        message: "The planned workout could not be opened.",
+      };
+    }
+    try {
+      writeWorkoutDraft(localStorage, workoutDraft);
+      setWorkoutEntryTargetId(null);
+      setStorageError("");
+      setPage("workouts");
+      return { status: "started", plannedWorkout };
+    } catch (error) {
+      setStorageError(storageMessage("start this planned workout"));
+      return {
+        status: "error",
+        message: "The planned workout could not be started.",
+      };
+    }
+  }
+
+  function openCompletedWorkout(id) {
+    if (!workoutEntries.some((entry) => entry.id === id)) return false;
+    skipNextPageTopScrollRef.current = true;
+    setWorkoutEntryTargetId(id);
+    setPage("workouts");
+    return true;
+  }
+
   async function prepareWorkoutPhotos(entry, workoutId, existingEntry = null) {
     const incomingPhotos = entry.photos || [];
     const existingPhotos = existingEntry?.photos || [];
@@ -1104,6 +1329,27 @@ function App() {
   }
 
   function saveWorkoutEntry(entry) {
+    const plannedWorkoutId = entry.plannedWorkoutId || null;
+    if (
+      plannedWorkoutId &&
+      (
+        completedPlannedWorkoutIdsRef.current.has(plannedWorkoutId) ||
+        pendingPlannedWorkoutIdsRef.current.has(plannedWorkoutId)
+      )
+    ) {
+      setStorageError(
+        "This planned workout is already linked to a completed workout. Trace did not create a duplicate."
+      );
+      return false;
+    }
+    if (plannedWorkoutId) {
+      pendingPlannedWorkoutIdsRef.current.add(plannedWorkoutId);
+    }
+    const finishPlannedWorkoutSave = (saved) => {
+      if (!plannedWorkoutId) return;
+      pendingPlannedWorkoutIdsRef.current.delete(plannedWorkoutId);
+      if (saved) completedPlannedWorkoutIdsRef.current.add(plannedWorkoutId);
+    };
     const id = createId(new Set(workoutEntries.map((item) => item.id)));
     const persist = async (photoResult) => {
       const newEntry = {
@@ -1116,12 +1362,14 @@ function App() {
         localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
         setWorkoutEntries(updatedEntries);
         setStorageError("");
+        finishPlannedWorkoutSave(true);
         return true;
       } catch (error) {
         if (photoResult.newIds.length) {
           await Promise.resolve(deletePhotos(photoDatabaseRef.current, photoResult.newIds)).catch(() => {});
         }
         setStorageError(storageMessage("save this workout"));
+        finishPlannedWorkoutSave(false);
         return false;
       }
     };
@@ -1132,9 +1380,11 @@ function App() {
         localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
         setWorkoutEntries(updatedEntries);
         setStorageError("");
+        finishPlannedWorkoutSave(true);
         return true;
       } catch (error) {
         setStorageError(storageMessage("save this workout"));
+        finishPlannedWorkoutSave(false);
         return false;
       }
     }
@@ -1142,6 +1392,7 @@ function App() {
       .then(persist)
       .catch(() => {
         setStorageError(storageMessage("save these workout photos"));
+        finishPlannedWorkoutSave(false);
         return false;
       });
   }
@@ -1252,6 +1503,9 @@ function App() {
     try {
       localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
       setWorkoutEntries(updatedEntries);
+      if (deleted?.plannedWorkoutId) {
+        completedPlannedWorkoutIdsRef.current.delete(deleted.plannedWorkoutId);
+      }
       const photoIds = (deleted?.photos || []).map(({ id }) => id).filter(Boolean);
       if (photoIds.length) Promise.resolve(deletePhotos(photoDatabaseRef.current, photoIds)).catch(() => setStorageError("The workout was deleted, but Trace couldn't clean up its photos."));
       (deleted?.photos || []).forEach(({ url }) => { if (url) { URL.revokeObjectURL(url); activeObjectUrlsRef.current.delete(url); } });
@@ -1357,6 +1611,8 @@ function App() {
     <div
       aria-hidden={ceremonyEntry ? "true" : undefined}
       className="trace-app-shell"
+      data-testid="trace-app-shell"
+      data-planned-workout-count={plannedWorkouts.length}
       inert={Boolean(ceremonyEntry)}
       style={{
         minHeight: "100vh",
@@ -1409,7 +1665,11 @@ function App() {
           onOpenSettings={() => setPage("settings")}
           onOpenMedications={() => setPage("medications")}
           onOpenProtocols={() => setPage("protocols")}
-          onOpenWorkouts={() => setPage("workouts")}
+          onOpenToday={() => setPage("today")}
+          onOpenWorkouts={() => {
+            setWorkoutEntryTargetId(null);
+            setPage("workouts");
+          }}
           onOpenTrophyCase={() => setPage("trophy-case")}
           onOpenBackup={() => setPage("backup")}
           onOpenJournal={() => setPage("journal")}
@@ -1444,6 +1704,23 @@ function App() {
           updateNutritionEntry={updateNutritionEntry}
           deleteNutritionEntry={deleteNutritionEntry}
           saveNutritionGoals={saveNutritionGoals}
+          buttonStyle={buttonStyle}
+          inputStyle={inputStyle}
+          containerStyle={containerStyle}
+        />
+      ) : page === "today" ? (
+        <TodayPage
+          onBack={() => setPage("home")}
+          plannedWorkouts={plannedWorkouts}
+          workoutEntries={workoutEntries}
+          savedExercises={savedExercises}
+          createPlannedWorkout={createPlannedWorkout}
+          updatePlannedWorkout={updatePlannedWorkout}
+          appendPlannedWorkoutExercise={appendPlannedWorkoutExercise}
+          removePlannedWorkoutExercise={removePlannedWorkoutExercise}
+          deletePlannedWorkout={deletePlannedWorkout}
+          startPlannedWorkout={startPlannedWorkout}
+          openCompletedWorkout={openCompletedWorkout}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}
@@ -1500,6 +1777,8 @@ function App() {
           containerStyle={containerStyle}
           trophySourceTarget={trophySourceNavigation?.sourceType === "workout-pr" ? trophySourceNavigation.target : null}
           onReturnToTrophyCase={returnToTrophyCase}
+          workoutEntryTargetId={workoutEntryTargetId}
+          onWorkoutEntryTargetShown={() => setWorkoutEntryTargetId(null)}
         />
       ) : page === "protocols" ? (
         <ProtocolsPage
@@ -1517,7 +1796,7 @@ function App() {
       ) : page === "backup" ? (
         <BackupPage
           onBack={() => setPage("home")}
-          onRestoreComplete={synchronizeRestoredAppSettings}
+          onRestoreComplete={synchronizeRestoredAppState}
           buttonStyle={buttonStyle}
           containerStyle={containerStyle}
         />

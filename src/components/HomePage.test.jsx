@@ -10,6 +10,7 @@ const baseProps = {
   onOpenHealth: jest.fn(),
   onOpenMedications: jest.fn(),
   onOpenProtocols: jest.fn(),
+  onOpenToday: jest.fn(),
   onOpenWorkouts: jest.fn(),
   onOpenTrophyCase: jest.fn(),
   onOpenBackup: jest.fn(),
@@ -29,6 +30,7 @@ test("renders primary Timeline actions in the intended order", () => {
     .map((button) => button.textContent.trim())
     .filter((name) => [
       "Add Memory",
+      "Today's Schedule",
       "Nutrition",
       "Health",
       "Workouts",
@@ -39,6 +41,7 @@ test("renders primary Timeline actions in the intended order", () => {
     ].includes(name));
   expect(names).toEqual([
     "Add Memory",
+    "Today's Schedule",
     "Nutrition",
     "Health",
     "Workouts",
@@ -48,6 +51,7 @@ test("renders primary Timeline actions in the intended order", () => {
     "Backup & Restore",
   ]);
   expect(screen.getByRole("button", { name: "Add Memory" })).toHaveClass("trace-feature-action--primary");
+  expect(screen.getByRole("button", { name: "Today's Schedule" })).toHaveClass("trace-feature-action--core");
   expect(screen.getByRole("button", { name: "Nutrition" })).toHaveClass("trace-feature-action--core");
   expect(screen.getByRole("button", { name: "Health" })).toHaveClass("trace-feature-action--core");
 });

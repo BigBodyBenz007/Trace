@@ -174,7 +174,7 @@ export default function BackupPage({
           <p>No Trace data has been changed yet.</p>
           <ul>
             <li>Memories: {summary.memories}</li><li>Photos: {summary.photos}</li>
-            <li>Nutrition entries: {summary.nutritionEntries}</li><li>Health measurements: {summary.healthMeasurementEntries || 0}</li><li>Workouts: {summary.workouts}</li>
+            <li>Nutrition entries: {summary.nutritionEntries}</li><li>Health measurements: {summary.healthMeasurementEntries || 0}</li><li>Planned workouts: {summary.plannedWorkouts || 0}</li><li>Workouts: {summary.workouts}</li>
             <li>Medication & supplement entries: {summary.medicationEntries}</li><li>Protocols: {summary.protocols}</li>
             <li>Trophy Case entries: {summary.trophyCaseEntries}</li><li>Saved exercises: {summary.savedExercises}</li>
             <li>Saved compounds: {summary.savedCompounds}</li><li>Saved foods: {summary.userFoods}</li><li>Journal entries: {summary.journalEntries || 0}</li>

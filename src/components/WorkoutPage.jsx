@@ -162,6 +162,8 @@ function WorkoutPage({
   containerStyle,
   trophySourceTarget = null,
   onReturnToTrophyCase = null,
+  workoutEntryTargetId = null,
+  onWorkoutEntryTargetShown = () => {},
 }) {
   const initialDateTime = currentLocalDateTime();
   const restoredDraftRef = useRef(readWorkoutDraft());
@@ -197,12 +199,18 @@ function WorkoutPage({
     restoredDraftRef.current?.startedAt ||
       new Date(`${initialDateTime.date}T${initialDateTime.time}`).toISOString()
   );
+  const plannedWorkoutIdRef = useRef(
+    restoredDraftRef.current?.plannedWorkoutId || null
+  );
   const draftPersistenceEnabledRef = useRef(Boolean(restoredForm));
 
   useEffect(() => {
     if (editingEntryId !== null || !isDirty) return undefined;
     const persistedDraft = {
       schemaVersion: WORKOUT_DRAFT_SCHEMA_VERSION,
+      ...(plannedWorkoutIdRef.current
+        ? { plannedWorkoutId: plannedWorkoutIdRef.current }
+        : {}),
       startedAt: startedAtRef.current,
       updatedAt: new Date().toISOString(),
       form: { title, date, time, notes, exercises },
@@ -270,6 +278,24 @@ function WorkoutPage({
   const sortedEntries = [...workoutEntries].sort(
     (first, second) => new Date(second.occurredAt) - new Date(first.occurredAt)
   );
+
+  useEffect(() => {
+    if (
+      !workoutEntryTargetId ||
+      !workoutEntries.some(({ id }) => id === workoutEntryTargetId)
+    ) {
+      return;
+    }
+    setActiveWorkoutEntryId(workoutEntryTargetId);
+    const frameId = window.requestAnimationFrame(() => {
+      workoutEntryRefs.current.get(workoutEntryTargetId)?.scrollIntoView?.({
+        behavior: "smooth",
+        block: "center",
+      });
+      onWorkoutEntryTargetShown();
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [workoutEntryTargetId, workoutEntries, onWorkoutEntryTargetShown]);
   const formInputStyle = {
     ...inputStyle,
     boxSizing: "border-box",
@@ -492,6 +518,7 @@ function WorkoutPage({
     setPhotos([]);
     setSearchResetKey((current) => current + 1);
     startedAtRef.current = new Date(`${current.date}T${current.time}`).toISOString();
+    plannedWorkoutIdRef.current = null;
     if (clearDraft) clearWorkoutDraft();
   }
 
@@ -501,6 +528,9 @@ function WorkoutPage({
       date,
       time,
       startedAt: startedAtRef.current,
+      ...(plannedWorkoutIdRef.current
+        ? { plannedWorkoutId: plannedWorkoutIdRef.current }
+        : {}),
       notes,
       exercises,
       photos,
@@ -739,6 +769,7 @@ function WorkoutPage({
     setStatusMessage("");
     setActiveSearchExerciseId(null);
     setEditingSavedExercise(null);
+    plannedWorkoutIdRef.current = entry.plannedWorkoutId || null;
     formRef.current?.scrollIntoView?.({ behavior: "smooth" });
   }
 
@@ -819,7 +850,7 @@ function WorkoutPage({
       <header className="trace-feature-page__identity">
       <p className="trace-feature-page__kicker">Performance log</p>
       <h1 style={{ marginBottom: "10px" }}>Workouts</h1>
-      <ConfirmationMessage message={confirmationMessage} />
+      <ConfirmationMessage message={confirmationMessage} placement="viewport-edge" />
       <p className="trace-feature-page__lede" style={{ color: "#bbb", marginBottom: "24px" }}>
         Record completed strength workouts as entered. Trace does not provide
         training recommendations.

@@ -1,7 +1,11 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import WorkoutPage from "./WorkoutPage";
 import { createExerciseDefinition } from "../services/exerciseCatalog";
-import { WORKOUT_DRAFT_STORAGE_KEY } from "../services/workoutDraft";
+import { createPlannedWorkout } from "../services/plannedWorkout";
+import {
+  createWorkoutDraftFromPlannedWorkout,
+  WORKOUT_DRAFT_STORAGE_KEY,
+} from "../services/workoutDraft";
 
 const originalRequestAnimationFrame = window.requestAnimationFrame;
 const originalCreateObjectURL = URL.createObjectURL;
@@ -94,6 +98,83 @@ test("successful save clears a restored draft and does not duplicate the workout
   expect(props.saveWorkoutEntry).toHaveBeenCalledTimes(1);
   expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
   expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Workout traced");
+  expect(screen.getByTestId("save-confirmation")).toHaveClass("trace-save-confirmation");
+  expect(screen.getByTestId("save-confirmation")).toHaveAttribute("data-placement", "viewport-edge");
+});
+
+test("restores planned prefills and saves one normal entry with its backlink", () => {
+  const plan = plannedExecution();
+  const draft = createWorkoutDraftFromPlannedWorkout(
+    plan,
+    new Date(2026, 7, 22, 14, 25)
+  );
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  const view = renderPage();
+
+  expect(screen.getByLabelText("Workout title")).toHaveValue("Planned Push");
+  expect(screen.getByLabelText("Workout notes (optional)")).toHaveValue("Plan notes");
+  expect(screen.getByLabelText("Exercise 1 name")).toHaveValue("Dumbbell Bench Press");
+  expect(screen.getByLabelText("Exercise 1 notes")).toHaveValue("Exercise notes");
+  expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(8);
+  expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(60);
+  expect(screen.getByLabelText("Exercise 1 set 1 weight unit")).toHaveValue("kg");
+  expect(screen.getByLabelText("Exercise 1 set 1 notes")).toHaveValue("Target notes");
+
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(view.saveWorkoutEntry).toHaveBeenCalledTimes(1);
+  expect(view.saveWorkoutEntry).toHaveBeenCalledWith(expect.objectContaining({
+    plannedWorkoutId: plan.id,
+    title: plan.title,
+  }));
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
+});
+
+test("adds an exercise only to the active planned-workout draft", async () => {
+  const plan = plannedExecution();
+  const savedPlan = JSON.stringify([plan]);
+  localStorage.setItem("plannedWorkouts", savedPlan);
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(
+    createWorkoutDraftFromPlannedWorkout(plan, new Date(2026, 7, 22, 14, 25))
+  ));
+  renderPage();
+
+  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
+  expect(screen.getByLabelText("Exercise 2 name")).toHaveValue("");
+  expect(screen.getByLabelText("Exercise 2 set 1 reps")).toHaveValue(null);
+  fireEvent.change(screen.getByLabelText("Exercise 2 name"), {
+    target: { value: "Cable Fly" },
+  });
+
+  await waitFor(() => {
+    const stored = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+    expect(stored).toMatchObject({
+      plannedWorkoutId: plan.id,
+      form: {
+        exercises: [
+          { name: "Dumbbell Bench Press" },
+          { name: "Cable Fly" },
+        ],
+      },
+    });
+  });
+  expect(localStorage.getItem("plannedWorkouts")).toBe(savedPlan);
+});
+
+test("discarding a planned-workout draft does not complete or change its plan", () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  const plan = plannedExecution();
+  const savedPlan = JSON.stringify([plan]);
+  localStorage.setItem("plannedWorkouts", savedPlan);
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(
+    createWorkoutDraftFromPlannedWorkout(plan, new Date(2026, 7, 22, 14, 25))
+  ));
+  const view = renderPage();
+
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(view.saveWorkoutEntry).not.toHaveBeenCalled();
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
+  expect(localStorage.getItem("plannedWorkouts")).toBe(savedPlan);
+  confirm.mockRestore();
 });
 
 test("saving a restored draft records its original start and actual finish", () => {
@@ -216,6 +297,27 @@ function renderPage(overrides = {}) {
   const props = renderPageProps(overrides);
   render(<WorkoutPage {...props} />);
   return props;
+}
+
+function plannedExecution() {
+  return createPlannedWorkout({
+    id: "planned-workout:execution",
+    scheduledDate: "2026-08-22",
+    title: "Planned Push",
+    notes: "Plan notes",
+    exercises: [{
+      id: "planned-exercise:bench",
+      name: "Dumbbell Bench Press",
+      exerciseId: "trace:chest-db-bench-002",
+      notes: "Exercise notes",
+      targetSets: [{
+        id: "planned-set:bench",
+        reps: 8,
+        load: { mode: "external", amount: 60, unit: "kg" },
+        notes: "Target notes",
+      }],
+    }],
+  }, new Date("2026-08-20T12:00:00.000Z"));
 }
 
 test("uses the scoped performance-log presentation and nested workout surfaces", () => {

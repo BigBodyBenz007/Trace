@@ -40,3 +40,20 @@
   0%, 78% { opacity: 1; }
   100% { opacity: 0; }
 }
+
+.trace-save-confirmation {
+  left: auto;
+  pointer-events: none;
+  right: max(16px, calc((100vw - 1120px) / 2));
+  top: calc(16px + env(safe-area-inset-top));
+  transform: none;
+}
+
+@media (max-width: 600px) {
+  .trace-save-confirmation {
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    left: auto;
+    right: 12px;
+    top: auto;
+  }
+}
