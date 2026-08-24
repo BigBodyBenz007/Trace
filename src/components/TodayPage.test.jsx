@@ -248,6 +248,12 @@ test("starts an incomplete planned workout through the execution callback", () =
   );
 });
 
+test("starts an incomplete planned workout from a mobile touch interaction", () => {
+  const { startPlannedWorkout } = renderPage({ plannedWorkouts: [plan()] }, { expanded: false });
+  fireEvent.touchStart(screen.getByRole("button", { name: "Start workout Upper Body" }));
+  expect(startPlannedWorkout).toHaveBeenCalledWith("planned-workout:today", null);
+});
+
 test("shows an active planned-workout draft as Started with Continue actions", () => {
   const planned = plan();
   const { startPlannedWorkout } = renderPage({

@@ -284,7 +284,7 @@ test("selecting a search result populates the existing form", () => {
   expect(form.getByLabelText("Protein (g)")).toHaveValue(1.3);
   expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(27);
   expect(form.getByLabelText("Fat (g)")).toHaveValue(0.4);
-  expect(form.getByText("Unknown")).toBeInTheDocument();
+  expect(form.getAllByText("Unknown")).toHaveLength(2);
   expect(form.getByLabelText("Number of servings")).toHaveValue(1);
   expect(form.getByText("One serving: 1 medium banana")).toBeInTheDocument();
 });
@@ -701,6 +701,7 @@ test("successfully saving a manual food clears search and requests persistence",
       protein: 22,
       carbohydrates: 18,
       fat: 20,
+      fiber: null,
       sodium: null,
     },
     serving: {
@@ -714,6 +715,9 @@ test("successfully saving a manual food clears search and requests persistence",
       source: "user-added",
       sourceId: "meatloaf",
       confidence: "user-added",
+      sourceType: "grocery-custom",
+      category: "other",
+      categoryLabel: "Other",
       modified: false,
     },
     portion: {
@@ -735,6 +739,95 @@ test("successfully saving a manual food clears search and requests persistence",
   });
   expect(screen.getByLabelText("Food search")).toHaveValue("");
   expect(form.getByLabelText("Food / meal name")).toHaveValue("");
+});
+
+test("creates a custom grocery food with nullable nutrients and reusable source metadata", () => {
+  const saveUserFood = jest.fn((food) => ({
+    status: "added",
+    food: createUserFood(food.name, food.nutrients, food.serving, food),
+    matchesDefinition: true,
+  }));
+  const props = renderNutritionPage({ saveUserFood });
+
+  fireEvent.click(screen.getByRole("button", { name: "Create grocery food" }));
+  const creator = screen.getByRole("button", { name: "Save grocery food" }).closest("form");
+  fireEvent.change(within(creator).getByLabelText("Food name"), {
+    target: { value: "Raw chicken breast strips" },
+  });
+  fireEvent.change(within(creator).getByLabelText("Brand (optional)"), {
+    target: { value: "Market Pantry" },
+  });
+  fireEvent.change(within(creator).getByLabelText("Food category / type"), {
+    target: { value: "protein" },
+  });
+  fireEvent.change(within(creator).getByLabelText("Serving amount"), {
+    target: { value: "4" },
+  });
+  fireEvent.change(within(creator).getByLabelText("Serving unit"), {
+    target: { value: "oz" },
+  });
+  fireEvent.change(within(creator).getByLabelText("Protein (g)"), {
+    target: { value: "26" },
+  });
+  fireEvent.change(within(creator).getByLabelText("Food notes (optional)"), {
+    target: { value: "Raw weight" },
+  });
+  fireEvent.click(within(creator).getByRole("button", { name: "Save grocery food" }));
+
+  expect(props.saveNutritionEntry).not.toHaveBeenCalled();
+  expect(saveUserFood).toHaveBeenCalledWith(expect.objectContaining({
+    name: "Raw chicken breast strips",
+    brand: "Market Pantry",
+    category: "protein",
+    serving: { amount: 4, unit: "oz", description: "4 oz" },
+    nutrients: {
+      calories: "",
+      protein: "26",
+      carbohydrates: "",
+      fat: "",
+      fiber: "",
+      sodium: "",
+    },
+    notes: "Raw weight",
+  }));
+  expect(saveUserFood.mock.results[0].value.food).toMatchObject({
+    sourceType: "grocery-custom",
+    categoryLabel: "Protein / meat",
+    nutrients: {
+      calories: null,
+      protein: 26,
+      carbohydrates: null,
+      fat: null,
+      fiber: null,
+      sodium: null,
+    },
+    provenance: { label: "User-entered", completeness: "partial" },
+  });
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Raw chicken breast strips saved. Search for it above to log a meal."
+  );
+});
+
+test("keeps the existing grocery food when a duplicate name is submitted", () => {
+  const existingFood = createUserFood("Oats", { calories: 150 });
+  const saveUserFood = jest.fn(() => ({
+    status: "duplicate",
+    food: existingFood,
+    matchesDefinition: false,
+  }));
+  const props = renderNutritionPage({ saveUserFood });
+
+  fireEvent.click(screen.getByRole("button", { name: "Create grocery food" }));
+  const creator = screen.getByRole("button", { name: "Save grocery food" }).closest("form");
+  fireEvent.change(within(creator).getByLabelText("Food name"), {
+    target: { value: "  OATS " },
+  });
+  fireEvent.click(within(creator).getByRole("button", { name: "Save grocery food" }));
+
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "A grocery food named Oats is already saved. The existing food was kept."
+  );
+  expect(props.saveNutritionEntry).not.toHaveBeenCalled();
 });
 
 test("a saved user food appears in search and scales like a catalog food", () => {
@@ -766,7 +859,8 @@ test("a saved user food appears in search and scales like a catalog food", () =>
   fireEvent.click(screen.getByRole("button", { name: /Meatloaf/i }));
   const form = entryForm();
 
-  expect(screen.getByText("User Added")).toBeInTheDocument();
+  expect(screen.getByText("Grocery/custom")).toBeInTheDocument();
+  expect(screen.getByText("User-entered")).toBeInTheDocument();
   expect(form.getByLabelText("Food / meal name")).toHaveValue("Meatloaf");
   fireEvent.change(form.getByLabelText("Number of servings"), {
     target: { value: "1.5" },
@@ -782,6 +876,8 @@ test("a saved user food appears in search and scales like a catalog food", () =>
       source: "user-added",
       sourceId: "meatloaf",
       confidence: "user-added",
+      sourceType: "grocery-custom",
+      category: "other",
       modified: false,
     },
     portion: {
@@ -825,6 +921,52 @@ test("a richer saved user food can be searched, selected, and scaled", () => {
     unit: "serving",
     basis: { amount: 4, unit: "oz", description: "4 oz" },
   });
+});
+
+test("searches a grocery food later and logs unknown nutrients without converting them to zero", () => {
+  const groceryFood = createUserFood(
+    "Raw chicken breast strips",
+    { protein: 26, carbohydrates: 0 },
+    { amount: 4, unit: "oz", description: "4 oz" },
+    { brand: "Market Pantry", category: "protein" }
+  );
+  const props = renderNutritionPage({ userFoods: [groceryFood] });
+
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "Market Pantry" },
+  });
+  const result = screen.getByRole("button", { name: /Raw chicken breast strips/i });
+  expect(within(result).getByText("Grocery/custom")).toBeInTheDocument();
+  expect(within(result).getByText("User-entered")).toBeInTheDocument();
+  expect(within(result).getByText("Protein / meat · Market Pantry")).toBeInTheDocument();
+  fireEvent.click(result);
+
+  const form = entryForm();
+  expect(form.getByLabelText("Calories")).toHaveValue(null);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(26);
+  expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(0);
+  expect(form.getByLabelText("Fat (g)")).toHaveValue(null);
+  expect(form.getByLabelText("Fiber (g)")).toHaveValue(null);
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry).toHaveBeenCalledWith(expect.objectContaining({
+    name: "Raw chicken breast strips",
+    calories: null,
+    protein: 26,
+    carbohydrates: 0,
+    fat: null,
+    fiber: null,
+    foodReference: expect.objectContaining({
+      sourceType: "grocery-custom",
+      category: "protein",
+      categoryLabel: "Protein / meat",
+      brand: "Market Pantry",
+    }),
+    nutritionCompleteness: expect.objectContaining({
+      status: "partial",
+      unknownNutrients: expect.arrayContaining(["calories", "fat", "sodium"]),
+    }),
+  }));
 });
 
 test("a conflicting duplicate logs without provenance and keeps the saved food", () => {

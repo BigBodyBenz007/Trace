@@ -26,7 +26,14 @@ export function searchFoods(
 
   return foods
     .filter((food) => {
-      const searchableFood = normalizeFoodQuery([food.name, food.restaurant?.name, ...(food.searchAliases || [])].filter(Boolean).join(" "));
+      const searchableFood = normalizeFoodQuery([
+        food.name,
+        food.restaurant?.name,
+        food.brand,
+        food.category,
+        food.categoryLabel,
+        ...(food.searchAliases || []),
+      ].filter(Boolean).join(" "));
       return queryTokens.every((token) => searchableFood.includes(token));
     })
     .sort((firstFood, secondFood) => {

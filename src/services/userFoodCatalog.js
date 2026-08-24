@@ -3,57 +3,103 @@ import { createServingDefinition } from "./servingDefinition";
 
 export const USER_FOODS_STORAGE_KEY = "userFoods";
 
-function toNonNegativeNumber(value) {
-  const number = Number(value);
+export const GROCERY_FOOD_CATEGORY_OPTIONS = Object.freeze([
+  { value: "protein", label: "Protein / meat" },
+  { value: "eggs-dairy", label: "Eggs / dairy" },
+  { value: "grains-starches", label: "Grains / starches" },
+  { value: "vegetables", label: "Vegetables" },
+  { value: "fruit", label: "Fruit" },
+  { value: "other", label: "Other" },
+]);
 
-  return Number.isFinite(number) ? Math.max(0, number) : 0;
+const GROCERY_FOOD_CATEGORIES = new Set(
+  GROCERY_FOOD_CATEGORY_OPTIONS.map(({ value }) => value)
+);
+
+function normalizeOptionalText(value) {
+  const normalized = String(value || "").trim().replace(/\s+/g, " ");
+  return normalized || null;
 }
 
 function toOptionalNonNegativeNumber(value) {
   if (value === null || value === undefined || value === "") return null;
-  return toNonNegativeNumber(value);
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, number) : null;
 }
 
 export function createUserFood(
   name,
   nutrients,
-  serving = createServingDefinition({ amount: 1, unit: "serving" })
+  serving = createServingDefinition({ amount: 1, unit: "serving" }),
+  details = {}
 ) {
   const normalizedName = normalizeFoodQuery(name);
 
   if (!normalizedName) return null;
 
   const sourceId = encodeURIComponent(normalizedName);
+  const brand = normalizeOptionalText(details.brand);
+  const notes = normalizeOptionalText(details.notes);
+  const category = GROCERY_FOOD_CATEGORIES.has(details.category)
+    ? details.category
+    : "other";
+  const categoryLabel = GROCERY_FOOD_CATEGORY_OPTIONS.find(
+    (option) => option.value === category
+  ).label;
+  const normalizedNutrients = {
+    calories: toOptionalNonNegativeNumber(nutrients?.calories),
+    protein: toOptionalNonNegativeNumber(nutrients?.protein),
+    carbohydrates: toOptionalNonNegativeNumber(nutrients?.carbohydrates),
+    fat: toOptionalNonNegativeNumber(nutrients?.fat),
+    fiber: toOptionalNonNegativeNumber(nutrients?.fiber),
+    sodium: toOptionalNonNegativeNumber(nutrients?.sodium),
+  };
+  const completeness = ["calories", "protein", "carbohydrates", "fat"].every(
+    (nutrient) => normalizedNutrients[nutrient] !== null
+  )
+    ? "complete"
+    : "partial";
 
   return {
     id: `user-added:${sourceId}`,
     name: String(name).trim().replace(/\s+/g, " "),
+    sourceType: "grocery-custom",
+    category,
+    categoryLabel,
+    ...(brand ? { brand } : {}),
+    ...(notes ? { notes } : {}),
     serving: { ...serving },
-    nutrients: {
-      calories: toNonNegativeNumber(nutrients?.calories),
-      protein: toNonNegativeNumber(nutrients?.protein),
-      carbohydrates: toNonNegativeNumber(nutrients?.carbohydrates),
-      fat: toNonNegativeNumber(nutrients?.fat),
-      sodium: toOptionalNonNegativeNumber(nutrients?.sodium),
-    },
+    nutrients: normalizedNutrients,
     provenance: {
       source: "user-added",
       sourceId,
       confidence: "user-added",
+      label: "User-entered",
+      completeness,
     },
   };
 }
 
 function foodDefinitionsMatch(firstFood, secondFood) {
   const servingFields = ["amount", "unit", "description", "grams"];
-  const nutrientFields = ["calories", "protein", "carbohydrates", "fat", "sodium"];
+  const nutrientFields = ["calories", "protein", "carbohydrates", "fat", "fiber", "sodium"];
+  const metadataValue = (food, field) => {
+    if (field === "sourceType") return food[field] || "grocery-custom";
+    if (field === "category") return food[field] || "other";
+    return food[field] || null;
+  };
 
   return (
+    ["brand", "category", "notes", "sourceType"].every(
+      (field) => metadataValue(firstFood, field) === metadataValue(secondFood, field)
+    ) &&
     servingFields.every(
       (field) => firstFood.serving?.[field] === secondFood.serving?.[field]
     ) &&
     nutrientFields.every(
-      (field) => firstFood.nutrients?.[field] === secondFood.nutrients?.[field]
+      (field) =>
+        (firstFood.nutrients?.[field] ?? null) ===
+        (secondFood.nutrients?.[field] ?? null)
     )
   );
 }

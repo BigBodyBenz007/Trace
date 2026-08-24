@@ -914,8 +914,12 @@ function App() {
     }
   }
 
-  function saveUserFood({ name, nutrients, serving }) {
-    const userFood = createUserFood(name, nutrients, serving);
+  function saveUserFood({ name, nutrients, serving, brand, category, notes }) {
+    const userFood = createUserFood(name, nutrients, serving, {
+      brand,
+      category,
+      notes,
+    });
     const result = addUserFood(userFoods, userFood);
 
     if (!result.added) {

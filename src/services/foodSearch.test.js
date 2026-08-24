@@ -2,6 +2,7 @@ import starterFoods from "../data/starterFoods";
 import restaurantFoods from "../data/restaurantFoods";
 import restaurantFoodFixtures from "../data/restaurantFoodFixtures";
 import { normalizeRestaurantFood } from "./restaurantFoodModel";
+import { createUserFood } from "./userFoodCatalog";
 import {
   DEFAULT_RESULT_LIMIT,
   normalizeFoodQuery,
@@ -199,6 +200,23 @@ test("searches restaurant catalogs by chain and item while preserving saved-food
     "Medium Coca-Cola",
     "Large Coca-Cola",
   ]);
+});
+
+test("searches grocery foods by name, brand, and friendly category without changing restaurant results", () => {
+  const groceryFood = createUserFood(
+    "Raw chicken breast strips",
+    { calories: 120, protein: 26 },
+    { amount: 4, unit: "oz", description: "4 oz" },
+    { brand: "Market Pantry", category: "protein" }
+  );
+
+  expect(searchFoodCatalog("raw chicken", [groceryFood])[0]).toBe(groceryFood);
+  expect(searchFoodCatalog("market pantry", [groceryFood])[0]).toBe(groceryFood);
+  expect(searchFoodCatalog("protein meat", [groceryFood])[0]).toBe(groceryFood);
+  expect(searchFoodCatalog("McNuggets", [groceryFood])[0]).toMatchObject({
+    sourceType: "restaurant",
+    restaurant: { name: "McDonald's" },
+  });
 });
 
 test("restaurant food and menu-option IDs are collision-free", () => {

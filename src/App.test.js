@@ -394,6 +394,78 @@ test("Timeline opens Protocols and returns to Timeline at the top", () => {
   expectDestinationScrolledToTop();
 });
 
+test("Nutrition creates, persists, searches, and logs a custom grocery food", async () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  fireEvent.click(screen.getByRole("button", { name: "Create grocery food" }));
+  const creator = screen.getByRole("button", { name: "Save grocery food" }).closest("form");
+
+  fireEvent.change(within(creator).getByLabelText("Food name"), {
+    target: { value: "Raw chicken breast strips" },
+  });
+  fireEvent.change(within(creator).getByLabelText("Brand (optional)"), {
+    target: { value: "Market Pantry" },
+  });
+  fireEvent.change(within(creator).getByLabelText("Food category / type"), {
+    target: { value: "protein" },
+  });
+  fireEvent.change(within(creator).getByLabelText("Serving amount"), {
+    target: { value: "4" },
+  });
+  fireEvent.change(within(creator).getByLabelText("Serving unit"), {
+    target: { value: "oz" },
+  });
+  fireEvent.change(within(creator).getByLabelText("Protein (g)"), {
+    target: { value: "26" },
+  });
+  fireEvent.click(within(creator).getByRole("button", { name: "Save grocery food" }));
+
+  await waitFor(() => expect(JSON.parse(localStorage.getItem("userFoods"))).toHaveLength(1));
+  const [savedFood] = JSON.parse(localStorage.getItem("userFoods"));
+  expect(savedFood).toMatchObject({
+    name: "Raw chicken breast strips",
+    brand: "Market Pantry",
+    category: "protein",
+    categoryLabel: "Protein / meat",
+    sourceType: "grocery-custom",
+    nutrients: {
+      calories: null,
+      protein: 26,
+      carbohydrates: null,
+      fat: null,
+      fiber: null,
+      sodium: null,
+    },
+    provenance: { label: "User-entered", completeness: "partial" },
+  });
+
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "Market Pantry" },
+  });
+  const searchResult = await screen.findByRole("button", {
+    name: /Raw chicken breast strips/i,
+  });
+  expect(within(searchResult).getByText("Grocery/custom")).toBeInTheDocument();
+  expect(within(searchResult).getByText("User-entered")).toBeInTheDocument();
+  fireEvent.click(searchResult);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  const [loggedMeal] = JSON.parse(localStorage.getItem("nutritionEntries"));
+  expect(loggedMeal).toMatchObject({
+    name: "Raw chicken breast strips",
+    calories: null,
+    protein: 26,
+    carbohydrates: null,
+    fat: null,
+    fiber: null,
+    foodReference: {
+      sourceType: "grocery-custom",
+      categoryLabel: "Protein / meat",
+      brand: "Market Pantry",
+    },
+  });
+});
+
 test("Timeline opens Today's Schedule and returns to Timeline at the top", () => {
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));

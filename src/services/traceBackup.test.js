@@ -8,6 +8,7 @@ import {
   validateTraceBackup,
 } from "./traceBackup";
 import { readAppSettings } from "./appSettings";
+import { createUserFood } from "./userFoodCatalog";
 import { createWorkoutDraftFromPlannedWorkout } from "./workoutDraft";
 import { createDailyAction, emptyDailyActionCollection } from "./dailyAction";
 import {
@@ -202,6 +203,55 @@ test("exports structured data and multiple photos without mutating sources", asy
   ]);
   expect(database.records()[0].blob).toBeInstanceOf(Blob);
   expect(memories[0].images).toEqual(["photo-1", "photo-2"]);
+});
+
+test("backs up and restores custom grocery foods and nullable meal snapshots unchanged", async () => {
+  const groceryFood = createUserFood(
+    "Raw chicken breast strips",
+    { protein: 26, carbohydrates: 0 },
+    { amount: 4, unit: "oz", description: "4 oz" },
+    { brand: "Market Pantry", category: "protein", notes: "Raw weight" }
+  );
+  const meal = {
+    id: "meal-grocery-1",
+    name: groceryFood.name,
+    calories: null,
+    protein: 26,
+    carbohydrates: 0,
+    fat: null,
+    fiber: null,
+    sodium: null,
+    foodReference: {
+      source: "user-added",
+      sourceId: groceryFood.provenance.sourceId,
+      sourceType: "grocery-custom",
+      category: "protein",
+      categoryLabel: "Protein / meat",
+      brand: "Market Pantry",
+    },
+  };
+  const source = makeStorage({
+    userFoods: JSON.stringify([groceryFood]),
+    nutritionEntries: JSON.stringify([meal]),
+  });
+  const created = await createTraceBackup({
+    storage: source,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+
+  expect(created.data.structured.userFoods).toEqual([groceryFood]);
+  expect(created.data.structured.nutritionEntries).toEqual([meal]);
+  expect(created.data.structured.userFoods[0].nutrients.calories).toBeNull();
+
+  const restored = makeStorage();
+  await restoreTraceBackup(created, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+
+  expect(JSON.parse(restored.value("userFoods"))).toEqual([groceryFood]);
+  expect(JSON.parse(restored.value("nutritionEntries"))).toEqual([meal]);
 });
 
 test("backs up saved private Journal entries but excludes unfinished drafts", async () => {

@@ -7,6 +7,7 @@ export const NUTRIENT_KEYS = [
 
 export const OPTIONAL_NUTRIENT_KEYS = ["sodium"];
 export const TRACKED_NUTRIENT_KEYS = [...NUTRIENT_KEYS, ...OPTIONAL_NUTRIENT_KEYS];
+export const FOOD_NUTRIENT_KEYS = [...TRACKED_NUTRIENT_KEYS, "fiber"];
 
 function toNonNegativeNumber(value) {
   const number = Number(value);
