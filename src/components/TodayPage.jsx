@@ -5,7 +5,9 @@ import {
   WORKOUT_WEIGHT_UNITS,
 } from "../constants/workoutOptions";
 import { formatDateOnly } from "../services/dateOnly";
+import { formatDoseUnit, formatRoute } from "../services/medicationEntry";
 import { getPlannedWorkoutError } from "../services/plannedWorkout";
+import { protocolItemsScheduledForDate } from "../services/protocol";
 import { createWorkoutItemId } from "../services/workoutEntry";
 
 export function localScheduledDate(value = new Date()) {
@@ -60,6 +62,7 @@ function targetSummary(target) {
 function TodayPage({
   onBack,
   plannedWorkouts = [],
+  protocols = [],
   workoutEntries = [],
   savedExercises = [],
   createPlannedWorkout,
@@ -83,6 +86,10 @@ function TodayPage({
   const todaysPlans = useMemo(
     () => plannedWorkouts.filter(({ scheduledDate }) => scheduledDate === todayKey),
     [plannedWorkouts, todayKey]
+  );
+  const todaysProtocolItems = useMemo(
+    () => protocolItemsScheduledForDate(protocols, currentDate),
+    [protocols, currentDate]
   );
   const completedWorkoutByPlanId = useMemo(() => {
     const completed = new Map();
@@ -363,10 +370,10 @@ function TodayPage({
       style={containerStyle}
     >
       <header className="trace-feature-page__identity">
-        <p className="trace-feature-page__kicker">Workout planning</p>
+        <p className="trace-feature-page__kicker">Daily planning</p>
         <h1>Today&apos;s Schedule</h1>
         <p className="trace-feature-page__lede">
-          Map out intended exercises and targets. Plans stay separate from completed workout history.
+          Review today&apos;s workout plans and protocol items. Plans stay separate from completed history.
         </p>
       </header>
 
@@ -536,20 +543,23 @@ function TodayPage({
 
       {!draft && (
         <>
-      <section className="trace-feature-section trace-today-schedule" aria-label="Planned workouts for today">
+      <section className="trace-feature-section trace-today-schedule" aria-label="Today's schedule">
         <h2>Planned for {formatDateOnly(todayKey)}</h2>
-        {todaysPlans.length === 0 ? (
+        {todaysPlans.length === 0 && todaysProtocolItems.length === 0 ? (
           <div className="trace-feature-surface trace-today-empty">
-            <h3>No workout planned for today.</h3>
-            <p>You can create a plan for today or choose another date.</p>
+            <h3>Nothing scheduled for today.</h3>
+            <p>You can create a workout plan for today or choose another date.</p>
           </div>
-        ) : (
-          <div className="trace-today-schedule__list">
+        ) : null}
+        {todaysPlans.length > 0 && (
+          <section className="trace-today-schedule__group" aria-label="Planned workouts for today">
+            <h3 className="trace-today-schedule__group-title">Planned workouts</h3>
+            <div className="trace-today-schedule__list">
             {todaysPlans.map((plan) => {
               const completedWorkout = completedWorkoutByPlanId.get(plan.id);
               const hasDraftConflict = draftConflict?.planId === plan.id;
               return (
-              <article className="trace-data-card trace-today-plan" data-draft-collision={hasDraftConflict ? "open" : "closed"} key={plan.id}>
+              <article className="trace-data-card trace-today-plan" data-draft-collision={hasDraftConflict ? "open" : "closed"} data-schedule-item-type="workout" key={plan.id}>
                 <span className="trace-badge">
                   Plan {"\u00b7"} {completedWorkout ? "completed" : "not completed"}
                 </span>
@@ -618,7 +628,40 @@ function TodayPage({
               </article>
               );
             })}
-          </div>
+            </div>
+          </section>
+        )}
+        {todaysProtocolItems.length > 0 && (
+          <section className="trace-today-schedule__group" aria-label="Protocols for today">
+            <h3 className="trace-today-schedule__group-title">Protocols</h3>
+            <div className="trace-today-schedule__list">
+              {todaysProtocolItems.map(({ protocol, item }) => (
+                <article
+                  className="trace-data-card trace-today-protocol"
+                  data-schedule-item-type="protocol"
+                  key={`${protocol.id}:${item.id}`}
+                >
+                  <span className="trace-badge">Protocol {"\u00b7"} scheduled</span>
+                  <h3>{protocol.name}</h3>
+                  <dl className="trace-today-protocol__details">
+                    <div>
+                      <dt>Medication / compound</dt>
+                      <dd>{item.compound.name}</dd>
+                    </div>
+                    <div>
+                      <dt>Dose</dt>
+                      <dd>{item.dose.amount} {formatDoseUnit(item.dose)}</dd>
+                    </div>
+                    <div>
+                      <dt>Route / method</dt>
+                      <dd>{formatRoute(item.route)}</dd>
+                    </div>
+                  </dl>
+                  {item.notes && <p className="trace-today-protocol__notes">{item.notes}</p>}
+                </article>
+              ))}
+            </div>
+          </section>
         )}
       </section>
 

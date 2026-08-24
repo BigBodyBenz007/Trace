@@ -1744,6 +1744,7 @@ function App() {
         <TodayPage
           onBack={() => setPage("home")}
           plannedWorkouts={plannedWorkouts}
+          protocols={protocols}
           workoutEntries={workoutEntries}
           savedExercises={savedExercises}
           createPlannedWorkout={createPlannedWorkout}

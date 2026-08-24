@@ -396,12 +396,48 @@ test("Timeline opens Today's Schedule and returns to Timeline at the top", () =>
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
   expect(screen.getByRole("heading", { name: "Today's Schedule" })).toBeInTheDocument();
   expectDestinationScrolledToTop();
-  expect(screen.getByRole("heading", { name: "No workout planned for today." })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Nothing scheduled for today." })).toBeInTheDocument();
 
   window.scrollTo.mockClear();
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
   expectDestinationScrolledToTop();
+});
+
+test("Today reads scheduled protocol items from the existing protocol collection", async () => {
+  const today = new Date();
+  const isoWeekday = today.getDay() || 7;
+  localStorage.setItem("protocols", JSON.stringify([{
+    id: "protocol:today",
+    schemaVersion: 1,
+    name: "Stored protocol",
+    startDate: localCalendarDateKey(today),
+    endDate: null,
+    status: "active",
+    notes: "",
+    items: [{
+      id: "protocol-item:today",
+      compound: { name: "Stored compound" },
+      dose: { amount: 2.5, unit: "mg" },
+      route: { code: "intramuscular" },
+      schedule: { type: "weekly-days", weekdays: [isoWeekday] },
+      notes: "Left side",
+    }],
+    createdAt: "2026-08-01T00:00:00.000Z",
+    updatedAt: "2026-08-01T00:00:00.000Z",
+    endedAt: null,
+  }]));
+
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+
+  const protocols = await screen.findByRole("region", { name: "Protocols for today" });
+  expect(within(protocols).getByRole("heading", { name: "Stored protocol" })).toBeInTheDocument();
+  expect(within(protocols).getByText("Stored compound")).toBeInTheDocument();
+  expect(within(protocols).getByText("2.5 mg")).toBeInTheDocument();
+  expect(within(protocols).getByText("Intramuscular (IM)")).toBeInTheDocument();
+  expect(within(protocols).getByText("Left side")).toBeInTheDocument();
+  expect(localStorage.getItem("medicationEntries")).toBeNull();
 });
 
 test("Today creates, edits, and deletes plans without creating completed workouts", async () => {

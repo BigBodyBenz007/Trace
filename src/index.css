@@ -2207,6 +2207,55 @@ code {
   gap: var(--trace-space-4);
 }
 
+.trace-today-schedule__group {
+  margin-top: var(--trace-space-5);
+  min-width: 0;
+}
+
+.trace-today-schedule__group-title {
+  color: var(--trace-brass-strong);
+  margin-bottom: 0;
+  text-align: left;
+}
+
+.trace-today-protocol {
+  box-sizing: border-box;
+  margin: 0;
+  min-width: 0;
+  padding: clamp(14px, 3vw, 20px);
+}
+
+.trace-today-protocol h3 {
+  margin-bottom: var(--trace-space-3);
+}
+
+.trace-today-protocol__details {
+  display: grid;
+  gap: var(--trace-space-3);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0;
+}
+
+.trace-today-protocol__details div {
+  min-width: 0;
+}
+
+.trace-today-protocol__details dt {
+  color: var(--trace-text-muted);
+  font-size: 0.82rem;
+}
+
+.trace-today-protocol__details dd {
+  margin: var(--trace-space-1) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.trace-today-protocol__notes {
+  color: var(--trace-text-muted);
+  margin-bottom: 0;
+  white-space: pre-wrap;
+}
+
 .trace-today-plan h3 {
   margin-bottom: var(--trace-space-2);
 }
@@ -2235,6 +2284,10 @@ code {
 
   .trace-today-target__empty-load {
     grid-column: auto;
+  }
+
+  .trace-today-protocol__details {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

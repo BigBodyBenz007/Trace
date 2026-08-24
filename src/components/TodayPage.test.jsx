@@ -26,6 +26,31 @@ function plan(overrides = {}) {
   }, CREATED_AT);
 }
 
+function protocol(overrides = {}, itemOverrides = {}) {
+  return {
+    id: "protocol:today",
+    schemaVersion: 1,
+    name: "Recovery protocol",
+    startDate: "2026-08-01",
+    endDate: null,
+    status: "active",
+    notes: "",
+    items: [{
+      id: "protocol-item:today",
+      compound: { name: "B12" },
+      dose: { amount: 1, unit: "ml" },
+      route: { code: "subcutaneous" },
+      schedule: { type: "weekly-days", weekdays: [6] },
+      notes: "Rotate injection site",
+      ...itemOverrides,
+    }],
+    createdAt: "2026-08-01T12:00:00.000Z",
+    updatedAt: "2026-08-01T12:00:00.000Z",
+    endedAt: null,
+    ...overrides,
+  };
+}
+
 function renderPage(props = {}) {
   const callbacks = {
     onBack: jest.fn(),
@@ -94,10 +119,59 @@ test("shows only planned workouts matching the current device-local date", () =>
   expect(screen.getByRole("heading", { name: "Planned for August 22, 2026" })).toBeInTheDocument();
 });
 
-test("shows a useful empty state when today has no plans", () => {
+test("shows a protocol item scheduled for the browser-local current date", () => {
+  renderPage({ protocols: [protocol()] });
+
+  const schedule = screen.getByRole("region", { name: "Protocols for today" });
+  expect(within(schedule).getByText("Protocol · scheduled")).toBeInTheDocument();
+  expect(within(schedule).getByRole("heading", { name: "Recovery protocol" })).toBeInTheDocument();
+  expect(within(schedule).getByText("B12")).toBeInTheDocument();
+  expect(within(schedule).getByText("1 mL")).toBeInTheDocument();
+  expect(within(schedule).getByText("Subcutaneous (SC)")).toBeInTheDocument();
+  expect(within(schedule).getByText("Rotate injection site")).toBeInTheDocument();
+});
+
+test("does not show protocols scheduled for another local date or historical ended protocols", () => {
+  renderPage({
+    protocols: [
+      protocol({ id: "protocol:tomorrow", name: "Sunday protocol" }, {
+        id: "protocol-item:tomorrow",
+        schedule: { type: "weekly-days", weekdays: [7] },
+      }),
+      protocol({ id: "protocol:future", name: "Future protocol", startDate: "2026-08-23" }),
+      protocol({ id: "protocol:ended", name: "Ended protocol", status: "ended", endDate: "2026-08-22" }),
+    ],
+  });
+
+  expect(screen.queryByRole("region", { name: "Protocols for today" })).not.toBeInTheDocument();
+  expect(screen.queryByText("Sunday protocol")).not.toBeInTheDocument();
+  expect(screen.queryByText("Future protocol")).not.toBeInTheDocument();
+  expect(screen.queryByText("Ended protocol")).not.toBeInTheDocument();
+});
+
+test("keeps workout and protocol entries clearly separated with workout actions intact", () => {
+  const { startPlannedWorkout } = renderPage({
+    plannedWorkouts: [plan()],
+    protocols: [protocol()],
+  });
+
+  const workoutGroup = screen.getByRole("region", { name: "Planned workouts for today" });
+  const protocolGroup = screen.getByRole("region", { name: "Protocols for today" });
+  expect(within(workoutGroup).getByText("Plan · not completed")).toBeInTheDocument();
+  expect(within(protocolGroup).getByText("Protocol · scheduled")).toBeInTheDocument();
+  expect(workoutGroup.querySelector('[data-schedule-item-type="workout"]')).toBeInTheDocument();
+  expect(protocolGroup.querySelector('[data-schedule-item-type="protocol"]')).toBeInTheDocument();
+
+  fireEvent.click(within(workoutGroup).getByRole("button", { name: "Start planned workout Upper Body" }));
+  expect(startPlannedWorkout).toHaveBeenCalledWith("planned-workout:today", null);
+  expect(within(workoutGroup).getByRole("button", { name: "Edit planned workout Upper Body" })).toBeInTheDocument();
+  expect(within(workoutGroup).getByRole("button", { name: "Delete planned workout Upper Body" })).toBeInTheDocument();
+});
+
+test("shows a useful empty state when today has no workouts or protocols", () => {
   renderPage({ plannedWorkouts: [plan({ scheduledDate: "2026-08-23" })] });
-  expect(screen.getByRole("heading", { name: "No workout planned for today." })).toBeInTheDocument();
-  expect(screen.getByText("You can create a plan for today or choose another date.")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Nothing scheduled for today." })).toBeInTheDocument();
+  expect(screen.getByText("You can create a workout plan for today or choose another date.")).toBeInTheDocument();
 });
 
 test("starts an incomplete planned workout through the execution callback", () => {
@@ -165,12 +239,12 @@ test("hides the empty schedule while creating and restores it on cancel", () => 
 
   expect(screen.getByTestId("today-page")).toHaveAttribute("data-editor-mode", "create");
   expect(screen.getByRole("form", { name: "Create planned workout" })).toBeInTheDocument();
-  expect(screen.queryByRole("region", { name: "Planned workouts for today" })).not.toBeInTheDocument();
-  expect(screen.queryByRole("heading", { name: "No workout planned for today." })).not.toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Today's schedule" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Nothing scheduled for today." })).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   expect(screen.getByTestId("today-page")).toHaveAttribute("data-editor-mode", "closed");
-  expect(screen.getByRole("heading", { name: "No workout planned for today." })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Nothing scheduled for today." })).toBeInTheDocument();
 });
 
 test("hides the saved plan while editing and restores it on cancel", () => {
@@ -431,5 +505,22 @@ test.each([
       : "minmax(0, 1.15fr) minmax(0, 0.9fr) minmax(0, 1.15fr) minmax(130px, 1fr) minmax(70px, 0.55fr)",
   });
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+  if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
+});
+
+test("contains mixed Today schedule cards at 390px without horizontal overflow", () => {
+  const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+  renderPage({
+    plannedWorkouts: [plan()],
+    protocols: [protocol({}, {
+      compound: { name: "A very long compound name that must remain contained on a narrow screen" },
+    })],
+  });
+
+  expect(screen.getByTestId("today-page")).toHaveAttribute("data-layout", "mobile");
+  expect(screen.getByRole("region", { name: "Planned workouts for today" })).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Protocols for today" })).toBeInTheDocument();
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
   if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
 });

@@ -150,6 +150,36 @@ function localDateKey(date) {
   ).padStart(2, "0")}`;
 }
 
+export function protocolItemsScheduledForDate(protocols, date = new Date()) {
+  if (!Array.isArray(protocols) || !(date instanceof Date) || Number.isNaN(date.getTime())) {
+    return [];
+  }
+
+  const dateKey = localDateKey(date);
+  const isoWeekday = date.getDay() || 7;
+
+  return protocols.flatMap((protocol) => {
+    if (
+      protocol?.status !== "active" ||
+      !isValidLocalDate(protocol.startDate) ||
+      protocol.startDate > dateKey ||
+      (protocol.endDate &&
+        (!isValidLocalDate(protocol.endDate) || protocol.endDate < dateKey)) ||
+      !Array.isArray(protocol.items)
+    ) {
+      return [];
+    }
+
+    return protocol.items
+      .filter(
+        (item) =>
+          item?.schedule?.type === "weekly-days" &&
+          normalizeWeekdays(item.schedule.weekdays).includes(isoWeekday)
+      )
+      .map((item) => ({ protocol, item }));
+  });
+}
+
 export function endProtocol(protocol, now = new Date()) {
   if (!protocol || protocol.status !== "active") return null;
   const timestamp = now.toISOString();

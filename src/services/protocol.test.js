@@ -4,6 +4,7 @@ import {
   formatProtocolSchedule,
   getProtocolError,
   normalizeWeekdays,
+  protocolItemsScheduledForDate,
   readProtocols,
   writeProtocols,
 } from "./protocol";
@@ -102,6 +103,30 @@ test("formats one, several, and every day from structured schedules", () => {
   expect(formatProtocolSchedule({ type: "weekly-days", weekdays: [5, 1, 3] })).toBe("Monday, Wednesday, Friday");
   expect(formatProtocolSchedule({ type: "weekly-days", weekdays: [7, 6, 5, 4, 3, 2, 1] })).toBe("Every day");
   expect(normalizeWeekdays([3, 1, 3])).toEqual([1, 3]);
+});
+
+test("selects only active protocol items inside inclusive date boundaries for the local weekday", () => {
+  const current = createProtocol(draft({
+    startDate: "2026-08-22",
+    endDate: "2026-08-22",
+    items: [item({ schedule: { type: "weekly-days", weekdays: [6] } })],
+  }));
+  const wrongWeekday = createProtocol(draft({
+    id: "protocol:wrong-weekday",
+    startDate: "2026-08-01",
+    items: [item({
+      id: "protocol-item:wrong-weekday",
+      schedule: { type: "weekly-days", weekdays: [7] },
+    })],
+  }));
+  const ended = { ...current, id: "protocol:ended", status: "ended" };
+
+  const scheduled = protocolItemsScheduledForDate(
+    [current, wrongWeekday, ended],
+    new Date(2026, 7, 22, 23, 30)
+  );
+
+  expect(scheduled).toEqual([{ protocol: current, item: current.items[0] }]);
 });
 
 test("ending records the actual local end date and preserves the full snapshot", () => {
