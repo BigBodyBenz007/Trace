@@ -788,10 +788,27 @@ function HomePage({
         </header>
         <aside className="trace-home-utilities" aria-label="Personal and settings" data-layout="independent-utility-frame">
           <button type="button" className="trace-settings-button" data-utility-position="left" aria-label="Settings" onClick={onOpenSettings} title="Settings">⚙</button>
-          <div className="trace-journal-shelf" data-utility-position="right">
+          <div className="trace-journal-shelf" data-utility-position="right" data-testid="story-achievements-actions">
             <button type="button" className="trace-journal-button" aria-label="Open Journal" onClick={onOpenJournal}>
-              <svg aria-hidden="true" viewBox="0 0 32 32" width="25" height="25" fill="none"><path d="M6 4.5h17.5A2.5 2.5 0 0 1 26 7v20H8.5A3.5 3.5 0 0 1 5 23.5V5.5A1 1 0 0 1 6 4.5Z" fill="#5b432f" stroke="#ead8b8" strokeWidth="1.5"/><path d="M9 4.5v22.4M8.5 21.5H26" stroke="#ead8b8" strokeWidth="1.5"/></svg>
-              <span>Journal</span>
+              <svg aria-hidden="true" viewBox="0 0 36 36" fill="none">
+                <path d="M8.5 5.5h18A2.5 2.5 0 0 1 29 8v22H11a4 4 0 0 1-4-4V7a1.5 1.5 0 0 1 1.5-1.5Z" fill="currentColor" fillOpacity=".16" stroke="currentColor" strokeWidth="1.5"/>
+                <path d="M11.5 5.5v24M11 24.5h18M16 12h8M16 17h8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5"/>
+              </svg>
+              <span className="trace-utility-button__copy">
+                <span className="trace-utility-button__eyebrow">Your story</span>
+                <span className="trace-utility-button__label">Journal</span>
+              </span>
+            </button>
+            <button type="button" className="trace-trophy-button" aria-label="Open Trophy Case" onClick={onOpenTrophyCase}>
+              <svg aria-hidden="true" viewBox="0 0 36 36" fill="none">
+                <path d="M12 7.5h12v5.75c0 4.1-2.5 7.25-6 7.25s-6-3.15-6-7.25V7.5Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.7"/>
+                <path d="M12 10H8.5v2.25c0 3 1.65 4.75 4.5 5.25M24 10h3.5v2.25c0 3-1.65 4.75-4.5 5.25M18 20.5V26M13.5 29h9M15 26h6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7"/>
+                <path d="m18 10.25.9 1.85 2.05.3-1.48 1.44.35 2.04L18 14.92l-1.82.96.35-2.04-1.48-1.44 2.05-.3.9-1.85Z" fill="currentColor"/>
+              </svg>
+              <span className="trace-utility-button__copy">
+                <span className="trace-utility-button__eyebrow">Achievements</span>
+                <span className="trace-utility-button__label">Trophy Case</span>
+              </span>
             </button>
           </div>
         </aside>
@@ -829,10 +846,6 @@ function HomePage({
 
           <button className="trace-feature-action" type="button" onClick={onOpenProtocols}>
             Protocols
-          </button>
-
-          <button className="trace-feature-action trace-feature-action--brass" type="button" onClick={onOpenTrophyCase}>
-            Open Trophy Case
           </button>
         </div>
       </nav>

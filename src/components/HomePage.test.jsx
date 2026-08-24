@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { readFileSync } from "fs";
 import HomePage from "./HomePage";
 import { TIMELINE_FOCUS_TUNING } from "../services/timelineFocus";
 
@@ -25,7 +26,8 @@ const baseProps = {
 
 test("renders primary Timeline actions in the intended order", () => {
   render(<HomePage {...baseProps} memories={[]} trophyEntries={[]} />);
-  const names = screen.getAllByRole("button")
+  const featureNavigation = screen.getByRole("navigation", { name: "Trace features" });
+  const names = within(featureNavigation).getAllByRole("button")
     .map((button) => button.textContent.trim())
     .filter((name) => [
       "Add Memory",
@@ -35,7 +37,6 @@ test("renders primary Timeline actions in the intended order", () => {
       "Workouts",
       "Medications & Supplements",
       "Protocols",
-      "Open Trophy Case",
     ].includes(name));
   expect(names).toEqual([
     "Add Memory",
@@ -45,7 +46,6 @@ test("renders primary Timeline actions in the intended order", () => {
     "Workouts",
     "Medications & Supplements",
     "Protocols",
-    "Open Trophy Case",
   ]);
   expect(screen.getByRole("button", { name: "Add Memory" })).toHaveClass("trace-feature-action--primary");
   expect(screen.getByRole("button", { name: "Today's Schedule" })).toHaveClass("trace-feature-action--core");
@@ -53,7 +53,7 @@ test("renders primary Timeline actions in the intended order", () => {
   expect(screen.getByRole("button", { name: "Health" })).toHaveClass("trace-feature-action--core");
 });
 
-test("frames centered branding with independent accessible Settings and Journal controls", () => {
+test("frames centered branding with accessible Settings, Journal, and Trophy Case controls", () => {
   render(<HomePage {...baseProps} memories={[]} trophyEntries={[]} />);
   const featureNavigation = screen.getByRole("navigation", { name: "Trace features" });
   const personalArea = screen.getByRole("complementary", { name: "Personal and settings" });
@@ -61,6 +61,8 @@ test("frames centered branding with independent accessible Settings and Journal 
   const intro = branding.parentElement;
   const settings = within(personalArea).getByRole("button", { name: "Settings" });
   const journal = within(personalArea).getByRole("button", { name: "Open Journal" });
+  const trophyCase = within(personalArea).getByRole("button", { name: "Open Trophy Case" });
+  const storyAchievements = screen.getByTestId("story-achievements-actions");
   expect(branding).toHaveAttribute("data-layout", "centered-branding");
   expect(within(branding).getByRole("heading", { name: "Trace" })).toBeInTheDocument();
   expect(within(branding).getByText("Your timeline. Your story.")).toBeInTheDocument();
@@ -69,12 +71,37 @@ test("frames centered branding with independent accessible Settings and Journal 
   expect(intro).toHaveAttribute("data-safe-area-context", "body-inset");
   expect(personalArea).toHaveAttribute("data-layout", "independent-utility-frame");
   expect(settings).toHaveAttribute("data-utility-position", "left");
-  expect(journal.closest("[data-utility-position]")).toHaveAttribute("data-utility-position", "right");
+  expect(storyAchievements).toHaveAttribute("data-utility-position", "right");
+  expect(within(storyAchievements).getAllByRole("button")).toEqual([journal, trophyCase]);
   expect(within(featureNavigation).queryByRole("button", { name: /Journal/ })).not.toBeInTheDocument();
+  expect(within(featureNavigation).queryByRole("button", { name: /Trophy Case/ })).not.toBeInTheDocument();
+  expect(journal).toHaveTextContent("Your storyJournal");
+  expect(trophyCase).toHaveTextContent("AchievementsTrophy Case");
   fireEvent.click(journal);
   expect(baseProps.onOpenJournal).toHaveBeenCalledTimes(1);
+  fireEvent.click(trophyCase);
+  expect(baseProps.onOpenTrophyCase).toHaveBeenCalledTimes(1);
   fireEvent.click(settings);
   expect(baseProps.onOpenSettings).toHaveBeenCalledTimes(1);
+});
+
+test("fills the secondary action row without the former Backup gap", () => {
+  render(<HomePage {...baseProps} memories={[]} trophyEntries={[]} />);
+  const secondary = document.querySelector(".trace-feature-navigation__secondary");
+  expect(within(secondary).getAllByRole("button").map((button) => button.textContent.trim()))
+    .toEqual(["Workouts", "Medications & Supplements", "Protocols"]);
+  expect(readFileSync(require.resolve("../index.css"), "utf8"))
+    .toMatch(/\.trace-feature-navigation__secondary\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+});
+
+test("keeps the Homepage action layout width-safe at 390px", () => {
+  render(<HomePage {...baseProps} memories={[]} trophyEntries={[]} />);
+  const css = readFileSync(require.resolve("../index.css"), "utf8");
+  expect(screen.getByTestId("home-page")).toBeInTheDocument();
+  expect(css).toMatch(/\.trace-feature-action\s*\{[^}]*overflow-wrap:\s*anywhere/s);
+  expect(css).toMatch(/\.trace-feature-action,[^}]*min-width:\s*0/s);
+  expect(css).toMatch(/@media \(max-width: 520px\)\s*\{[\s\S]*?\.trace-feature-navigation__core,[\s\S]*?\.trace-feature-navigation__secondary,[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/);
+  expect(css).toMatch(/@media \(max-width: 400px\)\s*\{[\s\S]*?\.trace-journal-shelf\s*\{[^}]*max-width:\s*calc\(100% - 58px\)/);
 });
 
 const memories = [
