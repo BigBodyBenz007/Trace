@@ -1453,16 +1453,6 @@ test("places Workout History before Exercise History without duplicating either 
   ).toBeTruthy();
 });
 
-test("places an empty curated Trophy Case before Exercise History while PRs remain candidates", () => {
-  renderPage({ workoutEntries: [entry()] });
-  const trophyHeading = screen.getByRole("heading", { name: "Trophy Case" });
-  const historyHeading = screen.getByRole("heading", { name: "Exercise History" });
-  expect(trophyHeading.compareDocumentPosition(historyHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-  expect(screen.getByText("No trophies yet. Achievements you choose to celebrate will appear here.")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: /Incline Press.*1 performance/ }));
-  expect(screen.getAllByRole("button", { name: "Add to Trophy Case" }).length).toBeGreaterThan(0);
-});
-
 test("selects a saved exercise and applies defaults only to untouched and new sets", () => {
   const dips = createExerciseDefinition({
     name: "Dips",

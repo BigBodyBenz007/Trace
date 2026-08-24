@@ -2987,8 +2987,7 @@ code {
 
 /* Workouts: stronger nested hierarchy while retaining gym-ready density. */
 .trace-feature-page--workouts .trace-feature-surface,
-.trace-feature-page--workouts .trace-feature-section,
-.trace-feature-page--workouts .trace-trophy-section {
+.trace-feature-page--workouts .trace-feature-section {
   max-width: 840px;
 }
 

@@ -2081,7 +2081,10 @@ test("new Memory trophies persist, trigger the shared ceremony, preserve snapsho
   fireEvent.click(screen.getByRole("button", { name: "Open achievement: Graduation Day" }));
   fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(JSON.parse(localStorage.getItem("memories"))).toHaveLength(1);
-  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  const backToTimeline = screen.queryAllByRole("button", { name: "Back to Timeline" });
+  if (backToTimeline.length) {
+    fireEvent.click(backToTimeline[0]);
+  }
   fireEvent.click(screen.getByRole("button", { name: "Open memory Graduation Day" }));
   fireEvent.click(screen.getByRole("button", { name: "Add to Trophy Case" }));
   const readdedTrophies = JSON.parse(localStorage.getItem("trophyCaseEntries"));
@@ -2102,8 +2105,16 @@ test("new Memory trophies persist, trigger the shared ceremony, preserve snapsho
   await waitFor(() => expect(JSON.parse(localStorage.getItem("memories"))).toEqual([]));
   expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual(readdedTrophies);
 
-  openWorkouts();
+  const backToTimelineAfterDelete = screen.queryAllByRole("button", { name: "Back to Timeline" });
+  const backToTrophyCase = screen.queryByRole("button", { name: "Back to Trophy Case" });
+  if (backToTimelineAfterDelete.length) {
+    fireEvent.click(backToTimelineAfterDelete[0]);
+  } else if (backToTrophyCase) {
+    fireEvent.click(backToTrophyCase);
+  }
+  fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
   expect(screen.getByRole("group", { name: "Graduation Day trophy" })).toHaveTextContent("Finally finished my degree.");
+  fireEvent.click(screen.getByRole("button", { name: "Open achievement: Graduation Day" }));
   fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual([]);
 });
@@ -2970,7 +2981,10 @@ test("refreshes a resolvable curated PR after correction and freezes it after so
   fireEvent.click(within(currentRecords).getByRole("button", { name: "Add to Trophy Case" }));
   expect(screen.getByRole("dialog", { name: "Added to Trophy Case" })).toHaveTextContent("6 reps");
   expect(screen.getAllByRole("button", { name: "In Trophy Case", hidden: true }).every((button) => button.disabled)).toBe(true);
-  expect(screen.getByRole("group", { name: "Dips trophy", hidden: true })).toHaveTextContent("6 reps");
+  fireEvent.click(screen.getByRole("button", { name: "Close Trophy Case ceremony" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
+  expect(screen.getByRole("group", { name: "Dips trophy" })).toHaveTextContent("6 reps");
   const curatedSnapshot = JSON.parse(localStorage.getItem("trophyCaseEntries"));
   expect(curatedSnapshot).toHaveLength(1);
   expect(curatedSnapshot[0]).toMatchObject({
@@ -2978,13 +2992,16 @@ test("refreshes a resolvable curated PR after correction and freezes it after so
     sourceRecordType: "bodyweight-reps",
     sourceSnapshot: { exerciseName: "Dips", recordValue: "6 reps", workoutTitle: "Push Day" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Close Trophy Case ceremony" }));
 
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  openWorkouts();
   expandCompletedWorkout("Push Day");
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "16" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
   await waitFor(() => {
+    fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
     expect(screen.getByRole("group", { name: "Dips trophy" })).toHaveTextContent("16 reps");
   });
   const correctedSnapshot = JSON.parse(localStorage.getItem("trophyCaseEntries"));
@@ -2995,12 +3012,18 @@ test("refreshes a resolvable curated PR after correction and freezes it after so
     sourceSnapshot: { recordValue: "16 reps" },
   });
 
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  openWorkouts();
+  expandCompletedWorkout("Push Day");
   jest.spyOn(window, "confirm").mockReturnValue(true);
-  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+  fireEvent.click(within(screen.getByText("Push Day").closest("article")).getByRole("button", { name: "Delete" }));
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]);
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
   expect(screen.getByRole("group", { name: "Dips trophy" })).toHaveTextContent("16 reps");
   expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual(correctedSnapshot);
 
+  fireEvent.click(screen.getByRole("button", { name: /Open workout achievement: Dips/i }));
   fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(JSON.parse(localStorage.getItem("trophyCaseEntries"))).toEqual([]);
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]);
@@ -3026,7 +3049,6 @@ test("dedicated Trophy Case removal preserves workout history, derived PRs, and 
 
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   openWorkouts();
-  expect(screen.getByText("No trophies yet. Achievements you choose to celebrate will appear here.")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: /Dips.*1 performance/ }));
   expect(screen.getByRole("region", { name: "Dips current records" })).toHaveTextContent("6 reps");
   expect(screen.getAllByRole("button", { name: "Add to Trophy Case" }).length).toBeGreaterThan(0);
@@ -3092,9 +3114,10 @@ test("loading or removing an existing trophy never replays its ceremony", () => 
   };
   localStorage.setItem("trophyCaseEntries", JSON.stringify([storedTrophy]));
   render(<App />);
-  openWorkouts();
+  fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
   expect(screen.getByRole("group", { name: "Existing Achievement trophy" })).toBeInTheDocument();
   expect(screen.queryByRole("dialog", { name: "Added to Trophy Case" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Open achievement: Existing Achievement" }));
   fireEvent.click(screen.getByRole("button", { name: "Remove from Trophy Case" }));
   expect(screen.queryByRole("dialog", { name: "Added to Trophy Case" })).not.toBeInTheDocument();
 });
@@ -3165,7 +3188,6 @@ test("workout edits and confirmed deletion update only workout storage", () => {
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]);
   expect(screen.getByText("No workouts logged yet.")).toBeInTheDocument();
   expect(screen.getByText("No exercise history yet.")).toBeInTheDocument();
-  expect(screen.getByText("No trophies yet. Achievements you choose to celebrate will appear here.")).toBeInTheDocument();
 });
 
 test("creates reusable exercises separately and immediately makes them searchable", () => {

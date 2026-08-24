@@ -2,7 +2,6 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import ExerciseSearch from "./ExerciseSearch";
 import SavedExerciseEditor from "./SavedExerciseEditor";
 import ExerciseHistory from "./ExerciseHistory";
-import TrophyCase from "./TrophyCase";
 import WorkoutPhotos from "./WorkoutPhotos";
 import {
   WORKOUT_LOAD_MODES,
@@ -189,7 +188,6 @@ function WorkoutPage({
   updateWorkoutEntry,
   deleteWorkoutEntry,
   addTrophyCaseEntry = () => false,
-  removeTrophyCaseEntry = () => false,
   buttonStyle,
   inputStyle,
   containerStyle,
@@ -1598,12 +1596,6 @@ function WorkoutPage({
         </div>
       </form>
       )}
-
-      <TrophyCase
-        trophyEntries={trophyEntries}
-        removeTrophyCaseEntry={removeTrophyCaseEntry}
-        buttonStyle={buttonStyle}
-      />
 
       <section className="trace-feature-section trace-feature-history trace-workout-history" style={{ marginTop: "36px", maxWidth: "760px", textAlign: "left", width: "100%" }}>
         <h2>Workout History</h2>
