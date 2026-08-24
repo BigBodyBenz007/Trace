@@ -100,6 +100,13 @@ function expandCompletedWorkout(title) {
   );
 }
 
+function getLifeCurrentRenderer(renderer) {
+  const current = screen.getByTestId("life-current");
+  return current.matches(`[data-life-current-renderer="${renderer}"]`)
+    ? current
+    : current.querySelector(`[data-life-current-renderer="${renderer}"]`);
+}
+
 function plannedWorkout(id, title = "Upper Body") {
   return {
     id,
@@ -1780,8 +1787,7 @@ test.each([
     viewport.scrollTop = 23;
     const previewNodes = [...gallery.querySelectorAll("[data-timeline-gallery-thumbnail]")];
     const previewSources = previewNodes.map(({ src }) => src);
-    const themedRenderer = screen.getByTestId("life-current")
-      .querySelector(`[data-life-current-renderer="${rendererId}"]`);
+    const themedRenderer = getLifeCurrentRenderer(rendererId);
     const themedGeometry = themedRenderer.outerHTML;
 
     documentScrollX = 37;
@@ -1890,8 +1896,7 @@ test.each([
       .not.toBeInTheDocument();
     expect(targetCard).toHaveAttribute("data-timeline-focused", "true");
     expect(targetVisual.getAttribute("style")).toBe(targetVisualStyle);
-    expect(screen.getByTestId("life-current")
-      .querySelector(`[data-life-current-renderer="${rendererId}"]`)).toBe(themedRenderer);
+    expect(getLifeCurrentRenderer(rendererId)).toBe(themedRenderer);
     expect(themedRenderer.outerHTML).toBe(themedGeometry);
     expect(getPhoto).toHaveBeenCalledTimes(4);
     expect(URL.createObjectURL).toHaveBeenCalledTimes(4);
