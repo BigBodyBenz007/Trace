@@ -185,12 +185,18 @@ function WorkoutPage({
   );
   const [editingSavedExercise, setEditingSavedExercise] = useState(null);
   const [activeWorkoutEntryId, setActiveWorkoutEntryId] = useState(null);
+  const [expandedWorkoutEntryIds, setExpandedWorkoutEntryIds] = useState(
+    () => new Set()
+  );
   const [focusDropId, setFocusDropId] = useState(null);
   const [pendingDropRemovals, setPendingDropRemovals] = useState({});
   const [searchResetKey, setSearchResetKey] = useState(0);
   const pageTopRef = useRef(null);
   const formRef = useRef(null);
   const workoutEntryRefs = useRef(new Map());
+  const workoutEditOriginRef = useRef(null);
+  const pendingWorkoutDeleteAnchorRef = useRef(null);
+  const workoutDeleteScrollCompensationRef = useRef(null);
   const dropInputRefs = useRef(new Map());
   const dropRemovalTimersRef = useRef(new Map());
   const dropUndoRowRefs = useRef(new Map());
@@ -279,6 +285,43 @@ function WorkoutPage({
     (first, second) => new Date(second.occurredAt) - new Date(first.occurredAt)
   );
 
+  useLayoutEffect(() => {
+    const anchor = pendingWorkoutDeleteAnchorRef.current;
+    if (
+      !anchor ||
+      workoutEntries.some(({ id }) => id === anchor.deletedEntryId)
+    ) {
+      return;
+    }
+    pendingWorkoutDeleteAnchorRef.current = null;
+    const compensation = workoutDeleteScrollCompensationRef.current;
+    const anchorNode = anchor.entryId
+      ? workoutEntryRefs.current.get(anchor.entryId)
+      : null;
+    const currentScrollY = window.scrollY || window.pageYOffset || 0;
+    const desiredScrollY = anchorNode
+      ? currentScrollY + anchorNode.getBoundingClientRect().top - anchor.viewportTop
+      : anchor.documentScrollY;
+    if (compensation) compensation.style.height = "0px";
+    const naturalDocumentHeight = Math.max(
+      document.documentElement.scrollHeight,
+      document.body.scrollHeight
+    );
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    const requiredCompensation = Math.max(
+      0,
+      Math.ceil(desiredScrollY + viewportHeight - naturalDocumentHeight)
+    );
+    if (compensation) {
+      compensation.style.height = `${requiredCompensation}px`;
+    }
+    window.scrollTo({
+      top: Math.max(0, desiredScrollY),
+      left: anchor.documentScrollX,
+      behavior: "auto",
+    });
+  }, [workoutEntries]);
+
   useEffect(() => {
     if (
       !workoutEntryTargetId ||
@@ -287,6 +330,12 @@ function WorkoutPage({
       return;
     }
     setActiveWorkoutEntryId(workoutEntryTargetId);
+    setExpandedWorkoutEntryIds((current) => {
+      if (current.has(workoutEntryTargetId)) return current;
+      const next = new Set(current);
+      next.add(workoutEntryTargetId);
+      return next;
+    });
     const frameId = window.requestAnimationFrame(() => {
       workoutEntryRefs.current.get(workoutEntryTargetId)?.scrollIntoView?.({
         behavior: "smooth",
@@ -708,6 +757,12 @@ function WorkoutPage({
   }
 
   function editWorkout(entry) {
+    const entryNode = workoutEntryRefs.current.get(entry.id);
+    workoutEditOriginRef.current = entryNode ? {
+      entryId: entry.id,
+      viewportTop: entryNode.getBoundingClientRect().top,
+      documentScrollX: window.scrollX || window.pageXOffset || 0,
+    } : null;
     clearPendingDropRemovals();
     const entryDateTime = localDateTime(entry.occurredAt);
     setTitle(entry.title);
@@ -780,23 +835,82 @@ function WorkoutPage({
     ) {
       return;
     }
+    const editOrigin = editingEntryId !== null
+      ? workoutEditOriginRef.current
+      : null;
+    workoutEditOriginRef.current = null;
     resetForm({ clearDraft: editingEntryId === null });
     window.requestAnimationFrame(() => {
-      pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
+      const originNode = editOrigin
+        ? workoutEntryRefs.current.get(editOrigin.entryId)
+        : null;
+      if (originNode) {
+        const currentScrollY = window.scrollY || window.pageYOffset || 0;
+        window.scrollTo({
+          top: Math.max(
+            0,
+            currentScrollY + originNode.getBoundingClientRect().top - editOrigin.viewportTop
+          ),
+          left: editOrigin.documentScrollX,
+          behavior: "auto",
+        });
+      } else {
+        pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
+      }
     });
   }
 
   function removeWorkout(id) {
     if (!window.confirm("Delete this workout?")) return;
+    const deletedIndex = sortedEntries.findIndex((entry) => entry.id === id);
+    const nextEntry = sortedEntries[deletedIndex + 1];
+    const previousEntry = sortedEntries[deletedIndex - 1];
+    const anchorEntry = nextEntry || previousEntry || null;
+    const deletedNode = workoutEntryRefs.current.get(id);
+    const anchorNode = anchorEntry
+      ? workoutEntryRefs.current.get(anchorEntry.id)
+      : null;
+    pendingWorkoutDeleteAnchorRef.current = {
+      deletedEntryId: id,
+      entryId: anchorEntry?.id || null,
+      viewportTop: nextEntry && deletedNode
+        ? deletedNode.getBoundingClientRect().top
+        : anchorNode?.getBoundingClientRect().top || 0,
+      documentScrollX: window.scrollX || window.pageXOffset || 0,
+      documentScrollY: window.scrollY || window.pageYOffset || 0,
+    };
     const deleteResult = deleteWorkoutEntry(id);
     const finishDelete = (deleted) => {
-      if (deleted && editingEntryId === id) resetForm();
+      if (!deleted) {
+        pendingWorkoutDeleteAnchorRef.current = null;
+        return;
+      }
+      if (editingEntryId === id) resetForm();
+      setExpandedWorkoutEntryIds((current) => {
+        if (!current.has(id)) return current;
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+      setActiveWorkoutEntryId((current) => current === id
+        ? anchorEntry?.id || null
+        : current);
     };
     if (deleteResult && typeof deleteResult.then === "function") {
       deleteResult.then(finishDelete);
     } else {
       finishDelete(deleteResult);
     }
+  }
+
+  function toggleWorkoutEntry(id) {
+    setActiveWorkoutEntryId(id);
+    setExpandedWorkoutEntryIds((current) => {
+      const next = new Set(current);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   return (
@@ -1292,20 +1406,44 @@ function WorkoutPage({
           <p style={{ color: "#bbb" }}>No workouts logged yet.</p>
         ) : (
           <div style={{ display: "grid", gap: "14px" }}>
-            {sortedEntries.map((entry) => (
-              <article
-                className="trace-data-card trace-workout-history-card"
-                key={entry.id}
-                ref={(node) => {
-                  if (node) workoutEntryRefs.current.set(entry.id, node);
-                  else workoutEntryRefs.current.delete(entry.id);
-                }}
-                aria-current={activeWorkoutEntryId === entry.id ? "true" : undefined}
-                style={{ background: "#1f2937", borderRadius: "12px", maxWidth: "100%", overflowWrap: "anywhere", padding: "18px" }}
-              >
-                <h3 style={{ marginTop: 0 }}>{entry.title}</h3>
-                <p>{new Date(entry.occurredAt).toLocaleString()}</p>
-                <WorkoutTiming entry={entry} />
+            {sortedEntries.map((entry) => {
+              const expanded = expandedWorkoutEntryIds.has(entry.id);
+              const detailId = `workout-history-details-${entry.id}`;
+              return (
+                <article
+                  className="trace-data-card trace-workout-history-card"
+                  key={entry.id}
+                  ref={(node) => {
+                    if (node) workoutEntryRefs.current.set(entry.id, node);
+                    else workoutEntryRefs.current.delete(entry.id);
+                  }}
+                  aria-current={activeWorkoutEntryId === entry.id ? "true" : undefined}
+                  style={{ background: "#1f2937", borderRadius: "12px", maxWidth: "100%", overflow: "hidden", overflowWrap: "anywhere", padding: "18px", width: "100%" }}
+                >
+                <div className="trace-workout-history-card__summary">
+                  <div style={{ minWidth: 0 }}>
+                    <h3 style={{ margin: 0 }}>{entry.title}</h3>
+                    <p style={{ margin: "6px 0 0" }}>
+                      <time dateTime={entry.occurredAt}>
+                        {new Date(entry.occurredAt).toLocaleString()}
+                      </time>
+                    </p>
+                  </div>
+                  <button
+                    className="trace-action trace-action--secondary trace-workout-history-card__toggle"
+                    type="button"
+                    aria-controls={detailId}
+                    aria-expanded={expanded}
+                    aria-label={`${expanded ? "Collapse" : "Expand"} workout: ${entry.title}`}
+                    onClick={() => toggleWorkoutEntry(entry.id)}
+                    style={smallButtonStyle}
+                  >
+                    {expanded ? "Collapse workout" : "Expand workout"}
+                  </button>
+                </div>
+                  {expanded && (
+                    <div id={detailId} className="trace-workout-history-card__details">
+                      <WorkoutTiming entry={entry} />
                 {entry.notes && <p style={{ whiteSpace: "pre-wrap" }}>{entry.notes}</p>}
                 <WorkoutPhotos photos={entry.photos} label={`${entry.title} photos`} />
                 {entry.exercises.map((exercise) => (
@@ -1326,8 +1464,11 @@ function WorkoutPage({
                   <button className="trace-action trace-action--secondary" type="button" onClick={() => editWorkout(entry)} style={smallButtonStyle}>Edit</button>
                   <button className="trace-action trace-action--danger" type="button" onClick={() => removeWorkout(entry.id)} style={{ ...smallButtonStyle, backgroundColor: "#b91c1c" }}>Delete</button>
                 </div>
-              </article>
-            ))}
+                    </div>
+                  )}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
@@ -1342,6 +1483,11 @@ function WorkoutPage({
       />
 
       <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...backButtonStyle, marginTop: "24px" }}>Back to Timeline</button>
+      <div
+        aria-hidden="true"
+        ref={workoutDeleteScrollCompensationRef}
+        style={{ height: 0, pointerEvents: "none", width: "100%" }}
+      />
     </div>
   );
 }

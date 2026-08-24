@@ -2372,6 +2372,36 @@ code {
   box-shadow: inset 3px 0 0 var(--trace-brass);
 }
 
+.trace-workout-history-card__summary {
+  align-items: center;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.trace-workout-history-card__toggle {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.trace-workout-history-card__details {
+  max-width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 430px) {
+  .trace-workout-history-card__summary {
+    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trace-workout-history-card__toggle {
+    width: 100%;
+  }
+}
+
 .trace-exercise-history > div > div > button[aria-expanded="true"] {
   background: var(--trace-teal-strong) !important;
   border-color: var(--trace-teal-soft) !important;

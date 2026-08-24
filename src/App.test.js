@@ -94,6 +94,12 @@ function openWorkouts() {
   fireEvent.click(screen.getByRole("button", { name: "Workouts" }));
 }
 
+function expandCompletedWorkout(title) {
+  fireEvent.click(
+    screen.getByRole("button", { name: `Expand workout: ${title}` })
+  );
+}
+
 function plannedWorkout(id, title = "Upper Body") {
   return {
     id,
@@ -2335,6 +2341,7 @@ test("workouts persist separately and reload as complete snapshots", () => {
   render(<App />);
   openWorkouts();
   expect(screen.getByRole("heading", { name: "Push Day" })).toBeInTheDocument();
+  expandCompletedWorkout("Push Day");
   expect(screen.getByText(/Bodyweight.*6 reps/)).toBeInTheDocument();
 });
 
@@ -2356,6 +2363,7 @@ test("completed workout drops persist recursively and reload in Workout History"
   firstRender.unmount();
   render(<App />);
   openWorkouts();
+  expandCompletedWorkout("Drop Push Day");
   expect(screen.getByText("↳ Drop 1: Bodyweight × 4 reps")).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("workoutEntries"))[0].exercises[0].sets[0].drops[0].id).toBe(dropId);
 });
@@ -2382,6 +2390,7 @@ test("workout photo blobs stay in IndexedDB references and are cleaned up with o
   expect(putPhotos).toHaveBeenCalledWith(database, [
     expect.objectContaining({ id: stored.photos[0], workoutId: stored.id, blob: photo }),
   ]);
+  expandCompletedWorkout("Photo Workout");
   expect(screen.getByRole("region", { name: "Photo Workout photos" })).toBeInTheDocument();
 
   jest.spyOn(window, "confirm").mockReturnValue(true);
@@ -2411,6 +2420,7 @@ test("refreshes a resolvable curated PR after correction and freezes it after so
   });
   fireEvent.click(screen.getByRole("button", { name: "Close Trophy Case ceremony" }));
 
+  expandCompletedWorkout("Push Day");
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "16" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
@@ -2557,6 +2567,7 @@ test("workout edits and confirmed deletion update only workout storage", () => {
   localStorage.setItem("workoutEntries", JSON.stringify([storedEntry]));
   render(<App />);
   openWorkouts();
+  expandCompletedWorkout("Original Workout");
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   fireEvent.change(screen.getByLabelText("Workout title"), {
     target: { value: "Updated Workout" },
@@ -2728,6 +2739,7 @@ test("editing a saved exercise refreshes defaults and never rewrites history", (
   expect(
     screen.getByRole("heading", { name: "Historical Push Day" })
   ).toBeInTheDocument();
+  expandCompletedWorkout("Historical Push Day");
   expect(screen.getAllByText("Dips")).toHaveLength(2);
   expect(screen.getByText(/Bodyweight.*6 reps/)).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([

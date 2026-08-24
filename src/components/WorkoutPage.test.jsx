@@ -11,6 +11,7 @@ const originalRequestAnimationFrame = window.requestAnimationFrame;
 const originalCreateObjectURL = URL.createObjectURL;
 const originalRevokeObjectURL = URL.revokeObjectURL;
 const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
+const originalScrollTo = window.scrollTo;
 
 beforeEach(() => {
   localStorage.clear();
@@ -19,6 +20,7 @@ beforeEach(() => {
     return 1;
   };
   Element.prototype.scrollIntoView = jest.fn();
+  window.scrollTo = jest.fn();
   Element.prototype.getBoundingClientRect = jest.fn(() => ({
     top: 100,
     bottom: 150,
@@ -233,6 +235,7 @@ test("editing a saved workout neither restores into nor clears the new-workout d
 
   const props = renderPageProps({ workoutEntries: [entry()] });
   render(<WorkoutPage {...props} />);
+  expandWorkout();
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Edited history" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
@@ -246,6 +249,7 @@ afterEach(() => {
   URL.createObjectURL = originalCreateObjectURL;
   URL.revokeObjectURL = originalRevokeObjectURL;
   Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+  window.scrollTo = originalScrollTo;
   jest.restoreAllMocks();
 });
 
@@ -297,6 +301,13 @@ function renderPage(overrides = {}) {
   const props = renderPageProps(overrides);
   render(<WorkoutPage {...props} />);
   return props;
+}
+
+function expandWorkout(title = "Chest Day") {
+  fireEvent.click(
+    screen.getByRole("button", { name: `Expand workout: ${title}` })
+  );
+  return screen.getByText(title).closest("article");
 }
 
 function plannedExecution() {
@@ -739,6 +750,7 @@ test("historical drops can be edited, extended, and removed without changing tim
     }],
   });
   const props = renderPage({ workoutEntries: [saved] });
+  expandWorkout();
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   expect(screen.getByLabelText("Exercise 1 set 1 drop 1 weight")).toHaveValue(55);
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 1 reps"), { target: { value: "9" } });
@@ -763,6 +775,7 @@ test("historical drop removal can be undone before saving with timing intact", (
     }],
   });
   const props = renderPage({ workoutEntries: [saved] });
+  expandWorkout();
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
   expect(screen.getByText("Drop removed")).toBeInTheDocument();
@@ -886,6 +899,7 @@ test("editing a to-failure workout restores and updates the actual failure count
     }],
   });
   const props = renderPage({ workoutEntries: [saved] });
+  expandWorkout();
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   expect(screen.getByLabelText("Exercise 1 set 1 to failure")).toBeChecked();
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 actual reps at failure"), { target: { value: "13" } });
@@ -897,6 +911,219 @@ test("editing a to-failure workout restores and updates the actual failure count
   });
 });
 
+test("Workout History cards start collapsed with their title and date visible", () => {
+  const saved = entry();
+  renderPage({ workoutEntries: [saved] });
+
+  const card = screen.getByText(saved.title).closest("article");
+  const toggle = within(card).getByRole("button", {
+    name: `Expand workout: ${saved.title}`,
+  });
+  expect(toggle).toHaveAttribute("aria-expanded", "false");
+  expect(within(card).getByText(new Date(saved.occurredAt).toLocaleString())).toBeInTheDocument();
+  expect(within(card).queryByText("Incline Press")).not.toBeInTheDocument();
+  expect(within(card).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+  expect(within(card).queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+});
+
+test("opening and closing a Workout History card reveals and hides its existing details and actions", () => {
+  renderPage({ workoutEntries: [entry()] });
+  Element.prototype.scrollIntoView.mockClear();
+
+  const card = expandWorkout();
+  const collapse = within(card).getByRole("button", {
+    name: "Collapse workout: Chest Day",
+  });
+  expect(collapse).toHaveAttribute("aria-expanded", "true");
+  expect(within(card).getByText("Workout note")).toBeInTheDocument();
+  expect(within(card).getByText("Incline Press")).toBeInTheDocument();
+  expect(within(card).getByRole("button", { name: "Edit" })).toBeInTheDocument();
+  expect(within(card).getByRole("button", { name: "Delete" })).toBeInTheDocument();
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+
+  fireEvent.click(collapse);
+  expect(within(card).getByRole("button", { name: "Expand workout: Chest Day" })).toHaveAttribute("aria-expanded", "false");
+  expect(within(card).queryByText("Incline Press")).not.toBeInTheDocument();
+  expect(within(card).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+});
+
+test("multiple Workout History records remain independently usable", () => {
+  const legDay = entry({
+    id: "workout-2",
+    title: "Leg Day",
+    notes: "Leg workout note",
+    occurredAt: new Date(2026, 7, 8, 18, 30).toISOString(),
+    exercises: [{
+      ...entry().exercises[0],
+      id: "exercise-2",
+      name: "Back Squat",
+    }],
+  });
+  renderPage({ workoutEntries: [entry(), legDay] });
+
+  const chestCard = expandWorkout("Chest Day");
+  const legCard = expandWorkout("Leg Day");
+  expect(within(chestCard).getByText("Incline Press")).toBeInTheDocument();
+  expect(within(legCard).getByText("Back Squat")).toBeInTheDocument();
+
+  fireEvent.click(within(chestCard).getByRole("button", { name: "Collapse workout: Chest Day" }));
+  expect(within(chestCard).queryByText("Incline Press")).not.toBeInTheDocument();
+  expect(within(legCard).getByText("Back Squat")).toBeInTheDocument();
+  expect(within(legCard).getByRole("button", { name: "Delete" })).toBeInTheDocument();
+});
+
+test("target, close, edit, save, and delete retain the originating workout context", () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  const target = entry({ id: "workout-target", title: "Target Workout" });
+  const onWorkoutEntryTargetShown = jest.fn();
+  const props = renderPage({
+    workoutEntries: [entry(), target],
+    workoutEntryTargetId: target.id,
+    onWorkoutEntryTargetShown,
+  });
+  const targetCard = screen.getByText(target.title).closest("article");
+
+  expect(within(targetCard).getByRole("button", { name: "Collapse workout: Target Workout" })).toHaveAttribute("aria-expanded", "true");
+  expect(targetCard).toHaveAttribute("aria-current", "true");
+  expect(targetCard.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+  expect(onWorkoutEntryTargetShown).toHaveBeenCalledTimes(1);
+
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(within(targetCard).getByRole("button", { name: "Collapse workout: Target Workout" }));
+  fireEvent.click(within(targetCard).getByRole("button", { name: "Expand workout: Target Workout" }));
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+
+  fireEvent.click(within(targetCard).getByRole("button", { name: "Edit" }));
+  expect(screen.getByRole("heading", { name: "Edit Workout" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Workout title")).toHaveValue("Target Workout");
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(props.updateWorkoutEntry).toHaveBeenCalledWith(target.id, expect.any(Object));
+  expect(targetCard).toHaveAttribute("aria-current", "true");
+  expect(targetCard.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(within(targetCard).getByRole("button", { name: "Delete" }));
+  expect(confirm).toHaveBeenCalledWith("Delete this workout?");
+  expect(props.deleteWorkoutEntry).toHaveBeenCalledWith(target.id);
+  expect(within(targetCard).queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+});
+
+test("Edit Cancel restores the originating expanded card and viewport position", () => {
+  const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
+  Object.defineProperty(window, "scrollY", { configurable: true, value: 1200 });
+  jest.spyOn(window, "confirm").mockReturnValue(true);
+  try {
+    renderPage({ workoutEntries: [entry()] });
+    const card = expandWorkout();
+    let cardTop = 240;
+    card.getBoundingClientRect = jest.fn(() => ({
+      top: cardTop,
+      bottom: cardTop + 280,
+      left: 100,
+      right: 700,
+      width: 600,
+      height: 280,
+      x: 100,
+      y: cardTop,
+      toJSON: () => {},
+    }));
+
+    fireEvent.click(within(card).getByRole("button", { name: "Edit" }));
+    cardTop = 640;
+    window.scrollTo.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    expect(window.scrollTo).toHaveBeenLastCalledWith({
+      top: 1600,
+      left: 0,
+      behavior: "auto",
+    });
+    expect(card).toHaveAttribute("aria-current", "true");
+    expect(within(card).getByRole("button", { name: "Collapse workout: Chest Day" })).toHaveAttribute("aria-expanded", "true");
+  } finally {
+    if (originalScrollY) Object.defineProperty(window, "scrollY", originalScrollY);
+    else delete window.scrollY;
+  }
+});
+
+test("Delete anchors the remaining history and compensates for a shortened document", () => {
+  const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
+  const originalInnerHeight = Object.getOwnPropertyDescriptor(window, "innerHeight");
+  const originalScrollHeight = Object.getOwnPropertyDescriptor(document.documentElement, "scrollHeight");
+  Object.defineProperty(window, "scrollY", { configurable: true, value: 2369 });
+  Object.defineProperty(window, "innerHeight", { configurable: true, value: 1000 });
+  Object.defineProperty(document.documentElement, "scrollHeight", { configurable: true, value: 3201 });
+  jest.spyOn(window, "confirm").mockReturnValue(true);
+  try {
+    const deleted = entry({
+      id: "delete-me",
+      title: "Delete Me",
+      occurredAt: "2026-08-23T12:00:00.000Z",
+    });
+    const remaining = entry({
+      id: "remaining",
+      title: "Remaining Workout",
+      occurredAt: "2026-08-22T12:00:00.000Z",
+    });
+    const props = renderPageProps({ workoutEntries: [deleted, remaining] });
+    const view = render(<WorkoutPage {...props} />);
+    const deletedCard = screen.getByText("Delete Me").closest("article");
+    const remainingCard = screen.getByText("Remaining Workout").closest("article");
+    deletedCard.getBoundingClientRect = jest.fn(() => ({
+      top: 300, bottom: 500, left: 100, right: 700, width: 600, height: 200,
+      x: 100, y: 300, toJSON: () => {},
+    }));
+    remainingCard.getBoundingClientRect = jest.fn(() => ({
+      top: 300, bottom: 500, left: 100, right: 700, width: 600, height: 200,
+      x: 100, y: 300, toJSON: () => {},
+    }));
+
+    expandWorkout("Delete Me");
+    window.scrollTo.mockClear();
+    fireEvent.click(within(deletedCard).getByRole("button", { name: "Delete" }));
+    view.rerender(<WorkoutPage {...props} workoutEntries={[remaining]} />);
+
+    expect(window.scrollTo).toHaveBeenLastCalledWith({
+      top: 2369,
+      left: 0,
+      behavior: "auto",
+    });
+    expect(screen.getByText("Remaining Workout").closest("article")).toHaveAttribute("aria-current", "true");
+    expect(screen.getByTestId("workout-page").lastElementChild).toHaveStyle({ height: "168px" });
+  } finally {
+    if (originalScrollY) Object.defineProperty(window, "scrollY", originalScrollY);
+    else delete window.scrollY;
+    if (originalInnerHeight) Object.defineProperty(window, "innerHeight", originalInnerHeight);
+    else delete window.innerHeight;
+    if (originalScrollHeight) Object.defineProperty(document.documentElement, "scrollHeight", originalScrollHeight);
+    else delete document.documentElement.scrollHeight;
+  }
+});
+
+test.each([375, 390, 430, 1280])(
+  "keeps collapsed Workout History cards within the %spx viewport",
+  (width) => {
+    const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+    try {
+      renderPage({
+        workoutEntries: [entry({
+          title: "A very long completed workout title that must wrap without widening the page",
+        })],
+      });
+      const card = screen.getByText(/A very long completed workout title/).closest("article");
+      expect(card).toHaveStyle({ maxWidth: "100%", overflow: "hidden", width: "100%" });
+      expect(within(card).getByRole("button", { name: /Expand workout/ })).toHaveClass("trace-workout-history-card__toggle");
+      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+    } finally {
+      if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
+    }
+  }
+);
+
 test("displays known and unknown failure totals in workout history", () => {
   const saved = entry({ exercises: [{
     ...entry().exercises[0],
@@ -907,6 +1134,7 @@ test("displays known and unknown failure totals in workout history", () => {
     ],
   }] });
   renderPage({ workoutEntries: [saved] });
+  expandWorkout();
   expect(screen.getByText(/10 goal.*failure at 13/)).toBeInTheDocument();
   expect(screen.getByText(/10 goal.*to failure/)).toBeInTheDocument();
   expect(screen.getByText(/ 0 goal.*to failure/)).toBeInTheDocument();
@@ -918,6 +1146,7 @@ test("restores and updates a complete historical snapshot", () => {
     finishedAt: "2026-08-09T19:35:00.000Z",
   });
   const props = renderPage({ workoutEntries: [saved] });
+  expandWorkout();
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
 
   expect(screen.getByRole("heading", { name: "Edit Workout" })).toBeInTheDocument();
@@ -958,6 +1187,7 @@ test("failed historical edit stays in the editor without scrolling away", () => 
     workoutEntries: [saved],
     updateWorkoutEntry: jest.fn(() => false),
   });
+  expandWorkout();
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   Element.prototype.scrollIntoView.mockClear();
   fireEvent.change(screen.getByLabelText("Workout title"), {
@@ -981,6 +1211,8 @@ test("shows completion timing while legacy workouts render without fabricated ti
       entry({ id: "legacy", title: "Legacy Workout" }),
     ],
   });
+  expandWorkout("Chest Day");
+  expandWorkout("Legacy Workout");
   const completed = screen.getByText("Chest Day").closest("article");
   expect(within(completed).getByText("Start")).toBeInTheDocument();
   expect(within(completed).getByText("Finish")).toBeInTheDocument();
@@ -1004,6 +1236,7 @@ test("Workout History nests drop segments without changing parent set numbering"
     }],
   });
   renderPage({ workoutEntries: [withDrops] });
+  expandWorkout();
   const card = screen.getByText("Chest Day").closest("article");
   expect(within(card).getAllByRole("listitem")).toHaveLength(1);
   expect(within(card).getByText("↳ Drop 1: 55 lb × 8 reps")).toBeInTheDocument();
@@ -1031,6 +1264,7 @@ test("sorts history newest first and confirms deletion", () => {
   });
   const articles = screen.getAllByRole("article");
   expect(within(articles[0]).getByText("New Workout")).toBeInTheDocument();
+  expandWorkout("New Workout");
   fireEvent.click(within(articles[0]).getByRole("button", { name: "Delete" }));
 
   expect(confirm).toHaveBeenCalledWith("Delete this workout?");
@@ -1079,6 +1313,7 @@ test("editing preserves photos and each workout history card owns its gallery", 
   const withoutPhoto = entry({ id: "workout-2", title: "No Photo Workout" });
   const props = renderPage({ workoutEntries: [withPhoto, withoutPhoto] });
 
+  expandWorkout();
   expect(screen.getByRole("region", { name: "Chest Day photos" })).toBeInTheDocument();
   expect(screen.queryByRole("region", { name: "No Photo Workout photos" })).not.toBeInTheDocument();
   fireEvent.click(within(screen.getByText("Chest Day").closest("article")).getByRole("button", { name: "Edit" }));
@@ -1308,10 +1543,12 @@ test("Phase 1 exercises are eligible during edit while referenced exercises are 
     ],
   });
   const { unmount } = render(<WorkoutPage {...renderPageProps({ workoutEntries: [phaseOne] })} />);
+  expandWorkout();
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   expect(screen.getByLabelText("Save as reusable exercise")).toBeInTheDocument();
   unmount();
   render(<WorkoutPage {...renderPageProps({ workoutEntries: [referenced] })} />);
+  expandWorkout("Referenced");
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   expect(screen.queryByLabelText("Save as reusable exercise")).not.toBeInTheDocument();
 });
@@ -1383,6 +1620,7 @@ test("editing preserves built-in identity until the exercise name changes", () =
     ],
   });
   const props = renderPage({ workoutEntries: [builtInEntry] });
+  expandWorkout();
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
     target: { value: "12" },
