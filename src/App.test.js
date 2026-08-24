@@ -857,6 +857,33 @@ test("Today planner saves an exercise through the existing reusable catalog with
   expect(screen.getByRole("status")).toHaveTextContent("Cable Fly is already saved for reuse.");
 });
 
+test("Today persists and opens a planned workout after a complete mobile touch activation", () => {
+  const existing = {
+    ...plannedWorkout("planned-workout:mobile-start", "Mobile Start"),
+    scheduledDate: localCalendarDateKey(),
+  };
+  localStorage.setItem("plannedWorkouts", JSON.stringify([existing]));
+
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  const workoutCard = within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByRole("button", { name: "Open workout preview Mobile Start" }).closest("li");
+  const startButton = within(workoutCard).getByRole("button", { name: "Start workout Mobile Start" });
+
+  fireEvent.touchStart(startButton);
+  expect(screen.getByRole("heading", { name: "Today's Schedule" })).toBeInTheDocument();
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
+
+  fireEvent.touchEnd(startButton);
+  expect(screen.getByRole("heading", { name: "Workout Roadmap" })).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY))).toMatchObject({
+    plannedWorkoutId: existing.id,
+    context: { originPage: "today" },
+    form: { title: "Mobile Start" },
+  });
+  expect(screen.getAllByRole("button", { name: "Back to Today's Schedule" })[0]).toBeInTheDocument();
+});
+
 test("Today skips a planned workout for its date without deleting or completing it", async () => {
   const existing = {
     ...plannedWorkout("planned-workout:skip", "Skip Day"),

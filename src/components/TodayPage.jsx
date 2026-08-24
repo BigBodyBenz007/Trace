@@ -438,6 +438,7 @@ function TodayPage({
   const conflictResumeButtonRef = useRef(null);
   const startButtonRefs = useRef(new Map());
   const restoreStartFocusPlanIdRef = useRef(null);
+  const lastTouchStartRef = useRef({ planId: null, activatedAt: 0 });
   const previewPlan = plannedWorkouts.find(({ id }) => id === previewPlanId) || null;
   const activePlannedWorkoutId = activeWorkoutDraft?.plannedWorkoutId || null;
   const focusedItem = focusedScheduleItem
@@ -730,6 +731,18 @@ function TodayPage({
 
   function startPlanFromTouch(event, plan, conflictAction = null) {
     if (event?.cancelable) event.preventDefault();
+    lastTouchStartRef.current = { planId: plan.id, activatedAt: Date.now() };
+    startPlan(plan, conflictAction);
+  }
+
+  function startPlanFromClick(plan, conflictAction = null) {
+    const lastTouchStart = lastTouchStartRef.current;
+    if (
+      lastTouchStart.planId === plan.id
+      && Date.now() - lastTouchStart.activatedAt < 1000
+    ) {
+      return;
+    }
     startPlan(plan, conflictAction);
   }
 
@@ -981,7 +994,7 @@ function TodayPage({
           </button>
           {actionable && (
             <div className="trace-today-summary__actions" aria-label={`${scheduleItem.title} actions`}>
-              <button className="trace-action trace-action--brass" type="button" aria-label={`${scheduleItem.status === "started" ? "Continue workout" : "Start workout"} ${scheduleItem.title}`} onTouchStart={(event) => startPlanFromTouch(event, scheduleItem.plan)} onClick={() => startPlan(scheduleItem.plan)} style={compactButtonStyle}>{scheduleItem.status === "started" ? "Continue" : "Start"}</button>
+              <button className="trace-action trace-action--brass" type="button" aria-label={`${scheduleItem.status === "started" ? "Continue workout" : "Start workout"} ${scheduleItem.title}`} onTouchEnd={(event) => startPlanFromTouch(event, scheduleItem.plan)} onClick={() => startPlanFromClick(scheduleItem.plan)} style={compactButtonStyle}>{scheduleItem.status === "started" ? "Continue" : "Start"}</button>
               <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip workout ${scheduleItem.title}`} onClick={() => requestSkipPlan(scheduleItem.plan)} style={compactButtonStyle}>Skip</button>
             </div>
           )}
@@ -1074,7 +1087,7 @@ function TodayPage({
         {completedWorkout && <p className="trace-today-plan__completion">Completed {new Date(completedWorkout.occurredAt).toLocaleString()}</p>}
         {skipped && !completedWorkout && <p className="trace-today-plan__skipped">Skipped for today{plan.skipReasons?.[todayKey] ? ` · ${plan.skipReasons[todayKey]}` : ""}</p>}
         {!hasDraftConflict && <div className="trace-today-exercise__actions">
-           {completedWorkout ? <button className="trace-action trace-action--primary" type="button" aria-label={`Open completed workout ${plan.title}`} onClick={() => openCompletedWorkout(completedWorkout.id)} style={compactButtonStyle}>View completed workout</button> : <button className="trace-action trace-action--brass" type="button" aria-label={`${started ? "Continue workout" : "Start planned workout"} ${plan.title}`} onTouchStart={(event) => startPlanFromTouch(event, plan)} onClick={() => startPlan(plan)} ref={(node) => { if (node) startButtonRefs.current.set(plan.id, node); else startButtonRefs.current.delete(plan.id); }} style={compactButtonStyle}>{started ? "Continue workout" : "Start workout"}</button>}
+           {completedWorkout ? <button className="trace-action trace-action--primary" type="button" aria-label={`Open completed workout ${plan.title}`} onClick={() => openCompletedWorkout(completedWorkout.id)} style={compactButtonStyle}>View completed workout</button> : <button className="trace-action trace-action--brass" type="button" aria-label={`${started ? "Continue workout" : "Start planned workout"} ${plan.title}`} onTouchEnd={(event) => startPlanFromTouch(event, plan)} onClick={() => startPlanFromClick(plan)} ref={(node) => { if (node) startButtonRefs.current.set(plan.id, node); else startButtonRefs.current.delete(plan.id); }} style={compactButtonStyle}>{started ? "Continue workout" : "Start workout"}</button>}
           <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit planned workout ${plan.title}`} onClick={() => openEdit(plan)} style={compactButtonStyle}>Edit plan</button>
           {!completedWorkout && <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip workout ${plan.title}`} onClick={() => requestSkipPlan(plan)} style={compactButtonStyle}>Skip workout</button>}
           <button className="trace-action trace-action--danger" type="button" aria-label={`Delete planned workout ${plan.title}`} onClick={() => removePlan(plan)} style={compactButtonStyle}>Delete plan</button>
@@ -1401,7 +1414,7 @@ function TodayPage({
               <button className="trace-action trace-action--primary" type="button" onClick={() => openCompletedWorkout(completedWorkoutByPlanId.get(previewPlan.id).id)} style={compactButtonStyle}>View completed workout</button>
             ) : (
               <>
-                <button className="trace-action trace-action--brass" type="button" aria-label={`${activePlannedWorkoutId === previewPlan.id ? "Continue workout" : "Start planned workout"} ${previewPlan.title}`} onTouchStart={(event) => startPlanFromTouch(event, previewPlan)} onClick={() => startPlan(previewPlan)} style={compactButtonStyle}>{activePlannedWorkoutId === previewPlan.id ? "Continue workout" : "Start"}</button>
+                <button className="trace-action trace-action--brass" type="button" aria-label={`${activePlannedWorkoutId === previewPlan.id ? "Continue workout" : "Start planned workout"} ${previewPlan.title}`} onTouchEnd={(event) => startPlanFromTouch(event, previewPlan)} onClick={() => startPlanFromClick(previewPlan)} style={compactButtonStyle}>{activePlannedWorkoutId === previewPlan.id ? "Continue workout" : "Start"}</button>
                 <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit planned workout ${previewPlan.title}`} onClick={() => openEdit(previewPlan)} style={compactButtonStyle}>Edit</button>
                 <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip workout ${previewPlan.title}`} onClick={() => requestSkipPlan(previewPlan)} style={compactButtonStyle}>Skip</button>
               </>
