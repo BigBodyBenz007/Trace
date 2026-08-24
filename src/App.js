@@ -79,6 +79,7 @@ import {
   getPlannedWorkoutError,
   readPlannedWorkouts,
   removePlannedWorkoutExercise as removeExerciseFromPlannedWorkout,
+  restorePlannedWorkoutAtIndex,
   updatePlannedWorkout as updatePlannedWorkoutRecord,
   writePlannedWorkouts,
 } from "./services/plannedWorkout";
@@ -1237,6 +1238,38 @@ function App() {
     }
   }
 
+  function restorePlannedWorkout(plannedWorkout, originalIndex) {
+    if (plannedWorkouts.some(({ id }) => id === plannedWorkout?.id)) {
+      return {
+        status: "conflict",
+        message: "The planned workout could not be restored because its ID is already in use.",
+      };
+    }
+    const updated = restorePlannedWorkoutAtIndex(
+      plannedWorkouts,
+      plannedWorkout,
+      originalIndex
+    );
+    if (!updated) {
+      return {
+        status: "invalid",
+        message: "The planned workout could not be restored.",
+      };
+    }
+    try {
+      const saved = writePlannedWorkouts(localStorage, updated);
+      setPlannedWorkouts(saved);
+      setStorageError("");
+      return { status: "restored", plannedWorkout: saved[originalIndex] };
+    } catch (error) {
+      setStorageError(storageMessage("restore this planned workout"));
+      return {
+        status: "error",
+        message: "The planned workout could not be restored.",
+      };
+    }
+  }
+
   function startPlannedWorkout(id, conflictAction = null) {
     const plannedWorkout = plannedWorkouts.find((plan) => plan.id === id);
     if (!plannedWorkout) {
@@ -1719,6 +1752,7 @@ function App() {
           appendPlannedWorkoutExercise={appendPlannedWorkoutExercise}
           removePlannedWorkoutExercise={removePlannedWorkoutExercise}
           deletePlannedWorkout={deletePlannedWorkout}
+          restorePlannedWorkout={restorePlannedWorkout}
           startPlannedWorkout={startPlannedWorkout}
           openCompletedWorkout={openCompletedWorkout}
           buttonStyle={buttonStyle}

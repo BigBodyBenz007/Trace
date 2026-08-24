@@ -8,6 +8,7 @@ import {
   PLANNED_WORKOUT_SCHEMA_VERSION,
   readPlannedWorkouts,
   removePlannedWorkoutExercise,
+  restorePlannedWorkoutAtIndex,
   updatePlannedWorkout,
   writePlannedWorkouts,
 } from "./plannedWorkout";
@@ -382,6 +383,45 @@ test("reads and writes only the dedicated planned-workout collection", () => {
   );
   storage.getItem.mockReturnValue(JSON.stringify(written));
   expect(readPlannedWorkouts(storage)).toEqual(written);
+});
+
+test("restores an exact planned-workout record at its original array position", () => {
+  const first = created({ id: "planned-workout:first", title: "First" });
+  const deleted = created({
+    id: "planned-workout:deleted",
+    title: "Deleted",
+    notes: "Distinct notes",
+    futurePlanField: { preserved: true },
+    exercises: [exercise({
+      id: "planned-exercise:deleted",
+      targetSets: [{
+        id: "planned-set:deleted",
+        reps: 7,
+        load: { mode: "external", amount: 82.5, unit: "kg" },
+        notes: "Exact target",
+      }],
+    })],
+  });
+  const last = created({ id: "planned-workout:last", title: "Last" });
+  const existing = [first, last];
+  const before = JSON.parse(JSON.stringify(existing));
+  const deletedBefore = JSON.parse(JSON.stringify(deleted));
+
+  const restored = restorePlannedWorkoutAtIndex(existing, deleted, 1);
+
+  expect(restored).toEqual([first, deleted, last]);
+  expect(restored[1]).toEqual(deletedBefore);
+  expect(existing).toEqual(before);
+  expect(deleted).toEqual(deletedBefore);
+});
+
+test("refuses to restore a planned workout when its ID is already in use", () => {
+  const existing = [created({ id: "planned-workout:reused" })];
+  const deleted = created({ id: "planned-workout:reused", title: "Deleted original" });
+
+  expect(restorePlannedWorkoutAtIndex(existing, deleted, 0)).toBeNull();
+  expect(restorePlannedWorkoutAtIndex([], deleted, -1)).toBeNull();
+  expect(restorePlannedWorkoutAtIndex([], deleted, 1)).toBeNull();
 });
 
 test("rejects duplicate record IDs in persisted collections", () => {

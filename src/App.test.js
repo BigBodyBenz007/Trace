@@ -425,6 +425,109 @@ test("Today creates, edits, and deletes plans without creating completed workout
   confirm.mockRestore();
 });
 
+test("Today Undo restores the exact deleted plan and storage order without changing workout history", async () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  const scheduledDate = localCalendarDateKey();
+  const first = {
+    ...plannedWorkout("planned-workout:first", "First Plan"),
+    scheduledDate,
+  };
+  const deleted = {
+    ...plannedWorkout("planned-workout:deleted", "Deleted Plan"),
+    scheduledDate,
+    notes: "Distinct plan notes",
+    createdAt: "2026-08-18T10:00:00.000Z",
+    updatedAt: "2026-08-21T11:30:00.000Z",
+    futurePlanField: { preserved: true },
+    exercises: [{
+      id: "planned-exercise:deleted",
+      name: "Front Squat",
+      exerciseId: "trace:legs-front-squat-036",
+      notes: "Exact exercise notes",
+      targetSets: [{
+        id: "planned-set:deleted",
+        setType: "working",
+        reps: 6,
+        load: { mode: "external", amount: 102.5, unit: "kg" },
+        notes: "Exact set notes",
+      }],
+    }],
+  };
+  const last = {
+    ...plannedWorkout("planned-workout:last", "Last Plan"),
+    scheduledDate,
+  };
+  const originalPlans = [first, deleted, last];
+  localStorage.setItem("plannedWorkouts", JSON.stringify(originalPlans));
+  localStorage.setItem("workoutEntries", "[]");
+
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete planned workout Deleted Plan" }));
+  await waitFor(() => expect(JSON.parse(localStorage.getItem("plannedWorkouts")))
+    .toEqual([first, last]));
+  expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+  await waitFor(() => expect(JSON.parse(localStorage.getItem("plannedWorkouts")))
+    .toEqual(originalPlans));
+  expect(screen.getByRole("status")).toHaveTextContent("Planned workout restored.");
+  expect(localStorage.getItem("workoutEntries")).toBe("[]");
+  confirm.mockRestore();
+});
+
+test("failed Today Undo keeps the plan deleted and reports the storage error", async () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  const existing = {
+    ...plannedWorkout("planned-workout:restore-failure", "Restore Failure Plan"),
+    scheduledDate: localCalendarDateKey(),
+  };
+  localStorage.setItem("plannedWorkouts", JSON.stringify([existing]));
+
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete planned workout Restore Failure Plan" }));
+  await waitFor(() => expect(localStorage.getItem("plannedWorkouts")).toBe("[]"));
+
+  const originalSetItem = Storage.prototype.setItem;
+  const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (key, value) {
+    if (key === "plannedWorkouts") throw new Error("quota full");
+    return originalSetItem.call(this, key, value);
+  });
+  try {
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(localStorage.getItem("plannedWorkouts")).toBe("[]");
+    expect(screen.getByText("The planned workout could not be restored.")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
+  } finally {
+    setItem.mockRestore();
+    confirm.mockRestore();
+  }
+});
+
+test("Today deletion Undo disappears after navigation remounts the page", async () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  const existing = {
+    ...plannedWorkout("planned-workout:session-only", "Session-only Plan"),
+    scheduledDate: localCalendarDateKey(),
+  };
+  localStorage.setItem("plannedWorkouts", JSON.stringify([existing]));
+
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete planned workout Session-only Plan" }));
+  await waitFor(() => expect(localStorage.getItem("plannedWorkouts")).toBe("[]"));
+  expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+
+  expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
+  expect(localStorage.getItem("plannedWorkouts")).toBe("[]");
+  confirm.mockRestore();
+});
+
 test("executes a plan through WorkoutPage and reflects completion and deletion in Today", async () => {
   const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
   const plan = {

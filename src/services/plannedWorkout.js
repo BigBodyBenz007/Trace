@@ -405,6 +405,29 @@ export function normalizePlannedWorkouts(records) {
   return normalized;
 }
 
+export function restorePlannedWorkoutAtIndex(
+  plannedWorkouts,
+  plannedWorkout,
+  originalIndex
+) {
+  const normalized = normalizePlannedWorkouts(plannedWorkouts);
+  const restored = normalizePlannedWorkout(plannedWorkout);
+  if (
+    !normalized ||
+    !restored ||
+    !Number.isInteger(originalIndex) ||
+    originalIndex < 0 ||
+    originalIndex > normalized.length ||
+    normalized.some(({ id }) => id === restored.id)
+  ) {
+    return null;
+  }
+
+  const updated = [...normalized];
+  updated.splice(originalIndex, 0, restored);
+  return updated;
+}
+
 export function readPlannedWorkouts(storage = localStorage) {
   const saved = storage.getItem(PLANNED_WORKOUTS_STORAGE_KEY);
   if (!saved) return [];

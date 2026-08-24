@@ -65,6 +65,10 @@ function TodayPage({
   createPlannedWorkout,
   updatePlannedWorkout,
   deletePlannedWorkout,
+  restorePlannedWorkout = () => ({
+    status: "error",
+    message: "The planned workout could not be restored.",
+  }),
   startPlannedWorkout = () => ({
     status: "error",
     message: "The planned workout could not be started.",
@@ -95,6 +99,7 @@ function TodayPage({
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [formError, setFormError] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
+  const [pendingDeletion, setPendingDeletion] = useState(null);
   const [draftConflict, setDraftConflict] = useState(null);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 600);
   const conflictResumeButtonRef = useRef(null);
@@ -294,6 +299,7 @@ function TodayPage({
       setFormError(result?.message || "The planned workout could not be saved.");
       return;
     }
+    setPendingDeletion(null);
     setStatusMessage(editingId ? "Planned workout updated." : "Planned workout created.");
     closeEditor();
   }
@@ -307,9 +313,29 @@ function TodayPage({
       setFormError("The planned workout could not be deleted.");
       return;
     }
+    setPendingDeletion({
+      plannedWorkout: plan,
+      originalIndex: plannedWorkouts.findIndex(({ id }) => id === plan.id),
+    });
     if (editingId === plan.id) closeEditor();
     setFormError("");
     setStatusMessage("Planned workout deleted.");
+  }
+
+  function undoPlanDeletion() {
+    if (!pendingDeletion) return;
+    const result = restorePlannedWorkout(
+      pendingDeletion.plannedWorkout,
+      pendingDeletion.originalIndex
+    );
+    setPendingDeletion(null);
+    if (result?.status !== "restored") {
+      setStatusMessage("");
+      setFormError(result?.message || "The planned workout could not be restored.");
+      return;
+    }
+    setFormError("");
+    setStatusMessage("Planned workout restored.");
   }
 
   const fieldStyle = {
@@ -355,7 +381,21 @@ function TodayPage({
         )}
       </div>
 
-      {statusMessage && <p role="status" className="trace-today-page__status">{statusMessage}</p>}
+      {statusMessage && (
+        <div role="status" className="trace-today-page__status">
+          <span>{statusMessage}</span>
+          {pendingDeletion && (
+            <button
+              className="trace-action trace-action--secondary"
+              type="button"
+              onClick={undoPlanDeletion}
+              style={{ ...buttonStyle, fontSize: "15px", marginLeft: "12px", marginTop: 0, padding: "7px 12px" }}
+            >
+              Undo
+            </button>
+          )}
+        </div>
+      )}
       {!draft && formError && <p role="alert" className="trace-today-page__error">{formError}</p>}
 
       {draft && (

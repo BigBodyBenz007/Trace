@@ -43,6 +43,7 @@ function renderPage(props = {}) {
         : { status: "invalid", message: getPlannedWorkoutError(draft) };
     }),
     deletePlannedWorkout: jest.fn(() => true),
+    restorePlannedWorkout: jest.fn(() => ({ status: "restored" })),
     startPlannedWorkout: jest.fn(() => ({ status: "started" })),
     openCompletedWorkout: jest.fn(() => true),
   };
@@ -57,6 +58,7 @@ function renderPage(props = {}) {
   );
   return {
     ...callbacks,
+    unmount: view.unmount,
     rerenderPage(nextProps = {}) {
       view.rerender(
         <TodayPage
@@ -279,6 +281,71 @@ test("deletes a plan after confirmation", () => {
   fireEvent.click(screen.getByRole("button", { name: "Delete planned workout Upper Body" }));
   expect(deletePlannedWorkout).toHaveBeenCalledWith("planned-workout:today");
   expect(screen.getByRole("status")).toHaveTextContent("Planned workout deleted.");
+  expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+  confirm.mockRestore();
+});
+
+test("does not offer Undo when planned-workout deletion is cancelled", () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(false);
+  const { deletePlannedWorkout, restorePlannedWorkout } = renderPage({
+    plannedWorkouts: [plan()],
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Delete planned workout Upper Body" }));
+
+  expect(deletePlannedWorkout).not.toHaveBeenCalled();
+  expect(restorePlannedWorkout).not.toHaveBeenCalled();
+  expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
+  confirm.mockRestore();
+});
+
+test("replaces the pending Undo target with the newest deletion", () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  const first = plan({ id: "planned-workout:first", title: "First Plan" });
+  const second = plan({ id: "planned-workout:second", title: "Second Plan" });
+  const { rerenderPage, restorePlannedWorkout } = renderPage({
+    plannedWorkouts: [first, second],
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Delete planned workout First Plan" }));
+  rerenderPage({ plannedWorkouts: [second] });
+  fireEvent.click(screen.getByRole("button", { name: "Delete planned workout Second Plan" }));
+  fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+  expect(restorePlannedWorkout).toHaveBeenCalledTimes(1);
+  expect(restorePlannedWorkout).toHaveBeenCalledWith(second, 0);
+  confirm.mockRestore();
+});
+
+test("drops pending Undo state when Today is remounted", () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  const first = renderPage({ plannedWorkouts: [plan()] });
+  fireEvent.click(screen.getByRole("button", { name: "Delete planned workout Upper Body" }));
+  expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
+
+  first.unmount();
+  renderPage({ plannedWorkouts: [] });
+
+  expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
+  confirm.mockRestore();
+});
+
+test("leaves a deleted plan unrestored and reports an Undo failure", () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  const deletedPlan = plan();
+  const restorePlannedWorkout = jest.fn(() => ({
+    status: "error",
+    message: "The planned workout could not be restored.",
+  }));
+  renderPage({ plannedWorkouts: [deletedPlan], restorePlannedWorkout });
+  fireEvent.click(screen.getByRole("button", { name: "Delete planned workout Upper Body" }));
+  fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+
+  expect(restorePlannedWorkout).toHaveBeenCalledWith(deletedPlan, 0);
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "The planned workout could not be restored."
+  );
+  expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
   confirm.mockRestore();
 });
 
