@@ -390,17 +390,28 @@ export function skipPlannedWorkoutForDate(
   const normalizedWorkout = normalizePlannedWorkout(plannedWorkout);
   if (!normalizedWorkout || !parseDateOnlyLocal(date)) return null;
   if (normalizedWorkout.scheduledDate !== date) return null;
+  const normalizedReason = String(reason || "").trim();
   if (isPlannedWorkoutSkippedOnDate(normalizedWorkout, date)) {
-    return normalizedWorkout;
+    const skipReasons = { ...(normalizedWorkout.skipReasons || {}) };
+    if (normalizedReason) skipReasons[date] = normalizedReason;
+    else delete skipReasons[date];
+    const updated = {
+      ...normalizedWorkout,
+      skippedDates: [...normalizedWorkout.skippedDates],
+      updatedAt: now.toISOString(),
+    };
+    if (Object.keys(skipReasons).length > 0) updated.skipReasons = skipReasons;
+    else delete updated.skipReasons;
+    return updated;
   }
   return {
     ...normalizedWorkout,
     skippedDates: [...(normalizedWorkout.skippedDates || []), date].sort(),
-    ...(String(reason || "").trim()
+    ...(normalizedReason
       ? {
           skipReasons: {
             ...(normalizedWorkout.skipReasons || {}),
-            [date]: String(reason).trim(),
+            [date]: normalizedReason,
           },
         }
       : {}),

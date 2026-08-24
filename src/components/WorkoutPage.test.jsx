@@ -228,7 +228,7 @@ test("Roadmap expands only one exercise editor and remains contained at 390px", 
   if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
 });
 
-test("a Today-origin Roadmap provides Back to Today and returns there after all exercises are handled and saved", () => {
+test("a Today-origin Roadmap provides standardized Today navigation and returns there after all exercises are handled and saved", () => {
   const plan = plannedExecution();
   localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(
     createWorkoutDraftFromPlannedWorkout(
@@ -240,8 +240,10 @@ test("a Today-origin Roadmap provides Back to Today and returns there after all 
   const onReturnToToday = jest.fn();
   const view = renderPage({ onReturnToToday });
 
-  expect(screen.getAllByRole("button", { name: "Back to Today" })).toHaveLength(2);
-  fireEvent.click(screen.getAllByRole("button", { name: "Back to Today" })[0]);
+  const navigation = screen.getByRole("navigation", { name: "Focused event navigation" });
+  expect(within(navigation).getByRole("button", { name: "Back to Timeline" })).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Back to Today's Schedule" })).toHaveLength(2);
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Today's Schedule" })[0]);
   expect(onReturnToToday).toHaveBeenCalledTimes(1);
   fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
     .getByRole("button", { name: "Completed" }));

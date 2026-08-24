@@ -446,6 +446,173 @@ test("Today reads scheduled protocol items from the existing protocol collection
   expect(localStorage.getItem("medicationEntries")).toBeNull();
 });
 
+test("Today persists completed and skipped protocol occurrences by date without altering the recurring protocol", () => {
+  const today = new Date();
+  const date = localCalendarDateKey(today);
+  const isoWeekday = today.getDay() || 7;
+  const storedProtocol = {
+    id: "protocol:occurrences",
+    schemaVersion: 1,
+    name: "Recurring protocol",
+    startDate: date,
+    endDate: null,
+    status: "active",
+    notes: "Series remains active",
+    items: [
+      { id: "protocol-item:complete", compound: { name: "B12" }, dose: { amount: 1, unit: "ml" }, route: { code: "subcutaneous" }, schedule: { type: "weekly-days", weekdays: [isoWeekday] }, notes: "Complete today" },
+      { id: "protocol-item:skip", compound: { name: "Vitamin C" }, dose: { amount: 500, unit: "mg" }, route: { code: "oral" }, schedule: { type: "weekly-days", weekdays: [isoWeekday] }, notes: "Skip today" },
+    ],
+    createdAt: "2026-08-01T00:00:00.000Z",
+    updatedAt: "2026-08-01T00:00:00.000Z",
+    endedAt: null,
+  };
+  localStorage.setItem("protocols", JSON.stringify([storedProtocol]));
+
+  const first = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  let remaining = screen.getByRole("list", { name: "Today's schedule summary" });
+  let protocolCard = within(remaining).getByRole("button", { name: "Open protocol B12" }).closest("li");
+  fireEvent.click(within(protocolCard).getByRole("button", { name: "Complete protocol B12" }));
+  remaining = screen.getByRole("list", { name: "Today's schedule summary" });
+  protocolCard = within(remaining).getByRole("button", { name: "Open protocol Vitamin C" }).closest("li");
+  fireEvent.click(within(protocolCard).getByRole("button", { name: "Skip protocol Vitamin C" }));
+  fireEvent.change(screen.getByLabelText("Skip reason"), { target: { value: "Schedule conflict" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save skip" }));
+
+  const occurrences = JSON.parse(localStorage.getItem("protocolOccurrences"));
+  expect(occurrences).toMatchObject({ schemaVersion: 1 });
+  expect(occurrences.occurrences).toHaveLength(2);
+  expect(occurrences.occurrences).toEqual(expect.arrayContaining([
+    expect.objectContaining({ protocolId: storedProtocol.id, itemId: "protocol-item:complete", date, status: "completed" }),
+    expect.objectContaining({ protocolId: storedProtocol.id, itemId: "protocol-item:skip", date, status: "skipped", skipReason: "Schedule conflict" }),
+  ]));
+  expect(JSON.parse(localStorage.getItem("protocols"))).toEqual([storedProtocol]);
+  expect(localStorage.getItem("medicationEntries")).toBeNull();
+
+  first.unmount();
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(within(screen.getByRole("region", { name: "Completed today" })).getByText("B12 · 1 mL"))
+    .toBeInTheDocument();
+  const remainingRegion = screen.getByRole("region", { name: "Remaining today" });
+  expect(within(remainingRegion).getByRole("button", { name: "Open protocol Vitamin C" })).toHaveTextContent("Skipped");
+  fireEvent.click(within(remainingRegion).getByRole("button", { name: "Open protocol Vitamin C" }));
+  expect(screen.getByText("Reason: Schedule conflict")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Complete" }));
+  const completedOccurrence = JSON.parse(localStorage.getItem("protocolOccurrences"))
+    .occurrences.find(({ itemId }) => itemId === "protocol-item:skip");
+  expect(completedOccurrence).toMatchObject({
+    date,
+    status: "completed",
+    skipReason: "Schedule conflict",
+  });
+  expect(completedOccurrence.completedAt).toBeTruthy();
+  expect(completedOccurrence.skippedAt).toBeTruthy();
+  expect(JSON.parse(localStorage.getItem("protocols"))).toEqual([storedProtocol]);
+  fireEvent.click(screen.getByRole("button", { name: "Back to Today's Schedule" }));
+  expect(within(screen.getByRole("region", { name: "Completed today" }))
+    .getByRole("button", { name: "Open protocol Vitamin C" })).toBeInTheDocument();
+});
+
+test("Today persists daily action create, edit, skip, navigation, and delete without creating workout history", async () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Add to Today" }));
+  fireEvent.change(screen.getByLabelText("Action type"), { target: { value: "errand" } });
+  fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Pick up prescription" } });
+  fireEvent.change(screen.getByLabelText("Timing"), { target: { value: "time" } });
+  fireEvent.change(screen.getByLabelText("Time"), { target: { value: "17:30" } });
+  fireEvent.change(screen.getByLabelText("Location (optional)"), { target: { value: "Pharmacy" } });
+  fireEvent.change(screen.getByLabelText("Notes (optional)"), { target: { value: "Use drive-through" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save daily action" }));
+
+  let stored = JSON.parse(localStorage.getItem("dailyActions"));
+  expect(stored).toMatchObject({ schemaVersion: 1 });
+  expect(stored.actions).toHaveLength(1);
+  expect(stored.actions[0]).toMatchObject({
+    title: "Pick up prescription",
+    actionType: "errand",
+    date: localCalendarDateKey(),
+    time: "17:30",
+    location: "Pharmacy",
+    notes: "Use drive-through",
+    status: "scheduled",
+  });
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open daily action Pick up prescription" }));
+  expect(screen.getByRole("region", { name: "Daily action Pick up prescription" })).toHaveTextContent("Use drive-through");
+
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Collect prescription" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  stored = JSON.parse(localStorage.getItem("dailyActions"));
+  expect(stored.actions[0].title).toBe("Collect prescription");
+
+  fireEvent.click(screen.getByRole("button", { name: "Skip" }));
+  fireEvent.change(screen.getByLabelText("Skip reason"), { target: { value: "Schedule conflict" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save skip" }));
+  stored = JSON.parse(localStorage.getItem("dailyActions"));
+  expect(stored.actions[0]).toMatchObject({ status: "skipped", skipReason: "Schedule conflict" });
+  expect(stored.actions[0].skippedAt).toBeTruthy();
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "Complete" }));
+  stored = JSON.parse(localStorage.getItem("dailyActions"));
+  expect(stored.actions[0]).toMatchObject({
+    status: "completed",
+    skipReason: "Schedule conflict",
+  });
+  expect(stored.actions[0].completedAt).toBeTruthy();
+  expect(stored.actions[0].skippedAt).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Back to Today's Schedule" }));
+  expect(within(screen.getByRole("region", { name: "Completed today" }))
+    .getByRole("button", { name: "Open daily action Collect prescription" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Open daily action Collect prescription" }));
+  expect(screen.getByText("Previously skipped: Schedule conflict")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+  await waitFor(() => expect(JSON.parse(localStorage.getItem("dailyActions")).actions).toEqual([]));
+  expect(confirm).toHaveBeenCalled();
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+  confirm.mockRestore();
+});
+
+test("Today re-sorts daily actions immediately after create and edit", () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+
+  const addTimedAction = (title, time) => {
+    fireEvent.click(screen.getByRole("button", { name: "Add to Today" }));
+    fireEvent.change(screen.getByLabelText("Title"), { target: { value: title } });
+    fireEvent.change(screen.getByLabelText("Timing"), { target: { value: "time" } });
+    fireEvent.change(screen.getByLabelText("Time"), { target: { value: time } });
+    fireEvent.click(screen.getByRole("button", { name: "Save daily action" }));
+  };
+  const orderedActions = () => within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getAllByRole("button", { name: /^Open / }).map((button) => button.getAttribute("aria-label"));
+
+  addTimedAction("Late action", "16:00");
+  addTimedAction("Early action", "09:00");
+  expect(orderedActions()).toEqual([
+    "Open daily action Early action",
+    "Open daily action Late action",
+  ]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Open daily action Late action" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Time"), { target: { value: "08:00" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  fireEvent.click(screen.getByRole("button", { name: "Back to Today's Schedule" }));
+  expect(orderedActions()).toEqual([
+    "Open daily action Late action",
+    "Open daily action Early action",
+  ]);
+});
+
 test("Today creates, edits, and deletes plans without creating completed workouts", async () => {
   const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
   renderAppAtTimeline();
@@ -619,9 +786,6 @@ test("Today planner saves an exercise through the existing reusable catalog with
 });
 
 test("Today skips a planned workout for its date without deleting or completing it", async () => {
-  const confirm = jest.spyOn(window, "confirm")
-    .mockReturnValueOnce(false)
-    .mockReturnValueOnce(true);
   const existing = {
     ...plannedWorkout("planned-workout:skip", "Skip Day"),
     scheduledDate: localCalendarDateKey(),
@@ -630,16 +794,11 @@ test("Today skips a planned workout for its date without deleting or completing 
 
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
-  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
-  fireEvent.click(within(screen.getByRole("list", { name: "Today's schedule summary" }))
-    .getByRole("button", { name: "Open workout preview Skip Day" }));
-
-  fireEvent.click(screen.getByRole("button", { name: "Skip workout Skip Day" }));
+  const workoutCard = within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByRole("button", { name: "Open workout preview Skip Day" }).closest("li");
+  fireEvent.click(within(workoutCard).getByRole("button", { name: "Skip workout Skip Day" }));
   expect(JSON.parse(localStorage.getItem("plannedWorkouts"))[0]).not.toHaveProperty("skippedDates");
-  expect(screen.getByRole("button", { name: "Start planned workout Skip Day" })).toBeInTheDocument();
-
-  fireEvent.click(screen.getByRole("button", { name: "Skip workout Skip Day" }));
-  const reasonDialog = screen.getByRole("dialog", { name: "Optional skip reason" });
+  const reasonDialog = screen.getByRole("dialog", { name: "Skip workout Skip Day" });
   fireEvent.change(within(reasonDialog).getByLabelText("Skip reason"), { target: { value: "Schedule conflict" } });
   fireEvent.click(within(reasonDialog).getByRole("button", { name: "Save skip" }));
   await waitFor(() => expect(JSON.parse(localStorage.getItem("plannedWorkouts"))[0])
@@ -651,12 +810,20 @@ test("Today skips a planned workout for its date without deleting or completing 
       skipReasons: { [localCalendarDateKey()]: "Schedule conflict" },
     }));
   expect(localStorage.getItem("workoutEntries")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Back to today" }));
-  expect(screen.getByText("Workout · skipped")).toBeInTheDocument();
+  expect(screen.getAllByText("Skipped")[0]).toHaveClass("trace-today-item-status");
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
   expect(screen.getByText("Skipped for today · Schedule conflict")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Start planned workout Skip Day" })).not.toBeInTheDocument();
+  const skippedCard = within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByRole("button", { name: "Open workout preview Skip Day" }).closest("li");
+  expect(within(skippedCard).getByRole("button", { name: "Start workout Skip Day" })).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Open completed workout Skip Day" })).not.toBeInTheDocument();
-  confirm.mockRestore();
+  fireEvent.click(within(skippedCard).getByRole("button", { name: "Start workout Skip Day" }));
+  expect(screen.getByRole("heading", { name: "Workout Roadmap" })).toBeInTheDocument();
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Today's Schedule" })[0]);
+  expect(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByRole("button", { name: "Continue workout Skip Day" })).toBeInTheDocument();
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
 });
 
 test("executes a plan through WorkoutPage and reflects completion and deletion in Today", async () => {
@@ -691,10 +858,9 @@ test("executes a plan through WorkoutPage and reflects completion and deletion i
 
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
-  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
-  fireEvent.click(within(screen.getByRole("list", { name: "Today's schedule summary" }))
-    .getByRole("button", { name: "Open workout preview Planned Push" }));
-  fireEvent.click(screen.getByRole("button", { name: "Start planned workout Planned Push" }));
+  const workoutCard = within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByRole("button", { name: "Open workout preview Planned Push" }).closest("li");
+  fireEvent.click(within(workoutCard).getByRole("button", { name: "Start workout Planned Push" }));
 
   expect(screen.getByRole("heading", { name: "Workouts" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Workout Roadmap" })).toBeInTheDocument();
@@ -708,7 +874,7 @@ test("executes a plan through WorkoutPage and reflects completion and deletion i
   expect(volume).toHaveTextContent("2 total sets");
   expect(volume).toHaveTextContent("1 warm-up");
   expect(volume).toHaveTextContent("1 working");
-  expect(screen.getAllByRole("button", { name: "Back to Today" })).toHaveLength(2);
+  expect(screen.getAllByRole("button", { name: "Back to Today's Schedule" })).toHaveLength(2);
   fireEvent.click(within(roadmapExercise).getByRole("button", { name: "Edit" }));
   expect(screen.getByLabelText("Exercise 1 set 1 type")).toHaveValue("warm-up");
   expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(8);
@@ -762,10 +928,10 @@ test("executes a plan through WorkoutPage and reflects completion and deletion i
   expect(localStorage.getItem("plannedWorkouts")).toBe(savedPlan);
 
   expect(screen.getByRole("heading", { name: "Today's Schedule" })).toBeInTheDocument();
-  expect(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+  expect(within(screen.getByRole("list", { name: "Completed today summary" }))
     .getByText("Completed")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Show details" }));
-  expect(screen.getByText("Workout · completed")).toBeInTheDocument();
+  expect(screen.getAllByText("Completed")[0]).toHaveClass("trace-today-item-status");
   expect(screen.queryByRole("button", { name: "Start planned workout Planned Push" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Open completed workout Planned Push" }));
   expect(screen.getByRole("heading", { name: "Workout History" })).toBeInTheDocument();
@@ -783,7 +949,7 @@ test("executes a plan through WorkoutPage and reflects completion and deletion i
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
   fireEvent.click(screen.getByRole("button", { name: "Show details" }));
-  expect(screen.getByText("Workout · planned")).toBeInTheDocument();
+  expect(screen.getAllByText("Planned")[0]).toHaveClass("trace-today-item-status");
   expect(screen.getByRole("button", { name: "Start planned workout Planned Push" })).toBeInTheDocument();
   confirm.mockRestore();
 });
@@ -856,8 +1022,9 @@ test("saves a partial planned workout as resumable progress and completes it exa
     .getByText("Started")).toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "Show details" }));
-  expect(screen.getByText("Workout · started")).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Continue workout Partial Push" })).toBeInTheDocument();
+  expect(screen.getAllByText("Started")[0]).toHaveClass("trace-today-item-status");
+  expect(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByRole("button", { name: "Continue workout Partial Push" })).toBeInTheDocument();
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
   expect(within(screen.getByRole("list", { name: "Today's schedule summary" }))
@@ -867,7 +1034,8 @@ test("saves a partial planned workout as resumable progress and completes it exa
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
   fireEvent.click(screen.getByRole("button", { name: "Show details" }));
-  fireEvent.click(screen.getByRole("button", { name: "Continue workout Partial Push" }));
+  fireEvent.click(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByRole("button", { name: "Continue workout Partial Push" }));
 
   const restoredFirst = screen.getByRole("article", { name: "Roadmap exercise Dumbbell Press" });
   const restoredSecond = screen.getByRole("article", { name: "Roadmap exercise Chest Dip" });
@@ -893,7 +1061,7 @@ test("saves a partial planned workout as resumable progress and completes it exa
     ],
   });
   expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
-  expect(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+  expect(within(screen.getByRole("list", { name: "Completed today summary" }))
     .getByText("Completed")).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toHaveLength(1);
 });
@@ -963,7 +1131,7 @@ test("uses one fixed auto-dismissing toast host for planner, preview, and Roadma
       "Preview Toast marked skipped for today."
     );
     expect(screen.getByTestId("save-confirmation")).toHaveClass("trace-save-confirmation");
-    fireEvent.click(screen.getByRole("button", { name: "Back to today" }));
+    fireEvent.click(screen.getByRole("button", { name: "Back to Today's Schedule" }));
     fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
     expect(screen.queryByTestId("save-confirmation")).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
@@ -1083,11 +1251,12 @@ test("abandons and resumes the same plan draft without marking the plan complete
   fireEvent.click(screen.getByRole("button", { name: "Start planned workout Resume Plan" }));
   fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
     .getByRole("button", { name: "Completed" }));
-  fireEvent.click(screen.getAllByRole("button", { name: "Back to Today" })[0]);
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Today's Schedule" })[0]);
   fireEvent.click(screen.getByRole("button", { name: "Show details" }));
-  expect(screen.getByText("Workout · started")).toBeInTheDocument();
+  expect(screen.getAllByText("Started")[0]).toHaveClass("trace-today-item-status");
 
-  fireEvent.click(screen.getByRole("button", { name: "Continue workout Resume Plan" }));
+  fireEvent.click(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByRole("button", { name: "Continue workout Resume Plan" }));
   expect(screen.queryByRole("dialog", { name: "Workout already in progress" })).not.toBeInTheDocument();
   expect(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
     .getByRole("button", { name: "Completed" })).toHaveAttribute("aria-pressed", "true");
@@ -1098,7 +1267,7 @@ test("abandons and resumes the same plan draft without marking the plan complete
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
   fireEvent.click(screen.getByRole("button", { name: "Show details" }));
-  expect(screen.getByText("Workout · planned")).toBeInTheDocument();
+  expect(screen.getAllByText("Planned")[0]).toHaveClass("trace-today-item-status");
   confirm.mockRestore();
 });
 
@@ -1286,6 +1455,27 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
   };
   localStorage.setItem("appSettings", JSON.stringify(backedUpSettings));
   localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 2450 }));
+  const backedUpDailyActions = { schemaVersion: 1, actions: [{
+    schemaVersion: 1,
+    id: "daily-action:restored",
+    title: "Restored appointment",
+    actionType: "appointment",
+    date: localCalendarDateKey(),
+    time: "14:00",
+    timeWindow: null,
+    durationMinutes: null,
+    location: "Restored office",
+    notes: "Restored action notes",
+    recurrence: null,
+    status: "scheduled",
+    completedAt: null,
+    skippedAt: null,
+    skipReason: "",
+    customSkipReason: "",
+    createdAt: "2026-08-20T12:00:00.000Z",
+    updatedAt: "2026-08-20T12:00:00.000Z",
+  }] };
+  localStorage.setItem("dailyActions", JSON.stringify(backedUpDailyActions));
   let exportedBackup;
   createTraceBackup.mockImplementation(async () => {
     exportedBackup = {
@@ -1294,6 +1484,7 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
         structured: {
           appSettings: JSON.parse(localStorage.getItem("appSettings")),
           nutritionGoals: JSON.parse(localStorage.getItem("nutritionGoals")),
+          dailyActions: JSON.parse(localStorage.getItem("dailyActions")),
         },
         photos: [],
       },
@@ -1325,6 +1516,7 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
     lifeCurrentThemeId: "river",
   });
   localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 1800 }));
+  localStorage.setItem("dailyActions", JSON.stringify({ schemaVersion: 1, actions: [] }));
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
 
   parseTraceBackupText.mockReturnValue({
@@ -1334,6 +1526,7 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
   restoreTraceBackup.mockImplementation(async (backup) => {
     localStorage.setItem("appSettings", JSON.stringify(backup.data.structured.appSettings));
     localStorage.setItem("nutritionGoals", JSON.stringify(backup.data.structured.nutritionGoals));
+    localStorage.setItem("dailyActions", JSON.stringify(backup.data.structured.dailyActions));
     return { memories: 0, photos: 0 };
   });
   window.confirm = jest.fn(() => true);
@@ -1353,6 +1546,9 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
   expect(screen.getByLabelText("Kilograms (kg)")).toBeChecked();
   expect(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' })).toBeChecked();
   expect(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' })).toBeChecked();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(screen.getByRole("button", { name: "Open daily action Restored appointment" })).toBeInTheDocument();
   anchorClick.mockRestore();
 });
 

@@ -7,6 +7,14 @@ import packageMetadata from "../../package.json";
 import { normalizeAppSettings } from "./appSettings";
 import { normalizePlannedWorkouts } from "./plannedWorkout";
 import { normalizeWorkoutDraft } from "./workoutDraft";
+import {
+  emptyDailyActionCollection,
+  normalizeDailyActionCollection,
+} from "./dailyAction";
+import {
+  emptyProtocolOccurrenceCollection,
+  normalizeProtocolOccurrenceCollection,
+} from "./protocolOccurrence";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
 export const TRACE_BACKUP_SCHEMA_VERSION = 1;
@@ -20,7 +28,9 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
   "medicationEntries",
   "medicationCompounds",
   "protocols",
+  "protocolOccurrences",
   "plannedWorkouts",
+  "dailyActions",
   "workoutDraft",
   "workoutEntries",
   "savedExercises",
@@ -29,7 +39,7 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
 ]);
 
 const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
-const SPECIAL_KEYS = new Set(["workoutDraft"]);
+const SPECIAL_KEYS = new Set(["workoutDraft", "dailyActions", "protocolOccurrences"]);
 const ARRAY_KEYS = new Set(TRACE_STORAGE_KEYS.filter(
   (key) => !OBJECT_KEYS.has(key) && !SPECIAL_KEYS.has(key)
 ));
@@ -100,6 +110,12 @@ function decodePhoto(record) {
 function readStructuredData(storage) {
   return Object.fromEntries(TRACE_STORAGE_KEYS.map((key) => {
     const raw = storage.getItem(key);
+    if (raw === null && key === "dailyActions") {
+      return [key, emptyDailyActionCollection()];
+    }
+    if (raw === null && key === "protocolOccurrences") {
+      return [key, emptyProtocolOccurrenceCollection()];
+    }
     if (raw === null) return [key, null];
     try {
       const parsed = JSON.parse(raw);
@@ -107,6 +123,16 @@ function readStructuredData(storage) {
         if (parsed === null) return [key, null];
         const normalized = normalizeWorkoutDraft(parsed);
         if (!normalized) throw new Error("Invalid workout draft data.");
+        return [key, normalized];
+      }
+      if (key === "dailyActions") {
+        const normalized = normalizeDailyActionCollection(parsed);
+        if (!normalized) throw new Error("Invalid daily action data.");
+        return [key, normalized];
+      }
+      if (key === "protocolOccurrences") {
+        const normalized = normalizeProtocolOccurrenceCollection(parsed);
+        if (!normalized) throw new Error("Invalid protocol occurrence data.");
         return [key, normalized];
       }
       return [key, key === "appSettings" ? normalizeAppSettings(parsed) : parsed];
@@ -122,7 +148,7 @@ function validateStructuredData(structuredData) {
   }
   TRACE_STORAGE_KEYS.forEach((key) => {
     const value = structuredData[key];
-    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", "plannedWorkouts", "workoutDraft"].includes(key) && value === undefined)) return;
+    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", "plannedWorkouts", "dailyActions", "protocolOccurrences", "workoutDraft"].includes(key) && value === undefined)) return;
     if (ARRAY_KEYS.has(key) && !Array.isArray(value)) {
       throw new Error(`The backup contains invalid ${key} data.`);
     }
@@ -157,6 +183,20 @@ function validateStructuredData(structuredData) {
   ) {
     throw new Error("The backup contains invalid active workout draft data.");
   }
+  if (
+    structuredData.dailyActions !== undefined &&
+    structuredData.dailyActions !== null &&
+    !normalizeDailyActionCollection(structuredData.dailyActions)
+  ) {
+    throw new Error("The backup contains invalid daily action data.");
+  }
+  if (
+    structuredData.protocolOccurrences !== undefined &&
+    structuredData.protocolOccurrences !== null &&
+    !normalizeProtocolOccurrenceCollection(structuredData.protocolOccurrences)
+  ) {
+    throw new Error("The backup contains invalid protocol occurrence data.");
+  }
 }
 
 function photoReferenceIds(structuredData) {
@@ -183,10 +223,12 @@ export function summarizeTraceBackup(backup) {
     nutritionEntries: data.nutritionEntries?.length || 0,
     healthMeasurementEntries: data.healthMeasurementEntries?.length || 0,
     plannedWorkouts: data.plannedWorkouts?.length || 0,
+    dailyActions: data.dailyActions?.actions?.length || 0,
     activeWorkoutDraft: Boolean(data.workoutDraft),
     workouts: data.workoutEntries?.length || 0,
     medicationEntries: data.medicationEntries?.length || 0,
     protocols: data.protocols?.length || 0,
+    protocolOccurrences: data.protocolOccurrences?.occurrences?.length || 0,
     trophyCaseEntries: data.trophyCaseEntries?.length || 0,
     savedExercises: data.savedExercises?.length || 0,
     savedCompounds: data.medicationCompounds?.length || 0,
@@ -220,6 +262,12 @@ export function validateTraceBackup(value) {
       normalizedBackup.data.structured.workoutDraft
     );
   }
+  normalizedBackup.data.structured.dailyActions = normalizeDailyActionCollection(
+    normalizedBackup.data.structured.dailyActions ?? emptyDailyActionCollection()
+  );
+  normalizedBackup.data.structured.protocolOccurrences = normalizeProtocolOccurrenceCollection(
+    normalizedBackup.data.structured.protocolOccurrences ?? emptyProtocolOccurrenceCollection()
+  );
   if (!Array.isArray(value.data?.photos)) throw new Error("The backup is missing its photo collection.");
   const photoIds = new Set();
   value.data.photos.forEach((photo) => {

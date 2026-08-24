@@ -351,6 +351,36 @@ test("marks only the scheduled date skipped while preserving the planned workout
   expect(plan).toEqual(before);
 });
 
+test("updates or clears a skip reason without duplicating the skipped date", () => {
+  const plan = created();
+  const skipped = skipPlannedWorkoutForDate(
+    plan,
+    "2026-08-22",
+    new Date("2026-08-22T18:00:00.000Z"),
+    "Low energy"
+  );
+  const changed = skipPlannedWorkoutForDate(
+    skipped,
+    "2026-08-22",
+    new Date("2026-08-22T19:00:00.000Z"),
+    "Schedule conflict"
+  );
+  expect(changed).toMatchObject({
+    skippedDates: ["2026-08-22"],
+    skipReasons: { "2026-08-22": "Schedule conflict" },
+    updatedAt: "2026-08-22T19:00:00.000Z",
+  });
+
+  const cleared = skipPlannedWorkoutForDate(
+    changed,
+    "2026-08-22",
+    new Date("2026-08-22T20:00:00.000Z"),
+    ""
+  );
+  expect(cleared.skippedDates).toEqual(["2026-08-22"]);
+  expect(cleared).not.toHaveProperty("skipReasons");
+});
+
 test("rejects a skip outside the plan date and malformed persisted skip dates", () => {
   const plan = created();
   expect(skipPlannedWorkoutForDate(plan, "2026-08-23")).toBeNull();

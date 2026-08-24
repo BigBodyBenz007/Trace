@@ -1030,7 +1030,7 @@ function WorkoutPage({
   const returnsToToday = isPlannedRoadmap && workoutOriginPageRef.current === "today";
   const volume = isPlannedRoadmap ? roadmapVolume(exercises) : null;
   const leaveWorkout = returnsToToday ? onReturnToToday : onBack;
-  const leaveWorkoutLabel = returnsToToday ? "Back to Today" : "Back to Timeline";
+  const leaveWorkoutLabel = returnsToToday ? "Back to Today's Schedule" : "Back to Timeline";
 
   return (
     <div className="trace-feature-page trace-feature-page--workouts" ref={pageTopRef} data-testid="workout-page" style={containerStyle}>
@@ -1088,14 +1088,10 @@ function WorkoutPage({
         training recommendations.
       </p>
       </header>
-      <button
-        className="trace-action trace-action--secondary"
-        type="button"
-        onClick={leaveWorkout}
-        style={{ ...backButtonStyle, marginBottom: "24px", marginTop: 0 }}
-      >
-        {leaveWorkoutLabel}
-      </button>
+      <nav className="trace-focused-navigation" aria-label="Focused event navigation">
+        <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...backButtonStyle, marginTop: 0 }}>Back to Timeline</button>
+        {returnsToToday && <button className="trace-action trace-action--secondary" type="button" onClick={onReturnToToday} style={{ ...backButtonStyle, marginTop: 0 }}>Back to Today&apos;s Schedule</button>}
+      </nav>
 
       {isPlannedRoadmap && (
         <form

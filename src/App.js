@@ -89,6 +89,23 @@ import {
   readWorkoutDraft,
   writeWorkoutDraft,
 } from "./services/workoutDraft";
+import {
+  completeDailyAction as createCompletedDailyAction,
+  createDailyAction as createDailyActionRecord,
+  getDailyActionError,
+  readDailyActions,
+  skipDailyAction as createSkippedDailyAction,
+  updateDailyAction as updateDailyActionRecord,
+  writeDailyActions,
+} from "./services/dailyAction";
+import {
+  completeProtocolOccurrence as createCompletedProtocolOccurrence,
+  findProtocolOccurrence,
+  readProtocolOccurrences,
+  skipProtocolOccurrence as createSkippedProtocolOccurrence,
+  upsertProtocolOccurrence,
+  writeProtocolOccurrences,
+} from "./services/protocolOccurrence";
 
 const DEFAULT_NUTRITION_GOALS = {
   calories: 0,
@@ -180,7 +197,9 @@ function App() {
   const [appSettings, setAppSettings] = useState(() => readAppSettings(localStorage));
   const [medicationEntries, setMedicationEntries] = useState([]);
   const [protocols, setProtocols] = useState([]);
+  const [protocolOccurrences, setProtocolOccurrences] = useState([]);
   const [plannedWorkouts, setPlannedWorkouts] = useState([]);
+  const [dailyActions, setDailyActions] = useState([]);
   const [workoutEntries, setWorkoutEntries] = useState([]);
   const [activeWorkoutDraft, setActiveWorkoutDraft] = useState(() =>
     readWorkoutDraft(localStorage)
@@ -439,10 +458,30 @@ function App() {
 
   useEffect(() => {
     try {
+      setProtocolOccurrences(readProtocolOccurrences(localStorage));
+    } catch (error) {
+      setStorageError(
+        "Trace couldn't read the saved protocol occurrence statuses. The stored value was left unchanged."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
       setPlannedWorkouts(readPlannedWorkouts(localStorage));
     } catch (error) {
       setStorageError(
         "Trace couldn't read the saved planned workouts. The stored value was left unchanged."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setDailyActions(readDailyActions(localStorage));
+    } catch (error) {
+      setStorageError(
+        "Trace couldn't read the saved daily actions because their stored data is malformed. The stored value was left unchanged."
       );
     }
   }, []);
@@ -833,8 +872,12 @@ function App() {
     try {
       const restoredAppSettings = readAppSettings(localStorage);
       const restoredPlannedWorkouts = readPlannedWorkouts(localStorage);
+      const restoredDailyActions = readDailyActions(localStorage);
+      const restoredProtocolOccurrences = readProtocolOccurrences(localStorage);
       setAppSettings(restoredAppSettings);
       setPlannedWorkouts(restoredPlannedWorkouts);
+      setDailyActions(restoredDailyActions);
+      setProtocolOccurrences(restoredProtocolOccurrences);
       setStorageError("");
     } catch (error) {
       setStorageError(storageMessage("refresh restored data"));
@@ -1312,6 +1355,117 @@ function App() {
         message: "The planned workout could not be skipped.",
       };
     }
+  }
+
+  function saveDailyAction(draft) {
+    const dailyAction = createDailyActionRecord(draft);
+    if (!dailyAction) {
+      return { status: "invalid", message: getDailyActionError(draft) };
+    }
+    try {
+      const saved = writeDailyActions(localStorage, [...dailyActions, dailyAction]);
+      setDailyActions(saved);
+      setStorageError("");
+      return { status: "saved", dailyAction };
+    } catch (error) {
+      setStorageError(storageMessage("save this daily action"));
+      return { status: "error", message: "The daily action could not be saved." };
+    }
+  }
+
+  function updateDailyAction(id, draft) {
+    const existing = dailyActions.find((action) => action.id === id);
+    const dailyAction = updateDailyActionRecord(existing, draft);
+    if (!dailyAction) {
+      return { status: "invalid", message: getDailyActionError(draft) };
+    }
+    try {
+      const saved = writeDailyActions(localStorage, dailyActions.map((action) =>
+        action.id === id ? dailyAction : action
+      ));
+      setDailyActions(saved);
+      setStorageError("");
+      return { status: "saved", dailyAction };
+    } catch (error) {
+      setStorageError(storageMessage("update this daily action"));
+      return { status: "error", message: "The daily action could not be updated." };
+    }
+  }
+
+  function deleteDailyAction(id) {
+    if (!dailyActions.some((action) => action.id === id)) return false;
+    try {
+      const saved = writeDailyActions(localStorage, dailyActions.filter((action) => action.id !== id));
+      setDailyActions(saved);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this daily action"));
+      return false;
+    }
+  }
+
+  function completeDailyAction(id) {
+    const existing = dailyActions.find((action) => action.id === id);
+    const dailyAction = createCompletedDailyAction(existing);
+    if (!dailyAction) return { status: "error", message: "The daily action could not be completed." };
+    try {
+      const saved = writeDailyActions(localStorage, dailyActions.map((action) =>
+        action.id === id ? dailyAction : action
+      ));
+      setDailyActions(saved);
+      setStorageError("");
+      return { status: "saved", dailyAction };
+    } catch (error) {
+      setStorageError(storageMessage("complete this daily action"));
+      return { status: "error", message: "The daily action could not be completed." };
+    }
+  }
+
+  function skipDailyAction(id, reason = "", customReason = "") {
+    const existing = dailyActions.find((action) => action.id === id);
+    const dailyAction = createSkippedDailyAction(existing, reason, customReason);
+    if (!dailyAction) return { status: "error", message: "The daily action could not be skipped." };
+    try {
+      const saved = writeDailyActions(localStorage, dailyActions.map((action) =>
+        action.id === id ? dailyAction : action
+      ));
+      setDailyActions(saved);
+      setStorageError("");
+      return { status: "saved", dailyAction };
+    } catch (error) {
+      setStorageError(storageMessage("skip this daily action"));
+      return { status: "error", message: "The daily action could not be skipped." };
+    }
+  }
+
+  function saveProtocolOccurrenceStatus(protocolId, itemId, date, status, reason = "", customReason = "") {
+    const identity = { protocolId, itemId, date };
+    const existing = findProtocolOccurrence(protocolOccurrences, protocolId, itemId, date);
+    const occurrence = status === "completed"
+      ? createCompletedProtocolOccurrence(existing, identity)
+      : createSkippedProtocolOccurrence(existing, identity, reason, customReason);
+    const updated = occurrence && upsertProtocolOccurrence(protocolOccurrences, occurrence);
+    if (!updated) {
+      return { status: "error", message: "The protocol occurrence status could not be saved." };
+    }
+    try {
+      const saved = writeProtocolOccurrences(localStorage, updated);
+      setProtocolOccurrences(saved);
+      setStorageError("");
+      return { status: "saved", occurrence };
+    } catch (error) {
+      setStorageError(storageMessage("save this protocol occurrence status"));
+      return { status: "error", message: "The protocol occurrence status could not be saved." };
+    }
+  }
+
+  function completeProtocolOccurrence(protocolId, itemId, date) {
+    return saveProtocolOccurrenceStatus(protocolId, itemId, date, "completed");
+  }
+
+  function skipProtocolOccurrence(protocolId, itemId, date, reason = "", customReason = "") {
+    return saveProtocolOccurrenceStatus(protocolId, itemId, date, "skipped", reason, customReason);
   }
 
   function startPlannedWorkout(id, conflictAction = null) {
@@ -1801,8 +1955,10 @@ function App() {
           onBack={() => setPage("home")}
           plannedWorkouts={plannedWorkouts}
           protocols={protocols}
+          protocolOccurrences={protocolOccurrences}
           workoutEntries={workoutEntries}
           activeWorkoutDraft={activeWorkoutDraft}
+          dailyActions={dailyActions}
           savedExercises={savedExercises}
           saveExerciseDefinitions={saveExerciseDefinitions}
           createPlannedWorkout={createPlannedWorkout}
@@ -1814,6 +1970,13 @@ function App() {
           skipPlannedWorkout={skipPlannedWorkout}
           startPlannedWorkout={startPlannedWorkout}
           openCompletedWorkout={openCompletedWorkout}
+          createDailyAction={saveDailyAction}
+          updateDailyAction={updateDailyAction}
+          deleteDailyAction={deleteDailyAction}
+          completeDailyAction={completeDailyAction}
+          skipDailyAction={skipDailyAction}
+          completeProtocolOccurrence={completeProtocolOccurrence}
+          skipProtocolOccurrence={skipProtocolOccurrence}
           showToast={showConfirmation}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}

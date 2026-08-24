@@ -9,6 +9,11 @@ import {
 } from "./traceBackup";
 import { readAppSettings } from "./appSettings";
 import { createWorkoutDraftFromPlannedWorkout } from "./workoutDraft";
+import { createDailyAction, emptyDailyActionCollection } from "./dailyAction";
+import {
+  completeProtocolOccurrence,
+  emptyProtocolOccurrenceCollection,
+} from "./protocolOccurrence";
 
 function makeStorage(initial = {}, failOnSet = null) {
   const values = new Map(Object.entries(initial));
@@ -61,8 +66,34 @@ function makePhotoDatabase(initial = [], { failWriteCount = 0 } = {}) {
 function emptyStructured(overrides = {}) {
   return Object.fromEntries(TRACE_STORAGE_KEYS.map((key) => [
     key,
-    ["nutritionGoals", "appSettings", "workoutDraft"].includes(key) ? null : [],
+    key === "dailyActions"
+      ? emptyDailyActionCollection()
+      : key === "protocolOccurrences"
+        ? emptyProtocolOccurrenceCollection()
+      : ["nutritionGoals", "appSettings", "workoutDraft"].includes(key) ? null : [],
   ]).concat(Object.entries(overrides)));
+}
+
+function dailyAction() {
+  return createDailyAction({
+    title: "Pick up prescription",
+    actionType: "errand",
+    date: "2026-08-22",
+    time: "17:30",
+    timeWindow: null,
+    durationMinutes: 20,
+    location: "Neighborhood pharmacy",
+    notes: "Use the drive-through",
+    recurrence: null,
+  }, { id: "daily-action:pharmacy", now: new Date("2026-08-20T12:00:00.000Z") });
+}
+
+function protocolOccurrence() {
+  return completeProtocolOccurrence(null, {
+    protocolId: "protocol:one",
+    itemId: "protocol-item:one",
+    date: "2026-08-22",
+  }, new Date("2026-08-22T14:00:00.000Z"));
 }
 
 function encodedPhoto(id = "photo-1", text = "hello", type = "image/png") {
@@ -135,6 +166,8 @@ test("exports empty Trace data with stable version metadata and filename", async
   expect(result).toMatchObject({ format: "trace-backup", schemaVersion: 1, createdAt: "2026-08-12T10:20:30.000Z" });
   expect(result.data.photos).toEqual([]);
   expect(result.data.structured.workoutDraft).toBeNull();
+  expect(result.data.structured.dailyActions).toEqual(emptyDailyActionCollection());
+  expect(result.data.structured.protocolOccurrences).toEqual(emptyProtocolOccurrenceCollection());
   expect(traceBackupFilename(new Date(result.createdAt))).toBe("trace-backup-2026-08-12T10-20-30-000Z.json");
 });
 
@@ -142,11 +175,15 @@ test("exports structured data and multiple photos without mutating sources", asy
   const memories = [{ id: "memory-1", date: "2001-02-03", images: ["photo-1", "photo-2"] }];
   const plans = [plannedWorkout()];
   const workoutDraft = activeWorkoutDraft({ plannedWorkoutId: "planned-workout:orphaned" });
+  const actions = { schemaVersion: 1, actions: [dailyAction()] };
+  const occurrences = { schemaVersion: 1, occurrences: [protocolOccurrence()] };
   const storage = makeStorage({
     memories: JSON.stringify(memories),
     plannedWorkouts: JSON.stringify(plans),
     workoutDraft: JSON.stringify(workoutDraft),
     protocols: JSON.stringify([{ id: "protocol-1" }]),
+    dailyActions: JSON.stringify(actions),
+    protocolOccurrences: JSON.stringify(occurrences),
   });
   const database = makePhotoDatabase([
     { id: "photo-1", memoryId: "memory-1", blob: new Blob(["one"], { type: "image/png" }) },
@@ -157,6 +194,8 @@ test("exports structured data and multiple photos without mutating sources", asy
   expect(result.data.structured.plannedWorkouts).toEqual(plans);
   expect(result.data.structured.workoutDraft).toEqual(workoutDraft);
   expect(result.data.structured.protocols).toEqual([{ id: "protocol-1" }]);
+  expect(result.data.structured.dailyActions).toEqual(actions);
+  expect(result.data.structured.protocolOccurrences).toEqual(occurrences);
   expect(result.data.structured.workoutEntries).toBeNull();
   expect(result.data.photos.map(({ id, blob }) => [id, blob.type])).toEqual([
     ["photo-1", "image/png"], ["photo-2", "image/jpeg"],
@@ -187,9 +226,11 @@ test("validates summaries and rejects corrupt, future, and missing-reference bac
     memories: [{ id: "memory-1", date: "2026-01-02", images: ["photo-1"] }],
     nutritionEntries: [{ id: "meal" }], healthMeasurementEntries: [{ id: "health" }], plannedWorkouts: [plannedWorkout()], workoutDraft: activeWorkoutDraft(), workoutEntries: [{ id: "workout" }],
     medicationEntries: [{ id: "dose" }], protocols: [{ id: "protocol" }],
+    dailyActions: { schemaVersion: 1, actions: [dailyAction()] },
+    protocolOccurrences: { schemaVersion: 1, occurrences: [protocolOccurrence()] },
     trophyCaseEntries: [{ id: "trophy" }],
   }), photos: [encodedPhoto()] } });
-  expect(validateTraceBackup(valid).summary).toMatchObject({ memories: 1, photos: 1, nutritionEntries: 1, healthMeasurementEntries: 1, plannedWorkouts: 1, activeWorkoutDraft: true, workouts: 1, medicationEntries: 1, protocols: 1, trophyCaseEntries: 1 });
+  expect(validateTraceBackup(valid).summary).toMatchObject({ memories: 1, photos: 1, nutritionEntries: 1, healthMeasurementEntries: 1, plannedWorkouts: 1, activeWorkoutDraft: true, workouts: 1, medicationEntries: 1, protocols: 1, protocolOccurrences: 1, dailyActions: 1, trophyCaseEntries: 1 });
   expect(() => parseTraceBackupText("not json")).toThrow("not valid JSON");
   expect(() => validateTraceBackup({ ...valid, schemaVersion: 2 })).toThrow("newer");
   expect(() => validateTraceBackup({ ...valid, data: { ...valid.data, photos: [] } })).toThrow("missing referenced photo");
@@ -227,6 +268,8 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
     nutritionEntries: [{ id: "meal-1", sodium: 640 }], healthMeasurementEntries: [{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }], appSettings: { schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" } }, workoutEntries: [workoutWithDrops],
     medicationEntries: [{ id: "dose-1" }], medicationCompounds: [{ id: "compound-1" }],
     protocols: [{ id: "protocol-1" }], plannedWorkouts: [plannedWorkout()], workoutDraft: restoredDraft, trophyCaseEntries: [{ id: "trophy-1" }],
+    dailyActions: { schemaVersion: 1, actions: [dailyAction()] },
+    protocolOccurrences: { schemaVersion: 1, occurrences: [protocolOccurrence()] },
     savedExercises: [{ id: "exercise-1" }], userFoods: [{ id: "food-1" }],
     nutritionGoals: { calories: 2000, sodium: 2300 },
   });
@@ -237,7 +280,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   });
   const database = makePhotoDatabase([{ id: "old-photo", blob: new Blob(["old"]) }]);
   const summary = await restoreTraceBackup(value, { confirmed: true, storage, openDatabase: async () => database });
-  expect(summary).toMatchObject({ memories: 1, photos: 1, plannedWorkouts: 1, activeWorkoutDraft: true, workouts: 1 });
+  expect(summary).toMatchObject({ memories: 1, photos: 1, plannedWorkouts: 1, dailyActions: 1, protocolOccurrences: 1, activeWorkoutDraft: true, workouts: 1 });
   expect(JSON.parse(storage.value("memories"))[0]).toMatchObject({ id: "memory-1", date: "1999-06-12", images: ["photo-1"] });
   expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1", sodium: 640 }]);
   expect(JSON.parse(storage.value("nutritionGoals"))).toEqual({ calories: 2000, sodium: 2300 });
@@ -246,6 +289,8 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(JSON.parse(storage.value("workoutEntries"))).toEqual([workoutWithDrops]);
   expect(JSON.parse(storage.value("medicationEntries"))).toEqual([{ id: "dose-1" }]);
   expect(JSON.parse(storage.value("protocols"))).toEqual([{ id: "protocol-1" }]);
+  expect(JSON.parse(storage.value("dailyActions"))).toEqual({ schemaVersion: 1, actions: [dailyAction()] });
+  expect(JSON.parse(storage.value("protocolOccurrences"))).toEqual({ schemaVersion: 1, occurrences: [protocolOccurrence()] });
   expect(JSON.parse(storage.value("plannedWorkouts"))).toEqual([plannedWorkout()]);
   expect(JSON.parse(storage.value("workoutDraft"))).toEqual(restoredDraft);
   expect(JSON.parse(storage.value("trophyCaseEntries"))).toEqual([{ id: "trophy-1" }]);
@@ -289,6 +334,70 @@ test("accepts older backups without planned workouts and restores that domain em
     openDatabase: async () => makePhotoDatabase(),
   });
   expect(storage.value("plannedWorkouts")).toBeNull();
+});
+
+test("accepts older backups without daily actions and replaces current actions with an empty collection", async () => {
+  const structured = emptyStructured();
+  delete structured.dailyActions;
+  const value = backup({ data: { structured, photos: [] } });
+  const storage = makeStorage({
+    dailyActions: JSON.stringify({ schemaVersion: 1, actions: [dailyAction()] }),
+  });
+
+  expect(validateTraceBackup(value).summary.dailyActions).toBe(0);
+  await restoreTraceBackup(value, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(JSON.parse(storage.value("dailyActions"))).toEqual(emptyDailyActionCollection());
+});
+
+test("accepts older backups without protocol occurrence statuses and clears current statuses", async () => {
+  const structured = emptyStructured();
+  delete structured.protocolOccurrences;
+  const value = backup({ data: { structured, photos: [] } });
+  const storage = makeStorage({
+    protocolOccurrences: JSON.stringify({ schemaVersion: 1, occurrences: [protocolOccurrence()] }),
+  });
+
+  expect(validateTraceBackup(value).summary.protocolOccurrences).toBe(0);
+  await restoreTraceBackup(value, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(JSON.parse(storage.value("protocolOccurrences"))).toEqual(emptyProtocolOccurrenceCollection());
+});
+
+test("rejects malformed protocol occurrence statuses before restore mutates storage", async () => {
+  const current = JSON.stringify({ schemaVersion: 1, occurrences: [protocolOccurrence()] });
+  const malformed = { schemaVersion: 1, occurrences: [{ ...protocolOccurrence(), date: "2026-02-30" }] };
+  const value = backup({ data: { structured: emptyStructured({ protocolOccurrences: malformed }), photos: [] } });
+  const storage = makeStorage({ protocolOccurrences: current });
+
+  expect(() => validateTraceBackup(value)).toThrow("invalid protocol occurrence data");
+  await expect(restoreTraceBackup(value, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  })).rejects.toThrow("invalid protocol occurrence data");
+  expect(storage.value("protocolOccurrences")).toBe(current);
+});
+
+test("rejects malformed daily actions before restore mutates existing data", async () => {
+  const current = JSON.stringify({ schemaVersion: 1, actions: [dailyAction()] });
+  const malformed = { schemaVersion: 1, actions: [{ ...dailyAction(), date: "2026-02-30" }] };
+  const value = backup({ data: { structured: emptyStructured({ dailyActions: malformed }), photos: [] } });
+  const storage = makeStorage({ dailyActions: current });
+
+  expect(() => validateTraceBackup(value)).toThrow("invalid daily action data");
+  await expect(restoreTraceBackup(value, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  })).rejects.toThrow("invalid daily action data");
+  expect(storage.value("dailyActions")).toBe(current);
 });
 
 test("accepts older backups without an active workout draft and clears the current draft", async () => {
