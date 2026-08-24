@@ -2831,8 +2831,17 @@ code {
 
 /* Settings: conventional choices with unmistakable selected states. */
 .trace-feature-page--settings .life-current-theme-settings,
-.trace-settings-units {
+.trace-settings-units,
+.trace-settings-backup {
   max-width: 680px;
+  min-width: 0;
+  width: 100%;
+}
+
+.trace-settings-backup .trace-action {
+  max-width: 100%;
+  min-width: 0;
+  width: 100%;
 }
 
 .trace-feature-page--settings .life-current-theme-option,

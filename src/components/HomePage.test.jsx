@@ -13,7 +13,6 @@ const baseProps = {
   onOpenToday: jest.fn(),
   onOpenWorkouts: jest.fn(),
   onOpenTrophyCase: jest.fn(),
-  onOpenBackup: jest.fn(),
   onOpenJournal: jest.fn(),
   onOpenSettings: jest.fn(),
   deleteMemory: jest.fn(),
@@ -37,7 +36,6 @@ test("renders primary Timeline actions in the intended order", () => {
       "Medications & Supplements",
       "Protocols",
       "Open Trophy Case",
-      "Backup & Restore",
     ].includes(name));
   expect(names).toEqual([
     "Add Memory",
@@ -48,7 +46,6 @@ test("renders primary Timeline actions in the intended order", () => {
     "Medications & Supplements",
     "Protocols",
     "Open Trophy Case",
-    "Backup & Restore",
   ]);
   expect(screen.getByRole("button", { name: "Add Memory" })).toHaveClass("trace-feature-action--primary");
   expect(screen.getByRole("button", { name: "Today's Schedule" })).toHaveClass("trace-feature-action--core");
@@ -302,10 +299,10 @@ test("opens the dedicated Trophy Case from the Timeline", () => {
   expect(baseProps.onOpenTrophyCase).toHaveBeenCalledTimes(1);
 });
 
-test("opens Backup & Restore from the Timeline without changing existing action order", () => {
+test("keeps Save Backup and Backup & Restore actions off the Homepage", () => {
   render(<HomePage {...baseProps} memories={[]} trophyEntries={[]} />);
-  fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
-  expect(baseProps.onOpenBackup).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("button", { name: "Backup & Restore" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Save Backup/i })).not.toBeInTheDocument();
 });
 
 test("filters Timeline cards without recreating or expanding River scenery", () => {

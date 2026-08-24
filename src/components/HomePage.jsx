@@ -257,7 +257,6 @@ function HomePage({
   onOpenToday,
   onOpenWorkouts,
   onOpenTrophyCase,
-  onOpenBackup,
   onOpenJournal,
   deleteMemory,
   editMemory,
@@ -834,10 +833,6 @@ function HomePage({
 
           <button className="trace-feature-action trace-feature-action--brass" type="button" onClick={onOpenTrophyCase}>
             Open Trophy Case
-          </button>
-
-          <button className="trace-feature-action" type="button" onClick={onOpenBackup}>
-            Backup & Restore
           </button>
         </div>
       </nav>

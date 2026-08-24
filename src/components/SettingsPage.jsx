@@ -10,7 +10,7 @@ const OPTIONS = [
   { key: "circumference", label: "Body Measurements / Circumference", values: [["in", "Inches (in)"], ["cm", "Centimeters (cm)"]] },
 ];
 
-export default function SettingsPage({ settings, updateSettings, onBack, buttonStyle, containerStyle }) {
+export default function SettingsPage({ settings, updateSettings, onBack, onOpenBackup, buttonStyle, containerStyle }) {
   const [status, setStatus] = useState("");
   const statusTimerRef = useRef(null);
   useEffect(() => () => clearTimeout(statusTimerRef.current), []);
@@ -41,6 +41,11 @@ export default function SettingsPage({ settings, updateSettings, onBack, buttonS
     </header>
     <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...buttonStyle, backgroundColor: "#4b5563", fontSize: "16px", minHeight: "44px", padding: "10px 14px" }}>Back to Timeline</button>
     {status && <p className="trace-status trace-status--success" role="status" style={{ background: "#14532d", borderRadius: "10px", color: "white", maxWidth: "620px", padding: "10px 12px", width: "100%" }}>{status}</p>}
+    <section className="trace-feature-section trace-settings-backup" aria-labelledby="backup-settings-heading">
+      <h2 id="backup-settings-heading">Backup &amp; Restore</h2>
+      <p>Save a private copy of your Trace data or restore a previously created backup.</p>
+      <button className="trace-action trace-action--primary" type="button" onClick={onOpenBackup} style={buttonStyle}>Backup &amp; Restore</button>
+    </section>
     <section aria-labelledby="life-current-theme-heading" className="life-current-theme-settings">
       <h2 id="life-current-theme-heading">Life Current Theme</h2>
       <p className="life-current-theme-settings__intro">Choose how your timeline journey is presented.</p>

@@ -94,6 +94,14 @@ function openWorkouts() {
   fireEvent.click(screen.getByRole("button", { name: "Workouts" }));
 }
 
+function openBackupFromSettings() {
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByRole("heading", { name: "Settings" })).toBeInTheDocument();
+  const actions = screen.getAllByRole("button", { name: "Backup & Restore" });
+  expect(actions).toHaveLength(1);
+  fireEvent.click(actions[0]);
+}
+
 function expandCompletedWorkout(title) {
   fireEvent.click(
     screen.getByRole("button", { name: `Expand workout: ${title}` })
@@ -242,7 +250,7 @@ test("successful same-tab restore immediately refreshes planned-workout App stat
   render(<App />);
   await waitFor(() => expect(screen.getByTestId("trace-app-shell"))
     .toHaveAttribute("data-planned-workout-count", "1"));
-  fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
+  openBackupFromSettings();
   fireEvent.change(document.querySelector('input[type="file"]'), {
     target: { files: [new File(["backup"], "trace-backup.json", { type: "application/json" })] },
   });
@@ -288,7 +296,7 @@ test("same-tab restore leaves navigation unchanged and resumes an orphaned activ
   window.confirm = jest.fn(() => true);
 
   renderAppAtTimeline();
-  fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
+  openBackupFromSettings();
   fireEvent.change(document.querySelector('input[type="file"]'), {
     target: { files: [new File(["backup"], "trace-backup.json", { type: "application/json" })] },
   });
@@ -803,11 +811,13 @@ test("prevents a second completed entry for the same planned workout", async () 
   expect(screen.getByText(/already linked to a completed workout/)).toBeInTheDocument();
 });
 
-test("Timeline opens Backup & Restore and returns without changing data", () => {
+test("Settings opens Backup & Restore and returns to Timeline without changing data", () => {
   localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 2100 }));
   renderAppAtTimeline();
-  fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
+  expect(screen.queryByRole("button", { name: "Backup & Restore" })).not.toBeInTheDocument();
+  openBackupFromSettings();
   expect(screen.getByRole("heading", { name: "Backup & Restore" })).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Download Trace Backup" })).toHaveLength(1);
   expectDestinationScrolledToTop();
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
@@ -950,7 +960,7 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
   expect(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' })).toBeChecked();
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
 
-  fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
+  openBackupFromSettings();
   fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
   expect(await screen.findByText("Trace backup downloaded. Your current data was not changed.")).toBeInTheDocument();
   expect(exportedBackup.data.structured.appSettings).toEqual(backedUpSettings);
@@ -978,7 +988,7 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
     return { memories: 0, photos: 0 };
   });
   window.confirm = jest.fn(() => true);
-  fireEvent.click(screen.getByRole("button", { name: "Backup & Restore" }));
+  openBackupFromSettings();
   fireEvent.change(document.querySelector('input[type="file"]'), {
     target: { files: [new File([JSON.stringify(exportedBackup)], "trace-backup-settings.json", { type: "application/json" })] },
   });

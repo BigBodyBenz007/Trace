@@ -1704,7 +1704,6 @@ function App() {
             setPage("workouts");
           }}
           onOpenTrophyCase={() => setPage("trophy-case")}
-          onOpenBackup={() => setPage("backup")}
           onOpenJournal={() => setPage("journal")}
           deleteMemory={deleteMemory}
           editMemory={editMemory}
@@ -1776,6 +1775,7 @@ function App() {
           settings={appSettings}
           updateSettings={updateAppSettings}
           onBack={() => setPage("home")}
+          onOpenBackup={() => setPage("backup")}
           buttonStyle={buttonStyle}
           containerStyle={containerStyle}
         />

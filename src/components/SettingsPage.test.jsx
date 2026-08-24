@@ -68,3 +68,31 @@ test("shows transient confirmation only after Settings save succeeds", () => {
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
   jest.useRealTimers();
 });
+
+test("offers one responsive Backup & Restore entry and opens it from Settings", () => {
+  const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+  const onOpenBackup = jest.fn();
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+  try {
+    render(
+      <SettingsPage
+        settings={DEFAULT_APP_SETTINGS}
+        updateSettings={jest.fn()}
+        onBack={jest.fn()}
+        onOpenBackup={onOpenBackup}
+        buttonStyle={{}}
+        containerStyle={{}}
+      />
+    );
+    const actions = screen.getAllByRole("button", { name: "Backup & Restore" });
+    const section = screen.getByRole("heading", { name: "Backup & Restore" }).closest("section");
+    expect(actions).toHaveLength(1);
+    expect(section).toHaveClass("trace-settings-backup");
+    expect(actions[0]).toHaveClass("trace-action--primary");
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth);
+    fireEvent.click(actions[0]);
+    expect(onOpenBackup).toHaveBeenCalledTimes(1);
+  } finally {
+    if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
+  }
+});

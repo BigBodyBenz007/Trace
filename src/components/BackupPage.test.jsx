@@ -147,7 +147,9 @@ test("iPhone export opens the native file share sheet with the complete JSON fil
   expect(screen.queryByText("Trace backup downloaded. Your current data was not changed.")).not.toBeInTheDocument();
   expect(URL.createObjectURL).not.toHaveBeenCalled();
   expect(share).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: "Save Backup to Files" }));
+  const saveActions = screen.getAllByRole("button", { name: "Save Backup to Files" });
+  expect(saveActions).toHaveLength(1);
+  fireEvent.click(saveActions[0]);
   expect(await screen.findByText(/Choose Save to Files/)).toBeInTheDocument();
 
   const [{ files }] = share.mock.calls[0];
