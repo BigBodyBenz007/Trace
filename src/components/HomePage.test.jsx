@@ -644,7 +644,11 @@ test.each([
   expect(getLifeCurrentRenderer(renderer)).toBe(themedRenderer);
   if (themeId === "river") {
     expect(themedRenderer).toHaveAttribute("data-current-river-section", currentSection);
-    expect(themedRenderer).toHaveAttribute("data-loaded-river-sections", loadedSections);
+    expect(loadedSections).toBe("mountain-headwaters narrow-calm narrow-rocky-whitewater");
+    expect(themedRenderer).toHaveAttribute(
+      "data-loaded-river-sections",
+      "mountain-headwaters narrow-calm"
+    );
   } else {
     expect(themedRenderer).toHaveAttribute("data-life-current-renderer", renderer);
   }

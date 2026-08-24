@@ -131,7 +131,8 @@ export const RIVER_FALLBACK_SECTIONS = Object.freeze([
 
 export function resolveRiverSections(candidate = RIVER_CATALOG_SECTIONS) {
   const validCatalog = Array.isArray(candidate)
-    && candidate.length === 10
+    && candidate.length === 11
+    && candidate[0]?.id === "mountain-headwaters"
     && candidate.every((section) => section?.id && section?.sources);
   return validCatalog ? candidate : RIVER_FALLBACK_SECTIONS;
 }
@@ -174,18 +175,19 @@ export function locateRiverSection(progress, riverSections = RIVER_SECTIONS) {
   }
 
   const totalSectionWeight = riverSections.reduce(
-    (total, section) => total + section.weight,
+    (total, section) => total + (section.progressWeight ?? section.weight),
     0
   );
   const position = normalizedProgress * totalSectionWeight;
   let sectionStart = 0;
   for (let index = 0; index < riverSections.length; index += 1) {
     const section = riverSections[index];
-    const sectionEnd = sectionStart + section.weight;
+    const sectionWeight = section.progressWeight ?? section.weight;
+    const sectionEnd = sectionStart + sectionWeight;
     if (position < sectionEnd) {
       return {
         index,
-        localProgress: (position - sectionStart) / section.weight,
+        localProgress: (position - sectionStart) / sectionWeight,
       };
     }
     sectionStart = sectionEnd;

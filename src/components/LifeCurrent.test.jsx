@@ -72,14 +72,14 @@ test("renders the approved raster River from the sticky scenery slot", () => {
   expect(current).toHaveAttribute("data-theme-id", "river");
   expect(current).toHaveAttribute("data-life-current-renderer", "river-current");
   expect(current).toHaveAttribute("data-river-catalog", "ten-section");
-  expect(current).toHaveAttribute("data-current-river-section", "narrow-calm");
+  expect(current).toHaveAttribute("data-current-river-section", "mountain-headwaters");
   expect(current).toHaveAttribute(
     "data-loaded-river-sections",
-    "narrow-calm narrow-rocky-whitewater"
+    "mountain-headwaters narrow-calm narrow-rocky-whitewater"
   );
   expect(screen.getByTestId("life-current-river-scenery")).toBeInTheDocument();
-  expect(current.querySelectorAll("picture")).toHaveLength(2);
-  expect(current.querySelectorAll("img")).toHaveLength(2);
+  expect(current.querySelectorAll("picture")).toHaveLength(3);
+  expect(current.querySelectorAll("img")).toHaveLength(3);
   expect(current.querySelectorAll("source")).toHaveLength(0);
   current.querySelectorAll("img").forEach((image) => {
     expect(image).toHaveAttribute("alt", "");
@@ -88,6 +88,7 @@ test("renders the approved raster River from the sticky scenery slot", () => {
   });
   expect([...current.querySelectorAll("img")].map((image) => image.getAttribute("src")))
     .toEqual(expect.arrayContaining([
+      expect.stringContaining("00-mountain-headwaters.png"),
       expect.stringContaining("01-narrow-calm.png"),
       expect.stringContaining("02-narrow-rocky-whitewater.png"),
     ]));
@@ -275,24 +276,25 @@ test("consolidates same-day memories while preserving their combined intensity",
 });
 
 test("keeps bank-preserving desktop and mobile framing on catalog rasters", () => {
-  const { rerender } = render(<RiverHarness
+  const { unmount } = render(<RiverHarness
     points={[point("2000-01-01", 0), point("2026-01-01", 1)]}
     viewportWidth={1440}
   />);
   let firstSection = screen.getByTestId("life-current")
-    .querySelector('[data-river-section="narrow-calm"]');
+    .querySelector('[data-river-section="mountain-headwaters"]');
   expect(firstSection.style.getPropertyValue("--river-image-height")).toBe("100%");
   expect(firstSection.style.getPropertyValue("--river-image-top")).toBe("0%");
-  expect(firstSection.style.getPropertyValue("--river-section-width")).toBe("520px");
+  expect(firstSection.style.getPropertyValue("--river-section-width")).toBe("390px");
 
-  rerender(<RiverHarness
+  unmount();
+  render(<RiverHarness
     points={[point("2000-01-01", 0), point("2026-01-01", 1)]}
     viewportWidth={390}
   />);
   firstSection = screen.getByTestId("life-current")
-    .querySelector('[data-river-section="narrow-calm"]');
-  expect(firstSection.style.getPropertyValue("--river-section-width-mobile")).toBe("520px");
-  expect(screen.getByTestId("life-current").querySelectorAll("img")).toHaveLength(2);
+    .querySelector('[data-river-section="mountain-headwaters"]');
+  expect(firstSection.style.getPropertyValue("--river-section-width-mobile")).toBe("390px");
+  expect(screen.getByTestId("life-current").querySelectorAll("img")).toHaveLength(3);
 });
 
 test("reveals catalog scenery only after the mounted image has decoded", async () => {
@@ -301,7 +303,7 @@ test("reveals catalog scenery only after the mounted image has decoded", async (
     point("2026-01-01", 1),
   ]} />);
   const firstSection = screen.getByTestId("life-current")
-    .querySelector('[data-river-section="narrow-calm"]');
+    .querySelector('[data-river-section="mountain-headwaters"]');
   expect(firstSection).toHaveAttribute("data-image-ready", "false");
 
   await act(async () => {

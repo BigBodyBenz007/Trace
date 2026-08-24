@@ -10,6 +10,7 @@ import { buildRiverSequence, selectRiverSection } from "./riverCatalog";
 
 test("keeps the approved River landscape sequence fixed and independent of Memories", () => {
   expect(RIVER_SECTIONS.map(({ id }) => id)).toEqual([
+    "mountain-headwaters",
     "narrow-calm",
     "narrow-rocky-whitewater",
     "rising-narrow-to-broad",
@@ -37,8 +38,8 @@ test("keeps both banks in frame without oversized or vertically shifted images",
 test("maps scroll progress through variable-width sections without gaps", () => {
   expect(locateRiverSection(-1)).toEqual({ index: 0, localProgress: 0 });
   expect(locateRiverSection(0)).toEqual({ index: 0, localProgress: 0 });
-  expect(locateRiverSection(0.5).index).toBe(5);
-  expect(locateRiverSection(1)).toEqual({ index: 9, localProgress: 1 });
+  expect(locateRiverSection(0.5).index).toBe(6);
+  expect(locateRiverSection(1)).toEqual({ index: 10, localProgress: 1 });
   [0, 0.1, 0.25, 0.5, 0.75, 0.999, 1].forEach((progress) => {
     const located = locateRiverSection(progress);
     expect(located.index).toBeGreaterThanOrEqual(0);
@@ -48,17 +49,30 @@ test("maps scroll progress through variable-width sections without gaps", () => 
   });
 });
 
+test("progresses from the mountain opener into the original first River section", () => {
+  const totalProgressWeight = RIVER_SECTIONS.reduce(
+    (total, section) => total + (section.progressWeight ?? section.weight),
+    0
+  );
+  const openerEnd = RIVER_SECTIONS[0].progressWeight / totalProgressWeight;
+
+  expect(locateRiverSection(openerEnd / 2).index).toBe(0);
+  expect(locateRiverSection(openerEnd)).toEqual({ index: 1, localProgress: 0 });
+  expect(RIVER_SECTIONS[1].id).toBe("narrow-calm");
+  expect(RIVER_SECTIONS[1].join).toEqual({ desktop: 220, mobile: 160 });
+});
+
 test("returns only the current and adjacent section indexes", () => {
   expect(neighboringRiverSectionIndexes(0)).toEqual([0, 1]);
   expect(neighboringRiverSectionIndexes(3)).toEqual([2, 3, 4]);
-  expect(neighboringRiverSectionIndexes(9)).toEqual([8, 9]);
+  expect(neighboringRiverSectionIndexes(10)).toEqual([9, 10]);
 });
 
 test("adds only the next-nearest section needed to cover a wide viewport", () => {
   expect(nearbyRiverSectionIndexes(0, 390)).toEqual([0, 1]);
   expect(nearbyRiverSectionIndexes(0, 1160)).toEqual([0, 1, 2]);
   expect(nearbyRiverSectionIndexes(5, 1160)).toEqual([4, 5, 6]);
-  expect(nearbyRiverSectionIndexes(9, 1160)).toEqual([8, 9]);
+  expect(nearbyRiverSectionIndexes(10, 1160)).toEqual([9, 10]);
 });
 
 test("keeps the original six-section River as the invalid-catalog fallback", () => {

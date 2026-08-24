@@ -1388,10 +1388,29 @@ code {
 
 .river-current-section:is(
   [data-river-section="quiet-narrow"],
-  [data-river-section="narrow-calm"]
+  [data-river-section="mountain-headwaters"]
 ) {
   -webkit-mask-image: none;
   mask-image: none;
+}
+
+.river-current-section[data-river-section="narrow-calm"] {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    rgba(0, 0, 0, 0.12) calc(var(--river-section-join) * 0.18),
+    rgba(0, 0, 0, 0.62) calc(var(--river-section-join) * 0.55),
+    #000 calc(var(--river-section-join) * 0.78),
+    #000 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    rgba(0, 0, 0, 0.12) calc(var(--river-section-join) * 0.18),
+    rgba(0, 0, 0, 0.62) calc(var(--river-section-join) * 0.55),
+    #000 calc(var(--river-section-join) * 0.78),
+    #000 100%
+  );
 }
 
 .river-current-section::before {
@@ -1410,8 +1429,12 @@ code {
 
 .river-current-section:is(
   [data-river-section="quiet-narrow"],
-  [data-river-section="narrow-calm"]
+  [data-river-section="mountain-headwaters"]
 )::before {
+  content: none;
+}
+
+.river-current-section[data-river-section="narrow-calm"]::before {
   content: none;
 }
 
@@ -1482,6 +1505,25 @@ code {
       transparent var(--river-section-join-mobile)
     );
     width: var(--river-section-join-mobile);
+  }
+
+  .river-current-section[data-river-section="narrow-calm"] {
+    -webkit-mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      rgba(0, 0, 0, 0.12) calc(var(--river-section-join-mobile) * 0.18),
+      rgba(0, 0, 0, 0.62) calc(var(--river-section-join-mobile) * 0.55),
+      #000 calc(var(--river-section-join-mobile) * 0.78),
+      #000 100%
+    );
+    mask-image: linear-gradient(
+      to right,
+      transparent 0,
+      rgba(0, 0, 0, 0.12) calc(var(--river-section-join-mobile) * 0.18),
+      rgba(0, 0, 0, 0.62) calc(var(--river-section-join-mobile) * 0.55),
+      #000 calc(var(--river-section-join-mobile) * 0.78),
+      #000 100%
+    );
   }
 }
 

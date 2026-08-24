@@ -4,6 +4,7 @@ import descendingBroadToRapids from "../assets/life-current/river/catalog/09-des
 import mediumActiveSBend from "../assets/life-current/river/catalog/04-medium-active-s-bend.png";
 import mediumCalmBend from "../assets/life-current/river/catalog/03-medium-calm-bend.png";
 import mediumWhitewaterDescent from "../assets/life-current/river/catalog/05-medium-whitewater-descent.png";
+import mountainHeadwaters from "../assets/life-current/river/catalog/00-mountain-headwaters.png";
 import narrowCalm from "../assets/life-current/river/catalog/01-narrow-calm.png";
 import narrowRockyWhitewater from "../assets/life-current/river/catalog/02-narrow-rocky-whitewater.png";
 import recoveryPool from "../assets/life-current/river/catalog/10-recovery-pool.png";
@@ -28,7 +29,9 @@ function section({
   mobileJoin,
   mobileWeight,
   order,
+  progressWeight,
   roles,
+  selectable = true,
   weight,
   width,
   widthPixels,
@@ -45,7 +48,9 @@ function section({
     label,
     mobileWeight,
     order,
+    progressWeight,
     roles: Object.freeze(roles),
+    selectable,
     sources: pngSource(image, widthPixels, height),
     weight,
     width,
@@ -55,6 +60,26 @@ function section({
 // The order is the approved transition-aware rehearsal sequence. Metadata stays
 // attached to each scene so a caller can use the same catalog contextually.
 export const RIVER_CATALOG_SECTIONS = Object.freeze([
+  section({
+    id: "mountain-headwaters",
+    label: "Mountain headwaters",
+    image: mountainHeadwaters,
+    widthPixels: 1536,
+    height: 1024,
+    width: "narrow",
+    energy: "calm",
+    direction: "descending",
+    roles: ["headwater"],
+    entryWidth: "narrow",
+    exitWidth: "narrow",
+    order: 0,
+    weight: 390,
+    mobileWeight: 390,
+    progressWeight: 260,
+    join: 0,
+    mobileJoin: 0,
+    selectable: false,
+  }),
   section({
     id: "narrow-calm",
     label: "Narrow calm",
@@ -70,8 +95,9 @@ export const RIVER_CATALOG_SECTIONS = Object.freeze([
     order: 1,
     weight: 520,
     mobileWeight: 520,
-    join: 0,
-    mobileJoin: 0,
+    progressWeight: 260,
+    join: 220,
+    mobileJoin: 160,
   }),
   section({
     id: "narrow-rocky-whitewater",
@@ -253,6 +279,7 @@ export function selectRiverSection(state = {}, previousSection = null) {
       : null;
 
   return RIVER_CATALOG_SECTIONS
+    .filter((candidate) => candidate.selectable)
     .map((candidate) => {
       let score = 0;
       if (candidate.width === targetWidth) score += 4;
