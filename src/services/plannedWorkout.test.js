@@ -3,12 +3,14 @@ import {
   createPlannedWorkout,
   getPlannedWorkoutError,
   getPlannedWorkoutRecordError,
+  isPlannedWorkoutSkippedOnDate,
   normalizePlannedWorkout,
   normalizePlannedWorkouts,
   PLANNED_WORKOUT_SCHEMA_VERSION,
   readPlannedWorkouts,
   removePlannedWorkoutExercise,
   restorePlannedWorkoutAtIndex,
+  skipPlannedWorkoutForDate,
   updatePlannedWorkout,
   writePlannedWorkouts,
 } from "./plannedWorkout";
@@ -323,6 +325,49 @@ test("updates a plan immutably while preserving its stable record identity", () 
     "planned-exercise:curl",
   ]);
   expect(plan).toEqual(before);
+});
+
+test("marks only the scheduled date skipped while preserving the planned workout", () => {
+  const plan = created();
+  const before = JSON.parse(JSON.stringify(plan));
+  const skipped = skipPlannedWorkoutForDate(
+    plan,
+    "2026-08-22",
+    new Date("2026-08-22T18:00:00.000Z"),
+    "  Schedule conflict  "
+  );
+
+  expect(skipped).toMatchObject({
+    id: plan.id,
+    title: plan.title,
+    scheduledDate: plan.scheduledDate,
+    skippedDates: ["2026-08-22"],
+    skipReasons: { "2026-08-22": "Schedule conflict" },
+    updatedAt: "2026-08-22T18:00:00.000Z",
+  });
+  expect(skipped.exercises).toEqual(plan.exercises);
+  expect(isPlannedWorkoutSkippedOnDate(skipped, "2026-08-22")).toBe(true);
+  expect(isPlannedWorkoutSkippedOnDate(skipped, "2026-08-23")).toBe(false);
+  expect(plan).toEqual(before);
+});
+
+test("rejects a skip outside the plan date and malformed persisted skip dates", () => {
+  const plan = created();
+  expect(skipPlannedWorkoutForDate(plan, "2026-08-23")).toBeNull();
+  expect(skipPlannedWorkoutForDate(plan, "2026-02-30")).toBeNull();
+  expect(normalizePlannedWorkout({
+    ...plan,
+    skippedDates: ["not-a-date"],
+  })).toBeNull();
+  expect(normalizePlannedWorkout({
+    ...plan,
+    skipReasons: { "2026-08-22": "Schedule conflict" },
+  })).toBeNull();
+  expect(normalizePlannedWorkout({
+    ...plan,
+    skippedDates: ["2026-08-22"],
+    skipReasons: { "not-a-date": "Schedule conflict" },
+  })).toBeNull();
 });
 
 test("rejects invalid plan updates through the existing validation path", () => {

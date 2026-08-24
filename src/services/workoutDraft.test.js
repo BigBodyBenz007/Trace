@@ -83,6 +83,8 @@ test("creates a fresh actual workout draft from planned intentions", () => {
   expect(draft.form.exercises[0]).toMatchObject({
     exerciseId: "trace:chest-db-bench-002",
     notes: "Exercise notes",
+    roadmapStatus: "pending",
+    roadmapSkipReason: "",
     sets: [expect.objectContaining({
       reps: "8",
       setType: "warm-up",
@@ -101,6 +103,112 @@ test("creates a fresh actual workout draft from planned intentions", () => {
     })],
   });
   expect(plan).toEqual(before);
+  expect(draft.context).toEqual({
+    activeSearchExerciseId: null,
+    roadmapEditingExerciseId: null,
+  });
+});
+
+test("normalizes planned Roadmap status, reason, and single-exercise editing context", () => {
+  const draft = createWorkoutDraftFromPlannedWorkout(
+    plannedWorkout(),
+    new Date(2026, 7, 22, 9, 5)
+  );
+  draft.form.exercises[0].roadmapStatus = "skipped";
+  draft.form.exercises[0].roadmapSkipReason = "Equipment unavailable";
+  draft.context.roadmapEditingExerciseId = draft.form.exercises[0].id;
+
+  const normalized = normalizeWorkoutDraft(draft);
+  expect(normalized.form.exercises[0]).toMatchObject({
+    roadmapStatus: "skipped",
+    roadmapSkipReason: "Equipment unavailable",
+  });
+  expect(normalized.context).toMatchObject({
+    roadmapEditingExerciseId: draft.form.exercises[0].id,
+  });
+});
+
+test("preserves an optional Today origin without adding it to legacy drafts", () => {
+  const todayDraft = createWorkoutDraftFromPlannedWorkout(
+    plannedWorkout(),
+    new Date(2026, 7, 22, 9, 5),
+    { originPage: "today" }
+  );
+  expect(normalizeWorkoutDraft(todayDraft).context).toHaveProperty(
+    "originPage",
+    "today"
+  );
+
+  delete todayDraft.context.originPage;
+  expect(normalizeWorkoutDraft(todayDraft).context).not.toHaveProperty("originPage");
+  expect(normalizeWorkoutDraft({
+    ...todayDraft,
+    context: { ...todayDraft.context, originPage: "calendar" },
+  })).toBeNull();
+});
+
+test("keeps legacy generic drafts free of Roadmap-only fields", () => {
+  const draft = createWorkoutDraftFromPlannedWorkout(
+    plannedWorkout(),
+    new Date(2026, 7, 22, 9, 5)
+  );
+  delete draft.plannedWorkoutId;
+  delete draft.form.exercises[0].roadmapStatus;
+  delete draft.form.exercises[0].roadmapSkipReason;
+  delete draft.context.roadmapEditingExerciseId;
+
+  const normalized = normalizeWorkoutDraft(draft);
+  expect(normalized.form.exercises[0]).not.toHaveProperty("roadmapStatus");
+  expect(normalized.form.exercises[0]).not.toHaveProperty("roadmapSkipReason");
+  expect(normalized.context).not.toHaveProperty("roadmapEditingExerciseId");
+});
+
+test("populates every planned set with its intended reps and weight", () => {
+  const plan = plannedWorkout({
+    exercises: [{
+      id: "planned-exercise:multi-set",
+      name: "Barbell Bench Press",
+      notes: "",
+      targetSets: [
+        {
+          id: "planned-set:first",
+          setType: "warm-up",
+          reps: 10,
+          load: { mode: "external", amount: 95, unit: "lb" },
+          notes: "Easy",
+        },
+        {
+          id: "planned-set:second",
+          setType: "working",
+          reps: 6,
+          load: { mode: "external", amount: 155, unit: "lb" },
+          notes: "Working set",
+        },
+      ],
+    }],
+  });
+
+  const draft = createWorkoutDraftFromPlannedWorkout(
+    plan,
+    new Date(2026, 7, 22, 14, 37)
+  );
+
+  expect(draft.form.exercises[0].sets).toEqual([
+    expect.objectContaining({
+      setType: "warm-up",
+      reps: "10",
+      weightAmount: "95",
+      weightUnit: "lb",
+      notes: "Easy",
+    }),
+    expect.objectContaining({
+      setType: "working",
+      reps: "6",
+      weightAmount: "155",
+      weightUnit: "lb",
+      notes: "Working set",
+    }),
+  ]);
 });
 
 test("generates fresh actual IDs and gives an untargeted exercise one editable empty set", () => {

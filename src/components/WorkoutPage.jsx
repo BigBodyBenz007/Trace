@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import ExerciseSearch from "./ExerciseSearch";
-import ConfirmationMessage from "./ConfirmationMessage";
 import SavedExerciseEditor from "./SavedExerciseEditor";
 import ExerciseHistory from "./ExerciseHistory";
 import TrophyCase from "./TrophyCase";
@@ -91,6 +90,36 @@ function moveItem(items, index, direction) {
   return moved;
 }
 
+const EXERCISE_SKIP_REASONS = [
+  "Pain or discomfort",
+  "Equipment unavailable",
+  "Not enough time",
+  "Low energy",
+  "Schedule conflict",
+];
+
+function roadmapSetSummary(set) {
+  const setType = set.setType === "warm-up" ? "Warm-up" : "Working";
+  const load = set.loadMode === "bodyweight"
+    ? "Bodyweight"
+    : set.weightAmount
+      ? `${set.weightAmount} ${set.weightUnit}`
+      : "Weight open";
+  return `${setType} · ${load} × ${set.reps || "reps open"}`;
+}
+
+function roadmapVolume(exercises) {
+  const sets = exercises.flatMap((exercise) =>
+    exercise.sets.filter((set) => !set.isUntouched)
+  );
+  const warmUp = sets.filter(({ setType }) => setType === "warm-up").length;
+  return {
+    total: sets.length,
+    warmUp,
+    working: sets.length - warmUp,
+  };
+}
+
 function WorkoutTiming({ entry }) {
   if (!entry.startedAt || !entry.finishedAt) return null;
   const start = new Date(entry.startedAt);
@@ -125,7 +154,7 @@ function completedSetDescription(set) {
       ? `${load} × ${set.reps} goal → to failure`
       : `${load} × ${set.reps} goal → failure at ${set.actualRepsAtFailure}`)
     : `${load} × ${set.reps} reps`;
-  return set.setType === "warm-up" ? `Warm-up · ${description}` : description;
+  return `${set.setType === "warm-up" ? "Warm-up" : "Working"} · ${description}`;
 }
 
 function CompletedDropSegments({ drops }) {
@@ -144,10 +173,14 @@ function CompletedDropSegments({ drops }) {
 
 function WorkoutPage({
   onBack,
+  navigationOriginPage = null,
+  onReturnToToday = onBack,
   workoutEntries,
+  onWorkoutDraftChange = () => {},
   trophyEntries = [],
   savedExercises = [],
   saveWorkoutEntry,
+  showToast = () => {},
   saveExerciseDefinitions = () => [],
   updateSavedExercise = () => ({
     status: "error",
@@ -176,9 +209,6 @@ function WorkoutPage({
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [isDirty, setIsDirty] = useState(Boolean(restoredForm));
   const [formError, setFormError] = useState("");
-  const [statusMessage, setStatusMessage] = useState("");
-  const [confirmationMessage, setConfirmationMessage] = useState("");
-  const confirmationTimerRef = useRef(null);
   const [photos, setPhotos] = useState([]);
   const [activeSearchExerciseId, setActiveSearchExerciseId] = useState(
     restoredDraftRef.current?.context?.activeSearchExerciseId || null
@@ -188,6 +218,12 @@ function WorkoutPage({
   const [expandedWorkoutEntryIds, setExpandedWorkoutEntryIds] = useState(
     () => new Set()
   );
+  const [roadmapEditingExerciseId, setRoadmapEditingExerciseId] = useState(
+    restoredDraftRef.current?.context?.roadmapEditingExerciseId || null
+  );
+  const [roadmapSkipExerciseId, setRoadmapSkipExerciseId] = useState(null);
+  const [roadmapSkipReason, setRoadmapSkipReason] = useState("");
+  const [roadmapCustomReason, setRoadmapCustomReason] = useState("");
   const [focusDropId, setFocusDropId] = useState(null);
   const [pendingDropRemovals, setPendingDropRemovals] = useState({});
   const [searchResetKey, setSearchResetKey] = useState(0);
@@ -208,6 +244,9 @@ function WorkoutPage({
   const plannedWorkoutIdRef = useRef(
     restoredDraftRef.current?.plannedWorkoutId || null
   );
+  const workoutOriginPageRef = useRef(
+    restoredDraftRef.current?.context?.originPage || navigationOriginPage
+  );
   const draftPersistenceEnabledRef = useRef(Boolean(restoredForm));
 
   useEffect(() => {
@@ -220,12 +259,19 @@ function WorkoutPage({
       startedAt: startedAtRef.current,
       updatedAt: new Date().toISOString(),
       form: { title, date, time, notes, exercises },
-      context: { activeSearchExerciseId },
+      context: {
+        activeSearchExerciseId,
+        roadmapEditingExerciseId,
+        ...(workoutOriginPageRef.current === "today"
+          ? { originPage: "today" }
+          : {}),
+      },
     };
     const persist = () => {
       if (!draftPersistenceEnabledRef.current) return;
       try {
         writeWorkoutDraft(localStorage, persistedDraft);
+        onWorkoutDraftChange(persistedDraft);
       } catch (error) {
         // Completed workout persistence reports storage failures globally. A
         // draft failure must not interrupt or discard the in-memory workout.
@@ -239,7 +285,7 @@ function WorkoutPage({
       window.removeEventListener("pagehide", flush);
       persist();
     };
-  }, [title, date, time, notes, exercises, activeSearchExerciseId, editingEntryId, isDirty]);
+  }, [title, date, time, notes, exercises, activeSearchExerciseId, roadmapEditingExerciseId, editingEntryId, isDirty, onWorkoutDraftChange]);
 
   useLayoutEffect(() => {
     if (!focusDropId) return;
@@ -273,14 +319,6 @@ function WorkoutPage({
     dropRemovalTimersRef.current.forEach((timer) => window.clearTimeout(timer));
     dropRemovalTimersRef.current.clear();
   }, []);
-  useEffect(() => () => clearTimeout(confirmationTimerRef.current), []);
-
-  function showConfirmation(message) {
-    setConfirmationMessage(message);
-    clearTimeout(confirmationTimerRef.current);
-    confirmationTimerRef.current = setTimeout(() => setConfirmationMessage(""), 3200);
-  }
-
   const sortedEntries = [...workoutEntries].sort(
     (first, second) => new Date(second.occurredAt) - new Date(first.occurredAt)
   );
@@ -560,15 +598,21 @@ function WorkoutPage({
     setEditingEntryId(null);
     setIsDirty(false);
     setFormError("");
-    setStatusMessage("");
     setActiveSearchExerciseId(null);
+    setRoadmapEditingExerciseId(null);
+    setRoadmapSkipExerciseId(null);
+    setRoadmapSkipReason("");
+    setRoadmapCustomReason("");
     setEditingSavedExercise(null);
     photos.filter(({ isDraft }) => isDraft).forEach(({ url }) => url && URL.revokeObjectURL(url));
     setPhotos([]);
     setSearchResetKey((current) => current + 1);
     startedAtRef.current = new Date(`${current.date}T${current.time}`).toISOString();
     plannedWorkoutIdRef.current = null;
-    if (clearDraft) clearWorkoutDraft();
+    if (clearDraft) {
+      clearWorkoutDraft();
+      onWorkoutDraftChange(null);
+    }
   }
 
   function draft() {
@@ -646,6 +690,41 @@ function WorkoutPage({
   function saveWorkout(event) {
     event.preventDefault();
     const workoutDraft = draft();
+    const isActivePlannedRoadmap = editingEntryId === null
+      && Boolean(plannedWorkoutIdRef.current);
+    const plannedRoadmapIsComplete = isActivePlannedRoadmap
+      && exercises.every(({ roadmapStatus }) =>
+        roadmapStatus === "completed" || roadmapStatus === "skipped"
+      );
+    if (isActivePlannedRoadmap && !plannedRoadmapIsComplete) {
+      const persistedDraft = {
+        schemaVersion: WORKOUT_DRAFT_SCHEMA_VERSION,
+        plannedWorkoutId: plannedWorkoutIdRef.current,
+        startedAt: startedAtRef.current,
+        updatedAt: new Date().toISOString(),
+        form: { title, date, time, notes, exercises },
+        context: {
+          activeSearchExerciseId,
+          roadmapEditingExerciseId,
+          ...(workoutOriginPageRef.current === "today"
+            ? { originPage: "today" }
+            : {}),
+        },
+      };
+      try {
+        writeWorkoutDraft(localStorage, persistedDraft);
+        onWorkoutDraftChange(persistedDraft);
+        setFormError("");
+        showToast(
+          "Workout progress saved.",
+          workoutOriginPageRef.current === "today" ? "today" : undefined
+        );
+        if (workoutOriginPageRef.current === "today") onReturnToToday();
+      } catch (error) {
+        setFormError("The workout progress could not be saved.");
+      }
+      return;
+    }
     const error = getWorkoutEntryError(workoutDraft);
     if (error) {
       setFormError(error);
@@ -719,6 +798,10 @@ function WorkoutPage({
     function finishSave(saved) {
       if (!saved) return;
       const savedEditingEntryId = editingEntryId;
+      const returnToToday = savedEditingEntryId === null
+        && Boolean(plannedWorkoutIdRef.current)
+        && workoutOriginPageRef.current === "today"
+        && plannedRoadmapIsComplete;
       resetForm({ clearDraft: savedEditingEntryId === null });
       const messages = [];
       if (conflicts.length > 0) {
@@ -731,10 +814,16 @@ function WorkoutPage({
       if (catalogFailure) {
         messages.push("One or more reusable exercises could not be saved.");
       }
-      setStatusMessage(
-        messages.length > 0 ? `Workout logged. ${messages.join(" ")}` : ""
+      showToast(
+        messages.length > 0
+          ? `Workout traced. ${messages.join(" ")}`
+          : "Workout traced",
+        returnToToday ? "today" : undefined
       );
-      showConfirmation("Workout traced");
+      if (returnToToday) {
+        onReturnToToday();
+        return;
+      }
       if (savedEditingEntryId === null) {
         setActiveWorkoutEntryId(null);
         pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
@@ -821,7 +910,6 @@ function WorkoutPage({
     setActiveWorkoutEntryId(entry.id);
     setIsDirty(false);
     setFormError("");
-    setStatusMessage("");
     setActiveSearchExerciseId(null);
     setEditingSavedExercise(null);
     plannedWorkoutIdRef.current = entry.plannedWorkoutId || null;
@@ -913,6 +1001,37 @@ function WorkoutPage({
     });
   }
 
+  function completeRoadmapExercise(exerciseId) {
+    updateExercise(exerciseId, (exercise) => ({
+      ...exercise,
+      roadmapStatus: exercise.roadmapStatus === "completed" ? "pending" : "completed",
+      roadmapSkipReason: "",
+    }));
+    setRoadmapSkipExerciseId(null);
+  }
+
+  function saveRoadmapExerciseSkip(exerciseId, withoutReason = false) {
+    const reason = withoutReason
+      ? ""
+      : roadmapSkipReason === "Other"
+        ? roadmapCustomReason.trim()
+        : roadmapSkipReason;
+    updateExercise(exerciseId, (exercise) => ({
+      ...exercise,
+      roadmapStatus: "skipped",
+      roadmapSkipReason: reason,
+    }));
+    setRoadmapSkipExerciseId(null);
+    setRoadmapSkipReason("");
+    setRoadmapCustomReason("");
+  }
+
+  const isPlannedRoadmap = editingEntryId === null && Boolean(plannedWorkoutIdRef.current);
+  const returnsToToday = isPlannedRoadmap && workoutOriginPageRef.current === "today";
+  const volume = isPlannedRoadmap ? roadmapVolume(exercises) : null;
+  const leaveWorkout = returnsToToday ? onReturnToToday : onBack;
+  const leaveWorkoutLabel = returnsToToday ? "Back to Today" : "Back to Timeline";
+
   return (
     <div className="trace-feature-page trace-feature-page--workouts" ref={pageTopRef} data-testid="workout-page" style={containerStyle}>
       <style>{`
@@ -964,7 +1083,6 @@ function WorkoutPage({
       <header className="trace-feature-page__identity">
       <p className="trace-feature-page__kicker">Performance log</p>
       <h1 style={{ marginBottom: "10px" }}>Workouts</h1>
-      <ConfirmationMessage message={confirmationMessage} placement="viewport-edge" />
       <p className="trace-feature-page__lede" style={{ color: "#bbb", marginBottom: "24px" }}>
         Record completed strength workouts as entered. Trace does not provide
         training recommendations.
@@ -973,18 +1091,108 @@ function WorkoutPage({
       <button
         className="trace-action trace-action--secondary"
         type="button"
-        onClick={onBack}
+        onClick={leaveWorkout}
         style={{ ...backButtonStyle, marginBottom: "24px", marginTop: 0 }}
       >
-        Back to Timeline
+        {leaveWorkoutLabel}
       </button>
 
-      {statusMessage && (
-        <p role="status" style={{ color: "#d1d5db", maxWidth: "760px", width: "100%" }}>
-          {statusMessage}
-        </p>
+      {isPlannedRoadmap && (
+        <form
+          className="trace-feature-surface trace-feature-form trace-workout-roadmap"
+          aria-label="Workout roadmap"
+          ref={formRef}
+          onSubmit={saveWorkout}
+        >
+          <span className="trace-badge">Active planned workout</span>
+          <h2>Workout Roadmap</h2>
+          <h3 className="trace-workout-roadmap__title">{title}</h3>
+          {notes && <p className="trace-workout-roadmap__notes">{notes}</p>}
+          <ul className="trace-workout-volume" aria-label="Workout set summary">
+            <li><strong>{volume.total}</strong> total {volume.total === 1 ? "set" : "sets"}</li>
+            <li><strong>{volume.warmUp}</strong> warm-up</li>
+            <li><strong>{volume.working}</strong> working</li>
+          </ul>
+          <div className="trace-workout-roadmap__list">
+            {exercises.map((exercise, exerciseIndex) => {
+              const isEditing = roadmapEditingExerciseId === exercise.id;
+              const isChoosingSkipReason = roadmapSkipExerciseId === exercise.id;
+              const status = exercise.roadmapStatus || "pending";
+              const plannedSets = exercise.sets.filter((set) => !set.isUntouched);
+              return (
+                <article
+                  className="trace-data-card trace-workout-roadmap__exercise"
+                  data-roadmap-status={status}
+                  key={exercise.id}
+                  aria-label={`Roadmap exercise ${exercise.name}`}
+                >
+                  <div className="trace-workout-roadmap__exercise-header">
+                    <div>
+                      <h3>{exercise.name}</h3>
+                      <p>{plannedSets.length} {plannedSets.length === 1 ? "planned set" : "planned sets"}</p>
+                    </div>
+                    {status !== "pending" && <span className="trace-badge">{status === "completed" ? "Completed" : "Skipped"}</span>}
+                  </div>
+                  {plannedSets.length > 0 ? (
+                    <ul className="trace-workout-roadmap__set-summary" aria-label={`${exercise.name} planned set summary`}>
+                      {plannedSets.map((set) => <li key={set.id}>{roadmapSetSummary(set)}</li>)}
+                    </ul>
+                  ) : <p className="trace-workout-roadmap__empty">No planned sets.</p>}
+                  {status === "skipped" && exercise.roadmapSkipReason && <p className="trace-workout-roadmap__reason">Reason: {exercise.roadmapSkipReason}</p>}
+                  <div className="trace-workout-roadmap__actions" aria-label={`${exercise.name} roadmap actions`}>
+                    <button className="trace-action trace-action--secondary" type="button" aria-pressed={status === "completed"} onClick={() => completeRoadmapExercise(exercise.id)} style={smallButtonStyle}>Completed</button>
+                    <button className="trace-action trace-action--secondary" type="button" aria-expanded={isChoosingSkipReason} onClick={() => { setRoadmapSkipExerciseId((current) => current === exercise.id ? null : exercise.id); setRoadmapSkipReason(""); setRoadmapCustomReason(""); }} style={smallButtonStyle}>Skipped</button>
+                    <button className="trace-action trace-action--secondary" type="button" aria-expanded={isEditing} aria-controls={`roadmap-exercise-editor-${exercise.id}`} onClick={() => setRoadmapEditingExerciseId((current) => current === exercise.id ? null : exercise.id)} style={smallButtonStyle}>Edit</button>
+                  </div>
+                  {isChoosingSkipReason && (
+                    <section className="trace-workout-roadmap__skip" aria-label={`Skip reason for ${exercise.name}`}>
+                      <label>
+                        Optional reason
+                        <select value={roadmapSkipReason} onChange={(event) => setRoadmapSkipReason(event.target.value)} style={formInputStyle}>
+                          <option value="">No reason</option>
+                          {EXERCISE_SKIP_REASONS.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
+                          <option value="Other">Other / custom reason</option>
+                        </select>
+                      </label>
+                      {roadmapSkipReason === "Other" && <label>Custom reason<input value={roadmapCustomReason} onChange={(event) => setRoadmapCustomReason(event.target.value)} style={formInputStyle} /></label>}
+                      <div className="trace-workout-roadmap__actions">
+                        <button className="trace-action trace-action--primary" type="button" onClick={() => saveRoadmapExerciseSkip(exercise.id)} style={smallButtonStyle}>Save skipped exercise</button>
+                        <button className="trace-action trace-action--secondary" type="button" onClick={() => saveRoadmapExerciseSkip(exercise.id, true)} style={smallButtonStyle}>Skip without reason</button>
+                        <button className="trace-action trace-action--secondary" type="button" onClick={() => setRoadmapSkipExerciseId(null)} style={smallButtonStyle}>Cancel</button>
+                      </div>
+                    </section>
+                  )}
+                  {isEditing && (
+                    <section id={`roadmap-exercise-editor-${exercise.id}`} className="trace-workout-roadmap__editor" aria-label={`Edit ${exercise.name} sets`}>
+                      {exercise.sets.map((set, setIndex) => (
+                        <fieldset key={set.id}>
+                          <legend>Set {setIndex + 1}</legend>
+                          <div className="trace-workout-roadmap__set-fields">
+                            <label>Set type<select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} type`} value={set.setType || "working"} onChange={(event) => updateSet(exercise.id, set.id, { setType: event.target.value })} style={formInputStyle}><option value="working">Working</option><option value="warm-up">Warm-up</option></select></label>
+                            <label>Load mode<select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} load mode`} value={set.loadMode} onChange={(event) => updateSet(exercise.id, set.id, { loadMode: event.target.value })} style={formInputStyle}>{WORKOUT_LOAD_MODES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
+                            {set.loadMode === "external" && <label>Weight<input type="number" min="0" step="any" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} weight`} value={set.weightAmount} onChange={(event) => updateSet(exercise.id, set.id, { weightAmount: event.target.value })} style={formInputStyle} /></label>}
+                            {set.loadMode === "external" && <label>Unit<select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} weight unit`} value={set.weightUnit} onChange={(event) => updateSet(exercise.id, set.id, { weightUnit: event.target.value })} style={formInputStyle}>{WORKOUT_WEIGHT_UNITS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>}
+                            <label>Reps<input type="number" min="0" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} reps`} value={set.reps} onChange={(event) => updateSet(exercise.id, set.id, { reps: event.target.value })} style={formInputStyle} /></label>
+                          </div>
+                          <label>Set notes (optional)<input aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} notes`} value={set.notes} onChange={(event) => updateSet(exercise.id, set.id, { notes: event.target.value })} style={formInputStyle} /></label>
+                        </fieldset>
+                      ))}
+                      <button className="trace-action trace-action--secondary" type="button" onClick={() => setRoadmapEditingExerciseId(null)} style={smallButtonStyle}>Done editing</button>
+                    </section>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+          {formError && <p role="alert" style={{ color: "#fca5a5" }}>{formError}</p>}
+          <div className="trace-workout-roadmap__finish-actions">
+            <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>Save Workout</button>
+            <button className="trace-action trace-action--secondary" type="button" onClick={cancelWorkout} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel</button>
+          </div>
+        </form>
       )}
 
+      {!isPlannedRoadmap && (
       <form
         className="trace-feature-surface trace-feature-form trace-workout-form"
         ref={formRef}
@@ -1393,6 +1601,7 @@ function WorkoutPage({
           <button className="trace-action trace-action--secondary" type="button" onClick={cancelWorkout} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel</button>
         </div>
       </form>
+      )}
 
       <TrophyCase
         trophyEntries={trophyEntries}
@@ -1482,7 +1691,7 @@ function WorkoutPage({
         onReturnToTrophyCase={onReturnToTrophyCase}
       />
 
-      <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...backButtonStyle, marginTop: "24px" }}>Back to Timeline</button>
+      <button className="trace-action trace-action--secondary" type="button" onClick={leaveWorkout} style={{ ...backButtonStyle, marginTop: "24px" }}>{leaveWorkoutLabel}</button>
       <div
         aria-hidden="true"
         ref={workoutDeleteScrollCompensationRef}

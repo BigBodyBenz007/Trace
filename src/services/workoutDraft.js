@@ -13,6 +13,7 @@ export const WORKOUT_DRAFT_SCHEMA_VERSION = 1;
 
 const LOAD_MODES = new Set(WORKOUT_LOAD_MODES.map(({ value }) => value));
 const WEIGHT_UNITS = new Set(WORKOUT_WEIGHT_UNITS.map(({ value }) => value));
+const ROADMAP_STATUSES = new Set(["pending", "completed", "skipped"]);
 
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -106,9 +107,18 @@ function normalizeDraftExercise(exercise, usedIds) {
     return null;
   }
   const notes = optionalString(exercise.notes);
+  const hasRoadmapStatus = exercise.roadmapStatus !== undefined;
+  const hasRoadmapSkipReason = exercise.roadmapSkipReason !== undefined;
+  const roadmapSkipReason = optionalString(exercise.roadmapSkipReason);
+  const roadmapStatus = exercise.roadmapStatus || "pending";
   const hasReference = exercise.exerciseReference !== undefined && exercise.exerciseReference !== null;
   const reference = normalizeExerciseReference(exercise.exerciseReference);
-  if (notes === null || (hasReference && !reference)) return null;
+  if (
+    notes === null ||
+    roadmapSkipReason === null ||
+    !ROADMAP_STATUSES.has(roadmapStatus) ||
+    (hasReference && !reference)
+  ) return null;
 
   usedIds.add(exercise.id.trim());
   const sets = [];
@@ -132,6 +142,8 @@ function normalizeDraftExercise(exercise, usedIds) {
     defaultLoadMode,
     defaultWeightUnit,
     notes,
+    ...(hasRoadmapStatus ? { roadmapStatus } : {}),
+    ...(hasRoadmapSkipReason ? { roadmapSkipReason } : {}),
     sets,
   };
 }
@@ -169,6 +181,12 @@ export function normalizeWorkoutDraft(value) {
   if (!isObject(context)) return null;
   const activeSearchExerciseId = context.activeSearchExerciseId ?? null;
   if (activeSearchExerciseId !== null && !validId(activeSearchExerciseId)) return null;
+  const hasRoadmapEditingExerciseId = context.roadmapEditingExerciseId !== undefined;
+  const roadmapEditingExerciseId = context.roadmapEditingExerciseId ?? null;
+  if (roadmapEditingExerciseId !== null && !validId(roadmapEditingExerciseId)) return null;
+  const hasOriginPage = context.originPage !== undefined;
+  const originPage = context.originPage ?? null;
+  if (originPage !== null && originPage !== "today") return null;
 
   return {
     schemaVersion: WORKOUT_DRAFT_SCHEMA_VERSION,
@@ -184,7 +202,11 @@ export function normalizeWorkoutDraft(value) {
       notes: value.form.notes,
       exercises,
     },
-    context: { activeSearchExerciseId },
+    context: {
+      activeSearchExerciseId,
+      ...(hasRoadmapEditingExerciseId ? { roadmapEditingExerciseId } : {}),
+      ...(hasOriginPage ? { originPage } : {}),
+    },
   };
 }
 
@@ -231,7 +253,8 @@ function actualSetFromTarget(target) {
 
 export function createWorkoutDraftFromPlannedWorkout(
   plannedWorkout,
-  now = new Date()
+  now = new Date(),
+  { originPage = null } = {}
 ) {
   const plan = normalizePlannedWorkout(plannedWorkout);
   if (!plan || !Number.isFinite(now.getTime())) return null;
@@ -263,13 +286,19 @@ export function createWorkoutDraftFromPlannedWorkout(
           defaultLoadMode,
           defaultWeightUnit,
           notes: exercise.notes || "",
+          roadmapStatus: "pending",
+          roadmapSkipReason: "",
           sets: exercise.targetSets.length > 0
             ? exercise.targetSets.map(actualSetFromTarget)
             : [emptyActualSet(defaultLoadMode, defaultWeightUnit)],
         };
       }),
     },
-    context: { activeSearchExerciseId: null },
+    context: {
+      activeSearchExerciseId: null,
+      roadmapEditingExerciseId: null,
+      ...(originPage === "today" ? { originPage } : {}),
+    },
   };
 }
 

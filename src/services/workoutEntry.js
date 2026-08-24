@@ -69,6 +69,7 @@ export function getWorkoutEntryError(draft) {
     if (!meaningfulText(exercise?.name)) {
       return `Enter a name for exercise ${exerciseIndex + 1}.`;
     }
+    if (exercise.roadmapStatus === "skipped") continue;
     if (!Array.isArray(exercise?.sets) || exercise.sets.length === 0) {
       return `Add at least one set to exercise ${exerciseIndex + 1}.`;
     }
@@ -182,12 +183,20 @@ export function createWorkoutEntry(draft, existingEntry = null, now = new Date()
       return {
         id: exercise.id,
         name: cleanText(exercise.name),
+        ...(exercise.roadmapStatus === "completed"
+          ? { roadmapStatus: "completed" }
+          : exercise.roadmapStatus === "skipped"
+            ? {
+                roadmapStatus: "skipped",
+                roadmapSkipReason: cleanText(exercise.roadmapSkipReason),
+              }
+            : {}),
         ...(exerciseId ? { exerciseId } : {}),
         ...(exercise.exerciseReference
           ? { exerciseReference: { ...exercise.exerciseReference } }
           : {}),
         ...(cleanText(exercise.notes) ? { notes: cleanText(exercise.notes) } : {}),
-        sets: exercise.sets.map((set) => {
+        sets: exercise.roadmapStatus === "skipped" ? [] : exercise.sets.map((set) => {
           const completed = completedSetSegment(set, true);
           const drops = Array.isArray(set.drops) ? set.drops : [];
           return drops.length > 0

@@ -4,10 +4,17 @@ import {
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
 } from "../constants/workoutOptions";
+import { getExerciseDefinitionError } from "../services/exerciseCatalog";
 import { formatDateOnly } from "../services/dateOnly";
 import { formatDoseUnit, formatRoute } from "../services/medicationEntry";
-import { getPlannedWorkoutError } from "../services/plannedWorkout";
-import { protocolItemsScheduledForDate } from "../services/protocol";
+import {
+  getPlannedWorkoutError,
+  isPlannedWorkoutSkippedOnDate,
+} from "../services/plannedWorkout";
+import {
+  formatProtocolSchedule,
+  protocolItemsScheduledForDate,
+} from "../services/protocol";
 import { createWorkoutItemId } from "../services/workoutEntry";
 
 export function localScheduledDate(value = new Date()) {
@@ -25,12 +32,12 @@ function emptyPlannedExercise() {
   };
 }
 
-function emptyTargetSet() {
+function emptyTargetSet(inheritedLoad = null) {
   return {
     id: createWorkoutItemId("planned-set"),
     setType: "working",
     reps: "",
-    load: null,
+    load: inheritedLoad ? { ...inheritedLoad } : null,
     notes: "",
   };
 }
@@ -51,12 +58,49 @@ function copyPlanForEditing(plan) {
   };
 }
 
-function targetSummary(target) {
-  const reps = target.reps === undefined ? "reps open" : `${target.reps} reps`;
-  if (!target.load) return reps;
-  if (target.load.mode === "bodyweight") return `${reps}, bodyweight`;
-  const amount = target.load.amount === undefined ? "load open" : `${target.load.amount} ${target.load.unit}`;
-  return `${reps}, ${amount}`;
+const WORKOUT_SKIP_REASONS = [
+  "Pain or discomfort",
+  "Equipment unavailable",
+  "Not enough time",
+  "Low energy",
+  "Schedule conflict",
+];
+
+function plannedSetPreview(target) {
+  const setType = target.setType === "warm-up" ? "Warm-up" : "Working";
+  const reps = target.reps === undefined ? "reps open" : target.reps;
+  if (!target.load) return `${setType} · No weight target × ${reps}`;
+  if (target.load.mode === "bodyweight") return `${setType} · Bodyweight × ${reps}`;
+  const weight = target.load.amount === undefined
+    ? "Weight open"
+    : `${target.load.amount} ${target.load.unit}`;
+  return `${setType} · ${weight} × ${reps}`;
+}
+
+function plannedWorkoutVolume(exercises) {
+  const sets = exercises.flatMap((exercise) => exercise.targetSets || []);
+  const warmUp = sets.filter(({ setType }) => setType === "warm-up").length;
+  return {
+    total: sets.length,
+    warmUp,
+    working: sets.length - warmUp,
+  };
+}
+
+function scheduleTimeLabel(item) {
+  const time = item?.schedule?.time || item?.time;
+  const match = /^(\d{2}):(\d{2})$/.exec(String(time || ""));
+  if (!match) return "";
+  const date = new Date(2000, 0, 1, Number(match[1]), Number(match[2]));
+  return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
+function protocolActionSummary(item) {
+  return [
+    item.compound.name,
+    `${item.dose.amount} ${formatDoseUnit(item.dose)}`,
+    scheduleTimeLabel(item),
+  ].filter(Boolean).join(" · ");
 }
 
 function TodayPage({
@@ -64,7 +108,9 @@ function TodayPage({
   plannedWorkouts = [],
   protocols = [],
   workoutEntries = [],
+  activeWorkoutDraft = null,
   savedExercises = [],
+  saveExerciseDefinitions = () => [],
   createPlannedWorkout,
   updatePlannedWorkout,
   deletePlannedWorkout,
@@ -72,11 +118,16 @@ function TodayPage({
     status: "error",
     message: "The planned workout could not be restored.",
   }),
+  skipPlannedWorkout = () => ({
+    status: "error",
+    message: "The planned workout could not be skipped.",
+  }),
   startPlannedWorkout = () => ({
     status: "error",
     message: "The planned workout could not be started.",
   }),
   openCompletedWorkout = () => false,
+  showToast = () => {},
   currentDate = new Date(),
   buttonStyle = {},
   inputStyle = {},
@@ -91,6 +142,22 @@ function TodayPage({
     () => protocolItemsScheduledForDate(protocols, currentDate),
     [protocols, currentDate]
   );
+  const scheduleItems = useMemo(() => [
+    ...todaysPlans.map((plan) => ({
+      id: plan.id,
+      type: "workout",
+      title: plan.title,
+      plan,
+    })),
+    ...todaysProtocolItems.map(({ protocol, item }) => ({
+      id: `${protocol.id}:${item.id}`,
+      type: "protocol",
+      title: protocolActionSummary(item),
+      subtitle: `${protocol.name} · ${formatRoute(item.route)}`,
+      protocol,
+      item,
+    })),
+  ], [todaysPlans, todaysProtocolItems]);
   const completedWorkoutByPlanId = useMemo(() => {
     const completed = new Map();
     workoutEntries.forEach((entry) => {
@@ -105,13 +172,20 @@ function TodayPage({
   const [activeSearchExerciseId, setActiveSearchExerciseId] = useState(null);
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [formError, setFormError] = useState("");
-  const [statusMessage, setStatusMessage] = useState("");
   const [pendingDeletion, setPendingDeletion] = useState(null);
   const [draftConflict, setDraftConflict] = useState(null);
+  const [previewPlanId, setPreviewPlanId] = useState(null);
+  const [pendingSkipPlan, setPendingSkipPlan] = useState(null);
+  const [skipReason, setSkipReason] = useState("");
+  const [customSkipReason, setCustomSkipReason] = useState("");
+  const [isScheduleExpanded, setIsScheduleExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 600);
+  const initialDraftRef = useRef(null);
   const conflictResumeButtonRef = useRef(null);
   const startButtonRefs = useRef(new Map());
   const restoreStartFocusPlanIdRef = useRef(null);
+  const previewPlan = plannedWorkouts.find(({ id }) => id === previewPlanId) || null;
+  const activePlannedWorkoutId = activeWorkoutDraft?.plannedWorkoutId || null;
 
   useEffect(() => {
     const updateLayout = () => setIsMobile(window.innerWidth <= 600);
@@ -131,26 +205,30 @@ function TodayPage({
   }, [draftConflict]);
 
   function openCreate() {
-    setDraft({
+    const nextDraft = {
       scheduledDate: todayKey,
       title: "",
       notes: "",
       exercises: [emptyPlannedExercise()],
-    });
+    };
+    initialDraftRef.current = JSON.stringify(nextDraft);
+    setDraft(nextDraft);
     setEditingId(null);
     setActiveSearchExerciseId(null);
     setFormError("");
-    setStatusMessage("");
     setDraftConflict(null);
+    setPreviewPlanId(null);
   }
 
   function openEdit(plan) {
-    setDraft(copyPlanForEditing(plan));
+    const nextDraft = copyPlanForEditing(plan);
+    initialDraftRef.current = JSON.stringify(nextDraft);
+    setDraft(nextDraft);
     setEditingId(plan.id);
     setActiveSearchExerciseId(null);
     setFormError("");
-    setStatusMessage("");
     setDraftConflict(null);
+    setPreviewPlanId(null);
   }
 
   function closeEditor() {
@@ -158,6 +236,34 @@ function TodayPage({
     setEditingId(null);
     setActiveSearchExerciseId(null);
     setFormError("");
+    initialDraftRef.current = null;
+  }
+
+  function openPreview(plan) {
+    setPreviewPlanId(plan.id);
+    setPendingSkipPlan(null);
+    setSkipReason("");
+    setCustomSkipReason("");
+    setFormError("");
+  }
+
+  function closePreview() {
+    setPreviewPlanId(null);
+    setPendingSkipPlan(null);
+    setSkipReason("");
+    setCustomSkipReason("");
+  }
+
+  function cancelEditor() {
+    const hasUnsavedChanges = draft
+      && JSON.stringify(draft) !== initialDraftRef.current;
+    if (
+      hasUnsavedChanges
+      && !window.confirm("Cancel planning this workout? Your unsaved changes will be lost.")
+    ) {
+      return;
+    }
+    closeEditor();
   }
 
   function startPlan(plan, conflictAction = null) {
@@ -281,8 +387,43 @@ function TodayPage({
   function addTarget(exerciseId) {
     updateExercise(exerciseId, (exercise) => ({
       ...exercise,
-      targetSets: [...exercise.targetSets, emptyTargetSet()],
+      targetSets: [
+        ...exercise.targetSets,
+        emptyTargetSet(exercise.targetSets[exercise.targetSets.length - 1]?.load),
+      ],
     }));
+  }
+
+  function saveReusableExercise(exercise, exerciseIndex) {
+    const inheritedLoad = exercise.targetSets.find(({ load }) => load)?.load;
+    const definition = {
+      name: exercise.name,
+      defaultLoadMode: inheritedLoad?.mode || "external",
+      defaultWeightUnit: inheritedLoad?.mode === "external"
+        ? inheritedLoad.unit
+        : "lb",
+    };
+    const error = getExerciseDefinitionError(definition);
+    if (error) {
+      setFormError(`Exercise ${exerciseIndex + 1}: ${error}`);
+      return;
+    }
+    const result = saveExerciseDefinitions([definition])?.[0];
+    if (result?.status === "added") {
+      setFormError("");
+      showToast(`${exercise.name.trim()} saved as a reusable exercise.`);
+      return;
+    }
+    if (result?.status === "duplicate" && result.matchesDefinition) {
+      setFormError("");
+      showToast(`${exercise.name.trim()} is already saved for reuse.`);
+      return;
+    }
+    setFormError(
+      result?.status === "duplicate"
+        ? `A reusable exercise named ${exercise.name.trim()} already exists with different defaults.`
+        : "The reusable exercise could not be saved."
+    );
   }
 
   function removeTarget(exerciseId, targetId) {
@@ -307,7 +448,7 @@ function TodayPage({
       return;
     }
     setPendingDeletion(null);
-    setStatusMessage(editingId ? "Planned workout updated." : "Planned workout created.");
+    showToast(editingId ? "Planned workout updated." : "Planned workout created.");
     closeEditor();
   }
 
@@ -316,7 +457,6 @@ function TodayPage({
       return;
     }
     if (!deletePlannedWorkout(plan.id)) {
-      setStatusMessage("");
       setFormError("The planned workout could not be deleted.");
       return;
     }
@@ -326,7 +466,35 @@ function TodayPage({
     });
     if (editingId === plan.id) closeEditor();
     setFormError("");
-    setStatusMessage("Planned workout deleted.");
+    showToast("Planned workout deleted.");
+  }
+
+  function requestSkipPlan(plan) {
+    if (!window.confirm(`Skip workout “${plan.title}” for today? This keeps the plan and does not create a completed workout.`)) {
+      return false;
+    }
+    setPendingSkipPlan(plan);
+    setPreviewPlanId(plan.id);
+    setSkipReason("");
+    setCustomSkipReason("");
+    return true;
+  }
+
+  function confirmSkipPlan(reason) {
+    if (!pendingSkipPlan) return;
+    const selectedReason = reason === null
+      ? ""
+      : (reason || (skipReason === "Other" ? customSkipReason : skipReason));
+    const result = skipPlannedWorkout(pendingSkipPlan.id, todayKey, selectedReason.trim());
+    if (result?.status !== "skipped") {
+      setFormError(result?.message || "The planned workout could not be skipped.");
+      return;
+    }
+    setFormError("");
+    showToast(`${pendingSkipPlan.title} marked skipped for today.`);
+    setPendingSkipPlan(null);
+    setSkipReason("");
+    setCustomSkipReason("");
   }
 
   function undoPlanDeletion() {
@@ -337,12 +505,11 @@ function TodayPage({
     );
     setPendingDeletion(null);
     if (result?.status !== "restored") {
-      setStatusMessage("");
       setFormError(result?.message || "The planned workout could not be restored.");
       return;
     }
     setFormError("");
-    setStatusMessage("Planned workout restored.");
+    showToast("Planned workout restored.");
   }
 
   const fieldStyle = {
@@ -381,26 +548,23 @@ function TodayPage({
         <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={backStyle}>
           Back to Timeline
         </button>
-        {!draft && (
+        {!draft && !previewPlan && (
           <button className="trace-action trace-action--primary" type="button" onClick={openCreate} style={buttonStyle}>
             Create planned workout
           </button>
         )}
       </div>
 
-      {statusMessage && (
-        <div role="status" className="trace-today-page__status">
-          <span>{statusMessage}</span>
-          {pendingDeletion && (
-            <button
-              className="trace-action trace-action--secondary"
-              type="button"
-              onClick={undoPlanDeletion}
-              style={{ ...buttonStyle, fontSize: "15px", marginLeft: "12px", marginTop: 0, padding: "7px 12px" }}
-            >
-              Undo
-            </button>
-          )}
+      {pendingDeletion && (
+        <div className="trace-today-page__status">
+          <button
+            className="trace-action trace-action--secondary"
+            type="button"
+            onClick={undoPlanDeletion}
+            style={{ ...buttonStyle, fontSize: "15px", marginTop: 0, padding: "7px 12px" }}
+          >
+            Undo
+          </button>
         </div>
       )}
       {!draft && formError && <p role="alert" className="trace-today-page__error">{formError}</p>}
@@ -438,6 +602,7 @@ function TodayPage({
                   <button className="trace-action trace-action--secondary trace-today-exercise-action" type="button" aria-label={`Move exercise ${exerciseIndex + 1} up`} disabled={exerciseIndex === 0} onClick={() => moveExercise(exerciseIndex, -1)} style={compactButtonStyle}>Move up</button>
                   <button className="trace-action trace-action--secondary trace-today-exercise-action" type="button" aria-label={`Move exercise ${exerciseIndex + 1} down`} disabled={exerciseIndex === draft.exercises.length - 1} onClick={() => moveExercise(exerciseIndex, 1)} style={compactButtonStyle}>Move down</button>
                   <button className="trace-action trace-action--danger" type="button" aria-label={`Remove exercise ${exerciseIndex + 1}`} disabled={draft.exercises.length === 1} onClick={() => removeExercise(exercise.id)} style={compactButtonStyle}>Remove exercise</button>
+                  <button className="trace-action trace-action--secondary trace-today-exercise-action" type="button" aria-label={`Save exercise ${exerciseIndex + 1} as reusable`} onClick={() => saveReusableExercise(exercise, exerciseIndex)} style={compactButtonStyle}>Save as reusable exercise</button>
                 </div>
                 {activeSearchExerciseId === exercise.id && (
                   <ExerciseSearch
@@ -462,11 +627,13 @@ function TodayPage({
 
                 <div className="trace-today-targets">
                   <div className="trace-today-editor__section-heading">
-                    <strong>Optional targets</strong>
-                    <button className="trace-action trace-action--secondary" type="button" aria-label={`Add target set to exercise ${exerciseIndex + 1}`} onClick={() => addTarget(exercise.id)} style={compactButtonStyle}>Add target set</button>
+                    <strong>Target sets</strong>
+                    {exercise.targetSets.length > 0 && (
+                      <button className="trace-action trace-action--secondary" type="button" aria-label={`Add target set to exercise ${exerciseIndex + 1}`} onClick={() => addTarget(exercise.id)} style={compactButtonStyle}>Add target set</button>
+                    )}
                   </div>
                   {exercise.targetSets.length === 0 ? (
-                    <p className="trace-today-page__muted">No target sets. This exercise can be filled in during a future workout.</p>
+                    <button className="trace-action trace-action--secondary trace-today-add-target" type="button" aria-label={`Add target set to exercise ${exerciseIndex + 1}`} onClick={() => addTarget(exercise.id)} style={compactButtonStyle}>Add target set</button>
                   ) : exercise.targetSets.map((target, targetIndex) => (
                     <fieldset className="trace-today-target" key={target.id}>
                       <legend>Target set {targetIndex + 1}</legend>
@@ -503,26 +670,53 @@ function TodayPage({
                             {WORKOUT_LOAD_MODES.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
                           </select>
                         </label>
-                        {target.load?.mode === "external" ? (
-                          <>
-                            <label>
-                              <span className="trace-today-target__amount-label-text">Intended amount</span>
-                              <input aria-label={`Exercise ${exerciseIndex + 1} target set ${targetIndex + 1} intended amount`} type="number" min="0" step="any" value={target.load.amount ?? ""} onChange={(event) => updateTarget(exercise.id, target.id, { load: { ...target.load, amount: event.target.value } })} placeholder="Optional" style={fieldStyle} />
-                            </label>
-                            <label>
-                              Unit
-                              <select aria-label={`Exercise ${exerciseIndex + 1} target set ${targetIndex + 1} unit`} value={target.load.unit || "lb"} onChange={(event) => updateTarget(exercise.id, target.id, { load: { ...target.load, unit: event.target.value } })} style={fieldStyle}>
-                                {WORKOUT_WEIGHT_UNITS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
-                              </select>
-                            </label>
-                          </>
-                        ) : <span aria-hidden="true" className="trace-today-target__empty-load" />}
+                        <label>
+                          <span className="trace-today-target__amount-label-text">Intended weight</span>
+                          <input
+                            aria-label={`Exercise ${exerciseIndex + 1} target set ${targetIndex + 1} intended weight`}
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={target.load?.mode === "external" ? (target.load.amount ?? "") : ""}
+                            disabled={target.load?.mode === "bodyweight"}
+                            onChange={(event) => updateTarget(exercise.id, target.id, {
+                              load: {
+                                mode: "external",
+                                amount: event.target.value,
+                                unit: target.load?.unit || "lb",
+                              },
+                            })}
+                            placeholder="Enter weight"
+                            style={fieldStyle}
+                          />
+                        </label>
+                        <label>
+                          Unit
+                          <select
+                            aria-label={`Exercise ${exerciseIndex + 1} target set ${targetIndex + 1} unit`}
+                            value={target.load?.unit || "lb"}
+                            disabled={target.load?.mode === "bodyweight"}
+                            onChange={(event) => updateTarget(exercise.id, target.id, {
+                              load: {
+                                mode: "external",
+                                unit: event.target.value,
+                                ...(target.load?.amount === undefined ? {} : { amount: target.load.amount }),
+                              },
+                            })}
+                            style={fieldStyle}
+                          >
+                            {WORKOUT_WEIGHT_UNITS.map(({ value, label }) => <option key={value} value={value}>{label}</option>)}
+                          </select>
+                        </label>
                       </div>
                       <label style={{ display: "block", marginTop: "10px" }}>
                         Target set notes (optional)
                         <input aria-label={`Exercise ${exerciseIndex + 1} target set ${targetIndex + 1} notes`} value={target.notes || ""} onChange={(event) => updateTarget(exercise.id, target.id, { notes: event.target.value })} style={fieldStyle} />
                       </label>
-                      <button className="trace-action trace-action--danger" type="button" aria-label={`Remove target set ${targetIndex + 1} from exercise ${exerciseIndex + 1}`} onClick={() => removeTarget(exercise.id, target.id)} style={{ ...compactButtonStyle, marginTop: "10px" }}>Remove target set</button>
+                      <div className="trace-today-target__actions">
+                        <button className="trace-action trace-action--secondary" type="button" aria-label={`Add target set after set ${targetIndex + 1} in exercise ${exerciseIndex + 1}`} onClick={() => addTarget(exercise.id)} style={compactButtonStyle}>Add target set</button>
+                        <button className="trace-action trace-action--danger" type="button" aria-label={`Remove target set ${targetIndex + 1} from exercise ${exerciseIndex + 1}`} onClick={() => removeTarget(exercise.id, target.id)} style={compactButtonStyle}>Remove target set</button>
+                      </div>
                     </fieldset>
                   ))}
                 </div>
@@ -536,137 +730,167 @@ function TodayPage({
           {formError && <p role="alert" className="trace-today-page__error">{formError}</p>}
           <div className="trace-today-page__actions">
             <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>{editingId ? "Save changes" : "Save planned workout"}</button>
-            <button className="trace-action trace-action--secondary" type="button" onClick={closeEditor} style={backStyle}>Cancel</button>
+            <button className="trace-action trace-action--secondary" type="button" onClick={cancelEditor} style={backStyle}>Cancel</button>
           </div>
         </form>
       )}
 
-      {!draft && (
-        <>
-      <section className="trace-feature-section trace-today-schedule" aria-label="Today's schedule">
-        <h2>Planned for {formatDateOnly(todayKey)}</h2>
-        {todaysPlans.length === 0 && todaysProtocolItems.length === 0 ? (
-          <div className="trace-feature-surface trace-today-empty">
-            <h3>Nothing scheduled for today.</h3>
-            <p>You can create a workout plan for today or choose another date.</p>
-          </div>
-        ) : null}
-        {todaysPlans.length > 0 && (
-          <section className="trace-today-schedule__group" aria-label="Planned workouts for today">
-            <h3 className="trace-today-schedule__group-title">Planned workouts</h3>
-            <div className="trace-today-schedule__list">
-            {todaysPlans.map((plan) => {
-              const completedWorkout = completedWorkoutByPlanId.get(plan.id);
-              const hasDraftConflict = draftConflict?.planId === plan.id;
-              return (
-              <article className="trace-data-card trace-today-plan" data-draft-collision={hasDraftConflict ? "open" : "closed"} data-schedule-item-type="workout" key={plan.id}>
-                <span className="trace-badge">
-                  Plan {"\u00b7"} {completedWorkout ? "completed" : "not completed"}
-                </span>
-                <h3>{plan.title}</h3>
-                {plan.notes && <p className="trace-today-plan__notes">{plan.notes}</p>}
-                {completedWorkout && (
-                  <p className="trace-today-plan__completion">
-                    Completed {new Date(completedWorkout.occurredAt).toLocaleString()}
-                  </p>
-                )}
-                <ol>
-                  {plan.exercises.map((exercise) => (
-                    <li key={exercise.id}>
-                      <strong>{exercise.name}</strong>
-                      {exercise.targetSets.length > 0 && (
-                        <ul aria-label={`${exercise.name} targets`}>
-                          {exercise.targetSets.map((target) => <li key={target.id}>{targetSummary(target)}</li>)}
-                        </ul>
-                      )}
-                    </li>
-                  ))}
-                </ol>
-                {!hasDraftConflict && (
-                  <div className="trace-today-exercise__actions">
-                    {completedWorkout ? (
-                      <button className="trace-action trace-action--primary" type="button" aria-label={`Open completed workout ${plan.title}`} onClick={() => openCompletedWorkout(completedWorkout.id)} style={compactButtonStyle}>View completed workout</button>
-                    ) : (
-                      <button
-                        className="trace-action trace-action--brass"
-                        type="button"
-                        aria-label={`Start planned workout ${plan.title}`}
-                        onClick={() => startPlan(plan)}
-                        ref={(node) => {
-                          if (node) startButtonRefs.current.set(plan.id, node);
-                          else startButtonRefs.current.delete(plan.id);
-                        }}
-                        style={compactButtonStyle}
-                      >
-                        Start workout
-                      </button>
-                    )}
-                    <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit planned workout ${plan.title}`} onClick={() => openEdit(plan)} style={compactButtonStyle}>Edit plan</button>
-                    <button className="trace-action trace-action--danger" type="button" aria-label={`Delete planned workout ${plan.title}`} onClick={() => removePlan(plan)} style={compactButtonStyle}>Delete plan</button>
-                  </div>
-                )}
-                {hasDraftConflict && (
-                  <div
-                    aria-label="Workout already in progress"
-                    className="trace-feature-surface trace-today-draft-conflict"
-                    onKeyDown={(event) => {
-                      if (event.key === "Escape") cancelDraftConflict();
-                    }}
-                    role="dialog"
-                  >
-                    <h4>Workout already in progress</h4>
-                    <p>
-                      Resume {draftConflict.existingDraftTitle}, discard it and start this plan, or cancel.
-                    </p>
-                    <div className="trace-today-exercise__actions">
-                      <button ref={conflictResumeButtonRef} className="trace-action trace-action--primary" type="button" onClick={() => startPlan(plan, "resume")} style={compactButtonStyle}>Resume current workout</button>
-                      <button className="trace-action trace-action--danger" type="button" onClick={() => startPlan(plan, "discard")} style={compactButtonStyle}>Discard and start plan</button>
-                      <button className="trace-action trace-action--secondary" type="button" onClick={cancelDraftConflict} style={compactButtonStyle}>Cancel</button>
-                    </div>
-                  </div>
-                )}
+      {!draft && previewPlan && (
+        <section className="trace-feature-surface trace-workout-preview" aria-label={`Workout preview ${previewPlan.title}`}>
+          <button className="trace-action trace-action--secondary" type="button" onClick={closePreview} style={compactButtonStyle}>Back to today</button>
+          <span className="trace-badge">Planned workout</span>
+          <h2>{previewPlan.title}</h2>
+          {previewPlan.notes && <p className="trace-today-plan__notes">{previewPlan.notes}</p>}
+          {(() => {
+            const volume = plannedWorkoutVolume(previewPlan.exercises);
+            return (
+              <ul className="trace-workout-volume" aria-label="Workout set summary">
+                <li><strong>{volume.total}</strong> total {volume.total === 1 ? "set" : "sets"}</li>
+                <li><strong>{volume.warmUp}</strong> warm-up</li>
+                <li><strong>{volume.working}</strong> working</li>
+              </ul>
+            );
+          })()}
+          <div className="trace-workout-preview__exercises">
+            {previewPlan.exercises.map((exercise) => (
+              <article className="trace-data-card trace-workout-preview__exercise" key={exercise.id}>
+                <h3>{exercise.name}</h3>
+                <p>{exercise.targetSets.length} {exercise.targetSets.length === 1 ? "set" : "sets"}</p>
+                {exercise.targetSets.length > 0 ? (
+                  <ul aria-label={`${exercise.name} planned sets`}>
+                    {exercise.targetSets.map((target) => <li key={target.id}>{plannedSetPreview(target)}</li>)}
+                  </ul>
+                ) : <p className="trace-today-page__muted">No target sets planned.</p>}
               </article>
-              );
-            })}
-            </div>
-          </section>
-        )}
-        {todaysProtocolItems.length > 0 && (
-          <section className="trace-today-schedule__group" aria-label="Protocols for today">
-            <h3 className="trace-today-schedule__group-title">Protocols</h3>
-            <div className="trace-today-schedule__list">
-              {todaysProtocolItems.map(({ protocol, item }) => (
-                <article
-                  className="trace-data-card trace-today-protocol"
-                  data-schedule-item-type="protocol"
-                  key={`${protocol.id}:${item.id}`}
-                >
-                  <span className="trace-badge">Protocol {"\u00b7"} scheduled</span>
-                  <h3>{protocol.name}</h3>
-                  <dl className="trace-today-protocol__details">
-                    <div>
-                      <dt>Medication / compound</dt>
-                      <dd>{item.compound.name}</dd>
-                    </div>
-                    <div>
-                      <dt>Dose</dt>
-                      <dd>{item.dose.amount} {formatDoseUnit(item.dose)}</dd>
-                    </div>
-                    <div>
-                      <dt>Route / method</dt>
-                      <dd>{formatRoute(item.route)}</dd>
-                    </div>
-                  </dl>
-                  {item.notes && <p className="trace-today-protocol__notes">{item.notes}</p>}
-                </article>
-              ))}
-            </div>
-          </section>
-        )}
-      </section>
+            ))}
+          </div>
+          <div className="trace-workout-preview__actions" data-testid="workout-preview-actions">
+            {completedWorkoutByPlanId.get(previewPlan.id) ? (
+              <button className="trace-action trace-action--primary" type="button" onClick={() => openCompletedWorkout(completedWorkoutByPlanId.get(previewPlan.id).id)} style={compactButtonStyle}>View completed workout</button>
+            ) : isPlannedWorkoutSkippedOnDate(previewPlan, todayKey) ? (
+              <span className="trace-today-plan__status" role="status">Skipped</span>
+            ) : (
+              <>
+                <button className="trace-action trace-action--brass" type="button" aria-label={`${activePlannedWorkoutId === previewPlan.id ? "Continue workout" : "Start planned workout"} ${previewPlan.title}`} onClick={() => startPlan(previewPlan)} style={compactButtonStyle}>{activePlannedWorkoutId === previewPlan.id ? "Continue workout" : "Start"}</button>
+                <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit planned workout ${previewPlan.title}`} onClick={() => openEdit(previewPlan)} style={compactButtonStyle}>Edit</button>
+                <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip workout ${previewPlan.title}`} onClick={() => requestSkipPlan(previewPlan)} style={compactButtonStyle}>Skip</button>
+              </>
+            )}
+          </div>
+        </section>
+      )}
 
-      <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={backStyle}>Back to Timeline</button>
+      {!draft && !previewPlan && (
+        <>
+          <section className="trace-feature-surface trace-today-schedule" aria-label="Today's schedule" data-expanded={isScheduleExpanded ? "true" : "false"} data-testid="today-schedule-dashboard">
+            <div className="trace-today-schedule__header">
+              <div>
+                <p className="trace-today-schedule__eyebrow">Today</p>
+                <h2>{formatDateOnly(todayKey)}</h2>
+                <p className="trace-today-schedule__count">{scheduleItems.length === 0 ? "No scheduled items" : `${scheduleItems.length} scheduled ${scheduleItems.length === 1 ? "item" : "items"}`}</p>
+              </div>
+              <button className="trace-action trace-action--secondary trace-today-schedule__toggle" type="button" aria-controls="today-schedule-details" aria-expanded={isScheduleExpanded} onClick={() => setIsScheduleExpanded((current) => !current)} style={compactButtonStyle}>{isScheduleExpanded ? "Hide details" : "Show details"}</button>
+            </div>
+            {scheduleItems.length === 0 ? (
+              <div className="trace-today-empty"><h3>Nothing scheduled for today.</h3><p>You can create a workout plan for today or choose another date.</p></div>
+            ) : (
+              <ul className="trace-today-summary" aria-label="Today's schedule summary">
+                {scheduleItems.slice(0, 4).map((scheduleItem) => scheduleItem.type === "workout" ? (
+                  <li data-schedule-item-type="workout" key={scheduleItem.id}>
+                    <button className="trace-today-summary__workout" type="button" aria-label={`Open workout preview ${scheduleItem.title}`} onClick={() => openPreview(scheduleItem.plan)}>
+                      <span className="trace-today-summary__type trace-today-summary__type--workout">Workout</span>
+                      <span className="trace-today-summary__copy"><strong>{scheduleItem.title}</strong><small>{completedWorkoutByPlanId.get(scheduleItem.plan.id) ? "Completed" : isPlannedWorkoutSkippedOnDate(scheduleItem.plan, todayKey) ? "Skipped" : activePlannedWorkoutId === scheduleItem.plan.id ? "Started" : "Planned"}</small></span>
+                    </button>
+                  </li>
+                ) : (
+                  <li data-schedule-item-type="protocol" key={scheduleItem.id}>
+                    <span className="trace-today-summary__type trace-today-summary__type--protocol">Protocol</span>
+                    <span className="trace-today-summary__copy"><strong>{scheduleItem.title}</strong><small>{scheduleItem.subtitle}</small></span>
+                  </li>
+                ))}
+                {scheduleItems.length > 4 && <li className="trace-today-summary__more">+{scheduleItems.length - 4} more scheduled</li>}
+              </ul>
+            )}
+            {isScheduleExpanded && scheduleItems.length > 0 && (
+              <section id="today-schedule-details" className="trace-today-schedule__details" aria-label="Today's actionable items">
+                <h3 className="trace-today-schedule__group-title">Daily plan</h3>
+                <div className="trace-today-schedule__list">
+                  {scheduleItems.map((scheduleItem) => {
+                    if (scheduleItem.type === "protocol") {
+                      const { protocol, item } = scheduleItem;
+                      return (
+                        <article className="trace-data-card trace-today-protocol" data-schedule-item-type="protocol" key={scheduleItem.id}>
+                          <span className="trace-badge">Protocol item · scheduled</span>
+                          <h3>{item.compound.name}</h3>
+                          <p className="trace-today-protocol__action-summary">{protocolActionSummary(item)}</p>
+                          <dl className="trace-today-protocol__details">
+                            <div><dt>Protocol</dt><dd>{protocol.name}</dd></div>
+                            <div><dt>Dose</dt><dd>{item.dose.amount} {formatDoseUnit(item.dose)}</dd></div>
+                            <div><dt>Route / method</dt><dd>{formatRoute(item.route)}</dd></div>
+                            <div><dt>Schedule</dt><dd>{formatProtocolSchedule(item.schedule)}{scheduleTimeLabel(item) ? ` · ${scheduleTimeLabel(item)}` : ""}</dd></div>
+                          </dl>
+                          {item.notes && <p className="trace-today-protocol__notes"><strong>Item notes:</strong> <span>{item.notes}</span></p>}
+                          {protocol.notes && <p className="trace-today-protocol__notes"><strong>Protocol notes:</strong> <span>{protocol.notes}</span></p>}
+                        </article>
+                      );
+                    }
+                    const plan = scheduleItem.plan;
+                    const completedWorkout = completedWorkoutByPlanId.get(plan.id);
+                    const skipped = isPlannedWorkoutSkippedOnDate(plan, todayKey);
+                    const started = activePlannedWorkoutId === plan.id;
+                    const hasDraftConflict = draftConflict?.planId === plan.id;
+                    return (
+                      <article className="trace-data-card trace-today-plan" data-draft-collision={hasDraftConflict ? "open" : "closed"} data-schedule-item-type="workout" key={plan.id}>
+                        <span className="trace-badge">Workout · {completedWorkout ? "completed" : skipped ? "skipped" : started ? "started" : "planned"}</span>
+                        <h3><button className="trace-today-plan__open" type="button" aria-label={`Open workout preview ${plan.title}`} onClick={() => openPreview(plan)}>{plan.title}</button></h3>
+                        <p className="trace-today-plan__schedule">Scheduled {formatDateOnly(plan.scheduledDate)}</p>
+                        {plan.notes && <p className="trace-today-plan__notes">{plan.notes}</p>}
+                        {completedWorkout && <p className="trace-today-plan__completion">Completed {new Date(completedWorkout.occurredAt).toLocaleString()}</p>}
+                        {skipped && !completedWorkout && <p className="trace-today-plan__skipped">Skipped for today{plan.skipReasons?.[todayKey] ? ` · ${plan.skipReasons[todayKey]}` : ""}</p>}
+                        {!hasDraftConflict && (
+                          <div className="trace-today-exercise__actions">
+                            {completedWorkout ? <button className="trace-action trace-action--primary" type="button" aria-label={`Open completed workout ${plan.title}`} onClick={() => openCompletedWorkout(completedWorkout.id)} style={compactButtonStyle}>View completed workout</button> : skipped ? <span className="trace-today-plan__status" role="status">Skipped</span> : <button className="trace-action trace-action--brass" type="button" aria-label={`${started ? "Continue workout" : "Start planned workout"} ${plan.title}`} onClick={() => startPlan(plan)} ref={(node) => { if (node) startButtonRefs.current.set(plan.id, node); else startButtonRefs.current.delete(plan.id); }} style={compactButtonStyle}>{started ? "Continue workout" : "Start workout"}</button>}
+                            <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit planned workout ${plan.title}`} onClick={() => openEdit(plan)} style={compactButtonStyle}>Edit plan</button>
+                            {!completedWorkout && !skipped && <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip workout ${plan.title}`} onClick={() => requestSkipPlan(plan)} style={compactButtonStyle}>Skip workout</button>}
+                            <button className="trace-action trace-action--danger" type="button" aria-label={`Delete planned workout ${plan.title}`} onClick={() => removePlan(plan)} style={compactButtonStyle}>Delete plan</button>
+                          </div>
+                        )}
+                        {hasDraftConflict && (
+                          <div aria-label="Workout already in progress" className="trace-feature-surface trace-today-draft-conflict" onKeyDown={(event) => { if (event.key === "Escape") cancelDraftConflict(); }} role="dialog">
+                            <h4>Workout already in progress</h4><p>Resume {draftConflict.existingDraftTitle}, discard it and start this plan, or cancel.</p>
+                            <div className="trace-today-exercise__actions"><button ref={conflictResumeButtonRef} className="trace-action trace-action--primary" type="button" onClick={() => startPlan(plan, "resume")} style={compactButtonStyle}>Resume current workout</button><button className="trace-action trace-action--danger" type="button" onClick={() => startPlan(plan, "discard")} style={compactButtonStyle}>Discard and start plan</button><button className="trace-action trace-action--secondary" type="button" onClick={cancelDraftConflict} style={compactButtonStyle}>Cancel</button></div>
+                          </div>
+                        )}
+                      </article>
+                    );
+                  })}
+                </div>
+              </section>
+            )}
+          </section>
+          <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={backStyle}>Back to Timeline</button>
         </>
+      )}
+
+      {!draft && pendingSkipPlan && (
+        <section className="trace-feature-surface trace-skip-reason" role="dialog" aria-label="Optional skip reason">
+          <h2>Optional reason</h2>
+          <p>Why are you skipping this workout?</p>
+          <label>
+            Skip reason
+            <select value={skipReason} onChange={(event) => setSkipReason(event.target.value)} style={fieldStyle}>
+              <option value="">No reason</option>
+              {WORKOUT_SKIP_REASONS.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
+              <option value="Other">Other / custom reason</option>
+            </select>
+          </label>
+          {skipReason === "Other" && <label>Custom reason<input value={customSkipReason} onChange={(event) => setCustomSkipReason(event.target.value)} style={fieldStyle} /></label>}
+          <div className="trace-skip-reason__actions">
+            <button className="trace-action trace-action--primary" type="button" onClick={() => confirmSkipPlan()} style={compactButtonStyle}>Save skip</button>
+            <button className="trace-action trace-action--secondary" type="button" onClick={() => confirmSkipPlan(null)} style={compactButtonStyle}>Skip without reason</button>
+            <button className="trace-action trace-action--secondary" type="button" onClick={() => setPendingSkipPlan(null)} style={compactButtonStyle}>Cancel</button>
+          </div>
+        </section>
       )}
     </div>
   );

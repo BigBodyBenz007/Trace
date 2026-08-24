@@ -866,7 +866,11 @@ test("a conflicting duplicate logs without provenance and keeps the saved food",
       basis: { amount: 4, unit: "oz", description: "4 oz" },
     },
   });
-  expect(screen.getByRole("status")).toHaveTextContent(
+  const duplicateEntryStatus = screen.getByText(
+    "Entry logged. Your existing saved Meatloaf was kept.",
+    { selector: '[role="status"]' }
+  );
+  expect(duplicateEntryStatus).toHaveTextContent(
     "Entry logged. Your existing saved Meatloaf was kept."
   );
 });

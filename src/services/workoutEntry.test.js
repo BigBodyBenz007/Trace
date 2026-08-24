@@ -160,6 +160,47 @@ test("accepts zero reps and preserves failure fields", () => {
   });
 });
 
+test("preserves optional planned Roadmap completion and skip context", () => {
+  const draft = validDraft({
+    exercises: [
+      {
+        ...validDraft().exercises[0],
+        roadmapStatus: "completed",
+      },
+      {
+        ...validDraft().exercises[0],
+        id: "exercise-2",
+        name: "Cable Fly",
+        roadmapStatus: "skipped",
+        roadmapSkipReason: "Equipment unavailable",
+        sets: [{ ...validDraft().exercises[0].sets[0], id: "set-2" }],
+      },
+    ],
+  });
+
+  const entry = createWorkoutEntry(draft);
+  expect(entry.exercises[0]).toHaveProperty("roadmapStatus", "completed");
+  expect(entry.exercises[1]).toMatchObject({
+    roadmapStatus: "skipped",
+    roadmapSkipReason: "Equipment unavailable",
+    sets: [],
+  });
+});
+
+test("allows a skipped Roadmap exercise without invented performed sets", () => {
+  const draft = validDraft();
+  draft.exercises[0].roadmapStatus = "skipped";
+  draft.exercises[0].roadmapSkipReason = "Low energy";
+  draft.exercises[0].sets = [];
+
+  expect(getWorkoutEntryError(draft)).toBe("");
+  expect(createWorkoutEntry(draft).exercises[0]).toMatchObject({
+    roadmapStatus: "skipped",
+    roadmapSkipReason: "Low energy",
+    sets: [],
+  });
+});
+
 test("adds a planned-workout backlink without changing normal completion fields", () => {
   const now = new Date("2026-08-10T00:00:00.000Z");
   const entry = createWorkoutEntry(

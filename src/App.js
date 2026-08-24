@@ -80,6 +80,7 @@ import {
   readPlannedWorkouts,
   removePlannedWorkoutExercise as removeExerciseFromPlannedWorkout,
   restorePlannedWorkoutAtIndex,
+  skipPlannedWorkoutForDate,
   updatePlannedWorkout as updatePlannedWorkoutRecord,
   writePlannedWorkouts,
 } from "./services/plannedWorkout";
@@ -181,7 +182,11 @@ function App() {
   const [protocols, setProtocols] = useState([]);
   const [plannedWorkouts, setPlannedWorkouts] = useState([]);
   const [workoutEntries, setWorkoutEntries] = useState([]);
+  const [activeWorkoutDraft, setActiveWorkoutDraft] = useState(() =>
+    readWorkoutDraft(localStorage)
+  );
   const [workoutEntryTargetId, setWorkoutEntryTargetId] = useState(null);
+  const [workoutOriginPage, setWorkoutOriginPage] = useState(null);
   const [journalEntries, setJournalEntries] = useState([]);
   const [trophyCaseEntries, setTrophyCaseEntries] = useState([]);
   const [ceremonyEntry, setCeremonyEntry] = useState(null);
@@ -235,12 +240,20 @@ function App() {
   }
   const photoUrlLoader = photoUrlLoaderRef.current;
 
-  function showConfirmation(message) {
+  function showConfirmation(message, destinationPage = page) {
     confirmationIdRef.current += 1;
-    setConfirmation({ id: confirmationIdRef.current, message });
+    setConfirmation({ id: confirmationIdRef.current, message, page: destinationPage });
     clearTimeout(confirmationTimerRef.current);
     confirmationTimerRef.current = setTimeout(() => setConfirmation(null), 3200);
   }
+
+  useEffect(() => () => clearTimeout(confirmationTimerRef.current), []);
+
+  useEffect(() => {
+    if (!confirmation || confirmation.page === page) return;
+    clearTimeout(confirmationTimerRef.current);
+    setConfirmation(null);
+  }, [confirmation, page]);
 
   function medicationEntryConfirmation(entry, wasEditing = false) {
     const reference = entry?.compoundReference;
@@ -633,7 +646,7 @@ function App() {
       }
 
       setMemories(updatedMemories);
-      showConfirmation("Memory traced");
+      showConfirmation("Memory traced", "home");
       setMemoryCount(updatedMemories.length);
       if (editingId !== null) {
         setHomePageGeneration((generation) => generation + 1);
@@ -1270,6 +1283,37 @@ function App() {
     }
   }
 
+  function skipPlannedWorkout(id, date, reason = "") {
+    const existing = plannedWorkouts.find((plannedWorkout) => plannedWorkout.id === id);
+    const plannedWorkout = skipPlannedWorkoutForDate(
+      existing,
+      date,
+      new Date(),
+      reason
+    );
+    if (!plannedWorkout) {
+      return {
+        status: "invalid",
+        message: "The planned workout could not be skipped.",
+      };
+    }
+    const updated = plannedWorkouts.map((item) =>
+      item.id === id ? plannedWorkout : item
+    );
+    try {
+      const saved = writePlannedWorkouts(localStorage, updated);
+      setPlannedWorkouts(saved);
+      setStorageError("");
+      return { status: "skipped", plannedWorkout };
+    } catch (error) {
+      setStorageError(storageMessage("skip this planned workout"));
+      return {
+        status: "error",
+        message: "The planned workout could not be skipped.",
+      };
+    }
+  }
+
   function startPlannedWorkout(id, conflictAction = null) {
     const plannedWorkout = plannedWorkouts.find((plan) => plan.id === id);
     if (!plannedWorkout) {
@@ -1287,7 +1331,9 @@ function App() {
 
     const existingDraft = readWorkoutDraft(localStorage);
     if (existingDraft?.plannedWorkoutId === id) {
+      setActiveWorkoutDraft(existingDraft);
       setWorkoutEntryTargetId(null);
+      setWorkoutOriginPage("today");
       setPage("workouts");
       return { status: "resumed", plannedWorkout };
     }
@@ -1298,7 +1344,9 @@ function App() {
       };
     }
     if (existingDraft && conflictAction === "resume") {
+      setActiveWorkoutDraft(existingDraft);
       setWorkoutEntryTargetId(null);
+      setWorkoutOriginPage("today");
       setPage("workouts");
       return { status: "resumed-existing" };
     }
@@ -1306,7 +1354,11 @@ function App() {
       return { status: "cancelled" };
     }
 
-    const workoutDraft = createWorkoutDraftFromPlannedWorkout(plannedWorkout);
+    const workoutDraft = createWorkoutDraftFromPlannedWorkout(
+      plannedWorkout,
+      new Date(),
+      { originPage: "today" }
+    );
     if (!workoutDraft) {
       return {
         status: "error",
@@ -1315,7 +1367,9 @@ function App() {
     }
     try {
       writeWorkoutDraft(localStorage, workoutDraft);
+      setActiveWorkoutDraft(workoutDraft);
       setWorkoutEntryTargetId(null);
+      setWorkoutOriginPage("today");
       setStorageError("");
       setPage("workouts");
       return { status: "started", plannedWorkout };
@@ -1332,6 +1386,7 @@ function App() {
     if (!workoutEntries.some((entry) => entry.id === id)) return false;
     skipNextPageTopScrollRef.current = true;
     setWorkoutEntryTargetId(id);
+    setWorkoutOriginPage("today");
     setPage("workouts");
     return true;
   }
@@ -1657,7 +1712,7 @@ function App() {
     >
       <ConfirmationMessage
         key={confirmation?.id}
-        message={confirmation?.message || ""}
+        message={confirmation?.page === page ? confirmation.message : ""}
       />
       {storageError && (
         <div
@@ -1701,6 +1756,7 @@ function App() {
           onOpenToday={() => setPage("today")}
           onOpenWorkouts={() => {
             setWorkoutEntryTargetId(null);
+            setWorkoutOriginPage(null);
             setPage("workouts");
           }}
           onOpenTrophyCase={() => setPage("trophy-case")}
@@ -1746,15 +1802,19 @@ function App() {
           plannedWorkouts={plannedWorkouts}
           protocols={protocols}
           workoutEntries={workoutEntries}
+          activeWorkoutDraft={activeWorkoutDraft}
           savedExercises={savedExercises}
+          saveExerciseDefinitions={saveExerciseDefinitions}
           createPlannedWorkout={createPlannedWorkout}
           updatePlannedWorkout={updatePlannedWorkout}
           appendPlannedWorkoutExercise={appendPlannedWorkoutExercise}
           removePlannedWorkoutExercise={removePlannedWorkoutExercise}
           deletePlannedWorkout={deletePlannedWorkout}
           restorePlannedWorkout={restorePlannedWorkout}
+          skipPlannedWorkout={skipPlannedWorkout}
           startPlannedWorkout={startPlannedWorkout}
           openCompletedWorkout={openCompletedWorkout}
+          showToast={showConfirmation}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}
@@ -1797,10 +1857,18 @@ function App() {
       ) : page === "workouts" ? (
         <WorkoutPage
           onBack={() => setPage("home")}
+          navigationOriginPage={workoutOriginPage}
+          onReturnToToday={() => {
+            setWorkoutEntryTargetId(null);
+            setWorkoutOriginPage(null);
+            setPage("today");
+          }}
           workoutEntries={workoutEntries}
+          onWorkoutDraftChange={setActiveWorkoutDraft}
           trophyEntries={trophyCaseEntries}
           savedExercises={savedExercises}
           saveWorkoutEntry={saveWorkoutEntry}
+          showToast={showConfirmation}
           saveExerciseDefinitions={saveExerciseDefinitions}
           updateSavedExercise={updateSavedExercise}
           updateWorkoutEntry={updateWorkoutEntry}

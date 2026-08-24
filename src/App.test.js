@@ -309,7 +309,10 @@ test("same-tab restore leaves navigation unchanged and resumes an orphaned activ
 
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" }).at(-1));
   openWorkouts();
-  expect(screen.getByLabelText("Workout title")).toHaveValue("Restored Active Workout");
+  expect(screen.getByRole("heading", { name: "Workout Roadmap" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Restored Active Workout" })).toBeInTheDocument();
+  fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
+    .getByRole("button", { name: "Edit" }));
   expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(185);
   expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(9);
   expect(screen.getByLabelText("Exercise 1 set 1 notes")).toHaveValue("Preserved from backup");
@@ -394,6 +397,7 @@ test("Timeline opens Protocols and returns to Timeline at the top", () => {
 test("Timeline opens Today's Schedule and returns to Timeline at the top", () => {
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(screen.getByTestId("today-schedule-dashboard")).toHaveAttribute("data-expanded", "false");
   expect(screen.getByRole("heading", { name: "Today's Schedule" })).toBeInTheDocument();
   expectDestinationScrolledToTop();
   expect(screen.getByRole("heading", { name: "Nothing scheduled for today." })).toBeInTheDocument();
@@ -430,10 +434,12 @@ test("Today reads scheduled protocol items from the existing protocol collection
 
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
 
-  const protocols = await screen.findByRole("region", { name: "Protocols for today" });
-  expect(within(protocols).getByRole("heading", { name: "Stored protocol" })).toBeInTheDocument();
-  expect(within(protocols).getByText("Stored compound")).toBeInTheDocument();
+  const schedule = await screen.findByRole("region", { name: "Today's actionable items" });
+  const protocols = schedule.querySelector('[data-schedule-item-type="protocol"]');
+  expect(within(protocols).getByRole("heading", { name: "Stored compound" })).toBeInTheDocument();
+  expect(within(protocols).getByText("Stored protocol")).toBeInTheDocument();
   expect(within(protocols).getByText("2.5 mg")).toBeInTheDocument();
   expect(within(protocols).getByText("Intramuscular (IM)")).toBeInTheDocument();
   expect(within(protocols).getByText("Left side")).toBeInTheDocument();
@@ -444,6 +450,7 @@ test("Today creates, edits, and deletes plans without creating completed workout
   const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
   fireEvent.click(screen.getByRole("button", { name: "Create planned workout" }));
   fireEvent.change(screen.getByLabelText("Planned workout title"), { target: { value: "Today's Push" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Bench Press" } });
@@ -520,6 +527,7 @@ test("Today Undo restores the exact deleted plan and storage order without chang
 
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
   fireEvent.click(screen.getByRole("button", { name: "Delete planned workout Deleted Plan" }));
   await waitFor(() => expect(JSON.parse(localStorage.getItem("plannedWorkouts")))
     .toEqual([first, last]));
@@ -544,6 +552,7 @@ test("failed Today Undo keeps the plan deleted and reports the storage error", a
 
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
   fireEvent.click(screen.getByRole("button", { name: "Delete planned workout Restore Failure Plan" }));
   await waitFor(() => expect(localStorage.getItem("plannedWorkouts")).toBe("[]"));
 
@@ -573,6 +582,7 @@ test("Today deletion Undo disappears after navigation remounts the page", async 
 
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
   fireEvent.click(screen.getByRole("button", { name: "Delete planned workout Session-only Plan" }));
   await waitFor(() => expect(localStorage.getItem("plannedWorkouts")).toBe("[]"));
   expect(screen.getByRole("button", { name: "Undo" })).toBeInTheDocument();
@@ -582,6 +592,70 @@ test("Today deletion Undo disappears after navigation remounts the page", async 
 
   expect(screen.queryByRole("button", { name: "Undo" })).not.toBeInTheDocument();
   expect(localStorage.getItem("plannedWorkouts")).toBe("[]");
+  confirm.mockRestore();
+});
+
+test("Today planner saves an exercise through the existing reusable catalog without saving or duplicating the plan", async () => {
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Create planned workout" }));
+  fireEvent.change(screen.getByLabelText("Planned workout title"), { target: { value: "Unsaved Push" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Cable Fly" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add target set to exercise 1" }));
+  fireEvent.change(screen.getByLabelText("Exercise 1 target set 1 intended weight"), { target: { value: "35" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save exercise 1 as reusable" }));
+
+  await waitFor(() => expect(JSON.parse(localStorage.getItem("savedExercises"))).toHaveLength(1));
+  expect(JSON.parse(localStorage.getItem("savedExercises"))[0]).toMatchObject({
+    name: "Cable Fly",
+    defaults: { load: { mode: "external", unit: "lb" } },
+  });
+  expect(localStorage.getItem("plannedWorkouts")).toBeNull();
+  expect(screen.getByRole("form", { name: "Create planned workout" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Save exercise 1 as reusable" }));
+  await waitFor(() => expect(JSON.parse(localStorage.getItem("savedExercises"))).toHaveLength(1));
+  expect(screen.getByRole("status")).toHaveTextContent("Cable Fly is already saved for reuse.");
+});
+
+test("Today skips a planned workout for its date without deleting or completing it", async () => {
+  const confirm = jest.spyOn(window, "confirm")
+    .mockReturnValueOnce(false)
+    .mockReturnValueOnce(true);
+  const existing = {
+    ...plannedWorkout("planned-workout:skip", "Skip Day"),
+    scheduledDate: localCalendarDateKey(),
+  };
+  localStorage.setItem("plannedWorkouts", JSON.stringify([existing]));
+
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
+  fireEvent.click(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByRole("button", { name: "Open workout preview Skip Day" }));
+
+  fireEvent.click(screen.getByRole("button", { name: "Skip workout Skip Day" }));
+  expect(JSON.parse(localStorage.getItem("plannedWorkouts"))[0]).not.toHaveProperty("skippedDates");
+  expect(screen.getByRole("button", { name: "Start planned workout Skip Day" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Skip workout Skip Day" }));
+  const reasonDialog = screen.getByRole("dialog", { name: "Optional skip reason" });
+  fireEvent.change(within(reasonDialog).getByLabelText("Skip reason"), { target: { value: "Schedule conflict" } });
+  fireEvent.click(within(reasonDialog).getByRole("button", { name: "Save skip" }));
+  await waitFor(() => expect(JSON.parse(localStorage.getItem("plannedWorkouts"))[0])
+    .toMatchObject({
+      id: existing.id,
+      title: existing.title,
+      exercises: existing.exercises,
+      skippedDates: [localCalendarDateKey()],
+      skipReasons: { [localCalendarDateKey()]: "Schedule conflict" },
+    }));
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Back to today" }));
+  expect(screen.getByText("Workout · skipped")).toBeInTheDocument();
+  expect(screen.getByText("Skipped for today · Schedule conflict")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Start planned workout Skip Day" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Open completed workout Skip Day" })).not.toBeInTheDocument();
   confirm.mockRestore();
 });
 
@@ -602,6 +676,12 @@ test("executes a plan through WorkoutPage and reflects completion and deletion i
         reps: 8,
         load: { mode: "external", amount: 60, unit: "kg" },
         notes: "Target notes",
+      }, {
+        id: "planned-set:bench-working",
+        setType: "working",
+        reps: 6,
+        load: { mode: "external", amount: 70, unit: "kg" },
+        notes: "Working target",
       }],
     }],
   };
@@ -611,22 +691,38 @@ test("executes a plan through WorkoutPage and reflects completion and deletion i
 
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
+  fireEvent.click(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByRole("button", { name: "Open workout preview Planned Push" }));
   fireEvent.click(screen.getByRole("button", { name: "Start planned workout Planned Push" }));
 
   expect(screen.getByRole("heading", { name: "Workouts" })).toBeInTheDocument();
-  expect(screen.getByLabelText("Workout title")).toHaveValue("Planned Push");
-  expect(screen.getByLabelText("Date")).toHaveValue(localCalendarDateKey());
-  expect(screen.getByLabelText("Workout notes (optional)")).toHaveValue("Plan notes");
-  expect(screen.getByLabelText("Exercise 1 name")).toHaveValue("Dumbbell Bench Press");
-  expect(screen.getByLabelText("Exercise 1 notes")).toHaveValue("Exercise notes");
+  expect(screen.getByRole("heading", { name: "Workout Roadmap" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Planned Push" })).toBeInTheDocument();
+  expect(screen.getByText("Plan notes")).toBeInTheDocument();
+  const roadmapExercise = screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" });
+  expect(within(roadmapExercise).getByText("2 planned sets")).toBeInTheDocument();
+  expect(within(roadmapExercise).getByText("Warm-up · 60 kg × 8")).toBeInTheDocument();
+  expect(within(roadmapExercise).getByText("Working · 70 kg × 6")).toBeInTheDocument();
+  const volume = screen.getByRole("list", { name: "Workout set summary" });
+  expect(volume).toHaveTextContent("2 total sets");
+  expect(volume).toHaveTextContent("1 warm-up");
+  expect(volume).toHaveTextContent("1 working");
+  expect(screen.getAllByRole("button", { name: "Back to Today" })).toHaveLength(2);
+  fireEvent.click(within(roadmapExercise).getByRole("button", { name: "Edit" }));
   expect(screen.getByLabelText("Exercise 1 set 1 type")).toHaveValue("warm-up");
   expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(8);
   expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(60);
   expect(screen.getByLabelText("Exercise 1 set 1 weight unit")).toHaveValue("kg");
   expect(screen.getByLabelText("Exercise 1 set 1 notes")).toHaveValue("Target notes");
+  expect(screen.getByLabelText("Exercise 1 set 2 reps")).toHaveValue(6);
+  expect(screen.getByLabelText("Exercise 1 set 2 weight")).toHaveValue(70);
+  expect(screen.getByLabelText("Exercise 1 set 2 weight unit")).toHaveValue("kg");
+  expect(screen.getByLabelText("Exercise 1 set 2 notes")).toHaveValue("Working target");
 
   const activeDraft = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
   expect(activeDraft.plannedWorkoutId).toBe(plan.id);
+  expect(activeDraft.context.originPage).toBe("today");
   expect(new Date(activeDraft.startedAt).getTime()).toBeGreaterThanOrEqual(startedAfter);
   expect(activeDraft).not.toHaveProperty("finishedAt");
   expect(activeDraft.form.exercises[0].id).not.toBe(plan.exercises[0].id);
@@ -634,12 +730,8 @@ test("executes a plan through WorkoutPage and reflects completion and deletion i
     plan.exercises[0].targetSets[0].id
   );
 
-  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
-  fireEvent.change(screen.getByLabelText("Exercise 2 name"), {
-    target: { value: "Remembered Curl" },
-  });
   expect(localStorage.getItem("plannedWorkouts")).toBe(savedPlan);
-  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 2" }));
+  fireEvent.click(within(roadmapExercise).getByRole("button", { name: "Completed" }));
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
 
   await waitFor(() => {
@@ -651,23 +743,36 @@ test("executes a plan through WorkoutPage and reflects completion and deletion i
     title: "Planned Push",
     exercises: [expect.objectContaining({
       name: "Dumbbell Bench Press",
-      sets: [expect.objectContaining({
-        reps: 8,
-        load: { mode: "external", amount: 60, unit: "kg" },
-        notes: "Target notes",
-      })],
+      sets: [
+        expect.objectContaining({
+          reps: 8,
+          load: { mode: "external", amount: 60, unit: "kg" },
+          notes: "Target notes",
+        }),
+        expect.objectContaining({
+          reps: 6,
+          load: { mode: "external", amount: 70, unit: "kg" },
+          notes: "Working target",
+        }),
+      ],
     })],
   });
   expect(completed.finishedAt).toBeTruthy();
   expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
   expect(localStorage.getItem("plannedWorkouts")).toBe(savedPlan);
 
-  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
-  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
-  expect(screen.getByText("Plan · completed")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Today's Schedule" })).toBeInTheDocument();
+  expect(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByText("Completed")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
+  expect(screen.getByText("Workout · completed")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Start planned workout Planned Push" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Open completed workout Planned Push" }));
   expect(screen.getByRole("heading", { name: "Workout History" })).toBeInTheDocument();
+  const expandCompleted = screen.queryByRole("button", { name: "Expand workout: Planned Push" });
+  if (expandCompleted) fireEvent.click(expandCompleted);
+  expect(screen.getByText(/Warm-up · 60 kg × 8 reps/)).toBeInTheDocument();
+  expect(screen.getByText(/Working · 70 kg × 6 reps/)).toBeInTheDocument();
   expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
     behavior: "smooth",
     block: "center",
@@ -677,9 +782,209 @@ test("executes a plan through WorkoutPage and reflects completion and deletion i
   await waitFor(() => expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([]));
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
-  expect(screen.getByText("Plan · not completed")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
+  expect(screen.getByText("Workout · planned")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Start planned workout Planned Push" })).toBeInTheDocument();
   confirm.mockRestore();
+});
+
+test("saves a partial planned workout as resumable progress and completes it exactly once", async () => {
+  const plan = {
+    ...plannedWorkout("planned-workout:partial", "Partial Push"),
+    scheduledDate: localCalendarDateKey(),
+    exercises: [{
+      id: "planned-exercise:press",
+      name: "Dumbbell Press",
+      notes: "Keep the completed values",
+      targetSets: [{
+        id: "planned-set:press",
+        reps: 8,
+        load: { mode: "external", amount: 60, unit: "kg" },
+        notes: "Controlled",
+      }],
+    }, {
+      id: "planned-exercise:dip",
+      name: "Chest Dip",
+      notes: "Finish later",
+      targetSets: [{
+        id: "planned-set:dip",
+        reps: 10,
+        load: { mode: "bodyweight" },
+        notes: "Full range",
+      }],
+    }],
+  };
+  localStorage.setItem("plannedWorkouts", JSON.stringify([plan]));
+
+  const firstRender = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Open workout preview Partial Push" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Start planned workout Partial Push" }));
+
+  const firstExercise = screen.getByRole("article", { name: "Roadmap exercise Dumbbell Press" });
+  fireEvent.click(within(firstExercise).getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), {
+    target: { value: "65" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
+    target: { value: "9" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Done editing" }));
+  fireEvent.click(within(firstExercise).getByRole("button", { name: "Completed" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  expect(screen.getByRole("heading", { name: "Today's Schedule" })).toBeInTheDocument();
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Workout progress saved.");
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+  const partialDraft = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+  expect(partialDraft).toMatchObject({
+    plannedWorkoutId: plan.id,
+    context: { originPage: "today" },
+    form: {
+      exercises: [
+        expect.objectContaining({
+          name: "Dumbbell Press",
+          roadmapStatus: "completed",
+          sets: [expect.objectContaining({ weightAmount: "65", reps: "9" })],
+        }),
+        expect.objectContaining({ name: "Chest Dip", roadmapStatus: "pending" }),
+      ],
+    },
+  });
+  expect(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByText("Started")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
+  expect(screen.getByText("Workout · started")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Continue workout Partial Push" })).toBeInTheDocument();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByText("Started")).toBeInTheDocument();
+
+  firstRender.unmount();
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
+  fireEvent.click(screen.getByRole("button", { name: "Continue workout Partial Push" }));
+
+  const restoredFirst = screen.getByRole("article", { name: "Roadmap exercise Dumbbell Press" });
+  const restoredSecond = screen.getByRole("article", { name: "Roadmap exercise Chest Dip" });
+  expect(within(restoredFirst).getByRole("button", { name: "Completed" }))
+    .toHaveAttribute("aria-pressed", "true");
+  expect(within(restoredSecond).getByRole("button", { name: "Completed" }))
+    .toHaveAttribute("aria-pressed", "false");
+  fireEvent.click(within(restoredFirst).getByRole("button", { name: "Edit" }));
+  expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(65);
+  expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(9);
+
+  fireEvent.click(within(restoredSecond).getByRole("button", { name: "Completed" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  await waitFor(() => {
+    expect(JSON.parse(localStorage.getItem("workoutEntries"))).toHaveLength(1);
+  });
+  expect(JSON.parse(localStorage.getItem("workoutEntries"))[0]).toMatchObject({
+    plannedWorkoutId: plan.id,
+    exercises: [
+      expect.objectContaining({ roadmapStatus: "completed" }),
+      expect.objectContaining({ roadmapStatus: "completed" }),
+    ],
+  });
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
+  expect(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByText("Completed")).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("workoutEntries"))).toHaveLength(1);
+});
+
+test("uses one fixed auto-dismissing toast host for planner, preview, and Roadmap success", () => {
+  jest.useFakeTimers();
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+  const previewPlan = {
+    ...plannedWorkout("planned-workout:toast-preview", "Preview Toast"),
+    scheduledDate: localCalendarDateKey(),
+  };
+  const roadmapPlan = {
+    ...plannedWorkout("planned-workout:toast-roadmap", "Roadmap Toast"),
+    scheduledDate: localCalendarDateKey(),
+    exercises: [{
+      id: "planned-exercise:toast-one",
+      name: "Push-Up",
+      notes: "",
+      targetSets: [{
+        id: "planned-set:toast-one",
+        reps: 10,
+        load: { mode: "bodyweight" },
+        notes: "",
+      }],
+    }, {
+      id: "planned-exercise:toast-two",
+      name: "Dip",
+      notes: "",
+      targetSets: [{
+        id: "planned-set:toast-two",
+        reps: 8,
+        load: { mode: "bodyweight" },
+        notes: "",
+      }],
+    }],
+  };
+  localStorage.setItem("plannedWorkouts", JSON.stringify([previewPlan, roadmapPlan]));
+
+  try {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+    fireEvent.click(screen.getByRole("button", { name: "Create planned workout" }));
+    fireEvent.change(screen.getByLabelText("Planned workout title"), {
+      target: { value: "Planner Toast" },
+    });
+    fireEvent.change(screen.getByLabelText("Exercise 1 name"), {
+      target: { value: "Squat" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save planned workout" }));
+
+    const plannerToast = screen.getByTestId("save-confirmation");
+    expect(plannerToast).toHaveTextContent("Planned workout created.");
+    expect(plannerToast).toHaveClass("trace-save-confirmation");
+    expect(plannerToast).toHaveAttribute("data-placement", "viewport-edge");
+    expect(plannerToast).toHaveAttribute("aria-live", "polite");
+    expect(plannerToast).toHaveStyle({ position: "fixed", zIndex: "10000" });
+    expect(screen.getAllByTestId("save-confirmation")).toHaveLength(1);
+    act(() => jest.advanceTimersByTime(3200));
+    expect(screen.queryByTestId("save-confirmation")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Open workout preview Preview Toast" }));
+    fireEvent.click(screen.getByRole("button", { name: "Skip workout Preview Toast" }));
+    fireEvent.click(screen.getByRole("button", { name: "Skip without reason" }));
+    expect(screen.getByTestId("save-confirmation")).toHaveTextContent(
+      "Preview Toast marked skipped for today."
+    );
+    expect(screen.getByTestId("save-confirmation")).toHaveClass("trace-save-confirmation");
+    fireEvent.click(screen.getByRole("button", { name: "Back to today" }));
+    fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+    expect(screen.queryByTestId("save-confirmation")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+
+    fireEvent.click(screen.getByRole("button", { name: "Open workout preview Roadmap Toast" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start planned workout Roadmap Toast" }));
+    fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Push-Up" }))
+      .getByRole("button", { name: "Completed" }));
+    fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+    expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Workout progress saved.");
+    expect(screen.getByTestId("save-confirmation")).toHaveClass("trace-save-confirmation");
+    expect(screen.getAllByTestId("save-confirmation")).toHaveLength(1);
+    expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+    act(() => jest.advanceTimersByTime(3200));
+    expect(screen.queryByTestId("save-confirmation")).not.toBeInTheDocument();
+  } finally {
+    confirm.mockRestore();
+    if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
+    else delete window.innerWidth;
+    jest.useRealTimers();
+  }
 });
 
 test("does not replace an unrelated draft and can resume it from the collision choice", () => {
@@ -718,6 +1023,7 @@ test("does not replace an unrelated draft and can resume it from the collision c
 
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
   fireEvent.click(screen.getByRole("button", { name: "Start planned workout Collision Plan" }));
   expect(screen.getByRole("dialog", { name: "Workout already in progress" })).toBeInTheDocument();
   expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBe(serializedDraft);
@@ -750,11 +1056,13 @@ test("explicit discard replaces an unrelated draft with the selected plan", () =
 
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
   fireEvent.click(screen.getByRole("button", { name: "Start planned workout Discard Choice Plan" }));
   fireEvent.click(screen.getByRole("button", { name: "Discard and start plan" }));
 
   expect(screen.getByRole("heading", { name: "Workouts" })).toBeInTheDocument();
-  expect(screen.getByLabelText("Workout title")).toHaveValue("Discard Choice Plan");
+  expect(screen.getByRole("heading", { name: "Workout Roadmap" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Discard Choice Plan" })).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY))).toMatchObject({
     plannedWorkoutId: plan.id,
     form: { title: "Discard Choice Plan" },
@@ -771,24 +1079,26 @@ test("abandons and resumes the same plan draft without marking the plan complete
 
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
   fireEvent.click(screen.getByRole("button", { name: "Start planned workout Resume Plan" }));
-  fireEvent.change(screen.getByLabelText("Workout notes (optional)"), {
-    target: { value: "In progress" },
-  });
-  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
-  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
-  expect(screen.getByText("Plan · not completed")).toBeInTheDocument();
+  fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
+    .getByRole("button", { name: "Completed" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Today" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
+  expect(screen.getByText("Workout · started")).toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole("button", { name: "Start planned workout Resume Plan" }));
+  fireEvent.click(screen.getByRole("button", { name: "Continue workout Resume Plan" }));
   expect(screen.queryByRole("dialog", { name: "Workout already in progress" })).not.toBeInTheDocument();
-  expect(screen.getByLabelText("Workout notes (optional)")).toHaveValue("In progress");
+  expect(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
+    .getByRole("button", { name: "Completed" })).toHaveAttribute("aria-pressed", "true");
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
   expect(localStorage.getItem("workoutEntries")).toBeNull();
 
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
-  expect(screen.getByText("Plan · not completed")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Show details" }));
+  expect(screen.getByText("Workout · planned")).toBeInTheDocument();
   confirm.mockRestore();
 });
 
@@ -839,7 +1149,10 @@ test("prevents a second completed entry for the same planned workout", async () 
 
   renderAppAtTimeline();
   openWorkouts();
-  await screen.findByText("Duplicate Guard");
+  expect(within(await screen.findByRole("form", { name: "Workout roadmap" }))
+    .getByRole("heading", { name: "Duplicate Guard" })).toBeInTheDocument();
+  fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Dips" }))
+    .getByRole("button", { name: "Completed" }));
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
 
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([existingEntry]);
@@ -2415,7 +2728,7 @@ test("completed workout drops persist recursively and reload in Workout History"
   render(<App />);
   openWorkouts();
   expandCompletedWorkout("Drop Push Day");
-  expect(screen.getByText("↳ Drop 1: Bodyweight × 4 reps")).toBeInTheDocument();
+  expect(screen.getByText("↳ Drop 1: Working · Bodyweight × 4 reps")).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("workoutEntries"))[0].exercises[0].sets[0].drops[0].id).toBe(dropId);
 });
 
@@ -2648,7 +2961,8 @@ test("workout edits and confirmed deletion update only workout storage", () => {
   });
 
   fireEvent.click(screen.getByRole("button", { name: /Squat.*1 performance/ }));
-  expect(screen.getAllByText("100 kg × 6 reps")).toHaveLength(3);
+  expect(screen.getAllByText("100 kg × 6 reps")).toHaveLength(2);
+  expect(screen.getByText("Working · 100 kg × 6 reps")).toBeInTheDocument();
 
   jest.spyOn(window, "confirm").mockReturnValue(true);
   fireEvent.click(screen.getByRole("button", { name: "Delete" }));

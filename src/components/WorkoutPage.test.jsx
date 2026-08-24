@@ -99,9 +99,7 @@ test("successful save clears a restored draft and does not duplicate the workout
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
   expect(props.saveWorkoutEntry).toHaveBeenCalledTimes(1);
   expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
-  expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Workout traced");
-  expect(screen.getByTestId("save-confirmation")).toHaveClass("trace-save-confirmation");
-  expect(screen.getByTestId("save-confirmation")).toHaveAttribute("data-placement", "viewport-edge");
+  expect(props.showToast).toHaveBeenCalledWith("Workout traced", undefined);
 });
 
 test("restores planned prefills and saves one normal entry with its backlink", () => {
@@ -113,15 +111,24 @@ test("restores planned prefills and saves one normal entry with its backlink", (
   localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
   const view = renderPage();
 
-  expect(screen.getByLabelText("Workout title")).toHaveValue("Planned Push");
-  expect(screen.getByLabelText("Workout notes (optional)")).toHaveValue("Plan notes");
-  expect(screen.getByLabelText("Exercise 1 name")).toHaveValue("Dumbbell Bench Press");
-  expect(screen.getByLabelText("Exercise 1 notes")).toHaveValue("Exercise notes");
+  expect(screen.getByRole("form", { name: "Workout roadmap" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Planned Push" })).toBeInTheDocument();
+  expect(screen.getByText("Plan notes")).toBeInTheDocument();
+  const exercise = screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" });
+  expect(within(exercise).getByText("1 planned set")).toBeInTheDocument();
+  expect(within(exercise).getByText("Warm-up · 60 kg × 8")).toBeInTheDocument();
+  const volume = screen.getByRole("list", { name: "Workout set summary" });
+  expect(volume).toHaveTextContent("1 total set");
+  expect(volume).toHaveTextContent("1 warm-up");
+  expect(volume).toHaveTextContent("0 working");
+  fireEvent.click(within(exercise).getByRole("button", { name: "Edit" }));
   expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(8);
   expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(60);
   expect(screen.getByLabelText("Exercise 1 set 1 weight unit")).toHaveValue("kg");
+  expect(screen.getByLabelText("Exercise 1 set 1 type")).toHaveValue("warm-up");
   expect(screen.getByLabelText("Exercise 1 set 1 notes")).toHaveValue("Target notes");
 
+  fireEvent.click(within(exercise).getByRole("button", { name: "Completed" }));
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
   expect(view.saveWorkoutEntry).toHaveBeenCalledTimes(1);
   expect(view.saveWorkoutEntry).toHaveBeenCalledWith(expect.objectContaining({
@@ -131,7 +138,7 @@ test("restores planned prefills and saves one normal entry with its backlink", (
   expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
 });
 
-test("adds an exercise only to the active planned-workout draft", async () => {
+test("keeps Roadmap actions compact, edits one exercise, and persists skip details only in the active draft", async () => {
   const plan = plannedExecution();
   const savedPlan = JSON.stringify([plan]);
   localStorage.setItem("plannedWorkouts", savedPlan);
@@ -140,12 +147,22 @@ test("adds an exercise only to the active planned-workout draft", async () => {
   ));
   renderPage();
 
-  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
-  expect(screen.getByLabelText("Exercise 2 name")).toHaveValue("");
-  expect(screen.getByLabelText("Exercise 2 set 1 reps")).toHaveValue(null);
-  fireEvent.change(screen.getByLabelText("Exercise 2 name"), {
-    target: { value: "Cable Fly" },
-  });
+  const exercise = screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" });
+  const actions = within(exercise).getByLabelText("Dumbbell Bench Press roadmap actions");
+  expect(within(actions).getAllByRole("button")).toHaveLength(3);
+  fireEvent.click(within(actions).getByRole("button", { name: "Completed" }));
+  expect(exercise).toHaveAttribute("data-roadmap-status", "completed");
+  fireEvent.click(within(actions).getByRole("button", { name: "Completed" }));
+
+  fireEvent.click(within(actions).getByRole("button", { name: "Edit" }));
+  expect(screen.getByRole("region", { name: "Edit Dumbbell Bench Press sets" })).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "9" } });
+  fireEvent.click(within(actions).getByRole("button", { name: "Skipped" }));
+  const reason = screen.getByRole("region", { name: "Skip reason for Dumbbell Bench Press" });
+  fireEvent.change(within(reason).getByLabelText("Optional reason"), { target: { value: "Pain or discomfort" } });
+  fireEvent.click(within(reason).getByRole("button", { name: "Save skipped exercise" }));
+  expect(exercise).toHaveAttribute("data-roadmap-status", "skipped");
+  expect(within(exercise).getByText("Reason: Pain or discomfort")).toBeInTheDocument();
 
   await waitFor(() => {
     const stored = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
@@ -153,13 +170,85 @@ test("adds an exercise only to the active planned-workout draft", async () => {
       plannedWorkoutId: plan.id,
       form: {
         exercises: [
-          { name: "Dumbbell Bench Press" },
-          { name: "Cable Fly" },
+          {
+            name: "Dumbbell Bench Press",
+            roadmapStatus: "skipped",
+            roadmapSkipReason: "Pain or discomfort",
+            sets: [expect.objectContaining({ reps: "9" })],
+          },
         ],
       },
     });
   });
   expect(localStorage.getItem("plannedWorkouts")).toBe(savedPlan);
+});
+
+test("Roadmap expands only one exercise editor and remains contained at 390px", () => {
+  const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+  const firstPlan = plannedExecution();
+  const plan = createPlannedWorkout({
+    ...firstPlan,
+    id: "planned-workout:two-exercises",
+    exercises: [
+      firstPlan.exercises[0],
+      {
+        id: "planned-exercise:dip",
+        name: "Chest Dip With A Deliberately Long Exercise Name",
+        notes: "",
+        targetSets: [{
+          id: "planned-set:dip",
+          reps: 10,
+          load: { mode: "bodyweight" },
+          notes: "",
+        }],
+      },
+    ],
+  }, new Date("2026-08-20T12:00:00.000Z"));
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(
+    createWorkoutDraftFromPlannedWorkout(plan, new Date(2026, 7, 22, 14, 25))
+  ));
+  renderPage();
+
+  const volume = screen.getByRole("list", { name: "Workout set summary" });
+  expect(volume).toHaveTextContent("2 total sets");
+  expect(volume).toHaveTextContent("1 warm-up");
+  expect(volume).toHaveTextContent("1 working");
+
+  const first = screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" });
+  const second = screen.getByRole("article", { name: "Roadmap exercise Chest Dip With A Deliberately Long Exercise Name" });
+  fireEvent.click(within(first).getByRole("button", { name: "Edit" }));
+  expect(screen.getByRole("region", { name: "Edit Dumbbell Bench Press sets" })).toBeInTheDocument();
+  expect(screen.queryByRole("region", { name: "Edit Chest Dip With A Deliberately Long Exercise Name sets" })).not.toBeInTheDocument();
+
+  fireEvent.click(within(second).getByRole("button", { name: "Edit" }));
+  expect(screen.queryByRole("region", { name: "Edit Dumbbell Bench Press sets" })).not.toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Edit Chest Dip With A Deliberately Long Exercise Name sets" })).toBeInTheDocument();
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+  if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
+});
+
+test("a Today-origin Roadmap provides Back to Today and returns there after all exercises are handled and saved", () => {
+  const plan = plannedExecution();
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(
+    createWorkoutDraftFromPlannedWorkout(
+      plan,
+      new Date(2026, 7, 22, 14, 25),
+      { originPage: "today" }
+    )
+  ));
+  const onReturnToToday = jest.fn();
+  const view = renderPage({ onReturnToToday });
+
+  expect(screen.getAllByRole("button", { name: "Back to Today" })).toHaveLength(2);
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Today" })[0]);
+  expect(onReturnToToday).toHaveBeenCalledTimes(1);
+  fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
+    .getByRole("button", { name: "Completed" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  expect(view.saveWorkoutEntry).toHaveBeenCalledTimes(1);
+  expect(onReturnToToday).toHaveBeenCalledTimes(2);
 });
 
 test("discarding a planned-workout draft does not complete or change its plan", () => {
@@ -286,6 +375,7 @@ function renderPageProps(overrides = {}) {
     onBack: jest.fn(),
     workoutEntries: [],
     saveWorkoutEntry: jest.fn(() => true),
+    showToast: jest.fn(),
     saveExerciseDefinitions: jest.fn(() => []),
     updateSavedExercise: jest.fn(() => ({ status: "updated" })),
     updateWorkoutEntry: jest.fn(() => true),
@@ -323,6 +413,7 @@ function plannedExecution() {
       notes: "Exercise notes",
       targetSets: [{
         id: "planned-set:bench",
+        setType: "warm-up",
         reps: 8,
         load: { mode: "external", amount: 60, unit: "kg" },
         notes: "Target notes",
@@ -1239,8 +1330,8 @@ test("Workout History nests drop segments without changing parent set numbering"
   expandWorkout();
   const card = screen.getByText("Chest Day").closest("article");
   expect(within(card).getAllByRole("listitem")).toHaveLength(1);
-  expect(within(card).getByText("↳ Drop 1: 55 lb × 8 reps")).toBeInTheDocument();
-  expect(within(card).getByText("↳ Drop 2: Bodyweight × 6 reps")).toBeInTheDocument();
+  expect(within(card).getByText("↳ Drop 1: Working · 55 lb × 8 reps")).toBeInTheDocument();
+  expect(within(card).getByText("↳ Drop 2: Working · Bodyweight × 6 reps")).toBeInTheDocument();
   expect(within(card).getByText("First drop")).toBeInTheDocument();
   expect(within(card).getByText("Second drop")).toBeInTheDocument();
 });
@@ -1513,7 +1604,10 @@ test("keeps conflicting historical snapshots unreferenced and combines messages"
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
 
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises.every((exercise) => !exercise.exerciseReference)).toBe(true);
-  expect(screen.getByRole("status")).toHaveTextContent("Dips, Press definitions were kept");
+  expect(props.showToast).toHaveBeenCalledWith(
+    "Workout traced. Your existing saved Dips, Press definitions were kept.",
+    undefined
+  );
 });
 
 test("catalog failure does not block history and leaves no misleading reference", () => {
@@ -1527,7 +1621,10 @@ test("catalog failure does not block history and leaves no misleading reference"
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
   expect(props.saveWorkoutEntry).toHaveBeenCalledTimes(1);
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0]).not.toHaveProperty("exerciseReference");
-  expect(screen.getByRole("status")).toHaveTextContent("reusable exercises could not be saved");
+  expect(props.showToast).toHaveBeenCalledWith(
+    "Workout traced. One or more reusable exercises could not be saved.",
+    undefined
+  );
 });
 
 test("Phase 1 exercises are eligible during edit while referenced exercises are not", () => {

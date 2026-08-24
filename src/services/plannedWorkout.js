@@ -43,6 +43,28 @@ function cleanNotes(value) {
   return String(value || "").trim();
 }
 
+function normalizedSkippedDates(value) {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) return null;
+  const dates = value.map((date) => String(date || "").trim());
+  if (dates.some((date) => !parseDateOnlyLocal(date))) return null;
+  return [...new Set(dates)].sort();
+}
+
+function normalizedSkipReasons(value) {
+  if (value === undefined) return {};
+  if (!isObject(value)) return null;
+  const entries = Object.entries(value);
+  if (entries.some(([date, reason]) =>
+    !parseDateOnlyLocal(date) || typeof reason !== "string"
+  )) return null;
+  return Object.fromEntries(
+    entries
+      .map(([date, reason]) => [date, reason.trim()])
+      .filter(([, reason]) => reason !== "")
+  );
+}
+
 function validId(value) {
   return typeof value === "string" && Boolean(value.trim());
 }
@@ -159,6 +181,17 @@ function getStructureError(value, requireRecordFields = false) {
   }
   if (!parseDateOnlyLocal(value.scheduledDate)) {
     return "Enter a valid scheduled date.";
+  }
+  const skippedDates = normalizedSkippedDates(value.skippedDates);
+  if (skippedDates === null) {
+    return "Enter valid skipped workout dates.";
+  }
+  const skipReasons = normalizedSkipReasons(value.skipReasons);
+  if (skipReasons === null) {
+    return "Enter valid skipped workout reasons.";
+  }
+  if (Object.keys(skipReasons).some((date) => !skippedDates.includes(date))) {
+    return "Keep skipped workout reasons attached to skipped dates.";
   }
   if (!meaningfulText(value.title)) return "Enter a planned workout title.";
   if (!Array.isArray(value.exercises) || value.exercises.length === 0) {
@@ -296,7 +329,9 @@ function normalizedExercises(exercises) {
 export function createPlannedWorkout(draft, now = new Date()) {
   if (getPlannedWorkoutError(draft)) return null;
   const timestamp = now.toISOString();
-  return {
+  const skippedDates = normalizedSkippedDates(draft.skippedDates);
+  const skipReasons = normalizedSkipReasons(draft.skipReasons);
+  const record = {
     ...cloneValue(draft),
     id: validId(draft.id)
       ? draft.id.trim()
@@ -307,14 +342,21 @@ export function createPlannedWorkout(draft, now = new Date()) {
     title: compactText(draft.title),
     notes: cleanNotes(draft.notes),
     exercises: normalizedExercises(draft.exercises),
+    ...(skippedDates.length > 0 ? { skippedDates } : {}),
+    ...(Object.keys(skipReasons).length > 0 ? { skipReasons } : {}),
     createdAt: timestamp,
     updatedAt: timestamp,
   };
+  if (skippedDates.length === 0) delete record.skippedDates;
+  if (Object.keys(skipReasons).length === 0) delete record.skipReasons;
+  return record;
 }
 
 export function normalizePlannedWorkout(record) {
   if (getPlannedWorkoutRecordError(record)) return null;
-  return {
+  const skippedDates = normalizedSkippedDates(record.skippedDates);
+  const skipReasons = normalizedSkipReasons(record.skipReasons);
+  const normalized = {
     ...cloneValue(record),
     id: record.id.trim(),
     schemaVersion: PLANNED_WORKOUT_SCHEMA_VERSION,
@@ -325,6 +367,44 @@ export function normalizePlannedWorkout(record) {
     exercises: normalizedExercises(record.exercises),
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
+  };
+  if (skippedDates.length > 0) normalized.skippedDates = skippedDates;
+  else delete normalized.skippedDates;
+  if (Object.keys(skipReasons).length > 0) normalized.skipReasons = skipReasons;
+  else delete normalized.skipReasons;
+  return normalized;
+}
+
+export function isPlannedWorkoutSkippedOnDate(plannedWorkout, date) {
+  if (!parseDateOnlyLocal(date)) return false;
+  return Array.isArray(plannedWorkout?.skippedDates)
+    && plannedWorkout.skippedDates.includes(date);
+}
+
+export function skipPlannedWorkoutForDate(
+  plannedWorkout,
+  date,
+  now = new Date(),
+  reason = ""
+) {
+  const normalizedWorkout = normalizePlannedWorkout(plannedWorkout);
+  if (!normalizedWorkout || !parseDateOnlyLocal(date)) return null;
+  if (normalizedWorkout.scheduledDate !== date) return null;
+  if (isPlannedWorkoutSkippedOnDate(normalizedWorkout, date)) {
+    return normalizedWorkout;
+  }
+  return {
+    ...normalizedWorkout,
+    skippedDates: [...(normalizedWorkout.skippedDates || []), date].sort(),
+    ...(String(reason || "").trim()
+      ? {
+          skipReasons: {
+            ...(normalizedWorkout.skipReasons || {}),
+            [date]: String(reason).trim(),
+          },
+        }
+      : {}),
+    updatedAt: now.toISOString(),
   };
 }
 
