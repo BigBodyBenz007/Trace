@@ -114,6 +114,18 @@ try {
     })()`,
   });
 
+  await send("Runtime.evaluate", {
+    awaitPromise: true,
+    expression: `(async () => {
+      const images = [...document.querySelectorAll(
+        '[data-life-current-renderer="river-current"] img'
+      )];
+      await Promise.all(images.map((image) => image.decode().catch(() => undefined)));
+      await new Promise((resolve) => requestAnimationFrame(() =>
+        requestAnimationFrame(resolve)));
+    })()`,
+  });
+
   const diagnostics = await send("Runtime.evaluate", {
     expression: `(() => {
       const river = document.querySelector('[data-life-current-renderer="river-current"]');
