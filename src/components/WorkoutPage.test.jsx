@@ -253,6 +253,29 @@ test("a Today-origin Roadmap provides standardized Today navigation and returns 
   expect(onReturnToToday).toHaveBeenCalledTimes(2);
 });
 
+test("a Calendar-origin Roadmap exposes calendar navigation and returns there after completion", () => {
+  const plan = plannedExecution();
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(
+    createWorkoutDraftFromPlannedWorkout(
+      plan,
+      new Date(2026, 7, 22, 14, 25),
+      { originPage: "calendar", selectedDate: "2026-08-22", visibleMonth: "2026-08" }
+    )
+  ));
+  const onReturnToCalendar = jest.fn();
+  const view = renderPage({ onReturnToCalendar });
+
+  expect(screen.getAllByRole("button", { name: "Back to Calendar" })).toHaveLength(2);
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Calendar" })[0]);
+  expect(onReturnToCalendar).toHaveBeenCalledTimes(1);
+
+  fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
+    .getByRole("button", { name: "Completed" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(view.saveWorkoutEntry).toHaveBeenCalledTimes(1);
+  expect(onReturnToCalendar).toHaveBeenCalledTimes(2);
+});
+
 test("discarding a planned-workout draft does not complete or change its plan", () => {
   const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
   const plan = plannedExecution();

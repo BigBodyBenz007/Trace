@@ -2263,6 +2263,16 @@ code {
   min-width: 0;
 }
 
+.trace-today-schedule__header-actions {
+  align-items: stretch;
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  gap: var(--trace-space-2);
+  justify-content: flex-end;
+  min-width: 0;
+}
+
 .trace-today-schedule__eyebrow,
 .trace-today-schedule__count {
   color: var(--trace-text-muted);
@@ -2527,8 +2537,220 @@ code {
   text-align: left;
 }
 
-.trace-today-schedule__group[aria-label^="Completed today"] .trace-today-summary__card {
+.trace-today-schedule__group--completed .trace-today-summary__card {
   opacity: 0.72;
+}
+
+.trace-schedule-calendar {
+  box-sizing: border-box;
+  margin-top: var(--trace-space-5);
+  max-width: 800px;
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.trace-schedule-calendar__toolbar {
+  align-items: center;
+  display: grid;
+  gap: var(--trace-space-2);
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+}
+
+.trace-schedule-calendar__toolbar h2 {
+  font-size: clamp(1.25rem, 4vw, 1.75rem);
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.trace-schedule-calendar__toolbar .trace-action {
+  font-size: 0.92rem !important;
+  margin: 0 !important;
+  min-width: 0;
+  padding: 10px 14px !important;
+}
+
+.trace-schedule-calendar__weekdays,
+.trace-schedule-calendar__grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  min-width: 0;
+  width: 100%;
+}
+
+.trace-schedule-calendar__weekdays {
+  color: var(--trace-text-muted);
+  font-size: 0.72rem;
+  font-weight: var(--trace-weight-bold);
+  margin-top: var(--trace-space-4);
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.trace-schedule-calendar__grid {
+  gap: 4px;
+  margin-top: var(--trace-space-2);
+}
+
+.trace-schedule-calendar__day {
+  align-items: stretch;
+  background: #10293a;
+  border: 1px solid #385267;
+  border-radius: 8px;
+  color: var(--trace-text);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  font: inherit;
+  justify-content: flex-start;
+  min-height: 86px;
+  min-width: 0;
+  overflow: hidden;
+  padding: 5px;
+  position: relative;
+  text-align: left;
+}
+
+.trace-schedule-calendar__day[data-outside-month="true"] {
+  color: var(--trace-text-muted);
+  opacity: 0.58;
+}
+
+.trace-schedule-calendar__day[aria-current="date"] {
+  border-color: var(--trace-brass-strong);
+}
+
+.trace-schedule-calendar__day[aria-pressed="true"] {
+  background: #214c67;
+  box-shadow: inset 0 0 0 2px var(--trace-brass-strong);
+}
+
+.trace-schedule-calendar__day:focus-visible {
+  outline: 2px solid var(--trace-brass-strong);
+  outline-offset: 1px;
+  z-index: 1;
+}
+
+.trace-schedule-calendar__date-number {
+  align-self: flex-start;
+  font-size: 0.8rem;
+  font-weight: var(--trace-weight-bold);
+  line-height: 1;
+}
+
+.trace-schedule-calendar__events {
+  display: grid;
+  gap: 3px;
+  margin-top: 5px;
+  min-width: 0;
+  width: 100%;
+}
+
+.trace-schedule-calendar__event,
+.trace-schedule-calendar__more {
+  border-radius: 4px;
+  box-sizing: border-box;
+  display: block;
+  font-size: 0.62rem;
+  font-weight: var(--trace-weight-bold);
+  line-height: 1.15;
+  min-width: 0;
+  overflow: hidden;
+  padding: 3px 4px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trace-schedule-calendar__event--workout {
+  background: #265e7e;
+  color: #eff9ff;
+}
+
+.trace-schedule-calendar__event--protocol,
+.trace-schedule-calendar__event--medication,
+.trace-schedule-calendar__event--supplement {
+  background: #6c5727;
+  color: #fff7da;
+}
+
+.trace-schedule-calendar__event--meeting,
+.trace-schedule-calendar__event--appointment {
+  background: #5a4779;
+  color: #f7f0ff;
+}
+
+.trace-schedule-calendar__event--errand,
+.trace-schedule-calendar__event--personal,
+.trace-schedule-calendar__event--other {
+  background: #356453;
+  color: #effff8;
+}
+
+.trace-schedule-calendar__more {
+  color: var(--trace-text-muted);
+  padding-bottom: 0;
+  padding-top: 0;
+}
+
+.trace-calendar-day-overlay {
+  background: rgba(4, 12, 18, 0.78);
+  box-sizing: border-box;
+  display: grid;
+  inset: 0;
+  overflow-y: auto;
+  padding: max(var(--trace-space-4), env(safe-area-inset-top)) max(var(--trace-space-4), env(safe-area-inset-right)) max(var(--trace-space-4), env(safe-area-inset-bottom)) max(var(--trace-space-4), env(safe-area-inset-left));
+  place-items: center;
+  position: fixed;
+  z-index: 1100;
+}
+
+.trace-calendar-day-dialog {
+  box-sizing: border-box;
+  margin: 0;
+  max-height: calc(100dvh - (2 * var(--trace-space-4)));
+  max-width: 800px;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  text-align: left;
+  width: 100%;
+}
+
+.trace-calendar-day-dialog__header {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--trace-border);
+  display: flex;
+  gap: var(--trace-space-3);
+  justify-content: space-between;
+  margin-bottom: var(--trace-space-4);
+  padding-bottom: var(--trace-space-4);
+}
+
+.trace-calendar-day-dialog__header h2 {
+  margin: var(--trace-space-1) 0 0;
+  overflow-wrap: anywhere;
+}
+
+.trace-calendar-day-dialog__header-actions {
+  align-items: stretch;
+  display: flex;
+  flex: 0 1 auto;
+  flex-wrap: wrap;
+  gap: var(--trace-space-2);
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.trace-calendar-day-dialog__header-actions .trace-action {
+  margin: 0 !important;
+}
+
+.trace-calendar-day-dialog > .trace-today-schedule,
+.trace-calendar-day-dialog > .trace-workout-preview,
+.trace-calendar-day-dialog > .trace-today-focused,
+.trace-calendar-day-dialog > .trace-feature-form {
+  margin-top: 0;
 }
 
 .trace-today-protocol {
@@ -2792,7 +3014,73 @@ code {
     flex-direction: column;
   }
 
+  .trace-today-schedule__header-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    width: 100%;
+  }
+
   .trace-feature-page .trace-today-schedule__toggle {
+    width: 100%;
+  }
+
+  .trace-schedule-calendar__toolbar {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .trace-schedule-calendar__toolbar h2 {
+    grid-column: 1 / -1;
+    grid-row: 1;
+  }
+
+  .trace-schedule-calendar__today {
+    grid-column: 1 / -1;
+  }
+
+  .trace-schedule-calendar__grid {
+    gap: 2px;
+  }
+
+  .trace-schedule-calendar__day {
+    border-radius: 6px;
+    min-height: 68px;
+    padding: 3px;
+  }
+
+  .trace-schedule-calendar__date-number {
+    font-size: 0.72rem;
+  }
+
+  .trace-schedule-calendar__events {
+    gap: 2px;
+    margin-top: 3px;
+  }
+
+  .trace-schedule-calendar__event,
+  .trace-schedule-calendar__more {
+    font-size: 0.52rem;
+    padding: 2px;
+  }
+
+  .trace-calendar-day-overlay {
+    padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  }
+
+  .trace-calendar-day-dialog {
+    max-height: calc(100dvh - 20px);
+  }
+
+  .trace-calendar-day-dialog__header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trace-calendar-day-dialog__header-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trace-calendar-day-dialog__header-actions .trace-action {
     width: 100%;
   }
 

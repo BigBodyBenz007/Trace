@@ -173,7 +173,9 @@ function CompletedDropSegments({ drops }) {
 function WorkoutPage({
   onBack,
   navigationOriginPage = null,
+  navigationOriginCalendar = null,
   onReturnToToday = onBack,
+  onReturnToCalendar = onBack,
   workoutEntries,
   onWorkoutDraftChange = () => {},
   trophyEntries = [],
@@ -245,7 +247,32 @@ function WorkoutPage({
   const workoutOriginPageRef = useRef(
     restoredDraftRef.current?.context?.originPage || navigationOriginPage
   );
+  const workoutOriginCalendarRef = useRef(
+    restoredDraftRef.current?.context?.originPage === "calendar"
+      ? {
+          selectedDate: restoredDraftRef.current.context.selectedDate,
+          visibleMonth: restoredDraftRef.current.context.visibleMonth,
+        }
+      : navigationOriginCalendar
+  );
   const draftPersistenceEnabledRef = useRef(Boolean(restoredForm));
+
+  function workoutOriginContext() {
+    if (workoutOriginPageRef.current === "calendar") {
+      return {
+        originPage: "calendar",
+        selectedDate: workoutOriginCalendarRef.current?.selectedDate,
+        visibleMonth: workoutOriginCalendarRef.current?.visibleMonth,
+      };
+    }
+    return workoutOriginPageRef.current === "today" ? { originPage: "today" } : {};
+  }
+
+  function returnToWorkoutOrigin() {
+    if (workoutOriginPageRef.current === "calendar") onReturnToCalendar();
+    else if (workoutOriginPageRef.current === "today") onReturnToToday();
+    else onBack();
+  }
 
   useEffect(() => {
     if (editingEntryId !== null || !isDirty) return undefined;
@@ -260,9 +287,7 @@ function WorkoutPage({
       context: {
         activeSearchExerciseId,
         roadmapEditingExerciseId,
-        ...(workoutOriginPageRef.current === "today"
-          ? { originPage: "today" }
-          : {}),
+        ...workoutOriginContext(),
       },
     };
     const persist = () => {
@@ -704,9 +729,7 @@ function WorkoutPage({
         context: {
           activeSearchExerciseId,
           roadmapEditingExerciseId,
-          ...(workoutOriginPageRef.current === "today"
-            ? { originPage: "today" }
-            : {}),
+          ...workoutOriginContext(),
         },
       };
       try {
@@ -715,9 +738,9 @@ function WorkoutPage({
         setFormError("");
         showToast(
           "Workout progress saved.",
-          workoutOriginPageRef.current === "today" ? "today" : undefined
+          workoutOriginPageRef.current || undefined
         );
-        if (workoutOriginPageRef.current === "today") onReturnToToday();
+        if (workoutOriginPageRef.current) returnToWorkoutOrigin();
       } catch (error) {
         setFormError("The workout progress could not be saved.");
       }
@@ -796,9 +819,9 @@ function WorkoutPage({
     function finishSave(saved) {
       if (!saved) return;
       const savedEditingEntryId = editingEntryId;
-      const returnToToday = savedEditingEntryId === null
+      const returnToSchedule = savedEditingEntryId === null
         && Boolean(plannedWorkoutIdRef.current)
-        && workoutOriginPageRef.current === "today"
+        && Boolean(workoutOriginPageRef.current)
         && plannedRoadmapIsComplete;
       resetForm({ clearDraft: savedEditingEntryId === null });
       const messages = [];
@@ -816,10 +839,10 @@ function WorkoutPage({
         messages.length > 0
           ? `Workout traced. ${messages.join(" ")}`
           : "Workout traced",
-        returnToToday ? "today" : undefined
+        returnToSchedule ? workoutOriginPageRef.current : undefined
       );
-      if (returnToToday) {
-        onReturnToToday();
+      if (returnToSchedule) {
+        returnToWorkoutOrigin();
         return;
       }
       if (savedEditingEntryId === null) {
@@ -925,7 +948,14 @@ function WorkoutPage({
       ? workoutEditOriginRef.current
       : null;
     workoutEditOriginRef.current = null;
+    const returnToSchedule = editingEntryId === null
+      && Boolean(plannedWorkoutIdRef.current)
+      && Boolean(workoutOriginPageRef.current);
     resetForm({ clearDraft: editingEntryId === null });
+    if (returnToSchedule) {
+      returnToWorkoutOrigin();
+      return;
+    }
     window.requestAnimationFrame(() => {
       const originNode = editOrigin
         ? workoutEntryRefs.current.get(editOrigin.entryId)
@@ -1025,10 +1055,13 @@ function WorkoutPage({
   }
 
   const isPlannedRoadmap = editingEntryId === null && Boolean(plannedWorkoutIdRef.current);
-  const returnsToToday = isPlannedRoadmap && workoutOriginPageRef.current === "today";
+  const returnsToSchedule = Boolean(workoutOriginPageRef.current);
+  const scheduleReturnLabel = workoutOriginPageRef.current === "calendar"
+    ? "Back to Calendar"
+    : "Back to Today's Schedule";
   const volume = isPlannedRoadmap ? roadmapVolume(exercises) : null;
-  const leaveWorkout = returnsToToday ? onReturnToToday : onBack;
-  const leaveWorkoutLabel = returnsToToday ? "Back to Today's Schedule" : "Back to Timeline";
+  const leaveWorkout = returnsToSchedule ? returnToWorkoutOrigin : onBack;
+  const leaveWorkoutLabel = returnsToSchedule ? scheduleReturnLabel : "Back to Timeline";
 
   return (
     <div className="trace-feature-page trace-feature-page--workouts" ref={pageTopRef} data-testid="workout-page" style={containerStyle}>
@@ -1088,7 +1121,7 @@ function WorkoutPage({
       </header>
       <nav className="trace-focused-navigation" aria-label="Focused event navigation">
         <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...backButtonStyle, marginTop: 0 }}>Back to Timeline</button>
-        {returnsToToday && <button className="trace-action trace-action--secondary" type="button" onClick={onReturnToToday} style={{ ...backButtonStyle, marginTop: 0 }}>Back to Today&apos;s Schedule</button>}
+        {returnsToSchedule && <button className="trace-action trace-action--secondary" type="button" onClick={returnToWorkoutOrigin} style={{ ...backButtonStyle, marginTop: 0 }}>{scheduleReturnLabel}</button>}
       </nav>
 
       {isPlannedRoadmap && (

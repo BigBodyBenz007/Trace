@@ -22,6 +22,7 @@ import {
   dailyActionsForDate,
 } from "../services/dailyAction";
 import { findProtocolOccurrence } from "../services/protocolOccurrence";
+import ScheduleCalendar from "./ScheduleCalendar";
 
 export function localScheduledDate(value = new Date()) {
   return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(
@@ -302,6 +303,8 @@ function SkipReasonDialog({
 
 function TodayPage({
   onBack,
+  onOpenCalendar = null,
+  onOpenToday = null,
   plannedWorkouts = [],
   protocols = [],
   protocolOccurrences = [],
@@ -335,11 +338,26 @@ function TodayPage({
   skipProtocolOccurrence = () => ({ status: "error", message: "The protocol occurrence could not be skipped." }),
   showToast = () => {},
   currentDate = new Date(),
+  browserDate = new Date(),
+  scheduleView = "today",
+  selectedDateKey = null,
+  visibleMonthKey = null,
+  onSelectCalendarDate = () => {},
+  onChangeCalendarMonth = () => {},
+  calendarOverlayOpen = null,
+  onCalendarOverlayOpenChange = () => {},
   buttonStyle = {},
   inputStyle = {},
   containerStyle = {},
 }) {
   const todayKey = localScheduledDate(currentDate);
+  const isCalendarView = scheduleView === "calendar";
+  const originLabel = isCalendarView ? "Calendar" : "Today's Schedule";
+  const remainingLabel = isCalendarView ? "Scheduled items" : "Remaining today";
+  const completedLabel = isCalendarView ? "Completed" : "Completed today";
+  const browserTodayKey = localScheduledDate(browserDate);
+  const isFutureScheduleDate = isCalendarView && todayKey > browserTodayKey;
+  const canExecuteSelectedDate = !isFutureScheduleDate;
   const todaysPlans = useMemo(
     () => plannedWorkouts.filter(({ scheduledDate }) => scheduledDate === todayKey),
     [plannedWorkouts, todayKey]
@@ -432,6 +450,7 @@ function TodayPage({
   const [protocolSkipReason, setProtocolSkipReason] = useState("");
   const [protocolCustomSkipReason, setProtocolCustomSkipReason] = useState("");
   const [isScheduleExpanded, setIsScheduleExpanded] = useState(false);
+  const [internalCalendarOverlayOpen, setInternalCalendarOverlayOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 600);
   const initialDraftRef = useRef(null);
   const initialActionDraftRef = useRef(null);
@@ -439,6 +458,11 @@ function TodayPage({
   const startButtonRefs = useRef(new Map());
   const restoreStartFocusPlanIdRef = useRef(null);
   const lastTouchStartRef = useRef({ planId: null, activatedAt: 0 });
+  const calendarDialogRef = useRef(null);
+  const calendarCloseButtonRef = useRef(null);
+  const calendarDayTriggerRef = useRef(null);
+  const closeCalendarOverlayRef = useRef(null);
+  const isCalendarDayOpen = calendarOverlayOpen ?? internalCalendarOverlayOpen;
   const previewPlan = plannedWorkouts.find(({ id }) => id === previewPlanId) || null;
   const activePlannedWorkoutId = activeWorkoutDraft?.plannedWorkoutId || null;
   const focusedItem = focusedScheduleItem
@@ -462,7 +486,58 @@ function TodayPage({
     startButtonRefs.current.get(planId)?.focus();
   }, [draftConflict]);
 
+  useEffect(() => {
+    if (!isCalendarView || !isCalendarDayOpen) return undefined;
+    const previouslyFocused = document.activeElement;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    calendarCloseButtonRef.current?.focus();
+
+    function handleKeyDown(event) {
+      if (document.querySelector(".trace-skip-overlay")) return;
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeCalendarOverlayRef.current?.();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(calendarDialogRef.current?.querySelectorAll(
+        "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex='-1'])"
+      ) || []);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousBodyOverflow;
+      const selectedDayButton = document.querySelector(`[data-calendar-date="${todayKey}"]`);
+      const restoreTarget = calendarDayTriggerRef.current || selectedDayButton || previouslyFocused;
+      if (restoreTarget instanceof HTMLElement && restoreTarget.isConnected) restoreTarget.focus();
+    };
+  }, [isCalendarView, isCalendarDayOpen, todayKey]);
+
+  function setCalendarDayOpen(open) {
+    setInternalCalendarOverlayOpen(open);
+    onCalendarOverlayOpenChange(open);
+  }
+
+  function openCalendarDay(trigger) {
+    calendarDayTriggerRef.current = trigger || document.activeElement;
+    setCalendarDayOpen(true);
+  }
+
   function openCreate() {
+    if (isCalendarView && !isCalendarDayOpen) openCalendarDay(document.activeElement);
     const nextDraft = {
       scheduledDate: todayKey,
       title: "",
@@ -515,6 +590,7 @@ function TodayPage({
   }
 
   function openActionCreate() {
+    if (isCalendarView && !isCalendarDayOpen) openCalendarDay(document.activeElement);
     const nextDraft = emptyActionDraft(todayKey);
     initialActionDraftRef.current = JSON.stringify(nextDraft);
     setActionDraft(nextDraft);
@@ -547,24 +623,33 @@ function TodayPage({
       && !window.confirm("Cancel this daily action? Your unsaved changes will be lost.")
     ) return;
     closeActionEditor();
+    if (isCalendarView) closeFocusedItem();
   }
 
-  function returnToTodaySchedule() {
+  function returnToOriginSchedule() {
     if (
       draft
       && JSON.stringify(draft) !== initialDraftRef.current
       && !window.confirm("Cancel planning this workout? Your unsaved changes will be lost.")
-    ) return;
+    ) return false;
     if (
       actionDraft
       && JSON.stringify(actionDraft) !== initialActionDraftRef.current
       && !window.confirm("Cancel this daily action? Your unsaved changes will be lost.")
-    ) return;
+    ) return false;
     if (draft) closeEditor();
     if (actionDraft) closeActionEditor();
     closePreview();
     closeFocusedItem();
+    return true;
   }
+
+  function closeCalendarOverlay() {
+    if (!returnToOriginSchedule()) return false;
+    setCalendarDayOpen(false);
+    return true;
+  }
+  closeCalendarOverlayRef.current = closeCalendarOverlay;
 
   function saveAction(event) {
     event.preventDefault();
@@ -579,8 +664,8 @@ function TodayPage({
     const wasEditing = Boolean(actionEditingId);
     const savedId = result.dailyAction.id;
     closeActionEditor();
-    setFocusedScheduleItem(wasEditing ? { type: "daily-action", id: savedId } : null);
-    showToast(wasEditing ? "Daily action updated." : "Added to Today.");
+    setFocusedScheduleItem(!isCalendarView && wasEditing ? { type: "daily-action", id: savedId } : null);
+    showToast(wasEditing ? "Daily action updated." : isCalendarView ? "Added to schedule." : "Added to Today.");
   }
 
   function focusProtocol(scheduleItem) {
@@ -616,6 +701,7 @@ function TodayPage({
     }
     setFormError("");
     showToast(`${scheduleItem.item.compound.name} completed.`);
+    if (isCalendarView) closeFocusedItem();
   }
 
   function requestProtocolSkip(scheduleItem) {
@@ -646,6 +732,7 @@ function TodayPage({
     setProtocolCustomSkipReason("");
     setFormError("");
     showToast(`${pendingProtocolSkip.item.compound.name} skipped.`);
+    if (isCalendarView) closeFocusedItem();
   }
 
   function markActionComplete(action) {
@@ -656,6 +743,7 @@ function TodayPage({
     }
     setFormError("");
     showToast(`${action.title} completed.`);
+    if (isCalendarView) closeFocusedItem();
   }
 
   function requestActionSkip(action) {
@@ -680,6 +768,7 @@ function TodayPage({
     setActionCustomSkipReason("");
     setFormError("");
     showToast(`${pendingActionSkip.title} skipped.`);
+    if (isCalendarView) closeFocusedItem();
   }
 
   function removeDailyAction(action) {
@@ -706,7 +795,13 @@ function TodayPage({
   }
 
   function startPlan(plan, conflictAction = null) {
-    const result = startPlannedWorkout(plan.id, conflictAction);
+    const result = isCalendarView
+      ? startPlannedWorkout(plan.id, conflictAction, {
+          originPage: "calendar",
+          selectedDate: todayKey,
+          visibleMonth: visibleMonthKey,
+        })
+      : startPlannedWorkout(plan.id, conflictAction);
     if (result?.status === "draft-conflict") {
       setDraftConflict({
         planId: plan.id,
@@ -722,11 +817,21 @@ function TodayPage({
       return;
     }
     if (result?.status === "completed" && result.workoutEntry) {
-      openCompletedWorkout(result.workoutEntry.id);
+      openCompleted(result.workoutEntry.id);
       return;
     }
     setDraftConflict(null);
     setFormError("");
+  }
+
+  function openCompleted(id) {
+    return isCalendarView
+      ? openCompletedWorkout(id, {
+          originPage: "calendar",
+          selectedDate: todayKey,
+          visibleMonth: visibleMonthKey,
+        })
+      : openCompletedWorkout(id);
   }
 
   function startPlanFromTouch(event, plan, conflictAction = null) {
@@ -945,10 +1050,11 @@ function TodayPage({
       return;
     }
     setFormError("");
-    showToast(`${pendingSkipPlan.title} marked skipped for today.`);
+    showToast(`${pendingSkipPlan.title} marked skipped${isCalendarView ? ` for ${formatDateOnly(todayKey)}` : " for today"}.`);
     setPendingSkipPlan(null);
     setSkipReason("");
     setCustomSkipReason("");
+    if (isCalendarView) closePreview();
   }
 
   function undoPlanDeletion() {
@@ -992,10 +1098,11 @@ function TodayPage({
             <span className="trace-today-item__meta"><span className="trace-today-summary__type trace-today-summary__type--workout">Workout</span><TodayStatus status={scheduleItem.status} /></span>
             <span className="trace-today-summary__copy"><strong>{scheduleItem.title}</strong><small>{volume.total} {volume.total === 1 ? "set" : "sets"} · {volume.warmUp} warm-up · {volume.working} working</small></span>
           </button>
-          {actionable && (
+          {actionable && (canExecuteSelectedDate || isCalendarView) && (
             <div className="trace-today-summary__actions" aria-label={`${scheduleItem.title} actions`}>
-              <button className="trace-action trace-action--brass" type="button" aria-label={`${scheduleItem.status === "started" ? "Continue workout" : "Start workout"} ${scheduleItem.title}`} onTouchEnd={(event) => startPlanFromTouch(event, scheduleItem.plan)} onClick={() => startPlanFromClick(scheduleItem.plan)} style={compactButtonStyle}>{scheduleItem.status === "started" ? "Continue" : "Start"}</button>
-              <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip workout ${scheduleItem.title}`} onClick={() => requestSkipPlan(scheduleItem.plan)} style={compactButtonStyle}>Skip</button>
+              {canExecuteSelectedDate && <button className="trace-action trace-action--brass" type="button" aria-label={`${scheduleItem.status === "started" ? "Continue workout" : "Start workout"} ${scheduleItem.title}`} onTouchEnd={(event) => startPlanFromTouch(event, scheduleItem.plan)} onClick={() => startPlanFromClick(scheduleItem.plan)} style={compactButtonStyle}>{scheduleItem.status === "started" ? "Continue" : "Start"}</button>}
+              {isCalendarView && <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit planned workout ${scheduleItem.title}`} onClick={() => openEdit(scheduleItem.plan)} style={compactButtonStyle}>Edit</button>}
+              {canExecuteSelectedDate && <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip workout ${scheduleItem.title}`} onClick={() => requestSkipPlan(scheduleItem.plan)} style={compactButtonStyle}>Skip</button>}
             </div>
           )}
         </li>
@@ -1009,7 +1116,7 @@ function TodayPage({
             <span className="trace-today-item__meta"><span className="trace-today-summary__type trace-today-summary__type--protocol">Protocol</span><TodayStatus status={scheduleItem.status} /></span>
             <span className="trace-today-summary__copy"><strong>{scheduleItem.title}</strong><small>{scheduleItem.subtitle}</small></span>
           </button>
-          {actionable && (
+          {actionable && canExecuteSelectedDate && (
             <div className="trace-today-summary__actions" aria-label={`${scheduleItem.item.compound.name} actions`}>
               <button className="trace-action trace-action--primary" type="button" aria-label={`Complete protocol ${scheduleItem.item.compound.name}`} onClick={() => markProtocolComplete(scheduleItem)} style={compactButtonStyle}>Complete</button>
               <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip protocol ${scheduleItem.item.compound.name}`} onClick={() => requestProtocolSkip(scheduleItem)} style={compactButtonStyle}>Skip</button>
@@ -1028,7 +1135,7 @@ function TodayPage({
           <span className="trace-today-item__meta"><span className={`trace-today-summary__type trace-today-summary__type--${action.actionType}`}>{dailyActionTypeLabel(action.actionType)}</span><TodayStatus status={scheduleItem.status} /></span>
           <span className="trace-today-summary__copy"><strong>{action.title}</strong>{details && <small>{details}</small>}</span>
         </button>
-        {actionable && (
+        {actionable && canExecuteSelectedDate && (
           <div className="trace-today-summary__actions" aria-label={`${action.title} actions`}>
             <button className="trace-action trace-action--primary" type="button" aria-label={`Complete ${dailyActionTypeLabel(action.actionType)} ${action.title}`} onClick={() => markActionComplete(action)} style={compactButtonStyle}>Complete</button>
             <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip ${dailyActionTypeLabel(action.actionType)} ${action.title}`} onClick={() => requestActionSkip(action)} style={compactButtonStyle}>Skip</button>
@@ -1055,7 +1162,7 @@ function TodayPage({
           {item.notes && <p className="trace-today-protocol__notes"><strong>Item notes:</strong> <span>{item.notes}</span></p>}
           {protocol.notes && <p className="trace-today-protocol__notes"><strong>Protocol notes:</strong> <span>{protocol.notes}</span></p>}
           {skipProvenanceLabel(scheduleItem.occurrence, scheduleItem.status === "completed") && <p className="trace-today-plan__skipped">{skipProvenanceLabel(scheduleItem.occurrence, scheduleItem.status === "completed")}</p>}
-          {["scheduled", "skipped"].includes(scheduleItem.status) && <div className="trace-today-exercise__actions"><button className="trace-action trace-action--primary" type="button" onClick={() => markProtocolComplete(scheduleItem)} style={compactButtonStyle}>Complete</button><button className="trace-action trace-action--secondary" type="button" onClick={() => requestProtocolSkip(scheduleItem)} style={compactButtonStyle}>Skip</button></div>}
+          {canExecuteSelectedDate && ["scheduled", "skipped"].includes(scheduleItem.status) && <div className="trace-today-exercise__actions"><button className="trace-action trace-action--primary" type="button" onClick={() => markProtocolComplete(scheduleItem)} style={compactButtonStyle}>Complete</button><button className="trace-action trace-action--secondary" type="button" onClick={() => requestProtocolSkip(scheduleItem)} style={compactButtonStyle}>Skip</button></div>}
         </article>
       );
     }
@@ -1069,7 +1176,7 @@ function TodayPage({
           {action.location && <p className="trace-today-plan__notes">{action.location}</p>}
           {action.notes && <p className="trace-today-plan__notes">{action.notes}</p>}
           {skipProvenanceLabel(action, action.status === "completed") && <p className="trace-today-plan__skipped">{skipProvenanceLabel(action, action.status === "completed")}</p>}
-          {["scheduled", "skipped"].includes(action.status) && <div className="trace-today-exercise__actions"><button className="trace-action trace-action--primary" type="button" onClick={() => markActionComplete(action)} style={compactButtonStyle}>Complete</button><button className="trace-action trace-action--secondary" type="button" onClick={() => requestActionSkip(action)} style={compactButtonStyle}>Skip</button></div>}
+          {canExecuteSelectedDate && ["scheduled", "skipped"].includes(action.status) && <div className="trace-today-exercise__actions"><button className="trace-action trace-action--primary" type="button" onClick={() => markActionComplete(action)} style={compactButtonStyle}>Complete</button><button className="trace-action trace-action--secondary" type="button" onClick={() => requestActionSkip(action)} style={compactButtonStyle}>Skip</button></div>}
         </article>
       );
     }
@@ -1085,11 +1192,11 @@ function TodayPage({
         <p className="trace-today-plan__schedule">Scheduled {formatDateOnly(plan.scheduledDate)}</p>
         {plan.notes && <p className="trace-today-plan__notes">{plan.notes}</p>}
         {completedWorkout && <p className="trace-today-plan__completion">Completed {new Date(completedWorkout.occurredAt).toLocaleString()}</p>}
-        {skipped && !completedWorkout && <p className="trace-today-plan__skipped">Skipped for today{plan.skipReasons?.[todayKey] ? ` · ${plan.skipReasons[todayKey]}` : ""}</p>}
+        {skipped && !completedWorkout && <p className="trace-today-plan__skipped">Skipped {isCalendarView ? formatDateOnly(todayKey) : "for today"}{plan.skipReasons?.[todayKey] ? ` · ${plan.skipReasons[todayKey]}` : ""}</p>}
         {!hasDraftConflict && <div className="trace-today-exercise__actions">
-           {completedWorkout ? <button className="trace-action trace-action--primary" type="button" aria-label={`Open completed workout ${plan.title}`} onClick={() => openCompletedWorkout(completedWorkout.id)} style={compactButtonStyle}>View completed workout</button> : <button className="trace-action trace-action--brass" type="button" aria-label={`${started ? "Continue workout" : "Start planned workout"} ${plan.title}`} onTouchEnd={(event) => startPlanFromTouch(event, plan)} onClick={() => startPlanFromClick(plan)} ref={(node) => { if (node) startButtonRefs.current.set(plan.id, node); else startButtonRefs.current.delete(plan.id); }} style={compactButtonStyle}>{started ? "Continue workout" : "Start workout"}</button>}
+           {completedWorkout ? <button className="trace-action trace-action--primary" type="button" aria-label={`Open completed workout ${plan.title}`} onClick={() => openCompleted(completedWorkout.id)} style={compactButtonStyle}>View completed workout</button> : canExecuteSelectedDate && <button className="trace-action trace-action--brass" type="button" aria-label={`${started ? "Continue workout" : "Start planned workout"} ${plan.title}`} onTouchEnd={(event) => startPlanFromTouch(event, plan)} onClick={() => startPlanFromClick(plan)} ref={(node) => { if (node) startButtonRefs.current.set(plan.id, node); else startButtonRefs.current.delete(plan.id); }} style={compactButtonStyle}>{started ? "Continue workout" : "Start workout"}</button>}
           <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit planned workout ${plan.title}`} onClick={() => openEdit(plan)} style={compactButtonStyle}>Edit plan</button>
-          {!completedWorkout && <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip workout ${plan.title}`} onClick={() => requestSkipPlan(plan)} style={compactButtonStyle}>Skip workout</button>}
+          {!completedWorkout && canExecuteSelectedDate && <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip workout ${plan.title}`} onClick={() => requestSkipPlan(plan)} style={compactButtonStyle}>Skip workout</button>}
           <button className="trace-action trace-action--danger" type="button" aria-label={`Delete planned workout ${plan.title}`} onClick={() => removePlan(plan)} style={compactButtonStyle}>Delete plan</button>
         </div>}
         {hasDraftConflict && <div aria-label="Workout already in progress" className="trace-feature-surface trace-today-draft-conflict" onKeyDown={(event) => { if (event.key === "Escape") cancelDraftConflict(); }} role="dialog"><h4>Workout already in progress</h4><p>Resume {draftConflict.existingDraftTitle}, discard it and start this plan, or cancel.</p><div className="trace-today-exercise__actions"><button ref={conflictResumeButtonRef} className="trace-action trace-action--primary" type="button" onClick={() => startPlan(plan, "resume")} style={compactButtonStyle}>Resume current workout</button><button className="trace-action trace-action--danger" type="button" onClick={() => startPlan(plan, "discard")} style={compactButtonStyle}>Discard and start plan</button><button className="trace-action trace-action--secondary" type="button" onClick={cancelDraftConflict} style={compactButtonStyle}>Cancel</button></div></div>}
@@ -1106,25 +1213,32 @@ function TodayPage({
       style={containerStyle}
     >
       <header className="trace-feature-page__identity">
-        <p className="trace-feature-page__kicker">Daily planning</p>
-        <h1>Today&apos;s Schedule</h1>
+        <p className="trace-feature-page__kicker">{isCalendarView ? "Planning ahead" : "Daily planning"}</p>
+        <h1>{isCalendarView ? "Upcoming Schedule" : "Today's Schedule"}</h1>
         <p className="trace-feature-page__lede">
-          Review today&apos;s workouts, protocols, and daily actions. Each source stays separate from completed workout history.
+          {isCalendarView
+            ? "Check upcoming workouts, protocols, and daily actions without changing their authoritative records."
+            : "Review today's workouts, protocols, and daily actions. Each source stays separate from completed workout history."}
         </p>
       </header>
 
-      <nav className="trace-today-page__actions" aria-label={(draft || actionDraft || previewPlan || focusedScheduleItem) ? "Focused event navigation" : "Today navigation"}>
+      <nav className="trace-today-page__actions" aria-label={(draft || actionDraft || previewPlan || focusedScheduleItem) ? "Focused event navigation" : isCalendarView ? "Calendar navigation" : "Today navigation"}>
         <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={backStyle}>
           Back to Timeline
         </button>
         {(draft || actionDraft || previewPlan || focusedScheduleItem) && (
-          <button className="trace-action trace-action--secondary" type="button" onClick={returnToTodaySchedule} style={backStyle}>
+          <button className="trace-action trace-action--secondary" type="button" onClick={returnToOriginSchedule} style={backStyle}>
+            Back to {originLabel}
+          </button>
+        )}
+        {isCalendarView && onOpenToday && !draft && !actionDraft && !previewPlan && !focusedScheduleItem && (
+          <button className="trace-action trace-action--secondary" type="button" onClick={onOpenToday} style={backStyle}>
             Back to Today&apos;s Schedule
           </button>
         )}
         {!draft && !actionDraft && !previewPlan && !focusedItem && (
           <button className="trace-action trace-action--brass" type="button" onClick={openActionCreate} style={buttonStyle}>
-            Add to Today
+            {isCalendarView ? "Add to selected day" : "Add to Today"}
           </button>
         )}
         {!draft && !actionDraft && !previewPlan && !focusedItem && (
@@ -1133,6 +1247,46 @@ function TodayPage({
           </button>
         )}
       </nav>
+
+      {isCalendarView && (
+        <ScheduleCalendar
+          selectedDateKey={selectedDateKey || todayKey}
+          visibleMonthKey={visibleMonthKey || todayKey.slice(0, 7)}
+          onSelectDate={onSelectCalendarDate}
+          onOpenDate={(dateKey, trigger) => {
+            if (dateKey) openCalendarDay(trigger);
+          }}
+          onChangeMonth={onChangeCalendarMonth}
+          plannedWorkouts={plannedWorkouts}
+          protocols={protocols}
+          dailyActions={dailyActions}
+          browserToday={browserDate}
+        />
+      )}
+
+      {(!isCalendarView || isCalendarDayOpen) && (
+        <div className={isCalendarView ? "trace-calendar-day-overlay" : undefined}>
+          <section
+            className={isCalendarView ? "trace-feature-surface trace-calendar-day-dialog" : undefined}
+            role={isCalendarView ? "dialog" : undefined}
+            aria-modal={isCalendarView ? "true" : undefined}
+            aria-labelledby={isCalendarView ? "calendar-selected-date-heading" : undefined}
+            ref={isCalendarView ? calendarDialogRef : undefined}
+          >
+            {isCalendarView && (
+              <header className="trace-calendar-day-dialog__header">
+                <div>
+                  <p className="trace-today-schedule__eyebrow">Selected day</p>
+                  <h2 id="calendar-selected-date-heading">{formatDateOnly(todayKey)}</h2>
+                </div>
+                <div className="trace-calendar-day-dialog__header-actions">
+                  {(draft || actionDraft || previewPlan || focusedScheduleItem) && (
+                    <button className="trace-action trace-action--secondary" type="button" onClick={returnToOriginSchedule} style={compactButtonStyle}>Back to selected date</button>
+                  )}
+                  <button ref={calendarCloseButtonRef} className="trace-action trace-action--secondary trace-calendar-day-dialog__close" type="button" aria-label="Close selected day" onClick={closeCalendarOverlay} style={compactButtonStyle}><span aria-hidden="true">×</span> Close</button>
+                </div>
+              </header>
+            )}
 
       {pendingDeletion && (
         <div className="trace-today-page__status">
@@ -1315,8 +1469,8 @@ function TodayPage({
       )}
 
       {!draft && actionDraft && (
-        <form className="trace-feature-surface trace-feature-form trace-daily-action-editor" aria-label={actionEditingId ? "Edit daily action" : "Add to Today"} onSubmit={saveAction}>
-          <h2>{actionEditingId ? "Edit daily action" : "Add to Today"}</h2>
+        <form className="trace-feature-surface trace-feature-form trace-daily-action-editor" aria-label={actionEditingId ? "Edit daily action" : isCalendarView ? "Add to selected day" : "Add to Today"} onSubmit={saveAction}>
+          <h2>{actionEditingId ? "Edit daily action" : isCalendarView ? "Add to selected day" : "Add to Today"}</h2>
           <div className="trace-daily-action-editor__grid">
             <label>
               Action type
@@ -1411,12 +1565,12 @@ function TodayPage({
           </div>
           <div className="trace-workout-preview__actions" data-testid="workout-preview-actions">
             {completedWorkoutByPlanId.get(previewPlan.id) ? (
-              <button className="trace-action trace-action--primary" type="button" onClick={() => openCompletedWorkout(completedWorkoutByPlanId.get(previewPlan.id).id)} style={compactButtonStyle}>View completed workout</button>
+              <button className="trace-action trace-action--primary" type="button" onClick={() => openCompleted(completedWorkoutByPlanId.get(previewPlan.id).id)} style={compactButtonStyle}>View completed workout</button>
             ) : (
               <>
-                <button className="trace-action trace-action--brass" type="button" aria-label={`${activePlannedWorkoutId === previewPlan.id ? "Continue workout" : "Start planned workout"} ${previewPlan.title}`} onTouchEnd={(event) => startPlanFromTouch(event, previewPlan)} onClick={() => startPlanFromClick(previewPlan)} style={compactButtonStyle}>{activePlannedWorkoutId === previewPlan.id ? "Continue workout" : "Start"}</button>
+                {canExecuteSelectedDate && <button className="trace-action trace-action--brass" type="button" aria-label={`${activePlannedWorkoutId === previewPlan.id ? "Continue workout" : "Start planned workout"} ${previewPlan.title}`} onTouchEnd={(event) => startPlanFromTouch(event, previewPlan)} onClick={() => startPlanFromClick(previewPlan)} style={compactButtonStyle}>{activePlannedWorkoutId === previewPlan.id ? "Continue workout" : "Start"}</button>}
                 <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit planned workout ${previewPlan.title}`} onClick={() => openEdit(previewPlan)} style={compactButtonStyle}>Edit</button>
-                <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip workout ${previewPlan.title}`} onClick={() => requestSkipPlan(previewPlan)} style={compactButtonStyle}>Skip</button>
+                {canExecuteSelectedDate && <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip workout ${previewPlan.title}`} onClick={() => requestSkipPlan(previewPlan)} style={compactButtonStyle}>Skip</button>}
               </>
             )}
           </div>
@@ -1438,7 +1592,7 @@ function TodayPage({
             {focusedItem.item.notes && <p className="trace-today-protocol__notes"><strong>Item notes:</strong> <span>{focusedItem.item.notes}</span></p>}
             {focusedItem.protocol.notes && <p className="trace-today-protocol__notes"><strong>Protocol notes:</strong> <span>{focusedItem.protocol.notes}</span></p>}
             {skipProvenanceLabel(focusedItem.occurrence, focusedItem.status === "completed") && <p className="trace-today-plan__skipped">{skipProvenanceLabel(focusedItem.occurrence, focusedItem.status === "completed")}</p>}
-            {["scheduled", "skipped"].includes(focusedItem.status) && <div className="trace-today-exercise__actions"><button className="trace-action trace-action--primary" type="button" onClick={() => markProtocolComplete(focusedItem)} style={compactButtonStyle}>Complete</button><button className="trace-action trace-action--secondary" type="button" onClick={() => requestProtocolSkip(focusedItem)} style={compactButtonStyle}>Skip</button></div>}
+            {canExecuteSelectedDate && ["scheduled", "skipped"].includes(focusedItem.status) && <div className="trace-today-exercise__actions"><button className="trace-action trace-action--primary" type="button" onClick={() => markProtocolComplete(focusedItem)} style={compactButtonStyle}>Complete</button><button className="trace-action trace-action--secondary" type="button" onClick={() => requestProtocolSkip(focusedItem)} style={compactButtonStyle}>Skip</button></div>}
           </article>
         </section>
       )}
@@ -1457,8 +1611,8 @@ function TodayPage({
             {focusedItem.action.notes && <p className="trace-today-protocol__notes"><strong>Notes:</strong> <span>{focusedItem.action.notes}</span></p>}
             {skipProvenanceLabel(focusedItem.action, focusedItem.action.status === "completed") && <p className="trace-today-plan__skipped">{skipProvenanceLabel(focusedItem.action, focusedItem.action.status === "completed")}</p>}
             <div className="trace-today-exercise__actions">
-              {["scheduled", "skipped"].includes(focusedItem.action.status) && <button className="trace-action trace-action--primary" type="button" onClick={() => markActionComplete(focusedItem.action)} style={compactButtonStyle}>Complete</button>}
-              {["scheduled", "skipped"].includes(focusedItem.action.status) && <button className="trace-action trace-action--secondary" type="button" onClick={() => requestActionSkip(focusedItem.action)} style={compactButtonStyle}>Skip</button>}
+              {canExecuteSelectedDate && ["scheduled", "skipped"].includes(focusedItem.action.status) && <button className="trace-action trace-action--primary" type="button" onClick={() => markActionComplete(focusedItem.action)} style={compactButtonStyle}>Complete</button>}
+              {canExecuteSelectedDate && ["scheduled", "skipped"].includes(focusedItem.action.status) && <button className="trace-action trace-action--secondary" type="button" onClick={() => requestActionSkip(focusedItem.action)} style={compactButtonStyle}>Skip</button>}
               <button className="trace-action trace-action--secondary" type="button" onClick={() => openActionEdit(focusedItem.action)} style={compactButtonStyle}>Edit</button>
               <button className="trace-action trace-action--danger" type="button" onClick={() => removeDailyAction(focusedItem.action)} style={compactButtonStyle}>Delete</button>
             </div>
@@ -1468,32 +1622,38 @@ function TodayPage({
 
       {!draft && !actionDraft && !previewPlan && !focusedItem && (
         <>
-          <section className="trace-feature-surface trace-today-schedule" aria-label="Today's schedule" data-expanded={isScheduleExpanded ? "true" : "false"} data-testid="today-schedule-dashboard">
+          <section className="trace-feature-surface trace-today-schedule" aria-label={isCalendarView ? "Selected day's schedule" : "Today's schedule"} data-expanded={isScheduleExpanded ? "true" : "false"} data-testid={isCalendarView ? "calendar-day-schedule" : "today-schedule-dashboard"}>
             <div className="trace-today-schedule__header">
               <div>
-                <p className="trace-today-schedule__eyebrow">Today</p>
+                <p className="trace-today-schedule__eyebrow">{isCalendarView ? "Selected day" : "Today"}</p>
                 <h2>{formatDateOnly(todayKey)}</h2>
                 <p className="trace-today-schedule__count">{scheduleItems.length === 0 ? "No scheduled items" : `${scheduleItems.length} scheduled ${scheduleItems.length === 1 ? "item" : "items"}`}</p>
               </div>
-              <button className="trace-action trace-action--secondary trace-today-schedule__toggle" type="button" aria-controls="today-schedule-details" aria-expanded={isScheduleExpanded} onClick={() => setIsScheduleExpanded((current) => !current)} style={compactButtonStyle}>{isScheduleExpanded ? "Hide details" : "Show details"}</button>
+              <div className="trace-today-schedule__header-actions">
+                {!isCalendarView && onOpenCalendar && <button className="trace-action trace-action--brass" type="button" onClick={onOpenCalendar} style={compactButtonStyle}>Upcoming Schedule</button>}
+                <button className="trace-action trace-action--secondary trace-today-schedule__toggle" type="button" aria-controls={isCalendarView ? "calendar-schedule-details" : "today-schedule-details"} aria-expanded={isScheduleExpanded} onClick={() => setIsScheduleExpanded((current) => !current)} style={compactButtonStyle}>{isScheduleExpanded ? "Hide details" : "Show details"}</button>
+              </div>
             </div>
             {scheduleItems.length === 0 ? (
-              <div className="trace-today-empty"><h3>Nothing scheduled for today.</h3><p>Add a daily action, create a workout plan, or choose another date.</p></div>
+              <div className="trace-today-empty"><h3>{isCalendarView ? "Nothing scheduled for this day." : "Nothing scheduled for today."}</h3><p>Add a daily action, create a workout plan, or choose another date.</p></div>
             ) : (
               <div className="trace-today-schedule__sections">
-                {remainingScheduleItems.length > 0 && <section className="trace-today-schedule__group" aria-label="Remaining today"><h3 className="trace-today-schedule__group-title">Remaining today</h3><ul className="trace-today-summary" aria-label="Today's schedule summary">{remainingScheduleItems.map(renderCompactScheduleItem)}</ul></section>}
-                {completedScheduleItems.length > 0 && <section className="trace-today-schedule__group" aria-label="Completed today"><h3 className="trace-today-schedule__group-title">Completed today</h3><ul className="trace-today-summary" aria-label="Completed today summary">{completedScheduleItems.map(renderCompactScheduleItem)}</ul></section>}
+                {remainingScheduleItems.length > 0 && <section className="trace-today-schedule__group" aria-label={remainingLabel}><h3 className="trace-today-schedule__group-title">{remainingLabel}</h3><ul className="trace-today-summary" aria-label={isCalendarView ? "Selected day schedule summary" : "Today's schedule summary"}>{remainingScheduleItems.map(renderCompactScheduleItem)}</ul></section>}
+                {completedScheduleItems.length > 0 && <section className="trace-today-schedule__group trace-today-schedule__group--completed" aria-label={completedLabel}><h3 className="trace-today-schedule__group-title">{completedLabel}</h3><ul className="trace-today-summary" aria-label={isCalendarView ? "Selected day completed summary" : "Completed today summary"}>{completedScheduleItems.map(renderCompactScheduleItem)}</ul></section>}
               </div>
             )}
             {isScheduleExpanded && scheduleItems.length > 0 && (
-              <section id="today-schedule-details" className="trace-today-schedule__details" aria-label="Today's actionable items">
-                {remainingScheduleItems.length > 0 && <section className="trace-today-schedule__group" aria-label="Remaining today details"><h3 className="trace-today-schedule__group-title">Remaining today</h3><div className="trace-today-schedule__list">{remainingScheduleItems.map(renderExpandedScheduleItem)}</div></section>}
-                {completedScheduleItems.length > 0 && <section className="trace-today-schedule__group" aria-label="Completed today details"><h3 className="trace-today-schedule__group-title">Completed today</h3><div className="trace-today-schedule__list">{completedScheduleItems.map(renderExpandedScheduleItem)}</div></section>}
+              <section id={isCalendarView ? "calendar-schedule-details" : "today-schedule-details"} className="trace-today-schedule__details" aria-label={isCalendarView ? "Selected day's actionable items" : "Today's actionable items"}>
+                {remainingScheduleItems.length > 0 && <section className="trace-today-schedule__group" aria-label={`${remainingLabel} details`}><h3 className="trace-today-schedule__group-title">{remainingLabel}</h3><div className="trace-today-schedule__list">{remainingScheduleItems.map(renderExpandedScheduleItem)}</div></section>}
+                {completedScheduleItems.length > 0 && <section className="trace-today-schedule__group trace-today-schedule__group--completed" aria-label={`${completedLabel} details`}><h3 className="trace-today-schedule__group-title">{completedLabel}</h3><div className="trace-today-schedule__list">{completedScheduleItems.map(renderExpandedScheduleItem)}</div></section>}
               </section>
             )}
           </section>
           <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={backStyle}>Back to Timeline</button>
         </>
+      )}
+          </section>
+        </div>
       )}
 
       {!draft && pendingSkipPlan && (
@@ -1506,7 +1666,7 @@ function TodayPage({
           setCustomReason={setCustomSkipReason}
           onSave={() => confirmSkipPlan()}
           onSkipWithoutReason={() => confirmSkipPlan(null)}
-          onCancel={() => setPendingSkipPlan(null)}
+          onCancel={() => { setPendingSkipPlan(null); if (isCalendarView) closePreview(); }}
           fieldStyle={fieldStyle}
           buttonStyle={compactButtonStyle}
         />
@@ -1515,14 +1675,14 @@ function TodayPage({
       {!draft && !actionDraft && pendingProtocolSkip && (
         <SkipReasonDialog
           ariaLabel={`Skip protocol ${pendingProtocolSkip.item.compound.name}`}
-          prompt="Why are you skipping this protocol item today?"
+          prompt={isCalendarView ? `Why are you skipping this protocol item on ${formatDateOnly(todayKey)}?` : "Why are you skipping this protocol item today?"}
           reason={protocolSkipReason}
           customReason={protocolCustomSkipReason}
           setReason={setProtocolSkipReason}
           setCustomReason={setProtocolCustomSkipReason}
           onSave={() => confirmProtocolSkip(false)}
           onSkipWithoutReason={() => confirmProtocolSkip(true)}
-          onCancel={() => setPendingProtocolSkip(null)}
+          onCancel={() => { setPendingProtocolSkip(null); if (isCalendarView) closeFocusedItem(); }}
           fieldStyle={fieldStyle}
           buttonStyle={compactButtonStyle}
         />
@@ -1538,7 +1698,7 @@ function TodayPage({
           setCustomReason={setActionCustomSkipReason}
           onSave={() => confirmActionSkip(false)}
           onSkipWithoutReason={() => confirmActionSkip(true)}
-          onCancel={() => setPendingActionSkip(null)}
+          onCancel={() => { setPendingActionSkip(null); if (isCalendarView) closeFocusedItem(); }}
           fieldStyle={fieldStyle}
           buttonStyle={compactButtonStyle}
         />

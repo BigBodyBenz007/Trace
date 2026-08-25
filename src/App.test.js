@@ -480,6 +480,72 @@ test("Timeline opens Today's Schedule and returns to Timeline at the top", () =>
   expectDestinationScrolledToTop();
 });
 
+test("calendar-origin workout Back, Cancel, Continue, and Complete restore the selected month and day", async () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  const now = new Date();
+  const selected = new Date(now.getFullYear(), now.getMonth() - 1, 12, 12);
+  const selectedDate = localCalendarDateKey(selected);
+  const selectedMonth = selectedDate.slice(0, 7);
+  const calendarPlan = {
+    ...plannedWorkout("planned-workout:calendar", "Calendar Strength"),
+    scheduledDate: selectedDate,
+    exercises: [{
+      id: "planned-exercise:calendar",
+      name: "Calendar Squat",
+      notes: "",
+      targetSets: [{
+        id: "planned-set:calendar",
+        setType: "working",
+        reps: 5,
+        load: { mode: "bodyweight" },
+        notes: "",
+      }],
+    }],
+  };
+  localStorage.setItem("plannedWorkouts", JSON.stringify([calendarPlan]));
+
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Upcoming Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Previous month" }));
+  fireEvent.click(document.querySelector(`[data-calendar-date="${selectedDate}"]`));
+  expect(screen.getByRole("dialog", { name: selected.toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }) })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Start workout Calendar Strength" }));
+  expect(screen.getByRole("heading", { name: "Workout Roadmap" })).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Back to Calendar" })).toHaveLength(2);
+  expect(screen.getByRole("button", { name: "Back to Timeline" })).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).context).toMatchObject({
+    originPage: "calendar",
+    selectedDate,
+    visibleMonth: selectedMonth,
+  });
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Calendar" })[0]);
+  expect(screen.getByRole("dialog", { name: selected.toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }) })).toBeInTheDocument();
+  expect(document.querySelector(`[data-calendar-date="${selectedDate}"]`)).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(screen.getByRole("button", { name: "Continue workout Calendar Strength" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(screen.getByRole("heading", { name: "Upcoming Schedule" })).toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: selected.toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }) })).toBeInTheDocument();
+  expect(document.querySelector(`[data-calendar-date="${selectedDate}"]`)).toHaveAttribute("aria-pressed", "true");
+
+  fireEvent.click(screen.getByRole("button", { name: "Start workout Calendar Strength" }));
+  const roadmapExercise = screen.getByRole("article", { name: "Roadmap exercise Calendar Squat" });
+  fireEvent.click(within(roadmapExercise).getByRole("button", { name: "Completed" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  await waitFor(() => expect(screen.getByRole("heading", { name: "Upcoming Schedule" })).toBeInTheDocument());
+  expect(document.querySelector(`[data-calendar-date="${selectedDate}"]`)).toHaveAttribute("aria-pressed", "true");
+  expect(within(screen.getByRole("region", { name: "Completed" })).getByText("Calendar Strength")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Open workout preview Calendar Strength" }));
+  fireEvent.click(screen.getByRole("button", { name: "View completed workout" }));
+  expect(screen.getAllByRole("button", { name: "Back to Calendar" })).toHaveLength(2);
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Calendar" })[0]);
+  expect(screen.getByRole("dialog", { name: selected.toLocaleDateString([], { month: "long", day: "numeric", year: "numeric" }) })).toBeInTheDocument();
+  expect(document.querySelector(`[data-calendar-date="${selectedDate}"]`)).toHaveAttribute("aria-pressed", "true");
+  confirm.mockRestore();
+});
+
 test("Today reads scheduled protocol items from the existing protocol collection", async () => {
   const today = new Date();
   const isoWeekday = today.getDay() || 7;

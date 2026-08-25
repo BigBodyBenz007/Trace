@@ -128,7 +128,7 @@ test("normalizes planned Roadmap status, reason, and single-exercise editing con
   });
 });
 
-test("preserves an optional Today origin without adding it to legacy drafts", () => {
+test("preserves explicit Today and Calendar origins without adding them to legacy drafts", () => {
   const todayDraft = createWorkoutDraftFromPlannedWorkout(
     plannedWorkout(),
     new Date(2026, 7, 22, 9, 5),
@@ -141,6 +141,20 @@ test("preserves an optional Today origin without adding it to legacy drafts", ()
 
   delete todayDraft.context.originPage;
   expect(normalizeWorkoutDraft(todayDraft).context).not.toHaveProperty("originPage");
+  const calendarDraft = normalizeWorkoutDraft({
+    ...todayDraft,
+    context: {
+      ...todayDraft.context,
+      originPage: "calendar",
+      selectedDate: "2026-09-12",
+      visibleMonth: "2026-09",
+    },
+  });
+  expect(calendarDraft.context).toMatchObject({
+    originPage: "calendar",
+    selectedDate: "2026-09-12",
+    visibleMonth: "2026-09",
+  });
   expect(normalizeWorkoutDraft({
     ...todayDraft,
     context: { ...todayDraft.context, originPage: "calendar" },

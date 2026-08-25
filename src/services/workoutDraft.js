@@ -7,6 +7,7 @@ import {
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
 } from "../constants/workoutOptions";
+import { parseDateOnlyLocal } from "./dateOnly";
 
 export const WORKOUT_DRAFT_STORAGE_KEY = "workoutDraft";
 export const WORKOUT_DRAFT_SCHEMA_VERSION = 1;
@@ -186,7 +187,13 @@ export function normalizeWorkoutDraft(value) {
   if (roadmapEditingExerciseId !== null && !validId(roadmapEditingExerciseId)) return null;
   const hasOriginPage = context.originPage !== undefined;
   const originPage = context.originPage ?? null;
-  if (originPage !== null && originPage !== "today") return null;
+  if (originPage !== null && !["today", "calendar"].includes(originPage)) return null;
+  const selectedDate = context.selectedDate ?? null;
+  const visibleMonth = context.visibleMonth ?? null;
+  if (originPage === "calendar" && (
+    !parseDateOnlyLocal(selectedDate)
+    || !/^\d{4}-(0[1-9]|1[0-2])$/.test(String(visibleMonth || ""))
+  )) return null;
 
   return {
     schemaVersion: WORKOUT_DRAFT_SCHEMA_VERSION,
@@ -206,6 +213,7 @@ export function normalizeWorkoutDraft(value) {
       activeSearchExerciseId,
       ...(hasRoadmapEditingExerciseId ? { roadmapEditingExerciseId } : {}),
       ...(hasOriginPage ? { originPage } : {}),
+      ...(originPage === "calendar" ? { selectedDate, visibleMonth } : {}),
     },
   };
 }
@@ -254,7 +262,7 @@ function actualSetFromTarget(target) {
 export function createWorkoutDraftFromPlannedWorkout(
   plannedWorkout,
   now = new Date(),
-  { originPage = null } = {}
+  { originPage = null, selectedDate = null, visibleMonth = null } = {}
 ) {
   const plan = normalizePlannedWorkout(plannedWorkout);
   if (!plan || !Number.isFinite(now.getTime())) return null;
@@ -297,7 +305,8 @@ export function createWorkoutDraftFromPlannedWorkout(
     context: {
       activeSearchExerciseId: null,
       roadmapEditingExerciseId: null,
-      ...(originPage === "today" ? { originPage } : {}),
+      ...(["today", "calendar"].includes(originPage) ? { originPage } : {}),
+      ...(originPage === "calendar" ? { selectedDate, visibleMonth } : {}),
     },
   };
 }

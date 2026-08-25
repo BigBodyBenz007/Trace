@@ -13,6 +13,7 @@ import BackupPage from "./components/BackupPage";
 import JournalPage from "./components/JournalPage";
 import TodayPage from "./components/TodayPage";
 import ConfirmationMessage from "./components/ConfirmationMessage";
+import { parseDateOnlyLocal } from "./services/dateOnly";
 import { detectMemoryAchievement } from "./services/memoryAchievement";
 import {
   addExerciseDefinition,
@@ -206,6 +207,10 @@ function App() {
   );
   const [workoutEntryTargetId, setWorkoutEntryTargetId] = useState(null);
   const [workoutOriginPage, setWorkoutOriginPage] = useState(null);
+  const [workoutOriginCalendar, setWorkoutOriginCalendar] = useState(null);
+  const [calendarSelectedDate, setCalendarSelectedDate] = useState(() => localCalendarDateKey());
+  const [calendarVisibleMonth, setCalendarVisibleMonth] = useState(() => localCalendarDateKey().slice(0, 7));
+  const [calendarOverlayOpen, setCalendarOverlayOpen] = useState(false);
   const [journalEntries, setJournalEntries] = useState([]);
   const [trophyCaseEntries, setTrophyCaseEntries] = useState([]);
   const [ceremonyEntry, setCeremonyEntry] = useState(null);
@@ -1472,7 +1477,7 @@ function App() {
     return saveProtocolOccurrenceStatus(protocolId, itemId, date, "skipped", reason, customReason);
   }
 
-  function startPlannedWorkout(id, conflictAction = null) {
+  function startPlannedWorkout(id, conflictAction = null, navigationContext = null) {
     const plannedWorkout = plannedWorkouts.find((plan) => plan.id === id);
     if (!plannedWorkout) {
       return {
@@ -1488,10 +1493,34 @@ function App() {
     }
 
     const existingDraft = readWorkoutDraft(localStorage);
+    const originPage = navigationContext?.originPage === "calendar" ? "calendar" : "today";
+    const originCalendar = originPage === "calendar" ? {
+      selectedDate: navigationContext.selectedDate,
+      visibleMonth: navigationContext.visibleMonth,
+    } : null;
+    const draftWithOrigin = (draft) => ({
+      ...draft,
+      context: {
+        ...(draft.context || {}),
+        originPage,
+        ...(originCalendar ? {
+          selectedDate: originCalendar.selectedDate,
+          visibleMonth: originCalendar.visibleMonth,
+        } : {}),
+      },
+    });
     if (existingDraft?.plannedWorkoutId === id) {
-      setActiveWorkoutDraft(existingDraft);
+      const resumedDraft = originPage === "calendar" ? draftWithOrigin(existingDraft) : existingDraft;
+      try {
+        if (originPage === "calendar") writeWorkoutDraft(localStorage, resumedDraft);
+      } catch (error) {
+        setStorageError(storageMessage("preserve this workout's calendar return"));
+        return { status: "error", message: "The workout return context could not be saved." };
+      }
+      setActiveWorkoutDraft(resumedDraft);
       setWorkoutEntryTargetId(null);
-      setWorkoutOriginPage("today");
+      setWorkoutOriginPage(originPage);
+      setWorkoutOriginCalendar(originCalendar);
       setPage("workouts");
       return { status: "resumed", plannedWorkout };
     }
@@ -1502,9 +1531,17 @@ function App() {
       };
     }
     if (existingDraft && conflictAction === "resume") {
-      setActiveWorkoutDraft(existingDraft);
+      const resumedDraft = originPage === "calendar" ? draftWithOrigin(existingDraft) : existingDraft;
+      try {
+        if (originPage === "calendar") writeWorkoutDraft(localStorage, resumedDraft);
+      } catch (error) {
+        setStorageError(storageMessage("preserve this workout's calendar return"));
+        return { status: "error", message: "The workout return context could not be saved." };
+      }
+      setActiveWorkoutDraft(resumedDraft);
       setWorkoutEntryTargetId(null);
-      setWorkoutOriginPage("today");
+      setWorkoutOriginPage(originPage);
+      setWorkoutOriginCalendar(originCalendar);
       setPage("workouts");
       return { status: "resumed-existing" };
     }
@@ -1515,7 +1552,11 @@ function App() {
     const workoutDraft = createWorkoutDraftFromPlannedWorkout(
       plannedWorkout,
       new Date(),
-      { originPage: "today" }
+      {
+        originPage,
+        selectedDate: originCalendar?.selectedDate,
+        visibleMonth: originCalendar?.visibleMonth,
+      }
     );
     if (!workoutDraft) {
       return {
@@ -1527,7 +1568,8 @@ function App() {
       writeWorkoutDraft(localStorage, workoutDraft);
       setActiveWorkoutDraft(workoutDraft);
       setWorkoutEntryTargetId(null);
-      setWorkoutOriginPage("today");
+      setWorkoutOriginPage(originPage);
+      setWorkoutOriginCalendar(originCalendar);
       setStorageError("");
       setPage("workouts");
       return { status: "started", plannedWorkout };
@@ -1540,11 +1582,16 @@ function App() {
     }
   }
 
-  function openCompletedWorkout(id) {
+  function openCompletedWorkout(id, navigationContext = null) {
     if (!workoutEntries.some((entry) => entry.id === id)) return false;
     skipNextPageTopScrollRef.current = true;
     setWorkoutEntryTargetId(id);
-    setWorkoutOriginPage("today");
+    const originPage = navigationContext?.originPage === "calendar" ? "calendar" : "today";
+    setWorkoutOriginPage(originPage);
+    setWorkoutOriginCalendar(originPage === "calendar" ? {
+      selectedDate: navigationContext.selectedDate,
+      visibleMonth: navigationContext.visibleMonth,
+    } : null);
     setPage("workouts");
     return true;
   }
@@ -1915,6 +1962,7 @@ function App() {
           onOpenWorkouts={() => {
             setWorkoutEntryTargetId(null);
             setWorkoutOriginPage(null);
+            setWorkoutOriginCalendar(null);
             setPage("workouts");
           }}
           onOpenTrophyCase={() => setPage("trophy-case")}
@@ -1954,9 +2002,27 @@ function App() {
           inputStyle={inputStyle}
           containerStyle={containerStyle}
         />
-      ) : page === "today" ? (
+      ) : page === "today" || page === "calendar" ? (
         <TodayPage
-          onBack={() => setPage("home")}
+          onBack={() => { setCalendarOverlayOpen(false); setPage("home"); }}
+          onOpenCalendar={() => {
+            const today = localCalendarDateKey();
+            setCalendarSelectedDate(today);
+            setCalendarVisibleMonth(today.slice(0, 7));
+            setCalendarOverlayOpen(false);
+            setPage("calendar");
+          }}
+          onOpenToday={() => { setCalendarOverlayOpen(false); setPage("today"); }}
+          scheduleView={page === "calendar" ? "calendar" : "today"}
+          currentDate={page === "calendar"
+            ? parseDateOnlyLocal(calendarSelectedDate) || new Date()
+            : new Date()}
+          selectedDateKey={calendarSelectedDate}
+          visibleMonthKey={calendarVisibleMonth}
+          onSelectCalendarDate={setCalendarSelectedDate}
+          onChangeCalendarMonth={setCalendarVisibleMonth}
+          calendarOverlayOpen={page === "calendar" ? calendarOverlayOpen : null}
+          onCalendarOverlayOpenChange={setCalendarOverlayOpen}
           plannedWorkouts={plannedWorkouts}
           protocols={protocols}
           protocolOccurrences={protocolOccurrences}
@@ -2025,10 +2091,23 @@ function App() {
         <WorkoutPage
           onBack={() => setPage("home")}
           navigationOriginPage={workoutOriginPage}
+          navigationOriginCalendar={workoutOriginCalendar}
           onReturnToToday={() => {
+            setCalendarOverlayOpen(false);
             setWorkoutEntryTargetId(null);
             setWorkoutOriginPage(null);
+            setWorkoutOriginCalendar(null);
             setPage("today");
+          }}
+          onReturnToCalendar={() => {
+            const origin = workoutOriginCalendar || activeWorkoutDraft?.context;
+            if (origin?.selectedDate) setCalendarSelectedDate(origin.selectedDate);
+            if (origin?.visibleMonth) setCalendarVisibleMonth(origin.visibleMonth);
+            setCalendarOverlayOpen(true);
+            setWorkoutEntryTargetId(null);
+            setWorkoutOriginPage(null);
+            setWorkoutOriginCalendar(null);
+            setPage("calendar");
           }}
           workoutEntries={workoutEntries}
           onWorkoutDraftChange={setActiveWorkoutDraft}

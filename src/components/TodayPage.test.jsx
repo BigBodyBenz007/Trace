@@ -137,6 +137,7 @@ function renderPage(props = {}, { expanded = true } = {}) {
   const view = render(
     <TodayPage
       currentDate={TODAY}
+      browserDate={TODAY}
       plannedWorkouts={[]}
       savedExercises={[]}
       {...callbacks}
@@ -153,6 +154,7 @@ function renderPage(props = {}, { expanded = true } = {}) {
       view.rerender(
         <TodayPage
           currentDate={TODAY}
+          browserDate={TODAY}
           plannedWorkouts={[]}
           savedExercises={[]}
           {...callbacks}
@@ -1490,5 +1492,253 @@ test("whole-workout skip accepts a custom reason and keeps its actions contained
     "Travel day"
   );
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+  if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
+});
+
+test("Today exposes Upcoming Schedule from the schedule header", () => {
+  const onOpenCalendar = jest.fn();
+  renderPage({ onOpenCalendar }, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Upcoming Schedule" }));
+  expect(onOpenCalendar).toHaveBeenCalledTimes(1);
+});
+
+test("calendar selection renders all authoritative source types in chronological order with status grouping", () => {
+  const selectedDate = "2026-08-26";
+  const planned = plan({ scheduledDate: selectedDate, scheduledTime: "11:00", title: "Late workout" });
+  const startedPlan = plan({ id: "planned-workout:started", scheduledDate: selectedDate, scheduledTime: "12:00", title: "Started workout" });
+  const skippedPlan = plan({ id: "planned-workout:skipped", scheduledDate: selectedDate, scheduledTime: "13:00", title: "Skipped workout", skippedDates: [selectedDate] });
+  const completedPlan = plan({ id: "planned-workout:completed", scheduledDate: selectedDate, title: "Completed workout" });
+  const action = dailyAction({ date: selectedDate, time: "09:00", title: "Middle action" });
+  renderPage({
+    scheduleView: "calendar",
+    currentDate: new Date(2026, 7, 26, 12),
+    selectedDateKey: selectedDate,
+    visibleMonthKey: "2026-08",
+    plannedWorkouts: [planned, startedPlan, skippedPlan, completedPlan],
+    activeWorkoutDraft: { plannedWorkoutId: startedPlan.id },
+    workoutEntries: [{ id: "workout:completed", plannedWorkoutId: completedPlan.id, occurredAt: "2026-08-26T15:00:00.000Z" }],
+    protocols: [protocol({}, { schedule: { type: "weekly-days", weekdays: [3], time: "08:00" }, compound: { name: "Early protocol" } })],
+    dailyActions: [action],
+  }, { expanded: false });
+
+  expect(screen.getByRole("heading", { name: "Upcoming Schedule" })).toBeInTheDocument();
+  fireEvent.click(document.querySelector(`[data-calendar-date="${selectedDate}"]`));
+  const remaining = screen.getByRole("list", { name: "Selected day schedule summary" });
+  const cards = within(remaining).getAllByRole("listitem");
+  expect(cards.map((card) => card.getAttribute("data-schedule-item-type"))).toEqual([
+    "protocol",
+    "daily-action",
+    "workout",
+    "workout",
+    "workout",
+  ]);
+  expect(within(cards[0]).getByText(/Early protocol/)).toBeInTheDocument();
+  expect(within(cards[1]).getByText("Middle action")).toBeInTheDocument();
+  expect(within(cards[2]).getByText("Late workout")).toBeInTheDocument();
+  expect(within(cards[3]).getByText("Started workout")).toBeInTheDocument();
+  expect(within(cards[4]).getByText("Skipped workout")).toBeInTheDocument();
+  expect(within(remaining).getAllByText("Scheduled")).toHaveLength(2);
+  expect(within(remaining).getByText("Planned")).toBeInTheDocument();
+  expect(within(remaining).getByText("Started")).toBeInTheDocument();
+  expect(within(remaining).getByText("Skipped")).toBeInTheDocument();
+  const completed = screen.getByRole("region", { name: "Completed" });
+  expect(within(completed).getByText("Completed workout")).toBeInTheDocument();
+  expect(completed).toHaveClass("trace-today-schedule__group--completed");
+});
+
+test("calendar workout preview, Edit, Skip, and Start preserve the selected calendar origin", () => {
+  const selectedDate = "2026-08-26";
+  const planned = plan({ scheduledDate: selectedDate });
+  const view = renderPage({
+    scheduleView: "calendar",
+    currentDate: new Date(2026, 7, 26, 12),
+    browserDate: new Date(2026, 7, 26, 12),
+    selectedDateKey: selectedDate,
+    visibleMonthKey: "2026-08",
+    plannedWorkouts: [planned],
+  }, { expanded: false });
+
+  fireEvent.click(document.querySelector(`[data-calendar-date="${selectedDate}"]`));
+  fireEvent.click(screen.getByRole("button", { name: "Open workout preview Upper Body" }));
+  expect(screen.getByRole("button", { name: "Back to Calendar" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Back to Calendar" }));
+  expect(screen.getByRole("dialog", { name: "August 26, 2026" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Open workout preview Upper Body" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit planned workout Upper Body" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(screen.getByTestId("calendar-day-schedule")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Open workout preview Upper Body" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit planned workout Upper Body" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(view.updatePlannedWorkout).toHaveBeenCalledWith(planned.id, expect.objectContaining({ scheduledDate: selectedDate }));
+  expect(screen.getByTestId("calendar-day-schedule")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Open workout preview Upper Body" }));
+  fireEvent.click(screen.getByRole("button", { name: "Skip workout Upper Body" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save skip" }));
+  expect(view.skipPlannedWorkout).toHaveBeenCalledWith(planned.id, selectedDate, "");
+  expect(screen.getByTestId("calendar-day-schedule")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Start workout Upper Body" }));
+  expect(view.startPlannedWorkout).toHaveBeenCalledWith(planned.id, null, {
+    originPage: "calendar",
+    selectedDate,
+    visibleMonth: "2026-08",
+  });
+});
+
+test("calendar protocol and daily-action Complete, Skip cancel, Edit cancel, and Save return to the selected day", () => {
+  const selectedDate = "2026-08-26";
+  const action = dailyAction({ date: selectedDate });
+  const view = renderPage({
+    scheduleView: "calendar",
+    currentDate: new Date(2026, 7, 26, 12),
+    browserDate: new Date(2026, 7, 26, 12),
+    selectedDateKey: selectedDate,
+    visibleMonthKey: "2026-08",
+    protocols: [protocol({}, { schedule: { type: "weekly-days", weekdays: [3] } })],
+    dailyActions: [action],
+  }, { expanded: false });
+
+  fireEvent.click(document.querySelector(`[data-calendar-date="${selectedDate}"]`));
+  fireEvent.click(screen.getByRole("button", { name: "Open protocol B12" }));
+  fireEvent.click(within(screen.getByRole("region", { name: "Protocol details B12" })).getByRole("button", { name: "Complete" }));
+  expect(view.completeProtocolOccurrence).toHaveBeenCalledWith("protocol:today", "protocol-item:today", selectedDate);
+  expect(screen.getByTestId("calendar-day-schedule")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Open daily action Team check-in" }));
+  fireEvent.click(within(screen.getByRole("region", { name: "Daily action Team check-in" })).getByRole("button", { name: "Edit" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(view.updateDailyAction).toHaveBeenCalled();
+  expect(screen.getByTestId("calendar-day-schedule")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Open daily action Team check-in" }));
+  fireEvent.click(within(screen.getByRole("region", { name: "Daily action Team check-in" })).getByRole("button", { name: "Skip" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(view.skipDailyAction).not.toHaveBeenCalled();
+  expect(screen.getByTestId("calendar-day-schedule")).toBeInTheDocument();
+});
+
+test("clicking a calendar day opens an accessible focus-trapped overlay and restores the trigger on close", () => {
+  const selectedDate = "2026-08-26";
+  renderPage({
+    scheduleView: "calendar",
+    currentDate: new Date(2026, 7, 26, 12),
+    browserDate: new Date(2026, 7, 26, 12),
+    selectedDateKey: selectedDate,
+    visibleMonthKey: "2026-08",
+  }, { expanded: false });
+
+  const day = document.querySelector(`[data-calendar-date="${selectedDate}"]`);
+  day.focus();
+  fireEvent.click(day);
+
+  const dialog = screen.getByRole("dialog", { name: "August 26, 2026" });
+  expect(screen.getByTestId("schedule-calendar")).toBeInTheDocument();
+  expect(document.body.style.overflow).toBe("hidden");
+  const close = within(dialog).getByRole("button", { name: "Close selected day" });
+  expect(close).toHaveFocus();
+
+  const focusable = within(dialog).getAllByRole("button");
+  const last = focusable[focusable.length - 1];
+  last.focus();
+  fireEvent.keyDown(document, { key: "Tab" });
+  expect(close).toHaveFocus();
+  close.focus();
+  fireEvent.keyDown(document, { key: "Tab", shiftKey: true });
+  expect(last).toHaveFocus();
+
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.queryByRole("dialog", { name: "August 26, 2026" })).not.toBeInTheDocument();
+  expect(document.body.style.overflow).toBe("");
+  expect(day).toHaveFocus();
+
+  fireEvent.click(day);
+  fireEvent.click(screen.getByRole("button", { name: "Close selected day" }));
+  expect(screen.queryByRole("dialog", { name: "August 26, 2026" })).not.toBeInTheDocument();
+  expect(day).toHaveFocus();
+});
+
+test("today keeps execution actions in the calendar overlay and nested Skip returns to the selected date", () => {
+  const selectedDate = "2026-08-22";
+  const view = renderPage({
+    scheduleView: "calendar",
+    currentDate: TODAY,
+    browserDate: TODAY,
+    selectedDateKey: selectedDate,
+    visibleMonthKey: "2026-08",
+    plannedWorkouts: [plan()],
+    protocols: [protocol()],
+    dailyActions: [dailyAction()],
+  }, { expanded: false });
+
+  fireEvent.click(document.querySelector(`[data-calendar-date="${selectedDate}"]`));
+  const selectedDayDialog = screen.getByRole("dialog", { name: "August 22, 2026" });
+  expect(within(selectedDayDialog).getByRole("button", { name: "Start workout Upper Body" })).toBeInTheDocument();
+  expect(within(selectedDayDialog).getByRole("button", { name: "Complete protocol B12" })).toBeInTheDocument();
+  expect(within(selectedDayDialog).getByRole("button", { name: "Complete Meeting Team check-in" })).toBeInTheDocument();
+
+  fireEvent.click(within(selectedDayDialog).getByRole("button", { name: "Open workout preview Upper Body" }));
+  fireEvent.click(screen.getByRole("button", { name: "Skip workout Upper Body" }));
+  const skipDialog = screen.getByRole("dialog", { name: "Skip workout Upper Body" });
+  expect(skipDialog.parentElement).toHaveClass("trace-skip-overlay");
+  expect(document.body.style.overflow).toBe("hidden");
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.queryByRole("dialog", { name: "Skip workout Upper Body" })).not.toBeInTheDocument();
+  expect(screen.getByRole("dialog", { name: "August 22, 2026" })).toBeInTheDocument();
+  expect(screen.getByTestId("calendar-day-schedule")).toBeInTheDocument();
+  expect(view.skipPlannedWorkout).not.toHaveBeenCalled();
+});
+
+test("future calendar dates remain editable and reschedulable without execution actions", () => {
+  const selectedDate = "2026-08-23";
+  const planned = plan({ scheduledDate: selectedDate });
+  const action = dailyAction({ date: selectedDate });
+  const view = renderPage({
+    scheduleView: "calendar",
+    currentDate: new Date(2026, 7, 23, 12),
+    browserDate: TODAY,
+    selectedDateKey: selectedDate,
+    visibleMonthKey: "2026-08",
+    plannedWorkouts: [planned],
+    protocols: [protocol({}, { schedule: { type: "weekly-days", weekdays: [7] } })],
+    dailyActions: [action],
+  }, { expanded: false });
+
+  fireEvent.click(document.querySelector(`[data-calendar-date="${selectedDate}"]`));
+  const dialog = screen.getByRole("dialog", { name: "August 23, 2026" });
+  expect(within(dialog).queryByRole("button", { name: /^(Start|Continue|Complete|Skip)/ })).not.toBeInTheDocument();
+  expect(within(dialog).getByRole("button", { name: "Edit planned workout Upper Body" })).toBeInTheDocument();
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "Open daily action Team check-in" }));
+  const actionDetails = screen.getByRole("region", { name: "Daily action Team check-in" });
+  expect(within(actionDetails).queryByRole("button", { name: "Complete" })).not.toBeInTheDocument();
+  expect(within(actionDetails).queryByRole("button", { name: "Skip" })).not.toBeInTheDocument();
+  fireEvent.click(within(actionDetails).getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-08-24" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save changes" }));
+  expect(view.updateDailyAction).toHaveBeenCalledWith(action.id, expect.objectContaining({ date: "2026-08-24" }));
+  expect(screen.getByRole("dialog", { name: "August 23, 2026" })).toBeInTheDocument();
+});
+
+test("calendar overlay stays contained at exactly 390px", () => {
+  const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+  renderPage({
+    scheduleView: "calendar",
+    currentDate: TODAY,
+    browserDate: TODAY,
+    selectedDateKey: "2026-08-22",
+    visibleMonthKey: "2026-08",
+    plannedWorkouts: [plan()],
+  }, { expanded: false });
+
+  fireEvent.click(document.querySelector('[data-calendar-date="2026-08-22"]'));
+  const dialog = screen.getByRole("dialog", { name: "August 22, 2026" });
+  expect(dialog).toHaveClass("trace-calendar-day-dialog");
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+  fireEvent.click(within(dialog).getByRole("button", { name: "Close selected day" }));
   if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
 });
