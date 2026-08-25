@@ -57,6 +57,62 @@ test("shows Unknown for unavailable nutrients instead of treating them as zero",
   expect(result.querySelector('[data-nutrient="carbohydrates"]')).toHaveTextContent("Carbs 0 g");
 });
 
+test("keeps raw and dried ingredient states separate and clearly labeled", () => {
+  renderFoodSearch();
+  searchFor("whole egg");
+
+  const raw = screen.getByText("Egg, whole, raw").closest("button");
+  const dried = screen.getByText("Egg, whole, dried").closest("button");
+
+  expect(raw).not.toBe(dried);
+  expect(within(raw).getByText("Prep: Raw")).toHaveAttribute("data-preparation-state", "raw");
+  expect(within(dried).getByText("Prep: Dried")).toHaveAttribute("data-preparation-state", "dry");
+});
+
+test("does not render fried grocery eggs", () => {
+  renderFoodSearch();
+  searchFor("egg fried");
+
+  expect(screen.queryByRole("button", { name: /Egg, whole, cooked, fried/i })).not.toBeInTheDocument();
+  expect(screen.getByText(/No catalog foods found/i)).toBeInTheDocument();
+});
+
+test("preserves the USDA serving and nutrients without unsupported cooking-fat claims", () => {
+  renderFoodSearch();
+  searchFor("raw chicken breast strips");
+
+  const result = screen.getByRole("button", { name: /Chicken breast, boneless, skinless, raw/i });
+  expect(result).toHaveTextContent("4 oz raw (113 g)");
+  expect(result.querySelector('[data-nutrient="calories"]')).toHaveTextContent("Calories 120.2");
+  expect(result.querySelector('[data-nutrient="protein"]')).toHaveTextContent("Protein 25.52 g");
+  expect(result.querySelector('[data-nutrient="fat"]')).toHaveTextContent("Fat 2.19 g");
+  expect(result).not.toHaveTextContent(/includes? (oil|butter)|added fat|cooking adds/i);
+});
+
+test("keeps user-added cooking ingredients separate from the selected food macros", () => {
+  const oil = createUserFood(
+    "User cooking olive oil",
+    { calories: 120, protein: 0, carbohydrates: 0, fat: 14, fiber: 0, sodium: 0 },
+    { amount: 1, unit: "tbsp", description: "1 tablespoon" }
+  );
+  const onSelectFood = renderFoodSearch({ userFoods: [oil] });
+
+  searchFor("raw chicken breast strips");
+  fireEvent.click(screen.getByRole("button", { name: /Chicken breast, boneless, skinless, raw/i }));
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "grocery:usda:2646170",
+    nutrients: expect.objectContaining({ calories: 120.2, fat: 2.19 }),
+  }));
+
+  searchFor("user cooking olive oil");
+  fireEvent.click(screen.getByRole("button", { name: /User cooking olive oil/i }));
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: oil.id,
+    nutrients: expect.objectContaining({ calories: 120, fat: 14 }),
+  }));
+  expect(onSelectFood.mock.calls[0][0].id).not.toBe(onSelectFood.mock.calls[1][0].id);
+});
+
 test("keeps USDA, restaurant, and user-entered source badges understandable", () => {
   const userFood = createUserFood(
     "Home freezer breakfast bowl",
@@ -100,6 +156,9 @@ test("keeps cards contained by the 390px layout contract", () => {
       "fiber",
       "sodium",
     ]);
+    if (result.dataset.foodSource === "grocery") {
+      expect(result.querySelector(".trace-food-result__preparation")).toHaveStyle({ maxWidth: "100%" });
+    }
   });
 });
 

@@ -32,9 +32,22 @@ preparation state, and nullable nutrients. Missing values remain `null`; an
 explicit USDA zero remains `0`. A record is `partial` whenever any displayed
 nutrient is unknown and lists those fields in `provenance.unknownNutrients`.
 
-Generic raw and cooked foods use separate FDC records and separate stable IDs.
-Search aliases may describe a cut form, such as raw chicken breast strips, but
-do not merge raw and cooked nutrition.
+The complete source batch remains normalized and addressable for provenance
+tests, but ordinary Nutrition search applies an ingredient-only eligibility
+policy. Raw, uncooked, dried, basic as-sold ingredients, safe unprepared frozen
+foods, and standalone cooking fats remain searchable. Cooked, fried, baked,
+roasted, boiled, grilled, breaded, marinated, prepared-meal, and similar records
+are excluded from USDA grocery search. Filtering does not mutate or delete a
+source record and cannot alter an immutable nutrition snapshot already saved in
+`nutritionEntries`.
+
+Generic raw and cooked foods retain separate FDC records and stable IDs in the
+source batch; they are never merged. Search aliases may describe a cut form,
+such as raw chicken breast strips, but do not transfer nutrition between forms.
+Cooking additions are also never attached to another food. Olive, avocado,
+canola, vegetable/soybean, coconut, sesame, peanut, and sunflower oils plus
+butter, ghee, lard, vegetable shortening, and a USDA cooking-spray record remain
+standalone search results with their own exact serving and nutrient data.
 
 ## Regenerating the checked-in seed
 
@@ -48,7 +61,8 @@ do not merge raw and cooked nutrition.
      <path-to-foundation-foods.json>
    ```
 
-The script preserves the original reviewed FDC IDs, fills fixed category quotas
+The script preserves the original reviewed FDC IDs, pins complete USDA records
+for the common standalone oils and fats, fills fixed category quotas
 through deterministic description rules, and writes the small
 `src/data/groceryFoods.v1.js` index plus eight
 `src/data/groceryFoods.v1.<category>.js` modules. A dataset change cannot alter

@@ -84,209 +84,263 @@ const groceryFoodSeeds = Object.freeze([
     }
   },
   {
-    "fdcId": 748323,
-    "name": "Oil, corn",
+    "fdcId": 171314,
+    "name": "Ghee (clarified butter)",
     "category": "fats-oils",
     "preparationState": "ready-to-use",
     "serving": {
       "amount": 1,
       "unit": "tbsp",
-      "description": "1 tbsp (14 g)",
+      "description": "1 tablespoon (14 g)",
       "grams": 14
     },
-    "searchAliases": [],
-    "sourceDescription": "Oil, corn",
-    "sourceDataType": "Foundation",
-    "sourceRelease": "2026-04",
+    "searchAliases": [
+      "ghee",
+      "clarified butter",
+      "cooking fat"
+    ],
+    "sourceDescription": "Butter, Clarified butter (ghee)",
+    "sourceDataType": "SR Legacy",
+    "sourceRelease": "2018-04",
     "nutrientsPer100g": {
-      "calories": null,
-      "protein": null,
-      "carbohydrates": null,
-      "fat": null,
-      "fiber": null,
-      "sodium": null
-    }
-  },
-  {
-    "fdcId": 1750348,
-    "name": "Oil, peanut",
-    "category": "fats-oils",
-    "preparationState": "ready-to-use",
-    "serving": {
-      "amount": 1,
-      "unit": "tbsp",
-      "description": "1 tbsp (14 g)",
-      "grams": 14
-    },
-    "searchAliases": [],
-    "sourceDescription": "Oil, peanut",
-    "sourceDataType": "Foundation",
-    "sourceRelease": "2026-04",
-    "nutrientsPer100g": {
-      "calories": null,
-      "protein": null,
-      "carbohydrates": null,
-      "fat": null,
-      "fiber": null,
-      "sodium": null
-    }
-  },
-  {
-    "fdcId": 330458,
-    "name": "Oil, coconut",
-    "category": "fats-oils",
-    "preparationState": "ready-to-use",
-    "serving": {
-      "amount": 1,
-      "unit": "tbsp",
-      "description": "1 tbsp liquid oil (11.6 g)",
-      "grams": 11.6
-    },
-    "searchAliases": [],
-    "sourceDescription": "Oil, coconut",
-    "sourceDataType": "Foundation",
-    "sourceRelease": "2026-04",
-    "nutrientsPer100g": {
-      "calories": 833,
+      "calories": 900,
       "protein": 0,
-      "carbohydrates": 0.84,
-      "fat": 99.1,
-      "fiber": null,
+      "carbohydrates": 0,
+      "fat": 100,
+      "fiber": 0,
       "sodium": 0
     }
   },
   {
-    "fdcId": 748366,
-    "name": "Oil, soybean",
+    "fdcId": 171401,
+    "name": "Lard",
     "category": "fats-oils",
     "preparationState": "ready-to-use",
     "serving": {
       "amount": 1,
       "unit": "tbsp",
-      "description": "1 tbsp (14 g)",
-      "grams": 14
+      "description": "1 tablespoon (12.8 g)",
+      "grams": 12.8
     },
-    "searchAliases": [],
-    "sourceDescription": "Oil, soybean",
-    "sourceDataType": "Foundation",
-    "sourceRelease": "2026-04",
+    "searchAliases": [
+      "pork fat",
+      "cooking lard"
+    ],
+    "sourceDescription": "Lard",
+    "sourceDataType": "SR Legacy",
+    "sourceRelease": "2018-04",
     "nutrientsPer100g": {
-      "calories": null,
-      "protein": null,
-      "carbohydrates": null,
-      "fat": null,
-      "fiber": null,
-      "sodium": null
+      "calories": 902,
+      "protein": 0,
+      "carbohydrates": 0,
+      "fat": 100,
+      "fiber": 0,
+      "sodium": 0
     }
   },
   {
-    "fdcId": 1750349,
-    "name": "Oil, sunflower",
+    "fdcId": 173584,
+    "name": "Vegetable shortening",
     "category": "fats-oils",
     "preparationState": "ready-to-use",
     "serving": {
       "amount": 1,
       "unit": "tbsp",
-      "description": "1 tbsp (14 g)",
-      "grams": 14
+      "description": "1 tablespoon (12.8 g)",
+      "grams": 12.8
     },
-    "searchAliases": [],
-    "sourceDescription": "Oil, sunflower",
-    "sourceDataType": "Foundation",
-    "sourceRelease": "2026-04",
+    "searchAliases": [
+      "shortening",
+      "vegetable cooking fat"
+    ],
+    "sourceDescription": "Shortening, vegetable, household, composite",
+    "sourceDataType": "SR Legacy",
+    "sourceRelease": "2018-04",
     "nutrientsPer100g": {
-      "calories": null,
-      "protein": null,
-      "carbohydrates": null,
-      "fat": null,
-      "fiber": null,
-      "sodium": null
+      "calories": 884,
+      "protein": 0,
+      "carbohydrates": 0,
+      "fat": 100,
+      "fiber": 0,
+      "sodium": 4
     }
   },
   {
-    "fdcId": 1750350,
-    "name": "Oil, safflower",
+    "fdcId": 171430,
+    "name": "PAM cooking spray, original",
+    "brand": "PAM",
     "category": "fats-oils",
     "preparationState": "ready-to-use",
     "serving": {
       "amount": 1,
-      "unit": "tbsp",
-      "description": "1 tbsp (14 g)",
-      "grams": 14
+      "unit": "spray",
+      "description": "1 spray, about 1/3 second (0.3 g)",
+      "grams": 0.3
     },
-    "searchAliases": [],
-    "sourceDescription": "Oil, safflower",
-    "sourceDataType": "Foundation",
-    "sourceRelease": "2026-04",
+    "searchAliases": [
+      "cooking spray",
+      "nonstick cooking spray",
+      "oil spray"
+    ],
+    "sourceDescription": "Oil, PAM cooking spray, original",
+    "sourceDataType": "SR Legacy",
+    "sourceRelease": "2018-04",
     "nutrientsPer100g": {
-      "calories": null,
-      "protein": null,
-      "carbohydrates": null,
-      "fat": null,
-      "fiber": null,
-      "sodium": null
+      "calories": 792,
+      "protein": 0.26,
+      "carbohydrates": 20.7,
+      "fat": 78.7,
+      "fiber": 0,
+      "sodium": 59
     }
   },
   {
-    "fdcId": 1750351,
-    "name": "Oil, olive, extra light",
+    "fdcId": 171410,
+    "name": "Peanut oil",
     "category": "fats-oils",
     "preparationState": "ready-to-use",
     "serving": {
       "amount": 1,
       "unit": "tbsp",
-      "description": "1 tbsp (14 g)",
-      "grams": 14
+      "description": "1 tablespoon (13.5 g)",
+      "grams": 13.5
     },
-    "searchAliases": [],
-    "sourceDescription": "Oil, olive, extra light",
-    "sourceDataType": "Foundation",
-    "sourceRelease": "2026-04",
+    "searchAliases": [
+      "peanut cooking oil"
+    ],
+    "sourceDescription": "Oil, peanut, salad or cooking",
+    "sourceDataType": "SR Legacy",
+    "sourceRelease": "2018-04",
     "nutrientsPer100g": {
-      "calories": null,
-      "protein": null,
-      "carbohydrates": null,
-      "fat": null,
-      "fiber": null,
-      "sodium": null
+      "calories": 884,
+      "protein": 0,
+      "carbohydrates": 0,
+      "fat": 100,
+      "fiber": 0,
+      "sodium": 0
     }
   },
   {
-    "fdcId": 748608,
-    "name": "Oil, olive, extra virgin",
+    "fdcId": 172338,
+    "name": "Sunflower oil, high oleic",
     "category": "fats-oils",
     "preparationState": "ready-to-use",
     "serving": {
       "amount": 1,
       "unit": "tbsp",
-      "description": "1 tbsp (14 g)",
+      "description": "1 tablespoon (14 g)",
       "grams": 14
     },
-    "searchAliases": [],
-    "sourceDescription": "Oil, olive, extra virgin",
-    "sourceDataType": "Foundation",
-    "sourceRelease": "2026-04",
+    "searchAliases": [
+      "sunflower oil",
+      "sunflower cooking oil"
+    ],
+    "sourceDescription": "Oil, sunflower, high oleic (70% and over)",
+    "sourceDataType": "SR Legacy",
+    "sourceRelease": "2018-04",
     "nutrientsPer100g": {
-      "calories": null,
-      "protein": null,
-      "carbohydrates": null,
-      "fat": null,
-      "fiber": null,
-      "sodium": null
+      "calories": 884,
+      "protein": 0,
+      "carbohydrates": 0,
+      "fat": 100,
+      "fiber": 0,
+      "sodium": 0
+    }
+  },
+  {
+    "fdcId": 171411,
+    "name": "Vegetable oil (soybean)",
+    "category": "fats-oils",
+    "preparationState": "ready-to-use",
+    "serving": {
+      "amount": 1,
+      "unit": "tbsp",
+      "description": "1 tablespoon (13.6 g)",
+      "grams": 13.6
+    },
+    "searchAliases": [
+      "vegetable oil",
+      "soybean oil",
+      "soy cooking oil"
+    ],
+    "sourceDescription": "Oil, soybean, salad or cooking",
+    "sourceDataType": "SR Legacy",
+    "sourceRelease": "2018-04",
+    "nutrientsPer100g": {
+      "calories": 884,
+      "protein": 0,
+      "carbohydrates": 0,
+      "fat": 100,
+      "fiber": 0,
+      "sodium": 0
+    }
+  },
+  {
+    "fdcId": 171412,
+    "name": "Coconut oil",
+    "category": "fats-oils",
+    "preparationState": "ready-to-use",
+    "serving": {
+      "amount": 1,
+      "unit": "tbsp",
+      "description": "1 tablespoon (13.6 g)",
+      "grams": 13.6
+    },
+    "searchAliases": [
+      "coconut cooking oil"
+    ],
+    "sourceDescription": "Oil, coconut",
+    "sourceDataType": "SR Legacy",
+    "sourceRelease": "2018-04",
+    "nutrientsPer100g": {
+      "calories": 892,
+      "protein": 0,
+      "carbohydrates": 0,
+      "fat": 99.1,
+      "fiber": 0,
+      "sodium": 0
+    }
+  },
+  {
+    "fdcId": 171016,
+    "name": "Sesame oil",
+    "category": "fats-oils",
+    "preparationState": "ready-to-use",
+    "serving": {
+      "amount": 1,
+      "unit": "tbsp",
+      "description": "1 tablespoon (13.6 g)",
+      "grams": 13.6
+    },
+    "searchAliases": [
+      "sesame cooking oil"
+    ],
+    "sourceDescription": "Oil, sesame, salad or cooking",
+    "sourceDataType": "SR Legacy",
+    "sourceRelease": "2018-04",
+    "nutrientsPer100g": {
+      "calories": 884,
+      "protein": 0,
+      "carbohydrates": 0,
+      "fat": 100,
+      "fiber": 0,
+      "sodium": 0
     }
   },
   {
     "fdcId": 173573,
-    "name": "Oil, avocado",
+    "name": "Avocado oil",
     "category": "fats-oils",
     "preparationState": "ready-to-use",
     "serving": {
       "amount": 1,
       "unit": "tbsp",
-      "description": "1 tbsp (14 g)",
+      "description": "1 tablespoon (14 g)",
       "grams": 14
     },
-    "searchAliases": [],
+    "searchAliases": [
+      "avocado cooking oil"
+    ],
     "sourceDescription": "Oil, avocado",
     "sourceDataType": "SR Legacy",
     "sourceRelease": "2018-04",
@@ -348,8 +402,8 @@ const groceryFoodSeeds = Object.freeze([
     }
   },
   {
-    "fdcId": 171016,
-    "name": "Oil, sesame, salad or cooking",
+    "fdcId": 172370,
+    "name": "Oil, vegetable, soybean, refined",
     "category": "fats-oils",
     "preparationState": "ready-to-use",
     "serving": {
@@ -359,7 +413,7 @@ const groceryFoodSeeds = Object.freeze([
       "grams": 13.6
     },
     "searchAliases": [],
-    "sourceDescription": "Oil, sesame, salad or cooking",
+    "sourceDescription": "Oil, vegetable, soybean, refined",
     "sourceDataType": "SR Legacy",
     "sourceRelease": "2018-04",
     "nutrientsPer100g": {
@@ -372,123 +426,99 @@ const groceryFoodSeeds = Object.freeze([
     }
   },
   {
-    "fdcId": 173581,
-    "name": "Butter, light, stick, with salt",
+    "fdcId": 171025,
+    "name": "Oil, sunflower, linoleic, (approx. 65%)",
     "category": "fats-oils",
     "preparationState": "ready-to-use",
     "serving": {
       "amount": 1,
       "unit": "tbsp",
-      "description": "1 tbsp (14 g)",
-      "grams": 14
+      "description": "1 tbsp (13.6 g)",
+      "grams": 13.6
     },
     "searchAliases": [],
-    "sourceDescription": "Butter, light, stick, with salt",
+    "sourceDescription": "Oil, sunflower, linoleic, (approx. 65%)",
     "sourceDataType": "SR Legacy",
     "sourceRelease": "2018-04",
     "nutrientsPer100g": {
-      "calories": 499,
-      "protein": 3.3,
+      "calories": 884,
+      "protein": 0,
       "carbohydrates": 0,
-      "fat": 55.1,
+      "fat": 100,
       "fiber": 0,
-      "sodium": 450
+      "sodium": 0
     }
   },
   {
-    "fdcId": 171415,
-    "name": "Margarine,spread, 35-39% fat, tub",
+    "fdcId": 171443,
+    "name": "Mayonnaise, reduced fat, with olive oil",
     "category": "fats-oils",
-    "preparationState": "ready-to-use",
-    "serving": {
-      "amount": 1,
-      "unit": "tsp",
-      "description": "1 tsp (4.8 g)",
-      "grams": 4.8
-    },
-    "searchAliases": [],
-    "sourceDescription": "Margarine,spread, 35-39% fat, tub",
-    "sourceDataType": "SR Legacy",
-    "sourceRelease": "2018-04",
-    "nutrientsPer100g": {
-      "calories": 349,
-      "protein": 0.23,
-      "carbohydrates": 1.52,
-      "fat": 38,
-      "fiber": 0,
-      "sodium": 584
-    }
-  },
-  {
-    "fdcId": 173589,
-    "name": "Margarine Spread, 40-49% fat, tub",
-    "category": "fats-oils",
-    "preparationState": "ready-to-use",
+    "preparationState": "ready-to-eat",
     "serving": {
       "amount": 1,
       "unit": "tbsp",
-      "description": "1 tbsp (14 g)",
-      "grams": 14
+      "description": "1 tbsp (15 g)",
+      "grams": 15
     },
     "searchAliases": [],
-    "sourceDescription": "Margarine Spread, 40-49% fat, tub",
+    "sourceDescription": "Mayonnaise, reduced fat, with olive oil",
     "sourceDataType": "SR Legacy",
     "sourceRelease": "2018-04",
     "nutrientsPer100g": {
-      "calories": 401,
-      "protein": 0.27,
+      "calories": 361,
+      "protein": 0.37,
       "carbohydrates": 0,
-      "fat": 44.5,
+      "fat": 40,
       "fiber": 0,
-      "sodium": 716
+      "sodium": 800
     }
   },
   {
-    "fdcId": 172344,
-    "name": "Butter, light, stick, without salt",
+    "fdcId": 171017,
+    "name": "Oil, sunflower, linoleic (less than 60%)",
     "category": "fats-oils",
     "preparationState": "ready-to-use",
     "serving": {
       "amount": 1,
       "unit": "tbsp",
-      "description": "1 tbsp (14 g)",
-      "grams": 14
+      "description": "1 tbsp (13.6 g)",
+      "grams": 13.6
     },
     "searchAliases": [],
-    "sourceDescription": "Butter, light, stick, without salt",
+    "sourceDescription": "Oil, sunflower, linoleic (less than 60%)",
     "sourceDataType": "SR Legacy",
     "sourceRelease": "2018-04",
     "nutrientsPer100g": {
-      "calories": 499,
-      "protein": 3.3,
+      "calories": 884,
+      "protein": 0,
       "carbohydrates": 0,
-      "fat": 55.1,
+      "fat": 100,
       "fiber": 0,
-      "sodium": 36
+      "sodium": 0
     }
   },
   {
-    "fdcId": 169894,
-    "name": "Butter replacement, without fat, powder",
+    "fdcId": 167691,
+    "name": "Vegetable oil-butter spread, reduced calorie",
     "category": "fats-oils",
-    "preparationState": "dry",
+    "preparationState": "ready-to-eat",
     "serving": {
       "amount": 1,
       "unit": "tbsp",
-      "description": "1 tbsp (14 g)",
-      "grams": 14
+      "description": "1 tbsp (13 g)",
+      "grams": 13
     },
     "searchAliases": [],
-    "sourceDescription": "Butter replacement, without fat, powder",
+    "sourceDescription": "Vegetable oil-butter spread, reduced calorie",
     "sourceDataType": "SR Legacy",
     "sourceRelease": "2018-04",
     "nutrientsPer100g": {
-      "calories": 373,
-      "protein": 2,
-      "carbohydrates": 89,
-      "fat": 1,
+      "calories": 465,
+      "protein": 0,
+      "carbohydrates": 0,
+      "fat": 53,
       "fiber": 0,
-      "sodium": 1200
+      "sodium": 581
     }
   }
 ]);

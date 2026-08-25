@@ -347,17 +347,15 @@ test("shows USDA grocery source, serving, and unknown nutrients for raw chicken 
   }));
 });
 
-test("shows raw and cooked chicken breast as separate grocery results", () => {
+test("shows raw chicken breast and excludes the cooked USDA variant", () => {
   renderNutritionPage();
   fireEvent.change(screen.getByLabelText("Food search"), {
     target: { value: "chicken breast" },
   });
 
   const raw = screen.getByRole("button", { name: /Chicken breast, boneless, skinless, raw/i });
-  const cooked = screen.getByRole("button", { name: /Chicken breast, cooked, roasted/i });
   expect(raw).toHaveTextContent("4 oz raw (113 g)");
-  expect(cooked).toHaveTextContent("3 oz cooked (85 g)");
-  expect(raw).not.toBe(cooked);
+  expect(screen.queryByRole("button", { name: /Chicken breast, cooked, roasted/i })).not.toBeInTheDocument();
 });
 
 test("keeps food search results contained at the 390px mobile contract", () => {
@@ -1234,6 +1232,63 @@ test("editing a catalog entry restores quantity, basis, nutrition, and provenanc
         basis: savedEntry.portion.basis,
       }),
       nutritionBasis: savedEntry.nutritionBasis,
+      foodReference: savedEntry.foodReference,
+    })
+  );
+});
+
+test("keeps a previously logged cooked USDA food and its immutable snapshot intact", () => {
+  const savedEntry = {
+    id: "saved-cooked-chicken",
+    name: "Chicken breast, cooked, roasted",
+    calories: 140.3,
+    protein: 26.35,
+    carbohydrates: 0,
+    fat: 3.03,
+    fiber: 0,
+    sodium: 62.9,
+    loggedAt: localTimestamp(2026, 7, 8),
+    notes: "Historical USDA entry",
+    foodReference: {
+      source: "usda-fooddata-central",
+      sourceId: "171477",
+      confidence: "official-source",
+      label: "USDA",
+      sourceType: "grocery",
+      dataType: "generic",
+      category: "protein",
+      categoryLabel: "Protein / meat",
+      preparationState: "cooked",
+      modified: false,
+    },
+    portion: {
+      amount: 1,
+      unit: "serving",
+      basis: { amount: 3, unit: "oz", description: "3 oz cooked (85 g)", grams: 85 },
+    },
+    nutritionBasis: {
+      calories: 140.3,
+      protein: 26.35,
+      carbohydrates: 0,
+      fat: 3.03,
+      fiber: 0,
+      sodium: 62.9,
+    },
+  };
+  const props = renderNutritionPage({ nutritionEntries: [savedEntry] });
+
+  expect(screen.getByText("Chicken breast, cooked, roasted")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const form = entryForm();
+  expect(form.getByText("One serving: 3 oz cooked (85 g)")).toBeInTheDocument();
+  expect(form.getByLabelText("Calories")).toHaveValue(140.3);
+  expect(form.getByLabelText("Fat (g)")).toHaveValue(3.03);
+  fireEvent.click(form.getByRole("button", { name: "Save Changes" }));
+  expect(props.updateNutritionEntry).toHaveBeenCalledWith(
+    "saved-cooked-chicken",
+    expect.objectContaining({
+      nutritionBasis: savedEntry.nutritionBasis,
+      portion: savedEntry.portion,
       foodReference: savedEntry.foodReference,
     })
   );

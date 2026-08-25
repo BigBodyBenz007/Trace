@@ -50,6 +50,16 @@ const coreSelections = [
   { fdcId: 171413, name: "Olive oil", category: "fats-oils", preparationState: "ready-to-use", serving: serving(1, "tbsp", "1 tablespoon (13.5 g)", 13.5), searchAliases: ["cooking oil", "salad oil"] },
   { fdcId: 172336, name: "Canola oil", category: "fats-oils", preparationState: "ready-to-use", serving: serving(1, "tbsp", "1 tablespoon (14 g)", 14), searchAliases: ["rapeseed oil", "cooking oil"] },
   { fdcId: 173410, name: "Butter, salted", category: "fats-oils", preparationState: "ready-to-use", serving: serving(1, "tbsp", "1 tablespoon (14.2 g)", 14.2), searchAliases: ["salted butter", "dairy butter"] },
+  { fdcId: 171314, name: "Ghee (clarified butter)", category: "fats-oils", preparationState: "ready-to-use", serving: serving(1, "tbsp", "1 tablespoon (14 g)", 14), searchAliases: ["ghee", "clarified butter", "cooking fat"] },
+  { fdcId: 171401, name: "Lard", category: "fats-oils", preparationState: "ready-to-use", serving: serving(1, "tbsp", "1 tablespoon (12.8 g)", 12.8), searchAliases: ["pork fat", "cooking lard"] },
+  { fdcId: 173584, name: "Vegetable shortening", category: "fats-oils", preparationState: "ready-to-use", serving: serving(1, "tbsp", "1 tablespoon (12.8 g)", 12.8), searchAliases: ["shortening", "vegetable cooking fat"] },
+  { fdcId: 171430, name: "PAM cooking spray, original", brand: "PAM", category: "fats-oils", preparationState: "ready-to-use", serving: serving(1, "spray", "1 spray, about 1/3 second (0.3 g)", 0.3), searchAliases: ["cooking spray", "nonstick cooking spray", "oil spray"] },
+  { fdcId: 171410, name: "Peanut oil", category: "fats-oils", preparationState: "ready-to-use", serving: serving(1, "tbsp", "1 tablespoon (13.5 g)", 13.5), searchAliases: ["peanut cooking oil"] },
+  { fdcId: 172338, name: "Sunflower oil, high oleic", category: "fats-oils", preparationState: "ready-to-use", serving: serving(1, "tbsp", "1 tablespoon (14 g)", 14), searchAliases: ["sunflower oil", "sunflower cooking oil"] },
+  { fdcId: 171411, name: "Vegetable oil (soybean)", category: "fats-oils", preparationState: "ready-to-use", serving: serving(1, "tbsp", "1 tablespoon (13.6 g)", 13.6), searchAliases: ["vegetable oil", "soybean oil", "soy cooking oil"] },
+  { fdcId: 171412, name: "Coconut oil", category: "fats-oils", preparationState: "ready-to-use", serving: serving(1, "tbsp", "1 tablespoon (13.6 g)", 13.6), searchAliases: ["coconut cooking oil"] },
+  { fdcId: 171016, name: "Sesame oil", category: "fats-oils", preparationState: "ready-to-use", serving: serving(1, "tbsp", "1 tablespoon (13.6 g)", 13.6), searchAliases: ["sesame cooking oil"] },
+  { fdcId: 173573, name: "Avocado oil", category: "fats-oils", preparationState: "ready-to-use", serving: serving(1, "tbsp", "1 tablespoon (14 g)", 14), searchAliases: ["avocado cooking oil"] },
   { fdcId: 746784, name: "Granulated sugar", category: "pantry", preparationState: "ready-to-use", serving: serving(1, "tsp", "1 teaspoon (4 g)", 4), searchAliases: ["white sugar", "table sugar"] },
   { fdcId: 168936, name: "All-purpose flour, enriched, unbleached", category: "pantry", preparationState: "dry", serving: serving(1, "cup", "1 cup (125 g)", 125), searchAliases: ["white flour", "wheat flour", "all purpose flour"] },
   { fdcId: 174266, name: "Peanut butter, smooth, salted", category: "pantry", preparationState: "ready-to-eat", serving: serving(2, "tbsp", "2 tablespoons (32 g)", 32), dedupeKey: "generic:peanut-butter", searchAliases: ["smooth peanut butter", "creamy peanut butter"] },
@@ -166,7 +176,7 @@ const categoryPlans = Object.freeze({
   "fats-oils": {
     target: 20,
     usdaCategories: ["Fats and Oils"],
-    exclude: /salad dressing|shortening, industrial|animal fat|lard|nutmeg|ucuhuba|cocoa butter|lecithin|palm kernel/i,
+    exclude: /salad dressing|shortening, industrial|animal fat|nutmeg|ucuhuba|cocoa butter|lecithin|palm kernel/i,
     rules: [
       [/(olive|canola|vegetable|avocado|coconut|sunflower|safflower|corn|soybean|peanut|sesame).*oil|oil, (olive|canola|vegetable|avocado|coconut|sunflower|safflower|corn|soybean|peanut|sesame)/i, 12],
       [/(butter|margarine|ghee)/i, 6],
@@ -385,6 +395,9 @@ for (const [category, plan] of Object.entries(categoryPlans)) {
       && plan.usdaCategories.includes(food.foodCategory?.description)
       && pattern.test(food.description)
       && !plan.exclude.test(food.description)
+      && (category !== "fats-oils" || ["calories", "fat"].every((nutrient) => (
+        nutrientAmount(food, nutrientIds[nutrient]) !== null
+      )))
       && !selectedDescriptions.has(normalizeDescription(food.description).toLowerCase())
       && !selectedNames.has(friendlyName(food.description).toLowerCase())
     )).sort(candidateOrder);

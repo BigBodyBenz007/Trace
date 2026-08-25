@@ -340,21 +340,23 @@ test("finds raw chicken breast strips through USDA aliases before restaurant foo
   expect(results.findIndex((food) => food.sourceType === "restaurant")).not.toBe(0);
 });
 
-test("keeps raw and cooked chicken breast results visibly distinct", () => {
+test("keeps raw chicken breast searchable and excludes the cooked USDA variant", () => {
   const results = searchFoodCatalog("chicken breast", [], 20);
   const raw = results.find((food) => food.id === "grocery:usda:2646170");
   const cooked = results.find((food) => food.id === "grocery:usda:171477");
 
   expect(raw).toMatchObject({ preparationState: "raw", serving: { description: expect.stringContaining("raw") } });
-  expect(cooked).toMatchObject({ preparationState: "cooked", serving: { description: expect.stringContaining("cooked") } });
-  expect(raw.provenance.sourceId).not.toBe(cooked.provenance.sourceId);
+  expect(cooked).toBeUndefined();
+  expect(results.filter((food) => food.sourceType === "grocery")).not.toEqual(expect.arrayContaining([
+    expect.objectContaining({ preparationState: "cooked" }),
+  ]));
 });
 
 test("searches generic grocery foods by category and useful staple names", () => {
-  expect(searchFoodCatalog("rice").map(({ id }) => id)).toEqual(expect.arrayContaining([
-    "grocery:usda:168878",
-    "grocery:usda:169704",
-  ]));
+  const rice = searchFoodCatalog("rice", [], 20).filter(({ sourceType }) => sourceType === "grocery");
+  expect(rice.length).toBeGreaterThan(0);
+  expect(rice.some(({ preparationState, name }) => ["raw", "dry"].includes(preparationState) || /uncooked/i.test(name))).toBe(true);
+  expect(rice.some(({ preparationState }) => preparationState === "cooked")).toBe(false);
   expect(searchFoodCatalog("eggs dairy").every((food) => food.category === "eggs-dairy")).toBe(true);
   expect(searchFoodCatalog("eggs")[0]).toMatchObject({
     id: "grocery:usda:171287",
@@ -367,26 +369,57 @@ test("searches generic grocery foods by category and useful staple names", () =>
   });
 });
 
-test("searches representative foods across every expanded grocery category", () => {
-  const expectations = [
-    ["ground beef", "protein", /Ground beef/],
-    ["frozen cod", "seafood", /Cod.*frozen|frozen.*Cod/i],
-    ["egg whites", "eggs-dairy", /Egg white/],
-    ["canned pineapple", "fruit", /Pineapple.*canned|canned.*Pineapple/i],
-    ["frozen broccoli", "vegetables", /Broccoli.*frozen|frozen.*Broccoli/i],
-    ["quinoa cooked", "grains-starches", /Quinoa, cooked/],
-    ["avocado oil", "fats-oils", /Oil, avocado/],
-    ["almond butter", "pantry", /Almond butter|almond butter/],
-  ];
+test.each([
+  ["ground beef", "protein", /Ground beef/],
+  ["cod raw", "seafood", /Cod.*raw|raw.*Cod/i],
+  ["egg whites", "eggs-dairy", /Egg white/],
+  ["pineapple raw", "fruit", /Pineapple.*raw|raw.*Pineapple/i],
+  ["frozen broccoli", "vegetables", /Broccoli.*frozen|frozen.*Broccoli/i],
+  ["quinoa", "grains-starches", /Quinoa/],
+  ["avocado oil", "fats-oils", /Avocado oil|Oil, avocado/],
+  ["almond butter", "pantry", /Almond butter|almond butter/],
+])("searches ingredient-level %s from the %s category", (query, category, name) => {
+  const result = searchFoodCatalog(query, [], 20).find((food) => name.test(food.name));
+  expect(result).toMatchObject({
+    category,
+    sourceType: "grocery",
+    dataType: "generic",
+    provenance: { source: "usda-fooddata-central", label: "USDA" },
+  });
+});
 
-  expectations.forEach(([query, category, name]) => {
-    const result = searchFoodCatalog(query, [], 20).find((food) => name.test(food.name));
-    expect(result).toMatchObject({
-      category,
-      sourceType: "grocery",
-      dataType: "generic",
-      provenance: { source: "usda-fooddata-central", label: "USDA" },
-    });
+test("keeps raw and dried eggs while excluding cooked and fried grocery eggs", () => {
+  expect(searchFoodCatalog("whole egg raw").map(({ id }) => id)).toContain("grocery:usda:171287");
+  expect(searchFoodCatalog("egg whites").map(({ id }) => id)).toContain("grocery:usda:172183");
+  expect(searchFoodCatalog("egg dried", [], 20).map(({ id }) => id)).toEqual(expect.arrayContaining([
+    "grocery:usda:329490",
+    "grocery:usda:323793",
+  ]));
+  expect(searchFoodCatalog("egg fried", [], 20).filter(({ sourceType }) => sourceType === "grocery")).toEqual([]);
+  expect(searchFoodCatalog("egg cooked", [], 20).filter(({ sourceType }) => sourceType === "grocery")).toEqual([]);
+});
+
+test("searches standalone oils and fats without attaching them to ingredient results", () => {
+  expect(searchFoodCatalog("vegetable oil")[0]).toMatchObject({
+    id: "grocery:usda:171411",
+    nutrients: { calories: 120.2, protein: 0, carbohydrates: 0, fat: 13.6, fiber: 0, sodium: 0 },
+  });
+  expect(searchFoodCatalog("ghee")[0]).toMatchObject({
+    id: "grocery:usda:171314",
+    nutrients: { calories: 126, protein: 0, carbohydrates: 0, fat: 14, fiber: 0, sodium: 0 },
+  });
+  expect(searchFoodCatalog("cooking spray")[0]).toMatchObject({
+    id: "grocery:usda:171430",
+    serving: { description: "1 spray, about 1/3 second (0.3 g)" },
+  });
+  expect(searchFoodCatalog("raw chicken breast strips")[0].id).toBe("grocery:usda:2646170");
+  expect(searchFoodCatalog("raw chicken breast strips")[0].nutrients).toEqual({
+    calories: 120.2,
+    protein: 25.52,
+    carbohydrates: 0,
+    fat: 2.19,
+    fiber: null,
+    sodium: 74.6,
   });
 });
 

@@ -84,8 +84,53 @@ export function normalizeGroceryFood(seed) {
   });
 }
 
-const groceryFoods = Object.freeze(
+const COOKED_METHOD_PATTERN = /\b(baked|barbecued|boiled|braised|broiled|cooked|fried|grilled|heated|microwaved|poached|roasted|sauteed|saut\u00e9ed|simmered|steamed|stewed|toasted)\b/i;
+const ADDED_COOKING_INGREDIENT_PATTERN = /\b(battered|breaded|marinated)\b|\b(in|with)\s+(butter|gravy|marinade|oil|sauce)\b/i;
+const PREPARED_MEAL_PATTERN = /\b(casserole|dinner|entree|meal|pizza|sandwich|soup|stew)\b/i;
+const PREPARED_GRAIN_PRODUCT_PATTERN = /\b(bagel|bread|english muffin|granola|roll|taco shell|tortilla)\b/i;
+const PROCESSED_MEAT_PATTERN = /\b(bacon|ham|luncheon|sausage)\b|\b(cured|smoked)\b/i;
+const SAFE_CANNED_PATTERN = /\b(in water|juice pack|no salt added|without salt|water pack)\b/i;
+
+export function isIngredientLevelGroceryFood(food) {
+  if (!food) return false;
+  if (food.category === "fats-oils") return true;
+
+  const sourceText = `${food.name || ""} ${food.provenance?.sourceDescription || ""}`;
+  if (
+    ["cooked", "frozen-cooked"].includes(food.preparationState)
+    || COOKED_METHOD_PATTERN.test(sourceText)
+    || ADDED_COOKING_INGREDIENT_PATTERN.test(sourceText)
+    || PREPARED_MEAL_PATTERN.test(sourceText)
+  ) return false;
+
+  if (["protein", "seafood"].includes(food.category) && PROCESSED_MEAT_PATTERN.test(sourceText)) {
+    return false;
+  }
+  if (
+    food.category === "grains-starches"
+    && PREPARED_GRAIN_PRODUCT_PATTERN.test(sourceText)
+    && !/\b(bread crumbs|breadcrumbs)\b/i.test(sourceText)
+  ) return false;
+
+  if (["raw", "dry"].includes(food.preparationState)) return true;
+  if (/\buncooked\b/i.test(sourceText)) return true;
+  if (food.preparationState === "frozen") {
+    return /\b(raw|unprepared|unsweetened)\b/i.test(sourceText);
+  }
+  if (food.preparationState === "canned") {
+    return SAFE_CANNED_PATTERN.test(sourceText)
+      && !/\b(brine|oil|sauce|syrup|sweetened)\b/i.test(sourceText);
+  }
+  if (["ready-to-eat", "ready-to-use"].includes(food.preparationState)) {
+    return ["eggs-dairy", "fruit", "pantry", "vegetables"].includes(food.category);
+  }
+  return false;
+}
+
+export const grocerySourceFoods = Object.freeze(
   groceryFoodSeedsV1.map(normalizeGroceryFood).filter(Boolean)
 );
+
+const groceryFoods = Object.freeze(grocerySourceFoods.filter(isIngredientLevelGroceryFood));
 
 export default groceryFoods;

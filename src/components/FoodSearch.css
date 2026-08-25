@@ -72,6 +72,12 @@
   padding: 3px 7px;
 }
 
+.trace-food-result__preparation {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .trace-food-result__details {
   color: #aeb9c6;
   display: flex;

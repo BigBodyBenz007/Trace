@@ -20,6 +20,27 @@ const NUTRIENT_SUMMARY = [
   ["sodium", "Sodium", " mg"],
 ];
 
+const PREPARATION_LABELS = {
+  raw: "Raw",
+  cooked: "Cooked",
+  baked: "Baked",
+  fried: "Fried",
+  roasted: "Roasted",
+  dry: "Dried",
+  dried: "Dried",
+  canned: "Canned",
+  frozen: "Frozen",
+  "frozen-cooked": "Frozen · cooked",
+  "ready-to-eat": "Ready to eat",
+  "ready-to-use": "Ready to use",
+};
+
+function preparationLabel(preparationState) {
+  if (!preparationState) return null;
+  return PREPARATION_LABELS[preparationState]
+    || preparationState.replace(/-/g, " ").replace(/^./, (letter) => letter.toUpperCase());
+}
+
 function foodSourceLabels(food) {
   if (food.sourceType === "restaurant") {
     return ["Restaurant", CONFIDENCE_LABELS[food.provenance.confidence] || food.provenance.confidence];
@@ -42,7 +63,7 @@ function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
   return (
     <section className="trace-feature-surface trace-food-search" style={{ background: "#1f2937", borderRadius: "16px", boxSizing: "border-box", marginTop: "24px", maxWidth: "700px", minWidth: 0, padding: "24px", textAlign: "left", width: "100%" }}>
       <h2 style={{ marginTop: 0 }}>Find a Food</h2>
-      <p style={{ color: "#d1d5db" }}>Search USDA grocery foods, restaurant menus, Trace starters, or your saved foods.</p>
+      <p style={{ color: "#d1d5db" }}>Search USDA grocery ingredients, restaurant menus, Trace starters, or your saved foods.</p>
       <label style={{ display: "block" }}>
         Food search
         <input type="search" placeholder="Search foods by name, brand, or category..." value={query} onChange={(event) => setQuery(event.target.value)} style={{ ...inputStyle, boxSizing: "border-box", fontSize: "18px", marginTop: "8px", maxWidth: "100%", padding: "12px", width: "100%" }} />
@@ -60,6 +81,11 @@ function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
                   {foodSourceLabels(food).map((label) => (
                     <span className="trace-badge" key={label}>{label}</span>
                   ))}
+                  {preparationLabel(food.preparationState) && (
+                    <span className="trace-badge trace-food-result__preparation" data-preparation-state={food.preparationState} style={{ maxWidth: "100%" }}>
+                      Prep: {preparationLabel(food.preparationState)}
+                    </span>
+                  )}
                 </span>
                 <span className="trace-food-result__details">
                   {(food.categoryLabel || food.category || food.brand) && <><span className="trace-food-result__category">{[food.categoryLabel || food.category, food.brand].filter(Boolean).join(" \u00b7 ")}</span>{" "}</>}
