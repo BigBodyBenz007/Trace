@@ -176,6 +176,31 @@ export function localCalendarDateKey(value = new Date()) {
   ).padStart(2, "0")}`;
 }
 
+function readStoredWorkoutEntries(storage, {
+  getDatabase,
+  onCreateObjectUrl,
+}) {
+  const savedWorkoutEntries = storage.getItem("workoutEntries");
+  if (!savedWorkoutEntries) return null;
+  const parsedEntries = JSON.parse(savedWorkoutEntries);
+  if (!Array.isArray(parsedEntries)) throw new Error("Invalid workout data.");
+  if (!parsedEntries.some((entry) => Array.isArray(entry.photos) && entry.photos.length > 0)) {
+    return parsedEntries;
+  }
+  return getDatabase().then((database) => Promise.all(parsedEntries.map(async (entry) => ({
+      ...entry,
+      ...(Array.isArray(entry.photos) ? { photos: (await Promise.all(entry.photos.map(async (value) => {
+        const id = typeof value === "string" ? value : value?.id;
+        if (!id) return null;
+        const photo = await getPhoto(database, id);
+        if (!photo?.blob) return { id };
+        const url = URL.createObjectURL(photo.blob);
+        onCreateObjectUrl(url);
+        return { id, url };
+      }))).filter(Boolean) } : {}),
+    }))));
+}
+
 function App() {
   const [page, setPage] = useState("home");
 
@@ -494,28 +519,15 @@ function App() {
   useEffect(() => {
     async function loadWorkouts() {
       try {
-      const savedWorkoutEntries = localStorage.getItem("workoutEntries");
-      if (!savedWorkoutEntries) return;
-      const parsedEntries = JSON.parse(savedWorkoutEntries);
-      if (!Array.isArray(parsedEntries)) throw new Error("Invalid workout data.");
-      if (!parsedEntries.some((entry) => Array.isArray(entry.photos) && entry.photos.length > 0)) {
-        setWorkoutEntries(parsedEntries);
-        return;
-      }
-      const database = await ensurePhotoDatabase();
-      const hydrated = await Promise.all(parsedEntries.map(async (entry) => ({
-        ...entry,
-        ...(Array.isArray(entry.photos) ? { photos: (await Promise.all(entry.photos.map(async (value) => {
-          const id = typeof value === "string" ? value : value?.id;
-          if (!id) return null;
-          const photo = await getPhoto(database, id);
-          if (!photo?.blob) return { id };
-          const url = URL.createObjectURL(photo.blob);
-          activeObjectUrlsRef.current.add(url);
-          return { id, url };
-        }))).filter(Boolean) } : {}),
-      })));
-      setWorkoutEntries(hydrated);
+        const storedWorkoutEntries = readStoredWorkoutEntries(localStorage, {
+          getDatabase: ensurePhotoDatabase,
+          onCreateObjectUrl: (url) => activeObjectUrlsRef.current.add(url),
+        });
+        if (storedWorkoutEntries && typeof storedWorkoutEntries.then === "function") {
+          setWorkoutEntries(await storedWorkoutEntries);
+        } else if (storedWorkoutEntries) {
+          setWorkoutEntries(storedWorkoutEntries);
+        }
       } catch (error) {
         setStorageError("Trace couldn't read the saved workouts or their photos. The stored value was left unchanged.");
       }
@@ -873,16 +885,23 @@ function App() {
     }
   }
 
-  function synchronizeRestoredAppState() {
+  async function synchronizeRestoredAppState() {
     try {
       const restoredAppSettings = readAppSettings(localStorage);
       const restoredPlannedWorkouts = readPlannedWorkouts(localStorage);
       const restoredDailyActions = readDailyActions(localStorage);
       const restoredProtocolOccurrences = readProtocolOccurrences(localStorage);
+      const restoredWorkoutDraft = readWorkoutDraft(localStorage);
+      const restoredWorkoutEntries = (await Promise.resolve(readStoredWorkoutEntries(localStorage, {
+        getDatabase: ensurePhotoDatabase,
+        onCreateObjectUrl: (url) => activeObjectUrlsRef.current.add(url),
+      }))) || [];
       setAppSettings(restoredAppSettings);
       setPlannedWorkouts(restoredPlannedWorkouts);
       setDailyActions(restoredDailyActions);
       setProtocolOccurrences(restoredProtocolOccurrences);
+      setActiveWorkoutDraft(restoredWorkoutDraft);
+      setWorkoutEntries(restoredWorkoutEntries);
       setStorageError("");
     } catch (error) {
       setStorageError(storageMessage("refresh restored data"));
@@ -1498,23 +1517,23 @@ function App() {
       selectedDate: navigationContext.selectedDate,
       visibleMonth: navigationContext.visibleMonth,
     } : null;
-    const draftWithOrigin = (draft) => ({
-      ...draft,
-      context: {
-        ...(draft.context || {}),
-        originPage,
-        ...(originCalendar ? {
-          selectedDate: originCalendar.selectedDate,
-          visibleMonth: originCalendar.visibleMonth,
-        } : {}),
-      },
-    });
+    const draftWithOrigin = (draft) => {
+      const context = { ...(draft.context || {}), originPage };
+      if (originCalendar) {
+        context.selectedDate = originCalendar.selectedDate;
+        context.visibleMonth = originCalendar.visibleMonth;
+      } else {
+        delete context.selectedDate;
+        delete context.visibleMonth;
+      }
+      return { ...draft, context };
+    };
     if (existingDraft?.plannedWorkoutId === id) {
-      const resumedDraft = originPage === "calendar" ? draftWithOrigin(existingDraft) : existingDraft;
+      const resumedDraft = draftWithOrigin(existingDraft);
       try {
-        if (originPage === "calendar") writeWorkoutDraft(localStorage, resumedDraft);
+        writeWorkoutDraft(localStorage, resumedDraft);
       } catch (error) {
-        setStorageError(storageMessage("preserve this workout's calendar return"));
+        setStorageError(storageMessage("preserve this workout's schedule return"));
         return { status: "error", message: "The workout return context could not be saved." };
       }
       setActiveWorkoutDraft(resumedDraft);
@@ -1531,11 +1550,11 @@ function App() {
       };
     }
     if (existingDraft && conflictAction === "resume") {
-      const resumedDraft = originPage === "calendar" ? draftWithOrigin(existingDraft) : existingDraft;
+      const resumedDraft = draftWithOrigin(existingDraft);
       try {
-        if (originPage === "calendar") writeWorkoutDraft(localStorage, resumedDraft);
+        writeWorkoutDraft(localStorage, resumedDraft);
       } catch (error) {
-        setStorageError(storageMessage("preserve this workout's calendar return"));
+        setStorageError(storageMessage("preserve this workout's schedule return"));
         return { status: "error", message: "The workout return context could not be saved." };
       }
       setActiveWorkoutDraft(resumedDraft);

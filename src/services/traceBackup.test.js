@@ -205,6 +205,48 @@ test("exports structured data and multiple photos without mutating sources", asy
   expect(memories[0].images).toEqual(["photo-1", "photo-2"]);
 });
 
+test("restores a valid pre-execution-flow workout draft without inventing a planned-workout backlink", async () => {
+  const legacyDraft = activeWorkoutDraft();
+  delete legacyDraft.plannedWorkoutId;
+  legacyDraft.context = { activeSearchExerciseId: null };
+  legacyDraft.form.exercises.forEach((exercise) => {
+    delete exercise.roadmapStatus;
+    delete exercise.roadmapSkipReason;
+  });
+  const value = backup({
+    createdAt: "2026-08-23T18:00:00.000Z",
+    data: {
+      structured: emptyStructured({
+        plannedWorkouts: [plannedWorkout()],
+        workoutDraft: legacyDraft,
+      }),
+      photos: [],
+    },
+  });
+  const storage = makeStorage();
+
+  const parsed = validateTraceBackup(value);
+  expect(parsed.summary.activeWorkoutDraft).toBe(true);
+  expect(parsed.backup.data.structured.workoutDraft).not.toHaveProperty("plannedWorkoutId");
+
+  await restoreTraceBackup(value, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+
+  const restoredDraft = JSON.parse(storage.value("workoutDraft"));
+  expect(restoredDraft).toMatchObject({
+    schemaVersion: 1,
+    form: {
+      title: "Upper Body",
+      exercises: [expect.objectContaining({ name: "Dumbbell Bench Press" })],
+    },
+    context: { activeSearchExerciseId: null },
+  });
+  expect(restoredDraft).not.toHaveProperty("plannedWorkoutId");
+});
+
 test("backs up and restores custom grocery foods and nullable meal snapshots unchanged", async () => {
   const groceryFood = createUserFood(
     "Raw chicken breast strips",

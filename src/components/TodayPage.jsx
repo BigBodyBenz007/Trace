@@ -301,6 +301,74 @@ function SkipReasonDialog({
   );
 }
 
+function WorkoutDraftConflictDialog({
+  existingDraftTitle,
+  onResume,
+  onDiscard,
+  onCancel,
+  buttonStyle,
+}) {
+  const dialogRef = useRef(null);
+  const resumeButtonRef = useRef(null);
+  const cancelRef = useRef(onCancel);
+  cancelRef.current = onCancel;
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement;
+    resumeButtonRef.current?.focus();
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        cancelRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(dialogRef.current?.querySelectorAll(
+        "button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex='-1'])"
+      ) || []);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      if (previouslyFocused instanceof HTMLElement && previouslyFocused.isConnected) {
+        previouslyFocused.focus();
+      }
+    };
+  }, []);
+
+  return (
+    <div className="trace-skip-overlay">
+      <section
+        ref={dialogRef}
+        className="trace-feature-surface trace-skip-reason trace-today-draft-conflict"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Workout already in progress"
+      >
+        <h2>Workout already in progress</h2>
+        <p>Resume {existingDraftTitle}, discard it and start this plan, or cancel.</p>
+        <div className="trace-skip-reason__actions">
+          <button ref={resumeButtonRef} className="trace-action trace-action--primary" type="button" onClick={onResume} style={buttonStyle}>Resume current workout</button>
+          <button className="trace-action trace-action--danger" type="button" onClick={onDiscard} style={buttonStyle}>Discard and start plan</button>
+          <button className="trace-action trace-action--secondary" type="button" onClick={onCancel} style={buttonStyle}>Cancel</button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 function TodayPage({
   onBack,
   onOpenCalendar = null,
@@ -454,7 +522,6 @@ function TodayPage({
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 600);
   const initialDraftRef = useRef(null);
   const initialActionDraftRef = useRef(null);
-  const conflictResumeButtonRef = useRef(null);
   const startButtonRefs = useRef(new Map());
   const restoreStartFocusPlanIdRef = useRef(null);
   const lastTouchStartRef = useRef({ planId: null, activatedAt: 0 });
@@ -464,6 +531,9 @@ function TodayPage({
   const closeCalendarOverlayRef = useRef(null);
   const isCalendarDayOpen = calendarOverlayOpen ?? internalCalendarOverlayOpen;
   const previewPlan = plannedWorkouts.find(({ id }) => id === previewPlanId) || null;
+  const conflictPlan = draftConflict
+    ? plannedWorkouts.find(({ id }) => id === draftConflict.planId) || null
+    : null;
   const activePlannedWorkoutId = activeWorkoutDraft?.plannedWorkoutId || null;
   const focusedItem = focusedScheduleItem
     ? scheduleItems.find(({ type, id }) => type === focusedScheduleItem.type && id === focusedScheduleItem.id) || null
@@ -476,10 +546,7 @@ function TodayPage({
   }, []);
 
   useEffect(() => {
-    if (draftConflict) {
-      conflictResumeButtonRef.current?.focus();
-      return;
-    }
+    if (draftConflict) return;
     const planId = restoreStartFocusPlanIdRef.current;
     if (!planId) return;
     restoreStartFocusPlanIdRef.current = null;
@@ -1199,7 +1266,6 @@ function TodayPage({
           {!completedWorkout && canExecuteSelectedDate && <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip workout ${plan.title}`} onClick={() => requestSkipPlan(plan)} style={compactButtonStyle}>Skip workout</button>}
           <button className="trace-action trace-action--danger" type="button" aria-label={`Delete planned workout ${plan.title}`} onClick={() => removePlan(plan)} style={compactButtonStyle}>Delete plan</button>
         </div>}
-        {hasDraftConflict && <div aria-label="Workout already in progress" className="trace-feature-surface trace-today-draft-conflict" onKeyDown={(event) => { if (event.key === "Escape") cancelDraftConflict(); }} role="dialog"><h4>Workout already in progress</h4><p>Resume {draftConflict.existingDraftTitle}, discard it and start this plan, or cancel.</p><div className="trace-today-exercise__actions"><button ref={conflictResumeButtonRef} className="trace-action trace-action--primary" type="button" onClick={() => startPlan(plan, "resume")} style={compactButtonStyle}>Resume current workout</button><button className="trace-action trace-action--danger" type="button" onClick={() => startPlan(plan, "discard")} style={compactButtonStyle}>Discard and start plan</button><button className="trace-action trace-action--secondary" type="button" onClick={cancelDraftConflict} style={compactButtonStyle}>Cancel</button></div></div>}
       </article>
     );
   }
@@ -1668,6 +1734,16 @@ function TodayPage({
           onSkipWithoutReason={() => confirmSkipPlan(null)}
           onCancel={() => { setPendingSkipPlan(null); if (isCalendarView) closePreview(); }}
           fieldStyle={fieldStyle}
+          buttonStyle={compactButtonStyle}
+        />
+      )}
+
+      {!draft && !actionDraft && draftConflict && conflictPlan && (
+        <WorkoutDraftConflictDialog
+          existingDraftTitle={draftConflict.existingDraftTitle}
+          onResume={() => startPlan(conflictPlan, "resume")}
+          onDiscard={() => startPlan(conflictPlan, "discard")}
+          onCancel={cancelDraftConflict}
           buttonStyle={compactButtonStyle}
         />
       )}

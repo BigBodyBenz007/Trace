@@ -321,6 +321,231 @@ test("same-tab restore leaves navigation unchanged and resumes an orphaned activ
   });
 });
 
+test("an older restored backup surfaces a legacy draft collision and can explicitly start and skip today's plan", async () => {
+  const today = localCalendarDateKey();
+  const restoredPlan = {
+    ...plannedWorkout("planned-workout:legacy-restore", "Legacy Restore Plan"),
+    scheduledDate: today,
+  };
+  const legacyDraft = {
+    schemaVersion: 1,
+    startedAt: "2026-08-22T16:00:00.000Z",
+    updatedAt: "2026-08-22T16:05:00.000Z",
+    form: {
+      title: "Legacy manual workout",
+      date: today,
+      time: "11:00",
+      notes: "Keep this restored draft until I choose.",
+      exercises: [{
+        id: "exercise:legacy-manual",
+        name: "Squat",
+        notes: "",
+        sets: [{
+          id: "set:legacy-manual",
+          reps: "5",
+          loadMode: "bodyweight",
+          weightAmount: "",
+          weightUnit: "lb",
+          notes: "",
+        }],
+      }],
+    },
+    context: { activeSearchExerciseId: null },
+  };
+  const restoredBackup = {
+    format: "trace-backup",
+    schemaVersion: 1,
+    createdAt: "2026-08-24T16:00:00.000Z",
+    app: { name: "Trace", version: "0.1.0" },
+    data: {
+      structured: {
+        plannedWorkouts: [restoredPlan],
+        workoutDraft: legacyDraft,
+        workoutEntries: [],
+      },
+      photos: [],
+    },
+  };
+  const restoredSummary = {
+    memories: 0,
+    photos: 0,
+    plannedWorkouts: 1,
+    activeWorkoutDraft: true,
+    workouts: 0,
+  };
+  parseTraceBackupText.mockReturnValue({ backup: restoredBackup, summary: restoredSummary });
+  restoreTraceBackup.mockImplementation(async () => {
+    localStorage.setItem("plannedWorkouts", JSON.stringify([restoredPlan]));
+    localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(legacyDraft));
+    localStorage.removeItem("workoutEntries");
+    return restoredSummary;
+  });
+  window.confirm = jest.fn(() => true);
+
+  renderAppAtTimeline();
+  openBackupFromSettings();
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File([JSON.stringify(restoredBackup)], "trace-backup-before-start-fix.json", { type: "application/json" })] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  expect(await screen.findByRole("heading", { name: /Trace restored successfully/ })).toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" }).at(-1));
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  const start = await screen.findByRole("button", { name: "Start workout Legacy Restore Plan" });
+  fireEvent.click(start);
+
+  const collision = screen.getByRole("dialog", { name: "Workout already in progress" });
+  expect(collision).toHaveAttribute("aria-modal", "true");
+  expect(within(collision).getByText(/Legacy manual workout/)).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY))).toEqual(legacyDraft);
+
+  fireEvent.click(within(collision).getByRole("button", { name: "Discard and start plan" }));
+  expect(screen.getByRole("heading", { name: "Workout Roadmap" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Legacy Restore Plan" })).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY))).toMatchObject({
+    plannedWorkoutId: restoredPlan.id,
+    context: { originPage: "today" },
+  });
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Today's Schedule" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Skip workout Legacy Restore Plan" }));
+  fireEvent.click(screen.getByRole("button", { name: "Skip without reason" }));
+  expect(JSON.parse(localStorage.getItem("plannedWorkouts"))[0]).toMatchObject({
+    skippedDates: [today],
+  });
+});
+
+test("same-tab restore resumes the matching active draft and replaces stale calendar origin with Today", async () => {
+  const today = localCalendarDateKey();
+  const restoredPlan = {
+    ...plannedWorkout("planned-workout:restored-active", "Restored Active Plan"),
+    scheduledDate: today,
+  };
+  const restoredDraft = createWorkoutDraftFromPlannedWorkout(
+    restoredPlan,
+    new Date(2026, 7, 24, 12, 0),
+    { originPage: "calendar", selectedDate: today, visibleMonth: today.slice(0, 7) }
+  );
+  restoredDraft.form.notes = "Preserve restored progress";
+  const restoredBackup = {
+    createdAt: "2026-08-24T17:00:00.000Z",
+    data: { structured: { plannedWorkouts: [restoredPlan], workoutDraft: restoredDraft }, photos: [] },
+  };
+  const restoredSummary = {
+    memories: 0,
+    photos: 0,
+    plannedWorkouts: 1,
+    activeWorkoutDraft: true,
+  };
+  parseTraceBackupText.mockReturnValue({ backup: restoredBackup, summary: restoredSummary });
+  restoreTraceBackup.mockImplementation(async () => {
+    localStorage.setItem("plannedWorkouts", JSON.stringify([restoredPlan]));
+    localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(restoredDraft));
+    return restoredSummary;
+  });
+  window.confirm = jest.fn(() => true);
+
+  renderAppAtTimeline();
+  openBackupFromSettings();
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["backup"], "trace-backup-active-draft.json", { type: "application/json" })] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  expect(await screen.findByRole("heading", { name: /Trace restored successfully/ })).toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" }).at(-1));
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByText("Started")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Continue workout Restored Active Plan" }));
+
+  expect(screen.getByRole("heading", { name: "Workout Roadmap" })).toBeInTheDocument();
+  expect(screen.getByText("Preserve restored progress")).toHaveClass("trace-workout-roadmap__notes");
+  expect(screen.getAllByRole("button", { name: "Back to Today's Schedule" }).length).toBeGreaterThan(0);
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY))).toMatchObject({
+    plannedWorkoutId: restoredPlan.id,
+    context: { originPage: "today" },
+  });
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).context)
+    .not.toHaveProperty("selectedDate");
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).context)
+    .not.toHaveProperty("visibleMonth");
+});
+
+test("same-tab restore treats completed workout history as authoritative over a stale matching draft", async () => {
+  const today = localCalendarDateKey();
+  const restoredPlan = {
+    ...plannedWorkout("planned-workout:restored-completed", "Restored Completed Plan"),
+    scheduledDate: today,
+  };
+  const staleDraft = createWorkoutDraftFromPlannedWorkout(
+    restoredPlan,
+    new Date(2026, 7, 24, 12, 0)
+  );
+  const completedWorkout = {
+    id: "workout:restored-completed",
+    schemaVersion: 1,
+    type: "strength",
+    plannedWorkoutId: restoredPlan.id,
+    title: restoredPlan.title,
+    occurredAt: "2026-08-24T17:00:00.000Z",
+    startedAt: "2026-08-24T16:00:00.000Z",
+    finishedAt: "2026-08-24T17:00:00.000Z",
+    notes: "",
+    exercises: [],
+    createdAt: "2026-08-24T17:00:00.000Z",
+    updatedAt: "2026-08-24T17:00:00.000Z",
+  };
+  const restoredBackup = {
+    createdAt: "2026-08-24T18:00:00.000Z",
+    data: {
+      structured: {
+        plannedWorkouts: [restoredPlan],
+        workoutDraft: staleDraft,
+        workoutEntries: [completedWorkout],
+      },
+      photos: [],
+    },
+  };
+  const restoredSummary = {
+    memories: 0,
+    photos: 0,
+    plannedWorkouts: 1,
+    activeWorkoutDraft: true,
+    workouts: 1,
+  };
+  parseTraceBackupText.mockReturnValue({ backup: restoredBackup, summary: restoredSummary });
+  restoreTraceBackup.mockImplementation(async () => {
+    localStorage.setItem("plannedWorkouts", JSON.stringify([restoredPlan]));
+    localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(staleDraft));
+    localStorage.setItem("workoutEntries", JSON.stringify([completedWorkout]));
+    return restoredSummary;
+  });
+  window.confirm = jest.fn(() => true);
+
+  renderAppAtTimeline();
+  openBackupFromSettings();
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["backup"], "trace-backup-completed-workout.json", { type: "application/json" })] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  expect(await screen.findByRole("heading", { name: /Trace restored successfully/ })).toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" }).at(-1));
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(within(screen.getByRole("list", { name: "Completed today summary" }))
+    .getByText("Completed")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Start.*Restored Completed Plan/ }))
+    .not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Continue.*Restored Completed Plan/ }))
+    .not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY))).toEqual(staleDraft);
+});
+
 function fillBodyweightWorkout(title = "Push Day") {
   fireEvent.change(screen.getByLabelText("Workout title"), {
     target: { value: title },
@@ -1364,7 +1589,13 @@ test("does not replace an unrelated draft and can resume it from the collision c
   fireEvent.click(screen.getByRole("button", { name: "Resume current workout" }));
   expect(screen.getByRole("heading", { name: "Workouts" })).toBeInTheDocument();
   expect(screen.getByLabelText("Workout title")).toHaveValue("Unrelated workout");
-  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBe(serializedDraft);
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY))).toMatchObject({
+    form: {
+      title: "Unrelated workout",
+      exercises: [{ sets: [expect.objectContaining({ reps: "5" })] }],
+    },
+    context: { originPage: "today" },
+  });
   expect(localStorage.getItem("workoutEntries")).toBeNull();
 });
 
