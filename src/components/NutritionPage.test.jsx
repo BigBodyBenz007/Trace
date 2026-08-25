@@ -317,7 +317,7 @@ test("shows USDA grocery source, serving, and unknown nutrients for raw chicken 
   expect(within(result).getByText("USDA")).toBeInTheDocument();
   expect(within(result).getByText("Grocery")).toBeInTheDocument();
   expect(result).toHaveTextContent("4 oz raw (113 g)");
-  expect(result).toHaveTextContent("Carbohydrates 0 g");
+  expect(result).toHaveTextContent("Carbs 0 g");
   expect(result).toHaveTextContent("Fiber Unknown");
   expect(result).toHaveTextContent("Some USDA nutrient values are unavailable and remain unknown.");
 

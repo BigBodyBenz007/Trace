@@ -11,6 +11,15 @@ const CONFIDENCE_LABELS = {
 const displayNutrient = (value, unit = "") =>
   value === null || value === undefined ? "Unknown" : `${value}${unit}`;
 
+const NUTRIENT_SUMMARY = [
+  ["calories", "Calories", ""],
+  ["protein", "Protein", " g"],
+  ["carbohydrates", "Carbs", " g"],
+  ["fat", "Fat", " g"],
+  ["fiber", "Fiber", " g"],
+  ["sodium", "Sodium", " mg"],
+];
+
 function foodSourceLabels(food) {
   if (food.sourceType === "restaurant") {
     return ["Restaurant", CONFIDENCE_LABELS[food.provenance.confidence] || food.provenance.confidence];
@@ -39,26 +48,34 @@ function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
         <input type="search" placeholder="Search foods by name, brand, or category..." value={query} onChange={(event) => setQuery(event.target.value)} style={{ ...inputStyle, boxSizing: "border-box", fontSize: "18px", marginTop: "8px", maxWidth: "100%", padding: "12px", width: "100%" }} />
       </label>
       {results.length > 0 && (
-        <div aria-label="Food search results" style={{ display: "grid", gap: "10px", marginTop: "16px" }}>
+        <div aria-label="Food search results" className="trace-food-search__results">
           {results.map((food) => (
-            <button className="trace-search-result" data-food-source={food.sourceType} key={food.id} type="button" onClick={() => onSelectFood(food)} style={{ background: "#111827", border: "1px solid #4b5563", borderRadius: "12px", boxSizing: "border-box", color: "white", cursor: "pointer", maxWidth: "100%", minWidth: 0, overflowWrap: "anywhere", padding: "14px", textAlign: "left", width: "100%" }}>
-              <span className="trace-food-result__heading" style={{ alignItems: "baseline", display: "flex", flexWrap: "wrap", gap: "8px", justifyContent: "space-between", minWidth: 0 }}>
-                <strong style={{ flex: "1 1 220px", minWidth: 0, overflowWrap: "anywhere" }}>{food.restaurant ? `${food.restaurant.name} \u00b7 ${food.name}` : food.brand ? `${food.brand} \u00b7 ${food.name}` : food.name}</strong>
-                <span className="trace-food-result__badges" style={{ display: "flex", flex: "0 1 auto", flexWrap: "wrap", gap: "6px", maxWidth: "100%", minWidth: 0 }}>
+            <button className="trace-search-result trace-food-result" data-food-source={food.sourceType} data-layout="compact" key={food.id} type="button" onClick={() => onSelectFood(food)} style={{ boxSizing: "border-box", maxWidth: "100%", minWidth: 0, width: "100%" }}>
+              <span className="trace-food-result__content">
+                <span className="trace-food-result__heading" style={{ minWidth: 0 }}>
+                  <strong className="trace-food-result__name">{food.restaurant ? `${food.restaurant.name} \u00b7 ${food.name}` : food.brand ? `${food.brand} \u00b7 ${food.name}` : food.name}</strong>
+                  <span aria-hidden="true" className="trace-food-result__action">Select</span>
+                </span>
+                <span className="trace-food-result__badges" style={{ maxWidth: "100%", minWidth: 0 }}>
                   {foodSourceLabels(food).map((label) => (
-                    <span className="trace-badge" key={label} style={{ background: "#374151", borderRadius: "999px", color: "#d1d5db", fontSize: "13px", padding: "4px 8px" }}>{label}</span>
+                    <span className="trace-badge" key={label}>{label}</span>
                   ))}
                 </span>
+                <span className="trace-food-result__details">
+                  {(food.categoryLabel || food.category || food.brand) && <><span className="trace-food-result__category">{[food.categoryLabel || food.category, food.brand].filter(Boolean).join(" \u00b7 ")}</span>{" "}</>}
+                  <span className="trace-food-result__serving">{food.serving.description}</span>
+                </span>
+                <span aria-label="Nutrition summary" className="trace-food-result__nutrients" data-compact-grid="3x2" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
+                  {NUTRIENT_SUMMARY.map(([nutrient, label, unit]) => (
+                    <span className="trace-food-result__nutrient" data-nutrient={nutrient} key={nutrient}>
+                      <span className="trace-food-result__nutrient-label">{label}{" "}</span>
+                      <strong>{displayNutrient(food.nutrients[nutrient], unit)}</strong>
+                    </span>
+                  ))}
+                </span>
+                {food.provenance.completeness === "partial" && <span className="trace-food-result__completeness">{food.sourceType === "restaurant" ? "Some nutrition values are unavailable because the restaurant does not publish them." : food.sourceType === "grocery" ? "Some USDA nutrient values are unavailable and remain unknown." : "Nutrition values left blank by the user remain unknown."}</span>}
+                {food.notes && <span className="trace-food-result__notes">{food.notes}</span>}
               </span>
-              {(food.categoryLabel || food.category || food.brand) && <span style={{ color: "#d1d5db", display: "block", fontSize: "13px", marginTop: "6px" }}>{[food.categoryLabel || food.category, food.brand].filter(Boolean).join(" \u00b7 ")}</span>}
-              <span style={{ color: "#9ca3af", display: "block", marginTop: "6px" }}>{food.serving.description}</span>
-              <span className="trace-food-result__nutrients" style={{ display: "block", lineHeight: 1.6, marginTop: "6px", maxWidth: "100%", minWidth: 0, overflowWrap: "anywhere" }}>
-                {displayNutrient(food.nutrients.calories)} calories {" \u00b7 "} Protein {displayNutrient(food.nutrients.protein, " g")} {" \u00b7 "} Carbohydrates {displayNutrient(food.nutrients.carbohydrates, " g")} {" \u00b7 "} Fat {displayNutrient(food.nutrients.fat, " g")}
-                {["grocery", "grocery-custom"].includes(food.sourceType) && <> {" \u00b7 "} Fiber {displayNutrient(food.nutrients.fiber, " g")}</>}
-                {" \u00b7 "} Sodium {displayNutrient(food.nutrients.sodium, " mg")}
-              </span>
-              {food.provenance.completeness === "partial" && <span style={{ color: "#9ca3af", display: "block", fontSize: "13px", marginTop: "6px" }}>{food.sourceType === "restaurant" ? "Some nutrition values are unavailable because the restaurant does not publish them." : food.sourceType === "grocery" ? "Some USDA nutrient values are unavailable and remain unknown." : "Nutrition values left blank by the user remain unknown."}</span>}
-              {food.notes && <span style={{ color: "#9ca3af", display: "block", fontSize: "13px", marginTop: "6px" }}>{food.notes}</span>}
             </button>
           ))}
         </div>
