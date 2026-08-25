@@ -19,8 +19,10 @@ test("renders compact global unit controls and saves each preference", () => {
   expect(screen.getByRole("heading", { name: "Life Current Theme" })).toBeInTheDocument();
   expect(screen.getByRole("radio", { name: /River/ })).toBeChecked();
   expect(screen.getByRole("radio", { name: /Haunted Forest/ })).not.toBeChecked();
+  expect(screen.getByRole("radio", { name: /Gnome Village/ })).not.toBeChecked();
   expect(screen.getByText("A flowing current through your timeline.")).toBeInTheDocument();
   expect(screen.getByText("A winding path through a darker world.")).toBeInTheDocument();
+  expect(screen.getByText("A storybook path through a lived-in woodland village.")).toBeInTheDocument();
   expect(screen.getByText("✓ Selected")).toBeInTheDocument();
   fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
   expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ units: expect.objectContaining({ weight: "kg" }) }));
@@ -52,6 +54,27 @@ test("theme controls expose accessible checked states and preserve unrelated set
   expect(screen.getByRole("radio", { name: /Haunted Forest/ })).toBeChecked();
   expect(screen.getByRole("radio", { name: /River/ })).not.toBeChecked();
   expect(screen.getByText("✓ Selected").closest("label")).toHaveAttribute("data-selected", "true");
+});
+
+test("selects Gnome Village through the shared theme control", () => {
+  const updateSettings = jest.fn(() => true);
+  render(
+    <SettingsPage
+      settings={DEFAULT_APP_SETTINGS}
+      updateSettings={updateSettings}
+      onBack={jest.fn()}
+      buttonStyle={{}}
+      containerStyle={{}}
+    />
+  );
+
+  const gnome = screen.getByRole("radio", { name: /Gnome Village/ });
+  expect(gnome).toHaveAttribute("aria-describedby", "life-current-theme-gnome-village-description");
+  fireEvent.click(gnome);
+  expect(updateSettings).toHaveBeenLastCalledWith({
+    ...DEFAULT_APP_SETTINGS,
+    lifeCurrentThemeId: "gnome-village",
+  });
 });
 
 test("shows transient confirmation only after Settings save succeeds", () => {

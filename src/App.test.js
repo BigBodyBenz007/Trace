@@ -1948,25 +1948,28 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
   anchorClick.mockRestore();
 });
 
-test("Life Current theme selection persists across reload and switches back to River", async () => {
+test.each([
+  ["Haunted Forest", "haunted-forest"],
+  ["Gnome Village", "gnome-village"],
+])("%s Life Current theme selection persists across reload and switches back to River", async (themeName, themeId) => {
   localStorage.setItem("nutritionEntries", JSON.stringify([
     { id: "theme-activity", loggedAt: "2026-05-18T12:00:00" },
   ]));
   const first = render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-  fireEvent.click(screen.getByRole("radio", { name: /Haunted Forest/ }));
+  fireEvent.click(screen.getByRole("radio", { name: new RegExp(themeName) }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
-    lifeCurrentThemeId: "haunted-forest",
+    lifeCurrentThemeId: themeId,
     units: { weight: "lb", height: "ft-in", circumference: "in" },
   });
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
-  expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", "haunted-forest");
+  expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", themeId);
   first.unmount();
 
   render(<App />);
-  expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", "haunted-forest");
+  expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", themeId);
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-  expect(screen.getByRole("radio", { name: /Haunted Forest/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: new RegExp(themeName) })).toBeChecked();
   fireEvent.click(screen.getByRole("radio", { name: /River/ }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
     lifeCurrentThemeId: "river",
@@ -2632,6 +2635,7 @@ test("renders stable metadata-first geometry for 21 Memories while 51 photos hyd
 test.each([
   ["river", "river-current", "Close Edit Memory"],
   ["haunted-forest", "forest-path", "Close Edit Memory"],
+  ["gnome-village", "gnome-village", "Close Edit Memory"],
   ["river", "river-current", "Cancel"],
 ])("Edit Cancel retains four-photo Detail and restores the exact original %s timeline position (%s) via %s", async (themeId, rendererId, cancelControlName) => {
   const storedMemories = [

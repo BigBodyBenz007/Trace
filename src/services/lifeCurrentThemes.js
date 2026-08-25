@@ -45,6 +45,28 @@ export const LIFE_CURRENT_THEMES = Object.freeze([
       }),
     }),
   }),
+  Object.freeze({
+    id: "gnome-village",
+    name: "Gnome Village",
+    description: "A storybook path through a lived-in woodland village.",
+    presentation: Object.freeze({
+      renderer: "gnome-village",
+      className: "life-current-theme--gnome-village",
+      colors: Object.freeze({
+        year: "#f4ead0",
+        month: "#d6c9a4",
+        fallback: "#7f7158",
+        stem: "#796849",
+        node: "#dca85d",
+        selectedNode: "#ffe2a6",
+        nodeBorder: "#2d2b22",
+        nodeGlow: "rgba(220, 168, 93, 0.74)",
+        card: "#2d3026",
+        selectedCardRing: "#dca85d",
+        selectedCardGlow: "rgba(220, 168, 93, 0.2)",
+      }),
+    }),
+  }),
 ]);
 
 const THEMES_BY_ID = new Map(LIFE_CURRENT_THEMES.map((theme) => [theme.id, theme]));

@@ -251,6 +251,96 @@ test("Haunted Forest reveals decoded images and safely falls back to River on fa
   expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "haunted-forest");
 });
 
+test("Gnome Village renders its one-time opener and nearby reusable scenes at 390px", () => {
+  const currentLayout = layout([
+    point("2020-01-01", 0, 0.1, 0.2),
+    point("2026-01-01", 1, 1, 4),
+  ]);
+  const before = JSON.parse(JSON.stringify(currentLayout));
+  render(<RiverHarness
+    points={currentLayout.points}
+    themeId="gnome-village"
+    viewportWidth={390}
+  />);
+  const gnome = screen.getByTestId("life-current");
+
+  expect(gnome).toHaveAttribute("data-theme-id", "gnome-village");
+  expect(gnome).toHaveAttribute("data-life-current-renderer", "gnome-village");
+  expect(gnome).toHaveAttribute("data-gnome-catalog", "one-opener-ten-reusable");
+  expect(gnome).toHaveAttribute("data-current-gnome-section", "book-beginning");
+  expect(gnome).toHaveAttribute(
+    "data-loaded-gnome-sections",
+    "book-beginning after-book-start geometry-master"
+  );
+  const scenery = screen.getByTestId("life-current-gnome-scenery");
+  expect(scenery.querySelectorAll("picture")).toHaveLength(3);
+  expect([...scenery.querySelectorAll("[data-gnome-section]")]
+    .map((section) => section.getAttribute("data-gnome-section")))
+    .toEqual(["book-beginning", "after-book-start", "geometry-master"]);
+  expect(scenery.querySelector('[data-gnome-section="book-beginning"] img'))
+    .toHaveAttribute("width", "1672");
+  expect(scenery.querySelector('[data-gnome-section="book-beginning"] img'))
+    .toHaveAttribute("height", "941");
+  expect(scenery.querySelector('[data-gnome-section="geometry-master"]')
+    .style.getPropertyValue("--river-image-height")).toBe("150.1%");
+  expect(scenery.querySelector('[data-gnome-section="book-beginning"]')
+    .style.getPropertyValue("--river-section-width-mobile")).toBe("460px");
+  expect(currentLayout).toEqual(before);
+});
+
+test("Gnome Village reaches dusk, night, and dawn with nearby-only loading", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  window.cancelAnimationFrame = jest.fn();
+  const { unmount } = render(<RiverHarness
+    points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+    themeId="gnome-village"
+    viewportWidth={1000}
+  />);
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const gnome = screen.getByTestId("life-current");
+
+  viewport.scrollLeft = 4800;
+  fireEvent.scroll(viewport);
+  act(() => frames.shift()());
+
+  expect(gnome).toHaveAttribute("data-current-gnome-section", "dawn");
+  expect(gnome).toHaveAttribute("data-loaded-gnome-sections", "dusk night dawn");
+  expect(gnome.querySelectorAll("img")).toHaveLength(3);
+  expect(Number(gnome.getAttribute("data-gnome-progress"))).toBeCloseTo(0.96, 4);
+
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.cancelAnimationFrame = originalCancelAnimationFrame;
+});
+
+test("Gnome Village reveals decoded images and safely falls back to River on failure", async () => {
+  render(<RiverHarness
+    points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+    themeId="gnome-village"
+    viewportWidth={390}
+  />);
+  const firstSection = screen.getByTestId("life-current")
+    .querySelector('[data-gnome-section="book-beginning"]');
+  expect(firstSection).toHaveAttribute("data-image-ready", "false");
+
+  await act(async () => {
+    fireEvent.load(firstSection.querySelector("img"));
+    await Promise.resolve();
+  });
+  expect(firstSection).toHaveAttribute("data-image-ready", "true");
+
+  fireEvent.error(firstSection.querySelector("img"));
+  expect(screen.getByTestId("life-current"))
+    .toHaveAttribute("data-life-current-renderer", "river-current");
+  expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "gnome-village");
+});
+
 test("invalid theme IDs safely render River", () => {
   render(<RiverHarness points={[point("2026-01-01", 0)]} themeId="lost-world" />);
   expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "river");

@@ -537,6 +537,7 @@ test("initial newest navigation centers the final Memory before the quiet trail"
 test.each([
   ["river", "river-current"],
   ["haunted-forest", "forest-path"],
+  ["gnome-village", "gnome-village"],
 ])("%s keeps Timeline Focus cards and navigation behavior intact", (themeId, renderer) => {
   render(
     <HomePage
@@ -561,6 +562,7 @@ test.each([
 test.each([
   ["river", "river-current"],
   ["haunted-forest", "forest-path"],
+  ["gnome-village", "gnome-village"],
 ])("inactive retained %s Home pauses behavior without resetting its timeline", (themeId, renderer) => {
   const originalObserver = global.IntersectionObserver;
   const originalRequestAnimationFrame = window.requestAnimationFrame;

@@ -1,4 +1,5 @@
 import React from "react";
+import GnomeCurrent from "./GnomeCurrent";
 import HauntedForestCurrent from "./HauntedForestCurrent";
 import RiverCurrent from "./RiverCurrent";
 import { getLifeCurrentTheme } from "../services/lifeCurrentThemes";
@@ -44,6 +45,17 @@ export function LifeCurrentScenery({
   if (theme.presentation.renderer === "forest-path") {
     return (
       <HauntedForestCurrent
+        active={active}
+        points={points}
+        themeId={theme.id}
+        viewportRef={viewportRef}
+      />
+    );
+  }
+
+  if (theme.presentation.renderer === "gnome-village") {
+    return (
+      <GnomeCurrent
         active={active}
         points={points}
         themeId={theme.id}

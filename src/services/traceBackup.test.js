@@ -553,33 +553,36 @@ test("rejects malformed nested workout drafts before restore mutates storage or 
   expect(storage.value("workoutDraft")).toBe(original);
 });
 
-test("new backups preserve and restore the selected Life Current theme", async () => {
-  const source = makeStorage({
-    appSettings: JSON.stringify({
-      schemaVersion: 1,
-      units: { weight: "kg", height: "cm", circumference: "cm" },
-      lifeCurrentThemeId: "haunted-forest",
-    }),
-  });
-  const value = await createTraceBackup({
-    storage: source,
-    openDatabase: async () => makePhotoDatabase(),
-  });
-  expect(value.data.structured.appSettings).toMatchObject({
-    lifeCurrentThemeId: "haunted-forest",
-  });
+test.each(["haunted-forest", "gnome-village"])(
+  "new backups preserve and restore the selected %s Life Current theme",
+  async (lifeCurrentThemeId) => {
+    const source = makeStorage({
+      appSettings: JSON.stringify({
+        schemaVersion: 1,
+        units: { weight: "kg", height: "cm", circumference: "cm" },
+        lifeCurrentThemeId,
+      }),
+    });
+    const value = await createTraceBackup({
+      storage: source,
+      openDatabase: async () => makePhotoDatabase(),
+    });
+    expect(value.data.structured.appSettings).toMatchObject({
+      lifeCurrentThemeId,
+    });
 
-  const restored = makeStorage();
-  await restoreTraceBackup(value, {
-    confirmed: true,
-    storage: restored,
-    openDatabase: async () => makePhotoDatabase(),
-  });
-  expect(readAppSettings(restored)).toMatchObject({
-    units: { weight: "kg", height: "cm", circumference: "cm" },
-    lifeCurrentThemeId: "haunted-forest",
-  });
-});
+    const restored = makeStorage();
+    await restoreTraceBackup(value, {
+      confirmed: true,
+      storage: restored,
+      openDatabase: async () => makePhotoDatabase(),
+    });
+    expect(readAppSettings(restored)).toMatchObject({
+      units: { weight: "kg", height: "cm", circumference: "cm" },
+      lifeCurrentThemeId,
+    });
+  }
+);
 
 test("legacy and invalid backup theme values safely fall back to River without corrupting settings", async () => {
   const legacySettings = {

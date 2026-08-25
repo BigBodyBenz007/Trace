@@ -5,13 +5,22 @@ import {
   normalizeLifeCurrentThemeId,
 } from "./lifeCurrentThemes";
 
-test("registers the two stable first-party Life Current themes", () => {
-  expect(LIFE_CURRENT_THEMES.map(({ id }) => id)).toEqual(["river", "haunted-forest"]);
+test("registers the three stable first-party Life Current themes", () => {
+  expect(LIFE_CURRENT_THEMES.map(({ id }) => id)).toEqual([
+    "river",
+    "haunted-forest",
+    "gnome-village",
+  ]);
   expect(DEFAULT_LIFE_CURRENT_THEME_ID).toBe("river");
   expect(getLifeCurrentTheme("haunted-forest")).toMatchObject({
     name: "Haunted Forest",
     description: "A winding path through a darker world.",
     presentation: { renderer: "forest-path" },
+  });
+  expect(getLifeCurrentTheme("gnome-village")).toMatchObject({
+    name: "Gnome Village",
+    description: "A storybook path through a lived-in woodland village.",
+    presentation: { renderer: "gnome-village" },
   });
 });
 

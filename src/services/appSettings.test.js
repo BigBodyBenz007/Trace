@@ -32,25 +32,28 @@ test("invalid stored themes fall back to River while preserving valid unrelated 
   });
 });
 
-test("saving an unrelated unit preference preserves the selected Life Current theme", () => {
-  const storage = {
-    raw: JSON.stringify({
-      schemaVersion: 1,
-      units: { weight: "lb", height: "ft-in", circumference: "in" },
-      lifeCurrentThemeId: "haunted-forest",
-    }),
-    getItem() { return this.raw; },
-    setItem(key, value) { this.raw = value; },
-  };
-  const current = readAppSettings(storage);
+test.each(["haunted-forest", "gnome-village"])(
+  "saving an unrelated unit preference preserves the selected %s Life Current theme",
+  (lifeCurrentThemeId) => {
+    const storage = {
+      raw: JSON.stringify({
+        schemaVersion: 1,
+        units: { weight: "lb", height: "ft-in", circumference: "in" },
+        lifeCurrentThemeId,
+      }),
+      getItem() { return this.raw; },
+      setItem(key, value) { this.raw = value; },
+    };
+    const current = readAppSettings(storage);
 
-  writeAppSettings(storage, {
-    ...current,
-    units: { ...current.units, weight: "kg" },
-  });
+    writeAppSettings(storage, {
+      ...current,
+      units: { ...current.units, weight: "kg" },
+    });
 
-  expect(readAppSettings(storage)).toMatchObject({
-    units: { weight: "kg" },
-    lifeCurrentThemeId: "haunted-forest",
-  });
-});
+    expect(readAppSettings(storage)).toMatchObject({
+      units: { weight: "kg" },
+      lifeCurrentThemeId,
+    });
+  }
+);
