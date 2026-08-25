@@ -157,44 +157,98 @@ test("River visuals are not recreated inside the Timeline card canvas", () => {
   expect(container).toBeEmptyDOMElement();
 });
 
-test("Haunted Forest reuses chronology geometry while mapping engagement to path width", () => {
+test("Haunted Forest renders the ordered raster catalog from the sticky scenery slot", () => {
   const currentLayout = layout([
     point("2020-01-01", 0, 0.1, 0.2),
     point("2021-01-01", 0.45, 0.5, 1),
     point("2026-01-01", 1, 1, 4),
   ]);
   const before = JSON.parse(JSON.stringify(currentLayout));
-  render(<>
-    <LifeCurrentScenery themeId="haunted-forest" />
-    <LifeCurrent layout={currentLayout} themeId="haunted-forest" />
-  </>);
-  const expectedCoordinates = getLifeCurrentPointCoordinates(currentLayout.points);
+  render(<RiverHarness
+    points={currentLayout.points}
+    themeId="haunted-forest"
+    viewportWidth={390}
+  />);
   const forest = screen.getByTestId("life-current");
 
   expect(forest).toHaveAttribute("data-theme-id", "haunted-forest");
-  expect(forest.querySelector('[data-life-current-renderer="forest-path"]')).toBeInTheDocument();
-  const forestPath = forest.querySelector('[data-life-current-renderer="forest-path"] > path')
-    .getAttribute("d");
-  expect(forestPath).toMatch(new RegExp(`^M ${expectedCoordinates[0].x} `));
-  expect(forestPath).toContain(`, ${expectedCoordinates.at(-1).x} ${expectedCoordinates.at(-1).y}`);
-  const widths = [...forest.querySelectorAll('[data-forest-path-segment="true"]')]
-    .map((segment) => Number(segment.getAttribute("data-engagement-width")));
-  expect(widths).toHaveLength(2);
-  expect(widths[1]).toBeGreaterThan(widths[0]);
-  expect(forest.querySelector("[stroke-dasharray]")).not.toBeInTheDocument();
+  expect(forest).toHaveAttribute("data-life-current-renderer", "forest-path");
+  expect(forest).toHaveAttribute("data-forest-catalog", "ten-section");
+  expect(forest).toHaveAttribute("data-current-forest-section", "root-doorway");
+  expect(forest).toHaveAttribute(
+    "data-loaded-forest-sections",
+    "root-doorway first-trail crowded-tangle"
+  );
+  expect(forest).toHaveAttribute("data-last-activity-date", "2026-01-01");
   const scenery = screen.getByTestId("life-current-forest-scenery");
-  expect(screen.getByTestId("life-current-forest-scenery-frame")).toHaveStyle({
-    height: "0",
-    pointerEvents: "none",
-    position: "sticky",
-    width: "100%",
-  });
-  expect(scenery).toHaveAttribute("aria-hidden", "true");
-  const layers = [...scenery.querySelectorAll("[data-forest-layer]")];
-  expect(layers.map((layer) => layer.getAttribute("data-forest-layer"))).toEqual([
-    "distant-trees", "foreground-trees",
-  ]);
+  expect(scenery.querySelectorAll("picture")).toHaveLength(3);
+  expect([...scenery.querySelectorAll("[data-forest-section]")]
+    .map((section) => section.getAttribute("data-forest-section")))
+    .toEqual(["root-doorway", "first-trail", "crowded-tangle"]);
+  expect(scenery.querySelector("svg")).not.toBeInTheDocument();
+  expect(scenery.querySelector('[data-forest-section="root-doorway"] img'))
+    .toHaveAttribute("width", "1600");
+  expect(scenery.querySelector('[data-forest-section="root-doorway"] img'))
+    .toHaveAttribute("height", "900");
+  expect(scenery.querySelector('[data-forest-section="root-doorway"]')
+    .style.getPropertyValue("--river-section-width-mobile")).toBe("460px");
   expect(currentLayout).toEqual(before);
+});
+
+test("Haunted Forest advances through its catalog while mounting only nearby scenes", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  window.cancelAnimationFrame = jest.fn();
+  const { unmount } = render(<RiverHarness
+    points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+    themeId="haunted-forest"
+    viewportWidth={1000}
+  />);
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const forest = screen.getByTestId("life-current");
+
+  viewport.scrollLeft = 2500;
+  fireEvent.scroll(viewport);
+  act(() => frames.shift()());
+
+  expect(forest).toHaveAttribute("data-current-forest-section", "blackwater-marsh");
+  expect(forest).toHaveAttribute(
+    "data-loaded-forest-sections",
+    "hollow-clearing blackwater-marsh white-fog-crossing"
+  );
+  expect(forest.querySelectorAll("img")).toHaveLength(3);
+  expect(Number(forest.getAttribute("data-forest-progress"))).toBeCloseTo(0.5, 4);
+
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.cancelAnimationFrame = originalCancelAnimationFrame;
+});
+
+test("Haunted Forest reveals decoded images and safely falls back to River on failure", async () => {
+  render(<RiverHarness
+    points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+    themeId="haunted-forest"
+    viewportWidth={390}
+  />);
+  const firstSection = screen.getByTestId("life-current")
+    .querySelector('[data-forest-section="root-doorway"]');
+  expect(firstSection).toHaveAttribute("data-image-ready", "false");
+
+  await act(async () => {
+    fireEvent.load(firstSection.querySelector("img"));
+    await Promise.resolve();
+  });
+  expect(firstSection).toHaveAttribute("data-image-ready", "true");
+
+  fireEvent.error(firstSection.querySelector("img"));
+  expect(screen.getByTestId("life-current"))
+    .toHaveAttribute("data-life-current-renderer", "river-current");
+  expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "haunted-forest");
 });
 
 test("invalid theme IDs safely render River", () => {
