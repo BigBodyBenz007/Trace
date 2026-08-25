@@ -1815,14 +1815,14 @@ test("Timeline opens the empty Trophy Case and returns at the top without replay
   expectDestinationScrolledToTop();
 });
 
-test("Nutrition to Timeline lands at the top after rendering", () => {
+test("Nutrition bottom navigation returns to Timeline at the top", () => {
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
   window.scrollTo.mockClear();
 
-  fireEvent.click(
-    screen.getAllByRole("button", { name: "Back to Timeline" })[0]
-  );
+  const navigationButtons = screen.getAllByRole("button", { name: "Back to Timeline" });
+  expect(navigationButtons).toHaveLength(2);
+  fireEvent.click(navigationButtons.at(-1));
 
   expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
   expectDestinationScrolledToTop();

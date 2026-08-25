@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
+import { readFileSync } from "fs";
 import NutritionPage, { calculateNutritionAverages } from "./NutritionPage";
 import { createUserFood } from "../services/userFoodCatalog";
 
@@ -277,15 +278,45 @@ function entryForm() {
   );
 }
 
-test("provides matching timeline navigation controls at the top and bottom", () => {
-  const props = renderNutritionPage();
+test("provides matching timeline navigation controls without changing draft or search state", () => {
+  const props = renderNutritionPage({
+    nutritionEntries: [{
+      ...entry(new Date().toISOString(), 420, 24, 36, 18, 510),
+      name: "Logged lunch",
+      notes: "",
+    }],
+  });
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "banana" },
+  });
+  fireEvent.change(entryForm().getByLabelText("Food / meal name"), {
+    target: { value: "Draft supper" },
+  });
   const navigationButtons = screen.getAllByRole("button", {
     name: "Back to Timeline",
   });
+  const bottomButton = screen.getByTestId("nutrition-bottom-back");
+  const bottomNavigation = screen.getByRole("navigation", {
+    name: "Nutrition page navigation",
+  });
 
   expect(navigationButtons).toHaveLength(2);
+  expect(navigationButtons[1]).toBe(bottomButton);
+  [
+    screen.getByRole("heading", { name: "Find a Food" }),
+    screen.getByRole("heading", { name: "Add Nutrition Entry" }),
+    screen.getByRole("heading", { name: "Saved Entries" }),
+    screen.getByRole("heading", { name: "Logged lunch" }),
+  ].forEach((content) => {
+    expect(content.compareDocumentPosition(bottomNavigation) & Node.DOCUMENT_POSITION_FOLLOWING)
+      .not.toBe(0);
+  });
+
+  fireEvent.click(bottomButton);
+  expect(screen.getByLabelText("Food search")).toHaveValue("banana");
+  expect(entryForm().getByLabelText("Food / meal name")).toHaveValue("Draft supper");
+  expect(props.saveNutritionEntry).not.toHaveBeenCalled();
   fireEvent.click(navigationButtons[0]);
-  fireEvent.click(navigationButtons[1]);
 
   expect(props.onBack).toHaveBeenCalledTimes(2);
 });
@@ -371,6 +402,9 @@ test("keeps food search results contained at the 390px mobile contract", () => {
   expect(result).toHaveStyle({ boxSizing: "border-box", maxWidth: "100%", minWidth: 0, width: "100%" });
   expect(result.querySelector(".trace-food-result__heading")).toHaveStyle({ minWidth: 0 });
   expect(result.querySelector(".trace-food-result__badges")).toHaveStyle({ maxWidth: "100%", minWidth: 0 });
+  const css = readFileSync(require.resolve("../index.css"), "utf8");
+  expect(css).toMatch(/\.trace-nutrition-bottom-navigation\s*\{[^}]*box-sizing:\s*border-box;[^}]*max-width:\s*700px;[^}]*width:\s*100%/s);
+  expect(css).toMatch(/\.trace-nutrition-bottom-navigation \.trace-action\s*\{[^}]*max-width:\s*100%;[^}]*width:\s*100%/s);
 });
 
 test("restaurant food uses the existing serving flow and logs scaled macros", () => {

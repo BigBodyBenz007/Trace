@@ -1068,17 +1068,6 @@ function NutritionPage({
             Cancel Entry
           </button>
 
-          <button
-            className="trace-action trace-action--secondary"
-            type="button"
-            onClick={onBack}
-            style={{
-              ...buttonStyle,
-              backgroundColor: "#666",
-            }}
-          >
-            Back to Timeline
-          </button>
         </div>
       </form>
 
@@ -1367,6 +1356,24 @@ function NutritionPage({
           </div>
         )}
       </section>
+
+      <nav
+        aria-label="Nutrition page navigation"
+        className="trace-nutrition-bottom-navigation"
+      >
+        <button
+          className="trace-action trace-action--secondary"
+          data-testid="nutrition-bottom-back"
+          type="button"
+          onClick={onBack}
+          style={{
+            ...buttonStyle,
+            backgroundColor: "#666",
+          }}
+        >
+          Back to Timeline
+        </button>
+      </nav>
 
     </div>
   );
