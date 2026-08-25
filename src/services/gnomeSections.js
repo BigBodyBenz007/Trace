@@ -90,26 +90,26 @@ const treehouseDistrictSection = section(
   "treehouse-district",
   "Treehouse district",
   treehouseDistrict,
-  3,
+  6,
   "reusable"
 );
 const townCenterSection = section(
   "town-center",
   "Town center",
   townCenter,
-  4,
+  3,
   "reusable"
 );
-const bridgeSection = section("bridge", "Bridge", bridge, 5, "reusable");
-const waterfallSection = section("waterfall", "Waterfall", waterfall, 6, "reusable");
+const bridgeSection = section("bridge", "Bridge", bridge, 4, "reusable");
+const waterfallSection = section("waterfall", "Waterfall", waterfall, 5, "reusable");
 
 export const GNOME_DAYTIME_POOL = Object.freeze([
   geometryMasterSection,
   marketplaceSection,
-  treehouseDistrictSection,
   townCenterSection,
   bridgeSection,
   waterfallSection,
+  treehouseDistrictSection,
 ]);
 
 export const GNOME_DAYTIME_SECTIONS = GNOME_DAYTIME_POOL;

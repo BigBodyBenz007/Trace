@@ -14,10 +14,10 @@ test("orders one Gnome opener, a locked evening sequence, and the resumed daytim
     "book-beginning",
     "geometry-master",
     "marketplace",
-    "treehouse-district",
     "town-center",
     "bridge",
     "waterfall",
+    "treehouse-district",
     "after-book-start",
     "twilight-hills",
     "twilight-stream",
@@ -25,10 +25,10 @@ test("orders one Gnome opener, a locked evening sequence, and the resumed daytim
     "sunrise-return",
     "geometry-master",
     "marketplace",
-    "treehouse-district",
     "town-center",
     "bridge",
     "waterfall",
+    "treehouse-district",
     "after-book-start",
   ]);
   expect(GNOME_OPENER_SECTION).toBe(GNOME_SECTIONS[0]);
@@ -39,10 +39,10 @@ test("orders one Gnome opener, a locked evening sequence, and the resumed daytim
   expect(GNOME_REUSABLE_SECTIONS.map(({ id }) => id)).toEqual([
     "geometry-master",
     "marketplace",
-    "treehouse-district",
     "town-center",
     "bridge",
     "waterfall",
+    "treehouse-district",
   ]);
   expect(GNOME_REUSABLE_SECTIONS.every(({ sequenceRole }) => sequenceRole === "reusable"))
     .toBe(true);
@@ -86,10 +86,10 @@ test("configures only compatible lighting boundaries around the deterministic cy
   expect(GNOME_SCENE_CYCLE.map(({ id }) => id)).toEqual([
     "geometry-master",
     "marketplace",
-    "treehouse-district",
     "town-center",
     "bridge",
     "waterfall",
+    "treehouse-district",
     "after-book-start",
     "twilight-hills",
     "twilight-stream",
@@ -116,6 +116,29 @@ test("configures only compatible lighting boundaries around the deterministic cy
   expect(repeatedCycle.at(-1)).toBe(GNOME_DAYTIME_POOL[0]);
 });
 
+test("excludes incompatible edge environments from daytime adjacency", () => {
+  const daytimeWithDuskApproach = [
+    ...GNOME_DAYTIME_POOL,
+    GNOME_DUSK_APPROACH_SECTION,
+  ];
+  const adjacentPairs = daytimeWithDuskApproach.slice(1).map((section, index) =>
+    `${daytimeWithDuskApproach[index].id}>${section.id}`
+  );
+
+  expect(adjacentPairs).toEqual([
+    "geometry-master>marketplace",
+    "marketplace>town-center",
+    "town-center>bridge",
+    "bridge>waterfall",
+    "waterfall>treehouse-district",
+    "treehouse-district>after-book-start",
+  ]);
+  expect(adjacentPairs).not.toEqual(expect.arrayContaining([
+    "marketplace>treehouse-district",
+    "treehouse-district>town-center",
+  ]));
+});
+
 test("uses the untouched normalized package assets and source dimensions", () => {
   const catalog = [
     GNOME_OPENER_SECTION,
@@ -127,10 +150,10 @@ test("uses the untouched normalized package assets and source dimensions", () =>
     expect.stringContaining("00-gnome-book-beginning.png"),
     expect.stringContaining("02-gnome-geometry-master.png"),
     expect.stringContaining("03-gnome-marketplace.png"),
-    expect.stringContaining("06-gnome-treehouse-district.png"),
     expect.stringContaining("07-gnome-town-center.png"),
     expect.stringContaining("05-gnome-bridge.png"),
     expect.stringContaining("04-gnome-waterfall.png"),
+    expect.stringContaining("06-gnome-treehouse-district.png"),
     expect.stringContaining("01-gnome-after-book-start.png"),
     expect.stringContaining("twilight_gnome_village_in_the_hills.png"),
     expect.stringContaining("twilight_gnome_village_by_the_stream.png"),
