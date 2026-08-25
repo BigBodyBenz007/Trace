@@ -670,7 +670,7 @@ test("Nutrition creates, persists, searches, and logs a custom grocery food", as
   const searchResult = await screen.findByRole("button", {
     name: /Raw chicken breast strips/i,
   });
-  expect(within(searchResult).getByText("Grocery/custom")).toBeInTheDocument();
+  expect(within(searchResult).getByText("Grocery")).toBeInTheDocument();
   expect(within(searchResult).getByText("User-entered")).toBeInTheDocument();
   fireEvent.click(searchResult);
   fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));

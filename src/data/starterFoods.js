@@ -1,6 +1,7 @@
 const starterFoods = [
   {
     id: "banana-medium",
+    dedupeKey: "generic:banana-medium",
     name: "Banana",
     serving: {
       amount: 1,
@@ -17,6 +18,7 @@ const starterFoods = [
   },
   {
     id: "apple-medium",
+    dedupeKey: "generic:apple-medium",
     name: "Apple",
     serving: {
       amount: 1,
@@ -33,6 +35,7 @@ const starterFoods = [
   },
   {
     id: "egg-large",
+    dedupeKey: "generic:egg-large",
     name: "Egg",
     serving: {
       amount: 1,
@@ -65,6 +68,7 @@ const starterFoods = [
   },
   {
     id: "chicken-breast-cooked-100g",
+    dedupeKey: "generic:chicken-breast-cooked",
     name: "Chicken breast, cooked",
     serving: {
       amount: 100,
@@ -81,6 +85,7 @@ const starterFoods = [
   },
   {
     id: "white-rice-cooked-cup",
+    dedupeKey: "generic:white-rice-cooked",
     name: "White rice, cooked",
     serving: {
       amount: 1,
@@ -97,6 +102,7 @@ const starterFoods = [
   },
   {
     id: "greek-yogurt-plain-cup",
+    dedupeKey: "generic:greek-yogurt-plain",
     name: "Greek yogurt, plain",
     serving: {
       amount: 1,
@@ -113,6 +119,7 @@ const starterFoods = [
   },
   {
     id: "peanut-butter-tablespoons",
+    dedupeKey: "generic:peanut-butter",
     name: "Peanut butter",
     serving: {
       amount: 2,
@@ -129,6 +136,7 @@ const starterFoods = [
   },
   {
     id: "whole-milk-cup",
+    dedupeKey: "generic:whole-milk",
     name: "Whole milk",
     serving: {
       amount: 1,
@@ -145,6 +153,7 @@ const starterFoods = [
   },
   {
     id: "broccoli-cooked-cup",
+    dedupeKey: "generic:broccoli-cooked",
     name: "Broccoli, cooked",
     serving: {
       amount: 1,

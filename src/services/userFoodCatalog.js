@@ -1,16 +1,10 @@
 import { normalizeFoodQuery } from "./foodSearch";
 import { createServingDefinition } from "./servingDefinition";
+import { GROCERY_FOOD_CATEGORY_OPTIONS } from "./groceryFoodCatalog";
 
 export const USER_FOODS_STORAGE_KEY = "userFoods";
 
-export const GROCERY_FOOD_CATEGORY_OPTIONS = Object.freeze([
-  { value: "protein", label: "Protein / meat" },
-  { value: "eggs-dairy", label: "Eggs / dairy" },
-  { value: "grains-starches", label: "Grains / starches" },
-  { value: "vegetables", label: "Vegetables" },
-  { value: "fruit", label: "Fruit" },
-  { value: "other", label: "Other" },
-]);
+export { GROCERY_FOOD_CATEGORY_OPTIONS };
 
 const GROCERY_FOOD_CATEGORIES = new Set(
   GROCERY_FOOD_CATEGORY_OPTIONS.map(({ value }) => value)
@@ -64,6 +58,7 @@ export function createUserFood(
     id: `user-added:${sourceId}`,
     name: String(name).trim().replace(/\s+/g, " "),
     sourceType: "grocery-custom",
+    dataType: "user-entered",
     category,
     categoryLabel,
     ...(brand ? { brand } : {}),

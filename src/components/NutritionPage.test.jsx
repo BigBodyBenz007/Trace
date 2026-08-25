@@ -6,8 +6,11 @@ function localTimestamp(year, month, day, hour = 12) {
   return new Date(year, month, day, hour).toISOString();
 }
 
+let entrySequence = 0;
+
 function entry(loggedAt, calories, protein, carbohydrates, fat, sodium) {
   return {
+    id: `nutrition-test-entry-${entrySequence += 1}`,
     loggedAt,
     calories,
     protein,
@@ -127,8 +130,21 @@ function selectBanana() {
   fireEvent.change(screen.getByLabelText("Food search"), {
     target: { value: "  BANANA  " },
   });
-  fireEvent.click(screen.getByRole("button", { name: /Banana/i }));
+  fireEvent.click(screen.getByRole("button", { name: /^Banana, raw\b/i }));
 }
+
+const USDA_BANANA_REFERENCE = {
+  source: "usda-fooddata-central",
+  sourceId: "173944",
+  confidence: "official-source",
+  label: "USDA",
+  completeness: "complete",
+  sourceType: "grocery",
+  dataType: "generic",
+  category: "fruit",
+  categoryLabel: "Fruit",
+  preparationState: "raw",
+};
 
 function expandNutritionGoals() {
   fireEvent.click(screen.getByRole("button", { name: "Nutrition Goals" }));
@@ -279,14 +295,84 @@ test("selecting a search result populates the existing form", () => {
   selectBanana();
   const form = entryForm();
 
-  expect(form.getByLabelText("Food / meal name")).toHaveValue("Banana");
+  expect(form.getByLabelText("Food / meal name")).toHaveValue("Banana, raw");
   expect(form.getByLabelText("Calories")).toHaveValue(105);
-  expect(form.getByLabelText("Protein (g)")).toHaveValue(1.3);
-  expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(27);
-  expect(form.getByLabelText("Fat (g)")).toHaveValue(0.4);
-  expect(form.getAllByText("Unknown")).toHaveLength(2);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(1.29);
+  expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(26.9);
+  expect(form.getByLabelText("Fat (g)")).toHaveValue(0.39);
+  expect(form.queryByText("Unknown")).not.toBeInTheDocument();
   expect(form.getByLabelText("Number of servings")).toHaveValue(1);
-  expect(form.getByText("One serving: 1 medium banana")).toBeInTheDocument();
+  expect(form.getByText("One serving: 1 medium banana (118 g)")).toBeInTheDocument();
+});
+
+test("shows USDA grocery source, serving, and unknown nutrients for raw chicken breast strips", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "raw chicken breast strips" },
+  });
+
+  const result = screen.getByRole("button", {
+    name: /Chicken breast, boneless, skinless, raw/i,
+  });
+  expect(within(result).getByText("USDA")).toBeInTheDocument();
+  expect(within(result).getByText("Grocery")).toBeInTheDocument();
+  expect(result).toHaveTextContent("4 oz raw (113 g)");
+  expect(result).toHaveTextContent("Carbohydrates 0 g");
+  expect(result).toHaveTextContent("Fiber Unknown");
+  expect(result).toHaveTextContent("Some USDA nutrient values are unavailable and remain unknown.");
+
+  fireEvent.click(result);
+  const form = entryForm();
+  expect(form.getByLabelText("Food / meal name")).toHaveValue(
+    "Chicken breast, boneless, skinless, raw"
+  );
+  expect(form.getByLabelText("Calories")).toHaveValue(120.2);
+  expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(0);
+  expect(form.getByLabelText("Fiber (g)")).toHaveValue(null);
+  expect(form.getByText("One serving: 4 oz raw (113 g)")).toBeInTheDocument();
+
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+  expect(props.saveNutritionEntry).toHaveBeenCalledWith(expect.objectContaining({
+    carbohydrates: 0,
+    fiber: null,
+    foodReference: expect.objectContaining({
+      source: "usda-fooddata-central",
+      sourceId: "2646170",
+      label: "USDA",
+      sourceType: "grocery",
+      dataType: "generic",
+      preparationState: "raw",
+      modified: false,
+    }),
+  }));
+});
+
+test("shows raw and cooked chicken breast as separate grocery results", () => {
+  renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "chicken breast" },
+  });
+
+  const raw = screen.getByRole("button", { name: /Chicken breast, boneless, skinless, raw/i });
+  const cooked = screen.getByRole("button", { name: /Chicken breast, cooked, roasted/i });
+  expect(raw).toHaveTextContent("4 oz raw (113 g)");
+  expect(cooked).toHaveTextContent("3 oz cooked (85 g)");
+  expect(raw).not.toBe(cooked);
+});
+
+test("keeps food search results contained at the 390px mobile contract", () => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+  renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "raw chicken breast strips" },
+  });
+
+  const search = screen.getByRole("heading", { name: "Find a Food" }).closest("section");
+  const result = screen.getByRole("button", { name: /Chicken breast, boneless, skinless, raw/i });
+  expect(search).toHaveStyle({ boxSizing: "border-box", maxWidth: "700px", minWidth: 0, width: "100%" });
+  expect(result).toHaveStyle({ boxSizing: "border-box", maxWidth: "100%", minWidth: 0, width: "100%" });
+  expect(result.querySelector(".trace-food-result__heading")).toHaveStyle({ minWidth: 0 });
+  expect(result.querySelector(".trace-food-result__badges")).toHaveStyle({ maxWidth: "100%", minWidth: 0 });
 });
 
 test("restaurant food uses the existing serving flow and logs scaled macros", () => {
@@ -519,9 +605,9 @@ test("fractional servings recalculate all nutrients live", () => {
   });
 
   expect(form.getByLabelText("Calories")).toHaveValue(52.5);
-  expect(form.getByLabelText("Protein (g)")).toHaveValue(0.65);
-  expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(13.5);
-  expect(form.getByLabelText("Fat (g)")).toHaveValue(0.2);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(0.645);
+  expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(13.45);
+  expect(form.getByLabelText("Fat (g)")).toHaveValue(0.195);
 });
 
 test("multiple servings recalculate all nutrients live", () => {
@@ -534,9 +620,9 @@ test("multiple servings recalculate all nutrients live", () => {
   });
 
   expect(form.getByLabelText("Calories")).toHaveValue(210);
-  expect(form.getByLabelText("Protein (g)")).toHaveValue(2.6);
-  expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(54);
-  expect(form.getByLabelText("Fat (g)")).toHaveValue(0.8);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(2.58);
+  expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(53.8);
+  expect(form.getByLabelText("Fat (g)")).toHaveValue(0.78);
 });
 
 test("catalog-populated values remain editable", () => {
@@ -859,7 +945,7 @@ test("a saved user food appears in search and scales like a catalog food", () =>
   fireEvent.click(screen.getByRole("button", { name: /Meatloaf/i }));
   const form = entryForm();
 
-  expect(screen.getByText("Grocery/custom")).toBeInTheDocument();
+  expect(screen.getByText("Grocery")).toBeInTheDocument();
   expect(screen.getByText("User-entered")).toBeInTheDocument();
   expect(form.getByLabelText("Food / meal name")).toHaveValue("Meatloaf");
   fireEvent.change(form.getByLabelText("Number of servings"), {
@@ -936,7 +1022,7 @@ test("searches a grocery food later and logs unknown nutrients without convertin
     target: { value: "Market Pantry" },
   });
   const result = screen.getByRole("button", { name: /Raw chicken breast strips/i });
-  expect(within(result).getByText("Grocery/custom")).toBeInTheDocument();
+  expect(within(result).getByText("Grocery")).toBeInTheDocument();
   expect(within(result).getByText("User-entered")).toBeInTheDocument();
   expect(within(result).getByText("Protein / meat · Market Pantry")).toBeInTheDocument();
   fireEvent.click(result);
@@ -1029,24 +1115,24 @@ test("saves calculated totals with portion and immutable nutrition snapshots", (
 
   expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
     calories: 157.5,
-    protein: 1.9500000000000002,
-    carbohydrates: 40.5,
-    fat: 0.6000000000000001,
+    protein: 1.935,
+    carbohydrates: 40.349999999999994,
+    fat: 0.585,
     portion: {
       amount: 1.5,
       unit: "serving",
       basis: {
         amount: 1,
         unit: "item",
-        description: "1 medium banana",
+        description: "1 medium banana (118 g)",
         grams: 118,
       },
     },
     nutritionBasis: {
       calories: 105,
-      protein: 1.3,
-      carbohydrates: 27,
-      fat: 0.4,
+      protein: 1.29,
+      carbohydrates: 26.9,
+      fat: 0.39,
     },
   });
 });
@@ -1057,9 +1143,7 @@ test("selected catalog provenance is saved when values are unchanged", () => {
   fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
 
   expect(props.saveNutritionEntry.mock.calls[0][0].foodReference).toEqual({
-    source: "trace-starter",
-    sourceId: "banana-medium",
-    confidence: "verified",
+    ...USDA_BANANA_REFERENCE,
     modified: false,
   });
 });
@@ -1075,9 +1159,7 @@ test("changing serving quantity does not mark catalog provenance modified", () =
   fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
 
   expect(props.saveNutritionEntry.mock.calls[0][0].foodReference).toEqual({
-    source: "trace-starter",
-    sourceId: "banana-medium",
-    confidence: "verified",
+    ...USDA_BANANA_REFERENCE,
     modified: false,
   });
 });
@@ -1091,9 +1173,7 @@ test("catalog provenance is marked modified after a populated value changes", ()
   fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
 
   expect(props.saveNutritionEntry.mock.calls[0][0].foodReference).toEqual({
-    source: "trace-starter",
-    sourceId: "banana-medium",
-    confidence: "verified",
+    ...USDA_BANANA_REFERENCE,
     modified: true,
   });
 });

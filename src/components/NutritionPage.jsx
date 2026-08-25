@@ -29,12 +29,23 @@ function getEntrySourceDetails(foodReference) {
     return ["Restaurant", foodReference.restaurantName].filter(Boolean);
   }
   if (
+    foodReference?.sourceType === "grocery" ||
+    foodReference?.source === "usda-fooddata-central"
+  ) {
+    return [
+      "Grocery",
+      foodReference.label || "USDA",
+      foodReference.categoryLabel || foodReference.category,
+      foodReference.brand,
+    ].filter(Boolean);
+  }
+  if (
     foodReference?.sourceType === "grocery-custom" ||
     foodReference?.source === "user-added"
   ) {
     return [
-      "Grocery/custom",
       "User-entered",
+      "Grocery",
       foodReference.categoryLabel || foodReference.category,
       foodReference.brand,
     ].filter(Boolean);
@@ -500,6 +511,7 @@ function NutritionPage({
       source: food.provenance.source,
       sourceId: food.provenance.sourceId,
       confidence: food.provenance.confidence,
+      ...(food.provenance.label ? { label: food.provenance.label } : {}),
       ...(food.provenance.completeness ? { completeness: food.provenance.completeness } : {}),
       ...(food.sourceType === "restaurant"
         ? {
@@ -507,6 +519,15 @@ function NutritionPage({
             restaurantId: food.restaurant.id,
             restaurantName: food.restaurant.name,
           }
+        : food.sourceType === "grocery"
+          ? {
+              sourceType: "grocery",
+              dataType: food.dataType || "generic",
+              category: food.category,
+              categoryLabel: food.categoryLabel,
+              preparationState: food.preparationState,
+              ...(food.brand ? { brand: food.brand } : {}),
+            }
         : food.sourceType === "grocery-custom" || food.provenance.source === "user-added"
           ? {
               sourceType: "grocery-custom",

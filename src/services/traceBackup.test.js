@@ -284,6 +284,8 @@ test("backs up and restores custom grocery foods and nullable meal snapshots unc
   expect(created.data.structured.userFoods).toEqual([groceryFood]);
   expect(created.data.structured.nutritionEntries).toEqual([meal]);
   expect(created.data.structured.userFoods[0].nutrients.calories).toBeNull();
+  expect(TRACE_STORAGE_KEYS).not.toContain("groceryFoods");
+  expect(created.data.structured).not.toHaveProperty("groceryFoods");
 
   const restored = makeStorage();
   await restoreTraceBackup(created, {

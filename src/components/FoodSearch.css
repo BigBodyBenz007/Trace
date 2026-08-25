@@ -1,0 +1,25 @@
+.trace-food-search,
+.trace-food-search [aria-label="Food search results"],
+.trace-food-search .trace-search-result,
+.trace-food-result__heading,
+.trace-food-result__badges,
+.trace-food-result__nutrients {
+  box-sizing: border-box;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.trace-food-result__badges {
+  align-items: flex-start;
+}
+
+@media (max-width: 430px) {
+  .trace-food-search .trace-search-result {
+    padding: 12px !important;
+  }
+
+  .trace-food-result__heading {
+    align-items: flex-start !important;
+    flex-direction: column;
+  }
+}

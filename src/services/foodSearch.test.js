@@ -61,7 +61,7 @@ test("combined catalog search includes user foods and keeps starter foods", () =
   };
 
   expect(searchFoodCatalog("meatloaf", [userFood])).toEqual([userFood]);
-  expect(searchFoodCatalog("banana", [userFood])[0].id).toBe("banana-medium");
+  expect(searchFoodCatalog("banana", [userFood])[0].id).toBe("grocery:usda:173944");
 });
 
 test("normalizes restaurant foods with a distinct source type and verification metadata", () => {
@@ -305,7 +305,7 @@ test("matches non-adjacent chain and item tokens in any searchable-field order",
 });
 
 test("keeps partial single-token results, ordering, and saved-food priority", () => {
-  expect(searchFoodCatalog("frie").map((food) => food.id)).toEqual([
+  expect(searchFoodCatalog("frie").slice(0, 5).map((food) => food.id)).toEqual([
     "restaurant:braums:french-fries",
     "restaurant:chick-fil-a:waffle-potato-fries",
     "restaurant:mcdonalds:french-fries",
@@ -323,7 +323,100 @@ test("keeps partial single-token results, ordering, and saved-food priority", ()
     provenance: { source: "user-added", sourceId: "fries", confidence: "user-added" },
   };
   expect(searchFoodCatalog("fries", [savedFries])[0]).toBe(savedFries);
-  expect(searchFoodCatalog("banana", [savedFries])[0].id).toBe("banana-medium");
+  expect(searchFoodCatalog("banana", [savedFries])[0].id).toBe("grocery:usda:173944");
+});
+
+test("finds raw chicken breast strips through USDA aliases before restaurant foods", () => {
+  const results = searchFoodCatalog("raw chicken breast strips");
+
+  expect(results[0]).toMatchObject({
+    id: "grocery:usda:2646170",
+    sourceType: "grocery",
+    dataType: "generic",
+    preparationState: "raw",
+    provenance: { source: "usda-fooddata-central", label: "USDA" },
+  });
+  expect(results[0].serving.description).toBe("4 oz raw (113 g)");
+  expect(results.findIndex((food) => food.sourceType === "restaurant")).not.toBe(0);
+});
+
+test("keeps raw and cooked chicken breast results visibly distinct", () => {
+  const results = searchFoodCatalog("chicken breast", [], 20);
+  const raw = results.find((food) => food.id === "grocery:usda:2646170");
+  const cooked = results.find((food) => food.id === "grocery:usda:171477");
+
+  expect(raw).toMatchObject({ preparationState: "raw", serving: { description: expect.stringContaining("raw") } });
+  expect(cooked).toMatchObject({ preparationState: "cooked", serving: { description: expect.stringContaining("cooked") } });
+  expect(raw.provenance.sourceId).not.toBe(cooked.provenance.sourceId);
+});
+
+test("searches generic grocery foods by category and useful staple names", () => {
+  expect(searchFoodCatalog("rice").map(({ id }) => id)).toEqual(expect.arrayContaining([
+    "grocery:usda:168878",
+    "grocery:usda:169704",
+  ]));
+  expect(searchFoodCatalog("eggs dairy").every((food) => food.category === "eggs-dairy")).toBe(true);
+  expect(searchFoodCatalog("eggs")[0]).toMatchObject({
+    id: "grocery:usda:171287",
+    name: "Egg, whole, raw",
+  });
+  expect(searchFoodCatalog("Greek yogurt")[0]).toMatchObject({
+    sourceType: "grocery",
+    dataType: "generic",
+    provenance: { label: "USDA" },
+  });
+});
+
+test("searches representative foods across every expanded grocery category", () => {
+  const expectations = [
+    ["ground beef", "protein", /Ground beef/],
+    ["frozen cod", "seafood", /Cod.*frozen|frozen.*Cod/i],
+    ["egg whites", "eggs-dairy", /Egg white/],
+    ["canned pineapple", "fruit", /Pineapple.*canned|canned.*Pineapple/i],
+    ["frozen broccoli", "vegetables", /Broccoli.*frozen|frozen.*Broccoli/i],
+    ["quinoa cooked", "grains-starches", /Quinoa, cooked/],
+    ["avocado oil", "fats-oils", /Oil, avocado/],
+    ["almond butter", "pantry", /Almond butter|almond butter/],
+  ];
+
+  expectations.forEach(([query, category, name]) => {
+    const result = searchFoodCatalog(query, [], 20).find((food) => name.test(food.name));
+    expect(result).toMatchObject({
+      category,
+      sourceType: "grocery",
+      dataType: "generic",
+      provenance: { source: "usda-fooddata-central", label: "USDA" },
+    });
+  });
+});
+
+test("ranks reviewed common ground-beef staples before less common lean variants", () => {
+  expect(searchFoodCatalog("ground beef").slice(0, 2).map(({ id }) => id)).toEqual([
+    "grocery:usda:2514744",
+    "grocery:usda:2514743",
+  ]);
+});
+
+test("supports high-value aliases without collapsing preparation forms", () => {
+  expect(searchFoodCatalog("chicken strips")[0]).toMatchObject({
+    id: "grocery:usda:2646170",
+    preparationState: "raw",
+  });
+  expect(searchFoodCatalog("sweet potato").some((food) => (
+    food.category === "vegetables" && /Sweet potato/i.test(food.name)
+  ))).toBe(true);
+  expect(searchFoodCatalog("egg whites")[0].name).toMatch(/Egg white/);
+  expect(searchFoodCatalog("greek yogurt")[0]).toMatchObject({ category: "eggs-dairy" });
+});
+
+test("suppresses starter duplicates while retaining the USDA grocery record", () => {
+  const bananaResults = searchFoodCatalog("banana", [], 20);
+
+  expect(bananaResults.filter(({ dedupeKey }) => dedupeKey === "generic:banana-medium")).toHaveLength(1);
+  expect(bananaResults.find(({ dedupeKey }) => dedupeKey === "generic:banana-medium")).toMatchObject({
+    id: "grocery:usda:173944",
+    provenance: { source: "usda-fooddata-central" },
+  });
 });
 
 test("preserves exact official Sonic and Braum's serving-option nutrition", () => {

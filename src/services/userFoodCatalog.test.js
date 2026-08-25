@@ -22,6 +22,7 @@ test("creates a reusable one-serving food with user-added provenance", () => {
     id: "user-added:meatloaf",
     name: "Meatloaf",
     sourceType: "grocery-custom",
+    dataType: "user-entered",
     category: "other",
     categoryLabel: "Other",
     serving: {
