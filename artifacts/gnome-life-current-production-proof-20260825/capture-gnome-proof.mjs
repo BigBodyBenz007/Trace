@@ -12,10 +12,10 @@ if (!width || !height || !outputDirectory) {
   throw new Error("Usage: node capture-gnome-proof.mjs <width> <height> <output-directory>");
 }
 
-const progressStops = [0, 0.27, 0.73, 1];
-const memories = Array.from({ length: 12 }, (_, index) => ({
+const progressStops = [0, 0.16, 0.32, 0.43, 0.49, 0.54, 0.59, 0.64, 0.78, 0.94];
+const memories = Array.from({ length: 20 }, (_, index) => ({
   categories: ["Reflection"],
-  date: `${1980 + index * 4}-06-15`,
+  date: `${1980 + index * 2}-06-15`,
   description: `Visual verification memory ${index + 1}`,
   favorite: false,
   id: `gnome-proof-${index + 1}`,

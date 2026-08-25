@@ -266,17 +266,17 @@ test("Gnome Village renders its one-time opener and nearby reusable scenes at 39
 
   expect(gnome).toHaveAttribute("data-theme-id", "gnome-village");
   expect(gnome).toHaveAttribute("data-life-current-renderer", "gnome-village");
-  expect(gnome).toHaveAttribute("data-gnome-catalog", "one-opener-ten-reusable");
+  expect(gnome).toHaveAttribute("data-gnome-catalog", "one-opener-locked-evening-cycle");
   expect(gnome).toHaveAttribute("data-current-gnome-section", "book-beginning");
   expect(gnome).toHaveAttribute(
     "data-loaded-gnome-sections",
-    "book-beginning after-book-start geometry-master"
+    "book-beginning geometry-master marketplace"
   );
   const scenery = screen.getByTestId("life-current-gnome-scenery");
   expect(scenery.querySelectorAll("picture")).toHaveLength(3);
   expect([...scenery.querySelectorAll("[data-gnome-section]")]
     .map((section) => section.getAttribute("data-gnome-section")))
-    .toEqual(["book-beginning", "after-book-start", "geometry-master"]);
+    .toEqual(["book-beginning", "geometry-master", "marketplace"]);
   expect(scenery.querySelector('[data-gnome-section="book-beginning"] img'))
     .toHaveAttribute("width", "1672");
   expect(scenery.querySelector('[data-gnome-section="book-beginning"] img'))
@@ -288,7 +288,7 @@ test("Gnome Village renders its one-time opener and nearby reusable scenes at 39
   expect(currentLayout).toEqual(before);
 });
 
-test("Gnome Village reaches dusk, night, and dawn with nearby-only loading", () => {
+test("Gnome Village keeps the evening sequence locked and resumes daytime after sunrise", () => {
   const originalRequestAnimationFrame = window.requestAnimationFrame;
   const originalCancelAnimationFrame = window.cancelAnimationFrame;
   const frames = [];
@@ -305,14 +305,27 @@ test("Gnome Village reaches dusk, night, and dawn with nearby-only loading", () 
   const viewport = screen.getByTestId("memory-timeline-viewport");
   const gnome = screen.getByTestId("life-current");
 
-  viewport.scrollLeft = 4800;
+  viewport.scrollLeft = 2700;
   fireEvent.scroll(viewport);
   act(() => frames.shift()());
 
-  expect(gnome).toHaveAttribute("data-current-gnome-section", "dawn");
-  expect(gnome).toHaveAttribute("data-loaded-gnome-sections", "dusk night dawn");
+  expect(gnome).toHaveAttribute("data-current-gnome-section", "moonlit-stream");
+  expect(gnome).toHaveAttribute(
+    "data-loaded-gnome-sections",
+    "twilight-stream moonlit-stream sunrise-return"
+  );
   expect(gnome.querySelectorAll("img")).toHaveLength(3);
-  expect(Number(gnome.getAttribute("data-gnome-progress"))).toBeCloseTo(0.96, 4);
+  expect(Number(gnome.getAttribute("data-gnome-progress"))).toBeCloseTo(0.54, 4);
+
+  viewport.scrollLeft = 3200;
+  fireEvent.scroll(viewport);
+  act(() => frames.shift()());
+
+  expect(gnome).toHaveAttribute("data-current-gnome-section", "geometry-master");
+  expect(gnome).toHaveAttribute(
+    "data-loaded-gnome-sections",
+    "sunrise-return geometry-master marketplace"
+  );
 
   unmount();
   window.requestAnimationFrame = originalRequestAnimationFrame;

@@ -6,7 +6,7 @@ function GnomeCurrent(props) {
   return (
     <RasterSceneCurrent
       {...props}
-      catalog="one-opener-ten-reusable"
+      catalog="one-opener-locked-evening-cycle"
       classPrefix="gnome"
       dataPrefix="gnome"
       rendererId="gnome-village"
