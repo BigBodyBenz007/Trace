@@ -20,6 +20,10 @@ import { LIFE_CURRENT_TRAIL_TUNING } from "./LifeCurrent";
 import StoredPhoto, { storedPhotoId } from "./StoredPhoto";
 import { PHOTO_LOAD_PRIORITY } from "../services/photoUrlLoader";
 import { acquireDocumentScrollLock } from "../services/documentScrollLock";
+import {
+  homeModulesInGroup,
+  normalizeHomeVisibility,
+} from "../services/homeModules";
 
 const CATEGORY_FILTER_OPTIONS = [
   "All",
@@ -267,6 +271,7 @@ function HomePage({
   medicationEntries = [],
   journalEntries = [],
   lifeCurrentThemeId = "river",
+  homeVisibility,
   addTrophyCaseEntry = () => false,
   memoryAchievementSuggestion = null,
   dismissMemoryAchievementSuggestion = () => {},
@@ -289,6 +294,7 @@ function HomePage({
   const [hoveredMemory, setHoveredMemory] = useState(null);
   const [filteredCameraDate, setFilteredCameraDate] = useState(null);
   const lifeCurrentTheme = getLifeCurrentTheme(lifeCurrentThemeId);
+  const visibleHomeModules = normalizeHomeVisibility(homeVisibility);
   const lifeCurrentColors = lifeCurrentTheme.presentation.colors;
   const timelineRef = useRef(null);
   const timelineFocusFrameRef = useRef(null);
@@ -301,6 +307,18 @@ function HomePage({
   const timelinePositionRequestRef = useRef(true);
   const memoryCardRefs = useRef(new Map());
   const detailPanelRef = useRef(null);
+  const homeModuleHandlers = {
+    schedule: onOpenToday,
+    nutrition: onOpenNutrition,
+    health: onOpenHealth,
+    workouts: onOpenWorkouts,
+    medications: onOpenMedications,
+    protocols: onOpenProtocols,
+  };
+  const visibleCoreModules = homeModulesInGroup("core")
+    .filter(({ id }) => visibleHomeModules[id]);
+  const visibleSecondaryModules = homeModulesInGroup("secondary")
+    .filter(({ id }) => visibleHomeModules[id]);
   useEffect(() => {
     if (!active) return undefined;
     const updatePhotoViewerLayout = () => {
@@ -788,8 +806,9 @@ function HomePage({
         </header>
         <aside className="trace-home-utilities" aria-label="Personal and settings" data-layout="independent-utility-frame">
           <button type="button" className="trace-settings-button" data-utility-position="left" aria-label="Settings" onClick={onOpenSettings} title="Settings">⚙</button>
+          {(visibleHomeModules.journal || visibleHomeModules.trophyCase) && (
           <div className="trace-journal-shelf" data-utility-position="right" data-testid="story-achievements-actions">
-            <button type="button" className="trace-journal-button" aria-label="Open Journal" onClick={onOpenJournal}>
+            {visibleHomeModules.journal && <button type="button" className="trace-journal-button" aria-label="Open Journal" onClick={onOpenJournal}>
               <svg aria-hidden="true" viewBox="0 0 36 36" fill="none">
                 <path d="M8.5 5.5h18A2.5 2.5 0 0 1 29 8v22H11a4 4 0 0 1-4-4V7a1.5 1.5 0 0 1 1.5-1.5Z" fill="currentColor" fillOpacity=".16" stroke="currentColor" strokeWidth="1.5"/>
                 <path d="M11.5 5.5v24M11 24.5h18M16 12h8M16 17h8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5"/>
@@ -798,8 +817,8 @@ function HomePage({
                 <span className="trace-utility-button__eyebrow">Your story</span>
                 <span className="trace-utility-button__label">Journal</span>
               </span>
-            </button>
-            <button type="button" className="trace-trophy-button" aria-label="Open Trophy Case" onClick={onOpenTrophyCase}>
+            </button>}
+            {visibleHomeModules.trophyCase && <button type="button" className="trace-trophy-button" aria-label="Open Trophy Case" onClick={onOpenTrophyCase}>
               <svg aria-hidden="true" viewBox="0 0 36 36" fill="none">
                 <path d="M12 7.5h12v5.75c0 4.1-2.5 7.25-6 7.25s-6-3.15-6-7.25V7.5Z" stroke="currentColor" strokeLinejoin="round" strokeWidth="1.7"/>
                 <path d="M12 10H8.5v2.25c0 3 1.65 4.75 4.5 5.25M24 10h3.5v2.25c0 3-1.65 4.75-4.5 5.25M18 20.5V26M13.5 29h9M15 26h6" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.7"/>
@@ -809,8 +828,9 @@ function HomePage({
                 <span className="trace-utility-button__eyebrow">Achievements</span>
                 <span className="trace-utility-button__label">Trophy Case</span>
               </span>
-            </button>
+            </button>}
           </div>
+          )}
         </aside>
       </div>
 
@@ -821,33 +841,25 @@ function HomePage({
           </button>
         </div>
 
-        <div className="trace-feature-navigation__core">
-          <button className="trace-feature-action trace-feature-action--core" type="button" onClick={onOpenToday}>
-            Today&apos;s Schedule
-          </button>
+        {visibleCoreModules.length > 0 && (
+          <div className="trace-feature-navigation__core">
+            {visibleCoreModules.map((module) => (
+              <button className="trace-feature-action trace-feature-action--core" key={module.id} type="button" onClick={homeModuleHandlers[module.id]}>
+                {module.label}
+              </button>
+            ))}
+          </div>
+        )}
 
-          <button className="trace-feature-action trace-feature-action--core" type="button" onClick={onOpenNutrition}>
-            Nutrition
-          </button>
-
-          <button className="trace-feature-action trace-feature-action--core" type="button" onClick={onOpenHealth}>
-            Health
-          </button>
-        </div>
-
-        <div className="trace-feature-navigation__secondary">
-          <button className="trace-feature-action" type="button" onClick={onOpenWorkouts}>
-            Workouts
-          </button>
-
-          <button className="trace-feature-action" type="button" onClick={onOpenMedications}>
-            Medications & Supplements
-          </button>
-
-          <button className="trace-feature-action" type="button" onClick={onOpenProtocols}>
-            Protocols
-          </button>
-        </div>
+        {visibleSecondaryModules.length > 0 && (
+          <div className="trace-feature-navigation__secondary">
+            {visibleSecondaryModules.map((module) => (
+              <button className="trace-feature-action" key={module.id} type="button" onClick={homeModuleHandlers[module.id]}>
+                {module.label}
+              </button>
+            ))}
+          </div>
+        )}
       </nav>
 
       {memoryAchievementSuggestion &&

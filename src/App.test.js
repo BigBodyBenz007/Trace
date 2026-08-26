@@ -599,7 +599,21 @@ test("Settings opens and global unit preferences survive remount into a fresh He
   fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' }));
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' }));
-  expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "river" });
+  expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({
+    schemaVersion: 2,
+    units: { weight: "kg", height: "cm", circumference: "cm" },
+    lifeCurrentThemeId: "river",
+    homeVisibility: {
+      schedule: true,
+      nutrition: true,
+      health: true,
+      workouts: true,
+      medications: true,
+      protocols: true,
+      journal: true,
+      trophyCase: true,
+    },
+  });
   first.unmount();
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "Health" }));
@@ -617,6 +631,41 @@ test("Timeline opens Protocols and returns to Timeline at the top", () => {
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
   expectDestinationScrolledToTop();
+});
+
+test("Home customization hides, persists, and restores the Workouts shortcut", () => {
+  const first = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  fireEvent.click(screen.getByRole("switch", { name: "Show Workouts on Home" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  expect(screen.queryByRole("button", { name: "Workouts" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+
+  first.unmount();
+  render(<App />);
+  expect(screen.queryByRole("button", { name: "Workouts" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByRole("switch", { name: "Show Workouts on Home" })).not.toBeChecked();
+  fireEvent.click(screen.getByRole("switch", { name: "Show Workouts on Home" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  expect(screen.getByRole("button", { name: "Workouts" })).toBeInTheDocument();
+});
+
+test("hiding Protocols changes only its Home shortcut and preserves Protocol data", () => {
+  const storedProtocols = JSON.stringify([{
+    id: "protocol-preserved",
+    name: "Preserved Protocol",
+    items: [],
+  }]);
+  localStorage.setItem("protocols", storedProtocols);
+  render(<App />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  fireEvent.click(screen.getByRole("switch", { name: "Show Protocols on Home" }));
+  expect(localStorage.getItem("protocols")).toBe(storedProtocols);
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  expect(screen.queryByRole("button", { name: "Protocols" })).not.toBeInTheDocument();
+  expect(localStorage.getItem("protocols")).toBe(storedProtocols);
 });
 
 test("Nutrition creates, persists, searches, and logs a custom grocery food", async () => {

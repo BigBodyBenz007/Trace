@@ -91,7 +91,7 @@ test("fills the secondary action row without the former Backup gap", () => {
   expect(within(secondary).getAllByRole("button").map((button) => button.textContent.trim()))
     .toEqual(["Workouts", "Medications & Supplements", "Protocols"]);
   expect(readFileSync(require.resolve("../index.css"), "utf8"))
-    .toMatch(/\.trace-feature-navigation__secondary\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\)/s);
+    .toMatch(/\.trace-feature-navigation__secondary\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit, minmax\(220px, 1fr\)\)/s);
 });
 
 test("keeps the Homepage action layout width-safe at 390px", () => {
@@ -102,6 +102,57 @@ test("keeps the Homepage action layout width-safe at 390px", () => {
   expect(css).toMatch(/\.trace-feature-action,[^}]*min-width:\s*0/s);
   expect(css).toMatch(/@media \(max-width: 520px\)\s*\{[\s\S]*?\.trace-feature-navigation__core,[\s\S]*?\.trace-feature-navigation__secondary,[\s\S]*?grid-template-columns:\s*minmax\(0, 1fr\)/);
   expect(css).toMatch(/@media \(max-width: 400px\)\s*\{[\s\S]*?\.trace-journal-shelf\s*\{[^}]*max-width:\s*calc\(100% - 58px\)/);
+});
+
+test("hides and restores Workouts while keeping Settings permanently accessible", () => {
+  const { rerender } = render(
+    <HomePage
+      {...baseProps}
+      homeVisibility={{ workouts: false }}
+      memories={[]}
+      trophyEntries={[]}
+    />
+  );
+  expect(screen.queryByRole("button", { name: "Workouts" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+
+  rerender(
+    <HomePage
+      {...baseProps}
+      homeVisibility={{ workouts: true }}
+      memories={[]}
+      trophyEntries={[]}
+    />
+  );
+  expect(screen.getByRole("button", { name: "Workouts" })).toBeInTheDocument();
+});
+
+test("multiple hidden modules remove empty groups and let remaining buttons reflow", () => {
+  render(
+    <HomePage
+      {...baseProps}
+      homeVisibility={{
+        schedule: false,
+        nutrition: false,
+        health: false,
+        workouts: false,
+        protocols: false,
+        journal: false,
+        trophyCase: false,
+      }}
+      memories={[]}
+      trophyEntries={[]}
+    />
+  );
+
+  const navigation = screen.getByRole("navigation", { name: "Trace features" });
+  expect(within(navigation).getAllByRole("button").map((button) => button.textContent.trim()))
+    .toEqual(["Add Memory", "Medications & Supplements"]);
+  expect(navigation.querySelector(".trace-feature-navigation__core")).not.toBeInTheDocument();
+  expect(screen.queryByTestId("story-achievements-actions")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Settings" })).toBeInTheDocument();
+  expect(readFileSync(require.resolve("../index.css"), "utf8"))
+    .toMatch(/\.trace-feature-navigation__secondary\s*\{[^}]*repeat\(auto-fit, minmax\(220px, 1fr\)\)/s);
 });
 
 const memories = [

@@ -1995,6 +1995,7 @@ function App() {
           medicationEntries={medicationEntries}
           journalEntries={journalEntries}
           lifeCurrentThemeId={appSettings.lifeCurrentThemeId}
+          homeVisibility={appSettings.homeVisibility}
           addTrophyCaseEntry={addTrophyCaseEntry}
           memoryAchievementSuggestion={memoryAchievementSuggestion}
           dismissMemoryAchievementSuggestion={() => setMemoryAchievementSuggestion(null)}

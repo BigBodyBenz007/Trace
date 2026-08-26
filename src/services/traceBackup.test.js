@@ -8,6 +8,7 @@ import {
   validateTraceBackup,
 } from "./traceBackup";
 import { readAppSettings } from "./appSettings";
+import { DEFAULT_HOME_VISIBILITY } from "./homeModules";
 import { createUserFood } from "./userFoodCatalog";
 import { createWorkoutDraftFromPlannedWorkout } from "./workoutDraft";
 import { createDailyAction, emptyDailyActionCollection } from "./dailyAction";
@@ -379,7 +380,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1", sodium: 640 }]);
   expect(JSON.parse(storage.value("nutritionGoals"))).toEqual({ calories: 2000, sodium: 2300 });
   expect(JSON.parse(storage.value("healthMeasurementEntries"))).toEqual([{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }]);
-  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 1, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "river" });
+  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 2, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "river", homeVisibility: DEFAULT_HOME_VISIBILITY });
   expect(JSON.parse(storage.value("workoutEntries"))).toEqual([workoutWithDrops]);
   expect(JSON.parse(storage.value("medicationEntries"))).toEqual([{ id: "dose-1" }]);
   expect(JSON.parse(storage.value("protocols"))).toEqual([{ id: "protocol-1" }]);
@@ -603,9 +604,10 @@ test("legacy and invalid backup theme values safely fall back to River without c
     });
     const validated = validateTraceBackup(value).backup;
     expect(validated.data.structured.appSettings).toEqual({
-      schemaVersion: 1,
+      schemaVersion: 2,
       units: { weight: "kg", height: "cm", circumference: "cm" },
       lifeCurrentThemeId: "river",
+      homeVisibility: DEFAULT_HOME_VISIBILITY,
     });
 
     const storage = makeStorage();
@@ -619,6 +621,57 @@ test("legacy and invalid backup theme values safely fall back to River without c
       { id: "kept-memory", date: "2026-01-01", images: [] },
     ]);
   }
+});
+
+test("backup export and restore retain Home visibility settings", async () => {
+  const homeVisibility = {
+    ...DEFAULT_HOME_VISIBILITY,
+    workouts: false,
+    protocols: false,
+  };
+  const source = makeStorage({
+    appSettings: JSON.stringify({
+      schemaVersion: 2,
+      units: { weight: "lb", height: "ft-in", circumference: "in" },
+      lifeCurrentThemeId: "river",
+      homeVisibility,
+    }),
+  });
+  const value = await createTraceBackup({
+    storage: source,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(value.data.structured.appSettings.homeVisibility).toEqual(homeVisibility);
+
+  const restored = makeStorage();
+  await restoreTraceBackup(value, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(readAppSettings(restored).homeVisibility).toEqual(homeVisibility);
+});
+
+test("older backups without Home visibility restore with every module visible", async () => {
+  const value = backup({
+    data: {
+      structured: emptyStructured({
+        appSettings: {
+          schemaVersion: 1,
+          units: { weight: "kg", height: "cm", circumference: "cm" },
+          lifeCurrentThemeId: "river",
+        },
+      }),
+      photos: [],
+    },
+  });
+  const restored = makeStorage();
+  await restoreTraceBackup(value, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(readAppSettings(restored).homeVisibility).toEqual(DEFAULT_HOME_VISIBILITY);
 });
 
 test("restores Journal entries and accepts older backups with no Journal collection", async () => {

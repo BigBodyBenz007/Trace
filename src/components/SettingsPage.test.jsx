@@ -82,7 +82,12 @@ test("shows transient confirmation only after Settings save succeeds", () => {
   const updateSettings = jest.fn(() => true);
   const { rerender } = render(<SettingsPage settings={DEFAULT_APP_SETTINGS} updateSettings={updateSettings} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
   fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
-  expect(screen.getByRole("status")).toHaveTextContent("Settings saved");
+  const confirmation = screen.getByRole("status");
+  expect(confirmation).toHaveTextContent("Settings saved");
+  expect(confirmation).toHaveClass("trace-save-confirmation");
+  expect(confirmation).toHaveAttribute("data-placement", "viewport-edge");
+  expect(confirmation).toHaveStyle({ position: "fixed" });
+  expect(confirmation).toHaveAttribute("data-testid", "save-confirmation");
   expect(updateSettings).toHaveBeenCalledTimes(1);
   act(() => jest.advanceTimersByTime(2200));
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
@@ -118,4 +123,46 @@ test("offers one responsive Backup & Restore entry and opens it from Settings", 
   } finally {
     if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
   }
+});
+
+test("offers accessible Home visibility switches and saves reversible choices", () => {
+  const updateSettings = jest.fn(() => true);
+  const { rerender } = render(
+    <SettingsPage
+      settings={DEFAULT_APP_SETTINGS}
+      updateSettings={updateSettings}
+      onBack={jest.fn()}
+      buttonStyle={{}}
+      containerStyle={{}}
+    />
+  );
+
+  expect(screen.getByRole("heading", { name: "Customize Home" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Make Trace yours" })).toBeInTheDocument();
+  expect(screen.getByText(/Hiding a tool won't delete your information/)).toBeInTheDocument();
+  expect(screen.getAllByRole("switch")).toHaveLength(8);
+  const workouts = screen.getByRole("switch", { name: "Show Workouts on Home" });
+  expect(workouts).toBeChecked();
+  fireEvent.click(workouts);
+  expect(updateSettings).toHaveBeenLastCalledWith({
+    ...DEFAULT_APP_SETTINGS,
+    homeVisibility: { ...DEFAULT_APP_SETTINGS.homeVisibility, workouts: false },
+  });
+
+  rerender(
+    <SettingsPage
+      settings={{
+        ...DEFAULT_APP_SETTINGS,
+        homeVisibility: { ...DEFAULT_APP_SETTINGS.homeVisibility, workouts: false },
+      }}
+      updateSettings={updateSettings}
+      onBack={jest.fn()}
+      buttonStyle={{}}
+      containerStyle={{}}
+    />
+  );
+  expect(screen.getByRole("switch", { name: "Show Workouts on Home" })).not.toBeChecked();
+  expect(screen.getByText("Hidden").closest("label")).toHaveAttribute("data-visible", "false");
+  fireEvent.click(screen.getByRole("switch", { name: "Show Workouts on Home" }));
+  expect(updateSettings).toHaveBeenLastCalledWith(DEFAULT_APP_SETTINGS);
 });
