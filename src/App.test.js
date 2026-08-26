@@ -3419,6 +3419,123 @@ test("workout photo blobs stay in IndexedDB references and are cleaned up with o
   expect(deletePhotos).toHaveBeenCalledWith(database, [stored.photos[0]]);
 });
 
+test("Trophy Case View Workout opens the exact full completed workout and returns to the originating trophy", () => {
+  const linkedWorkout = {
+    id: "workout-trophy-source",
+    schemaVersion: 1,
+    type: "strength",
+    title: "Trophy Push Day",
+    occurredAt: "2026-08-18T18:30:00.000Z",
+    notes: "Complete trophy workout notes",
+    exercises: [
+      {
+        id: "exercise-bench",
+        name: "Bench Press",
+        exerciseId: "trace:bench-press",
+        notes: "Bench setup notes",
+        sets: [
+          {
+            id: "set-trophy-source",
+            reps: 5,
+            load: { mode: "external", amount: 225, unit: "lb" },
+            notes: "Paused trophy set",
+          },
+        ],
+      },
+      {
+        id: "exercise-row",
+        name: "Chest-Supported Row",
+        sets: [
+          {
+            id: "set-row",
+            reps: 10,
+            load: { mode: "external", amount: 80, unit: "lb" },
+            notes: "Controlled lowering",
+          },
+        ],
+      },
+    ],
+    createdAt: "2026-08-18T19:30:00.000Z",
+    updatedAt: "2026-08-18T19:30:00.000Z",
+  };
+  const otherWorkout = {
+    ...linkedWorkout,
+    id: "workout-other",
+    title: "Unrelated Pull Day",
+    occurredAt: "2026-08-17T18:30:00.000Z",
+    exercises: [{
+      id: "exercise-other",
+      name: "Pull-Up",
+      sets: [{ id: "set-other", reps: 8, load: { mode: "bodyweight" }, notes: "" }],
+    }],
+  };
+  const trophy = {
+    schemaVersion: 1,
+    id: "trophy-linked-workout",
+    sourceType: "workout-pr",
+    sourceKey: "workout-pr|trace|bench-press|heaviest-weight|workout-trophy-source|set-trophy-source",
+    sourceId: linkedWorkout.id,
+    sourceRecordType: "heaviest-weight",
+    title: "Bench Press",
+    description: "Heaviest weight · 225 lb",
+    achievedAt: linkedWorkout.occurredAt,
+    addedToTrophyCaseAt: "2026-08-19T12:00:00.000Z",
+    sourceSnapshot: {
+      exerciseIdentityKey: "trace|trace:bench-press",
+      exerciseName: "Bench Press",
+      recordLabel: "Heaviest weight",
+      recordValue: "225 lb",
+      workoutId: linkedWorkout.id,
+      workoutTitle: linkedWorkout.title,
+      performanceId: `${linkedWorkout.id}|exercise-bench|0`,
+      setId: "set-trophy-source",
+    },
+    metadata: { exerciseSource: "trace" },
+  };
+  localStorage.setItem("workoutEntries", JSON.stringify([otherWorkout, linkedWorkout]));
+  localStorage.setItem("trophyCaseEntries", JSON.stringify([trophy]));
+
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Open Trophy Case" }));
+  fireEvent.click(screen.getByRole("button", { name: /Open workout achievement: Bench Press/i }));
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "View Workout" }));
+
+  const linkedCard = screen.getByRole("heading", { name: "Trophy Push Day" }).closest("article");
+  expect(within(linkedCard).getByRole("button", { name: "Collapse workout: Trophy Push Day" }))
+    .toHaveAttribute("aria-expanded", "true");
+  expect(linkedCard).toHaveTextContent("Complete trophy workout notes");
+  expect(linkedCard).toHaveTextContent("Bench Press");
+  expect(linkedCard).toHaveTextContent("225 lb");
+  expect(linkedCard).toHaveTextContent("5 reps");
+  expect(linkedCard).toHaveTextContent("Paused trophy set");
+  expect(linkedCard).toHaveTextContent("Chest-Supported Row");
+  expect(linkedCard).toHaveTextContent("Controlled lowering");
+  expect(screen.getByRole("button", { name: "Expand workout: Unrelated Pull Day" }))
+    .toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("region", { name: "Bench Press current records" })).not.toBeInTheDocument();
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "smooth",
+    block: "start",
+  });
+
+  const returnToTrophyCase = within(linkedCard).getByRole("button", {
+    name: "Back to Trophy Case",
+  });
+  const workoutActions = returnToTrophyCase.closest(".trace-workout-history-card__actions");
+  expect(within(workoutActions).getAllByRole("button").map((button) => button.textContent))
+    .toEqual(["Edit", "Delete", "Back to Trophy Case"]);
+  expect(returnToTrophyCase).toBeVisible();
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(returnToTrophyCase);
+  expect(screen.getByRole("heading", { name: "Trophy Case" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Open workout achievement: Bench Press/i })).toHaveFocus();
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "smooth",
+    block: "center",
+  });
+});
+
 test("refreshes a resolvable curated PR after correction and freezes it after source deletion", async () => {
   render(<App />);
   openWorkouts();

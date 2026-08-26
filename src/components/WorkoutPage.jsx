@@ -271,6 +271,7 @@ function WorkoutPage({
   function returnToWorkoutOrigin() {
     if (workoutOriginPageRef.current === "calendar") onReturnToCalendar();
     else if (workoutOriginPageRef.current === "today") onReturnToToday();
+    else if (workoutOriginPageRef.current === "trophy-case" && onReturnToTrophyCase) onReturnToTrophyCase();
     else onBack();
   }
 
@@ -400,7 +401,7 @@ function WorkoutPage({
     const frameId = window.requestAnimationFrame(() => {
       workoutEntryRefs.current.get(workoutEntryTargetId)?.scrollIntoView?.({
         behavior: "smooth",
-        block: "center",
+        block: workoutOriginPageRef.current === "trophy-case" ? "start" : "center",
       });
       onWorkoutEntryTargetShown();
     });
@@ -1055,13 +1056,15 @@ function WorkoutPage({
   }
 
   const isPlannedRoadmap = editingEntryId === null && Boolean(plannedWorkoutIdRef.current);
-  const returnsToSchedule = Boolean(workoutOriginPageRef.current);
-  const scheduleReturnLabel = workoutOriginPageRef.current === "calendar"
+  const returnsToOrigin = Boolean(workoutOriginPageRef.current);
+  const originReturnLabel = workoutOriginPageRef.current === "calendar"
     ? "Back to Calendar"
-    : "Back to Today's Schedule";
+    : workoutOriginPageRef.current === "trophy-case"
+      ? "Back to Trophy Case"
+      : "Back to Today's Schedule";
   const volume = isPlannedRoadmap ? roadmapVolume(exercises) : null;
-  const leaveWorkout = returnsToSchedule ? returnToWorkoutOrigin : onBack;
-  const leaveWorkoutLabel = returnsToSchedule ? scheduleReturnLabel : "Back to Timeline";
+  const leaveWorkout = returnsToOrigin ? returnToWorkoutOrigin : onBack;
+  const leaveWorkoutLabel = returnsToOrigin ? originReturnLabel : "Back to Timeline";
 
   return (
     <div className="trace-feature-page trace-feature-page--workouts" ref={pageTopRef} data-testid="workout-page" style={containerStyle}>
@@ -1121,7 +1124,7 @@ function WorkoutPage({
       </header>
       <nav className="trace-focused-navigation" aria-label="Focused event navigation">
         <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...backButtonStyle, marginTop: 0 }}>Back to Timeline</button>
-        {returnsToSchedule && <button className="trace-action trace-action--secondary" type="button" onClick={returnToWorkoutOrigin} style={{ ...backButtonStyle, marginTop: 0 }}>{scheduleReturnLabel}</button>}
+        {returnsToOrigin && <button className="trace-action trace-action--secondary" type="button" onClick={returnToWorkoutOrigin} style={{ ...backButtonStyle, marginTop: 0 }}>{originReturnLabel}</button>}
       </nav>
 
       {isPlannedRoadmap && (
@@ -1639,6 +1642,9 @@ function WorkoutPage({
             {sortedEntries.map((entry) => {
               const expanded = expandedWorkoutEntryIds.has(entry.id);
               const detailId = `workout-history-details-${entry.id}`;
+              const isTrophyOriginTarget = workoutOriginPageRef.current === "trophy-case"
+                && activeWorkoutEntryId === entry.id
+                && onReturnToTrophyCase;
               return (
                 <article
                   className="trace-data-card trace-workout-history-card"
@@ -1648,7 +1654,7 @@ function WorkoutPage({
                     else workoutEntryRefs.current.delete(entry.id);
                   }}
                   aria-current={activeWorkoutEntryId === entry.id ? "true" : undefined}
-                  style={{ background: "#1f2937", borderRadius: "12px", maxWidth: "100%", overflow: "hidden", overflowWrap: "anywhere", padding: "18px", width: "100%" }}
+                  style={{ background: "#1f2937", borderRadius: "12px", maxWidth: "100%", overflow: "hidden", overflowWrap: "anywhere", padding: "18px", ...(isTrophyOriginTarget ? { scrollMarginTop: "calc(env(safe-area-inset-top, 0px) + 24px)" } : {}), width: "100%" }}
                 >
                 <div className="trace-workout-history-card__summary">
                   <div style={{ minWidth: 0 }}>
@@ -1690,9 +1696,19 @@ function WorkoutPage({
                     </ol>
                   </div>
                 ))}
-                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "16px" }}>
+                <div className="trace-workout-history-card__actions" style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "16px" }}>
                   <button className="trace-action trace-action--secondary" type="button" onClick={() => editWorkout(entry)} style={smallButtonStyle}>Edit</button>
                   <button className="trace-action trace-action--danger" type="button" onClick={() => removeWorkout(entry.id)} style={{ ...smallButtonStyle, backgroundColor: "#b91c1c" }}>Delete</button>
+                  {isTrophyOriginTarget && (
+                    <button
+                      className="trace-action trace-action--secondary"
+                      type="button"
+                      onClick={returnToWorkoutOrigin}
+                      style={{ ...smallButtonStyle, backgroundColor: "#666" }}
+                    >
+                      Back to Trophy Case
+                    </button>
+                  )}
                 </div>
                     </div>
                   )}

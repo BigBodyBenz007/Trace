@@ -1064,6 +1064,48 @@ test("opening and closing a Workout History card reveals and hides its existing 
   expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
 });
 
+test("the linked completed workout shows a visible Trophy Case return only for Trophy Case origin", () => {
+  const target = entry({ id: "workout-trophy-target", title: "Trophy Workout" });
+  const onReturnToTrophyCase = jest.fn();
+  const trophyView = render(
+    <WorkoutPage
+      {...renderPageProps({
+        navigationOriginPage: "trophy-case",
+        onReturnToTrophyCase,
+        workoutEntries: [target],
+        workoutEntryTargetId: target.id,
+      })}
+    />
+  );
+
+  const trophyCard = screen.getByText(target.title).closest("article");
+  expect(trophyCard.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "smooth",
+    block: "start",
+  });
+  expect(trophyCard).toHaveStyle({
+    scrollMarginTop: "calc(env(safe-area-inset-top, 0px) + 24px)",
+  });
+  const trophyReturn = within(trophyCard).getByRole("button", {
+    name: "Back to Trophy Case",
+  });
+  const actionRow = trophyReturn.closest(".trace-workout-history-card__actions");
+  expect(within(actionRow).getAllByRole("button").map((button) => button.textContent))
+    .toEqual(["Edit", "Delete", "Back to Trophy Case"]);
+  expect(trophyReturn).toBeVisible();
+  fireEvent.click(trophyReturn);
+  expect(onReturnToTrophyCase).toHaveBeenCalledTimes(1);
+
+  trophyView.unmount();
+  renderPage({ workoutEntries: [target] });
+  const normalCard = expandWorkout(target.title);
+  expect(normalCard).not.toHaveStyle({
+    scrollMarginTop: "calc(env(safe-area-inset-top, 0px) + 24px)",
+  });
+  expect(within(normalCard).queryByRole("button", { name: "Back to Trophy Case" }))
+    .not.toBeInTheDocument();
+});
+
 test("multiple Workout History records remain independently usable", () => {
   const legDay = entry({
     id: "workout-2",

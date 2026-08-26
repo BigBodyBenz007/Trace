@@ -1910,12 +1910,22 @@ function App() {
     if (!target) return false;
     setTrophySourceNavigation({ originTrophyId: entry.id, sourceType: entry.sourceType, target });
     skipNextPageTopScrollRef.current = true;
-    setPage(entry.sourceType === "memory" ? "home" : "workouts");
+    if (entry.sourceType === "memory") {
+      setPage("home");
+    } else {
+      setWorkoutEntryTargetId(target.workoutId);
+      setWorkoutOriginPage("trophy-case");
+      setWorkoutOriginCalendar(null);
+      setPage("workouts");
+    }
     return true;
   }
 
   function returnToTrophyCase() {
     skipNextPageTopScrollRef.current = true;
+    setWorkoutEntryTargetId(null);
+    setWorkoutOriginPage(null);
+    setWorkoutOriginCalendar(null);
     setPage("trophy-case");
   }
 
@@ -2144,7 +2154,6 @@ function App() {
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}
-          trophySourceTarget={trophySourceNavigation?.sourceType === "workout-pr" ? trophySourceNavigation.target : null}
           onReturnToTrophyCase={returnToTrophyCase}
           workoutEntryTargetId={workoutEntryTargetId}
           onWorkoutEntryTargetShown={() => setWorkoutEntryTargetId(null)}
