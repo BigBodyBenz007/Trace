@@ -156,6 +156,14 @@ function completedSetDescription(set) {
   return `${set.setType === "warm-up" ? "Warm-up" : "Working"} · ${description}`;
 }
 
+function countCompletedWorkoutSets(entry) {
+  const exercises = Array.isArray(entry?.exercises) ? entry.exercises : [];
+  return exercises.reduce((total, exercise) => {
+    const sets = Array.isArray(exercise?.sets) ? exercise.sets : [];
+    return total + sets.length;
+  }, 0);
+}
+
 function CompletedDropSegments({ drops }) {
   if (!Array.isArray(drops) || drops.length === 0) return null;
   return (
@@ -1642,6 +1650,7 @@ function WorkoutPage({
             {sortedEntries.map((entry) => {
               const expanded = expandedWorkoutEntryIds.has(entry.id);
               const detailId = `workout-history-details-${entry.id}`;
+              const totalSets = countCompletedWorkoutSets(entry);
               const isTrophyOriginTarget = workoutOriginPageRef.current === "trophy-case"
                 && activeWorkoutEntryId === entry.id
                 && onReturnToTrophyCase;
@@ -1663,6 +1672,9 @@ function WorkoutPage({
                       <time dateTime={entry.occurredAt}>
                         {new Date(entry.occurredAt).toLocaleString()}
                       </time>
+                    </p>
+                    <p style={{ color: "#94a3b8", fontSize: "0.9rem", margin: "4px 0 0" }}>
+                      {totalSets} {totalSets === 1 ? "set" : "sets"}
                     </p>
                   </div>
                   <button

@@ -1037,9 +1037,76 @@ test("Workout History cards start collapsed with their title and date visible", 
   });
   expect(toggle).toHaveAttribute("aria-expanded", "false");
   expect(within(card).getByText(new Date(saved.occurredAt).toLocaleString())).toBeInTheDocument();
+  expect(within(card).getByText("1 set")).toBeInTheDocument();
   expect(within(card).queryByText("Incline Press")).not.toBeInTheDocument();
   expect(within(card).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
   expect(within(card).queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+});
+
+test("collapsed Workout History cards show total set counts across multiple exercises", () => {
+  const multiSetWorkout = entry({
+    id: "workout-multi-sets",
+    title: "Back to Back Day",
+    exercises: [
+      {
+        id: "exercise-a",
+        name: "Incline Press",
+        sets: [
+          {
+            id: "set-a-1",
+            reps: 10,
+            load: { mode: "external", amount: 70, unit: "lb" },
+          },
+          {
+            id: "set-a-2",
+            reps: 8,
+            load: { mode: "external", amount: 80, unit: "lb" },
+          },
+        ],
+      },
+      {
+        id: "exercise-b",
+        name: "Leg Press",
+        sets: [
+          {
+            id: "set-b-1",
+            reps: 12,
+            load: { mode: "external", amount: 200, unit: "lb" },
+          },
+          {
+            id: "set-b-2",
+            reps: 12,
+            load: { mode: "external", amount: 190, unit: "lb" },
+          },
+          {
+            id: "set-b-3",
+            reps: 12,
+            load: { mode: "external", amount: 180, unit: "lb" },
+          },
+        ],
+      },
+    ],
+  });
+  renderPage({ workoutEntries: [multiSetWorkout] });
+
+  const card = screen.getByText(multiSetWorkout.title).closest("article");
+  expect(within(card).getByText("5 sets")).toBeInTheDocument();
+});
+
+test("collapsed Workout History handles missing/malformed set data as zero total sets", () => {
+  const noSetWorkout = entry({
+    id: "workout-no-sets",
+    title: "Recovery Day",
+    exercises: [
+      { id: "exercise-empty", name: "Hold", sets: null },
+      { id: "exercise-bad", name: "Unscored", sets: undefined },
+      { id: "exercise-empty-array", name: "No-op", sets: [] },
+    ],
+  });
+  renderPage({ workoutEntries: [noSetWorkout] });
+
+  const card = screen.getByText(noSetWorkout.title).closest("article");
+  expect(within(card).getByText("0 sets")).toBeInTheDocument();
 });
 
 test("opening and closing a Workout History card reveals and hides its existing details and actions", () => {
