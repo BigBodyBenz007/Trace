@@ -2000,6 +2000,7 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
 test.each([
   ["Haunted Forest", "haunted-forest"],
   ["Gnome Village", "gnome-village"],
+  ["Desert Journey", "desert-journey"],
 ])("%s Life Current theme selection persists across reload and switches back to River", async (themeName, themeId) => {
   localStorage.setItem("nutritionEntries", JSON.stringify([
     { id: "theme-activity", loggedAt: "2026-05-18T12:00:00" },
@@ -2685,6 +2686,7 @@ test.each([
   ["river", "river-current", "Close Edit Memory"],
   ["haunted-forest", "forest-path", "Close Edit Memory"],
   ["gnome-village", "gnome-village", "Close Edit Memory"],
+  ["desert-journey", "desert-journey", "Close Edit Memory"],
   ["river", "river-current", "Cancel"],
 ])("Edit Cancel retains four-photo Detail and restores the exact original %s timeline position (%s) via %s", async (themeId, rendererId, cancelControlName) => {
   const storedMemories = [

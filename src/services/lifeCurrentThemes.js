@@ -67,6 +67,28 @@ export const LIFE_CURRENT_THEMES = Object.freeze([
       }),
     }),
   }),
+  Object.freeze({
+    id: "desert-journey",
+    name: "Desert Journey",
+    description: "One connected golden-ochre road through an ancient desert world.",
+    presentation: Object.freeze({
+      renderer: "desert-journey",
+      className: "life-current-theme--desert-journey",
+      colors: Object.freeze({
+        year: "#fff1d1",
+        month: "#e5c998",
+        fallback: "#8c6845",
+        stem: "#8c6845",
+        node: "#e7b768",
+        selectedNode: "#ffe1a3",
+        nodeBorder: "#34251d",
+        nodeGlow: "rgba(231, 183, 104, 0.76)",
+        card: "#3a281f",
+        selectedCardRing: "#e7b768",
+        selectedCardGlow: "rgba(231, 183, 104, 0.2)",
+      }),
+    }),
+  }),
 ]);
 
 const THEMES_BY_ID = new Map(LIFE_CURRENT_THEMES.map((theme) => [theme.id, theme]));

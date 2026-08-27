@@ -59,7 +59,7 @@ test("migrates old settings to visible defaults and persists Home visibility acr
   });
 });
 
-test.each(["haunted-forest", "gnome-village"])(
+test.each(["haunted-forest", "gnome-village", "desert-journey"])(
   "saving an unrelated unit preference preserves the selected %s Life Current theme",
   (lifeCurrentThemeId) => {
     const storage = {

@@ -1,4 +1,5 @@
 import React from "react";
+import DesertJourneyCurrent from "./DesertJourneyCurrent";
 import GnomeCurrent from "./GnomeCurrent";
 import HauntedForestCurrent from "./HauntedForestCurrent";
 import RiverCurrent from "./RiverCurrent";
@@ -56,6 +57,17 @@ export function LifeCurrentScenery({
   if (theme.presentation.renderer === "gnome-village") {
     return (
       <GnomeCurrent
+        active={active}
+        points={points}
+        themeId={theme.id}
+        viewportRef={viewportRef}
+      />
+    );
+  }
+
+  if (theme.presentation.renderer === "desert-journey") {
+    return (
+      <DesertJourneyCurrent
         active={active}
         points={points}
         themeId={theme.id}

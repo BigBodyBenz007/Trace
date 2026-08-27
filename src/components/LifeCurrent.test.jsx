@@ -354,6 +354,131 @@ test("Gnome Village reveals decoded images and safely falls back to River on fai
   expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "gnome-village");
 });
 
+test("Desert Journey renders one opener followed by exact baked 520px scenes", () => {
+  const currentLayout = layout([
+    point("2020-01-01", 0, 0.1, 0.2),
+    point("2026-01-01", 1, 1, 4),
+  ]);
+  const before = JSON.parse(JSON.stringify(currentLayout));
+  render(<RiverHarness
+    points={currentLayout.points}
+    themeId="desert-journey"
+    viewportWidth={390}
+  />);
+  const desert = screen.getByTestId("life-current");
+
+  expect(desert).toHaveAttribute("data-theme-id", "desert-journey");
+  expect(desert).toHaveAttribute("data-life-current-renderer", "desert-journey");
+  expect(desert).toHaveAttribute("data-desert-catalog", "baked-continuous-v2");
+  expect(desert).toHaveAttribute("data-current-desert-region", "sphinx-opener");
+  expect(desert).toHaveAttribute("data-current-desert-section", "sphinx-opener");
+  expect(desert).toHaveAttribute("data-desert-opener-count", "1");
+  const scenery = screen.getByTestId("life-current-desert-scenery");
+  expect(scenery.querySelector("svg")).not.toBeInTheDocument();
+  const sections = [...scenery.querySelectorAll("[data-desert-section]")];
+  const opener = scenery.querySelector('[data-desert-section="sphinx-opener"]');
+  expect(sections.map((section) => section.getAttribute("data-desert-section")))
+    .toEqual(["sphinx-opener", "oasis", "solo-traveler"]);
+  expect(scenery.querySelectorAll('[data-desert-section="sphinx-opener"]')).toHaveLength(1);
+  sections.forEach((section, index) => {
+    expect(section.style.getPropertyValue("--desert-section-left"))
+      .toBe(`${index * 520}px`);
+    expect(section.querySelector("img")).toHaveAttribute("width", "1774");
+    expect(section.querySelector("img")).toHaveAttribute("height", "887");
+  });
+  expect(opener.querySelector("img").getAttribute("src"))
+    .toContain("00-sphinx-opener.png");
+  expect(desert.style.getPropertyValue("--desert-section-width")).toBe("520px");
+  expect(desert.style.getPropertyValue("--desert-scenery-height")).toBe("260px");
+  expect(currentLayout).toEqual(before);
+});
+
+test("Desert Journey tracks timeline scrolling directly while bounding nearby baked scenes", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  window.cancelAnimationFrame = jest.fn();
+  const { unmount } = render(<RiverHarness
+    points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+    themeId="desert-journey"
+    viewportWidth={1000}
+  />);
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const desert = screen.getByTestId("life-current");
+
+  [2500, 3500, 4250, 4800, 5000].forEach((scrollLeft) => {
+    viewport.scrollLeft = scrollLeft;
+    fireEvent.scroll(viewport);
+    act(() => frames.shift()());
+    expect(desert).toHaveAttribute("data-desert-camera-offset", `${scrollLeft.toFixed(2)}`);
+    expect(desert).toHaveAttribute("data-current-desert-region", "baked-scene-cycle");
+    expect(desert.querySelectorAll("[data-desert-section]").length)
+      .toBeLessThanOrEqual(5);
+  });
+
+  expect(Number(desert.getAttribute("data-desert-progress"))).toBeCloseTo(1, 4);
+  expect(desert).toHaveAttribute("data-current-desert-section", "large-caravan");
+  expect(desert.querySelector('[data-desert-section="sphinx-opener"]'))
+    .not.toBeInTheDocument();
+  expect(desert.querySelector('[data-desert-section="vultures"]')).toBeInTheDocument();
+  expect(desert.querySelector('[data-desert-section="oasis"][data-desert-cycle="1"]'))
+    .toBeInTheDocument();
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.cancelAnimationFrame = originalCancelAnimationFrame;
+});
+
+test("Desert Journey uses only full-background images without layered overlay nodes", () => {
+  render(<RiverHarness
+    points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+    themeId="desert-journey"
+    viewportWidth={390}
+  />);
+  const desert = screen.getByTestId("life-current");
+
+  expect(desert.querySelector("picture")).not.toBeInTheDocument();
+  expect(desert.querySelector("[data-desert-overlay]")).not.toBeInTheDocument();
+  expect(desert.querySelector("[data-desert-base]")).not.toBeInTheDocument();
+  expect(desert.querySelectorAll("[data-desert-section] img")).toHaveLength(3);
+  expect([...desert.querySelectorAll("[data-desert-section] img")].map(({ src }) => src))
+    .toEqual([
+      expect.stringContaining("00-sphinx-opener.png"),
+      expect.stringContaining("01-oasis.png"),
+      expect.stringContaining("02-solo-traveler.png"),
+    ]);
+});
+
+test("Desert Journey decodes baked scenes and safely falls back to River on failure", async () => {
+  render(<RiverHarness
+    points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+    themeId="desert-journey"
+    viewportWidth={390}
+  />);
+  const desert = screen.getByTestId("life-current");
+  const opener = desert.querySelector('[data-desert-section="sphinx-opener"]');
+  const oasis = desert.querySelector('[data-desert-section="oasis"]');
+  expect(opener).toHaveAttribute("data-image-ready", "false");
+  expect(oasis).toHaveAttribute("data-image-ready", "false");
+
+  await act(async () => {
+    fireEvent.load(opener.querySelector("img"));
+    fireEvent.load(oasis.querySelector("img"));
+    await Promise.resolve();
+  });
+  expect(opener).toHaveAttribute("data-image-ready", "true");
+  expect(oasis).toHaveAttribute("data-image-ready", "true");
+
+  fireEvent.error(oasis.querySelector("img"));
+  expect(screen.getByTestId("life-current"))
+    .toHaveAttribute("data-life-current-renderer", "river-current");
+  expect(screen.getByTestId("life-current"))
+    .toHaveAttribute("data-theme-id", "desert-journey");
+});
+
 test("invalid theme IDs safely render River", () => {
   render(<RiverHarness points={[point("2026-01-01", 0)]} themeId="lost-world" />);
   expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "river");

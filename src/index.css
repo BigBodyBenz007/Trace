@@ -1276,6 +1276,12 @@ code {
     linear-gradient(145deg, #61734a, #304f3f 42%, #6f4c32 43% 64%, #c1975c 65% 72%, #253a32 73%);
 }
 
+.life-current-theme-swatch--desert-journey {
+  background:
+    linear-gradient(101deg, transparent 43%, #e5bd79 45% 56%, transparent 58%),
+    linear-gradient(145deg, #e7b066, #9c5937 48%, #392744 72%, #172245);
+}
+
 .life-current-theme-option__copy,
 .life-current-theme-option__heading,
 .life-current-theme-option__description {
@@ -1604,6 +1610,55 @@ code {
   border-radius: 14px;
   outline: 1px solid #4e5d46;
   outline-offset: -1px;
+}
+
+.life-current-theme--desert-journey {
+  background: #6f3d20;
+  border-radius: 0;
+  outline: none;
+}
+
+.desert-current-scene {
+  background: #9a5b2d;
+  height: var(--desert-scenery-height, 260px);
+}
+
+.desert-current-scene::after {
+  content: none;
+}
+
+.desert-current-track {
+  height: var(--desert-scenery-height, 260px);
+  inset: 0;
+  position: absolute;
+}
+
+.desert-current-section {
+  flex-shrink: 0;
+  height: var(--desert-scenery-height, 260px);
+  left: var(--desert-section-left);
+  margin: 0;
+  opacity: 0;
+  padding: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  transform: translate3d(var(--desert-offset), 0, 0);
+  width: var(--desert-section-width, 520px);
+  will-change: transform;
+}
+
+.desert-current-section[data-image-ready="true"] {
+  opacity: 1;
+}
+
+.desert-current-section img {
+  display: block;
+  height: var(--desert-scenery-height, 260px);
+  margin: 0;
+  max-width: none;
+  padding: 0;
+  width: auto;
 }
 
 .gnome-current-scene {

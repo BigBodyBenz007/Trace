@@ -20,9 +20,12 @@ test("renders compact global unit controls and saves each preference", () => {
   expect(screen.getByRole("radio", { name: /River/ })).toBeChecked();
   expect(screen.getByRole("radio", { name: /Haunted Forest/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Gnome Village/ })).not.toBeChecked();
+  expect(screen.getByRole("radio", { name: /Desert Journey/ })).not.toBeChecked();
   expect(screen.getByText("A flowing current through your timeline.")).toBeInTheDocument();
   expect(screen.getByText("A winding path through a darker world.")).toBeInTheDocument();
   expect(screen.getByText("A storybook path through a lived-in woodland village.")).toBeInTheDocument();
+  expect(screen.getByText("One connected golden-ochre road through an ancient desert world."))
+    .toBeInTheDocument();
   expect(screen.getByText("✓ Selected")).toBeInTheDocument();
   fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
   expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ units: expect.objectContaining({ weight: "kg" }) }));
@@ -74,6 +77,27 @@ test("selects Gnome Village through the shared theme control", () => {
   expect(updateSettings).toHaveBeenLastCalledWith({
     ...DEFAULT_APP_SETTINGS,
     lifeCurrentThemeId: "gnome-village",
+  });
+});
+
+test("selects Desert Journey through the shared theme control", () => {
+  const updateSettings = jest.fn(() => true);
+  render(
+    <SettingsPage
+      settings={DEFAULT_APP_SETTINGS}
+      updateSettings={updateSettings}
+      onBack={jest.fn()}
+      buttonStyle={{}}
+      containerStyle={{}}
+    />
+  );
+
+  const desert = screen.getByRole("radio", { name: /Desert Journey/ });
+  expect(desert).toHaveAttribute("aria-describedby", "life-current-theme-desert-journey-description");
+  fireEvent.click(desert);
+  expect(updateSettings).toHaveBeenLastCalledWith({
+    ...DEFAULT_APP_SETTINGS,
+    lifeCurrentThemeId: "desert-journey",
   });
 });
 
