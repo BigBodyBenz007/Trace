@@ -129,12 +129,17 @@
   white-space: nowrap;
 }
 
+.trace-food-result__caffeine,
 .trace-food-result__completeness,
 .trace-food-result__notes {
   color: #93a4b5;
   font-size: 0.72rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
+}
+
+.trace-food-result__caffeine strong {
+  color: #d1d5db;
 }
 
 @media (max-width: 430px) {

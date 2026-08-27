@@ -336,6 +336,51 @@ test("selecting a search result populates the existing form", () => {
   expect(form.getByText("One serving: 1 medium banana (118 g)")).toBeInTheDocument();
 });
 
+test("selecting and logging a branded drink preserves package, caffeine, sugars, and unknowns", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "monster ultra zero" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Monster Energy.*Ultra Zero/i }));
+
+  const form = entryForm();
+  expect(form.getByLabelText("Food / meal name")).toHaveValue("Ultra Zero");
+  expect(form.getByText("One serving: 16 fl oz can")).toBeInTheDocument();
+  expect(form.getByText("Packaged drink: Monster Energy")).toBeInTheDocument();
+  expect(form.getByText("Caffeine per serving: 150 mg")).toBeInTheDocument();
+  expect(form.getByLabelText("Calories")).toHaveValue(10);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(null);
+  expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(null);
+
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "2" } });
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry).toHaveBeenCalledWith(expect.objectContaining({
+    name: "Ultra Zero",
+    calories: 20,
+    protein: null,
+    carbohydrates: null,
+    totalSugar: 0,
+    addedSugar: null,
+    portion: expect.objectContaining({ amount: 2 }),
+    foodReference: expect.objectContaining({
+      sourceType: "beverage",
+      brand: "Monster Energy",
+      category: "energy",
+      packageSize: "16 fl oz can",
+      caffeineMg: 150,
+      modified: false,
+    }),
+    nutritionBasis: expect.objectContaining({
+      calories: 10,
+      protein: null,
+      carbohydrates: null,
+      totalSugar: 0,
+      addedSugar: null,
+    }),
+  }));
+});
+
 test("shows USDA grocery source, serving, and unknown nutrients for raw chicken breast strips", () => {
   const props = renderNutritionPage();
   fireEvent.change(screen.getByLabelText("Food search"), {

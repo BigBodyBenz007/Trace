@@ -50,6 +50,13 @@ function getEntrySourceDetails(foodReference) {
       foodReference.brand,
     ].filter(Boolean);
   }
+  if (foodReference?.sourceType === "beverage") {
+    return [
+      "Packaged drink",
+      foodReference.brand,
+      foodReference.packageSize,
+    ].filter(Boolean);
+  }
   if (foodReference) return ["Trace starter"];
   return ["User-entered"];
 }
@@ -393,9 +400,18 @@ function NutritionPage({
     }
 
     const completenessNutrition = entryNutritionBasis || enteredNutrition;
+    const scaledCatalogNutrition = entryNutritionBasis
+      ? scaleNutrition(entryNutritionBasis, isCreatingManualFood ? 1 : servingQuantity)
+      : null;
     const entry = {
       name: name.trim(),
       ...enteredNutrition,
+      ...(scaledCatalogNutrition && Object.prototype.hasOwnProperty.call(scaledCatalogNutrition, "totalSugar")
+        ? {
+            totalSugar: scaledCatalogNutrition.totalSugar,
+            addedSugar: scaledCatalogNutrition.addedSugar,
+          }
+        : {}),
       loggedAt: new Date(
         `${date || fallbackDateTime.date}T${time || fallbackDateTime.time}`
       ).toISOString(),
@@ -527,6 +543,15 @@ function NutritionPage({
               categoryLabel: food.categoryLabel,
               preparationState: food.preparationState,
               ...(food.brand ? { brand: food.brand } : {}),
+            }
+        : food.sourceType === "beverage"
+          ? {
+              sourceType: "beverage",
+              brand: food.brand,
+              category: food.category,
+              categoryLabel: food.categoryLabel,
+              packageSize: food.beverage.packageSize,
+              caffeineMg: food.beverage.caffeineMg,
             }
         : food.sourceType === "grocery-custom" || food.provenance.source === "user-added"
           ? {
@@ -828,6 +853,18 @@ function NutritionPage({
             >
               One serving: {portionBasis.description}
             </p>
+            {foodReference?.sourceType === "beverage" && (
+              <>
+                <p style={{ color: "#9ca3af", marginBottom: 0, marginTop: "4px" }}>
+                  Packaged drink: {foodReference.brand}
+                </p>
+                {foodReference.caffeineMg !== null && (
+                  <p style={{ color: "#9ca3af", marginBottom: 0, marginTop: "4px" }}>
+                    Caffeine per serving: {foodReference.caffeineMg} mg
+                  </p>
+                )}
+              </>
+            )}
           </div>
         )}
 

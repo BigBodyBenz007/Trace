@@ -340,6 +340,52 @@ test("finds raw chicken breast strips through USDA aliases before restaurant foo
   expect(results.findIndex((food) => food.sourceType === "restaurant")).not.toBe(0);
 });
 
+test("searches branded drinks across Phase 1 categories with tokenized AND matching", () => {
+  expect(searchFoodCatalog("coke zero")[0]).toMatchObject({
+    id: "beverage:coca-cola:zero-sugar-12oz",
+    sourceType: "beverage",
+    brand: "Coca-Cola",
+  });
+  expect(searchFoodCatalog("monster ultra")[0]).toMatchObject({
+    id: "beverage:monster:ultra-zero-16oz",
+    category: "energy",
+  });
+  expect(searchFoodCatalog("gatorade")[0]).toMatchObject({
+    brand: "Gatorade",
+    category: "sports-hydration",
+  });
+  expect(searchFoodCatalog("starbucks frappuccino")[0]).toMatchObject({
+    brand: "Starbucks",
+    category: "ready-to-drink-coffee",
+  });
+  expect(searchFoodCatalog("pure leaf sweet tea")[0]).toMatchObject({
+    id: "beverage:pure-leaf:sweet-tea-18-5oz",
+    category: "tea",
+  });
+});
+
+test("keeps diet and zero-sugar drinks distinct with exact package metadata", () => {
+  const results = searchFoodCatalog("pepsi", [], 20);
+  const diet = results.find(({ id }) => id === "beverage:pepsi:diet-pepsi-20oz");
+  const zero = results.find(({ id }) => id === "beverage:pepsi:zero-sugar-20oz");
+
+  expect(diet).toMatchObject({ name: "Diet Pepsi", serving: { description: "20 fl oz bottle" }, nutrients: { sodium: 60 } });
+  expect(zero).toMatchObject({ name: "Pepsi Zero Sugar", serving: { description: "20 fl oz bottle" }, nutrients: { sodium: 65 } });
+  expect(diet.id).not.toBe(zero.id);
+});
+
+test("preserves optional beverage caffeine and null nutrients in search results", () => {
+  expect(searchFoodCatalog("monster ultra zero")[0]).toMatchObject({
+    nutrients: { protein: null, carbohydrates: null, totalSugar: 0, addedSugar: null },
+    beverage: { caffeineMg: 150 },
+  });
+  expect(searchFoodCatalog("coca cola original")[0]).toMatchObject({
+    id: "beverage:coca-cola:original-20oz",
+    beverage: { caffeineMg: null },
+  });
+  expect(searchFoodCatalog("McNuggets")[0]).toMatchObject({ sourceType: "restaurant" });
+});
+
 test("keeps raw chicken breast searchable and excludes the cooked USDA variant", () => {
   const results = searchFoodCatalog("chicken breast", [], 20);
   const raw = results.find((food) => food.id === "grocery:usda:2646170");

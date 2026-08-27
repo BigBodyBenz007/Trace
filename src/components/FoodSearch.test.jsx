@@ -172,3 +172,23 @@ test("preserves click selection and native keyboard button semantics", () => {
   expect(onSelectFood).toHaveBeenCalledTimes(1);
   expect(onSelectFood).toHaveBeenCalledWith(expect.objectContaining({ id: "grocery:usda:2646170" }));
 });
+
+test("shows branded-drink source, package, caffeine, and unknown nutrient details", () => {
+  const onSelectFood = renderFoodSearch();
+  searchFor("monster ultra zero");
+
+  const result = screen.getByRole("button", { name: /Monster Energy.*Ultra Zero/i });
+  expect(within(result).getByText("Packaged drink")).toHaveClass("trace-badge");
+  expect(within(result).getByText("Official manufacturer source")).toHaveClass("trace-badge");
+  expect(result).toHaveTextContent("16 fl oz can");
+  expect(result).toHaveTextContent("Caffeine 150 mg");
+  expect(result.querySelector('[data-nutrient="protein"]')).toHaveTextContent("Protein Unknown");
+  expect(result.querySelector('[data-nutrient="carbohydrates"]')).toHaveTextContent("Carbs Unknown");
+  expect(result).toHaveTextContent("Nutrition values not published by the manufacturer remain unknown.");
+
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenCalledWith(expect.objectContaining({
+    id: "beverage:monster:ultra-zero-16oz",
+    beverage: { packageSize: "16 fl oz can", caffeineMg: 150 },
+  }));
+});

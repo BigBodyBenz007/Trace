@@ -1,7 +1,9 @@
 import starterFoods from "../data/starterFoods";
 import restaurantFoods from "../data/restaurantFoods";
+import beverageFoods from "../data/beverageFoods";
 import groceryFoods from "./groceryFoodCatalog";
 import { normalizeRestaurantFoods } from "./restaurantFoodModel";
+import { normalizeBeverageFoods } from "./beverageFoodModel";
 
 export const DEFAULT_RESULT_LIMIT = 6;
 
@@ -82,7 +84,8 @@ export function searchFoods(
       const sourcePriority = (food) => {
         if (food.provenance?.source === "user-added" || food.dataType === "user-entered") return 0;
         if (food.sourceType === "grocery") return 1;
-        if (food.sourceType === "restaurant") return 3;
+        if (food.sourceType === "restaurant") return 2;
+        if (food.sourceType === "beverage") return 3;
         return 2;
       };
       const priorityDifference = sourcePriority(firstFood) - sourcePriority(secondFood);
@@ -101,6 +104,7 @@ export function searchFoodCatalog(
     ...userFoods,
     ...groceryFoods,
     ...starterFoods,
+    ...normalizeBeverageFoods(beverageFoods),
     ...normalizeRestaurantFoods(restaurantFoods),
   ];
   const seenDedupeKeys = new Set();

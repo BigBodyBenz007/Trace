@@ -42,6 +42,9 @@ function preparationLabel(preparationState) {
 }
 
 function foodSourceLabels(food) {
+  if (food.sourceType === "beverage") {
+    return ["Packaged drink", "Official manufacturer source"];
+  }
   if (food.sourceType === "restaurant") {
     return ["Restaurant", CONFIDENCE_LABELS[food.provenance.confidence] || food.provenance.confidence];
   }
@@ -63,7 +66,7 @@ function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
   return (
     <section className="trace-feature-surface trace-food-search" style={{ background: "#1f2937", borderRadius: "16px", boxSizing: "border-box", marginTop: "24px", maxWidth: "700px", minWidth: 0, padding: "24px", textAlign: "left", width: "100%" }}>
       <h2 style={{ marginTop: 0 }}>Find a Food</h2>
-      <p style={{ color: "#d1d5db" }}>Search USDA grocery ingredients, restaurant menus, Trace starters, or your saved foods.</p>
+      <p style={{ color: "#d1d5db" }}>Search groceries, packaged drinks, restaurant menus, Trace starters, or your saved foods.</p>
       <label style={{ display: "block" }}>
         Food search
         <input type="search" placeholder="Search foods by name, brand, or category..." value={query} onChange={(event) => setQuery(event.target.value)} style={{ ...inputStyle, boxSizing: "border-box", fontSize: "18px", marginTop: "8px", maxWidth: "100%", padding: "12px", width: "100%" }} />
@@ -74,7 +77,7 @@ function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
             <button className="trace-search-result trace-food-result" data-food-source={food.sourceType} data-layout="compact" key={food.id} type="button" onClick={() => onSelectFood(food)} style={{ boxSizing: "border-box", maxWidth: "100%", minWidth: 0, width: "100%" }}>
               <span className="trace-food-result__content">
                 <span className="trace-food-result__heading" style={{ minWidth: 0 }}>
-                  <strong className="trace-food-result__name">{food.restaurant ? `${food.restaurant.name} \u00b7 ${food.name}` : food.brand ? `${food.brand} \u00b7 ${food.name}` : food.name}</strong>
+                  <strong className="trace-food-result__name">{food.restaurant ? `${food.restaurant.name} \u00b7 ${food.name}` : food.brand && food.brand !== food.name ? `${food.brand} \u00b7 ${food.name}` : food.name}</strong>
                   <span aria-hidden="true" className="trace-food-result__action">Select</span>
                 </span>
                 <span className="trace-food-result__badges" style={{ maxWidth: "100%", minWidth: 0 }}>
@@ -88,7 +91,7 @@ function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
                   )}
                 </span>
                 <span className="trace-food-result__details">
-                  {(food.categoryLabel || food.category || food.brand) && <><span className="trace-food-result__category">{[food.categoryLabel || food.category, food.brand].filter(Boolean).join(" \u00b7 ")}</span>{" "}</>}
+                  {(food.categoryLabel || food.category || food.brand) && <><span className="trace-food-result__category">{[food.categoryLabel || food.category, food.sourceType === "beverage" ? null : food.brand].filter(Boolean).join(" \u00b7 ")}</span>{" "}</>}
                   <span className="trace-food-result__serving">{food.serving.description}</span>
                 </span>
                 <span aria-label="Nutrition summary" className="trace-food-result__nutrients" data-compact-grid="3x2" style={{ gridTemplateColumns: "repeat(3, minmax(0, 1fr))" }}>
@@ -99,7 +102,10 @@ function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
                     </span>
                   ))}
                 </span>
-                {food.provenance.completeness === "partial" && <span className="trace-food-result__completeness">{food.sourceType === "restaurant" ? "Some nutrition values are unavailable because the restaurant does not publish them." : food.sourceType === "grocery" ? "Some USDA nutrient values are unavailable and remain unknown." : "Nutrition values left blank by the user remain unknown."}</span>}
+                {food.beverage?.caffeineMg !== null && food.beverage?.caffeineMg !== undefined && (
+                  <span className="trace-food-result__caffeine">Caffeine <strong>{food.beverage.caffeineMg} mg</strong></span>
+                )}
+                {food.provenance.completeness === "partial" && <span className="trace-food-result__completeness">{food.sourceType === "restaurant" ? "Some nutrition values are unavailable because the restaurant does not publish them." : food.sourceType === "beverage" ? "Nutrition values not published by the manufacturer remain unknown." : food.sourceType === "grocery" ? "Some USDA nutrient values are unavailable and remain unknown." : "Nutrition values left blank by the user remain unknown."}</span>}
                 {food.notes && <span className="trace-food-result__notes">{food.notes}</span>}
               </span>
             </button>
