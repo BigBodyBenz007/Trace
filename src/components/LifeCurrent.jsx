@@ -2,6 +2,7 @@ import React from "react";
 import DesertJourneyCurrent from "./DesertJourneyCurrent";
 import GnomeCurrent from "./GnomeCurrent";
 import HauntedForestCurrent from "./HauntedForestCurrent";
+import OuterSpaceJourneyCurrent from "./OuterSpaceJourneyCurrent";
 import RiverCurrent from "./RiverCurrent";
 import { getLifeCurrentTheme } from "../services/lifeCurrentThemes";
 
@@ -68,6 +69,17 @@ export function LifeCurrentScenery({
   if (theme.presentation.renderer === "desert-journey") {
     return (
       <DesertJourneyCurrent
+        active={active}
+        points={points}
+        themeId={theme.id}
+        viewportRef={viewportRef}
+      />
+    );
+  }
+
+  if (theme.presentation.renderer === "outer-space-journey") {
+    return (
+      <OuterSpaceJourneyCurrent
         active={active}
         points={points}
         themeId={theme.id}

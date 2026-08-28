@@ -89,6 +89,28 @@ export const LIFE_CURRENT_THEMES = Object.freeze([
       }),
     }),
   }),
+  Object.freeze({
+    id: "outer-space-journey",
+    name: "Outer Space Journey",
+    description: "A continuous expedition through an ancient alien world.",
+    presentation: Object.freeze({
+      renderer: "outer-space-journey",
+      className: "life-current-theme--outer-space-journey",
+      colors: Object.freeze({
+        year: "#eef7ff",
+        month: "#bed9e8",
+        fallback: "#536b78",
+        stem: "#536b78",
+        node: "#68d7e8",
+        selectedNode: "#c9f7ff",
+        nodeBorder: "#101b25",
+        nodeGlow: "rgba(104, 215, 232, 0.76)",
+        card: "#182832",
+        selectedCardRing: "#68d7e8",
+        selectedCardGlow: "rgba(104, 215, 232, 0.2)",
+      }),
+    }),
+  }),
 ]);
 
 const THEMES_BY_ID = new Map(LIFE_CURRENT_THEMES.map((theme) => [theme.id, theme]));

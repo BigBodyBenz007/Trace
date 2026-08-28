@@ -21,10 +21,13 @@ test("renders compact global unit controls and saves each preference", () => {
   expect(screen.getByRole("radio", { name: /Haunted Forest/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Gnome Village/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Desert Journey/ })).not.toBeChecked();
+  expect(screen.getByRole("radio", { name: /Outer Space Journey/ })).not.toBeChecked();
   expect(screen.getByText("A flowing current through your timeline.")).toBeInTheDocument();
   expect(screen.getByText("A winding path through a darker world.")).toBeInTheDocument();
   expect(screen.getByText("A storybook path through a lived-in woodland village.")).toBeInTheDocument();
   expect(screen.getByText("One connected golden-ochre road through an ancient desert world."))
+    .toBeInTheDocument();
+  expect(screen.getByText("A continuous expedition through an ancient alien world."))
     .toBeInTheDocument();
   expect(screen.getByText("✓ Selected")).toBeInTheDocument();
   fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
@@ -98,6 +101,30 @@ test("selects Desert Journey through the shared theme control", () => {
   expect(updateSettings).toHaveBeenLastCalledWith({
     ...DEFAULT_APP_SETTINGS,
     lifeCurrentThemeId: "desert-journey",
+  });
+});
+
+test("selects Outer Space Journey through the shared theme control", () => {
+  const updateSettings = jest.fn(() => true);
+  render(
+    <SettingsPage
+      settings={DEFAULT_APP_SETTINGS}
+      updateSettings={updateSettings}
+      onBack={jest.fn()}
+      buttonStyle={{}}
+      containerStyle={{}}
+    />
+  );
+
+  const outerSpace = screen.getByRole("radio", { name: /Outer Space Journey/ });
+  expect(outerSpace).toHaveAttribute(
+    "aria-describedby",
+    "life-current-theme-outer-space-journey-description"
+  );
+  fireEvent.click(outerSpace);
+  expect(updateSettings).toHaveBeenLastCalledWith({
+    ...DEFAULT_APP_SETTINGS,
+    lifeCurrentThemeId: "outer-space-journey",
   });
 });
 

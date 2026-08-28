@@ -5,12 +5,13 @@ import {
   normalizeLifeCurrentThemeId,
 } from "./lifeCurrentThemes";
 
-test("registers the four stable first-party Life Current themes", () => {
+test("registers the five stable first-party Life Current themes", () => {
   expect(LIFE_CURRENT_THEMES.map(({ id }) => id)).toEqual([
     "river",
     "haunted-forest",
     "gnome-village",
     "desert-journey",
+    "outer-space-journey",
   ]);
   expect(DEFAULT_LIFE_CURRENT_THEME_ID).toBe("river");
   expect(getLifeCurrentTheme("haunted-forest")).toMatchObject({
@@ -27,6 +28,11 @@ test("registers the four stable first-party Life Current themes", () => {
     name: "Desert Journey",
     description: "One connected golden-ochre road through an ancient desert world.",
     presentation: { renderer: "desert-journey" },
+  });
+  expect(getLifeCurrentTheme("outer-space-journey")).toMatchObject({
+    name: "Outer Space Journey",
+    description: "A continuous expedition through an ancient alien world.",
+    presentation: { renderer: "outer-space-journey" },
   });
 });
 

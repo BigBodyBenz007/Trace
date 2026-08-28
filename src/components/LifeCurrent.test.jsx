@@ -479,6 +479,121 @@ test("Desert Journey decodes baked scenes and safely falls back to River on fail
     .toHaveAttribute("data-theme-id", "desert-journey");
 });
 
+test("Outer Space Journey renders its one-time opener and exact uncropped 520px scenes", () => {
+  const currentLayout = layout([
+    point("2020-01-01", 0, 0.1, 0.2),
+    point("2026-01-01", 1, 1, 4),
+  ]);
+  const before = JSON.parse(JSON.stringify(currentLayout));
+  render(<RiverHarness
+    points={currentLayout.points}
+    themeId="outer-space-journey"
+    viewportWidth={390}
+  />);
+  const outerSpace = screen.getByTestId("life-current");
+  const scenery = screen.getByTestId("life-current-outer-space-scenery");
+
+  expect(outerSpace).toHaveAttribute("data-theme-id", "outer-space-journey");
+  expect(outerSpace).toHaveAttribute("data-life-current-renderer", "outer-space-journey");
+  expect(outerSpace).toHaveAttribute("data-outer-space-catalog", "approved-continuous-v1");
+  expect(outerSpace).toHaveAttribute("data-current-outer-space-region", "star-gate-opener");
+  expect(outerSpace).toHaveAttribute("data-current-outer-space-section", "star-gate-opener");
+  expect(outerSpace).toHaveAttribute("data-outer-space-opener-count", "1");
+  expect(outerSpace).toHaveAttribute("data-last-activity-date", "2026-01-01");
+  expect(scenery.querySelector("svg")).not.toBeInTheDocument();
+  expect(scenery.querySelector("picture")).not.toBeInTheDocument();
+  expect(scenery.querySelector("[data-outer-space-overlay]")).not.toBeInTheDocument();
+  expect(scenery.querySelector("[data-outer-space-seam]")).not.toBeInTheDocument();
+
+  const sections = [...scenery.querySelectorAll("[data-outer-space-section]")];
+  expect(sections.slice(0, 2).map((section) => section.getAttribute("data-outer-space-section")))
+    .toEqual(["star-gate-opener", "waystones"]);
+  expect(scenery.querySelectorAll('[data-outer-space-section="star-gate-opener"]'))
+    .toHaveLength(1);
+  sections.forEach((section, index) => {
+    expect(section.style.getPropertyValue("--outer-space-section-left"))
+      .toBe(`${index * 520}px`);
+    expect(section.querySelector("img")).toHaveAttribute("width", "1774");
+    expect(section.querySelector("img")).toHaveAttribute("height", "887");
+    expect(section.querySelector("img")).not.toHaveAttribute("style");
+  });
+  expect(sections[0].querySelector("img").getAttribute("src"))
+    .toContain("00-star-gate-opener.png");
+  expect(outerSpace.style.getPropertyValue("--outer-space-section-width")).toBe("520px");
+  expect(outerSpace.style.getPropertyValue("--outer-space-scenery-height")).toBe("260px");
+  expect(currentLayout).toEqual(before);
+});
+
+test("Outer Space Journey follows chronology while mounting only nearby recycled scenes", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  window.cancelAnimationFrame = jest.fn();
+  const { unmount } = render(<RiverHarness
+    points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+    themeId="outer-space-journey"
+    viewportWidth={1000}
+  />);
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const outerSpace = screen.getByTestId("life-current");
+
+  [520, 2080, 2600, 4160, 5000].forEach((scrollLeft) => {
+    viewport.scrollLeft = scrollLeft;
+    fireEvent.scroll(viewport);
+    act(() => frames.shift()());
+    expect(outerSpace).toHaveAttribute(
+      "data-outer-space-camera-offset",
+      `${scrollLeft.toFixed(2)}`
+    );
+    expect(outerSpace).toHaveAttribute("data-current-outer-space-region", "baked-scene-cycle");
+    expect(outerSpace.querySelectorAll("[data-outer-space-section]").length)
+      .toBeLessThanOrEqual(5);
+  });
+
+  expect(Number(outerSpace.getAttribute("data-outer-space-progress"))).toBeCloseTo(1, 4);
+  expect(outerSpace).toHaveAttribute("data-current-outer-space-section", "ancient-city");
+  expect(outerSpace.querySelector('[data-outer-space-section="star-gate-opener"]'))
+    .not.toBeInTheDocument();
+  expect(outerSpace.querySelector('[data-outer-space-section="nomad-caravan"]'))
+    .toBeInTheDocument();
+  expect(outerSpace.querySelector('[data-outer-space-section="waystones"][data-outer-space-cycle="1"]'))
+    .toBeInTheDocument();
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.cancelAnimationFrame = originalCancelAnimationFrame;
+});
+
+test("Outer Space Journey decodes locked scenes and safely falls back to River", async () => {
+  render(<RiverHarness
+    points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+    themeId="outer-space-journey"
+    viewportWidth={390}
+  />);
+  const outerSpace = screen.getByTestId("life-current");
+  const opener = outerSpace.querySelector('[data-outer-space-section="star-gate-opener"]');
+  const waystones = outerSpace.querySelector('[data-outer-space-section="waystones"]');
+  expect(opener).toHaveAttribute("data-image-ready", "false");
+  expect(waystones).toHaveAttribute("data-image-ready", "false");
+
+  await act(async () => {
+    fireEvent.load(opener.querySelector("img"));
+    fireEvent.load(waystones.querySelector("img"));
+    await Promise.resolve();
+  });
+  expect(opener).toHaveAttribute("data-image-ready", "true");
+  expect(waystones).toHaveAttribute("data-image-ready", "true");
+
+  fireEvent.error(waystones.querySelector("img"));
+  expect(screen.getByTestId("life-current"))
+    .toHaveAttribute("data-life-current-renderer", "river-current");
+  expect(screen.getByTestId("life-current"))
+    .toHaveAttribute("data-theme-id", "outer-space-journey");
+});
+
 test("invalid theme IDs safely render River", () => {
   render(<RiverHarness points={[point("2026-01-01", 0)]} themeId="lost-world" />);
   expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "river");

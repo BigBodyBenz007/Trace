@@ -590,6 +590,7 @@ test.each([
   ["haunted-forest", "forest-path"],
   ["gnome-village", "gnome-village"],
   ["desert-journey", "desert-journey"],
+  ["outer-space-journey", "outer-space-journey"],
 ])("%s keeps Timeline Focus cards and navigation behavior intact", (themeId, renderer) => {
   render(
     <HomePage
@@ -616,6 +617,7 @@ test.each([
   ["haunted-forest", "forest-path"],
   ["gnome-village", "gnome-village"],
   ["desert-journey", "desert-journey"],
+  ["outer-space-journey", "outer-space-journey"],
 ])("inactive retained %s Home pauses behavior without resetting its timeline", (themeId, renderer) => {
   const originalObserver = global.IntersectionObserver;
   const originalRequestAnimationFrame = window.requestAnimationFrame;

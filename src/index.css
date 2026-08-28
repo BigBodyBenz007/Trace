@@ -1282,6 +1282,10 @@ code {
     linear-gradient(145deg, #e7b066, #9c5937 48%, #392744 72%, #172245);
 }
 
+.life-current-theme-swatch--outer-space-journey {
+  background: linear-gradient(145deg, #152739, #326677 48%, #735f82 72%, #101725);
+}
+
 .life-current-theme-option__copy,
 .life-current-theme-option__heading,
 .life-current-theme-option__description {
@@ -1618,47 +1622,60 @@ code {
   outline: none;
 }
 
-.desert-current-scene {
-  background: #9a5b2d;
-  height: var(--desert-scenery-height, 260px);
+.life-current-theme--outer-space-journey {
+  background: #101725;
+  border-radius: 0;
+  outline: none;
 }
 
-.desert-current-scene::after {
+.baked-current-scene {
+  height: var(--baked-scenery-height, 260px);
+}
+
+.baked-current-scene::after {
   content: none;
 }
 
-.desert-current-track {
-  height: var(--desert-scenery-height, 260px);
+.baked-current-track {
+  height: var(--baked-scenery-height, 260px);
   inset: 0;
   position: absolute;
 }
 
-.desert-current-section {
+.baked-current-section {
   flex-shrink: 0;
-  height: var(--desert-scenery-height, 260px);
-  left: var(--desert-section-left);
+  height: var(--baked-scenery-height, 260px);
+  left: var(--baked-section-left);
   margin: 0;
   opacity: 0;
   padding: 0;
   pointer-events: none;
   position: absolute;
   top: 0;
-  transform: translate3d(var(--desert-offset), 0, 0);
-  width: var(--desert-section-width, 520px);
+  transform: translate3d(var(--baked-offset), 0, 0);
+  width: var(--baked-section-width, 520px);
   will-change: transform;
 }
 
-.desert-current-section[data-image-ready="true"] {
+.baked-current-section[data-image-ready="true"] {
   opacity: 1;
 }
 
-.desert-current-section img {
+.baked-current-section img {
   display: block;
-  height: var(--desert-scenery-height, 260px);
+  height: var(--baked-scenery-height, 260px);
   margin: 0;
   max-width: none;
   padding: 0;
   width: auto;
+}
+
+.desert-current-scene {
+  background: #9a5b2d;
+}
+
+.outer-space-current-scene {
+  background: #101725;
 }
 
 .gnome-current-scene {
