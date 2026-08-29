@@ -29,6 +29,8 @@ function BakedJourneySection({ classPrefix, dataPrefix, onImageError, section })
     [`data-${dataPrefix}-scene-index`]: section.sceneIndex,
     [`data-${dataPrefix}-section`]: section.id,
     [`data-${dataPrefix}-world-index`]: section.worldIndex,
+    [`data-${dataPrefix}-loop-boundary`]: section.loopBoundary ? "true" : "false",
+    [`data-${dataPrefix}-overlap-before`]: section.overlapBefore || 0,
   };
 
   return (
@@ -63,6 +65,7 @@ function BakedJourneyCurrent({
   dataPrefix,
   getNearbySections,
   getSection,
+  getSectionAtOffset,
   openerRegion,
   points = [],
   rendererId,
@@ -93,7 +96,9 @@ function BakedJourneyCurrent({
       const scrollRange = Math.max(0, viewport.scrollWidth - viewport.clientWidth);
       const cameraOffset = Math.max(0, Math.min(scrollRange, viewport.scrollLeft || 0));
       const scrollProgress = scrollRange > 0 ? cameraOffset / scrollRange : 0;
-      const currentSection = getSection(Math.floor(cameraOffset / sectionWidth));
+      const currentSection = getSectionAtOffset
+        ? getSectionAtOffset(cameraOffset)
+        : getSection(Math.floor(cameraOffset / sectionWidth));
       const nextSections = getNearbySections(cameraOffset, viewportWidth);
       const region = currentSection.worldIndex === 0
         ? openerRegion
@@ -139,7 +144,7 @@ function BakedJourneyCurrent({
         animationFrameRef.current = null;
       }
     };
-  }, [active, dataPrefix, getNearbySections, getSection, openerRegion, sectionWidth, useRiverFallback, viewportRef]);
+  }, [active, dataPrefix, getNearbySections, getSection, getSectionAtOffset, openerRegion, sectionWidth, useRiverFallback, viewportRef]);
 
   if (useRiverFallback) {
     return (

@@ -1611,9 +1611,8 @@ code {
 
 .life-current-theme--gnome-village {
   background: #18231d;
-  border-radius: 14px;
-  outline: 1px solid #4e5d46;
-  outline-offset: -1px;
+  border-radius: 0;
+  outline: none;
 }
 
 .life-current-theme--desert-journey {
@@ -1680,43 +1679,6 @@ code {
 
 .gnome-current-scene {
   background: #17231c;
-}
-
-.gnome-current-scene::after {
-  background: linear-gradient(
-    180deg,
-    rgba(12, 19, 14, 0.04),
-    transparent 34%,
-    transparent 70%,
-    rgba(12, 19, 14, 0.13)
-  );
-}
-
-.gnome-current-section[data-gnome-section="book-beginning"] {
-  -webkit-mask-image: none;
-  mask-image: none;
-}
-
-.gnome-current-section::before {
-  background: linear-gradient(
-    to right,
-    rgba(17, 28, 20, 0.2),
-    transparent var(--river-section-join)
-  );
-}
-
-.gnome-current-section[data-gnome-section="book-beginning"]::before {
-  content: none;
-}
-
-@media (max-width: 720px) {
-  .gnome-current-section::before {
-    background: linear-gradient(
-      to right,
-      rgba(17, 28, 20, 0.2),
-      transparent var(--river-section-join-mobile)
-    );
-  }
 }
 
 @media (max-width: 780px) {

@@ -251,7 +251,7 @@ test("Haunted Forest reveals decoded images and safely falls back to River on fa
   expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "haunted-forest");
 });
 
-test("Gnome Village renders its one-time opener and nearby reusable scenes at 390px", () => {
+test("Gnome Village renders the approved one-time opener and complete 520px scenes", () => {
   const currentLayout = layout([
     point("2020-01-01", 0, 0.1, 0.2),
     point("2026-01-01", 1, 1, 4),
@@ -266,29 +266,39 @@ test("Gnome Village renders its one-time opener and nearby reusable scenes at 39
 
   expect(gnome).toHaveAttribute("data-theme-id", "gnome-village");
   expect(gnome).toHaveAttribute("data-life-current-renderer", "gnome-village");
-  expect(gnome).toHaveAttribute("data-gnome-catalog", "one-opener-locked-evening-cycle");
-  expect(gnome).toHaveAttribute("data-current-gnome-section", "book-beginning");
-  expect(gnome).toHaveAttribute(
-    "data-loaded-gnome-sections",
-    "book-beginning geometry-master marketplace"
-  );
+  expect(gnome).toHaveAttribute("data-gnome-catalog", "approved-golden-path-v1");
+  expect(gnome).toHaveAttribute("data-current-gnome-region", "gnome-king-opener");
+  expect(gnome).toHaveAttribute("data-current-gnome-section", "gnome-king-opener");
+  expect(gnome).toHaveAttribute("data-gnome-opener-count", "1");
+  expect(gnome).toHaveAttribute("data-last-activity-date", "2026-01-01");
   const scenery = screen.getByTestId("life-current-gnome-scenery");
-  expect(scenery.querySelectorAll("picture")).toHaveLength(3);
-  expect([...scenery.querySelectorAll("[data-gnome-section]")]
-    .map((section) => section.getAttribute("data-gnome-section")))
-    .toEqual(["book-beginning", "geometry-master", "marketplace"]);
-  expect(scenery.querySelector('[data-gnome-section="book-beginning"] img'))
-    .toHaveAttribute("width", "1672");
-  expect(scenery.querySelector('[data-gnome-section="book-beginning"] img'))
-    .toHaveAttribute("height", "941");
-  expect(scenery.querySelector('[data-gnome-section="geometry-master"]')
-    .style.getPropertyValue("--river-image-height")).toBe("150.1%");
-  expect(scenery.querySelector('[data-gnome-section="book-beginning"]')
-    .style.getPropertyValue("--river-section-width-mobile")).toBe("460px");
+  expect(scenery.querySelector("picture")).not.toBeInTheDocument();
+  expect(scenery.querySelector("svg")).not.toBeInTheDocument();
+  expect(scenery.querySelector("[data-gnome-overlay]"))
+    .not.toBeInTheDocument();
+  expect(scenery.querySelector("[data-gnome-seam]"))
+    .not.toBeInTheDocument();
+  const sections = [...scenery.querySelectorAll("[data-gnome-section]")];
+  expect(sections.slice(0, 2).map((section) => section.getAttribute("data-gnome-section")))
+    .toEqual(["gnome-king-opener", "gnome-path-scene-01"]);
+  expect(sections.length).toBeLessThanOrEqual(4);
+  expect(scenery.querySelectorAll('[data-gnome-section="gnome-king-opener"]'))
+    .toHaveLength(1);
+  sections.forEach((section, index) => {
+    expect(section.style.getPropertyValue("--gnome-section-left"))
+      .toBe(`${index * 520}px`);
+    expect(section.querySelector("img")).toHaveAttribute("width", "1774");
+    expect(section.querySelector("img")).toHaveAttribute("height", "887");
+    expect(section.querySelector("img")).not.toHaveAttribute("style");
+  });
+  expect(sections[0].querySelector("img").getAttribute("src"))
+    .toContain("00-gnome-king-opener.png");
+  expect(gnome.style.getPropertyValue("--gnome-section-width")).toBe("520px");
+  expect(gnome.style.getPropertyValue("--gnome-scenery-height")).toBe("260px");
   expect(currentLayout).toEqual(before);
 });
 
-test("Gnome Village keeps the evening sequence locked and resumes daytime after sunrise", () => {
+test("Gnome Village follows chronology with bounded mounting and the exact recycled overlap", () => {
   const originalRequestAnimationFrame = window.requestAnimationFrame;
   const originalCancelAnimationFrame = window.cancelAnimationFrame;
   const frames = [];
@@ -299,33 +309,46 @@ test("Gnome Village keeps the evening sequence locked and resumes daytime after 
   window.cancelAnimationFrame = jest.fn();
   const { unmount } = render(<RiverHarness
     points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+    scrollWidth={9000}
     themeId="gnome-village"
     viewportWidth={1000}
   />);
   const viewport = screen.getByTestId("memory-timeline-viewport");
   const gnome = screen.getByTestId("life-current");
 
-  viewport.scrollLeft = 2700;
+  [520, 2080, 4160, 5200].forEach((scrollLeft) => {
+    viewport.scrollLeft = scrollLeft;
+    fireEvent.scroll(viewport);
+    act(() => frames.shift()());
+    expect(gnome).toHaveAttribute("data-gnome-camera-offset", scrollLeft.toFixed(2));
+    expect(gnome).toHaveAttribute("data-current-gnome-region", "baked-scene-cycle");
+    expect(gnome.querySelectorAll("[data-gnome-section]").length)
+      .toBeLessThanOrEqual(5);
+  });
+
+  const loopStart = 520 + (10 * 520 - 96 * 520 / 1774);
+  viewport.scrollLeft = loopStart;
   fireEvent.scroll(viewport);
   act(() => frames.shift()());
 
-  expect(gnome).toHaveAttribute("data-current-gnome-section", "moonlit-stream");
-  expect(gnome).toHaveAttribute(
-    "data-loaded-gnome-sections",
-    "twilight-stream moonlit-stream sunrise-return"
+  expect(gnome).toHaveAttribute("data-current-gnome-section", "gnome-path-scene-01");
+  expect(gnome.querySelector('[data-gnome-section="gnome-king-opener"]'))
+    .not.toBeInTheDocument();
+  const scene10 = gnome.querySelector(
+    '[data-gnome-section="gnome-path-scene-10"][data-gnome-cycle="0"]'
   );
-  expect(gnome.querySelectorAll("img")).toHaveLength(3);
-  expect(Number(gnome.getAttribute("data-gnome-progress"))).toBeCloseTo(0.54, 4);
-
-  viewport.scrollLeft = 3200;
-  fireEvent.scroll(viewport);
-  act(() => frames.shift()());
-
-  expect(gnome).toHaveAttribute("data-current-gnome-section", "geometry-master");
-  expect(gnome).toHaveAttribute(
-    "data-loaded-gnome-sections",
-    "sunrise-return geometry-master marketplace"
+  const recycledScene01 = gnome.querySelector(
+    '[data-gnome-section="gnome-path-scene-01"][data-gnome-cycle="1"]'
   );
+  expect(scene10).toBeInTheDocument();
+  expect(recycledScene01).toBeInTheDocument();
+  expect(recycledScene01).toHaveAttribute("data-gnome-loop-boundary", "true");
+  expect(Number(recycledScene01.getAttribute("data-gnome-overlap-before")))
+    .toBeCloseTo(96 * 520 / 1774, 10);
+  expect(
+    Number.parseFloat(scene10.style.getPropertyValue("--gnome-section-left")) + 520 -
+    Number.parseFloat(recycledScene01.style.getPropertyValue("--gnome-section-left"))
+  ).toBeCloseTo(96 * 520 / 1774, 10);
 
   unmount();
   window.requestAnimationFrame = originalRequestAnimationFrame;
@@ -339,7 +362,7 @@ test("Gnome Village reveals decoded images and safely falls back to River on fai
     viewportWidth={390}
   />);
   const firstSection = screen.getByTestId("life-current")
-    .querySelector('[data-gnome-section="book-beginning"]');
+    .querySelector('[data-gnome-section="gnome-king-opener"]');
   expect(firstSection).toHaveAttribute("data-image-ready", "false");
 
   await act(async () => {
