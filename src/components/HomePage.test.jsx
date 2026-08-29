@@ -1,6 +1,7 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "fs";
 import HomePage from "./HomePage";
+import { getAppTheme } from "../services/appThemes";
 import { TIMELINE_FOCUS_TUNING } from "../services/timelineFocus";
 
 const baseProps = {
@@ -225,6 +226,61 @@ test("root Reduced mode removes Life Current image fades and Timeline scale moti
   expect(css).toMatch(/\[data-timeline-card-visual="true"\][\s\S]*?transform:\s*scale\(1\) !important/);
   expect(css).toMatch(/\.river-current-section\[data-image-ready="true"\][\s\S]*?transition:\s*none/);
 });
+
+test.each([
+  "modern-heirloom",
+  "river",
+  "haunted-forest",
+  "gnome-village",
+  "desert-journey",
+  "outer-space-journey",
+].flatMap((themeId) => [[themeId, false], [themeId, true]]))(
+  "%s selection highlight remains visible when reducedMotion is %s",
+  (themeId, reducedMotion) => {
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+    const originalCancelAnimationFrame = window.cancelAnimationFrame;
+    const frames = [];
+    window.requestAnimationFrame = jest.fn((callback) => {
+      frames.push(callback);
+      return frames.length;
+    });
+    window.cancelAnimationFrame = jest.fn();
+
+    const onTimelineTargetShown = jest.fn();
+    const { unmount } = render(
+      <HomePage
+        {...baseProps}
+        memories={[memories[0]]}
+        onTimelineTargetShown={onTimelineTargetShown}
+        reducedMotion={reducedMotion}
+        themeId={themeId}
+        timelineTargetMemoryId="memory-a"
+        trophyEntries={[]}
+      />
+    );
+    const viewport = screen.getByTestId("memory-timeline-viewport");
+    const card = screen.getByTestId("timeline-memory-memory-a");
+    viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, width: 400 }));
+    viewport.scrollIntoView = jest.fn();
+    card.getBoundingClientRect = jest.fn(() => ({ left: 100, width: 200 }));
+
+    act(() => {
+      while (frames.length) frames.shift()();
+    });
+
+    const visual = card.querySelector("[data-timeline-card-visual]");
+    const colors = getAppTheme(themeId).presentation.colors;
+    expect(visual).toHaveAttribute("data-timeline-selected", "true");
+    expect(visual.style.boxShadow).toContain("0 0 0 2px");
+    expect(visual.style.boxShadow).toContain(colors.selectedCardRing);
+    expect(visual.style.boxShadow).toContain(colors.selectedCardGlow);
+    expect(onTimelineTargetShown).toHaveBeenCalledTimes(1);
+
+    unmount();
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+    window.cancelAnimationFrame = originalCancelAnimationFrame;
+  }
+);
 
 test.each([
   ["smooth", false],
@@ -682,6 +738,7 @@ test("initial newest navigation centers the final Memory before the quiet trail"
 });
 
 test.each([
+  ["modern-heirloom", "modern-heirloom-current"],
   ["river", "river-current"],
   ["haunted-forest", "forest-path"],
   ["gnome-village", "gnome-village"],
@@ -691,7 +748,7 @@ test.each([
   render(
     <HomePage
       {...baseProps}
-      lifeCurrentThemeId={themeId}
+      themeId={themeId}
       memories={memories}
       trophyEntries={[]}
     />
@@ -722,6 +779,7 @@ test.each([
 });
 
 test.each([
+  ["modern-heirloom", "modern-heirloom-current"],
   ["river", "river-current"],
   ["haunted-forest", "forest-path"],
   ["gnome-village", "gnome-village"],
@@ -753,7 +811,7 @@ test.each([
   const props = {
     ...baseProps,
     active: true,
-    lifeCurrentThemeId: themeId,
+    themeId,
     memories: retainedMemories,
     trophyEntries: [],
   };
@@ -903,7 +961,7 @@ test("updates visual focus from viewport-center geometry without changing select
   const callsBeforeScroll = window.requestAnimationFrame.mock.calls.length;
   fireEvent.scroll(viewport);
   fireEvent.scroll(viewport);
-  expect(window.requestAnimationFrame).toHaveBeenCalledTimes(callsBeforeScroll + 2);
+  expect(window.requestAnimationFrame).toHaveBeenCalledTimes(callsBeforeScroll + 1);
   act(() => frames.shift()());
   expect(centerRemoveAttribute).not.toHaveBeenCalledWith("data-timeline-focused");
   expect(rightSetAttribute).not.toHaveBeenCalledWith("data-timeline-focused", "true");

@@ -61,6 +61,24 @@ test("does not render a River visual for an empty layout", () => {
   expect(container).toBeEmptyDOMElement();
 });
 
+test("Modern Heirloom renders a quiet code-native current without immersive scenery", () => {
+  render(<RiverHarness
+    points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+    themeId="modern-heirloom"
+  />);
+
+  const current = screen.getByTestId("life-current");
+  expect(current).toHaveAttribute("aria-hidden", "true");
+  expect(current).toHaveAttribute("data-theme-id", "modern-heirloom");
+  expect(current).toHaveAttribute("data-life-current-renderer", "modern-heirloom-current");
+  expect(current).toHaveAttribute("data-quiet-trail", "false");
+  expect(screen.getByTestId("life-current-modern-heirloom-scenery")).toBeInTheDocument();
+  expect(current.querySelectorAll("path")).toHaveLength(2);
+  expect(current.querySelectorAll("circle")).toHaveLength(0);
+  expect(current.querySelectorAll("img, picture, source")).toHaveLength(0);
+  expect(getComputedStyle(current).pointerEvents).toBe("none");
+});
+
 test("renders the approved raster River from the sticky scenery slot", () => {
   render(<RiverHarness points={[
     point("2020-01-01", 0),
@@ -617,11 +635,11 @@ test("Outer Space Journey decodes locked scenes and safely falls back to River",
     .toHaveAttribute("data-theme-id", "outer-space-journey");
 });
 
-test("invalid theme IDs safely render River", () => {
+test("invalid theme IDs safely render Modern Heirloom", () => {
   render(<RiverHarness points={[point("2026-01-01", 0)]} themeId="lost-world" />);
-  expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "river");
+  expect(screen.getByTestId("life-current")).toHaveAttribute("data-theme-id", "modern-heirloom");
   expect(screen.getByTestId("life-current"))
-    .toHaveAttribute("data-life-current-renderer", "river-current");
+    .toHaveAttribute("data-life-current-renderer", "modern-heirloom-current");
 });
 
 test("ends at the latest activity for sparse older and recent Memory data", () => {

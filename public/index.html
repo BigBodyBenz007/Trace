@@ -2,6 +2,31 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <script>
+      (function () {
+        var fallbackTheme = "modern-heirloom";
+        var validThemes = [
+          "modern-heirloom",
+          "river",
+          "haunted-forest",
+          "gnome-village",
+          "desert-journey",
+          "outer-space-journey"
+        ];
+        var themeId = fallbackTheme;
+        try {
+          var rawSettings = window.localStorage.getItem("appSettings");
+          var settings = rawSettings ? JSON.parse(rawSettings) : null;
+          var currentTheme = settings && settings.themeId;
+          var legacyTheme = settings && settings.lifeCurrentThemeId;
+          if (validThemes.indexOf(currentTheme) !== -1) themeId = currentTheme;
+          else if (validThemes.indexOf(legacyTheme) !== -1) themeId = legacyTheme;
+        } catch (error) {
+          themeId = fallbackTheme;
+        }
+        document.documentElement.setAttribute("data-trace-theme", themeId);
+      }());
+    </script>
     <link rel="icon" type="image/png" href="%PUBLIC_URL%/trace-icon-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="theme-color" content="#111827" />

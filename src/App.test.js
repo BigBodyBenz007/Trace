@@ -210,6 +210,28 @@ test("passes authoritative structured activity to the Home Life Current", async 
   expect(screen.getByText("No memories found.")).toBeInTheDocument();
 });
 
+test("default theme and motion identities coexist on the HTML root and app shell", async () => {
+  localStorage.setItem("nutritionEntries", JSON.stringify([
+    { id: "theme-root-activity", loggedAt: "2026-05-18T12:00:00" },
+  ]));
+  render(<App />);
+
+  const shell = screen.getByTestId("trace-app-shell");
+  expect(document.documentElement).toHaveAttribute("data-trace-theme", "modern-heirloom");
+  expect(shell).toHaveAttribute("data-trace-theme", "modern-heirloom");
+  expect(shell).toHaveAttribute("data-motion", "standard");
+  expect(await screen.findByTestId("life-current"))
+    .toHaveAttribute("data-life-current-renderer", "modern-heirloom-current");
+});
+
+test("malformed settings fail safely to matching Modern Heirloom root attributes", () => {
+  localStorage.setItem("appSettings", "not-json");
+  render(<App />);
+  expect(document.documentElement).toHaveAttribute("data-trace-theme", "modern-heirloom");
+  expect(screen.getByTestId("trace-app-shell"))
+    .toHaveAttribute("data-trace-theme", "modern-heirloom");
+});
+
 test("loads and preserves planned workouts separately from completed workout storage", async () => {
   const plans = [plannedWorkout("planned-workout:loaded")];
   const serialized = JSON.stringify(plans);
@@ -603,9 +625,9 @@ test("Settings opens and global unit preferences survive remount into a fresh He
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' }));
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({
-    schemaVersion: 3,
+    schemaVersion: 4,
     units: { weight: "kg", height: "cm", circumference: "cm" },
-    lifeCurrentThemeId: "river",
+    themeId: "modern-heirloom",
     homeVisibility: {
       schedule: true,
       nutrition: true,
@@ -644,7 +666,7 @@ test("Motion preference applies immediately and persists after remount", () => {
   fireEvent.click(screen.getByRole("radio", { name: /Reduced motion/ }));
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
-    schemaVersion: 3,
+    schemaVersion: 4,
     motionPreference: "reduced",
   });
   first.unmount();
@@ -2071,10 +2093,12 @@ test("successful same-tab restore immediately synchronizes theme, units, and mot
   fireEvent.click(screen.getByLabelText("Inches (in)"));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
     units: { weight: "lb", height: "ft-in", circumference: "in" },
-    lifeCurrentThemeId: "river",
+    themeId: "river",
     motionPreference: "standard",
   });
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "standard");
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-theme", "river");
+  expect(document.documentElement).toHaveAttribute("data-trace-theme", "river");
   localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 1800 }));
   localStorage.setItem("dailyActions", JSON.stringify({ schemaVersion: 1, actions: [] }));
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
@@ -2099,6 +2123,8 @@ test("successful same-tab restore immediately synchronizes theme, units, and mot
   expect(await screen.findByRole("heading", { name: /Trace restored successfully/ })).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("nutritionGoals"))).toEqual({ calories: 2450 });
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-theme", "haunted-forest");
+  expect(document.documentElement).toHaveAttribute("data-trace-theme", "haunted-forest");
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
 
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
@@ -2119,7 +2145,7 @@ test.each([
   ["Gnome Village", "gnome-village"],
   ["Desert Journey", "desert-journey"],
   ["Outer Space Journey", "outer-space-journey"],
-])("%s Life Current theme selection persists across reload and switches back to River", async (themeName, themeId) => {
+])("%s app theme selection persists across reload and switches back to River", async (themeName, themeId) => {
   localStorage.setItem("nutritionEntries", JSON.stringify([
     { id: "theme-activity", loggedAt: "2026-05-18T12:00:00" },
   ]));
@@ -2127,9 +2153,11 @@ test.each([
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
   fireEvent.click(screen.getByRole("radio", { name: new RegExp(themeName) }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
-    lifeCurrentThemeId: themeId,
+    themeId,
     units: { weight: "lb", height: "ft-in", circumference: "in" },
   });
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-theme", themeId);
+  expect(document.documentElement).toHaveAttribute("data-trace-theme", themeId);
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", themeId);
   first.unmount();
@@ -2140,7 +2168,7 @@ test.each([
   expect(screen.getByRole("radio", { name: new RegExp(themeName) })).toBeChecked();
   fireEvent.click(screen.getByRole("radio", { name: /River/ }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
-    lifeCurrentThemeId: "river",
+    themeId: "river",
   });
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", "river");
@@ -2470,9 +2498,12 @@ test("saving a Memory returns to and centers the newly saved Memory", async () =
     block: "start",
   });
   expect(viewport.scrollLeft).toBe(0);
-  expect(savedCard.querySelector("[data-timeline-card-visual]")).toHaveStyle({
-    boxShadow: "0 0 0 2px #5ec8ff, 0 8px 20px rgba(94, 200, 255, 0.2)",
-  });
+  const savedCardVisual = savedCard.querySelector("[data-timeline-card-visual]");
+  expect(savedCardVisual).toHaveAttribute("data-timeline-selected", "true");
+  expect(savedCardVisual.style.boxShadow).toContain("0 0 0 2px");
+  expect(screen.getByTestId("timeline-memory-existing-newest")
+    .querySelector("[data-timeline-card-visual]"))
+    .toHaveAttribute("data-timeline-selected", "false");
   window.requestAnimationFrame = originalRequestAnimationFrame;
   window.cancelAnimationFrame = originalCancelAnimationFrame;
 });
@@ -2527,9 +2558,10 @@ test("editing a Memory returns to its timeline card", async () => {
     behavior: "auto",
     block: "start",
   });
-  expect(editedCard.querySelector("[data-timeline-card-visual]")).toHaveStyle({
-    boxShadow: "0 0 0 2px #5ec8ff, 0 8px 20px rgba(94, 200, 255, 0.2)",
-  });
+  expect(viewport.scrollLeft).toBe(0);
+  const editedCardVisual = editedCard.querySelector("[data-timeline-card-visual]");
+  expect(editedCardVisual).toHaveAttribute("data-timeline-selected", "true");
+  expect(editedCardVisual.style.boxShadow).toContain("0 0 0 2px");
   window.requestAnimationFrame = originalRequestAnimationFrame;
   window.cancelAnimationFrame = originalCancelAnimationFrame;
 });

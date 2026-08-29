@@ -434,7 +434,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1", sodium: 640 }]);
   expect(JSON.parse(storage.value("nutritionGoals"))).toEqual({ calories: 2000, sodium: 2300 });
   expect(JSON.parse(storage.value("healthMeasurementEntries"))).toEqual([{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }]);
-  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 3, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "river", homeVisibility: DEFAULT_HOME_VISIBILITY, motionPreference: "standard" });
+  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 4, units: { weight: "kg", height: "cm", circumference: "cm" }, themeId: "modern-heirloom", homeVisibility: DEFAULT_HOME_VISIBILITY, motionPreference: "standard" });
   expect(JSON.parse(storage.value("workoutEntries"))).toEqual([workoutWithDrops]);
   expect(JSON.parse(storage.value("medicationEntries"))).toEqual([{ id: "dose-1" }]);
   expect(JSON.parse(storage.value("protocols"))).toEqual([{ id: "protocol-1" }]);
@@ -467,7 +467,7 @@ test("restores pre-Settings backups with default Settings storage fallback", asy
   const storage = makeStorage({ appSettings: JSON.stringify({ units: { weight: "kg" } }) });
   await restoreTraceBackup(backup({ data: { structured, photos: [] } }), { confirmed: true, storage, openDatabase: async () => makePhotoDatabase() });
   expect(storage.value("appSettings")).toBeNull();
-  expect(readAppSettings(storage).lifeCurrentThemeId).toBe("river");
+  expect(readAppSettings(storage).themeId).toBe("modern-heirloom");
   expect(readAppSettings(storage).motionPreference).toBe("standard");
 });
 
@@ -659,8 +659,8 @@ test("rejects malformed nested workout drafts before restore mutates storage or 
   expect(storage.value("workoutDraft")).toBe(original);
 });
 
-test.each(["haunted-forest", "gnome-village", "desert-journey", "outer-space-journey"])(
-  "new backups preserve and restore the selected %s Life Current theme",
+test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-space-journey"])(
+  "backups migrate and restore the selected legacy %s theme",
   async (lifeCurrentThemeId) => {
     const source = makeStorage({
       appSettings: JSON.stringify({
@@ -674,8 +674,10 @@ test.each(["haunted-forest", "gnome-village", "desert-journey", "outer-space-jou
       openDatabase: async () => makePhotoDatabase(),
     });
     expect(value.data.structured.appSettings).toMatchObject({
-      lifeCurrentThemeId,
+      schemaVersion: 4,
+      themeId: lifeCurrentThemeId,
     });
+    expect(value.data.structured.appSettings).not.toHaveProperty("lifeCurrentThemeId");
 
     const restored = makeStorage();
     await restoreTraceBackup(value, {
@@ -685,12 +687,40 @@ test.each(["haunted-forest", "gnome-village", "desert-journey", "outer-space-jou
     });
     expect(readAppSettings(restored)).toMatchObject({
       units: { weight: "kg", height: "cm", circumference: "cm" },
-      lifeCurrentThemeId,
+      themeId: lifeCurrentThemeId,
     });
   }
 );
 
-test("legacy and invalid backup theme values safely fall back to River without corrupting settings", async () => {
+test("backup export and restore preserve a current schema-v4 themeId", async () => {
+  const source = makeStorage({
+    appSettings: JSON.stringify({
+      schemaVersion: 4,
+      units: { weight: "lb", height: "ft-in", circumference: "in" },
+      themeId: "modern-heirloom",
+      homeVisibility: DEFAULT_HOME_VISIBILITY,
+      motionPreference: "standard",
+    }),
+  });
+  const value = await createTraceBackup({
+    storage: source,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(value.data.structured.appSettings).toMatchObject({
+    schemaVersion: 4,
+    themeId: "modern-heirloom",
+  });
+
+  const restored = makeStorage();
+  await restoreTraceBackup(value, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(readAppSettings(restored).themeId).toBe("modern-heirloom");
+});
+
+test("missing and invalid backup theme values safely default to Modern Heirloom", async () => {
   const legacySettings = {
     schemaVersion: 1,
     units: { weight: "kg", height: "cm", circumference: "cm" },
@@ -709,9 +739,9 @@ test("legacy and invalid backup theme values safely fall back to River without c
     });
     const validated = validateTraceBackup(value).backup;
     expect(validated.data.structured.appSettings).toEqual({
-      schemaVersion: 3,
+      schemaVersion: 4,
       units: { weight: "kg", height: "cm", circumference: "cm" },
-      lifeCurrentThemeId: "river",
+      themeId: "modern-heirloom",
       homeVisibility: DEFAULT_HOME_VISIBILITY,
       motionPreference: "standard",
     });

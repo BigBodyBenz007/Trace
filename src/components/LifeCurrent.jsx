@@ -4,6 +4,7 @@ import GnomeCurrent from "./GnomeCurrent";
 import HauntedForestCurrent from "./HauntedForestCurrent";
 import OuterSpaceJourneyCurrent from "./OuterSpaceJourneyCurrent";
 import RiverCurrent from "./RiverCurrent";
+import ModernHeirloomCurrent from "./ModernHeirloomCurrent";
 import { getLifeCurrentTheme } from "../services/lifeCurrentThemes";
 
 const VIEWBOX_WIDTH = 1000;
@@ -37,12 +38,16 @@ export function getLifeCurrentPointCoordinates(points, extendFinalPointToEdge = 
 export function LifeCurrentScenery({
   active = true,
   layout,
-  themeId = "river",
+  themeId = "modern-heirloom",
   viewportRef,
 }) {
   const theme = getLifeCurrentTheme(themeId);
   const points = Array.isArray(layout?.points) ? layout.points : [];
   if (points.length === 0) return null;
+
+  if (theme.presentation.renderer === "modern-heirloom-current") {
+    return <ModernHeirloomCurrent points={points} themeId={theme.id} />;
+  }
 
   if (theme.presentation.renderer === "forest-path") {
     return (

@@ -6,7 +6,7 @@ import { DEFAULT_APP_SETTINGS } from "../services/appSettings";
 test("uses the scoped quiet-utility presentation and selected-state controls", () => {
   render(<SettingsPage settings={DEFAULT_APP_SETTINGS} updateSettings={jest.fn()} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
   expect(screen.getByTestId("settings-page")).toHaveClass("trace-feature-page--settings");
-  expect(screen.getByRole("radio", { name: /River/ }).closest("label")).toHaveAttribute("data-selected", "true");
+  expect(screen.getByRole("radio", { name: /Modern Heirloom/ }).closest("label")).toHaveAttribute("data-selected", "true");
   expect(screen.getByRole("radio", { name: /Standard motion/ }).closest("label")).toHaveAttribute("data-selected", "true");
 });
 
@@ -18,13 +18,17 @@ test("renders compact global unit controls and saves each preference", () => {
   expect(screen.getByLabelText("Pounds (lb)")).toBeChecked();
   expect(screen.getByLabelText("Feet + inches (ft/in)")).toBeChecked();
   expect(screen.getByLabelText("Inches (in)")).toBeChecked();
-  expect(screen.getByRole("heading", { name: "Life Current Theme" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "App Theme" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Motion & Effects" })).toBeInTheDocument();
-  expect(screen.getByRole("radio", { name: /River/ })).toBeChecked();
+  const themes = within(screen.getByRole("radiogroup", { name: "App Theme" })).getAllByRole("radio");
+  expect(themes).toHaveLength(6);
+  expect(screen.getByRole("radio", { name: /Modern Heirloom/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /^River/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Haunted Forest/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Gnome Village/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Desert Journey/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Outer Space Journey/ })).not.toBeChecked();
+  expect(screen.getByText("Trace's classic, non-illustrated presentation with a quiet brass Life Current.")).toBeInTheDocument();
   expect(screen.getByText("A flowing current through your timeline.")).toBeInTheDocument();
   expect(screen.getByText("A winding path through a darker world.")).toBeInTheDocument();
   expect(screen.getByText("A storybook path through a lived-in woodland village.")).toBeInTheDocument();
@@ -83,16 +87,16 @@ test("theme controls expose accessible checked states and preserve unrelated set
     <SettingsPage settings={DEFAULT_APP_SETTINGS} updateSettings={updateSettings} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />
   );
   const forest = screen.getByRole("radio", { name: /Haunted Forest/ });
-  expect(forest).toHaveAttribute("aria-describedby", "life-current-theme-haunted-forest-description");
+  expect(forest).toHaveAttribute("aria-describedby", "app-theme-haunted-forest-description");
   fireEvent.click(forest);
   expect(updateSettings).toHaveBeenLastCalledWith({
     ...DEFAULT_APP_SETTINGS,
-    lifeCurrentThemeId: "haunted-forest",
+    themeId: "haunted-forest",
   });
 
   rerender(
     <SettingsPage
-      settings={{ ...DEFAULT_APP_SETTINGS, lifeCurrentThemeId: "haunted-forest" }}
+      settings={{ ...DEFAULT_APP_SETTINGS, themeId: "haunted-forest" }}
       updateSettings={updateSettings}
       onBack={jest.fn()}
       buttonStyle={{}}
@@ -100,8 +104,41 @@ test("theme controls expose accessible checked states and preserve unrelated set
     />
   );
   expect(screen.getByRole("radio", { name: /Haunted Forest/ })).toBeChecked();
-  expect(screen.getByRole("radio", { name: /River/ })).not.toBeChecked();
+  expect(screen.getByRole("radio", { name: /Modern Heirloom/ })).not.toBeChecked();
+  expect(screen.getByRole("radio", { name: /^River/ })).not.toBeChecked();
   expect(screen.getByText("✓ Selected").closest("label")).toHaveAttribute("data-selected", "true");
+});
+
+test("Modern Heirloom remains a selectable choice distinct from River", () => {
+  const updateSettings = jest.fn(() => true);
+  const { rerender } = render(
+    <SettingsPage
+      settings={{ ...DEFAULT_APP_SETTINGS, themeId: "river" }}
+      updateSettings={updateSettings}
+      onBack={jest.fn()}
+      buttonStyle={{}}
+      containerStyle={{}}
+    />
+  );
+  expect(screen.getByRole("radio", { name: /^River/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /Modern Heirloom/ })).not.toBeChecked();
+  fireEvent.click(screen.getByRole("radio", { name: /Modern Heirloom/ }));
+  expect(updateSettings).toHaveBeenLastCalledWith({
+    ...DEFAULT_APP_SETTINGS,
+    themeId: "modern-heirloom",
+  });
+
+  rerender(
+    <SettingsPage
+      settings={DEFAULT_APP_SETTINGS}
+      updateSettings={updateSettings}
+      onBack={jest.fn()}
+      buttonStyle={{}}
+      containerStyle={{}}
+    />
+  );
+  expect(screen.getByRole("radio", { name: /Modern Heirloom/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /^River/ })).not.toBeChecked();
 });
 
 test("selects Gnome Village through the shared theme control", () => {
@@ -117,11 +154,11 @@ test("selects Gnome Village through the shared theme control", () => {
   );
 
   const gnome = screen.getByRole("radio", { name: /Gnome Village/ });
-  expect(gnome).toHaveAttribute("aria-describedby", "life-current-theme-gnome-village-description");
+  expect(gnome).toHaveAttribute("aria-describedby", "app-theme-gnome-village-description");
   fireEvent.click(gnome);
   expect(updateSettings).toHaveBeenLastCalledWith({
     ...DEFAULT_APP_SETTINGS,
-    lifeCurrentThemeId: "gnome-village",
+    themeId: "gnome-village",
   });
 });
 
@@ -138,11 +175,11 @@ test("selects Desert Journey through the shared theme control", () => {
   );
 
   const desert = screen.getByRole("radio", { name: /Desert Journey/ });
-  expect(desert).toHaveAttribute("aria-describedby", "life-current-theme-desert-journey-description");
+  expect(desert).toHaveAttribute("aria-describedby", "app-theme-desert-journey-description");
   fireEvent.click(desert);
   expect(updateSettings).toHaveBeenLastCalledWith({
     ...DEFAULT_APP_SETTINGS,
-    lifeCurrentThemeId: "desert-journey",
+    themeId: "desert-journey",
   });
 });
 
@@ -161,12 +198,12 @@ test("selects Outer Space Journey through the shared theme control", () => {
   const outerSpace = screen.getByRole("radio", { name: /Outer Space Journey/ });
   expect(outerSpace).toHaveAttribute(
     "aria-describedby",
-    "life-current-theme-outer-space-journey-description"
+    "app-theme-outer-space-journey-description"
   );
   fireEvent.click(outerSpace);
   expect(updateSettings).toHaveBeenLastCalledWith({
     ...DEFAULT_APP_SETTINGS,
-    lifeCurrentThemeId: "outer-space-journey",
+    themeId: "outer-space-journey",
   });
 });
 

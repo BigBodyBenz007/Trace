@@ -1260,6 +1260,12 @@ code {
   width: 44px;
 }
 
+.life-current-theme-swatch--modern-heirloom {
+  background:
+    linear-gradient(166deg, transparent 46%, rgba(210, 173, 120, 0.9) 48% 50%, transparent 52%),
+    linear-gradient(145deg, #102538, #07131f);
+}
+
 .life-current-theme-swatch--river {
   background: linear-gradient(145deg, #53653e, #2a6265 48%, #174951 67%, #6b6148 82%, #3d5338);
 }
@@ -1466,6 +1472,64 @@ code {
   border-radius: 14px;
   outline: 1px solid #344f43;
   outline-offset: -1px;
+}
+
+.life-current-theme--modern-heirloom {
+  background: #07131f;
+  border-radius: 14px;
+  outline: 1px solid rgba(110, 96, 78, 0.58);
+  outline-offset: -1px;
+}
+
+.modern-heirloom-current-frame {
+  height: 0;
+  left: 0;
+  pointer-events: none;
+  position: sticky;
+  top: 0;
+  width: 100%;
+  z-index: 0;
+}
+
+.modern-heirloom-current-scene {
+  background:
+    radial-gradient(circle at 46% 32%, rgba(27, 111, 106, 0.1), transparent 42%),
+    repeating-linear-gradient(112deg, rgba(242, 234, 220, 0.018) 0 1px, transparent 1px 5px),
+    linear-gradient(180deg, #0a1a28, #07131f);
+  contain: layout paint style;
+  height: var(--life-current-scenery-height);
+  left: 0;
+  overflow: hidden;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 100%;
+}
+
+.modern-heirloom-current-lines {
+  display: block;
+  height: 100%;
+  overflow: visible;
+  width: 100%;
+}
+
+.modern-heirloom-current-line {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.modern-heirloom-current-line--companion {
+  filter: drop-shadow(0 0 8px rgba(121, 201, 191, 0.16));
+  opacity: 0.26;
+  stroke: var(--trace-teal-soft);
+  stroke-width: 1.2;
+}
+
+.modern-heirloom-current-line--brass {
+  filter: drop-shadow(0 0 5px rgba(210, 173, 120, 0.16));
+  opacity: 0.92;
+  stroke: var(--trace-brass-strong);
+  stroke-width: 1.6;
 }
 
 .river-current-frame {

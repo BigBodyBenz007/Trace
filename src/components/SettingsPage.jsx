@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import {
-  LIFE_CURRENT_THEMES,
-  normalizeLifeCurrentThemeId,
-} from "../services/lifeCurrentThemes";
+  APP_THEMES,
+  normalizeAppThemeId,
+} from "../services/appThemes";
 import {
   HOME_MODULES,
   normalizeHomeVisibility,
@@ -36,8 +36,8 @@ export default function SettingsPage({ settings, updateSettings, onBack, onOpenB
     saveSettings({ ...settings, units: { ...settings.units, [key]: value } });
   }
 
-  function changeLifeCurrentTheme(lifeCurrentThemeId) {
-    saveSettings({ ...settings, lifeCurrentThemeId });
+  function changeTheme(themeId) {
+    saveSettings({ ...settings, themeId });
   }
 
   function changeHomeVisibility(moduleId, visible) {
@@ -55,7 +55,7 @@ export default function SettingsPage({ settings, updateSettings, onBack, onOpenB
     saveSettings({ ...settings, motionPreference });
   }
 
-  const selectedThemeId = normalizeLifeCurrentThemeId(settings?.lifeCurrentThemeId);
+  const selectedThemeId = normalizeAppThemeId(settings?.themeId);
   const homeVisibility = normalizeHomeVisibility(settings?.homeVisibility);
   const selectedMotionPreference = normalizeMotionPreference(settings?.motionPreference);
 
@@ -98,13 +98,13 @@ export default function SettingsPage({ settings, updateSettings, onBack, onOpenB
         })}
       </div>
     </section>
-    <section aria-labelledby="life-current-theme-heading" className="life-current-theme-settings">
-      <h2 id="life-current-theme-heading">Life Current Theme</h2>
-      <p className="life-current-theme-settings__intro">Choose how your timeline journey is presented.</p>
-      <div className="life-current-theme-options">
-        {LIFE_CURRENT_THEMES.map((theme) => {
+    <section aria-labelledby="app-theme-heading" className="life-current-theme-settings app-theme-settings">
+      <h2 id="app-theme-heading">App Theme</h2>
+      <p className="life-current-theme-settings__intro">Choose Trace&apos;s presentation throughout the app.</p>
+      <div aria-labelledby="app-theme-heading" className="life-current-theme-options" role="radiogroup">
+        {APP_THEMES.map((theme) => {
           const selected = selectedThemeId === theme.id;
-          const descriptionId = `life-current-theme-${theme.id}-description`;
+          const descriptionId = `app-theme-${theme.id}-description`;
           return (
             <label
               className="life-current-theme-option"
@@ -114,15 +114,15 @@ export default function SettingsPage({ settings, updateSettings, onBack, onOpenB
               <input
                 aria-describedby={descriptionId}
                 checked={selected}
-                name="life-current-theme"
-                onChange={() => changeLifeCurrentTheme(theme.id)}
+                name="app-theme"
+                onChange={() => changeTheme(theme.id)}
                 type="radio"
                 value={theme.id}
               />
               <span aria-hidden="true" className={`life-current-theme-swatch life-current-theme-swatch--${theme.id}`} />
               <span className="life-current-theme-option__copy">
                 <span className="life-current-theme-option__heading">
-                  <strong>{theme.name}</strong>
+                  <strong>{theme.label}</strong>
                   {selected && <span className="life-current-theme-option__selected">✓ Selected</span>}
                 </span>
                 <span id={descriptionId} className="life-current-theme-option__description">{theme.description}</span>

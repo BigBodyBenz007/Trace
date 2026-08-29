@@ -5,15 +5,21 @@ import {
   normalizeLifeCurrentThemeId,
 } from "./lifeCurrentThemes";
 
-test("registers the five stable first-party Life Current themes", () => {
+test("compatibility exports expose the authoritative six-theme app registry", () => {
   expect(LIFE_CURRENT_THEMES.map(({ id }) => id)).toEqual([
+    "modern-heirloom",
     "river",
     "haunted-forest",
     "gnome-village",
     "desert-journey",
     "outer-space-journey",
   ]);
-  expect(DEFAULT_LIFE_CURRENT_THEME_ID).toBe("river");
+  expect(DEFAULT_LIFE_CURRENT_THEME_ID).toBe("modern-heirloom");
+  expect(getLifeCurrentTheme("modern-heirloom")).toMatchObject({
+    name: "Modern Heirloom",
+    immersive: false,
+    presentation: { renderer: "modern-heirloom-current" },
+  });
   expect(getLifeCurrentTheme("haunted-forest")).toMatchObject({
     name: "Haunted Forest",
     description: "A winding path through a darker world.",
@@ -37,9 +43,9 @@ test("registers the five stable first-party Life Current themes", () => {
 });
 
 test.each([undefined, null, "", "obsolete", {}, []])(
-  "normalizes unknown theme value %p to River",
+  "normalizes unknown theme value %p to Modern Heirloom",
   (value) => {
-    expect(normalizeLifeCurrentThemeId(value)).toBe("river");
-    expect(getLifeCurrentTheme(value).id).toBe("river");
+    expect(normalizeLifeCurrentThemeId(value)).toBe("modern-heirloom");
+    expect(getLifeCurrentTheme(value).id).toBe("modern-heirloom");
   }
 );

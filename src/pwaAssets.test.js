@@ -32,6 +32,30 @@ test("HTML supplies iPhone standalone and safe-area viewport metadata", () => {
   expect(html).toContain("<title>Trace</title>");
 });
 
+test("HTML applies a fail-safe app theme before React starts", () => {
+  const html = fs.readFileSync(publicPath("index.html"), "utf8");
+  expect(html).toContain('var fallbackTheme = "modern-heirloom"');
+  expect(html).toContain('window.localStorage.getItem("appSettings")');
+  expect(html).toContain("settings && settings.themeId");
+  expect(html).toContain("settings && settings.lifeCurrentThemeId");
+  expect(html).toContain('document.documentElement.setAttribute("data-trace-theme", themeId)');
+  expect(html.indexOf("data-trace-theme")).toBeLessThan(html.indexOf('<div id="root"></div>'));
+});
+
+test("pre-paint theme bootstrap preserves legacy selection and survives malformed storage", () => {
+  const html = fs.readFileSync(publicPath("index.html"), "utf8");
+  const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+
+  localStorage.setItem("appSettings", JSON.stringify({ lifeCurrentThemeId: "gnome-village" }));
+  window.eval(bootstrap);
+  expect(document.documentElement).toHaveAttribute("data-trace-theme", "gnome-village");
+
+  localStorage.setItem("appSettings", "not-json");
+  window.eval(bootstrap);
+  expect(document.documentElement).toHaveAttribute("data-trace-theme", "modern-heirloom");
+  localStorage.clear();
+});
+
 test.each([
   ["trace-icon-192.png", 192],
   ["trace-icon-512.png", 512],

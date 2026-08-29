@@ -270,7 +270,7 @@ function HomePage({
   workoutEntries = [],
   medicationEntries = [],
   journalEntries = [],
-  lifeCurrentThemeId = "river",
+  themeId = "modern-heirloom",
   homeVisibility,
   reducedMotion = false,
   addTrophyCaseEntry = () => false,
@@ -293,7 +293,7 @@ function HomePage({
   const [detailMemoryId, setDetailMemoryId] = useState(null);
   const [activeDetailPhotoIndex, setActiveDetailPhotoIndex] = useState(0);
   const [filteredCameraDate, setFilteredCameraDate] = useState(null);
-  const lifeCurrentTheme = getLifeCurrentTheme(lifeCurrentThemeId);
+  const lifeCurrentTheme = getLifeCurrentTheme(themeId);
   const visibleHomeModules = normalizeHomeVisibility(homeVisibility);
   const lifeCurrentColors = lifeCurrentTheme.presentation.colors;
   const timelineRef = useRef(null);
@@ -1142,6 +1142,7 @@ function HomePage({
                             <div
                               className="trace-timeline-card-visual"
                               data-timeline-card-visual="true"
+                              data-timeline-selected={isSelected ? "true" : "false"}
                               style={{
                                 background: lifeCurrentColors.card,
                                 borderRadius: "14px",

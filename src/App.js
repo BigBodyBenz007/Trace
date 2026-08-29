@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef } from "react";
 import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
@@ -235,6 +235,10 @@ function App() {
   const [healthMeasurementEntries, setHealthMeasurementEntries] = useState([]);
   const [appSettings, setAppSettings] = useState(() => readAppSettings(localStorage));
   const reducedMotion = useReducedMotion(appSettings.motionPreference);
+
+  useLayoutEffect(() => {
+    document.documentElement.setAttribute("data-trace-theme", appSettings.themeId);
+  }, [appSettings.themeId]);
   const [medicationEntries, setMedicationEntries] = useState([]);
   const [protocols, setProtocols] = useState([]);
   const [protocolOccurrences, setProtocolOccurrences] = useState([]);
@@ -2029,6 +2033,7 @@ function App() {
       aria-hidden={ceremonyEntry ? "true" : undefined}
       className="trace-app-shell"
       data-motion={reducedMotion ? "reduced" : "standard"}
+      data-trace-theme={appSettings.themeId}
       data-testid="trace-app-shell"
       data-planned-workout-count={plannedWorkouts.length}
       inert={Boolean(ceremonyEntry)}
@@ -2100,7 +2105,7 @@ function App() {
           workoutEntries={workoutEntries}
           medicationEntries={medicationEntries}
           journalEntries={journalEntries}
-          lifeCurrentThemeId={appSettings.lifeCurrentThemeId}
+          themeId={appSettings.themeId}
           homeVisibility={appSettings.homeVisibility}
           reducedMotion={reducedMotion}
           addTrophyCaseEntry={addTrophyCaseEntry}
