@@ -139,6 +139,36 @@ test("front and back labels retain anatomical left/right orientation", () => {
   expect(deriveInjectionSiteLabel("back", 0.76, 0.25)).toBe("Right Upper Arm (Back)");
 });
 
+test("classifies front and back flanks with anatomical laterality", () => {
+  expect(deriveInjectionSiteLabel("front", 0.34, 0.42)).toBe("Right Flank");
+  expect(deriveInjectionSiteLabel("front", 0.66, 0.42)).toBe("Left Flank");
+  expect(deriveInjectionSiteLabel("back", 0.34, 0.42)).toBe("Left Flank (Back)");
+  expect(deriveInjectionSiteLabel("back", 0.66, 0.42)).toBe("Right Flank (Back)");
+});
+
+test("keeps genuine forearms distinct from the adjacent flank polygons", () => {
+  expect(deriveInjectionSiteLabel("front", 0.23, 0.42)).toBe("Right Forearm");
+  expect(deriveInjectionSiteLabel("front", 0.77, 0.42)).toBe("Left Forearm");
+  expect(deriveInjectionSiteLabel("back", 0.23, 0.42)).toBe("Left Forearm (Back)");
+  expect(deriveInjectionSiteLabel("back", 0.77, 0.42)).toBe("Right Forearm (Back)");
+});
+
+test("uses the tapered forearm-to-flank boundary instead of the former outer rectangle", () => {
+  expect(deriveInjectionSiteLabel("front", 0.29, 0.42)).toBe("Right Forearm");
+  expect(deriveInjectionSiteLabel("front", 0.31, 0.42)).toBe("Right Flank");
+  expect(deriveInjectionSiteLabel("back", 0.69, 0.42)).toBe("Right Flank (Back)");
+  expect(deriveInjectionSiteLabel("back", 0.71, 0.42)).toBe("Right Forearm (Back)");
+});
+
+test("uses a stable coordinate classifier for every body-style choice", () => {
+  BODY_STYLE_OPTIONS.forEach(() => {
+    expect(deriveInjectionSiteLabel("front", 0.34, 0.42)).toBe("Right Flank");
+    expect(deriveInjectionSiteLabel("back", 0.66, 0.42)).toBe("Right Flank (Back)");
+    expect(deriveInjectionSiteLabel("front", 0.23, 0.42)).toBe("Right Forearm");
+    expect(deriveInjectionSiteLabel("back", 0.77, 0.42)).toBe("Right Forearm (Back)");
+  });
+});
+
 test("uses local calendar dates for the final marker boundaries", () => {
   const now = new Date(2026, 7, 27, 0, 10);
   expect(injectionSiteRecency(new Date(2026, 7, 27, 23, 55), now)).toBe("today");

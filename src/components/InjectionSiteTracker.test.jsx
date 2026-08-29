@@ -118,6 +118,41 @@ test("persists body-style selection through its owner without moving saved coord
   expect(container.querySelector('[data-entry-id="shot:fixed"]')).toHaveAttribute("transform", before);
 });
 
+test("front and back flank taps keep their exact coordinates and anatomical labels", () => {
+  renderTracker();
+  selectBody("front", 214, 482);
+  expect(screen.getByText(/Selected:/)).toHaveTextContent("Selected: Right Flank");
+  expect(screen.getByTestId("pending-marker")).toHaveAttribute("transform", "translate(204 462)");
+
+  selectBody("back", 406, 482);
+  expect(screen.getByText(/Selected:/)).toHaveTextContent("Selected: Right Flank (Back)");
+  expect(screen.getByTestId("pending-marker")).toHaveAttribute("transform", "translate(396 462)");
+});
+
+test("a pending flank label and normalized marker remain stable across all five body styles", () => {
+  function Harness() {
+    const [style, setStyle] = useState("neutral-average");
+    return <InjectionSiteTracker
+      bodyHitTest={() => true}
+      bodyStyleId={style}
+      data={emptyInjectionSiteCollection()}
+      now={now}
+      protocols={protocols}
+      updateBodyStyle={(value) => { setStyle(value); return true; }}
+    />;
+  }
+  render(<Harness />);
+  selectBody("front", 214, 482);
+  const expectedTransform = "translate(204 462)";
+
+  BODY_STYLE_OPTIONS.forEach(({ id, label }) => {
+    fireEvent.change(screen.getByLabelText("Body Style"), { target: { value: id } });
+    expect(screen.getByAltText(`${label}, front view`)).toBeInTheDocument();
+    expect(screen.getByText(/Selected:/)).toHaveTextContent("Selected: Right Flank");
+    expect(screen.getByTestId("pending-marker")).toHaveAttribute("transform", expectedTransform);
+  });
+});
+
 test("transparent artwork space never selects a location", () => {
   renderTracker({ bodyHitTest: jest.fn(() => false) });
   selectBody("front", 20, 30);

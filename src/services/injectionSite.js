@@ -17,6 +17,57 @@ export const DEFAULT_BODY_STYLE_ID = "neutral-average";
 const BODY_STYLE_IDS = new Set(BODY_STYLE_OPTIONS.map(({ id }) => id));
 const VIEWS = new Set(["front", "back"]);
 
+const SCREEN_LEFT_FOREARM = Object.freeze([
+  [0.23, 0.33],
+  [0.32, 0.33],
+  [0.30, 0.40],
+  [0.27, 0.49],
+  [0.16, 0.49],
+  [0.19, 0.40],
+]);
+const SCREEN_LEFT_FLANK = Object.freeze([
+  [0.32, 0.33],
+  [0.45, 0.33],
+  [0.45, 0.49],
+  [0.27, 0.49],
+  [0.30, 0.40],
+]);
+
+function mirrorPolygon(points) {
+  return points.map(([x, y]) => [1 - x, y]);
+}
+
+const SCREEN_RIGHT_FOREARM = Object.freeze(mirrorPolygon(SCREEN_LEFT_FOREARM));
+const SCREEN_RIGHT_FLANK = Object.freeze(mirrorPolygon(SCREEN_LEFT_FLANK));
+
+const ARM_AND_FLANK_REGIONS = Object.freeze({
+  front: Object.freeze([
+    { label: "Right Forearm", polygon: SCREEN_LEFT_FOREARM },
+    { label: "Left Forearm", polygon: SCREEN_RIGHT_FOREARM },
+    { label: "Right Flank", polygon: SCREEN_LEFT_FLANK },
+    { label: "Left Flank", polygon: SCREEN_RIGHT_FLANK },
+  ]),
+  back: Object.freeze([
+    { label: "Left Forearm (Back)", polygon: SCREEN_LEFT_FOREARM },
+    { label: "Right Forearm (Back)", polygon: SCREEN_RIGHT_FOREARM },
+    { label: "Left Flank (Back)", polygon: SCREEN_LEFT_FLANK },
+    { label: "Right Flank (Back)", polygon: SCREEN_RIGHT_FLANK },
+  ]),
+});
+
+function pointInPolygon(x, y, polygon) {
+  let inside = false;
+  for (let current = 0, previous = polygon.length - 1; current < polygon.length; previous = current++) {
+    const [currentX, currentY] = polygon[current];
+    const [previousX, previousY] = polygon[previous];
+    const crossesY = (currentY > y) !== (previousY > y);
+    if (!crossesY) continue;
+    const edgeX = ((previousX - currentX) * (y - currentY)) / (previousY - currentY) + currentX;
+    if (x < edgeX) inside = !inside;
+  }
+  return inside;
+}
+
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
@@ -346,7 +397,12 @@ export function deriveInjectionSiteLabel(view, x, y) {
   if (y < 0.13) return `Head${back}`;
   if (y < 0.19) return `Neck${back}`;
   if (y < 0.33) return outer ? `${side} Upper Arm${back}` : `${side} ${view === "back" ? "Upper Back" : "Chest"}`;
-  if (y < 0.49) return outer ? `${side} Forearm${back}` : `${side} ${view === "back" ? "Lower Back" : "Abdomen"}`;
+  if (y < 0.49) {
+    const region = ARM_AND_FLANK_REGIONS[view]
+      .find(({ polygon }) => pointInPolygon(x, y, polygon));
+    if (region) return region.label;
+    return `${side} ${view === "back" ? "Lower Back" : "Abdomen"}`;
+  }
   if (y < 0.61) return `${side} ${view === "back" ? "Glute" : "Hip"}`;
   if (y < 0.79) return `${side} Thigh (${outer ? "Outer" : "Inner"})${back}`;
   if (y < 0.88) return `${side} Knee${back}`;
