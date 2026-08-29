@@ -15,6 +15,12 @@ import {
   emptyProtocolOccurrenceCollection,
   normalizeProtocolOccurrenceCollection,
 } from "./protocolOccurrence";
+import {
+  defaultInjectionSiteSettings,
+  emptyInjectionSiteCollection,
+  normalizeInjectionSiteCollection,
+  normalizeInjectionSiteSettings,
+} from "./injectionSite";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
 export const TRACE_BACKUP_SCHEMA_VERSION = 1;
@@ -29,6 +35,8 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
   "medicationCompounds",
   "protocols",
   "protocolOccurrences",
+  "injectionSiteEntries",
+  "injectionSiteSettings",
   "plannedWorkouts",
   "dailyActions",
   "workoutDraft",
@@ -39,7 +47,7 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
 ]);
 
 const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
-const SPECIAL_KEYS = new Set(["workoutDraft", "dailyActions", "protocolOccurrences"]);
+const SPECIAL_KEYS = new Set(["workoutDraft", "dailyActions", "protocolOccurrences", "injectionSiteEntries", "injectionSiteSettings"]);
 const ARRAY_KEYS = new Set(TRACE_STORAGE_KEYS.filter(
   (key) => !OBJECT_KEYS.has(key) && !SPECIAL_KEYS.has(key)
 ));
@@ -108,6 +116,12 @@ function decodePhoto(record) {
 }
 
 function readStructuredData(storage) {
+  let protocols = [];
+  try {
+    const rawProtocols = storage.getItem("protocols");
+    protocols = rawProtocols ? JSON.parse(rawProtocols) : [];
+    if (!Array.isArray(protocols)) protocols = [];
+  } catch (error) { protocols = []; }
   return Object.fromEntries(TRACE_STORAGE_KEYS.map((key) => {
     const raw = storage.getItem(key);
     if (raw === null && key === "dailyActions") {
@@ -115,6 +129,12 @@ function readStructuredData(storage) {
     }
     if (raw === null && key === "protocolOccurrences") {
       return [key, emptyProtocolOccurrenceCollection()];
+    }
+    if (raw === null && key === "injectionSiteEntries") {
+      return [key, emptyInjectionSiteCollection()];
+    }
+    if (raw === null && key === "injectionSiteSettings") {
+      return [key, defaultInjectionSiteSettings()];
     }
     if (raw === null) return [key, null];
     try {
@@ -135,6 +155,16 @@ function readStructuredData(storage) {
         if (!normalized) throw new Error("Invalid protocol occurrence data.");
         return [key, normalized];
       }
+      if (key === "injectionSiteEntries") {
+        const normalized = normalizeInjectionSiteCollection(parsed, protocols);
+        if (!normalized) throw new Error("Invalid injection site data.");
+        return [key, normalized];
+      }
+      if (key === "injectionSiteSettings") {
+        const normalized = normalizeInjectionSiteSettings(parsed);
+        if (!normalized) throw new Error("Invalid injection site settings.");
+        return [key, normalized];
+      }
       return [key, key === "appSettings" ? normalizeAppSettings(parsed) : parsed];
     } catch (error) {
       throw new Error(`Trace could not export malformed ${key} data.`);
@@ -148,7 +178,7 @@ function validateStructuredData(structuredData) {
   }
   TRACE_STORAGE_KEYS.forEach((key) => {
     const value = structuredData[key];
-    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", "plannedWorkouts", "dailyActions", "protocolOccurrences", "workoutDraft"].includes(key) && value === undefined)) return;
+    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", "plannedWorkouts", "dailyActions", "protocolOccurrences", "injectionSiteEntries", "injectionSiteSettings", "workoutDraft"].includes(key) && value === undefined)) return;
     if (ARRAY_KEYS.has(key) && !Array.isArray(value)) {
       throw new Error(`The backup contains invalid ${key} data.`);
     }
@@ -197,6 +227,20 @@ function validateStructuredData(structuredData) {
   ) {
     throw new Error("The backup contains invalid protocol occurrence data.");
   }
+  if (
+    structuredData.injectionSiteEntries !== undefined &&
+    structuredData.injectionSiteEntries !== null &&
+    !normalizeInjectionSiteCollection(structuredData.injectionSiteEntries, structuredData.protocols || [])
+  ) {
+    throw new Error("The backup contains invalid injection site data.");
+  }
+  if (
+    structuredData.injectionSiteSettings !== undefined &&
+    structuredData.injectionSiteSettings !== null &&
+    !normalizeInjectionSiteSettings(structuredData.injectionSiteSettings)
+  ) {
+    throw new Error("The backup contains invalid injection site settings.");
+  }
 }
 
 function photoReferenceIds(structuredData) {
@@ -229,6 +273,7 @@ export function summarizeTraceBackup(backup) {
     medicationEntries: data.medicationEntries?.length || 0,
     protocols: data.protocols?.length || 0,
     protocolOccurrences: data.protocolOccurrences?.occurrences?.length || 0,
+    injectionSiteEntries: data.injectionSiteEntries?.shots?.length || 0,
     trophyCaseEntries: data.trophyCaseEntries?.length || 0,
     savedExercises: data.savedExercises?.length || 0,
     savedCompounds: data.medicationCompounds?.length || 0,
@@ -267,6 +312,13 @@ export function validateTraceBackup(value) {
   );
   normalizedBackup.data.structured.protocolOccurrences = normalizeProtocolOccurrenceCollection(
     normalizedBackup.data.structured.protocolOccurrences ?? emptyProtocolOccurrenceCollection()
+  );
+  normalizedBackup.data.structured.injectionSiteEntries = normalizeInjectionSiteCollection(
+    normalizedBackup.data.structured.injectionSiteEntries ?? emptyInjectionSiteCollection(),
+    normalizedBackup.data.structured.protocols || []
+  );
+  normalizedBackup.data.structured.injectionSiteSettings = normalizeInjectionSiteSettings(
+    normalizedBackup.data.structured.injectionSiteSettings ?? defaultInjectionSiteSettings()
   );
   if (!Array.isArray(value.data?.photos)) throw new Error("The backup is missing its photo collection.");
   const photoIds = new Set();

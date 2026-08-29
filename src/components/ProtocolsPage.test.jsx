@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import ProtocolsPage from "./ProtocolsPage";
+import { defaultInjectionSiteSettings, emptyInjectionSiteCollection } from "../services/injectionSite";
 
 const item = { id: "item:1", compound: { name: "Creatine", reference: { source: "missing", sourceId: "gone" } }, dose: { amount: 5, unit: "g" }, route: { code: "oral" }, schedule: { type: "weekly-days", weekdays: [1,3,5] }, notes: "snapshot" };
 const active = { id: "protocol:1", schemaVersion: 1, name: "Training plan", startDate: "2026-08-20", endDate: null, status: "active", notes: "Mine", items: [item], createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z", endedAt: null };
@@ -12,7 +13,12 @@ beforeEach(() => {
 });
 
 function renderPage(overrides = {}) {
-  const props = { onBack: jest.fn(), protocols: [], compounds: [], saveProtocol: jest.fn(), updateProtocol: jest.fn(), endProtocol: jest.fn(), deleteProtocol: jest.fn(), ...overrides };
+  const props = {
+    onBack: jest.fn(), protocols: [], compounds: [], saveProtocol: jest.fn(), updateProtocol: jest.fn(),
+    endProtocol: jest.fn(), deleteProtocol: jest.fn(), injectionSiteData: emptyInjectionSiteCollection(),
+    injectionSiteSettings: defaultInjectionSiteSettings(), saveInjectionSession: jest.fn(), updateInjectionShot: jest.fn(),
+    deleteInjectionShot: jest.fn(), updateInjectionBodyStyle: jest.fn(), trackerBodyHitTest: () => true, ...overrides,
+  };
   render(<ProtocolsPage {...props} />);
   return props;
 }
@@ -21,6 +27,29 @@ test("uses the scoped ongoing-plan presentation and explicit primary action", ()
   renderPage();
   expect(screen.getByTestId("protocols-page")).toHaveClass("trace-feature-page--protocols");
   expect(screen.getByRole("button", { name: "Create Protocol" })).toHaveClass("trace-action--primary");
+  expect(screen.getByRole("navigation", { name: "Protocols navigation" })).toHaveClass("trace-protocols-navigation");
+  const actions = screen.getByLabelText("Protocol actions");
+  expect(actions).toHaveClass("trace-protocols-primary-actions");
+  expect(actions).toContainElement(screen.getByRole("button", { name: "Create Protocol" }));
+  expect(actions).toContainElement(screen.getByRole("button", { name: "Injection Site Tracker" }));
+});
+
+test("opens the Injection Site Tracker from Protocols and returns without creating a top-level page", () => {
+  renderPage({ protocols: [active] });
+  fireEvent.click(screen.getByRole("button", { name: "Injection Site Tracker" }));
+  expect(screen.getByTestId("injection-site-tracker")).toBeInTheDocument();
+  expect(screen.getByLabelText("Injection filter")).toHaveValue("");
+  fireEvent.click(screen.getByRole("button", { name: "Back to Protocols" }));
+  expect(screen.getByRole("heading", { name: "Protocols" })).toBeInTheDocument();
+});
+
+test("opens the tracker from Protocol detail with that existing Protocol preselected", () => {
+  renderPage({ protocols: [active] });
+  fireEvent.click(screen.getByRole("button", { name: "View Protocol" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Injection Site Tracker" })[0]);
+  expect(screen.getByLabelText("Injection filter")).toHaveValue(active.id);
+  fireEvent.click(screen.getByRole("button", { name: "Back to Protocols" }));
+  expect(screen.getByTestId("protocol-detail")).toHaveTextContent("Training plan");
 });
 
 test("shows tracking-only copy, intentional empty states, and Timeline navigation", () => {

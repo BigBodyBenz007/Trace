@@ -1834,6 +1834,71 @@ test("creates and persists a protocol without generating medication history", ()
   expect(screen.getByText("My weekly plan")).toBeInTheDocument();
 });
 
+test("logs an exact Protocol-linked injection site and restores it after an app remount", async () => {
+  const protocol = {
+    id: "protocol:injection", schemaVersion: 1, name: "Energy Phase 1", startDate: "2026-08-01",
+    endDate: null, status: "active", notes: "", createdAt: "2026-08-01T00:00:00.000Z",
+    updatedAt: "2026-08-01T00:00:00.000Z", endedAt: null,
+    items: [{ id: "protocol-item:injection", compound: { name: "B12" }, dose: { amount: 1, unit: "mg" }, route: { code: "intramuscular" }, schedule: { type: "weekly-days", weekdays: [4] }, notes: "" }],
+  };
+  localStorage.setItem("protocols", JSON.stringify([protocol]));
+  const canvasContext = {
+    clearRect: jest.fn(),
+    drawImage: jest.fn(),
+    getImageData: jest.fn(() => ({ data: [0, 0, 0, 255] })),
+  };
+  const canvasSpy = jest.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(canvasContext);
+  const view = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Protocols" }));
+  await waitFor(() => expect(screen.getByText("Energy Phase 1")).toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button", { name: "Injection Site Tracker" }));
+  const artwork = screen.getByTestId("front-body-art");
+  Object.defineProperties(artwork, {
+    complete: { configurable: true, value: true },
+    naturalWidth: { configurable: true, value: 600 },
+    naturalHeight: { configurable: true, value: 1100 },
+    currentSrc: { configurable: true, value: artwork.src },
+  });
+  const map = screen.getByTestId("front-body-map");
+  map.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 520, right: 200, bottom: 520 });
+  fireEvent.click(screen.getByTestId("front-silhouette"), { clientX: 50, clientY: 355 });
+  fireEvent.click(screen.getByRole("button", { name: /Log Injection/ }));
+  fireEvent.change(screen.getByLabelText("Injection source"), { target: { value: protocol.id } });
+  fireEvent.change(screen.getByLabelText("Injection date"), { target: { value: "2026-08-27" } });
+  fireEvent.change(screen.getByLabelText("Injection time"), { target: { value: "08:24" } });
+  fireEvent.click(screen.getByRole("button", { name: "Finish & Save" }));
+
+  const stored = JSON.parse(localStorage.getItem("injectionSiteEntries"));
+  expect(stored.schemaVersion).toBe(2);
+  expect(stored.sessions).toHaveLength(1);
+  expect(stored.shots).toHaveLength(1);
+  expect(stored.shots[0]).toMatchObject({
+    substanceName: "B12",
+    protocolId: protocol.id,
+    protocolName: "Energy Phase 1",
+    protocolItemId: "protocol-item:injection",
+    view: "front",
+    x: 0.25,
+    y: 355 / 520,
+    siteLabel: "Right Thigh (Outer)",
+  });
+  const savedLocal = new Date(stored.sessions[0].occurredAt);
+  expect([savedLocal.getFullYear(), savedLocal.getMonth() + 1, savedLocal.getDate(), savedLocal.getHours(), savedLocal.getMinutes()]).toEqual([2026, 8, 27, 8, 24]);
+  expect(screen.getByTestId("save-confirmation")).toHaveTextContent("1 shot traced");
+  fireEvent.change(screen.getByLabelText("Body Style"), { target: { value: "feminine-fuller" } });
+  expect(JSON.parse(localStorage.getItem("injectionSiteSettings"))).toEqual({ schemaVersion: 1, bodyStyleId: "feminine-fuller" });
+  canvasSpy.mockRestore();
+
+  view.unmount();
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Protocols" }));
+  await waitFor(() => expect(screen.getByText("Energy Phase 1")).toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button", { name: "Injection Site Tracker" }));
+  expect(screen.getByLabelText("Body Style")).toHaveValue("feminine-fuller");
+  expect(screen.getByAltText("Feminine — Fuller, front view")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: /Edit B12 injection at Right Thigh/ })).toBeInTheDocument();
+});
+
 test("Timeline to Workouts and Workouts to Timeline land at the top", () => {
   renderAppAtTimeline();
   openWorkouts();

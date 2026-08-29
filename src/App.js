@@ -107,6 +107,18 @@ import {
   upsertProtocolOccurrence,
   writeProtocolOccurrences,
 } from "./services/protocolOccurrence";
+import {
+  appendInjectionSession,
+  createInjectionSession,
+  defaultInjectionSiteSettings,
+  deleteInjectionShotData,
+  emptyInjectionSiteCollection,
+  readInjectionSiteData,
+  readInjectionSiteSettings,
+  updateInjectionShotData,
+  writeInjectionSiteData,
+  writeInjectionSiteSettings,
+} from "./services/injectionSite";
 
 const DEFAULT_NUTRITION_GOALS = {
   calories: 0,
@@ -224,6 +236,8 @@ function App() {
   const [medicationEntries, setMedicationEntries] = useState([]);
   const [protocols, setProtocols] = useState([]);
   const [protocolOccurrences, setProtocolOccurrences] = useState([]);
+  const [injectionSiteData, setInjectionSiteData] = useState(() => emptyInjectionSiteCollection());
+  const [injectionSiteSettings, setInjectionSiteSettings] = useState(() => defaultInjectionSiteSettings());
   const [plannedWorkouts, setPlannedWorkouts] = useState([]);
   const [dailyActions, setDailyActions] = useState([]);
   const [workoutEntries, setWorkoutEntries] = useState([]);
@@ -492,6 +506,17 @@ function App() {
     } catch (error) {
       setStorageError(
         "Trace couldn't read the saved protocol occurrence statuses. The stored value was left unchanged."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setInjectionSiteData(readInjectionSiteData(localStorage, readProtocols(localStorage)));
+      setInjectionSiteSettings(readInjectionSiteSettings(localStorage));
+    } catch (error) {
+      setStorageError(
+        "Trace couldn't read the saved injection-site history. The stored value was left unchanged."
       );
     }
   }, []);
@@ -890,7 +915,10 @@ function App() {
       const restoredAppSettings = readAppSettings(localStorage);
       const restoredPlannedWorkouts = readPlannedWorkouts(localStorage);
       const restoredDailyActions = readDailyActions(localStorage);
+      const restoredProtocols = readProtocols(localStorage);
       const restoredProtocolOccurrences = readProtocolOccurrences(localStorage);
+      const restoredInjectionSiteData = readInjectionSiteData(localStorage, restoredProtocols);
+      const restoredInjectionSiteSettings = readInjectionSiteSettings(localStorage);
       const restoredWorkoutDraft = readWorkoutDraft(localStorage);
       const restoredWorkoutEntries = (await Promise.resolve(readStoredWorkoutEntries(localStorage, {
         getDatabase: ensurePhotoDatabase,
@@ -899,7 +927,10 @@ function App() {
       setAppSettings(restoredAppSettings);
       setPlannedWorkouts(restoredPlannedWorkouts);
       setDailyActions(restoredDailyActions);
+      setProtocols(restoredProtocols);
       setProtocolOccurrences(restoredProtocolOccurrences);
+      setInjectionSiteData(restoredInjectionSiteData);
+      setInjectionSiteSettings(restoredInjectionSiteSettings);
       setActiveWorkoutDraft(restoredWorkoutDraft);
       setWorkoutEntries(restoredWorkoutEntries);
       setStorageError("");
@@ -1494,6 +1525,68 @@ function App() {
 
   function skipProtocolOccurrence(protocolId, itemId, date, reason = "", customReason = "") {
     return saveProtocolOccurrenceStatus(protocolId, itemId, date, "skipped", reason, customReason);
+  }
+
+  function saveInjectionSession(draft) {
+    const created = createInjectionSession(draft);
+    const updated = created && appendInjectionSession(injectionSiteData, created);
+    if (!updated) return { status: "invalid", message: "Complete every shot before saving this session." };
+    try {
+      const saved = writeInjectionSiteData(localStorage, updated);
+      setInjectionSiteData(saved);
+      const count = created.shots.length;
+      showConfirmation(`${count} ${count === 1 ? "shot" : "shots"} traced`, "protocols");
+      setStorageError("");
+      return { status: "saved", session: created.session, shots: created.shots };
+    } catch (error) {
+      setStorageError(storageMessage("save this injection session"));
+      return { status: "error", message: "No shots were saved. The injection session could not be stored." };
+    }
+  }
+
+  function updateInjectionShot(id, draft, occurredAt) {
+    const updated = updateInjectionShotData(injectionSiteData, id, draft, occurredAt);
+    if (!updated) return { status: "invalid", message: "The shot could not be updated." };
+    try {
+      const saved = writeInjectionSiteData(localStorage, updated);
+      setInjectionSiteData(saved);
+      showConfirmation("Injection updated", "protocols");
+      setStorageError("");
+      return { status: "saved", shot: saved.shots.find((shot) => shot.id === id) };
+    } catch (error) {
+      setStorageError(storageMessage("update this injection"));
+      return { status: "error", message: "The shot could not be updated." };
+    }
+  }
+
+  function deleteInjectionShot(id) {
+    const updated = deleteInjectionShotData(injectionSiteData, id);
+    if (!updated) return false;
+    try {
+      const saved = writeInjectionSiteData(localStorage, updated);
+      setInjectionSiteData(saved);
+      showConfirmation("Injection deleted", "protocols");
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this injection"));
+      return false;
+    }
+  }
+
+  function updateInjectionBodyStyle(bodyStyleId) {
+    try {
+      const saved = writeInjectionSiteSettings(localStorage, {
+        ...injectionSiteSettings,
+        bodyStyleId,
+      });
+      setInjectionSiteSettings(saved);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("save this injection body style"));
+      return false;
+    }
   }
 
   function startPlannedWorkout(id, conflictAction = null, navigationContext = null) {
@@ -2167,6 +2260,12 @@ function App() {
           updateProtocol={updateProtocol}
           endProtocol={finishProtocol}
           deleteProtocol={deleteProtocol}
+          injectionSiteData={injectionSiteData}
+          injectionSiteSettings={injectionSiteSettings}
+          saveInjectionSession={saveInjectionSession}
+          updateInjectionShot={updateInjectionShot}
+          deleteInjectionShot={deleteInjectionShot}
+          updateInjectionBodyStyle={updateInjectionBodyStyle}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}

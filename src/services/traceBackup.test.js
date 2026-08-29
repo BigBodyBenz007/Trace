@@ -16,6 +16,12 @@ import {
   completeProtocolOccurrence,
   emptyProtocolOccurrenceCollection,
 } from "./protocolOccurrence";
+import {
+  appendInjectionSession,
+  createInjectionSession,
+  defaultInjectionSiteSettings,
+  emptyInjectionSiteCollection,
+} from "./injectionSite";
 
 function makeStorage(initial = {}, failOnSet = null) {
   const values = new Map(Object.entries(initial));
@@ -72,6 +78,10 @@ function emptyStructured(overrides = {}) {
       ? emptyDailyActionCollection()
       : key === "protocolOccurrences"
         ? emptyProtocolOccurrenceCollection()
+      : key === "injectionSiteEntries"
+        ? emptyInjectionSiteCollection()
+      : key === "injectionSiteSettings"
+        ? defaultInjectionSiteSettings()
       : ["nutritionGoals", "appSettings", "workoutDraft"].includes(key) ? null : [],
   ]).concat(Object.entries(overrides)));
 }
@@ -96,6 +106,39 @@ function protocolOccurrence() {
     itemId: "protocol-item:one",
     date: "2026-08-22",
   }, new Date("2026-08-22T14:00:00.000Z"));
+}
+
+function injectionSiteEntry() {
+  return {
+    schemaVersion: 1,
+    id: "injection-site:one",
+    protocolId: "protocol:one",
+    protocolName: "User plan",
+    view: "front",
+    x: 0.237,
+    y: 0.681,
+    siteLabel: "Right Thigh (Outer)",
+    occurredAt: "2026-08-22T14:00:00.000Z",
+    notes: "",
+    createdAt: "2026-08-22T14:01:00.000Z",
+    updatedAt: "2026-08-22T14:01:00.000Z",
+  };
+}
+
+function injectionSiteCollection() {
+  const created = createInjectionSession({
+    occurredAt: "2026-08-22T14:00:00.000Z",
+    shots: [{
+      view: "front", x: 0.237, y: 0.681, siteLabel: "Right Thigh (Outer)",
+      substanceName: "Vitamin B12", protocolId: "protocol:one", protocolName: "User plan",
+      protocolItemId: "protocol-item:one", amount: 1, unit: "mg", notes: "",
+    }],
+  }, {
+    sessionId: "injection-session:one",
+    shotIds: ["injection-shot:one"],
+    now: new Date("2026-08-22T14:01:00.000Z"),
+  });
+  return appendInjectionSession(emptyInjectionSiteCollection(), created);
 }
 
 function encodedPhoto(id = "photo-1", text = "hello", type = "image/png") {
@@ -170,6 +213,8 @@ test("exports empty Trace data with stable version metadata and filename", async
   expect(result.data.structured.workoutDraft).toBeNull();
   expect(result.data.structured.dailyActions).toEqual(emptyDailyActionCollection());
   expect(result.data.structured.protocolOccurrences).toEqual(emptyProtocolOccurrenceCollection());
+  expect(result.data.structured.injectionSiteEntries).toEqual(emptyInjectionSiteCollection());
+  expect(result.data.structured.injectionSiteSettings).toEqual(defaultInjectionSiteSettings());
   expect(traceBackupFilename(new Date(result.createdAt))).toBe("trace-backup-2026-08-12T10-20-30-000Z.json");
 });
 
@@ -179,6 +224,8 @@ test("exports structured data and multiple photos without mutating sources", asy
   const workoutDraft = activeWorkoutDraft({ plannedWorkoutId: "planned-workout:orphaned" });
   const actions = { schemaVersion: 1, actions: [dailyAction()] };
   const occurrences = { schemaVersion: 1, occurrences: [protocolOccurrence()] };
+  const injectionSites = injectionSiteCollection();
+  const injectionSettings = { schemaVersion: 1, bodyStyleId: "feminine-fuller" };
   const storage = makeStorage({
     memories: JSON.stringify(memories),
     plannedWorkouts: JSON.stringify(plans),
@@ -186,6 +233,8 @@ test("exports structured data and multiple photos without mutating sources", asy
     protocols: JSON.stringify([{ id: "protocol-1" }]),
     dailyActions: JSON.stringify(actions),
     protocolOccurrences: JSON.stringify(occurrences),
+    injectionSiteEntries: JSON.stringify(injectionSites),
+    injectionSiteSettings: JSON.stringify(injectionSettings),
   });
   const database = makePhotoDatabase([
     { id: "photo-1", memoryId: "memory-1", blob: new Blob(["one"], { type: "image/png" }) },
@@ -198,6 +247,8 @@ test("exports structured data and multiple photos without mutating sources", asy
   expect(result.data.structured.protocols).toEqual([{ id: "protocol-1" }]);
   expect(result.data.structured.dailyActions).toEqual(actions);
   expect(result.data.structured.protocolOccurrences).toEqual(occurrences);
+  expect(result.data.structured.injectionSiteEntries).toEqual(injectionSites);
+  expect(result.data.structured.injectionSiteSettings).toEqual(injectionSettings);
   expect(result.data.structured.workoutEntries).toBeNull();
   expect(result.data.photos.map(({ id, blob }) => [id, blob.type])).toEqual([
     ["photo-1", "image/png"], ["photo-2", "image/jpeg"],
@@ -323,9 +374,10 @@ test("validates summaries and rejects corrupt, future, and missing-reference bac
     medicationEntries: [{ id: "dose" }], protocols: [{ id: "protocol" }],
     dailyActions: { schemaVersion: 1, actions: [dailyAction()] },
     protocolOccurrences: { schemaVersion: 1, occurrences: [protocolOccurrence()] },
+    injectionSiteEntries: injectionSiteCollection(),
     trophyCaseEntries: [{ id: "trophy" }],
   }), photos: [encodedPhoto()] } });
-  expect(validateTraceBackup(valid).summary).toMatchObject({ memories: 1, photos: 1, nutritionEntries: 1, healthMeasurementEntries: 1, plannedWorkouts: 1, activeWorkoutDraft: true, workouts: 1, medicationEntries: 1, protocols: 1, protocolOccurrences: 1, dailyActions: 1, trophyCaseEntries: 1 });
+  expect(validateTraceBackup(valid).summary).toMatchObject({ memories: 1, photos: 1, nutritionEntries: 1, healthMeasurementEntries: 1, plannedWorkouts: 1, activeWorkoutDraft: true, workouts: 1, medicationEntries: 1, protocols: 1, protocolOccurrences: 1, injectionSiteEntries: 1, dailyActions: 1, trophyCaseEntries: 1 });
   expect(() => parseTraceBackupText("not json")).toThrow("not valid JSON");
   expect(() => validateTraceBackup({ ...valid, schemaVersion: 2 })).toThrow("newer");
   expect(() => validateTraceBackup({ ...valid, data: { ...valid.data, photos: [] } })).toThrow("missing referenced photo");
@@ -365,6 +417,8 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
     protocols: [{ id: "protocol-1" }], plannedWorkouts: [plannedWorkout()], workoutDraft: restoredDraft, trophyCaseEntries: [{ id: "trophy-1" }],
     dailyActions: { schemaVersion: 1, actions: [dailyAction()] },
     protocolOccurrences: { schemaVersion: 1, occurrences: [protocolOccurrence()] },
+    injectionSiteEntries: injectionSiteCollection(),
+    injectionSiteSettings: { schemaVersion: 1, bodyStyleId: "masculine-average" },
     savedExercises: [{ id: "exercise-1" }], userFoods: [{ id: "food-1" }],
     nutritionGoals: { calories: 2000, sodium: 2300 },
   });
@@ -375,7 +429,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   });
   const database = makePhotoDatabase([{ id: "old-photo", blob: new Blob(["old"]) }]);
   const summary = await restoreTraceBackup(value, { confirmed: true, storage, openDatabase: async () => database });
-  expect(summary).toMatchObject({ memories: 1, photos: 1, plannedWorkouts: 1, dailyActions: 1, protocolOccurrences: 1, activeWorkoutDraft: true, workouts: 1 });
+  expect(summary).toMatchObject({ memories: 1, photos: 1, plannedWorkouts: 1, dailyActions: 1, protocolOccurrences: 1, injectionSiteEntries: 1, activeWorkoutDraft: true, workouts: 1 });
   expect(JSON.parse(storage.value("memories"))[0]).toMatchObject({ id: "memory-1", date: "1999-06-12", images: ["photo-1"] });
   expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1", sodium: 640 }]);
   expect(JSON.parse(storage.value("nutritionGoals"))).toEqual({ calories: 2000, sodium: 2300 });
@@ -386,6 +440,8 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(JSON.parse(storage.value("protocols"))).toEqual([{ id: "protocol-1" }]);
   expect(JSON.parse(storage.value("dailyActions"))).toEqual({ schemaVersion: 1, actions: [dailyAction()] });
   expect(JSON.parse(storage.value("protocolOccurrences"))).toEqual({ schemaVersion: 1, occurrences: [protocolOccurrence()] });
+  expect(JSON.parse(storage.value("injectionSiteEntries"))).toEqual(injectionSiteCollection());
+  expect(JSON.parse(storage.value("injectionSiteSettings"))).toEqual({ schemaVersion: 1, bodyStyleId: "masculine-average" });
   expect(JSON.parse(storage.value("plannedWorkouts"))).toEqual([plannedWorkout()]);
   expect(JSON.parse(storage.value("workoutDraft"))).toEqual(restoredDraft);
   expect(JSON.parse(storage.value("trophyCaseEntries"))).toEqual([{ id: "trophy-1" }]);
@@ -463,6 +519,54 @@ test("accepts older backups without protocol occurrence statuses and clears curr
     openDatabase: async () => makePhotoDatabase(),
   });
   expect(JSON.parse(storage.value("protocolOccurrences"))).toEqual(emptyProtocolOccurrenceCollection());
+});
+
+test("accepts older backups without injection sites and replaces current site history with a safe empty collection", async () => {
+  const structured = emptyStructured();
+  delete structured.injectionSiteEntries;
+  const value = backup({ data: { structured, photos: [] } });
+  const storage = makeStorage({
+    injectionSiteEntries: JSON.stringify({ schemaVersion: 1, entries: [injectionSiteEntry()] }),
+  });
+
+  expect(validateTraceBackup(value).summary.injectionSiteEntries).toBe(0);
+  await restoreTraceBackup(value, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(JSON.parse(storage.value("injectionSiteEntries"))).toEqual(emptyInjectionSiteCollection());
+});
+
+test("accepts older backups without injection body settings and restores the neutral default", async () => {
+  const structured = emptyStructured();
+  delete structured.injectionSiteSettings;
+  const value = backup({ data: { structured, photos: [] } });
+  const storage = makeStorage({
+    injectionSiteSettings: JSON.stringify({ schemaVersion: 1, bodyStyleId: "feminine-fuller" }),
+  });
+
+  await restoreTraceBackup(value, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(JSON.parse(storage.value("injectionSiteSettings"))).toEqual(defaultInjectionSiteSettings());
+});
+
+test("rejects malformed injection-site history before restore mutates existing data", async () => {
+  const current = JSON.stringify({ schemaVersion: 1, entries: [injectionSiteEntry()] });
+  const malformed = { schemaVersion: 1, entries: [{ ...injectionSiteEntry(), x: 1.2 }] };
+  const value = backup({ data: { structured: emptyStructured({ injectionSiteEntries: malformed }), photos: [] } });
+  const storage = makeStorage({ injectionSiteEntries: current });
+
+  expect(() => validateTraceBackup(value)).toThrow("invalid injection site data");
+  await expect(restoreTraceBackup(value, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  })).rejects.toThrow("invalid injection site data");
+  expect(storage.value("injectionSiteEntries")).toBe(current);
 });
 
 test("rejects malformed protocol occurrence statuses before restore mutates storage", async () => {

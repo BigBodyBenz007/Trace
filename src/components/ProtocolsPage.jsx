@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import ProtocolEditor from "./ProtocolEditor";
+import InjectionSiteTracker from "./InjectionSiteTracker";
 import { formatDoseUnit, formatRoute } from "../services/medicationEntry";
 import { formatProtocolSchedule } from "../services/protocol";
 
@@ -21,12 +22,21 @@ function ProtocolsPage({
   updateProtocol,
   endProtocol,
   deleteProtocol,
+  injectionSiteData,
+  injectionSiteSettings,
+  saveInjectionSession,
+  updateInjectionShot,
+  deleteInjectionShot,
+  updateInjectionBodyStyle,
+  trackerNow,
+  trackerBodyHitTest,
   buttonStyle = {},
   inputStyle = {},
   containerStyle = {},
 }) {
   const [selectedId, setSelectedId] = useState(null);
   const [editorMode, setEditorMode] = useState(null);
+  const [trackerProtocolId, setTrackerProtocolId] = useState(null);
   const [pendingNavigation, setPendingNavigation] = useState(null);
   const originRef = useRef(null);
   const pageTopRef = useRef(null);
@@ -133,7 +143,7 @@ function ProtocolsPage({
   }
 
   function removeProtocol() {
-    if (!window.confirm("Delete this protocol? Medication history will not be changed.")) return;
+    if (!window.confirm("Delete this protocol? Medication and injection-site history will not be changed.")) return;
     if (!deleteProtocol(selectedId)) return;
     setSelectedId(null);
     setEditorMode(null);
@@ -174,6 +184,23 @@ function ProtocolsPage({
     </section>
   );
 
+  if (trackerProtocolId !== null) {
+    return <InjectionSiteTracker
+      protocols={protocols}
+      data={injectionSiteData}
+      bodyStyleId={injectionSiteSettings?.bodyStyleId}
+      initialProtocolId={trackerProtocolId}
+      onBack={() => setTrackerProtocolId(null)}
+      saveSession={saveInjectionSession}
+      updateShot={updateInjectionShot}
+      deleteShot={deleteInjectionShot}
+      updateBodyStyle={updateInjectionBodyStyle}
+      now={trackerNow}
+      bodyHitTest={trackerBodyHitTest}
+      containerStyle={containerStyle}
+    />;
+  }
+
   if (editorMode) {
     return (
       <div className="trace-feature-page trace-feature-page--protocols" ref={pageTopRef} data-testid="protocols-page" style={containerStyle}>
@@ -196,6 +223,7 @@ function ProtocolsPage({
       <div aria-label={`${position} protocol detail actions`} style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "16px" }}>
         <button className="trace-action trace-action--secondary" type="button" onClick={closeDetail} style={backStyle}>Back to Protocols</button>
         {selected.status === "active" && <button className="trace-action trace-action--primary" type="button" onClick={openEdit}>Edit Protocol</button>}
+        <button className="trace-action trace-action--primary" type="button" onClick={() => setTrackerProtocolId(selected.id)}>Injection Site Tracker</button>
         {selected.status === "active" && <button className="trace-action trace-action--brass" type="button" onClick={finishProtocol}>End Protocol</button>}
         <button className="trace-action trace-action--danger" type="button" onClick={removeProtocol}>Delete Protocol</button>
       </div>
@@ -235,8 +263,13 @@ function ProtocolsPage({
         Record a protocol you chose. Trace stores and displays what you enter; it does not recommend protocols, compounds, doses, routes, or schedules.
       </p>
       </header>
-      <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={backStyle}>Back to Timeline</button>
-      <button className="trace-action trace-action--primary" ref={createRef} type="button" onClick={openCreate} style={buttonStyle}>Create Protocol</button>
+      <nav className="trace-protocols-navigation" aria-label="Protocols navigation">
+        <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={backStyle}>Back to Timeline</button>
+      </nav>
+      <div className="trace-protocols-primary-actions" aria-label="Protocol actions">
+        <button className="trace-action trace-action--primary" ref={createRef} type="button" onClick={openCreate} style={buttonStyle}>Create Protocol</button>
+        <button className="trace-action trace-action--brass" type="button" onClick={() => setTrackerProtocolId("")}>Injection Site Tracker</button>
+      </div>
       <div ref={listRef} style={{ width: "100%" }}>
         {renderList("Current & Upcoming Protocols", current, "No current or upcoming protocols yet.")}
         {renderList("Ended Protocols", ended, "No ended protocols yet.")}
