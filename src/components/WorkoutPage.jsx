@@ -12,6 +12,7 @@ import {
   createWorkoutEntry,
   createWorkoutItemId,
   getWorkoutEntryError,
+  getWorkoutEntryIssues,
 } from "../services/workoutEntry";
 import { getExerciseDefinitionError } from "../services/exerciseCatalog";
 import { formatWorkoutDuration } from "../services/workoutDuration";
@@ -215,6 +216,9 @@ function WorkoutPage({
   const [time, setTime] = useState(restoredForm?.time || initialDateTime.time);
   const [notes, setNotes] = useState(restoredForm?.notes || "");
   const [exercises, setExercises] = useState(() => restoredForm?.exercises || [emptyExercise()]);
+  const [collapsedExerciseIds, setCollapsedExerciseIds] = useState(
+    () => new Set(restoredDraftRef.current?.context?.collapsedExerciseIds || [])
+  );
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [isDirty, setIsDirty] = useState(Boolean(restoredForm));
   const [formError, setFormError] = useState("");
@@ -236,6 +240,7 @@ function WorkoutPage({
   const [focusDropId, setFocusDropId] = useState(null);
   const [pendingDropRemovals, setPendingDropRemovals] = useState({});
   const [searchResetKey, setSearchResetKey] = useState(0);
+  const [validationAttempted, setValidationAttempted] = useState(false);
   const pageTopRef = useRef(null);
   const formRef = useRef(null);
   const workoutEntryRefs = useRef(new Map());
@@ -245,6 +250,11 @@ function WorkoutPage({
   const dropInputRefs = useRef(new Map());
   const dropRemovalTimersRef = useRef(new Map());
   const dropUndoRowRefs = useRef(new Map());
+  const exerciseCardRefs = useRef(new Map());
+  const exerciseNameInputRefs = useRef(new Map());
+  const expandExerciseButtonRefs = useRef(new Map());
+  const activeExerciseIdRef = useRef(restoredForm?.exercises?.[0]?.id || null);
+  const pendingExerciseOrientationRef = useRef(null);
   const pendingUndoVisibilityRef = useRef(null);
   const startedAtRef = useRef(
     restoredDraftRef.current?.startedAt ||
@@ -297,6 +307,7 @@ function WorkoutPage({
       context: {
         activeSearchExerciseId,
         roadmapEditingExerciseId,
+        collapsedExerciseIds: Array.from(collapsedExerciseIds),
         ...workoutOriginContext(),
       },
     };
@@ -318,7 +329,7 @@ function WorkoutPage({
       window.removeEventListener("pagehide", flush);
       persist();
     };
-  }, [title, date, time, notes, exercises, activeSearchExerciseId, roadmapEditingExerciseId, editingEntryId, isDirty, onWorkoutDraftChange]);
+  }, [title, date, time, notes, exercises, activeSearchExerciseId, roadmapEditingExerciseId, collapsedExerciseIds, editingEntryId, isDirty, onWorkoutDraftChange]);
 
   useLayoutEffect(() => {
     if (!focusDropId) return;
@@ -328,6 +339,27 @@ function WorkoutPage({
       setFocusDropId(null);
     }
   }, [exercises, focusDropId]);
+
+  useLayoutEffect(() => {
+    const request = pendingExerciseOrientationRef.current;
+    if (!request) return;
+    const card = exerciseCardRefs.current.get(request.exerciseId);
+    const focusTarget = request.focusName
+      ? exerciseNameInputRefs.current.get(request.exerciseId)
+      : expandExerciseButtonRefs.current.get(request.exerciseId);
+    if (!card || !focusTarget) return;
+    pendingExerciseOrientationRef.current = null;
+    focusTarget.focus({ preventScroll: true });
+    const rectangle = card.getBoundingClientRect();
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    const isFullyVisible = rectangle.top >= 0 && rectangle.bottom <= viewportHeight;
+    if (request.alwaysScroll || !isFullyVisible) {
+      card.scrollIntoView?.({
+        behavior: motionScrollBehavior(),
+        block: request.focusName ? "center" : "nearest",
+      });
+    }
+  }, [exercises, collapsedExerciseIds]);
 
   useLayoutEffect(() => {
     const request = pendingUndoVisibilityRef.current;
@@ -464,13 +496,54 @@ function WorkoutPage({
   }
 
   function addExercise() {
-    setExercises((current) => [...current, emptyExercise()]);
+    const addedExercise = emptyExercise();
+    const previousExerciseId = exercises.some(({ id }) => id === activeExerciseIdRef.current)
+      ? activeExerciseIdRef.current
+      : exercises[exercises.length - 1]?.id;
+    setCollapsedExerciseIds((collapsed) => {
+      const next = new Set(collapsed);
+      if (previousExerciseId) next.add(previousExerciseId);
+      next.delete(addedExercise.id);
+      return next;
+    });
+    setExercises((current) => [...current, addedExercise]);
+    activeExerciseIdRef.current = addedExercise.id;
+    pendingExerciseOrientationRef.current = {
+      exerciseId: addedExercise.id,
+      focusName: true,
+      alwaysScroll: true,
+    };
     markChanged();
   }
 
   function removeExercise(exerciseId) {
     setExercises((current) => current.filter(({ id }) => id !== exerciseId));
+    setCollapsedExerciseIds((current) => {
+      if (!current.has(exerciseId)) return current;
+      const next = new Set(current);
+      next.delete(exerciseId);
+      return next;
+    });
     markChanged();
+  }
+
+  function collapseExercise(exerciseId) {
+    activeExerciseIdRef.current = exerciseId;
+    pendingExerciseOrientationRef.current = { exerciseId, focusName: false };
+    setCollapsedExerciseIds((current) => {
+      const next = new Set(current);
+      next.add(exerciseId);
+      return next;
+    });
+  }
+
+  function expandExercise(exerciseId) {
+    activeExerciseIdRef.current = exerciseId;
+    setCollapsedExerciseIds((current) => {
+      const next = new Set(current);
+      next.delete(exerciseId);
+      return next;
+    });
   }
 
   function reorderExercise(index, direction) {
@@ -628,9 +701,11 @@ function WorkoutPage({
     setTime(current.time);
     setNotes("");
     setExercises([emptyExercise()]);
+    setCollapsedExerciseIds(new Set());
     setEditingEntryId(null);
     setIsDirty(false);
     setFormError("");
+    setValidationAttempted(false);
     setActiveSearchExerciseId(null);
     setRoadmapEditingExerciseId(null);
     setRoadmapSkipExerciseId(null);
@@ -758,9 +833,22 @@ function WorkoutPage({
     }
     const error = getWorkoutEntryError(workoutDraft);
     if (error) {
+      setValidationAttempted(true);
       setFormError(error);
+      const firstCollapsedIssue = getWorkoutEntryIssues(workoutDraft).find(
+        ({ exerciseId }) => exerciseId && collapsedExerciseIds.has(exerciseId)
+      );
+      if (firstCollapsedIssue) {
+        pendingExerciseOrientationRef.current = {
+          exerciseId: firstCollapsedIssue.exerciseId,
+          focusName: false,
+          alwaysScroll: true,
+        };
+        setCollapsedExerciseIds((current) => new Set(current));
+      }
       return;
     }
+    setValidationAttempted(false);
 
     const reusableExercises = exercises.filter(
       (exercise) => !exercise.exerciseReference && exercise.saveAsReusable
@@ -936,11 +1024,13 @@ function WorkoutPage({
         })),
       }))
     );
+    setCollapsedExerciseIds(new Set());
     setPhotos((entry.photos || []).map((photo) => ({ ...photo })));
     setEditingEntryId(entry.id);
     setActiveWorkoutEntryId(entry.id);
     setIsDirty(false);
     setFormError("");
+    setValidationAttempted(false);
     setActiveSearchExerciseId(null);
     setEditingSavedExercise(null);
     plannedWorkoutIdRef.current = entry.plannedWorkoutId || null;
@@ -1074,6 +1164,17 @@ function WorkoutPage({
   const volume = isPlannedRoadmap ? roadmapVolume(exercises) : null;
   const leaveWorkout = returnsToOrigin ? returnToWorkoutOrigin : onBack;
   const leaveWorkoutLabel = returnsToOrigin ? originReturnLabel : "Back to Timeline";
+  const validationIssues = validationAttempted ? getWorkoutEntryIssues(draft()) : [];
+  const displayedFormError = validationIssues[0]?.message || formError;
+
+  function hasValidationIssue({ exerciseId, setId, dropId, field }) {
+    return validationIssues.some((issue) =>
+      issue.exerciseId === exerciseId
+      && issue.setId === setId
+      && issue.dropId === dropId
+      && issue.field === field
+    );
+  }
 
   return (
     <div className="trace-feature-page trace-feature-page--workouts" ref={pageTopRef} data-testid="workout-page" style={containerStyle}>
@@ -1245,6 +1346,7 @@ function WorkoutPage({
             value={title}
             onChange={(event) => changeField(setTitle, event.target.value)}
             maxLength={120}
+            aria-invalid={validationIssues.some(({ field }) => field === "title") || undefined}
             style={formInputStyle}
           />
         </label>
@@ -1262,6 +1364,7 @@ function WorkoutPage({
               type="date"
               value={date}
               onChange={(event) => changeField(setDate, event.target.value)}
+              aria-invalid={validationIssues.some(({ field }) => field === "dateTime") || undefined}
               style={formInputStyle}
             />
           </label>
@@ -1271,6 +1374,7 @@ function WorkoutPage({
               type="time"
               value={time}
               onChange={(event) => changeField(setTime, event.target.value)}
+              aria-invalid={validationIssues.some(({ field }) => field === "dateTime") || undefined}
               style={formInputStyle}
             />
           </label>
@@ -1286,11 +1390,26 @@ function WorkoutPage({
         </label>
 
         <h3>Exercises</h3>
-        {exercises.map((exercise, exerciseIndex) => (
+        {exercises.map((exercise, exerciseIndex) => {
+          const collapsed = collapsedExerciseIds.has(exercise.id);
+          const detailId = `workout-exercise-details-${exercise.id}`;
+          const missingInformationId = `workout-exercise-missing-${exercise.id}`;
+          const displayName = exercise.name.trim() || `Exercise ${exerciseIndex + 1}`;
+          const exerciseHasMissingInformation = validationIssues.some(
+            ({ exerciseId }) => exerciseId === exercise.id
+          );
+          const primarySetCount = Array.isArray(exercise.sets) ? exercise.sets.length : 0;
+          return (
           <section
-            className="trace-workout-exercise"
+            className={`trace-workout-exercise${collapsed ? " trace-workout-exercise--collapsed" : ""}${exerciseHasMissingInformation ? " trace-workout-exercise--missing" : ""}`}
             key={exercise.id}
+            ref={(node) => {
+              if (node) exerciseCardRefs.current.set(exercise.id, node);
+              else exerciseCardRefs.current.delete(exercise.id);
+            }}
             aria-label={`Exercise ${exerciseIndex + 1}`}
+            data-missing-information={exerciseHasMissingInformation || undefined}
+            onFocusCapture={() => { activeExerciseIdRef.current = exercise.id; }}
             style={{
               background: "#1f2937",
               borderRadius: "14px",
@@ -1298,6 +1417,32 @@ function WorkoutPage({
               padding: "18px",
             }}
           >
+            {collapsed ? (
+              <div className="trace-workout-exercise__collapsed-summary">
+                <div className="trace-workout-exercise__collapsed-copy">
+                  <h4>{displayName}</h4>
+                  <p>{primarySetCount} {primarySetCount === 1 ? "set" : "sets"}</p>
+                  {exerciseHasMissingInformation && <p id={missingInformationId} className="trace-workout-exercise__missing-text">Missing information</p>}
+                </div>
+                <button
+                  ref={(node) => {
+                    if (node) expandExerciseButtonRefs.current.set(exercise.id, node);
+                    else expandExerciseButtonRefs.current.delete(exercise.id);
+                  }}
+                  className="trace-action trace-action--secondary"
+                  type="button"
+                  aria-expanded={false}
+                  aria-controls={detailId}
+                  aria-describedby={exerciseHasMissingInformation ? missingInformationId : undefined}
+                  aria-label={`Expand Exercise: ${displayName}`}
+                  onClick={() => expandExercise(exercise.id)}
+                  style={smallButtonStyle}
+                >
+                  Expand Exercise
+                </button>
+              </div>
+            ) : (
+            <div id={detailId} className="trace-workout-exercise__details">
               <button
                 className="trace-action trace-action--secondary"
               type="button"
@@ -1346,11 +1491,16 @@ function WorkoutPage({
             <label style={{ display: "block" }}>
               Exercise {exerciseIndex + 1} name
               <input
+                ref={(node) => {
+                  if (node) exerciseNameInputRefs.current.set(exercise.id, node);
+                  else exerciseNameInputRefs.current.delete(exercise.id);
+                }}
                 value={exercise.name}
                 onChange={(event) =>
                   changeExerciseName(exercise.id, event.target.value)
                 }
                 maxLength={120}
+                aria-invalid={hasValidationIssue({ exerciseId: exercise.id, field: "name" }) || undefined}
                 style={formInputStyle}
               />
             </label>
@@ -1461,6 +1611,7 @@ function WorkoutPage({
                       aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} load mode`}
                       value={set.loadMode}
                       onChange={(event) => updateSet(exercise.id, set.id, { loadMode: event.target.value })}
+                      aria-invalid={hasValidationIssue({ exerciseId: exercise.id, setId: set.id, field: "loadMode" }) || undefined}
                       style={formInputStyle}
                     >
                       {WORKOUT_LOAD_MODES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -1469,7 +1620,7 @@ function WorkoutPage({
                   {set.loadMode === "external" && (
                     <label className="workout-set-unit-control" style={{ gridArea: "unit" }}>
                       Unit
-                      <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} weight unit`} value={set.weightUnit} onChange={(event) => updateSet(exercise.id, set.id, { weightUnit: event.target.value })} style={{ ...formInputStyle, fontSize: "16px", padding: "10px" }}>
+                      <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} weight unit`} value={set.weightUnit} onChange={(event) => updateSet(exercise.id, set.id, { weightUnit: event.target.value })} aria-invalid={hasValidationIssue({ exerciseId: exercise.id, setId: set.id, field: "weightUnit" }) || undefined} style={{ ...formInputStyle, fontSize: "16px", padding: "10px" }}>
                         {WORKOUT_WEIGHT_UNITS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                       </select>
                     </label>
@@ -1477,12 +1628,12 @@ function WorkoutPage({
                   {set.loadMode === "external" && (
                     <label className="workout-set-weight-control" style={{ gridArea: "weight" }}>
                       Weight
-                      <input type="number" min="0" step="any" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} weight`} value={set.weightAmount} onChange={(event) => updateSet(exercise.id, set.id, { weightAmount: event.target.value })} style={formInputStyle} />
+                      <input type="number" min="0" step="any" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} weight`} value={set.weightAmount} onChange={(event) => updateSet(exercise.id, set.id, { weightAmount: event.target.value })} aria-invalid={hasValidationIssue({ exerciseId: exercise.id, setId: set.id, field: "weightAmount" }) || undefined} style={formInputStyle} />
                     </label>
                   )}
                   <label className="workout-set-reps-control" style={{ gridArea: "reps" }}>
                     {set.toFailure ? "Goal reps" : "Reps"}
-                    <input type="number" min="0" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} reps`} value={set.reps} onChange={(event) => updateSet(exercise.id, set.id, { reps: event.target.value })} style={formInputStyle} />
+                    <input type="number" min="0" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} reps`} value={set.reps} onChange={(event) => updateSet(exercise.id, set.id, { reps: event.target.value })} aria-invalid={hasValidationIssue({ exerciseId: exercise.id, setId: set.id, field: "reps" }) || undefined} style={formInputStyle} />
                   </label>
                 </div>
                 <label style={{ display: "block", marginTop: "10px" }}>
@@ -1492,7 +1643,7 @@ function WorkoutPage({
                 {set.toFailure && (
                   <label style={{ display: "block", marginTop: "10px" }}>
                     Actual reps at failure (optional)
-                    <input type="number" min="0" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} actual reps at failure`} value={set.actualRepsAtFailure} onChange={(event) => updateSet(exercise.id, set.id, { actualRepsAtFailure: event.target.value })} style={{ ...formInputStyle, maxWidth: "140px" }} />
+                    <input type="number" min="0" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} actual reps at failure`} value={set.actualRepsAtFailure} onChange={(event) => updateSet(exercise.id, set.id, { actualRepsAtFailure: event.target.value })} aria-invalid={hasValidationIssue({ exerciseId: exercise.id, setId: set.id, field: "actualRepsAtFailure" }) || undefined} style={{ ...formInputStyle, maxWidth: "140px" }} />
                   </label>
                 )}
                 <label style={{ display: "block", marginTop: "10px" }}>
@@ -1546,7 +1697,7 @@ function WorkoutPage({
                     <div className={`workout-drop-entry-row${drop.loadMode === "bodyweight" ? " workout-drop-entry-row-bodyweight" : ""}`} style={{ display: "grid", gap: "8px", gridTemplateColumns: "repeat(auto-fit, minmax(110px, 1fr))", maxWidth: "100%" }}>
                       <label className="workout-drop-load-control" style={{ gridArea: "load" }}>
                         Load mode
-                        <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} load mode`} value={drop.loadMode} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { loadMode: event.target.value })} style={formInputStyle}>
+                        <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} load mode`} value={drop.loadMode} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { loadMode: event.target.value })} aria-invalid={hasValidationIssue({ exerciseId: exercise.id, setId: set.id, dropId: drop.id, field: "loadMode" }) || undefined} style={formInputStyle}>
                           {WORKOUT_LOAD_MODES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                         </select>
                       </label>
@@ -1554,11 +1705,11 @@ function WorkoutPage({
                         <>
                           <label className="workout-drop-weight-control" style={{ gridArea: "weight" }}>
                             Weight
-                            <input ref={(node) => { if (node) dropInputRefs.current.set(drop.id, node); else dropInputRefs.current.delete(drop.id); }} type="number" min="0" step="any" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} weight`} value={drop.weightAmount} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { weightAmount: event.target.value })} style={formInputStyle} />
+                            <input ref={(node) => { if (node) dropInputRefs.current.set(drop.id, node); else dropInputRefs.current.delete(drop.id); }} type="number" min="0" step="any" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} weight`} value={drop.weightAmount} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { weightAmount: event.target.value })} aria-invalid={hasValidationIssue({ exerciseId: exercise.id, setId: set.id, dropId: drop.id, field: "weightAmount" }) || undefined} style={formInputStyle} />
                           </label>
                           <label className="workout-drop-unit-control" style={{ gridArea: "unit" }}>
                             Weight unit
-                            <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} weight unit`} value={drop.weightUnit} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { weightUnit: event.target.value })} style={formInputStyle}>
+                            <select aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} weight unit`} value={drop.weightUnit} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { weightUnit: event.target.value })} aria-invalid={hasValidationIssue({ exerciseId: exercise.id, setId: set.id, dropId: drop.id, field: "weightUnit" }) || undefined} style={formInputStyle}>
                               {WORKOUT_WEIGHT_UNITS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
                             </select>
                           </label>
@@ -1566,7 +1717,7 @@ function WorkoutPage({
                       )}
                       <label className="workout-drop-reps-control" style={{ gridArea: "reps" }}>
                         {drop.toFailure ? "Goal reps" : "Reps"}
-                        <input ref={drop.loadMode === "bodyweight" ? (node) => { if (node) dropInputRefs.current.set(drop.id, node); else dropInputRefs.current.delete(drop.id); } : undefined} type="number" min="0" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} reps`} value={drop.reps} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { reps: event.target.value })} style={formInputStyle} />
+                        <input ref={drop.loadMode === "bodyweight" ? (node) => { if (node) dropInputRefs.current.set(drop.id, node); else dropInputRefs.current.delete(drop.id); } : undefined} type="number" min="0" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} reps`} value={drop.reps} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { reps: event.target.value })} aria-invalid={hasValidationIssue({ exerciseId: exercise.id, setId: set.id, dropId: drop.id, field: "reps" }) || undefined} style={formInputStyle} />
                       </label>
                     </div>
                     <label style={{ display: "block", marginTop: "8px" }}>
@@ -1576,7 +1727,7 @@ function WorkoutPage({
                     {drop.toFailure && (
                       <label style={{ display: "block", marginTop: "8px" }}>
                         Actual reps at failure (optional)
-                        <input type="number" min="0" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} actual reps at failure`} value={drop.actualRepsAtFailure} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { actualRepsAtFailure: event.target.value })} style={{ ...formInputStyle, maxWidth: "140px" }} />
+                        <input type="number" min="0" step="1" aria-label={`Exercise ${exerciseIndex + 1} set ${setIndex + 1} drop ${displayNumber} actual reps at failure`} value={drop.actualRepsAtFailure} onChange={(event) => updateDrop(exercise.id, set.id, drop.id, { actualRepsAtFailure: event.target.value })} aria-invalid={hasValidationIssue({ exerciseId: exercise.id, setId: set.id, dropId: drop.id, field: "actualRepsAtFailure" }) || undefined} style={{ ...formInputStyle, maxWidth: "140px" }} />
                       </label>
                     )}
                     <label style={{ display: "block", marginTop: "8px" }}>
@@ -1598,9 +1749,15 @@ function WorkoutPage({
                 </div>
               </fieldset>
             ))}
-            <button className="trace-action trace-action--secondary" type="button" onClick={() => addSet(exercise.id)} aria-label={`Add set to exercise ${exerciseIndex + 1}`} style={{ ...smallButtonStyle, marginTop: "14px" }}>Add Set</button>
+            <div className="trace-workout-exercise__bottom-actions">
+              <button className="trace-action trace-action--secondary" type="button" onClick={() => addSet(exercise.id)} aria-label={`Add set to exercise ${exerciseIndex + 1}`} style={smallButtonStyle}>Add Set</button>
+              <button className="trace-action trace-action--secondary" type="button" onClick={() => collapseExercise(exercise.id)} aria-expanded={true} aria-controls={detailId} aria-label={`Collapse Exercise: ${displayName}`} style={smallButtonStyle}>Collapse Exercise</button>
+            </div>
+            </div>
+            )}
           </section>
-        ))}
+          );
+        })}
         <button className="trace-action trace-action--primary" type="button" onClick={addExercise} style={smallButtonStyle}>Add Exercise</button>
 
         <section aria-label="Workout photo attachments" style={{ marginTop: "22px" }}>
@@ -1634,7 +1791,7 @@ function WorkoutPage({
           )}
         </section>
 
-        {formError && <p role="alert" style={{ color: "#fca5a5" }}>{formError}</p>}
+        {displayedFormError && <p role="alert" style={{ color: "#fca5a5" }}>{displayedFormError}</p>}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
           <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>{editingEntryId === null ? "Save Workout" : "Save Changes"}</button>
           <button className="trace-action trace-action--secondary" type="button" onClick={cancelWorkout} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel</button>

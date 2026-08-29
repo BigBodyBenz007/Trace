@@ -185,6 +185,15 @@ export function normalizeWorkoutDraft(value) {
   const hasRoadmapEditingExerciseId = context.roadmapEditingExerciseId !== undefined;
   const roadmapEditingExerciseId = context.roadmapEditingExerciseId ?? null;
   if (roadmapEditingExerciseId !== null && !validId(roadmapEditingExerciseId)) return null;
+  const collapsedExerciseIds = context.collapsedExerciseIds ?? [];
+  if (
+    !Array.isArray(collapsedExerciseIds)
+    || collapsedExerciseIds.some((id) => !validId(id))
+  ) return null;
+  const exerciseIds = new Set(exercises.map(({ id }) => id));
+  const normalizedCollapsedExerciseIds = Array.from(new Set(
+    collapsedExerciseIds.map((id) => id.trim())
+  )).filter((id) => exerciseIds.has(id));
   const hasOriginPage = context.originPage !== undefined;
   const originPage = context.originPage ?? null;
   if (originPage !== null && !["today", "calendar"].includes(originPage)) return null;
@@ -212,6 +221,9 @@ export function normalizeWorkoutDraft(value) {
     context: {
       activeSearchExerciseId,
       ...(hasRoadmapEditingExerciseId ? { roadmapEditingExerciseId } : {}),
+      ...(normalizedCollapsedExerciseIds.length > 0
+        ? { collapsedExerciseIds: normalizedCollapsedExerciseIds }
+        : {}),
       ...(hasOriginPage ? { originPage } : {}),
       ...(originPage === "calendar" ? { selectedDate, visibleMonth } : {}),
     },

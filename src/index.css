@@ -3548,6 +3548,64 @@ code {
   box-shadow: var(--trace-shadow-1);
 }
 
+.trace-workout-exercise--missing {
+  border-color: #fca5a5 !important;
+  box-shadow: inset 3px 0 0 #ef4444, var(--trace-shadow-1);
+}
+
+.trace-workout-exercise__collapsed-summary {
+  align-items: center;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.trace-workout-exercise__collapsed-copy {
+  min-width: 0;
+}
+
+.trace-workout-exercise__collapsed-copy h4,
+.trace-workout-exercise__collapsed-copy p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.trace-workout-exercise__collapsed-copy p {
+  color: var(--trace-text-muted);
+  margin-top: 4px;
+}
+
+.trace-workout-exercise__collapsed-copy .trace-workout-exercise__missing-text {
+  color: #fca5a5;
+  font-weight: var(--trace-weight-bold);
+}
+
+.trace-workout-exercise__bottom-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+  margin-top: 14px;
+}
+
+.trace-workout-exercise [aria-invalid="true"] {
+  border-color: #fca5a5 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.28);
+}
+
+@media (max-width: 480px) {
+  .trace-workout-exercise__collapsed-summary {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trace-workout-exercise__collapsed-summary > .trace-action {
+    align-self: flex-end;
+  }
+}
+
 .trace-workout-set {
   background: #0d2030;
   border: 1px solid var(--trace-border) !important;

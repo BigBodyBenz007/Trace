@@ -128,6 +128,19 @@ test("normalizes planned Roadmap status, reason, and single-exercise editing con
   });
 });
 
+test("normalizes collapsed exercise IDs in the existing draft context", () => {
+  const draft = createWorkoutDraftFromPlannedWorkout(
+    plannedWorkout(),
+    new Date(2026, 7, 22, 9, 5)
+  );
+  const firstId = draft.form.exercises[0].id;
+  draft.context.collapsedExerciseIds = [firstId, firstId, "exercise:stale"];
+
+  expect(normalizeWorkoutDraft(draft).context.collapsedExerciseIds).toEqual([firstId]);
+  draft.context.collapsedExerciseIds = "not-an-array";
+  expect(normalizeWorkoutDraft(draft)).toBeNull();
+});
+
 test("preserves explicit Today and Calendar origins without adding them to legacy drafts", () => {
   const todayDraft = createWorkoutDraftFromPlannedWorkout(
     plannedWorkout(),

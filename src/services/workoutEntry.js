@@ -55,72 +55,105 @@ export function workoutLocalDateTimeToIso(date, time) {
   return localDate.toISOString();
 }
 
-export function getWorkoutEntryError(draft) {
-  if (!meaningfulText(draft?.title)) return "Enter a workout title.";
+export function getWorkoutEntryIssues(draft) {
+  const issues = [];
+  if (!meaningfulText(draft?.title)) {
+    issues.push({ field: "title", message: "Enter a workout title." });
+  }
   if (!workoutLocalDateTimeToIso(draft?.date, draft?.time)) {
-    return "Enter a valid date and time.";
+    issues.push({ field: "dateTime", message: "Enter a valid date and time." });
   }
   if (!Array.isArray(draft?.exercises) || draft.exercises.length === 0) {
-    return "Add at least one exercise.";
+    issues.push({ field: "exercises", message: "Add at least one exercise." });
+    return issues;
   }
 
-  for (let exerciseIndex = 0; exerciseIndex < draft.exercises.length; exerciseIndex += 1) {
-    const exercise = draft.exercises[exerciseIndex];
+  draft.exercises.forEach((exercise, exerciseIndex) => {
+    const exerciseContext = { exerciseId: exercise?.id, exerciseIndex };
     if (!meaningfulText(exercise?.name)) {
-      return `Enter a name for exercise ${exerciseIndex + 1}.`;
+      issues.push({
+        ...exerciseContext,
+        field: "name",
+        message: `Enter a name for exercise ${exerciseIndex + 1}.`,
+      });
     }
-    if (exercise.roadmapStatus === "skipped") continue;
+    if (exercise?.roadmapStatus === "skipped") return;
     if (!Array.isArray(exercise?.sets) || exercise.sets.length === 0) {
-      return `Add at least one set to exercise ${exerciseIndex + 1}.`;
+      issues.push({
+        ...exerciseContext,
+        field: "sets",
+        message: `Add at least one set to exercise ${exerciseIndex + 1}.`,
+      });
+      return;
     }
 
-    for (let setIndex = 0; setIndex < exercise.sets.length; setIndex += 1) {
-      const set = exercise.sets[setIndex];
+    exercise.sets.forEach((set, setIndex) => {
       const location = `exercise ${exerciseIndex + 1}, set ${setIndex + 1}`;
-      const setError = getSetSegmentError(set, location);
-      if (setError) return setError;
+      const setIssues = getSetSegmentIssues(set, location);
+      setIssues.forEach((setIssue) => {
+        issues.push({
+          ...exerciseContext,
+          setId: set?.id,
+          setIndex,
+          ...setIssue,
+        });
+      });
       const drops = Array.isArray(set?.drops) ? set.drops : [];
-      for (let dropIndex = 0; dropIndex < drops.length; dropIndex += 1) {
-        const dropError = getSetSegmentError(
-          drops[dropIndex],
+      drops.forEach((drop, dropIndex) => {
+        const dropIssues = getSetSegmentIssues(
+          drop,
           `${location}, drop ${dropIndex + 1}`
         );
-        if (dropError) return dropError;
-      }
-    }
-  }
+        dropIssues.forEach((dropIssue) => {
+          issues.push({
+            ...exerciseContext,
+            setId: set?.id,
+            setIndex,
+            dropId: drop?.id,
+            dropIndex,
+            ...dropIssue,
+          });
+        });
+      });
+    });
+  });
 
-  return "";
+  return issues;
 }
 
-function getSetSegmentError(segment, location) {
+export function getWorkoutEntryError(draft) {
+  return getWorkoutEntryIssues(draft)[0]?.message || "";
+}
+
+function getSetSegmentIssues(segment, location) {
+  const issues = [];
   const repsBlank = String(segment?.reps ?? "").trim() === "";
   if (repsBlank && !segment?.toFailure) {
-    return `Enter a whole-number reps count for ${location}.`;
-  }
-  const reps = repsBlank ? 0 : Number(segment?.reps);
-  if (!Number.isFinite(reps) || !Number.isInteger(reps) || reps < 0) {
-    return `Enter a whole-number reps count for ${location}.`;
+    issues.push({ field: "reps", message: `Enter a whole-number reps count for ${location}.` });
+  } else {
+    const reps = repsBlank ? 0 : Number(segment?.reps);
+    if (!Number.isFinite(reps) || !Number.isInteger(reps) || reps < 0) {
+      issues.push({ field: "reps", message: `Enter a whole-number reps count for ${location}.` });
+    }
   }
   if (segment?.toFailure && String(segment.actualRepsAtFailure ?? "").trim() !== "") {
     const actualReps = Number(segment.actualRepsAtFailure);
     if (!Number.isFinite(actualReps) || !Number.isInteger(actualReps) || actualReps < 0) {
-      return `Enter a whole-number actual failure count for ${location}.`;
+      issues.push({ field: "actualRepsAtFailure", message: `Enter a whole-number actual failure count for ${location}.` });
     }
   }
   if (!LOAD_MODES.has(segment?.loadMode)) {
-    return `Choose a valid load mode for ${location}.`;
-  }
-  if (segment.loadMode === "external") {
+    issues.push({ field: "loadMode", message: `Choose a valid load mode for ${location}.` });
+  } else if (segment.loadMode === "external") {
     const amount = Number(segment.weightAmount);
     if (!Number.isFinite(amount) || amount <= 0) {
-      return `Enter an external weight greater than zero for ${location}.`;
+      issues.push({ field: "weightAmount", message: `Enter an external weight greater than zero for ${location}.` });
     }
     if (!WEIGHT_UNITS.has(segment.weightUnit)) {
-      return `Choose lb or kg for ${location}.`;
+      issues.push({ field: "weightUnit", message: `Choose lb or kg for ${location}.` });
     }
   }
-  return "";
+  return issues;
 }
 
 function completedSetSegment(segment, includeClassification = false) {

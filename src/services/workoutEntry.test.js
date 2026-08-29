@@ -1,6 +1,7 @@
 import {
   createWorkoutEntry,
   getWorkoutEntryError,
+  getWorkoutEntryIssues,
   workoutLocalDateTimeToIso,
 } from "./workoutEntry";
 
@@ -158,6 +159,26 @@ test("accepts zero reps and preserves failure fields", () => {
     toFailure: true,
     actualRepsAtFailure: 0,
   });
+});
+
+test("reports all exercise and field locations without changing the first validation error", () => {
+  const draft = validDraft({ title: "" });
+  draft.exercises[0].name = "";
+  draft.exercises[0].sets[0].reps = "";
+  draft.exercises[0].sets[0].weightAmount = "";
+  draft.exercises.push({
+    id: "exercise-2",
+    name: "Second",
+    sets: [],
+  });
+
+  expect(getWorkoutEntryError(draft)).toBe("Enter a workout title.");
+  expect(getWorkoutEntryIssues(draft)).toEqual(expect.arrayContaining([
+    expect.objectContaining({ exerciseId: "exercise-1", field: "name" }),
+    expect.objectContaining({ exerciseId: "exercise-1", setId: "set-1", field: "reps" }),
+    expect.objectContaining({ exerciseId: "exercise-1", setId: "set-1", field: "weightAmount" }),
+    expect.objectContaining({ exerciseId: "exercise-2", field: "sets" }),
+  ]));
 });
 
 test("preserves optional planned Roadmap completion and skip context", () => {

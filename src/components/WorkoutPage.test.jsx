@@ -519,7 +519,7 @@ test("focuses the search belonging to the activated exercise", () => {
   expect(searchInput).toHaveFocus();
   expect(searchInput.closest('section[aria-label="Exercise 2"]')).not.toBeNull();
   expect(screen.getByRole("button", { name: "Find an exercise for exercise 2" })).toHaveAttribute("aria-expanded", "true");
-  expect(screen.getByRole("button", { name: "Find an exercise for exercise 1" })).toHaveAttribute("aria-expanded", "false");
+  expect(screen.getByRole("button", { name: "Expand Exercise: Exercise 1" })).toHaveAttribute("aria-expanded", "false");
 });
 
 test("saves decimal external load and optional notes then resets", () => {
@@ -611,6 +611,7 @@ test("adds, removes, and reorders exercises and sets without drag and drop", () 
   expect(
     screen.queryByLabelText("Exercise 1 set 2 reps")
   ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Expand Exercise: First Exercise" }));
   fireEvent.click(
     screen.getByRole("button", { name: "Remove exercise 2" })
   );
@@ -932,6 +933,191 @@ test("shows mechanical validation errors", () => {
   expect(screen.getByRole("alert")).toHaveTextContent(
     "whole-number reps"
   );
+});
+
+test("places Collapse Exercise beside Add Set and compactly preserves entered exercise data", () => {
+  renderPage();
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Incline Press" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 notes"), { target: { value: "Keep this private" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), { target: { value: "70" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "10" } });
+
+  const collapse = screen.getByRole("button", { name: "Collapse Exercise: Incline Press" });
+  const actionRow = collapse.closest(".trace-workout-exercise__bottom-actions");
+  expect(within(actionRow).getByRole("button", { name: "Add set to exercise 1" })).toBeInTheDocument();
+  expect(collapse).toHaveAttribute("aria-expanded", "true");
+
+  fireEvent.click(collapse);
+  const card = screen.getByRole("region", { name: "Exercise 1" });
+  expect(within(card).getByRole("heading", { name: "Incline Press" })).toBeInTheDocument();
+  expect(within(card).getByText("1 set")).toBeInTheDocument();
+  expect(within(card).getAllByRole("button")).toHaveLength(1);
+  expect(within(card).queryByText("Keep this private")).not.toBeInTheDocument();
+  expect(within(card).queryByLabelText("Exercise 1 set 1 weight")).not.toBeInTheDocument();
+
+  const expand = within(card).getByRole("button", { name: "Expand Exercise: Incline Press" });
+  expect(expand).toHaveAttribute("aria-expanded", "false");
+  expect(expand).toHaveAttribute("aria-controls", collapse.getAttribute("aria-controls"));
+  fireEvent.click(expand);
+  expect(screen.getByLabelText("Exercise 1 notes")).toHaveValue("Keep this private");
+  expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(70);
+  expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(10);
+
+  fireEvent.click(screen.getByRole("button", { name: "Add set to exercise 1" }));
+  fireEvent.click(screen.getByRole("button", { name: "Collapse Exercise: Incline Press" }));
+  expect(within(card).getByText("2 sets")).toBeInTheDocument();
+});
+
+test("successful Add Exercise collapses the active exercise, expands and focuses the new one, and scrolls with standard motion", () => {
+  render(
+    <div className="trace-app-shell" data-motion="standard">
+      <WorkoutPage {...renderPageProps()} />
+    </div>
+  );
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Squat" } });
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
+
+  expect(screen.getByRole("button", { name: "Expand Exercise: Squat" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Exercise 2 name")).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Collapse Exercise: Exercise 2" })).toBeInTheDocument();
+  expect(Element.prototype.scrollIntoView).toHaveBeenLastCalledWith({
+    behavior: "smooth",
+    block: "center",
+  });
+});
+
+test("Add Exercise uses instant scrolling when Motion & Effects is reduced", () => {
+  render(
+    <div className="trace-app-shell" data-motion="reduced">
+      <WorkoutPage {...renderPageProps()} />
+    </div>
+  );
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
+  expect(screen.getByLabelText("Exercise 2 name")).toHaveFocus();
+  expect(Element.prototype.scrollIntoView).toHaveBeenLastCalledWith({
+    behavior: "auto",
+    block: "center",
+  });
+});
+
+test("manual collapse focuses its explicit Expand Exercise control and only scrolls when needed", () => {
+  renderPage();
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Row" } });
+  const card = screen.getByRole("region", { name: "Exercise 1" });
+  jest.spyOn(card, "getBoundingClientRect").mockReturnValue({
+    top: window.innerHeight + 10,
+    bottom: window.innerHeight + 210,
+    left: 0,
+    right: 300,
+    width: 300,
+    height: 200,
+    x: 0,
+    y: window.innerHeight + 10,
+    toJSON: () => {},
+  });
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Collapse Exercise: Row" }));
+  const expand = screen.getByRole("button", { name: "Expand Exercise: Row" });
+  expect(expand).toHaveFocus();
+  expect(Element.prototype.scrollIntoView).toHaveBeenLastCalledWith({
+    behavior: "smooth",
+    block: "nearest",
+  });
+
+  fireEvent.click(expand);
+  card.getBoundingClientRect.mockReturnValue({
+    top: 100,
+    bottom: 300,
+    left: 0,
+    right: 300,
+    width: 300,
+    height: 200,
+    x: 0,
+    y: 100,
+    toJSON: () => {},
+  });
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Collapse Exercise: Row" }));
+  expect(screen.getByRole("button", { name: "Expand Exercise: Row" })).toHaveFocus();
+  expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
+});
+
+test("multiple exercise cards retain independent collapse state and closing exercise search changes neither", () => {
+  renderPage();
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "First" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
+  fireEvent.change(screen.getByLabelText("Exercise 2 name"), { target: { value: "Second" } });
+
+  const findSecond = screen.getByRole("button", { name: "Find an exercise for exercise 2" });
+  fireEvent.click(findSecond);
+  fireEvent.click(findSecond);
+  expect(screen.getByRole("button", { name: "Expand Exercise: First" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Collapse Exercise: Second" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Expand Exercise: First" }));
+  fireEvent.click(screen.getByRole("button", { name: "Collapse Exercise: Second" }));
+  expect(screen.getByLabelText("Exercise 1 name")).toHaveValue("First");
+  expect(screen.getByRole("button", { name: "Expand Exercise: Second" })).toBeInTheDocument();
+});
+
+test("save validation marks every incomplete collapsed exercise and clears each warning after correction", () => {
+  renderPage();
+  fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Validation" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
+  fireEvent.click(screen.getByRole("button", { name: "Collapse Exercise: Exercise 2" }));
+  Element.prototype.scrollIntoView.mockClear();
+
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  const firstCard = screen.getByRole("region", { name: "Exercise 1" });
+  const secondCard = screen.getByRole("region", { name: "Exercise 2" });
+  expect(firstCard).toHaveClass("trace-workout-exercise--missing");
+  expect(secondCard).toHaveClass("trace-workout-exercise--missing");
+  expect(within(firstCard).getByText("Missing information")).toBeInTheDocument();
+  expect(within(secondCard).getByText("Missing information")).toBeInTheDocument();
+  const firstExpand = within(firstCard).getByRole("button", { name: "Expand Exercise: Exercise 1" });
+  const firstWarning = within(firstCard).getByText("Missing information");
+  expect(firstExpand).not.toHaveAttribute("aria-invalid");
+  expect(firstExpand).toHaveAttribute("aria-describedby", firstWarning.id);
+  expect(firstExpand).toHaveFocus();
+  const secondExpand = within(secondCard).getByRole("button", { name: "Expand Exercise: Exercise 2" });
+  expect(secondExpand).not.toHaveAttribute("aria-invalid");
+  expect(secondExpand).toHaveAttribute(
+    "aria-describedby",
+    within(secondCard).getByText("Missing information").id
+  );
+  expect(Element.prototype.scrollIntoView).toHaveBeenLastCalledWith({ behavior: "smooth", block: "nearest" });
+
+  fireEvent.click(firstExpand);
+  expect(screen.getByLabelText("Exercise 1 name")).toHaveAttribute("aria-invalid", "true");
+  expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveAttribute("aria-invalid", "true");
+  expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveAttribute("aria-invalid", "true");
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Bench" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "5" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), { target: { value: "100" } });
+  expect(firstCard).not.toHaveClass("trace-workout-exercise--missing");
+  expect(secondCard).toHaveClass("trace-workout-exercise--missing");
+  expect(within(secondCard).getByText("Missing information")).toBeInTheDocument();
+});
+
+test("collapsed state and all exercise values resume through the existing workout draft", async () => {
+  const first = render(<WorkoutPage {...renderPageProps()} />);
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Draft Row" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), { target: { value: "88" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "12" } });
+  fireEvent.click(screen.getByRole("button", { name: "Collapse Exercise: Draft Row" }));
+  await waitFor(() => expect(
+    JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).context.collapsedExerciseIds
+  ).toHaveLength(1));
+  const draft = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+  expect(draft.context.collapsedExerciseIds).toEqual([draft.form.exercises[0].id]);
+
+  first.unmount();
+  render(<WorkoutPage {...renderPageProps()} />);
+  fireEvent.click(screen.getByRole("button", { name: "Expand Exercise: Draft Row" }));
+  expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(88);
+  expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(12);
 });
 
 test("uses compact responsive rows for external and bodyweight set entry", () => {
@@ -1724,7 +1910,7 @@ test("keeps conflicting historical snapshots unreferenced and combines messages"
   fireEvent.change(screen.getByLabelText("Exercise 2 name"), { target: { value: "Press" } });
   fireEvent.change(screen.getByLabelText("Exercise 2 set 1 weight"), { target: { value: "20" } });
   fireEvent.change(screen.getByLabelText("Exercise 2 set 1 reps"), { target: { value: "10" } });
-  fireEvent.click(screen.getAllByLabelText("Save as reusable exercise")[1]);
+  fireEvent.click(screen.getByLabelText("Save as reusable exercise"));
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
 
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises.every((exercise) => !exercise.exerciseReference)).toBe(true);
