@@ -1319,7 +1319,33 @@ code {
 }
 
 .life-current-theme {
+  --life-current-card-lowering: 68px;
+  --life-current-card-overlap: 22px;
+  --life-current-card-space: 310px;
+  --life-current-scenery-height: 260px;
+  --life-current-stage-min-height: 566px;
   isolation: isolate;
+}
+
+/*
+ * The scene remains fixed at its native 260px presentation. Cards are moved by
+ * their outer positioning box, while the inner visual owns focus scaling. This
+ * keeps the card top at the scene's lower edge and reserves the scaled height.
+ */
+.trace-timeline-card-position {
+  transform: none;
+}
+
+.trace-timeline-card-visual {
+  transform-origin: center top;
+}
+
+@media (max-width: 720px) {
+  .life-current-theme {
+    --life-current-card-lowering: 74px;
+    --life-current-card-overlap: 16px;
+    --life-current-stage-min-height: 572px;
+  }
 }
 
 .life-current-theme--river {

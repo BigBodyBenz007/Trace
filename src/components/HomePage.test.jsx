@@ -522,7 +522,7 @@ test("renders compact Timeline previews while keeping full content in Memory Det
   const card = screen.getByTestId("timeline-memory-compact");
   const visual = card.querySelector("[data-timeline-card-visual]");
   expect(card).toHaveStyle({
-    contain: "layout paint style",
+    contain: "layout style",
     width: "240px",
   });
   expect(card).toHaveAttribute("data-containment-width", "240");
@@ -551,9 +551,45 @@ test("mobile focused cards can grow without paint-containment clipping", () => {
     TIMELINE_FOCUS_TUNING.maximumScale).toBeLessThan(390);
   expect(240 - 28 - 28).toBe(TIMELINE_FOCUS_TUNING.baseCardWidth);
   expect(card).toHaveAttribute("data-containment-width", "240");
+  expect(card).toHaveAttribute("data-timeline-card-position", "true");
+  expect(card).toHaveClass("trace-timeline-card-position");
+  expect(card).toHaveStyle({
+    contain: "layout style",
+    marginTop: "var(--life-current-card-lowering)",
+    minHeight: "var(--life-current-card-space)",
+    overflow: "visible",
+  });
+  expect(visual).toHaveClass("trace-timeline-card-visual");
   expect(visual).toHaveStyle({ transformOrigin: "center top" });
+  expect(card.children).toHaveLength(1);
+  expect(card.firstElementChild).toBe(visual);
+  expect(within(card).queryByRole("button", { name: "Select Same Day" }))
+    .not.toBeInTheDocument();
   expect(within(card).getByText("Same Day")).toBeInTheDocument();
   expect(within(card).getByText(/May/)).toBeInTheDocument();
+});
+
+test("uses responsive shared Life Current spacing while keeping the stage width-safe", () => {
+  render(<HomePage {...baseProps} memories={memories} trophyEntries={[]} />);
+  const css = readFileSync(require.resolve("../index.css"), "utf8");
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const canvas = screen.getByTestId("timeline-content-canvas");
+  const card = screen.getByTestId("timeline-memory-memory-a");
+
+  expect(viewport).toHaveStyle({ maxWidth: "100%", overflowX: "auto", width: "100%" });
+  expect(canvas).toHaveClass("trace-life-current-stage");
+  expect(canvas).toHaveStyle({
+    minHeight: "var(--life-current-stage-min-height)",
+    minWidth: "100%",
+  });
+  expect(Number(card.dataset.containmentWidth))
+    .toBe(Math.ceil(TIMELINE_FOCUS_TUNING.baseCardWidth * TIMELINE_FOCUS_TUNING.maximumScale));
+  expect(css).toMatch(
+    /\.life-current-theme\s*\{[^}]*--life-current-card-lowering:\s*68px;[^}]*--life-current-card-overlap:\s*22px;[^}]*--life-current-card-space:\s*310px;[^}]*--life-current-stage-min-height:\s*566px;/s
+  );
+  expect(css).toMatch(
+    /@media \(max-width: 720px\)\s*\{\s*\.life-current-theme\s*\{[^}]*--life-current-card-lowering:\s*74px;[^}]*--life-current-card-overlap:\s*16px;[^}]*--life-current-stage-min-height:\s*572px;/s
+  );
 });
 
 test("initial newest navigation centers the final Memory before the quiet trail", () => {
@@ -603,9 +639,22 @@ test.each([
 
   const viewport = screen.getByTestId("memory-timeline-viewport");
   expect(viewport).toHaveAttribute("data-life-current-theme", themeId);
+  expect(viewport).toHaveAttribute("data-life-current-card-layout", "lowered-responsive");
   expect(getLifeCurrentRenderer(renderer)).toBeInTheDocument();
-  expect(screen.getByTestId("timeline-memory-memory-a").querySelector("[data-timeline-card-visual]"))
-    .toHaveStyle({ transformOrigin: "center top" });
+  const card = screen.getByTestId("timeline-memory-memory-a");
+  const visual = card.querySelector("[data-timeline-card-visual]");
+  expect(card).toHaveAttribute("data-timeline-card-position", "true");
+  expect(card).toHaveStyle({
+    marginTop: "var(--life-current-card-lowering)",
+    overflow: "visible",
+    transform: "",
+  });
+  expect(visual).toHaveStyle({ transformOrigin: "center top" });
+  expect(visual.style.transform).toContain("scale(var(--timeline-focus-scale");
+  expect(card.children).toHaveLength(1);
+  expect(card.firstElementChild).toBe(visual);
+  expect(within(card).queryByRole("button", { name: "Select Same Day" }))
+    .not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Past" }));
   expect(screen.getByRole("button", { name: "Past" })).toHaveAttribute("aria-pressed", "true");
   fireEvent.click(screen.getByTestId("timeline-memory-memory-a"));
@@ -1123,14 +1172,14 @@ test.each([
   }
 );
 
-test("large galleries render only preview metadata and thumbnails are not separate controls", () => {
+test("large galleries render only preview metadata without thumbnail or memory-anchor controls", () => {
   const memory = memoryWithPhotos(137);
   render(<HomePage {...baseProps} memories={[memory]} trophyEntries={[]} />);
   const card = screen.getByTestId("timeline-memory-" + memory.id);
   const thumbnails = card.querySelectorAll("[data-timeline-gallery-thumbnail]");
   expect(thumbnails).toHaveLength(3);
   expect(within(card).getByTestId("timeline-photo-overflow")).toHaveTextContent("+134");
-  expect(within(card).queryAllByRole("button")).toHaveLength(1);
+  expect(within(card).queryAllByRole("button")).toHaveLength(0);
 
   fireEvent.click(thumbnails[0]);
   const detail = screen.getByRole("dialog", {

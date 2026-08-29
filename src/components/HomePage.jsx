@@ -291,7 +291,6 @@ function HomePage({
   const [selectedMemory, setSelectedMemory] = useState(null);
   const [detailMemoryId, setDetailMemoryId] = useState(null);
   const [activeDetailPhotoIndex, setActiveDetailPhotoIndex] = useState(0);
-  const [hoveredMemory, setHoveredMemory] = useState(null);
   const [filteredCameraDate, setFilteredCameraDate] = useState(null);
   const lifeCurrentTheme = getLifeCurrentTheme(lifeCurrentThemeId);
   const visibleHomeModules = normalizeHomeVisibility(homeVisibility);
@@ -556,14 +555,6 @@ function HomePage({
 
   function isMemorySelected(memory) {
     return selectedMemory === getMemorySelectionKey(memory);
-  }
-
-  function setNodeHover(memory) {
-    setHoveredMemory(getMemorySelectionKey(memory));
-  }
-
-  function isNodeHovered(memory) {
-    return hoveredMemory === getMemorySelectionKey(memory);
   }
 
   useEffect(() => {
@@ -940,6 +931,7 @@ function HomePage({
 
       <div
         className={`life-current-theme ${lifeCurrentTheme.presentation.className}`}
+        data-life-current-card-layout="lowered-responsive"
         data-life-current-theme={lifeCurrentTheme.id}
         data-testid="memory-timeline-viewport"
         ref={timelineRef}
@@ -978,6 +970,7 @@ function HomePage({
           </div>
         )}
         <div
+            className="trace-life-current-stage"
             data-testid="timeline-content-canvas"
             data-full-memory-count={sortedMemories.length}
             data-visible-memory-count={filteredMemories.length}
@@ -987,7 +980,7 @@ function HomePage({
               display: "flex",
               alignItems: "flex-start",
               gap: "64px",
-              minHeight: "150px",
+              minHeight: "var(--life-current-stage-min-height)",
               minWidth: "100%",
               padding: isMemoryFilterActive
                 ? "8px 32px 16px"
@@ -1086,7 +1079,6 @@ function HomePage({
                         {monthGroup.memories.map((memory) => {
                           const selectionKey = getMemorySelectionKey(memory);
                           const isSelected = isMemorySelected(memory);
-                          const isHovered = isNodeHovered(memory);
                           const photoCount = Array.isArray(memory.images)
                             ? memory.images.length
                             : 0;
@@ -1104,10 +1096,12 @@ function HomePage({
                           return (
                             <div
                               aria-label={"Open memory " + memory.title}
+                              className="trace-timeline-card-position"
                               data-containment-gutter={TIMELINE_FOCUS_CONTAINMENT_GUTTER}
                               data-containment-width={TIMELINE_FOCUS_CONTAINMENT_WIDTH}
                               data-memory-date={memory.date || ""}
                               data-memory-id={memory.id}
+                              data-timeline-card-position="true"
                               data-testid={"timeline-memory-" + memory.id}
                               key={memory.id}
                               ref={(element) => {
@@ -1133,64 +1127,19 @@ function HomePage({
                               role="button"
                               tabIndex={0}
                               style={{
-                                contain: "layout paint style",
+                                contain: "layout style",
                                 flexShrink: 0,
                                 marginLeft: `-${TIMELINE_FOCUS_CONTAINMENT_GUTTER}px`,
                                 marginRight: `-${TIMELINE_FOCUS_CONTAINMENT_GUTTER}px`,
-                                minHeight: "236px",
+                                marginTop: "var(--life-current-card-lowering)",
+                                minHeight: "var(--life-current-card-space)",
                                 overflow: "visible",
                                 width: TIMELINE_FOCUS_CONTAINMENT_WIDTH,
                                 position: "relative",
                               }}
                             >
-                              <div
-                                aria-hidden="true"
-                                style={{
-                                  background: lifeCurrentColors.stem,
-                                  height: "52px",
-                                  left: "50%",
-                                  position: "absolute",
-                                  top: "-52px",
-                                  transform: "translateX(-50%)",
-                                  width: "2px",
-                                }}
-                              />
-
-                              <button
-                                aria-label={`Select ${memory.title}`}
-                                type="button"
-                                onClick={(event) => {
-                                  event.stopPropagation();
-                                  selectMemory(memory);
-                                }}
-                                onMouseEnter={() =>
-                                  setNodeHover(memory)
-                                }
-                                onMouseLeave={() => setHoveredMemory(null)}
-                                style={{
-                                  background: isSelected ? lifeCurrentColors.selectedNode : lifeCurrentColors.node,
-                                  border: `3px solid ${lifeCurrentColors.nodeBorder}`,
-                                  borderRadius: "50%",
-                                  boxShadow: isHovered
-                                    ? `0 0 16px ${lifeCurrentColors.nodeGlow}`
-                                    : "0 0 0 transparent",
-                                  cursor: "pointer",
-                                  height: "18px",
-                                  left: "50%",
-                                  padding: 0,
-                                  position: "absolute",
-                                  top: "-64px",
-                                  transform: isHovered
-                                    ? "translateX(-50%) scale(1.15)"
-                                    : "translateX(-50%) scale(1)",
-                                  transition:
-                                    "transform 160ms ease, box-shadow 160ms ease, background-color 160ms ease",
-                                  width: "18px",
-                                  zIndex: 1,
-                                }}
-                              />
-
                             <div
+                              className="trace-timeline-card-visual"
                               data-timeline-card-visual="true"
                               style={{
                                 background: lifeCurrentColors.card,
