@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import CompoundSearch from "./CompoundSearch";
 import SavedCompoundEditor from "./SavedCompoundEditor";
+import { motionScrollBehavior } from "../services/motionPreference";
 import {
   DOSE_UNIT_OPTIONS,
   ROUTE_OPTIONS,
@@ -115,7 +116,7 @@ function MedicationPage({
 
     const frameId = window.requestAnimationFrame(() => {
       editHeadingRef.current?.scrollIntoView?.({
-        behavior: "smooth",
+        behavior: motionScrollBehavior(),
         block: "start",
       });
     });
@@ -164,7 +165,7 @@ function MedicationPage({
         historyEntryRefs.current.get(entryId) ||
         historyGroupRefs.current.get(dateKey) ||
         historyTopRef.current;
-      target?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      target?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "center" });
     });
   }
 
@@ -246,7 +247,7 @@ function MedicationPage({
       });
       editOriginRef.current = null;
     } else {
-      pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
+      pageTopRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
     }
     selectionOriginRef.current = false;
   }
@@ -308,14 +309,14 @@ function MedicationPage({
       selectionOriginRef.current = false;
       window.requestAnimationFrame(() => {
         compoundSearchRef.current?.scrollIntoView?.({
-          behavior: "smooth",
+          behavior: motionScrollBehavior(),
           block: "start",
         });
       });
     } else {
       setCompoundSearchResetKey((currentKey) => currentKey + 1);
       window.requestAnimationFrame(() => {
-        pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
+        pageTopRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
       });
     }
   }

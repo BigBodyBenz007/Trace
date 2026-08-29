@@ -318,10 +318,3 @@
   }
   .trophy-ceremony__bay { height: 220px; min-height: 220px; }
 }
-
-@media (prefers-reduced-motion: reduce) {
-  .trophy-ceremony__cabinet { animation: none; }
-  .trophy-ceremony__door,
-  .trophy-ceremony__award,
-  .trophy-ceremony__plaque { transition: none; }
-}

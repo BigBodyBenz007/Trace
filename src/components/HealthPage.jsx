@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { HEALTH_MEASUREMENT_FIELDS, validateHealthMeasurementDraft } from "../services/healthMeasurements";
 import { DEFAULT_APP_SETTINGS } from "../services/appSettings";
+import { motionScrollBehavior } from "../services/motionPreference";
 
 function localDateTime(value = new Date()) {
   const date = new Date(value);
@@ -35,7 +36,7 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
     const target = entryRefs.current.get(id);
     if (!target) return;
     pendingHistoryScrollRef.current = null;
-    target.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    target.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "start" });
   }, [entries]);
 
   const fieldInputStyle = { ...inputStyle, boxSizing: "border-box", fontSize: "16px", marginTop: "4px", minHeight: "44px", padding: "8px", width: "100%" };
@@ -79,7 +80,7 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
     setDraft({ ...dateTime, measurements, height, notes: entry.notes || "" });
     setEditingId(entry.id);
     setError("");
-    window.requestAnimationFrame(() => editorRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }));
+    window.requestAnimationFrame(() => editorRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "start" }));
   }
 
   function remove(entry) {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motionScrollBehavior } from "../services/motionPreference";
 
 function timestampValue(value) {
   const timestamp = new Date(value).getTime();
@@ -204,7 +205,7 @@ export function TrophyCabinet({
   useEffect(() => {
     if (!selected) return;
     detailRef.current?.focus({ preventScroll: true });
-    detailRef.current?.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+    detailRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "nearest" });
   }, [selected]);
 
   useEffect(() => {
@@ -212,7 +213,7 @@ export function TrophyCabinet({
     const frame = window.requestAnimationFrame(() => {
       const trigger = triggerRefs.current.get(restoreTrophyId);
       if (!trigger) return;
-      trigger.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      trigger.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "center" });
       trigger.focus({ preventScroll: true });
       onRestoreComplete(restoreTrophyId);
     });
@@ -314,7 +315,7 @@ function TrophyCase({
     const frame = window.requestAnimationFrame(() => {
       const card = cardRefs.current.get(restoreTrophyId);
       if (!card) return;
-      card.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      card.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "center" });
       onRestoreComplete(restoreTrophyId);
     });
     return () => window.cancelAnimationFrame(frame);

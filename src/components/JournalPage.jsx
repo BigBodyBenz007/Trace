@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { motionScrollBehavior } from "../services/motionPreference";
 import {
   JOURNAL_MOODS,
   clearJournalDraft,
@@ -91,7 +92,7 @@ export default function JournalPage({
     const node = entryRefs.current.get(id);
     if (!node) return;
     pendingHistoryScrollRef.current = null;
-    node.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    node.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "start" });
   }, [entries]);
 
   const fieldStyle = {
@@ -154,7 +155,7 @@ export default function JournalPage({
     setEditingId(entry.id);
     setDraftActive(true);
     setError("");
-    window.requestAnimationFrame(() => editorRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }));
+    window.requestAnimationFrame(() => editorRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "start" }));
   }
 
   function cancelEdit() {

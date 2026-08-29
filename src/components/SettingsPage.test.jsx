@@ -1,4 +1,5 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import SettingsPage from "./SettingsPage";
 import { DEFAULT_APP_SETTINGS } from "../services/appSettings";
 
@@ -6,6 +7,7 @@ test("uses the scoped quiet-utility presentation and selected-state controls", (
   render(<SettingsPage settings={DEFAULT_APP_SETTINGS} updateSettings={jest.fn()} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
   expect(screen.getByTestId("settings-page")).toHaveClass("trace-feature-page--settings");
   expect(screen.getByRole("radio", { name: /River/ }).closest("label")).toHaveAttribute("data-selected", "true");
+  expect(screen.getByRole("radio", { name: /Standard motion/ }).closest("label")).toHaveAttribute("data-selected", "true");
 });
 
 test("renders compact global unit controls and saves each preference", () => {
@@ -17,6 +19,7 @@ test("renders compact global unit controls and saves each preference", () => {
   expect(screen.getByLabelText("Feet + inches (ft/in)")).toBeChecked();
   expect(screen.getByLabelText("Inches (in)")).toBeChecked();
   expect(screen.getByRole("heading", { name: "Life Current Theme" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Motion & Effects" })).toBeInTheDocument();
   expect(screen.getByRole("radio", { name: /River/ })).toBeChecked();
   expect(screen.getByRole("radio", { name: /Haunted Forest/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Gnome Village/ })).not.toBeChecked();
@@ -33,6 +36,45 @@ test("renders compact global unit controls and saves each preference", () => {
   fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
   expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ units: expect.objectContaining({ weight: "kg" }) }));
   expect(screen.getAllByRole("button", { name: "Back to Timeline" })).toHaveLength(2);
+});
+
+test("Motion & Effects offers exactly two accessible keyboard-operated choices", () => {
+  const updateSettings = jest.fn(() => true);
+  const { rerender } = render(
+    <SettingsPage
+      settings={DEFAULT_APP_SETTINGS}
+      updateSettings={updateSettings}
+      onBack={jest.fn()}
+      buttonStyle={{}}
+      containerStyle={{}}
+    />
+  );
+  const group = screen.getByRole("radiogroup", { name: "Motion & Effects" });
+  const choices = within(group).getAllByRole("radio");
+  const standard = screen.getByRole("radio", { name: /Standard motion/ });
+  const reduced = screen.getByRole("radio", { name: /Reduced motion/ });
+  expect(choices).toEqual([standard, reduced]);
+  expect(standard).toBeChecked();
+  expect(reduced).not.toBeChecked();
+  expect(reduced).toHaveAttribute("aria-describedby", "motion-preference-reduced-description");
+  reduced.focus();
+  userEvent.keyboard("{space}");
+  expect(updateSettings).toHaveBeenLastCalledWith({
+    ...DEFAULT_APP_SETTINGS,
+    motionPreference: "reduced",
+  });
+
+  rerender(
+    <SettingsPage
+      settings={{ ...DEFAULT_APP_SETTINGS, motionPreference: "reduced" }}
+      updateSettings={updateSettings}
+      onBack={jest.fn()}
+      buttonStyle={{}}
+      containerStyle={{}}
+    />
+  );
+  expect(screen.getByRole("radio", { name: /Reduced motion/ })).toBeChecked();
+  expect(screen.getByText("Selected").closest("label")).toHaveAttribute("data-selected", "true");
 });
 
 test("theme controls expose accessible checked states and preserve unrelated settings on save", () => {

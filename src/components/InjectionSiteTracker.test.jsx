@@ -21,20 +21,16 @@ const protocols = [
 const now = new Date(2026, 7, 27, 12, 0);
 let frames;
 let originalRequestAnimationFrame;
-let originalMatchMedia;
 
 beforeEach(() => {
   frames = [];
   originalRequestAnimationFrame = window.requestAnimationFrame;
-  originalMatchMedia = window.matchMedia;
   window.requestAnimationFrame = (callback) => { frames.push(callback); return frames.length; };
-  window.matchMedia = jest.fn(() => ({ matches: false }));
   Element.prototype.scrollIntoView = jest.fn();
 });
 
 afterEach(() => {
   window.requestAnimationFrame = originalRequestAnimationFrame;
-  window.matchMedia = originalMatchMedia;
 });
 
 function flushFrame() {
@@ -143,8 +139,7 @@ test("Log Injection starts dimmed and a body tap activates and focuses it withou
 });
 
 test("body tap scrolls the activated button only when outside the viewport and respects reduced motion", () => {
-  window.matchMedia = jest.fn(() => ({ matches: true }));
-  renderTracker();
+  renderTracker({ reducedMotion: true });
   const button = screen.getByRole("button", { name: /Log Injection/ });
   button.getBoundingClientRect = () => ({ top: 900, bottom: 950 });
   Object.defineProperty(window, "innerHeight", { configurable: true, value: 844 });
@@ -227,8 +222,7 @@ test("failed atomic Finish & Save keeps every queued shot available", () => {
 });
 
 test("Add Another Shot uses instant body-map scrolling with reduced motion", () => {
-  window.matchMedia = jest.fn(() => ({ matches: true }));
-  renderTracker({ protocols: [] });
+  renderTracker({ protocols: [], reducedMotion: true });
   const maps = screen.getByLabelText("Front and back body maps");
   selectBody(); flushFrame(); openEditor();
   fireEvent.change(screen.getByLabelText("What did you inject?"), { target: { value: "First" } });

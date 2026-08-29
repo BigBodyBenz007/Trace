@@ -11,22 +11,6 @@ const SETTLE_DELAY = 2850;
 const PLAQUE_DELAY = 3000;
 const COMPLETE_DELAY = 3800;
 
-function useReducedMotion() {
-  const [reduced, setReduced] = useState(
-    () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || false
-  );
-
-  useEffect(() => {
-    const query = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    if (!query) return undefined;
-    const update = () => setReduced(query.matches);
-    query.addEventListener?.("change", update);
-    return () => query.removeEventListener?.("change", update);
-  }, []);
-
-  return reduced;
-}
-
 function formatCeremonyDate(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
@@ -39,10 +23,10 @@ function TrophyPlacementCeremony({
   onClose,
   onCeremonyStart = NOOP,
   onTrophySettle = NOOP,
+  reducedMotion = false,
 }) {
   const closeRef = useRef(null);
   const settledEntryRef = useRef(null);
-  const reducedMotion = useReducedMotion();
   const [phase, setPhase] = useState(reducedMotion ? "complete" : "closed");
 
   useEffect(() => {

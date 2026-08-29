@@ -3,6 +3,7 @@ import ProtocolEditor from "./ProtocolEditor";
 import InjectionSiteTracker from "./InjectionSiteTracker";
 import { formatDoseUnit, formatRoute } from "../services/medicationEntry";
 import { formatProtocolSchedule } from "../services/protocol";
+import { motionScrollBehavior } from "../services/motionPreference";
 
 function formatDate(dateKey) {
   if (!dateKey) return "Open-ended";
@@ -30,6 +31,7 @@ function ProtocolsPage({
   updateInjectionBodyStyle,
   trackerNow,
   trackerBodyHitTest,
+  reducedMotion = false,
   buttonStyle = {},
   inputStyle = {},
   containerStyle = {},
@@ -73,11 +75,11 @@ function ProtocolsPage({
       } else if (pendingNavigation.type === "create-origin") {
         target = createRef.current || listRef.current;
       }
-      target?.scrollIntoView?.({ behavior: "smooth", block });
+      target?.scrollIntoView?.({ behavior: motionScrollBehavior(reducedMotion), block });
       setPendingNavigation(null);
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [pendingNavigation, selectedId, editorMode, protocols]);
+  }, [pendingNavigation, selectedId, editorMode, protocols, reducedMotion]);
 
   function openDetail(id) {
     const protocol = protocols.find((entry) => entry.id === id);
@@ -197,6 +199,7 @@ function ProtocolsPage({
       updateBodyStyle={updateInjectionBodyStyle}
       now={trackerNow}
       bodyHitTest={trackerBodyHitTest}
+      reducedMotion={reducedMotion}
       containerStyle={containerStyle}
     />;
   }

@@ -67,6 +67,7 @@ import {
   writeHealthMeasurementEntries,
 } from "./services/healthMeasurements";
 import { readAppSettings, writeAppSettings } from "./services/appSettings";
+import { useReducedMotion } from "./services/motionPreference";
 import { createPhotoUrlLoader } from "./services/photoUrlLoader";
 import {
   createJournalEntry,
@@ -233,6 +234,7 @@ function App() {
   const [nutritionEntries, setNutritionEntries] = useState([]);
   const [healthMeasurementEntries, setHealthMeasurementEntries] = useState([]);
   const [appSettings, setAppSettings] = useState(() => readAppSettings(localStorage));
+  const reducedMotion = useReducedMotion(appSettings.motionPreference);
   const [medicationEntries, setMedicationEntries] = useState([]);
   const [protocols, setProtocols] = useState([]);
   const [protocolOccurrences, setProtocolOccurrences] = useState([]);
@@ -2026,6 +2028,7 @@ function App() {
     <div
       aria-hidden={ceremonyEntry ? "true" : undefined}
       className="trace-app-shell"
+      data-motion={reducedMotion ? "reduced" : "standard"}
       data-testid="trace-app-shell"
       data-planned-workout-count={plannedWorkouts.length}
       inert={Boolean(ceremonyEntry)}
@@ -2099,6 +2102,7 @@ function App() {
           journalEntries={journalEntries}
           lifeCurrentThemeId={appSettings.lifeCurrentThemeId}
           homeVisibility={appSettings.homeVisibility}
+          reducedMotion={reducedMotion}
           addTrophyCaseEntry={addTrophyCaseEntry}
           memoryAchievementSuggestion={memoryAchievementSuggestion}
           dismissMemoryAchievementSuggestion={() => setMemoryAchievementSuggestion(null)}
@@ -2266,6 +2270,7 @@ function App() {
           updateInjectionShot={updateInjectionShot}
           deleteInjectionShot={deleteInjectionShot}
           updateInjectionBodyStyle={updateInjectionBodyStyle}
+          reducedMotion={reducedMotion}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}
@@ -2332,6 +2337,7 @@ function App() {
         <TrophyPlacementCeremony
           entry={ceremonyEntry}
           onClose={() => setCeremonyEntry(null)}
+          reducedMotion={reducedMotion}
         />
       )}
     </div>

@@ -41,6 +41,7 @@ let originalScrollTo;
 let originalScrollIntoView;
 let originalCreateObjectURL;
 let originalRevokeObjectURL;
+let originalMatchMedia;
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -56,6 +57,7 @@ beforeEach(() => {
   originalScrollIntoView = Element.prototype.scrollIntoView;
   originalCreateObjectURL = URL.createObjectURL;
   originalRevokeObjectURL = URL.revokeObjectURL;
+  originalMatchMedia = window.matchMedia;
   window.requestAnimationFrame = (callback) => {
     callback();
     return 1;
@@ -74,6 +76,7 @@ afterEach(() => {
   Element.prototype.scrollIntoView = originalScrollIntoView;
   URL.createObjectURL = originalCreateObjectURL;
   URL.revokeObjectURL = originalRevokeObjectURL;
+  window.matchMedia = originalMatchMedia;
 });
 
 function renderAppAtTimeline() {
@@ -600,7 +603,7 @@ test("Settings opens and global unit preferences survive remount into a fresh He
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' }));
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({
-    schemaVersion: 2,
+    schemaVersion: 3,
     units: { weight: "kg", height: "cm", circumference: "cm" },
     lifeCurrentThemeId: "river",
     homeVisibility: {
@@ -613,6 +616,7 @@ test("Settings opens and global unit preferences survive remount into a fresh He
       journal: true,
       trophyCase: true,
     },
+    motionPreference: "standard",
   });
   first.unmount();
   render(<App />);
@@ -631,6 +635,46 @@ test("Timeline opens Protocols and returns to Timeline at the top", () => {
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
   expectDestinationScrolledToTop();
+});
+
+test("Motion preference applies immediately and persists after remount", () => {
+  const first = render(<App />);
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "standard");
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  fireEvent.click(screen.getByRole("radio", { name: /Reduced motion/ }));
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
+  expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
+    schemaVersion: 3,
+    motionPreference: "reduced",
+  });
+  first.unmount();
+
+  render(<App />);
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByRole("radio", { name: /Reduced motion/ })).toBeChecked();
+});
+
+test("device Reduced overrides saved Standard and updates the active root state", () => {
+  let changeListener;
+  const query = {
+    matches: true,
+    addEventListener: jest.fn((type, listener) => { changeListener = listener; }),
+    removeEventListener: jest.fn(),
+  };
+  window.matchMedia = jest.fn(() => query);
+  render(<App />);
+
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByRole("radio", { name: /Standard motion/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /Reduced motion/ })).not.toBeChecked();
+
+  act(() => {
+    query.matches = false;
+    changeListener();
+  });
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "standard");
 });
 
 test("Home customization hides, persists, and restores the Workouts shortcut", () => {
@@ -1957,11 +2001,12 @@ test("Timeline to Add Memory resets a previously scrolled position", () => {
   expectDestinationScrolledToTop();
 });
 
-test("successful same-tab restore immediately synchronizes theme and unit settings without reload", async () => {
+test("successful same-tab restore immediately synchronizes theme, units, and motion without reload", async () => {
   const backedUpSettings = {
     schemaVersion: 1,
     units: { weight: "kg", height: "cm", circumference: "cm" },
     lifeCurrentThemeId: "haunted-forest",
+    motionPreference: "reduced",
   };
   localStorage.setItem("appSettings", JSON.stringify(backedUpSettings));
   localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 2450 }));
@@ -2006,6 +2051,8 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
   expect(screen.getByRole("radio", { name: /Haunted Forest/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /Reduced motion/ })).toBeChecked();
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   expect(screen.getByLabelText("Kilograms (kg)")).toBeChecked();
   expect(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' })).toBeChecked();
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
@@ -2018,13 +2065,16 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
 
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
   fireEvent.click(screen.getByRole("radio", { name: /River/ }));
+  fireEvent.click(screen.getByRole("radio", { name: /Standard motion/ }));
   fireEvent.click(screen.getByLabelText("Pounds (lb)"));
   fireEvent.click(screen.getByLabelText("Feet + inches (ft/in)"));
   fireEvent.click(screen.getByLabelText("Inches (in)"));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
     units: { weight: "lb", height: "ft-in", circumference: "in" },
     lifeCurrentThemeId: "river",
+    motionPreference: "standard",
   });
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "standard");
   localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 1800 }));
   localStorage.setItem("dailyActions", JSON.stringify({ schemaVersion: 1, actions: [] }));
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
@@ -2048,11 +2098,13 @@ test("successful same-tab restore immediately synchronizes theme and unit settin
   fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
   expect(await screen.findByRole("heading", { name: /Trace restored successfully/ })).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("nutritionGoals"))).toEqual({ calories: 2450 });
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
 
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
   expect(screen.getByRole("radio", { name: /Haunted Forest/ })).toBeChecked();
   expect(screen.getByRole("radio", { name: /River/ })).not.toBeChecked();
+  expect(screen.getByRole("radio", { name: /Reduced motion/ })).toBeChecked();
   expect(screen.getByLabelText("Kilograms (kg)")).toBeChecked();
   expect(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' })).toBeChecked();
   expect(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' })).toBeChecked();

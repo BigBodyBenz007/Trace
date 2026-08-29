@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { motionScrollBehavior } from "../services/motionPreference";
 import { deriveExerciseHistory } from "../services/exerciseHistory";
 import { deriveExercisePrs } from "../services/exercisePr";
 import { deriveEstimatedOneRepMaxes, formatEstimatedOneRepMax } from "../services/estimatedOneRepMax";
@@ -396,7 +397,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
     setIsFullPrHistoryOpen(false);
     setSelectedIdentityKey(null);
     if (restoreContext) {
-      summary?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      summary?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "center" });
     }
   }, [selectedIdentityKey]);
 
@@ -415,7 +416,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
     if (pendingSwitchScrollIdentityRef.current !== selectedIdentityKey) return;
     pendingSwitchScrollIdentityRef.current = null;
     exerciseSummaryRefs.current.get(selectedIdentityKey)?.scrollIntoView?.({
-      behavior: "smooth",
+      behavior: motionScrollBehavior(),
       block: "start",
     });
   }, [selectedIdentityKey]);
@@ -432,7 +433,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
     if (!trophySourceTarget?.performanceId || selectedIdentityKey !== trophySourceTarget.exerciseIdentityKey) return undefined;
     const frame = window.requestAnimationFrame(() => {
       performanceRefs.current.get(trophySourceTarget.performanceId)?.scrollIntoView?.({
-        behavior: "smooth",
+        behavior: motionScrollBehavior(),
         block: "center",
       });
     });

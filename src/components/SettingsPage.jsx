@@ -7,6 +7,10 @@ import {
   HOME_MODULES,
   normalizeHomeVisibility,
 } from "../services/homeModules";
+import {
+  MOTION_PREFERENCES,
+  normalizeMotionPreference,
+} from "../services/appSettings";
 import ConfirmationMessage from "./ConfirmationMessage";
 
 const OPTIONS = [
@@ -46,8 +50,14 @@ export default function SettingsPage({ settings, updateSettings, onBack, onOpenB
     });
   }
 
+  function changeMotionPreference(motionPreference) {
+    if (motionPreference === selectedMotionPreference) return;
+    saveSettings({ ...settings, motionPreference });
+  }
+
   const selectedThemeId = normalizeLifeCurrentThemeId(settings?.lifeCurrentThemeId);
   const homeVisibility = normalizeHomeVisibility(settings?.homeVisibility);
+  const selectedMotionPreference = normalizeMotionPreference(settings?.motionPreference);
 
   return <main className="trace-feature-page trace-feature-page--settings" data-testid="settings-page" style={{ ...containerStyle, justifyContent: "flex-start" }}>
     <header className="trace-feature-page__identity">
@@ -116,6 +126,50 @@ export default function SettingsPage({ settings, updateSettings, onBack, onOpenB
                   {selected && <span className="life-current-theme-option__selected">✓ Selected</span>}
                 </span>
                 <span id={descriptionId} className="life-current-theme-option__description">{theme.description}</span>
+              </span>
+            </label>
+          );
+        })}
+      </div>
+    </section>
+    <section aria-labelledby="motion-effects-heading" className="motion-preference-settings">
+      <h2 id="motion-effects-heading">Motion &amp; Effects</h2>
+      <p className="motion-preference-settings__intro">Choose how much nonessential movement Trace uses.</p>
+      <div aria-labelledby="motion-effects-heading" className="motion-preference-options" role="radiogroup">
+        {[
+          {
+            description: "Uses normal Trace motion when your device permits it.",
+            label: "Standard motion",
+            value: MOTION_PREFERENCES.STANDARD,
+          },
+          {
+            description: "Minimizes nonessential movement while keeping feedback and progress clear.",
+            label: "Reduced motion",
+            value: MOTION_PREFERENCES.REDUCED,
+          },
+        ].map((option) => {
+          const selected = selectedMotionPreference === option.value;
+          const descriptionId = `motion-preference-${option.value}-description`;
+          return (
+            <label
+              className="motion-preference-option"
+              data-selected={selected ? "true" : "false"}
+              key={option.value}
+            >
+              <input
+                aria-describedby={descriptionId}
+                checked={selected}
+                name="motion-preference"
+                onChange={() => changeMotionPreference(option.value)}
+                type="radio"
+                value={option.value}
+              />
+              <span className="motion-preference-option__copy">
+                <span className="motion-preference-option__heading">
+                  <strong>{option.label}</strong>
+                  {selected && <span className="motion-preference-option__selected">Selected</span>}
+                </span>
+                <span className="motion-preference-option__description" id={descriptionId}>{option.description}</span>
               </span>
             </label>
           );

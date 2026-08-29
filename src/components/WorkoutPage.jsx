@@ -3,6 +3,7 @@ import ExerciseSearch from "./ExerciseSearch";
 import SavedExerciseEditor from "./SavedExerciseEditor";
 import ExerciseHistory from "./ExerciseHistory";
 import WorkoutPhotos from "./WorkoutPhotos";
+import { motionScrollBehavior } from "../services/motionPreference";
 import {
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
@@ -343,7 +344,7 @@ function WorkoutPage({
       rectangle.left >= 0 &&
       rectangle.right <= window.innerWidth;
     if (!isFullyVisible) {
-      row.scrollIntoView?.({ behavior: "smooth", block: "nearest" });
+      row.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "nearest" });
     }
   }, [pendingDropRemovals]);
 
@@ -408,7 +409,7 @@ function WorkoutPage({
     });
     const frameId = window.requestAnimationFrame(() => {
       workoutEntryRefs.current.get(workoutEntryTargetId)?.scrollIntoView?.({
-        behavior: "smooth",
+        behavior: motionScrollBehavior(),
         block: workoutOriginPageRef.current === "trophy-case" ? "start" : "center",
       });
       onWorkoutEntryTargetShown();
@@ -856,12 +857,12 @@ function WorkoutPage({
       }
       if (savedEditingEntryId === null) {
         setActiveWorkoutEntryId(null);
-        pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
+        pageTopRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
       } else {
         setActiveWorkoutEntryId(savedEditingEntryId);
         window.requestAnimationFrame(() => {
           workoutEntryRefs.current.get(savedEditingEntryId)?.scrollIntoView?.({
-            behavior: "smooth",
+            behavior: motionScrollBehavior(),
             block: "center",
           });
         });
@@ -943,7 +944,7 @@ function WorkoutPage({
     setActiveSearchExerciseId(null);
     setEditingSavedExercise(null);
     plannedWorkoutIdRef.current = entry.plannedWorkoutId || null;
-    formRef.current?.scrollIntoView?.({ behavior: "smooth" });
+    formRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
   }
 
   function cancelWorkout() {
@@ -980,7 +981,7 @@ function WorkoutPage({
           behavior: "auto",
         });
       } else {
-        pageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
+        pageTopRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
       }
     });
   }

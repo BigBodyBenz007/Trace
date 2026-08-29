@@ -272,6 +272,7 @@ function HomePage({
   journalEntries = [],
   lifeCurrentThemeId = "river",
   homeVisibility,
+  reducedMotion = false,
   addTrophyCaseEntry = () => false,
   memoryAchievementSuggestion = null,
   dismissMemoryAchievementSuggestion = () => {},
@@ -463,7 +464,7 @@ function HomePage({
         cardBounds.left -
         viewportBounds.left -
         (viewportBounds.width - cardBounds.width) / 2,
-      behavior: "smooth",
+      behavior: reducedMotion ? "auto" : "smooth",
     });
   }
 
@@ -712,10 +713,10 @@ function HomePage({
     setActiveDetailPhotoIndex(0);
     setDetailMemoryId(memory.id);
     const frame = window.requestAnimationFrame(() => {
-      detailPanelRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      detailPanelRef.current?.scrollIntoView?.({ behavior: reducedMotion ? "auto" : "smooth", block: "start" });
     });
     return () => window.cancelAnimationFrame(frame);
-  }, [active, memories, trophySourceTarget]);
+  }, [active, memories, reducedMotion, trophySourceTarget]);
 
   useEffect(() => {
     if (!active || !timelinePositionRequestRef.current || isMemoryFilterActive || sortedMemories.length === 0) return undefined;

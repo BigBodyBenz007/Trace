@@ -110,6 +110,19 @@ test("detail and list navigation scroll only after destination render and restor
   expect(originRow.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
 });
 
+test("Reduced motion makes Protocol and Injection Tracker navigation instant", () => {
+  const frames = [];
+  window.requestAnimationFrame = (callback) => { frames.push(callback); return frames.length; };
+  renderPage({ protocols: [active], reducedMotion: true });
+  fireEvent.click(screen.getByRole("button", { name: "View Protocol" }));
+  const detail = screen.getByTestId("protocol-detail");
+  act(() => frames.shift()());
+  expect(detail.scrollIntoView).toHaveBeenCalledWith({ behavior: "auto", block: "start" });
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Injection Site Tracker" })[0]);
+  expect(screen.getByTestId("injection-site-tracker")).toBeInTheDocument();
+});
+
 test("bottom Back to Protocols and Create use the same render-aware restoration", () => {
   const frames = [];
   window.requestAnimationFrame = (callback) => { frames.push(callback); return frames.length; };

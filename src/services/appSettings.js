@@ -6,14 +6,21 @@ import {
   DEFAULT_HOME_VISIBILITY,
   normalizeHomeVisibility,
 } from "./homeModules";
+import {
+  MOTION_PREFERENCES,
+  normalizeMotionPreference,
+} from "./motionPreference";
+
+export { MOTION_PREFERENCES, normalizeMotionPreference } from "./motionPreference";
 
 export const APP_SETTINGS_STORAGE_KEY = "appSettings";
-export const APP_SETTINGS_SCHEMA_VERSION = 2;
+export const APP_SETTINGS_SCHEMA_VERSION = 3;
 export const DEFAULT_APP_SETTINGS = Object.freeze({
   schemaVersion: APP_SETTINGS_SCHEMA_VERSION,
   units: Object.freeze({ weight: "lb", height: "ft-in", circumference: "in" }),
   lifeCurrentThemeId: DEFAULT_LIFE_CURRENT_THEME_ID,
   homeVisibility: DEFAULT_HOME_VISIBILITY,
+  motionPreference: MOTION_PREFERENCES.STANDARD,
 });
 
 const VALID_UNITS = { weight: ["lb", "kg"], height: ["ft-in", "cm"], circumference: ["in", "cm"] };
@@ -28,6 +35,7 @@ export function normalizeAppSettings(value) {
     ])),
     lifeCurrentThemeId: normalizeLifeCurrentThemeId(value?.lifeCurrentThemeId),
     homeVisibility: normalizeHomeVisibility(value?.homeVisibility),
+    motionPreference: normalizeMotionPreference(value?.motionPreference),
   };
 }
 

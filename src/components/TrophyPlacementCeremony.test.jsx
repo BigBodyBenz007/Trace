@@ -236,11 +236,6 @@ test("starts and settles once while leaving persistence outside the ceremony", (
 });
 
 test("uses the immediate final state for reduced motion until explicitly dismissed", () => {
-  window.matchMedia = jest.fn(() => ({
-    matches: true,
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-  }));
   const settle = jest.fn();
   const close = jest.fn();
   render(
@@ -248,6 +243,7 @@ test("uses the immediate final state for reduced motion until explicitly dismiss
       entry={lifeEntry}
       onClose={close}
       onTrophySettle={settle}
+      reducedMotion
     />
   );
 

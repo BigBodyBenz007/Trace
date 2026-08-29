@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { searchUnifiedCompounds } from "../services/compoundSearch";
 import { formatCompoundCategory } from "../services/compoundIdentity";
 import { formatDoseUnit, formatRoute } from "../services/medicationEntry";
+import { motionScrollBehavior } from "../services/motionPreference";
 
 function blankItem(name, reference) {
   return {
@@ -50,7 +51,7 @@ function ProtocolCompoundPicker({ compounds = [], onSelect, onCancel, inputStyle
         const top = (viewport?.offsetTop || 0) + 16;
         const bottom = (viewport?.offsetTop || 0) + (viewport?.height || window.innerHeight) - 24;
         if (bounds.top < top || bounds.bottom > bottom) {
-          input.scrollIntoView?.({ behavior: "smooth", block: "center" });
+          input.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "center" });
         }
       });
     }

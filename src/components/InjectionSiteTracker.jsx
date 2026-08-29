@@ -10,6 +10,7 @@ import {
   localDateTimeToIso,
   shotDraftError,
 } from "../services/injectionSite";
+import { motionScrollBehavior } from "../services/motionPreference";
 
 const BODY_WIDTH = 600;
 const BODY_HEIGHT = 1100;
@@ -39,14 +40,6 @@ function formatAmount(shot) {
 
 function markerTransform(x, y) {
   return `translate(${Number((x * BODY_WIDTH).toFixed(6))} ${Number((y * BODY_HEIGHT).toFixed(6))})`;
-}
-
-function reducedMotion() {
-  return typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
-
-function scrollBehavior() {
-  return reducedMotion() ? "auto" : "smooth";
 }
 
 function MarkerShape({ recency, html = false }) {
@@ -375,6 +368,7 @@ export default function InjectionSiteTracker({
   updateBodyStyle = () => false,
   updateShot = () => ({ status: "error" }),
   protocols = [],
+  reducedMotion = false,
 }) {
   const validInitialProtocolId = protocols.some(({ id }) => id === initialProtocolId) ? initialProtocolId : "";
   const [filter, setFilter] = useState(validInitialProtocolId);
@@ -410,7 +404,7 @@ export default function InjectionSiteTracker({
       button.focus({ preventScroll: true });
       const bounds = button.getBoundingClientRect();
       if (bounds.top < 0 || bounds.bottom > window.innerHeight) {
-        button.scrollIntoView({ behavior: scrollBehavior(), block: "nearest" });
+        button.scrollIntoView({ behavior: motionScrollBehavior(reducedMotion), block: "nearest" });
       }
     });
   }
@@ -424,7 +418,7 @@ export default function InjectionSiteTracker({
 
   function focusBodyMaps() {
     window.requestAnimationFrame(() => {
-      mapsRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: "start" });
+      mapsRef.current?.scrollIntoView({ behavior: motionScrollBehavior(reducedMotion), block: "start" });
       instructionRef.current?.focus({ preventScroll: true });
     });
   }

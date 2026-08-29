@@ -434,7 +434,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1", sodium: 640 }]);
   expect(JSON.parse(storage.value("nutritionGoals"))).toEqual({ calories: 2000, sodium: 2300 });
   expect(JSON.parse(storage.value("healthMeasurementEntries"))).toEqual([{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }]);
-  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 2, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "river", homeVisibility: DEFAULT_HOME_VISIBILITY });
+  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 3, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "river", homeVisibility: DEFAULT_HOME_VISIBILITY, motionPreference: "standard" });
   expect(JSON.parse(storage.value("workoutEntries"))).toEqual([workoutWithDrops]);
   expect(JSON.parse(storage.value("medicationEntries"))).toEqual([{ id: "dose-1" }]);
   expect(JSON.parse(storage.value("protocols"))).toEqual([{ id: "protocol-1" }]);
@@ -468,6 +468,7 @@ test("restores pre-Settings backups with default Settings storage fallback", asy
   await restoreTraceBackup(backup({ data: { structured, photos: [] } }), { confirmed: true, storage, openDatabase: async () => makePhotoDatabase() });
   expect(storage.value("appSettings")).toBeNull();
   expect(readAppSettings(storage).lifeCurrentThemeId).toBe("river");
+  expect(readAppSettings(storage).motionPreference).toBe("standard");
 });
 
 test("accepts older backups without planned workouts and restores that domain empty", async () => {
@@ -708,10 +709,11 @@ test("legacy and invalid backup theme values safely fall back to River without c
     });
     const validated = validateTraceBackup(value).backup;
     expect(validated.data.structured.appSettings).toEqual({
-      schemaVersion: 2,
+      schemaVersion: 3,
       units: { weight: "kg", height: "cm", circumference: "cm" },
       lifeCurrentThemeId: "river",
       homeVisibility: DEFAULT_HOME_VISIBILITY,
+      motionPreference: "standard",
     });
 
     const storage = makeStorage();
@@ -727,7 +729,7 @@ test("legacy and invalid backup theme values safely fall back to River without c
   }
 });
 
-test("backup export and restore retain Home visibility settings", async () => {
+test("backup export and restore retain Home visibility and Motion settings", async () => {
   const homeVisibility = {
     ...DEFAULT_HOME_VISIBILITY,
     workouts: false,
@@ -739,6 +741,7 @@ test("backup export and restore retain Home visibility settings", async () => {
       units: { weight: "lb", height: "ft-in", circumference: "in" },
       lifeCurrentThemeId: "river",
       homeVisibility,
+      motionPreference: "reduced",
     }),
   });
   const value = await createTraceBackup({
@@ -746,6 +749,7 @@ test("backup export and restore retain Home visibility settings", async () => {
     openDatabase: async () => makePhotoDatabase(),
   });
   expect(value.data.structured.appSettings.homeVisibility).toEqual(homeVisibility);
+  expect(value.data.structured.appSettings.motionPreference).toBe("reduced");
 
   const restored = makeStorage();
   await restoreTraceBackup(value, {
@@ -754,6 +758,7 @@ test("backup export and restore retain Home visibility settings", async () => {
     openDatabase: async () => makePhotoDatabase(),
   });
   expect(readAppSettings(restored).homeVisibility).toEqual(homeVisibility);
+  expect(readAppSettings(restored).motionPreference).toBe("reduced");
 });
 
 test("older backups without Home visibility restore with every module visible", async () => {
@@ -776,6 +781,7 @@ test("older backups without Home visibility restore with every module visible", 
     openDatabase: async () => makePhotoDatabase(),
   });
   expect(readAppSettings(restored).homeVisibility).toEqual(DEFAULT_HOME_VISIBILITY);
+  expect(readAppSettings(restored).motionPreference).toBe("standard");
 });
 
 test("restores Journal entries and accepts older backups with no Journal collection", async () => {

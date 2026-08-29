@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import FoodSearch from "./FoodSearch";
 import GroceryFoodForm from "./GroceryFoodForm";
 import ConfirmationMessage from "./ConfirmationMessage";
+import { motionScrollBehavior } from "../services/motionPreference";
 import {
   FOOD_NUTRIENT_KEYS,
   NUTRIENT_KEYS,
@@ -456,7 +457,7 @@ function NutritionPage({
 
     resetForm();
     setFoodSearchResetKey((currentKey) => currentKey + 1);
-    todaySectionRef.current?.scrollIntoView?.({ behavior: "smooth" });
+    todaySectionRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
   }
 
   function resetForm() {
@@ -571,7 +572,7 @@ function NutritionPage({
     setIsDraftDirty(true);
 
     window.requestAnimationFrame(() => {
-      entryFormRef.current?.scrollIntoView?.({ behavior: "smooth" });
+      entryFormRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
       nameInputRef.current?.focus();
     });
   }
@@ -624,7 +625,7 @@ function NutritionPage({
       setPortionBasis(null);
       setNutritionBasis(null);
     }
-    entryFormRef.current?.scrollIntoView?.({ behavior: "smooth" });
+    entryFormRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
   }
 
   function changeServingQuantity(value) {
@@ -661,7 +662,7 @@ function NutritionPage({
     resetForm();
     setFoodSearchResetKey((currentKey) => currentKey + 1);
     window.requestAnimationFrame(() => {
-      nutritionPageTopRef.current?.scrollIntoView?.({ behavior: "smooth" });
+      nutritionPageTopRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
     });
   }
 

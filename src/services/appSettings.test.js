@@ -5,12 +5,14 @@ test("defaults to the existing units, River theme, and all Home modules visible"
   expect(readAppSettings({ getItem: () => null })).toEqual(DEFAULT_APP_SETTINGS);
   expect(DEFAULT_APP_SETTINGS.lifeCurrentThemeId).toBe("river");
   expect(DEFAULT_APP_SETTINGS.homeVisibility).toEqual(DEFAULT_HOME_VISIBILITY);
+  expect(DEFAULT_APP_SETTINGS.schemaVersion).toBe(3);
+  expect(DEFAULT_APP_SETTINGS.motionPreference).toBe("standard");
 });
 
 test("persists versioned preferences and safely normalizes malformed values", () => {
   const storage = { raw: null, getItem() { return this.raw; }, setItem(key, value) { this.raw = value; } };
-  writeAppSettings(storage, { units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "haunted-forest" });
-  expect(readAppSettings(storage)).toEqual({ schemaVersion: 2, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "haunted-forest", homeVisibility: DEFAULT_HOME_VISIBILITY });
+  writeAppSettings(storage, { units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "haunted-forest", motionPreference: "reduced" });
+  expect(readAppSettings(storage)).toEqual({ schemaVersion: 3, units: { weight: "kg", height: "cm", circumference: "cm" }, lifeCurrentThemeId: "haunted-forest", homeVisibility: DEFAULT_HOME_VISIBILITY, motionPreference: "reduced" });
   storage.raw = "not-json";
   expect(readAppSettings(storage)).toEqual(DEFAULT_APP_SETTINGS);
   expect(normalizeAppSettings({ units: { weight: "stones" } })).toEqual(DEFAULT_APP_SETTINGS);
@@ -28,10 +30,11 @@ test("invalid stored themes fall back to River while preserving valid unrelated 
   };
 
   expect(readAppSettings(storage)).toEqual({
-    schemaVersion: 2,
+    schemaVersion: 3,
     units: { weight: "kg", height: "cm", circumference: "cm" },
     lifeCurrentThemeId: "river",
     homeVisibility: DEFAULT_HOME_VISIBILITY,
+    motionPreference: "standard",
   });
 });
 
@@ -57,6 +60,40 @@ test("migrates old settings to visible defaults and persists Home visibility acr
     workouts: false,
     protocols: false,
   });
+});
+
+test("migrates schema-v1 and schema-v2 settings without losing Home visibility", () => {
+  const hiddenHome = { ...DEFAULT_HOME_VISIBILITY, workouts: false, journal: false };
+  expect(normalizeAppSettings({
+    schemaVersion: 1,
+    units: { weight: "kg", height: "cm", circumference: "cm" },
+    lifeCurrentThemeId: "haunted-forest",
+  })).toEqual({
+    schemaVersion: 3,
+    units: { weight: "kg", height: "cm", circumference: "cm" },
+    lifeCurrentThemeId: "haunted-forest",
+    homeVisibility: DEFAULT_HOME_VISIBILITY,
+    motionPreference: "standard",
+  });
+  expect(normalizeAppSettings({
+    schemaVersion: 2,
+    units: { weight: "lb", height: "ft-in", circumference: "in" },
+    lifeCurrentThemeId: "river",
+    homeVisibility: hiddenHome,
+    motionPreference: "reduced",
+  })).toEqual({
+    schemaVersion: 3,
+    units: { weight: "lb", height: "ft-in", circumference: "in" },
+    lifeCurrentThemeId: "river",
+    homeVisibility: hiddenHome,
+    motionPreference: "reduced",
+  });
+});
+
+test("missing and malformed motion values safely default to Standard", () => {
+  expect(normalizeAppSettings({ motionPreference: null }).motionPreference).toBe("standard");
+  expect(normalizeAppSettings({ motionPreference: "excessive" }).motionPreference).toBe("standard");
+  expect(normalizeAppSettings({ motionPreference: { reduced: true } }).motionPreference).toBe("standard");
 });
 
 test.each(["haunted-forest", "gnome-village", "desert-journey", "outer-space-journey"])(

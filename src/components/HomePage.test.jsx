@@ -195,6 +195,66 @@ function getLifeCurrentRenderer(renderer) {
     : current.querySelector(`[data-life-current-renderer="${renderer}"]`);
 }
 
+test.each([
+  ["smooth", false],
+  ["auto", true],
+])("Timeline centering uses %s scrolling when reducedMotion is %s", (behavior, reducedMotion) => {
+  const { unmount } = render(
+    <HomePage
+      {...baseProps}
+      memories={[memories[0]]}
+      reducedMotion={reducedMotion}
+      trophyEntries={[]}
+    />
+  );
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const card = screen.getByTestId("timeline-memory-memory-a");
+  viewport.scrollBy = jest.fn();
+  viewport.getBoundingClientRect = jest.fn(() => ({ left: 0, right: 400, width: 400 }));
+  card.getBoundingClientRect = jest.fn(() => ({ left: 500, right: 600, width: 100 }));
+
+  fireEvent.click(card);
+
+  expect(viewport.scrollBy).toHaveBeenCalledWith({ left: 350, behavior });
+  unmount();
+});
+
+test("root Reduced mode removes Life Current image fades and Timeline scale motion", () => {
+  const css = readFileSync(require.resolve("../index.css"), "utf8");
+  expect(css).toMatch(/\.trace-app-shell\[data-motion="reduced"\][\s\S]*?transition-duration:\s*0\.01ms !important/);
+  expect(css).toMatch(/\[data-timeline-card-visual="true"\][\s\S]*?transform:\s*scale\(1\) !important/);
+  expect(css).toMatch(/\.river-current-section\[data-image-ready="true"\][\s\S]*?transition:\s*none/);
+});
+
+test.each([
+  ["smooth", false],
+  ["auto", true],
+])("Trophy-source Memory detail uses %s scrolling when reducedMotion is %s", (behavior, reducedMotion) => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalScrollIntoView = Element.prototype.scrollIntoView;
+  const frames = [];
+  window.requestAnimationFrame = (callback) => { frames.push(callback); return frames.length; };
+  Element.prototype.scrollIntoView = jest.fn();
+  const { unmount } = render(
+    <HomePage
+      {...baseProps}
+      memories={[memories[0]]}
+      reducedMotion={reducedMotion}
+      trophyEntries={[]}
+      trophySourceTarget={{ memoryId: "memory-a" }}
+    />
+  );
+
+  act(() => {
+    while (frames.length) frames.shift()();
+  });
+
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior, block: "start" });
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  Element.prototype.scrollIntoView = originalScrollIntoView;
+});
+
 test("Memory detail locks document scrolling while its panel remains scrollable", () => {
   const pageScroll = mockPageScroll(18, 240);
   const memory = memoryWithOnePhoto();

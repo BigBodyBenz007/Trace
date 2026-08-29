@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import ProtocolCompoundPicker from "./ProtocolCompoundPicker";
 import { DOSE_UNIT_OPTIONS, ROUTE_OPTIONS } from "../constants/medicationOptions";
 import { createProtocolId, getProtocolError, WEEKDAYS } from "../services/protocol";
+import { motionScrollBehavior } from "../services/motionPreference";
 
 function todayKey() {
   const date = new Date();
@@ -46,7 +47,7 @@ function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, but
     if (!pickerOpen) return undefined;
     pickerRef.current?.querySelector('input[type="search"]')?.focus();
     const frame = window.requestAnimationFrame(() => {
-      pickerRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      pickerRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "start" });
     });
     return () => window.cancelAnimationFrame(frame);
   }, [pickerOpen]);
@@ -64,7 +65,7 @@ function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, but
     setPickerOpen(false);
     window.requestAnimationFrame(() => {
       itemRefs.current.get(item.id)?.scrollIntoView?.({
-        behavior: "smooth",
+        behavior: motionScrollBehavior(),
         block: "center",
       });
     });
@@ -73,7 +74,7 @@ function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, but
   function cancelPicker() {
     setPickerOpen(false);
     window.requestAnimationFrame(() => {
-      addItemRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      addItemRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "center" });
     });
   }
 
@@ -85,7 +86,7 @@ function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, but
     setItems(remaining);
     window.requestAnimationFrame(() => {
       const target = itemRefs.current.get(fallback) || itemSectionRef.current;
-      target?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+      target?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "center" });
     });
   }
 
