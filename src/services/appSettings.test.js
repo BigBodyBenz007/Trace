@@ -6,13 +6,14 @@ import {
 } from "./appSettings";
 import { DEFAULT_HOME_VISIBILITY } from "./homeModules";
 
-test("defaults new and missing settings to Modern Heirloom schema v4", () => {
+test("defaults new and missing settings to Modern Heirloom schema v5", () => {
   expect(readAppSettings({ getItem: () => null })).toEqual(DEFAULT_APP_SETTINGS);
   expect(DEFAULT_APP_SETTINGS).toMatchObject({
-    schemaVersion: 4,
+    schemaVersion: 5,
     themeId: "modern-heirloom",
     homeVisibility: DEFAULT_HOME_VISIBILITY,
     motionPreference: "standard",
+    journalPrivacy: { autoLockMinutes: 5 },
   });
   expect(DEFAULT_APP_SETTINGS).not.toHaveProperty("lifeCurrentThemeId");
 });
@@ -32,11 +33,12 @@ test("persists normalized current settings with only themeId", () => {
   });
 
   expect(saved).toEqual({
-    schemaVersion: 4,
+    schemaVersion: 5,
     units: { weight: "kg", height: "cm", circumference: "cm" },
     themeId: "haunted-forest",
     homeVisibility: { ...DEFAULT_HOME_VISIBILITY, workouts: false },
     motionPreference: "reduced",
+    journalPrivacy: { autoLockMinutes: 5 },
   });
   expect(JSON.parse(storage.raw)).toEqual(saved);
   expect(storage.raw).not.toContain("lifeCurrentThemeId");
@@ -52,11 +54,12 @@ test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-
       homeVisibility: { ...DEFAULT_HOME_VISIBILITY, journal: false },
       motionPreference: "reduced",
     })).toEqual({
-      schemaVersion: 4,
+      schemaVersion: 5,
       units: { weight: "kg", height: "cm", circumference: "cm" },
       themeId: lifeCurrentThemeId,
       homeVisibility: { ...DEFAULT_HOME_VISIBILITY, journal: false },
       motionPreference: "reduced",
+      journalPrivacy: { autoLockMinutes: 5 },
     });
   }
 );
@@ -102,11 +105,12 @@ test("schema-v3 migration preserves units, Home visibility, and Motion & Effects
     homeVisibility,
     motionPreference: "reduced",
   })).toEqual({
-    schemaVersion: 4,
+    schemaVersion: 5,
     units: { weight: "kg", height: "cm", circumference: "cm" },
     themeId: "river",
     homeVisibility,
     motionPreference: "reduced",
+    journalPrivacy: { autoLockMinutes: 5 },
   });
 });
 
@@ -114,4 +118,14 @@ test("missing or invalid theme and motion values use safe defaults", () => {
   expect(normalizeAppSettings({}).themeId).toBe("modern-heirloom");
   expect(normalizeAppSettings({ themeId: "lost-world" }).themeId).toBe("modern-heirloom");
   expect(normalizeAppSettings({ motionPreference: "excessive" }).motionPreference).toBe("standard");
+});
+
+test.each([1, 5, 15, 30])("preserves the supported %s-minute Journal auto-lock choice", (autoLockMinutes) => {
+  expect(normalizeAppSettings({ journalPrivacy: { autoLockMinutes } }).journalPrivacy)
+    .toEqual({ autoLockMinutes });
+});
+
+test("invalid Journal auto-lock settings use the five-minute default", () => {
+  expect(normalizeAppSettings({ journalPrivacy: { autoLockMinutes: 2 } }).journalPrivacy)
+    .toEqual({ autoLockMinutes: 5 });
 });

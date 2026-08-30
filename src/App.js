@@ -9,8 +9,9 @@ import ProtocolsPage from "./components/ProtocolsPage";
 import WorkoutPage from "./components/WorkoutPage";
 import TrophyPlacementCeremony from "./components/TrophyPlacementCeremony";
 import TrophyCasePage from "./components/TrophyCasePage";
-import BackupPage from "./components/BackupPage";
+import BackupPage, { createBackupFile, downloadWithAnchor } from "./components/BackupPage";
 import JournalPage from "./components/JournalPage";
+import JournalUnlockPage from "./components/JournalUnlockPage";
 import TodayPage from "./components/TodayPage";
 import ConfirmationMessage from "./components/ConfirmationMessage";
 import { parseDateOnlyLocal } from "./services/dateOnly";
@@ -70,11 +71,34 @@ import { readAppSettings, writeAppSettings } from "./services/appSettings";
 import { useReducedMotion } from "./services/motionPreference";
 import { createPhotoUrlLoader } from "./services/photoUrlLoader";
 import {
+  JOURNAL_DRAFT_STORAGE_KEY,
+  JOURNAL_ENTRY_STORAGE_KEY,
+  JOURNAL_SCHEMA_VERSION,
+  clearJournalDraft,
   createJournalEntry,
   readJournalEntries,
   updateJournalEntry,
+  writeJournalDraft,
   writeJournalEntries,
 } from "./services/journalEntry";
+import {
+  changeJournalVaultPassphrase,
+  disableJournalVault,
+  enableJournalVault,
+  journalDraftFromVaultPayload,
+  journalEntriesFromVaultPayload,
+  journalVaultStorageState,
+  persistUnlockedJournalVault,
+  recoverJournalVaultAccess,
+  recoverJournalVaultTransaction,
+  resetJournalVault,
+  rotateJournalVaultRecovery,
+  unlockJournalVault,
+  updateJournalVaultDomain,
+  JOURNAL_VAULT_STORAGE_KEY,
+  JOURNAL_VAULT_TRANSACTION_KEY,
+} from "./services/journalVault";
+import { createTraceBackup } from "./services/traceBackup";
 import {
   appendPlannedWorkoutExercise as appendExerciseToPlannedWorkout,
   createPlannedWorkout as createPlannedWorkoutRecord,
@@ -241,6 +265,27 @@ function readStoredWorkoutEntries(storage, {
     }))));
 }
 
+function initializeJournalPrivacy(storage) {
+  try {
+    recoverJournalVaultTransaction(storage);
+    const state = journalVaultStorageState(storage);
+    return {
+      enabled: state.enabled,
+      unlocked: false,
+      malformed: state.malformed,
+      recoveryFormat: state.recoveryFormat,
+    };
+  } catch (error) {
+    return {
+      enabled: storage.getItem(JOURNAL_VAULT_STORAGE_KEY) !== null ||
+        storage.getItem(JOURNAL_VAULT_TRANSACTION_KEY) !== null,
+      unlocked: false,
+      malformed: true,
+      recoveryFormat: null,
+    };
+  }
+}
+
 function App() {
   const [page, setPage] = useState("home");
 
@@ -286,6 +331,7 @@ function App() {
   const [calendarSelectedDate, setCalendarSelectedDate] = useState(() => localCalendarDateKey());
   const [calendarVisibleMonth, setCalendarVisibleMonth] = useState(() => localCalendarDateKey().slice(0, 7));
   const [calendarOverlayOpen, setCalendarOverlayOpen] = useState(false);
+  const [journalPrivacy, setJournalPrivacy] = useState(() => initializeJournalPrivacy(localStorage));
   const [journalEntries, setJournalEntries] = useState([]);
   const [trophyCaseEntries, setTrophyCaseEntries] = useState([]);
   const [ceremonyEntry, setCeremonyEntry] = useState(null);
@@ -310,6 +356,11 @@ function App() {
   const memoryEditorFolioRef = useRef(null);
   const completedPlannedWorkoutIdsRef = useRef(new Set());
   const pendingPlannedWorkoutIdsRef = useRef(new Set());
+  const journalSessionContextRef = useRef(null);
+  const journalSaveQueueRef = useRef(Promise.resolve());
+  const journalSaveErrorRef = useRef(null);
+  const journalPrivacyChannelRef = useRef(null);
+  const journalLockRef = useRef(null);
 
   function ensurePhotoDatabase() {
     if (photoDatabaseRef.current) return Promise.resolve(photoDatabaseRef.current);
@@ -638,12 +689,109 @@ function App() {
   }, []);
 
   useEffect(() => {
+    if (journalPrivacy.enabled) return;
     try {
       setJournalEntries(readJournalEntries(localStorage));
     } catch (error) {
       setStorageError("Trace couldn't read the saved Journal entries because their stored data is malformed. The stored value was left unchanged.");
     }
+  }, [journalPrivacy.enabled]);
+
+  useEffect(() => {
+    function clearLocalSession(nextState) {
+      if (journalSessionContextRef.current) journalSessionContextRef.current.invalidated = true;
+      journalSessionContextRef.current = null;
+      setJournalEntries([]);
+      setJournalPrivacy(nextState);
+    }
+
+    function synchronizePrivacyStorage() {
+      const state = journalVaultStorageState(localStorage);
+      if (state.enabled) {
+        clearLocalSession({
+          enabled: true,
+          unlocked: false,
+          malformed: state.malformed,
+          recoveryFormat: state.recoveryFormat,
+        });
+      } else {
+        clearLocalSession({
+          enabled: false,
+          unlocked: false,
+          malformed: false,
+          recoveryFormat: null,
+        });
+        try {
+          setJournalEntries(readJournalEntries(localStorage));
+        } catch (error) {
+          setStorageError("Trace couldn't read the saved Journal entries after Journal privacy changed in another tab.");
+        }
+      }
+    }
+
+    function receiveMessage(event) {
+      const message = event?.data;
+      if (!message || message.schemaVersion !== 1 || ![
+        "lock",
+        "disabled",
+        "vault-replaced",
+        "passphrase-changed",
+        "recovery-rotated",
+        "backup-restored",
+        "journal-reset",
+      ].includes(message.type)) return;
+      synchronizePrivacyStorage();
+    }
+
+    function storageChanged(event) {
+      if (event.key === JOURNAL_VAULT_STORAGE_KEY) synchronizePrivacyStorage();
+    }
+
+    if (typeof BroadcastChannel === "function") {
+      const channel = new BroadcastChannel("trace-journal-privacy-v1");
+      journalPrivacyChannelRef.current = channel;
+      channel.addEventListener?.("message", receiveMessage);
+      if (!channel.addEventListener) channel.onmessage = receiveMessage;
+    }
+    window.addEventListener("storage", storageChanged);
+    return () => {
+      window.removeEventListener("storage", storageChanged);
+      const channel = journalPrivacyChannelRef.current;
+      channel?.removeEventListener?.("message", receiveMessage);
+      channel?.close?.();
+      journalPrivacyChannelRef.current = null;
+    };
   }, []);
+
+  useEffect(() => {
+    if (!journalPrivacy.unlocked) return undefined;
+    let timerId;
+    const timeout = appSettings.journalPrivacy.autoLockMinutes * 60 * 1000;
+    const resetTimer = () => {
+      clearTimeout(timerId);
+      timerId = setTimeout(() => {
+        void journalLockRef.current?.({ automatic: true });
+      }, timeout);
+    };
+    const lockForBackground = () => {
+      if (document.visibilityState === "hidden") void journalLockRef.current?.({ automatic: true });
+    };
+    const lockForPageHide = () => void journalLockRef.current?.({ automatic: true });
+    resetTimer();
+    window.addEventListener("pointerdown", resetTimer, { passive: true });
+    window.addEventListener("keydown", resetTimer);
+    window.addEventListener("touchstart", resetTimer, { passive: true });
+    document.addEventListener("visibilitychange", lockForBackground);
+    window.addEventListener("pagehide", lockForPageHide);
+    return () => {
+      clearTimeout(timerId);
+      window.removeEventListener("pointerdown", resetTimer);
+      window.removeEventListener("keydown", resetTimer);
+      window.removeEventListener("touchstart", resetTimer);
+      document.removeEventListener("visibilitychange", lockForBackground);
+      window.removeEventListener("pagehide", lockForPageHide);
+    };
+  }, [appSettings.journalPrivacy.autoLockMinutes, journalPrivacy.unlocked]);
 
   useEffect(() => {
     const reconciled = reconcileWorkoutTrophyEntries(
@@ -981,6 +1129,10 @@ function App() {
         : [];
       if (!Array.isArray(restoredMedicationEntries)) throw new Error("Invalid medication data.");
       const restoredAppSettings = readAppSettings(localStorage);
+      const restoredJournalPrivacyState = journalVaultStorageState(localStorage);
+      const restoredJournalEntries = restoredJournalPrivacyState.enabled
+        ? []
+        : readJournalEntries(localStorage);
       const restoredPlannedWorkouts = readPlannedWorkouts(localStorage);
       const restoredDailyActions = readDailyActions(localStorage);
       const restoredProtocols = readProtocols(localStorage);
@@ -997,6 +1149,13 @@ function App() {
         onCreateObjectUrl: (url) => activeObjectUrlsRef.current.add(url),
       }))) || [];
       setAppSettings(restoredAppSettings);
+      setJournalEntries(restoredJournalEntries);
+      setJournalPrivacy({
+        enabled: restoredJournalPrivacyState.enabled,
+        unlocked: false,
+        malformed: restoredJournalPrivacyState.malformed,
+        recoveryFormat: restoredJournalPrivacyState.recoveryFormat,
+      });
       setMedicationEntries(restoredMedicationEntries);
       setMedicationCompounds(restoredMedicationCompounds);
       setMedicationDoseSchedules(restoredMedicationDoseSchedules);
@@ -2260,6 +2419,190 @@ function App() {
     }
   }
 
+  function broadcastJournalPrivacy(type) {
+    try {
+      journalPrivacyChannelRef.current?.postMessage({ schemaVersion: 1, type });
+    } catch (error) {
+      // Cross-tab invalidation is also backed by the storage event.
+    }
+  }
+
+  function installJournalSession(session) {
+    journalSessionContextRef.current = { invalidated: false, session };
+    journalSaveQueueRef.current = Promise.resolve();
+    journalSaveErrorRef.current = null;
+    setJournalEntries(journalEntriesFromVaultPayload(session.payload));
+    setJournalPrivacy({
+      enabled: true,
+      unlocked: true,
+      malformed: false,
+      recoveryFormat: journalVaultStorageState(localStorage).recoveryFormat,
+    });
+  }
+
+  function queueJournalVaultDomainWrite(key, rawValue) {
+    const context = journalSessionContextRef.current;
+    if (!context || context.invalidated) {
+      return Promise.reject(new Error("Journal is locked."));
+    }
+    const operation = journalSaveQueueRef.current.then(async () => {
+      if (context.invalidated) throw new Error("Journal session was invalidated.");
+      const nextPayload = updateJournalVaultDomain(context.session.payload, key, rawValue);
+      context.session = await persistUnlockedJournalVault(
+        localStorage,
+        context.session,
+        nextPayload
+      );
+      journalSaveErrorRef.current = null;
+      return { context, session: context.session };
+    });
+    journalSaveQueueRef.current = operation.catch((error) => {
+      journalSaveErrorRef.current = error;
+    });
+    return operation;
+  }
+
+  async function flushJournalSaves() {
+    await journalSaveQueueRef.current;
+    if (journalSaveErrorRef.current) throw journalSaveErrorRef.current;
+  }
+
+  function persistJournalDraft(draft) {
+    if (!journalPrivacy.enabled) {
+      writeJournalDraft(localStorage, draft);
+      return true;
+    }
+    return queueJournalVaultDomainWrite(
+      JOURNAL_DRAFT_STORAGE_KEY,
+      JSON.stringify({ schemaVersion: JOURNAL_SCHEMA_VERSION, ...draft })
+    );
+  }
+
+  function removeJournalDraft() {
+    if (!journalPrivacy.enabled) {
+      clearJournalDraft(localStorage);
+      return true;
+    }
+    return queueJournalVaultDomainWrite(JOURNAL_DRAFT_STORAGE_KEY, null);
+  }
+
+  async function enableJournalPrivacy({ passphrase, recoveryPhrase }) {
+    const session = await enableJournalVault({ storage: localStorage, passphrase, recoveryPhrase });
+    installJournalSession(session);
+    broadcastJournalPrivacy("vault-replaced");
+  }
+
+  async function unlockJournalPrivacy(passphrase) {
+    const session = await unlockJournalVault(
+      localStorage,
+      { type: "passphrase", value: passphrase }
+    );
+    installJournalSession(session);
+  }
+
+  async function recoverJournalPrivacy({
+    recoveryCredential,
+    newPassphrase,
+    rotateRecovery,
+    nextRecoveryPhrase,
+  }) {
+    const session = await recoverJournalVaultAccess(
+      localStorage,
+      recoveryCredential,
+      newPassphrase,
+      { rotateRecovery, nextRecoveryPhrase }
+    );
+    installJournalSession(session);
+    broadcastJournalPrivacy("vault-replaced");
+  }
+
+  async function changeJournalPassphrase(credential, newPassphrase) {
+    await flushJournalSaves();
+    const session = await changeJournalVaultPassphrase(
+      localStorage,
+      credential,
+      newPassphrase
+    );
+    installJournalSession(session);
+    broadcastJournalPrivacy("passphrase-changed");
+  }
+
+  async function rotateJournalRecovery(credential, recoveryPhrase) {
+    await flushJournalSaves();
+    const session = await rotateJournalVaultRecovery(
+      localStorage,
+      credential,
+      recoveryPhrase
+    );
+    installJournalSession(session);
+    broadcastJournalPrivacy("recovery-rotated");
+  }
+
+  async function lockJournal({ automatic = false, broadcast = true } = {}) {
+    const context = journalSessionContextRef.current;
+    if (!context) return true;
+    if (!automatic) {
+      try {
+        await flushJournalSaves();
+      } catch (error) {
+        setStorageError("Trace could not safely finish encrypting the latest Journal changes. The Journal remains unlocked so you can retry.");
+        throw error;
+      }
+      context.invalidated = true;
+    }
+    journalSessionContextRef.current = null;
+    setJournalEntries([]);
+    setJournalPrivacy((current) => ({ ...current, enabled: true, unlocked: false }));
+    if (broadcast) broadcastJournalPrivacy("lock");
+    showConfirmation(automatic ? "Journal locked automatically" : "Journal locked");
+    return true;
+  }
+
+  journalLockRef.current = lockJournal;
+
+  async function disableJournalPrivacy(credential) {
+    await flushJournalSaves();
+    const result = await disableJournalVault(localStorage, credential);
+    if (journalSessionContextRef.current) journalSessionContextRef.current.invalidated = true;
+    journalSessionContextRef.current = null;
+    setJournalEntries(result.entries);
+    setJournalPrivacy({
+      enabled: false,
+      unlocked: false,
+      malformed: false,
+      recoveryFormat: null,
+    });
+    broadcastJournalPrivacy("disabled");
+  }
+
+  async function downloadTraceBackupForJournalReset() {
+    const backup = await createTraceBackup();
+    downloadWithAnchor(createBackupFile(backup));
+  }
+
+  async function resetJournalPrivacy() {
+    resetJournalVault(localStorage);
+    if (journalSessionContextRef.current) journalSessionContextRef.current.invalidated = true;
+    journalSessionContextRef.current = null;
+    journalSaveQueueRef.current = Promise.resolve();
+    journalSaveErrorRef.current = null;
+    setJournalEntries([]);
+    setJournalPrivacy({
+      enabled: false,
+      unlocked: false,
+      malformed: false,
+      recoveryFormat: null,
+    });
+    broadcastJournalPrivacy("journal-reset");
+  }
+
+  function invalidateJournalForRestore() {
+    if (journalSessionContextRef.current) journalSessionContextRef.current.invalidated = true;
+    journalSessionContextRef.current = null;
+    setJournalEntries([]);
+    setJournalPrivacy((current) => ({ ...current, unlocked: false }));
+  }
+
   function saveJournalEntry(draft, editingJournalId = null) {
     const existingEntry = editingJournalId
       ? journalEntries.find((entry) => entry.id === editingJournalId)
@@ -2274,30 +2617,52 @@ function App() {
     const updatedEntries = existingEntry
       ? journalEntries.map((entry) => entry.id === existingEntry.id ? result.value : entry)
       : [...journalEntries, result.value];
-    try {
-      writeJournalEntries(localStorage, updatedEntries);
+    function finishSave() {
       setJournalEntries(updatedEntries);
       setStorageError("");
       showConfirmation(existingEntry ? "Journal entry updated" : "Journal entry traced");
       return result.value;
-    } catch (error) {
+    }
+    function failSave() {
       setStorageError(storageMessage(existingEntry ? "update this Journal entry" : "save this Journal entry"));
       return false;
+    }
+    if (journalPrivacy.enabled) {
+      return queueJournalVaultDomainWrite(JOURNAL_ENTRY_STORAGE_KEY, JSON.stringify(updatedEntries))
+        .then(({ context }) => journalSessionContextRef.current === context ? finishSave() : result.value)
+        .catch(failSave);
+    }
+    try {
+        writeJournalEntries(localStorage, updatedEntries);
+      return finishSave();
+    } catch (error) {
+      return failSave();
     }
   }
 
   function deleteJournalEntry(id) {
     const updatedEntries = journalEntries.filter((entry) => entry.id !== id);
     if (updatedEntries.length === journalEntries.length) return false;
-    try {
-      writeJournalEntries(localStorage, updatedEntries);
+    function finishDelete() {
       setJournalEntries(updatedEntries);
       setStorageError("");
       showConfirmation("Journal entry deleted");
       return true;
-    } catch (error) {
+    }
+    function failDelete() {
       setStorageError(storageMessage("delete this Journal entry"));
       return false;
+    }
+    if (journalPrivacy.enabled) {
+      return queueJournalVaultDomainWrite(JOURNAL_ENTRY_STORAGE_KEY, JSON.stringify(updatedEntries))
+        .then(({ context }) => journalSessionContextRef.current === context ? finishDelete() : true)
+        .catch(failDelete);
+    }
+    try {
+        writeJournalEntries(localStorage, updatedEntries);
+      return finishDelete();
+    } catch (error) {
+      return failDelete();
     }
   }
 
@@ -2429,6 +2794,7 @@ function App() {
           }}
           onOpenTrophyCase={() => setPage("trophy-case")}
           onOpenJournal={() => setPage("journal")}
+          journalLocked={journalPrivacy.enabled && !journalPrivacy.unlocked}
           deleteMemory={deleteMemory}
           editMemory={editMemory}
           trophyEntries={trophyCaseEntries}
@@ -2436,7 +2802,7 @@ function App() {
           healthMeasurementEntries={healthMeasurementEntries}
           workoutEntries={workoutEntries}
           medicationEntries={medicationEntries}
-          journalEntries={journalEntries}
+          journalEntries={journalPrivacy.enabled && !journalPrivacy.unlocked ? [] : journalEntries}
           themeId={appSettings.themeId}
           homeVisibility={appSettings.homeVisibility}
           reducedMotion={reducedMotion}
@@ -2544,6 +2910,12 @@ function App() {
           updateSettings={updateAppSettings}
           onBack={() => setPage("home")}
           onOpenBackup={() => setPage("backup")}
+          journalPrivacy={journalPrivacy}
+          onEnableJournalPrivacy={enableJournalPrivacy}
+          onChangeJournalPassphrase={changeJournalPassphrase}
+          onRotateJournalRecovery={rotateJournalRecovery}
+          onLockJournal={() => lockJournal()}
+          onDisableJournalPrivacy={disableJournalPrivacy}
           buttonStyle={buttonStyle}
           containerStyle={containerStyle}
         />
@@ -2632,21 +3004,49 @@ function App() {
       ) : page === "backup" ? (
         <BackupPage
           onBack={() => setPage("home")}
-          onRestoreComplete={synchronizeRestoredAppState}
+          journalLockEnabled={journalPrivacy.enabled}
+          journalVaultSession={journalSessionContextRef.current?.session || null}
+          onRestoreStarting={invalidateJournalForRestore}
+          onRestoreComplete={async (summary) => {
+            await synchronizeRestoredAppState(summary);
+            broadcastJournalPrivacy("backup-restored");
+          }}
           buttonStyle={buttonStyle}
           containerStyle={containerStyle}
         />
       ) : page === "journal" ? (
-        <JournalPage
-          entries={journalEntries}
-          onBack={() => setPage("home")}
-          saveEntry={saveJournalEntry}
-          deleteEntry={deleteJournalEntry}
-          onDraftStorageError={() => setStorageError(storageMessage("save this unfinished Journal draft"))}
-          buttonStyle={buttonStyle}
-          inputStyle={inputStyle}
-          containerStyle={containerStyle}
-        />
+        journalPrivacy.enabled && !journalPrivacy.unlocked ? (
+          <JournalUnlockPage
+            unavailable={journalPrivacy.malformed}
+            recoveryFormat={journalPrivacy.recoveryFormat}
+            onUnlock={unlockJournalPrivacy}
+            onRecover={recoverJournalPrivacy}
+            onReset={resetJournalPrivacy}
+            onDownloadBackup={downloadTraceBackupForJournalReset}
+            onBack={() => setPage("home")}
+          />
+        ) : (
+          <JournalPage
+            entries={journalEntries}
+            initialDraft={journalPrivacy.enabled
+              ? journalDraftFromVaultPayload(journalSessionContextRef.current.session.payload)
+              : undefined}
+            persistDraft={persistJournalDraft}
+            removeDraft={removeJournalDraft}
+            onBack={() => setPage("home")}
+            onLock={journalPrivacy.enabled ? () => lockJournal() : undefined}
+            onDisable={journalPrivacy.enabled ? disableJournalPrivacy : undefined}
+            recoveryFormat={journalPrivacy.recoveryFormat}
+            saveEntry={saveJournalEntry}
+            deleteEntry={deleteJournalEntry}
+            onDraftStorageError={() => setStorageError(journalPrivacy.enabled
+              ? "Trace could not safely encrypt the latest unfinished Journal draft. Keep this page open and retry."
+              : storageMessage("save this unfinished Journal draft"))}
+            buttonStyle={buttonStyle}
+            inputStyle={inputStyle}
+            containerStyle={containerStyle}
+          />
+        )
       ) : page === "trophy-case" ? (
         <TrophyCasePage
           onBack={() => setPage("home")}

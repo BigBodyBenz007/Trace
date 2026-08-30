@@ -31,9 +31,19 @@ import {
   emptyProtocolCompoundOutcomeCollection,
   normalizeProtocolCompoundOutcomeCollection,
 } from "./protocolCompoundOutcome";
+import {
+  encryptBackupJournalWithSession,
+  JOURNAL_VAULT_STORAGE_KEY,
+  validateJournalVaultPayload,
+} from "./journalVault";
+import {
+  journalRecoveryFormat,
+  unlockJournalVaultEnvelope,
+  validateJournalVaultEnvelope,
+} from "./journalVaultCrypto";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
-export const TRACE_BACKUP_SCHEMA_VERSION = 1;
+export const TRACE_BACKUP_SCHEMA_VERSION = 2;
 export const TRACE_STORAGE_KEYS = Object.freeze([
   "memories",
   "nutritionGoals",
@@ -57,10 +67,11 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
   "savedExercises",
   "trophyCaseEntries",
   "journalEntries",
+  JOURNAL_VAULT_STORAGE_KEY,
 ]);
 
 const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
-const SPECIAL_KEYS = new Set(["workoutDraft", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences"]);
+const SPECIAL_KEYS = new Set(["workoutDraft", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", JOURNAL_VAULT_STORAGE_KEY]);
 const ARRAY_KEYS = new Set(TRACE_STORAGE_KEYS.filter(
   (key) => !OBJECT_KEYS.has(key) && !SPECIAL_KEYS.has(key)
 ));
@@ -202,6 +213,10 @@ function readStructuredData(storage) {
         if (!normalized) throw new Error("Invalid injection site settings.");
         return [key, normalized];
       }
+      if (key === JOURNAL_VAULT_STORAGE_KEY) {
+        validateJournalVaultEnvelope(parsed);
+        return [key, parsed];
+      }
       return [key, key === "appSettings" ? normalizeAppSettings(parsed) : parsed];
     } catch (error) {
       throw new Error(`Trace could not export malformed ${key} data.`);
@@ -215,7 +230,7 @@ function validateStructuredData(structuredData) {
   }
   TRACE_STORAGE_KEYS.forEach((key) => {
     const value = structuredData[key];
-    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", "plannedWorkouts", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "workoutDraft"].includes(key) && value === undefined)) return;
+    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", JOURNAL_VAULT_STORAGE_KEY, "plannedWorkouts", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "workoutDraft"].includes(key) && value === undefined)) return;
     if (ARRAY_KEYS.has(key) && !Array.isArray(value)) {
       throw new Error(`The backup contains invalid ${key} data.`);
     }
@@ -235,6 +250,12 @@ function validateStructuredData(structuredData) {
       }
       ids.add(String(entry.id));
     });
+  }
+  if (structuredData[JOURNAL_VAULT_STORAGE_KEY] != null) {
+    validateJournalVaultEnvelope(structuredData[JOURNAL_VAULT_STORAGE_KEY]);
+    if (structuredData.journalEntries != null) {
+      throw new Error("The backup mixes encrypted and plaintext Journal data.");
+    }
   }
   if (
     structuredData.plannedWorkouts !== undefined &&
@@ -339,7 +360,11 @@ export function summarizeTraceBackup(backup) {
     savedExercises: data.savedExercises?.length || 0,
     savedCompounds: data.medicationCompounds?.length || 0,
     userFoods: data.userFoods?.length || 0,
-    journalEntries: data.journalEntries?.length || 0,
+    journalEntries: data[JOURNAL_VAULT_STORAGE_KEY] ? null : (data.journalEntries?.length || 0),
+    encryptedJournal: Boolean(data[JOURNAL_VAULT_STORAGE_KEY]),
+    journalRecoveryFormat: data[JOURNAL_VAULT_STORAGE_KEY]
+      ? journalRecoveryFormat(data[JOURNAL_VAULT_STORAGE_KEY])
+      : null,
   };
 }
 
@@ -349,10 +374,14 @@ export function validateTraceBackup(value) {
   if (value.schemaVersion > TRACE_BACKUP_SCHEMA_VERSION) {
     throw new Error("This Trace backup was created by a newer, unsupported backup version.");
   }
-  if (value.schemaVersion !== TRACE_BACKUP_SCHEMA_VERSION) throw new Error("This Trace backup version is unsupported.");
+  if (![1, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
   if (!value.createdAt || Number.isNaN(Date.parse(value.createdAt))) throw new Error("The Trace backup timestamp is invalid.");
   validateStructuredData(value.data?.structured);
   const normalizedBackup = cloneJson(value);
+  normalizedBackup.schemaVersion = TRACE_BACKUP_SCHEMA_VERSION;
+  if (normalizedBackup.data.structured[JOURNAL_VAULT_STORAGE_KEY] === undefined) {
+    normalizedBackup.data.structured[JOURNAL_VAULT_STORAGE_KEY] = null;
+  }
   if (normalizedBackup.data.structured.appSettings != null) {
     normalizedBackup.data.structured.appSettings = normalizeAppSettings(
       normalizedBackup.data.structured.appSettings
@@ -440,9 +469,33 @@ export async function restoreTraceBackup(value, {
   confirmed = false,
   storage = localStorage,
   openDatabase = openPhotoDatabase,
+  journalVaultSession = null,
+  backupJournalCredential = null,
 } = {}) {
   if (!confirmed) throw new Error("Restore confirmation is required.");
-  const { backup, summary } = validateTraceBackup(value);
+  const validated = validateTraceBackup(value);
+  const backup = validated.backup;
+  const backupVault = backup.data.structured[JOURNAL_VAULT_STORAGE_KEY];
+  if (backupVault) {
+    if (!backupJournalCredential) {
+      throw new Error("Verify the encrypted Journal backup before restoring it.");
+    }
+    const verified = await unlockJournalVaultEnvelope(backupVault, backupJournalCredential);
+    validateJournalVaultPayload(verified.payload, backupVault.vaultId);
+  }
+  const currentVaultRaw = storage.getItem(JOURNAL_VAULT_STORAGE_KEY);
+  if (currentVaultRaw !== null && !backup.data.structured[JOURNAL_VAULT_STORAGE_KEY]) {
+    if (!journalVaultSession || JSON.stringify(journalVaultSession.envelope) !== currentVaultRaw) {
+      throw new Error("Unlock the current Journal before restoring plaintext Journal data.");
+    }
+    backup.data.structured[JOURNAL_VAULT_STORAGE_KEY] = await encryptBackupJournalWithSession(
+      journalVaultSession,
+      backup.data.structured.journalEntries || []
+    );
+    backup.data.structured.journalEntries = null;
+  }
+  validateStructuredData(backup.data.structured);
+  const summary = summarizeTraceBackup(backup);
   const database = await openDatabase();
   const previousStructured = Object.fromEntries(TRACE_STORAGE_KEYS.map((key) => [key, storage.getItem(key)]));
   const previousPhotos = await getAllPhotos(database);

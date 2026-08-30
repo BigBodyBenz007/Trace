@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motionScrollBehavior } from "../services/motionPreference";
+import JournalDisableDialog from "./JournalDisableDialog";
 import {
   JOURNAL_MOODS,
   clearJournalDraft,
@@ -54,12 +55,21 @@ export default function JournalPage({
   onBack,
   saveEntry,
   deleteEntry,
+  initialDraft,
+  persistDraft = (value) => writeJournalDraft(localStorage, value),
+  removeDraft = () => clearJournalDraft(localStorage),
+  onLock,
+  onDisable,
+  recoveryFormat,
   onDraftStorageError = () => {},
   buttonStyle,
   inputStyle,
   containerStyle,
 }) {
-  const recovered = useMemo(() => readJournalDraft(localStorage), []);
+  const recovered = useMemo(
+    () => initialDraft === undefined ? readJournalDraft(localStorage) : initialDraft,
+    [initialDraft]
+  );
   const [draft, setDraft] = useState(() => recovered?.form || emptyDraft());
   const [editingId, setEditingId] = useState(() => recovered?.editingId || null);
   const [showRecoveredDraft, setShowRecoveredDraft] = useState(Boolean(recovered));
@@ -67,9 +77,15 @@ export default function JournalPage({
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState(() => new Set());
+  const [disableOpen, setDisableOpen] = useState(false);
+  const [privacyStatus, setPrivacyStatus] = useState("");
   const editorRef = useRef(null);
   const entryRefs = useRef(new Map());
   const pendingHistoryScrollRef = useRef(null);
+  const persistDraftRef = useRef(persistDraft);
+  const draftErrorRef = useRef(onDraftStorageError);
+  persistDraftRef.current = persistDraft;
+  draftErrorRef.current = onDraftStorageError;
 
   const sortedEntries = useMemo(() => sortJournalEntriesNewestFirst(entries), [entries]);
   const visibleEntries = useMemo(
@@ -80,11 +96,11 @@ export default function JournalPage({
   useEffect(() => {
     if (!draftActive) return;
     try {
-      writeJournalDraft(localStorage, { editingId, form: draft });
+      Promise.resolve(persistDraftRef.current({ editingId, form: draft })).catch(() => draftErrorRef.current());
     } catch (storageError) {
-      onDraftStorageError();
+      draftErrorRef.current();
     }
-  }, [draft, draftActive, editingId, onDraftStorageError]);
+  }, [draft, draftActive, editingId]);
 
   useEffect(() => {
     const id = pendingHistoryScrollRef.current;
@@ -115,15 +131,22 @@ export default function JournalPage({
   function persistCurrentDraft() {
     if (!draftActive) return;
     try {
-      writeJournalDraft(localStorage, { editingId, form: draft });
+      return persistDraft({ editingId, form: draft });
     } catch (storageError) {
       onDraftStorageError();
+      throw storageError;
     }
   }
 
   function backToTimeline() {
-    persistCurrentDraft();
-    onBack();
+    let result;
+    try {
+      result = persistCurrentDraft();
+    } catch (error) {
+      return;
+    }
+    if (result && typeof result.then === "function") result.then(onBack).catch(onDraftStorageError);
+    else onBack();
   }
 
   function submit(event) {
@@ -134,20 +157,32 @@ export default function JournalPage({
       persistCurrentDraft();
       return;
     }
-    const saved = saveEntry(draft, editingId);
-    if (!saved) return;
+    function finish(saved) {
+      if (!saved) return;
+      function clearComposer() {
+        pendingHistoryScrollRef.current = saved.id;
+        setExpandedIds((current) => new Set(current).add(saved.id));
+        setEditingId(null);
+        setDraft(emptyDraft());
+        setError("");
+        setShowRecoveredDraft(false);
+        setDraftActive(false);
+      }
+      try {
+        const result = removeDraft();
+        if (result && typeof result.then === "function") result.then(clearComposer).catch(onDraftStorageError);
+        else clearComposer();
+      } catch (storageError) {
+        onDraftStorageError();
+      }
+    }
     try {
-      clearJournalDraft(localStorage);
+      const result = saveEntry(draft, editingId);
+      if (result && typeof result.then === "function") result.then(finish).catch(onDraftStorageError);
+      else finish(result);
     } catch (storageError) {
       onDraftStorageError();
     }
-    pendingHistoryScrollRef.current = saved.id;
-    setExpandedIds((current) => new Set(current).add(saved.id));
-    setEditingId(null);
-    setDraft(emptyDraft());
-    setError("");
-    setShowRecoveredDraft(false);
-    setDraftActive(false);
   }
 
   function beginEdit(entry) {
@@ -160,36 +195,88 @@ export default function JournalPage({
 
   function cancelEdit() {
     if (!window.confirm("Discard unsaved changes to this Journal entry?")) return;
-    clearJournalDraft(localStorage);
-    setEditingId(null);
-    setDraft(emptyDraft());
-    setError("");
-    setShowRecoveredDraft(false);
-    setDraftActive(false);
+    function clearComposer() {
+      setEditingId(null);
+      setDraft(emptyDraft());
+      setError("");
+      setShowRecoveredDraft(false);
+      setDraftActive(false);
+    }
+    try {
+      const result = removeDraft();
+      if (result && typeof result.then === "function") result.then(clearComposer).catch(onDraftStorageError);
+      else clearComposer();
+    } catch (storageError) {
+      onDraftStorageError();
+    }
   }
 
   function discardDraft() {
     if (!window.confirm("Discard this unfinished Journal draft?")) return;
-    clearJournalDraft(localStorage);
-    setEditingId(null);
-    setDraft(emptyDraft());
-    setError("");
-    setShowRecoveredDraft(false);
-    setDraftActive(false);
+    function clearComposer() {
+      setEditingId(null);
+      setDraft(emptyDraft());
+      setError("");
+      setShowRecoveredDraft(false);
+      setDraftActive(false);
+    }
+    try {
+      const result = removeDraft();
+      if (result && typeof result.then === "function") result.then(clearComposer).catch(onDraftStorageError);
+      else clearComposer();
+    } catch (storageError) {
+      onDraftStorageError();
+    }
   }
 
   function remove(entry) {
     if (!window.confirm("Delete this Journal entry?")) return;
     const index = visibleEntries.findIndex(({ id }) => id === entry.id);
     const restoreEntry = visibleEntries[index + 1] || visibleEntries[index - 1];
-    if (!deleteEntry(entry.id)) return;
-    pendingHistoryScrollRef.current = restoreEntry?.id || null;
-    if (editingId === entry.id) {
-      clearJournalDraft(localStorage);
-      setEditingId(null);
-      setDraft(emptyDraft());
-      setShowRecoveredDraft(false);
-      setDraftActive(false);
+    function finish(deleted) {
+      if (!deleted) return;
+      pendingHistoryScrollRef.current = restoreEntry?.id || null;
+      if (editingId === entry.id) {
+        function clearEditor() {
+          setEditingId(null);
+          setDraft(emptyDraft());
+          setShowRecoveredDraft(false);
+          setDraftActive(false);
+        }
+        try {
+          const result = removeDraft();
+          if (result && typeof result.then === "function") result.then(clearEditor).catch(onDraftStorageError);
+          else clearEditor();
+        } catch (storageError) {
+          onDraftStorageError();
+        }
+      }
+    }
+    try {
+      const result = deleteEntry(entry.id);
+      if (result && typeof result.then === "function") result.then(finish).catch(onDraftStorageError);
+      else finish(result);
+    } catch (storageError) {
+      onDraftStorageError();
+    }
+  }
+
+  async function lockJournal() {
+    try {
+      await persistCurrentDraft();
+      await Promise.resolve(onLock?.());
+    } catch (error) {
+      onDraftStorageError();
+    }
+  }
+
+  async function openTurnOffDialog() {
+    try {
+      await persistCurrentDraft();
+      setPrivacyStatus("");
+      setDisableOpen(true);
+    } catch (error) {
+      onDraftStorageError();
     }
   }
 
@@ -202,7 +289,20 @@ export default function JournalPage({
           <p style={{ color: "#c8b99f", margin: "5px 0 0" }}>Private reflections in Trace. Entries are never shared.</p>
         </div>
       </header>
-      <button className="trace-action trace-action--secondary" type="button" onClick={backToTimeline} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Timeline</button>
+      <div className="journal-actions journal-page__navigation">
+        <button className="trace-action trace-action--secondary" type="button" onClick={backToTimeline} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Timeline</button>
+      </div>
+
+      {privacyStatus && <p className="journal-privacy-page-status" role="status">{privacyStatus}</p>}
+      {(onLock || onDisable) && (
+        <section className="journal-section journal-page-privacy-controls" aria-labelledby="journal-page-privacy-heading">
+          <h2 id="journal-page-privacy-heading">Journal Lock: On</h2>
+          <div className="journal-actions">
+            {onLock && <button className="trace-action trace-action--brass" type="button" onClick={lockJournal} style={{ ...smallButtonStyle, backgroundColor: "#75583d" }}>Lock Now</button>}
+            {onDisable && <button className="trace-action trace-action--brass" type="button" onClick={openTurnOffDialog} style={{ ...smallButtonStyle }}>Turn Off Journal Lock</button>}
+          </div>
+        </section>
+      )}
 
       <section ref={editorRef} aria-labelledby="journal-composer-heading" className="journal-section journal-composer">
         <h2 id="journal-composer-heading">{editingId ? "Edit Journal Entry" : "New Journal Entry"}</h2>
@@ -267,6 +367,17 @@ export default function JournalPage({
         )}
       </section>
       <button className="trace-action trace-action--secondary" type="button" onClick={backToTimeline} style={{ ...smallButtonStyle, backgroundColor: "#4b5563", marginTop: "24px" }}>Back to Timeline</button>
+      {disableOpen && onDisable && (
+        <JournalDisableDialog
+          onCancel={() => setDisableOpen(false)}
+          onComplete={() => {
+            setDisableOpen(false);
+            setPrivacyStatus("Journal Lock turned off.");
+          }}
+          onDisable={onDisable}
+          recoveryFormat={recoveryFormat}
+        />
+      )}
     </main>
   );
 }

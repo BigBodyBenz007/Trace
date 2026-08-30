@@ -228,6 +228,70 @@ test("requires explicit browser confirmation before applying a full restore", as
   expect(restoreTraceBackup).not.toHaveBeenCalled();
 });
 
+test("locked encrypted backup preview exposes no Journal count or details and warns before replacement", async () => {
+  parseTraceBackupText.mockReturnValue({
+    ...parsed,
+    summary: { ...summary, encryptedJournal: true, journalEntries: null },
+  });
+  window.confirm.mockReturnValue(false);
+  render(<BackupPage journalLockEnabled onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["encrypted backup"], "trace.json")] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  expect(screen.getByText("Encrypted Journal included")).toBeInTheDocument();
+  expect(screen.queryByText(/Journal entries:/)).not.toBeInTheDocument();
+  expect(screen.getByText(/backup's Journal password or recovery phrase will be required/i)).toBeInTheDocument();
+  const backupPasswordInput = screen.getByLabelText("Backup Journal password", { selector: 'input[type="password"]' });
+  fireEvent.change(backupPasswordInput, { target: { value: "backup passphrase" } });
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("encrypted Journal in the backup will replace the current Journal"));
+  expect(restoreTraceBackup).not.toHaveBeenCalled();
+  expect(backupPasswordInput).toHaveValue("");
+});
+
+test("encrypted restore passes the selected backup recovery phrase only after explicit confirmation", async () => {
+  const encryptedParsed = {
+    ...parsed,
+    summary: { ...summary, encryptedJournal: true, journalEntries: null },
+  };
+  parseTraceBackupText.mockReturnValue(encryptedParsed);
+  restoreTraceBackup.mockResolvedValue(encryptedParsed.summary);
+  window.confirm.mockReturnValue(true);
+  render(<BackupPage journalLockEnabled onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["encrypted backup"], "trace.json")] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  fireEvent.click(screen.getByLabelText("Backup recovery phrase"));
+  fireEvent.change(screen.getByLabelText("Backup Journal recovery phrase"), { target: { value: "complete recovery phrase" } });
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  await waitFor(() => expect(restoreTraceBackup).toHaveBeenCalledWith(encryptedParsed.backup, {
+    confirmed: true,
+    journalVaultSession: null,
+    backupJournalCredential: { type: "recovery-key", value: "complete recovery phrase" },
+  }));
+});
+
+test("encrypted legacy backup alone uses legacy recovery-key labels", async () => {
+  parseTraceBackupText.mockReturnValue({
+    ...parsed,
+    summary: {
+      ...summary,
+      encryptedJournal: true,
+      journalEntries: null,
+      journalRecoveryFormat: "legacy-random-key-v1",
+    },
+  });
+  render(<BackupPage journalLockEnabled onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["legacy encrypted backup"], "trace.json")] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  expect(screen.getByLabelText("Backup legacy recovery key")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Backup recovery phrase")).not.toBeInTheDocument();
+});
+
 test("preview and confirmation explain that a backup without a draft removes the current draft", async () => {
   parseTraceBackupText.mockReturnValue({
     ...parsed,
@@ -253,13 +317,15 @@ test("confirmed restore shows success only after the complete restore resolves",
   restoreTraceBackup.mockReturnValue(new Promise((resolve) => { finishRestore = resolve; }));
   const onBack = jest.fn();
   const onRestoreComplete = jest.fn();
-  render(<BackupPage onBack={onBack} onRestoreComplete={onRestoreComplete} buttonStyle={{}} containerStyle={{}} />);
+  const onRestoreStarting = jest.fn();
+  render(<BackupPage onBack={onBack} onRestoreStarting={onRestoreStarting} onRestoreComplete={onRestoreComplete} buttonStyle={{}} containerStyle={{}} />);
   fireEvent.change(document.querySelector('input[type="file"]'), {
     target: { files: [new File(["backup"], "trace.json")] },
   });
   await screen.findByRole("heading", { name: "Review Backup" });
   fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
-  await waitFor(() => expect(restoreTraceBackup).toHaveBeenCalledWith(parsed.backup, { confirmed: true }));
+  await waitFor(() => expect(restoreTraceBackup).toHaveBeenCalledWith(parsed.backup, { confirmed: true, journalVaultSession: null }));
+  expect(onRestoreStarting).toHaveBeenCalledTimes(1);
   expect(screen.queryByRole("heading", { name: "✓ Trace restored successfully" })).not.toBeInTheDocument();
   expect(onRestoreComplete).not.toHaveBeenCalled();
   finishRestore(summary);

@@ -262,6 +262,7 @@ function HomePage({
   onOpenWorkouts,
   onOpenTrophyCase,
   onOpenJournal,
+  journalLocked = false,
   deleteMemory,
   editMemory,
   trophyEntries = [],
@@ -800,7 +801,7 @@ function HomePage({
           <button type="button" className="trace-settings-button" data-utility-position="left" aria-label="Settings" onClick={onOpenSettings} title="Settings">⚙</button>
           {(visibleHomeModules.journal || visibleHomeModules.trophyCase) && (
           <div className="trace-journal-shelf" data-utility-position="right" data-testid="story-achievements-actions">
-            {visibleHomeModules.journal && <button type="button" className="trace-journal-button" aria-label="Open Journal" onClick={onOpenJournal}>
+            {visibleHomeModules.journal && <button type="button" className="trace-journal-button" aria-label={journalLocked ? "Open locked Journal" : "Open Journal"} onClick={onOpenJournal}>
               <svg aria-hidden="true" viewBox="0 0 36 36" fill="none">
                 <path d="M8.5 5.5h18A2.5 2.5 0 0 1 29 8v22H11a4 4 0 0 1-4-4V7a1.5 1.5 0 0 1 1.5-1.5Z" fill="currentColor" fillOpacity=".16" stroke="currentColor" strokeWidth="1.5"/>
                 <path d="M11.5 5.5v24M11 24.5h18M16 12h8M16 17h8" stroke="currentColor" strokeLinecap="round" strokeWidth="1.5"/>
@@ -808,6 +809,7 @@ function HomePage({
               <span className="trace-utility-button__copy">
                 <span className="trace-utility-button__eyebrow">Your story</span>
                 <span className="trace-utility-button__label">Journal</span>
+                {journalLocked && <span className="trace-journal-button__lock">Locked</span>}
               </span>
             </button>}
             {visibleHomeModules.trophyCase && <button type="button" className="trace-trophy-button" aria-label="Open Trophy Case" onClick={onOpenTrophyCase}>

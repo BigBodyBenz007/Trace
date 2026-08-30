@@ -103,7 +103,7 @@ function emptyStructured(overrides = {}) {
         ? emptyInjectionSiteCollection()
       : key === "injectionSiteSettings"
         ? defaultInjectionSiteSettings()
-      : ["nutritionGoals", "appSettings", "workoutDraft"].includes(key) ? null : [],
+      : ["nutritionGoals", "appSettings", "workoutDraft", "journalVault"].includes(key) ? null : [],
   ]).concat(Object.entries(overrides)));
 }
 
@@ -245,7 +245,7 @@ test("exports empty Trace data with stable version metadata and filename", async
     openDatabase: async () => database,
     now: () => new Date("2026-08-12T10:20:30.000Z"),
   });
-  expect(result).toMatchObject({ format: "trace-backup", schemaVersion: 1, createdAt: "2026-08-12T10:20:30.000Z" });
+  expect(result).toMatchObject({ format: "trace-backup", schemaVersion: 2, createdAt: "2026-08-12T10:20:30.000Z" });
   expect(result.data.photos).toEqual([]);
   expect(result.data.structured.workoutDraft).toBeNull();
   expect(result.data.structured.dailyActions).toEqual(emptyDailyActionCollection());
@@ -417,7 +417,7 @@ test("validates summaries and rejects corrupt, future, and missing-reference bac
   }), photos: [encodedPhoto()] } });
   expect(validateTraceBackup(valid).summary).toMatchObject({ memories: 1, photos: 1, nutritionEntries: 1, healthMeasurementEntries: 1, plannedWorkouts: 1, activeWorkoutDraft: true, workouts: 1, medicationEntries: 1, protocols: 1, protocolOccurrences: 1, injectionSiteEntries: 1, dailyActions: 1, trophyCaseEntries: 1 });
   expect(() => parseTraceBackupText("not json")).toThrow("not valid JSON");
-  expect(() => validateTraceBackup({ ...valid, schemaVersion: 2 })).toThrow("newer");
+  expect(() => validateTraceBackup({ ...valid, schemaVersion: 3 })).toThrow("newer");
   expect(() => validateTraceBackup({ ...valid, data: { ...valid.data, photos: [] } })).toThrow("missing referenced photo");
 });
 
@@ -472,7 +472,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1", sodium: 640 }]);
   expect(JSON.parse(storage.value("nutritionGoals"))).toEqual({ calories: 2000, sodium: 2300 });
   expect(JSON.parse(storage.value("healthMeasurementEntries"))).toEqual([{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }]);
-  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 4, units: { weight: "kg", height: "cm", circumference: "cm" }, themeId: "modern-heirloom", homeVisibility: DEFAULT_HOME_VISIBILITY, motionPreference: "standard" });
+  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 5, units: { weight: "kg", height: "cm", circumference: "cm" }, themeId: "modern-heirloom", homeVisibility: DEFAULT_HOME_VISIBILITY, motionPreference: "standard", journalPrivacy: { autoLockMinutes: 5 } });
   expect(JSON.parse(storage.value("workoutEntries"))).toEqual([workoutWithDrops]);
   expect(JSON.parse(storage.value("medicationEntries"))).toEqual([{ id: "dose-1" }]);
   expect(JSON.parse(storage.value("protocols"))).toEqual([{ id: "protocol-1" }]);
@@ -757,7 +757,7 @@ test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-
       openDatabase: async () => makePhotoDatabase(),
     });
     expect(value.data.structured.appSettings).toMatchObject({
-      schemaVersion: 4,
+      schemaVersion: 5,
       themeId: lifeCurrentThemeId,
     });
     expect(value.data.structured.appSettings).not.toHaveProperty("lifeCurrentThemeId");
@@ -775,7 +775,7 @@ test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-
   }
 );
 
-test("backup export and restore preserve a current schema-v4 themeId", async () => {
+test("backup export and restore preserve a current themeId", async () => {
   const source = makeStorage({
     appSettings: JSON.stringify({
       schemaVersion: 4,
@@ -790,7 +790,7 @@ test("backup export and restore preserve a current schema-v4 themeId", async () 
     openDatabase: async () => makePhotoDatabase(),
   });
   expect(value.data.structured.appSettings).toMatchObject({
-    schemaVersion: 4,
+    schemaVersion: 5,
     themeId: "modern-heirloom",
   });
 
@@ -822,11 +822,12 @@ test("missing and invalid backup theme values safely default to Modern Heirloom"
     });
     const validated = validateTraceBackup(value).backup;
     expect(validated.data.structured.appSettings).toEqual({
-      schemaVersion: 4,
+      schemaVersion: 5,
       units: { weight: "kg", height: "cm", circumference: "cm" },
       themeId: "modern-heirloom",
       homeVisibility: DEFAULT_HOME_VISIBILITY,
       motionPreference: "standard",
+      journalPrivacy: { autoLockMinutes: 5 },
     });
 
     const storage = makeStorage();

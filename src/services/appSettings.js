@@ -14,13 +14,15 @@ import {
 export { MOTION_PREFERENCES, normalizeMotionPreference } from "./motionPreference";
 
 export const APP_SETTINGS_STORAGE_KEY = "appSettings";
-export const APP_SETTINGS_SCHEMA_VERSION = 4;
+export const APP_SETTINGS_SCHEMA_VERSION = 5;
+export const JOURNAL_AUTO_LOCK_MINUTES = Object.freeze([1, 5, 15, 30]);
 export const DEFAULT_APP_SETTINGS = Object.freeze({
   schemaVersion: APP_SETTINGS_SCHEMA_VERSION,
   units: Object.freeze({ weight: "lb", height: "ft-in", circumference: "in" }),
   themeId: DEFAULT_APP_THEME_ID,
   homeVisibility: DEFAULT_HOME_VISIBILITY,
   motionPreference: MOTION_PREFERENCES.STANDARD,
+  journalPrivacy: Object.freeze({ autoLockMinutes: 5 }),
 });
 
 const VALID_UNITS = { weight: ["lb", "kg"], height: ["ft-in", "cm"], circumference: ["in", "cm"] };
@@ -29,6 +31,13 @@ function resolveThemeId(value) {
   if (isAppThemeId(value?.themeId)) return value.themeId;
   if (isAppThemeId(value?.lifeCurrentThemeId)) return value.lifeCurrentThemeId;
   return DEFAULT_APP_THEME_ID;
+}
+
+function normalizeJournalPrivacy(value) {
+  const minutes = Number(value?.autoLockMinutes);
+  return {
+    autoLockMinutes: JOURNAL_AUTO_LOCK_MINUTES.includes(minutes) ? minutes : 5,
+  };
 }
 
 export function normalizeAppSettings(value) {
@@ -42,6 +51,7 @@ export function normalizeAppSettings(value) {
     themeId: resolveThemeId(value),
     homeVisibility: normalizeHomeVisibility(value?.homeVisibility),
     motionPreference: normalizeMotionPreference(value?.motionPreference),
+    journalPrivacy: normalizeJournalPrivacy(value?.journalPrivacy),
   };
 }
 

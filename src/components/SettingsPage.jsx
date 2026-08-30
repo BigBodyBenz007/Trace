@@ -12,6 +12,7 @@ import {
   normalizeMotionPreference,
 } from "../services/appSettings";
 import ConfirmationMessage from "./ConfirmationMessage";
+import JournalPrivacySettings from "./JournalPrivacySettings";
 
 const OPTIONS = [
   { key: "weight", label: "Body Weight", values: [["lb", "Pounds (lb)"], ["kg", "Kilograms (kg)"]] },
@@ -19,7 +20,20 @@ const OPTIONS = [
   { key: "circumference", label: "Body Measurements / Circumference", values: [["in", "Inches (in)"], ["cm", "Centimeters (cm)"]] },
 ];
 
-export default function SettingsPage({ settings, updateSettings, onBack, onOpenBackup, buttonStyle, containerStyle }) {
+export default function SettingsPage({
+  settings,
+  updateSettings,
+  onBack,
+  onOpenBackup,
+  journalPrivacy = { enabled: false, unlocked: false, malformed: false },
+  onEnableJournalPrivacy = async () => {},
+  onChangeJournalPassphrase = async () => {},
+  onRotateJournalRecovery = async () => {},
+  onLockJournal = async () => {},
+  onDisableJournalPrivacy = async () => {},
+  buttonStyle,
+  containerStyle,
+}) {
   const [status, setStatus] = useState("");
   const statusTimerRef = useRef(null);
   useEffect(() => () => clearTimeout(statusTimerRef.current), []);
@@ -72,6 +86,22 @@ export default function SettingsPage({ settings, updateSettings, onBack, onOpenB
       <p>Save a private copy of your Trace data or restore a previously created backup.</p>
       <button className="trace-action trace-action--primary" type="button" onClick={onOpenBackup} style={buttonStyle}>Backup &amp; Restore</button>
     </section>
+    <JournalPrivacySettings
+      enabled={journalPrivacy.enabled}
+      unlocked={journalPrivacy.unlocked}
+        malformed={journalPrivacy.malformed}
+        recoveryFormat={journalPrivacy.recoveryFormat}
+      autoLockMinutes={settings.journalPrivacy?.autoLockMinutes || 5}
+      onAutoLockChange={(autoLockMinutes) => saveSettings({
+        ...settings,
+        journalPrivacy: { ...settings.journalPrivacy, autoLockMinutes },
+      })}
+      onEnable={onEnableJournalPrivacy}
+      onChangePassphrase={onChangeJournalPassphrase}
+      onRotateRecovery={onRotateJournalRecovery}
+      onLock={onLockJournal}
+      onDisable={onDisableJournalPrivacy}
+    />
     <section className="trace-feature-section trace-settings-home" aria-labelledby="customize-home-heading">
       <h2 id="customize-home-heading">Customize Home</h2>
       <h3>Make Trace yours</h3>

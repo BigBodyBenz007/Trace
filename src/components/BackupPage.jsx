@@ -5,6 +5,7 @@ import {
   restoreTraceBackup,
   traceBackupFilename,
 } from "../services/traceBackup";
+import { JOURNAL_RECOVERY_FORMAT_LEGACY } from "../services/journalVaultCrypto";
 
 function readFileText(file) {
   if (typeof file.text === "function") return file.text();
@@ -23,7 +24,7 @@ function isIOSDevice(browserNavigator = navigator) {
   );
 }
 
-function createBackupFile(backup) {
+export function createBackupFile(backup) {
   const filename = traceBackupFilename(new Date(backup.createdAt));
   const file = typeof File === "function"
     ? new File([JSON.stringify(backup)], filename, { type: "application/json" })
@@ -34,7 +35,7 @@ function createBackupFile(backup) {
   return file;
 }
 
-function downloadWithAnchor(file) {
+export function downloadWithAnchor(file) {
   const url = URL.createObjectURL(file);
   const link = document.createElement("a");
   link.href = url;
@@ -48,6 +49,9 @@ function downloadWithAnchor(file) {
 export default function BackupPage({
   onBack,
   onRestoreComplete = () => {},
+  onRestoreStarting = () => {},
+  journalLockEnabled = false,
+  journalVaultSession = null,
   buttonStyle,
   containerStyle,
 }) {
@@ -56,7 +60,12 @@ export default function BackupPage({
   const [preview, setPreview] = useState(null);
   const [iosBackup, setIosBackup] = useState(null);
   const [restoreComplete, setRestoreComplete] = useState(false);
+  const [backupCredentialType, setBackupCredentialType] = useState("passphrase");
+  const [backupCredentialValue, setBackupCredentialValue] = useState("");
   const fileInputRef = useRef(null);
+  const summary = preview?.summary;
+  const backupUsesLegacyRecovery = summary?.journalRecoveryFormat === JOURNAL_RECOVERY_FORMAT_LEGACY;
+  const backupRecoveryLabel = backupUsesLegacyRecovery ? "legacy recovery key" : "recovery phrase";
 
   async function exportBackup() {
     setError("");
@@ -113,6 +122,8 @@ export default function BackupPage({
     try {
       const parsed = parseTraceBackupText(await readFileText(file));
       setPreview(parsed);
+      setBackupCredentialType("passphrase");
+      setBackupCredentialValue("");
       setStatus("");
     } catch (validationError) {
       setPreview(null);
@@ -123,15 +134,39 @@ export default function BackupPage({
 
   async function confirmRestore() {
     if (!preview) return;
+    const backupJournalCredential = preview.summary.encryptedJournal
+      ? { type: backupCredentialType, value: backupCredentialValue }
+      : null;
+    if (backupJournalCredential && !backupJournalCredential.value.trim()) {
+      setError(`Enter the backup Journal ${backupCredentialType === "recovery-key" ? backupRecoveryLabel : "password"} before restoring.`);
+      return;
+    }
+    if (journalLockEnabled && !preview.summary.encryptedJournal && !journalVaultSession) {
+      setError("Unlock the current Journal before restoring a backup that contains plaintext Journal data.");
+      return;
+    }
     const draftEffect = preview.summary.activeWorkoutDraft
       ? "Any current active workout draft will be replaced by the active draft in this backup."
       : "Any current active workout draft will be removed because this backup has none.";
-    if (!window.confirm(`Replace all current Trace data with this backup? ${draftEffect} This cannot be merged.`)) return;
+    const journalEffect = preview.summary.encryptedJournal
+      ? ` The encrypted Journal in the backup will replace the current Journal and will require that backup's Journal password or ${backupRecoveryLabel}.`
+      : "";
+    if (!window.confirm(`Replace all current Trace data with this backup? ${draftEffect}${journalEffect} This cannot be merged.`)) {
+      setBackupCredentialValue("");
+      return;
+    }
     setError("");
     setStatus("Restoring Trace…");
     try {
-      const restoredSummary = await restoreTraceBackup(preview.backup, { confirmed: true });
-      onRestoreComplete(restoredSummary);
+      const activeSession = journalVaultSession;
+      setBackupCredentialValue("");
+      onRestoreStarting();
+      const restoredSummary = await restoreTraceBackup(preview.backup, {
+        confirmed: true,
+        journalVaultSession: activeSession,
+        ...(backupJournalCredential ? { backupJournalCredential } : {}),
+      });
+      await onRestoreComplete(restoredSummary);
       setPreview(null);
       setStatus("");
       setRestoreComplete(true);
@@ -142,7 +177,6 @@ export default function BackupPage({
     }
   }
 
-  const summary = preview?.summary;
   return (
     <main className="trace-feature-page trace-feature-page--backup" style={containerStyle}>
       <header className="trace-feature-page__identity">
@@ -182,10 +216,66 @@ export default function BackupPage({
             <li>Active workout draft: {summary.activeWorkoutDraft ? "Included — it will replace any current active workout draft" : "None — any current active workout draft will be removed"}</li>
             <li>Medication & supplement entries: {summary.medicationEntries}</li><li>Scheduled doses: {summary.medicationDoseSchedules || 0}</li><li>Dose occurrence changes: {summary.medicationDoseOccurrences || 0}</li><li>Protocols: {summary.protocols}</li><li>Protocol daily statuses: {summary.protocolOccurrences || 0}</li><li>Protocol compound results: {summary.protocolCompoundOutcomes || 0}</li><li>Injection shots: {summary.injectionSiteEntries || 0}</li>
             <li>Trophy Case entries: {summary.trophyCaseEntries}</li><li>Saved exercises: {summary.savedExercises}</li>
-            <li>Saved compounds: {summary.savedCompounds}</li><li>Saved foods: {summary.userFoods}</li><li>Journal entries: {summary.journalEntries || 0}</li>
+            <li>Saved compounds: {summary.savedCompounds}</li><li>Saved foods: {summary.userFoods}</li>
+            <li>{summary.encryptedJournal ? "Encrypted Journal included" : `Journal entries: ${summary.journalEntries || 0}`}</li>
           </ul>
+          {summary.encryptedJournal && (
+            <>
+              <p><strong>Restoring this encrypted Journal replaces the current Journal. The backup&apos;s Journal password or {backupRecoveryLabel} will be required.</strong></p>
+              <fieldset className="journal-privacy-credential">
+                <legend>Verify the encrypted Journal backup</legend>
+                <label>
+                  <input
+                    type="radio"
+                    name="backup-journal-credential"
+                    value="passphrase"
+                    checked={backupCredentialType === "passphrase"}
+                    onChange={() => {
+                      setBackupCredentialType("passphrase");
+                      setBackupCredentialValue("");
+                    }}
+                  />
+                  Backup Journal password
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="backup-journal-credential"
+                    value="recovery-key"
+                    checked={backupCredentialType === "recovery-key"}
+                    onChange={() => {
+                      setBackupCredentialType("recovery-key");
+                      setBackupCredentialValue("");
+                    }}
+                  />
+                  {backupUsesLegacyRecovery ? "Backup legacy recovery key" : "Backup recovery phrase"}
+                </label>
+                <label className="journal-privacy-field" htmlFor="backup-journal-credential-value">
+                  {backupCredentialType === "recovery-key" ? `Backup Journal ${backupRecoveryLabel}` : "Backup Journal password"}
+                  {backupCredentialType === "recovery-key" ? <textarea
+                    id="backup-journal-credential-value"
+                    autoComplete="off"
+                    autoCapitalize="none"
+                    spellCheck="false"
+                    value={backupCredentialValue}
+                    onChange={(event) => setBackupCredentialValue(event.target.value)}
+                  /> : <input
+                    id="backup-journal-credential-value"
+                    type="password"
+                    autoComplete="current-password"
+                    value={backupCredentialValue}
+                    onChange={(event) => setBackupCredentialValue(event.target.value)}
+                  />}
+                </label>
+                <p>This credential is used only to verify the backup before Trace changes any current data. It is not stored.</p>
+              </fieldset>
+            </>
+          )}
           <button className="trace-action trace-action--danger" type="button" style={{ ...buttonStyle, backgroundColor: "#b91c1c" }} onClick={confirmRestore}>Confirm Full Restore</button>
-          <button className="trace-action trace-action--secondary" type="button" style={{ ...buttonStyle, backgroundColor: "#4b5563" }} onClick={() => setPreview(null)}>Cancel Restore</button>
+          <button className="trace-action trace-action--secondary" type="button" style={{ ...buttonStyle, backgroundColor: "#4b5563" }} onClick={() => {
+            setBackupCredentialValue("");
+            setPreview(null);
+          }}>Cancel Restore</button>
         </section>
       )}
     </main>

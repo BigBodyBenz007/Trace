@@ -156,3 +156,41 @@ test("edit is explicit and delete requires confirmation", () => {
   expect(window.confirm).toHaveBeenCalledWith("Delete this Journal entry?");
   expect(deleteEntry).toHaveBeenCalledWith(original.id);
 });
+
+test("unlocked Journal exposes separate privacy controls and shared authenticated turn-off flow", async () => {
+  const draft = {
+    editingId: null,
+    form: {
+      title: "Exact draft",
+      body: "Preserve this unfinished thought",
+      date: "2026-08-30",
+      time: "09:45",
+      mood: "Calm",
+      tags: "private",
+    },
+  };
+  const persistDraft = jest.fn(async () => true);
+  const onDisable = jest.fn(async () => {});
+  render(
+    <JournalPage
+      {...baseProps}
+      initialDraft={draft}
+      persistDraft={persistDraft}
+      onLock={jest.fn(async () => {})}
+      onDisable={onDisable}
+    />
+  );
+  expect(screen.getByRole("heading", { name: "Journal Lock: On" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Lock Now" })).toBeInTheDocument();
+  const turnOff = screen.getByRole("button", { name: "Turn Off Journal Lock" });
+  expect(turnOff).not.toHaveClass("trace-action--danger");
+  fireEvent.click(turnOff);
+  expect(await screen.findByRole("dialog", { name: "Turn Off Journal Lock" })).toBeInTheDocument();
+  expect(persistDraft).toHaveBeenCalledWith(draft);
+  expect(screen.getByText(/entries will remain intact/)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Current Journal password"), { target: { value: "current credential" } });
+  fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Turn Off Journal Lock" }));
+  await waitFor(() => expect(onDisable).toHaveBeenCalledWith({ type: "passphrase", value: "current credential" }));
+  expect(screen.getByText("Journal Lock turned off.")).toHaveAttribute("role", "status");
+  expect(screen.getByRole("heading", { name: "Journal" })).toBeInTheDocument();
+});

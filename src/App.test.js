@@ -633,7 +633,7 @@ test("Settings opens and global unit preferences survive remount into a fresh He
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' }));
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({
-    schemaVersion: 4,
+    schemaVersion: 5,
     units: { weight: "kg", height: "cm", circumference: "cm" },
     themeId: "modern-heirloom",
     homeVisibility: {
@@ -647,6 +647,7 @@ test("Settings opens and global unit preferences survive remount into a fresh He
       trophyCase: true,
     },
     motionPreference: "standard",
+    journalPrivacy: { autoLockMinutes: 5 },
   });
   first.unmount();
   render(<App />);
@@ -674,7 +675,7 @@ test("Motion preference applies immediately and persists after remount", () => {
   fireEvent.click(screen.getByRole("radio", { name: /Reduced motion/ }));
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
-    schemaVersion: 4,
+    schemaVersion: 5,
     motionPreference: "reduced",
   });
   first.unmount();
