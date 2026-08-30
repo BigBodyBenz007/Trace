@@ -1074,7 +1074,7 @@ function HomePage({
                         style={{
                           display: "flex",
                           gap: "20px",
-                          paddingTop: "76px",
+                          paddingTop: "var(--life-current-card-top-gap)",
                         }}
                       >
                         {monthGroup.memories.map((memory) => {

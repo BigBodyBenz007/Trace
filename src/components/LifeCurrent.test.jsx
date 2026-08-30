@@ -61,7 +61,7 @@ test("does not render a River visual for an empty layout", () => {
   expect(container).toBeEmptyDOMElement();
 });
 
-test("Modern Heirloom renders a quiet code-native current without immersive scenery", () => {
+test("Modern Heirloom renders no decorative scenery or SVG paths", () => {
   render(<RiverHarness
     points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
     themeId="modern-heirloom"
@@ -72,10 +72,9 @@ test("Modern Heirloom renders a quiet code-native current without immersive scen
   expect(current).toHaveAttribute("data-theme-id", "modern-heirloom");
   expect(current).toHaveAttribute("data-life-current-renderer", "modern-heirloom-current");
   expect(current).toHaveAttribute("data-quiet-trail", "false");
-  expect(screen.getByTestId("life-current-modern-heirloom-scenery")).toBeInTheDocument();
-  expect(current.querySelectorAll("path")).toHaveLength(2);
-  expect(current.querySelectorAll("circle")).toHaveLength(0);
-  expect(current.querySelectorAll("img, picture, source")).toHaveLength(0);
+  expect(current).toBeEmptyDOMElement();
+  expect(screen.queryByTestId("life-current-modern-heirloom-scenery")).not.toBeInTheDocument();
+  expect(current.querySelectorAll("svg, path, circle, img, picture, source")).toHaveLength(0);
   expect(getComputedStyle(current).pointerEvents).toBe("none");
 });
 

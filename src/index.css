@@ -1441,7 +1441,7 @@ code {
   --life-current-card-lowering: 68px;
   --life-current-card-overlap: 22px;
   --life-current-card-space: 310px;
-  --life-current-scenery-height: 260px;
+  --life-current-card-top-gap: 76px;
   --life-current-stage-min-height: 566px;
   isolation: isolate;
 }
@@ -1475,7 +1475,12 @@ code {
 }
 
 .life-current-theme--modern-heirloom {
-  background: #07131f;
+  --life-current-card-lowering: 0px;
+  --life-current-card-top-gap: 16px;
+  --life-current-stage-min-height: 0px;
+  background:
+    repeating-linear-gradient(112deg, rgba(242, 234, 220, 0.018) 0 1px, transparent 1px 5px),
+    linear-gradient(180deg, #0a1a28, #07131f);
   border-radius: 14px;
   outline: 1px solid rgba(110, 96, 78, 0.58);
   outline-offset: -1px;
@@ -1489,47 +1494,6 @@ code {
   top: 0;
   width: 100%;
   z-index: 0;
-}
-
-.modern-heirloom-current-scene {
-  background:
-    radial-gradient(circle at 46% 32%, rgba(27, 111, 106, 0.1), transparent 42%),
-    repeating-linear-gradient(112deg, rgba(242, 234, 220, 0.018) 0 1px, transparent 1px 5px),
-    linear-gradient(180deg, #0a1a28, #07131f);
-  contain: layout paint style;
-  height: var(--life-current-scenery-height);
-  left: 0;
-  overflow: hidden;
-  pointer-events: none;
-  position: absolute;
-  top: 0;
-  width: 100%;
-}
-
-.modern-heirloom-current-lines {
-  display: block;
-  height: 100%;
-  overflow: visible;
-  width: 100%;
-}
-
-.modern-heirloom-current-line {
-  fill: none;
-  vector-effect: non-scaling-stroke;
-}
-
-.modern-heirloom-current-line--companion {
-  filter: drop-shadow(0 0 8px rgba(121, 201, 191, 0.16));
-  opacity: 0.26;
-  stroke: var(--trace-teal-soft);
-  stroke-width: 1.2;
-}
-
-.modern-heirloom-current-line--brass {
-  filter: drop-shadow(0 0 5px rgba(210, 173, 120, 0.16));
-  opacity: 0.92;
-  stroke: var(--trace-brass-strong);
-  stroke-width: 1.6;
 }
 
 .river-current-frame {

@@ -685,7 +685,7 @@ test("mobile focused cards can grow without paint-containment clipping", () => {
   expect(within(card).getByText(/May/)).toBeInTheDocument();
 });
 
-test("uses responsive shared Life Current spacing while keeping the stage width-safe", () => {
+test("uses responsive illustrated spacing and compact Modern Heirloom spacing", () => {
   render(<HomePage {...baseProps} memories={memories} trophyEntries={[]} />);
   const css = readFileSync(require.resolve("../index.css"), "utf8");
   const viewport = screen.getByTestId("memory-timeline-viewport");
@@ -706,9 +706,12 @@ test("uses responsive shared Life Current spacing while keeping the stage width-
   expect(css).toMatch(
     /@media \(max-width: 720px\)\s*\{\s*\.life-current-theme\s*\{[^}]*--life-current-card-lowering:\s*74px;[^}]*--life-current-card-overlap:\s*16px;[^}]*--life-current-stage-min-height:\s*572px;/s
   );
+  expect(css).toMatch(
+    /\.life-current-theme--modern-heirloom\s*\{[^}]*--life-current-card-lowering:\s*0px;[^}]*--life-current-card-top-gap:\s*16px;[^}]*--life-current-stage-min-height:\s*0px;/s
+  );
 });
 
-test("initial newest navigation centers the final Memory before the quiet trail", () => {
+test("Modern Heirloom centers the final Memory without decorative scenery", () => {
   const originalRequestAnimationFrame = window.requestAnimationFrame;
   const originalCancelAnimationFrame = window.cancelAnimationFrame;
   const frames = [];
@@ -718,7 +721,7 @@ test("initial newest navigation centers the final Memory before the quiet trail"
   });
   window.cancelAnimationFrame = jest.fn();
   const { unmount } = render(
-    <HomePage {...baseProps} memories={memories} trophyEntries={[]} />
+    <HomePage {...baseProps} memories={memories} themeId="modern-heirloom" trophyEntries={[]} />
   );
   const viewport = screen.getByTestId("memory-timeline-viewport");
   const finalCard = screen.getByTestId("timeline-memory-memory-b");
@@ -731,6 +734,9 @@ test("initial newest navigation centers the final Memory before the quiet trail"
 
   expect(finalCard.getBoundingClientRect).toHaveBeenCalled();
   expect(viewport.scrollLeft).toBe(225);
+  expect(viewport.querySelector("svg, path")).not.toBeInTheDocument();
+  expect(screen.getByText("2026")).toBeInTheDocument();
+  expect(screen.getByText("May")).toBeInTheDocument();
   expect(screen.queryByTestId("life-current-quiet-trail")).not.toBeInTheDocument();
   unmount();
   window.requestAnimationFrame = originalRequestAnimationFrame;

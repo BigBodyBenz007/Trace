@@ -23,6 +23,7 @@ test("registers six unique app themes with exactly one Modern Heirloom default",
   expect(DEFAULT_APP_THEME_ID).toBe("modern-heirloom");
   expect(getAppTheme("modern-heirloom")).toMatchObject({
     label: "Modern Heirloom",
+    description: "A clean, non-illustrated Life Current with Trace’s deep navy heirloom texture.",
     presentation: { renderer: "modern-heirloom-current" },
   });
   expect(getAppTheme("river")).toMatchObject({

@@ -20,7 +20,7 @@ export const APP_THEMES = Object.freeze([
   theme({
     id: "modern-heirloom",
     label: "Modern Heirloom",
-    description: "Trace's classic, non-illustrated presentation with a quiet brass Life Current.",
+    description: "A clean, non-illustrated Life Current with Trace’s deep navy heirloom texture.",
     immersive: false,
     isDefault: true,
     presentation: {

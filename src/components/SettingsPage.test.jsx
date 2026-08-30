@@ -28,7 +28,7 @@ test("renders compact global unit controls and saves each preference", () => {
   expect(screen.getByRole("radio", { name: /Gnome Village/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Desert Journey/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Outer Space Journey/ })).not.toBeChecked();
-  expect(screen.getByText("Trace's classic, non-illustrated presentation with a quiet brass Life Current.")).toBeInTheDocument();
+  expect(screen.getByText("A clean, non-illustrated Life Current with Trace’s deep navy heirloom texture.")).toBeInTheDocument();
   expect(screen.getByText("A flowing current through your timeline.")).toBeInTheDocument();
   expect(screen.getByText("A winding path through a darker world.")).toBeInTheDocument();
   expect(screen.getByText("A storybook path through a lived-in woodland village.")).toBeInTheDocument();
