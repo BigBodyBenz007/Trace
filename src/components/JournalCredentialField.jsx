@@ -38,6 +38,7 @@ export function JournalPasswordField({
   setValue,
   autoComplete = "current-password",
   copyable = false,
+  inputRef,
 }) {
   const [visible, setVisible] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
@@ -60,7 +61,7 @@ export function JournalPasswordField({
     <div className="journal-privacy-field">
       <label htmlFor={id}>{label}</label>
       <div className="journal-privacy-password">
-        <input autoComplete={autoComplete} id={id} name="password" onChange={changeValue} type={visible ? "text" : "password"} value={value} />
+        <input autoComplete={autoComplete} id={id} name="password" onChange={changeValue} ref={inputRef} type={visible ? "text" : "password"} value={value} />
         <button aria-controls={id} aria-label={`${visible ? "Hide" : "Show"} ${label.toLowerCase()}`} aria-pressed={visible} onClick={() => setVisible((current) => !current)} type="button">{visible ? "Hide" : "Show"}</button>
       </div>
       {copyable && (

@@ -290,16 +290,16 @@ export default function JournalPage({
         </div>
       </header>
       <div className="journal-actions journal-page__navigation">
+        {onLock && <button className="trace-action trace-action--brass" type="button" onClick={lockJournal} style={{ ...smallButtonStyle, backgroundColor: "#75583d" }}>Lock Journal</button>}
         <button className="trace-action trace-action--secondary" type="button" onClick={backToTimeline} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Timeline</button>
       </div>
 
       {privacyStatus && <p className="journal-privacy-page-status" role="status">{privacyStatus}</p>}
-      {(onLock || onDisable) && (
+      {onDisable && (
         <section className="journal-section journal-page-privacy-controls" aria-labelledby="journal-page-privacy-heading">
           <h2 id="journal-page-privacy-heading">Journal Lock: On</h2>
           <div className="journal-actions">
-            {onLock && <button className="trace-action trace-action--brass" type="button" onClick={lockJournal} style={{ ...smallButtonStyle, backgroundColor: "#75583d" }}>Lock Now</button>}
-            {onDisable && <button className="trace-action trace-action--brass" type="button" onClick={openTurnOffDialog} style={{ ...smallButtonStyle }}>Turn Off Journal Lock</button>}
+            <button className="trace-action trace-action--brass" type="button" onClick={openTurnOffDialog} style={{ ...smallButtonStyle }}>Turn Off Journal Lock</button>
           </div>
         </section>
       )}

@@ -157,7 +157,38 @@ test("edit is explicit and delete requires confirmation", () => {
   expect(deleteEntry).toHaveBeenCalledWith(original.id);
 });
 
-test("unlocked Journal exposes separate privacy controls and shared authenticated turn-off flow", async () => {
+test("unlocked Journal exposes a direct Lock Journal page action that persists the draft without confirmation", async () => {
+  const draft = {
+    editingId: null,
+    form: {
+      title: "Exact draft",
+      body: "Preserve this unfinished thought",
+      date: "2026-08-30",
+      time: "09:45",
+      mood: "Calm",
+      tags: "private",
+    },
+  };
+  const persistDraft = jest.fn(async () => true);
+  const onLock = jest.fn(async () => {});
+  render(
+    <JournalPage
+      {...baseProps}
+      initialDraft={draft}
+      persistDraft={persistDraft}
+      onLock={onLock}
+    />
+  );
+  const lock = screen.getByRole("button", { name: "Lock Journal" });
+  expect(lock.closest(".journal-page__navigation")).toBeInTheDocument();
+  fireEvent.click(lock);
+  await waitFor(() => expect(persistDraft).toHaveBeenCalledWith(draft));
+  await waitFor(() => expect(onLock).toHaveBeenCalledTimes(1));
+  expect(window.confirm).not.toHaveBeenCalled();
+  expect(screen.queryByRole("button", { name: "Lock Now" })).not.toBeInTheDocument();
+});
+
+test("unlocked Journal keeps Turn Off Journal Lock as a separate authenticated flow", async () => {
   const draft = {
     editingId: null,
     form: {
@@ -176,12 +207,10 @@ test("unlocked Journal exposes separate privacy controls and shared authenticate
       {...baseProps}
       initialDraft={draft}
       persistDraft={persistDraft}
-      onLock={jest.fn(async () => {})}
       onDisable={onDisable}
     />
   );
   expect(screen.getByRole("heading", { name: "Journal Lock: On" })).toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Lock Now" })).toBeInTheDocument();
   const turnOff = screen.getByRole("button", { name: "Turn Off Journal Lock" });
   expect(turnOff).not.toHaveClass("trace-action--danger");
   fireEvent.click(turnOff);

@@ -91,7 +91,7 @@ afterEach(() => {
   else delete document.visibilityState;
 });
 
-test("locked startup never renders Journal content; unlock restores it and Lock Now clears it", async () => {
+test("direct Lock Journal clears the active session without changing encrypted or unrelated data and focuses unlock", async () => {
   await prepareLockedJournal();
   render(<App />);
   expect(screen.getByRole("button", { name: "Open locked Journal" })).toBeInTheDocument();
@@ -100,6 +100,7 @@ test("locked startup never renders Journal content; unlock restores it and Lock 
 
   fireEvent.click(screen.getByRole("button", { name: "Open locked Journal" }));
   expect(screen.getByRole("heading", { name: "Journal locked" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Journal password")).toHaveFocus();
   expect(document.body).not.toHaveTextContent(secretTitle);
   await unlockFromPage();
   expect(screen.getByText(secretTitle)).toBeInTheDocument();
@@ -111,13 +112,24 @@ test("locked startup never renders Journal content; unlock restores it and Lock 
   fireEvent.change(screen.getByLabelText("Entry"), { target: { value: "updated encrypted body" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
   await screen.findByText("updated encrypted body", {}, { timeout: 15000 });
+  await screen.findByRole("button", { name: "Save Journal Entry" });
   expect(localStorage.getItem("journalEntries")).toBeNull();
   expect(localStorage.getItem("journalVault")).not.toContain("updated encrypted body");
+  const vaultBeforeLock = localStorage.getItem("journalVault");
+  const settingsBeforeLock = localStorage.getItem("appSettings");
+  localStorage.setItem("journal-lock-unrelated", "exact unrelated bytes");
 
-  fireEvent.click(screen.getByRole("button", { name: "Lock Now" }));
+  fireEvent.click(screen.getByRole("button", { name: "Lock Journal" }));
   await screen.findByRole("heading", { name: "Journal locked" });
   expect(document.body).not.toHaveTextContent(secretTitle);
   expect(document.body).not.toHaveTextContent(secretBody);
+  expect(screen.getByLabelText("Journal password")).toHaveFocus();
+  expect(localStorage.getItem("journalVault")).toBe(vaultBeforeLock);
+  expect(localStorage.getItem("journalVaultTransaction")).toBeNull();
+  expect(localStorage.getItem("journalEntries")).toBeNull();
+  expect(localStorage.getItem("journalDraft")).toBeNull();
+  expect(localStorage.getItem("appSettings")).toBe(settingsBeforeLock);
+  expect(localStorage.getItem("journal-lock-unrelated")).toBe("exact unrelated bytes");
   const channel = MockBroadcastChannel.instances[0];
   expect(channel.messages.at(-1)).toEqual({ schemaVersion: 1, type: "lock" });
   expect(JSON.stringify(channel.messages)).not.toContain(secretBody);

@@ -34,9 +34,13 @@ export default function JournalUnlockPage({
   const [failures, setFailures] = useState(0);
   const [delayed, setDelayed] = useState(false);
   const delayTimerRef = useRef(null);
+  const passwordInputRef = useRef(null);
   const legacy = recoveryFormat === JOURNAL_RECOVERY_FORMAT_LEGACY;
 
   useEffect(() => () => clearTimeout(delayTimerRef.current), []);
+  useEffect(() => {
+    if (mode === "passphrase") passwordInputRef.current?.focus();
+  }, [mode]);
 
   function beginDelay(nextFailures) {
     if (nextFailures < 2) return;
@@ -166,7 +170,7 @@ export default function JournalUnlockPage({
 
       {mode === "passphrase" ? (
         <form className="journal-privacy-card" onSubmit={submitPassphrase}>
-          <JournalPasswordField id="journal-unlock-passphrase" label="Journal password" value={passphrase} setValue={setPassphrase} />
+          <JournalPasswordField id="journal-unlock-passphrase" inputRef={passwordInputRef} label="Journal password" value={passphrase} setValue={setPassphrase} />
           {unavailable && <p role="alert">This encrypted Journal cannot be unlocked here. Its stored data was left unchanged.</p>}
           {error && <p className="journal-error" role="alert">{error}</p>}
           {delayed && <p role="status">Please wait briefly before trying again.</p>}
