@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import TodayPage from "./TodayPage";
 import {
   createPlannedWorkout as createRecord,
@@ -14,6 +14,21 @@ import {
   completeProtocolOccurrence as completeProtocolOccurrenceRecord,
   skipProtocolOccurrence as skipProtocolOccurrenceRecord,
 } from "../services/protocolOccurrence";
+import {
+  completeMedicationDoseOccurrence as completeDoseRecord,
+  createMedicationDoseSchedule,
+  deleteMedicationDoseSchedule as deleteDoseScheduleRecord,
+  endMedicationDoseSchedule as endDoseScheduleRecord,
+  medicationDoseOccurrenceItem,
+  removeMedicationDoseOccurrence as removeDoseRecord,
+  rescheduleMedicationDoseOccurrence as rescheduleDoseRecord,
+  skipMedicationDoseOccurrence as skipDoseRecord,
+} from "../services/medicationDoseSchedule";
+import {
+  PROTOCOL_COMPOUND_OUTCOMES_STORAGE_KEY,
+  persistProtocolCompoundResults as persistCompoundResults,
+  persistProtocolCompoundUndo as persistCompoundUndo,
+} from "../services/protocolCompoundOutcome";
 
 const TODAY = new Date(2026, 7, 22, 12, 0, 0);
 const CREATED_AT = new Date("2026-08-20T12:00:00.000Z");
@@ -58,6 +73,77 @@ function protocol(overrides = {}, itemOverrides = {}) {
     endedAt: null,
     ...overrides,
   };
+}
+
+function multiCompoundProtocol() {
+  const first = protocol();
+  return {
+    ...first,
+    items: [
+      first.items[0],
+      {
+        id: "protocol-item:peptide",
+        compound: { name: "Peptide A" },
+        dose: { amount: 250, unit: "mcg" },
+        route: { code: "subcutaneous" },
+        schedule: { type: "weekly-days", weekdays: [6], time: "20:00" },
+        notes: "Evening dose",
+      },
+    ],
+  };
+}
+
+function memoryStorage(initial = {}) {
+  const values = new Map(Object.entries(initial));
+  return {
+    getItem: jest.fn((key) => values.has(key) ? values.get(key) : null),
+    setItem: jest.fn((key, value) => values.set(key, String(value))),
+    removeItem: jest.fn((key) => values.delete(key)),
+  };
+}
+
+function protocolResultHarness() {
+  const state = { outcomes: [], occurrences: [], entries: [] };
+  const storage = memoryStorage({
+    medicationEntries: "[]",
+    protocolOccurrences: JSON.stringify({ schemaVersion: 1, occurrences: [] }),
+    [PROTOCOL_COMPOUND_OUTCOMES_STORAGE_KEY]: JSON.stringify({ schemaVersion: 1, occurrences: [] }),
+  });
+  const save = jest.fn((candidate, decisions) => {
+    const result = persistCompoundResults({
+      storage,
+      outcomes: state.outcomes,
+      protocolOccurrences: state.occurrences,
+      medicationEntries: state.entries,
+      candidate,
+      decisions,
+      now: new Date("2026-08-22T18:30:00.000Z"),
+    });
+    Object.assign(state, {
+      outcomes: result.outcomes,
+      occurrences: result.protocolOccurrences,
+      entries: result.medicationEntries,
+    });
+    return { status: "saved", outcome: result.outcome, completionStatus: result.status };
+  });
+  const undo = jest.fn((outcomeId, componentId) => {
+    const result = persistCompoundUndo({
+      storage,
+      outcomes: state.outcomes,
+      protocolOccurrences: state.occurrences,
+      medicationEntries: state.entries,
+      outcomeId,
+      componentId,
+      now: new Date("2026-08-22T19:00:00.000Z"),
+    });
+    Object.assign(state, {
+      outcomes: result.outcomes,
+      occurrences: result.protocolOccurrences,
+      entries: result.medicationEntries,
+    });
+    return { status: "saved", outcome: result.outcome };
+  });
+  return { state, save, undo };
 }
 
 function dailyAction(overrides = {}) {
@@ -127,6 +213,11 @@ function renderPage(props = {}, { expanded = true } = {}) {
     skipDailyAction: jest.fn(() => ({ status: "saved" })),
     completeProtocolOccurrence: jest.fn(() => ({ status: "saved" })),
     skipProtocolOccurrence: jest.fn(() => ({ status: "saved" })),
+    completeMedicationDoseOccurrence: jest.fn(() => ({ status: "saved" })),
+    undoMedicationDoseCompletion: jest.fn(() => ({ status: "saved" })),
+    skipMedicationDoseOccurrence: jest.fn(() => ({ status: "saved" })),
+    rescheduleMedicationDoseOccurrence: jest.fn(() => ({ status: "saved" })),
+    removeMedicationDoseOccurrence: jest.fn(() => ({ status: "saved" })),
     showToast: jest.fn(),
     saveExerciseDefinitions: jest.fn(() => [{
       status: "added",
@@ -238,7 +329,7 @@ test("keeps workout and protocol entries clearly separated with workout actions 
 test("shows a useful empty state when today has no workouts or protocols", () => {
   renderPage({ plannedWorkouts: [plan({ scheduledDate: "2026-08-23" })] });
   expect(screen.getByRole("heading", { name: "Nothing scheduled for today." })).toBeInTheDocument();
-  expect(screen.getByText("Add a daily action, create a workout plan, or choose another date.")).toBeInTheDocument();
+  expect(screen.getByText("Add a daily action, schedule a medication or supplement dose, create a workout plan, or choose another date.")).toBeInTheDocument();
 });
 
 test("starts an incomplete planned workout through the execution callback", () => {
@@ -718,6 +809,161 @@ test("direct protocol Complete moves only today's occurrence to Completed today"
   expect(within(completed).getByRole("button", { name: "Open protocol B12" })).toBeInTheDocument();
   expect(within(completed).getByText("Completed")).toHaveClass("trace-today-item-status--completed");
   expect(within(completed).queryByRole("button", { name: "Complete protocol B12" })).not.toBeInTheDocument();
+});
+
+test("multi-compound Protocol review lists every dose and Cancel changes nothing while restoring focus", async () => {
+  const harness = protocolResultHarness();
+  renderPage({
+    protocols: [multiCompoundProtocol()],
+    saveProtocolCompoundResults: harness.save,
+    undoProtocolCompoundResult: harness.undo,
+  }, { expanded: false });
+  const trigger = screen.getByRole("button", { name: "Complete protocol Recovery protocol" });
+
+  trigger.focus();
+  fireEvent.click(trigger);
+  const dialog = screen.getByRole("dialog", { name: "What did you take?" });
+  expect(within(dialog).getByRole("group", { name: "B12" })).toHaveTextContent("1 mL");
+  expect(within(dialog).getByRole("group", { name: "B12" })).toHaveTextContent("Subcutaneous (SC)");
+  expect(within(dialog).getByRole("group", { name: "Peptide A" })).toHaveTextContent("250 mcg");
+  expect(within(dialog).getAllByRole("radio", { name: "Taken" })).toHaveLength(2);
+  expect(within(dialog).getAllByRole("radio", { name: "Taken" }).every((radio) => radio.checked)).toBe(true);
+
+  fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+  expect(harness.save).not.toHaveBeenCalled();
+  expect(harness.state.entries).toEqual([]);
+  expect(harness.state.outcomes).toEqual([]);
+  await waitFor(() => expect(trigger).toHaveFocus());
+});
+
+test("compound review persists partial results, resumes only outstanding compounds, and supports precise Undo", () => {
+  const harness = protocolResultHarness();
+  const view = renderPage({
+    protocols: [multiCompoundProtocol()],
+    saveProtocolCompoundResults: harness.save,
+    undoProtocolCompoundResult: harness.undo,
+  }, { expanded: false });
+
+  fireEvent.click(screen.getByRole("button", { name: "Complete protocol Recovery protocol" }));
+  let dialog = screen.getByRole("dialog", { name: "What did you take?" });
+  const peptideResult = within(dialog).getByRole("radiogroup", { name: "Peptide A result" });
+  fireEvent.click(within(peptideResult).getByRole("radio", { name: "Not yet" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Save Results" }));
+  expect(harness.state.entries).toHaveLength(1);
+  expect(harness.state.entries[0]).toMatchObject({ name: "B12", protocolComponentId: "protocol-item:today" });
+  expect(harness.state.occurrences).toEqual([]);
+
+  view.rerenderPage({
+    protocolCompoundOutcomes: harness.state.outcomes,
+    protocolOccurrences: harness.state.occurrences,
+  });
+  let remaining = screen.getByRole("region", { name: "Remaining today" });
+  expect(within(remaining).getByText("Partially completed")).toBeInTheDocument();
+  expect(within(remaining).getByText(/Not yet:/).closest("p")).toHaveTextContent("Peptide A");
+
+  fireEvent.click(within(remaining).getByRole("button", { name: "Complete protocol Recovery protocol" }));
+  dialog = screen.getByRole("dialog", { name: "What did you take?" });
+  expect(within(dialog).getByRole("group", { name: "B12" })).toHaveTextContent("Saved result: Taken");
+  expect(within(dialog).getByRole("radiogroup", { name: "Peptide A result" }).querySelector("input[value='taken']")).toBeChecked();
+  fireEvent.click(within(dialog).getByRole("button", { name: "Save Results" }));
+  expect(harness.state.entries).toHaveLength(2);
+  expect(new Set(harness.state.entries.map(({ id }) => id)).size).toBe(2);
+  expect(harness.state.occurrences).toHaveLength(2);
+
+  view.rerenderPage({
+    protocolCompoundOutcomes: harness.state.outcomes,
+    protocolOccurrences: harness.state.occurrences,
+  });
+  const completed = screen.getByRole("region", { name: "Completed today" });
+  expect(within(completed).getByText(/Taken 2/)).toBeInTheDocument();
+  fireEvent.click(within(completed).getByRole("button", { name: "Undo taken for B12" }));
+  expect(harness.state.entries).toHaveLength(1);
+  expect(harness.state.entries[0].name).toBe("Peptide A");
+
+  view.rerenderPage({
+    protocolCompoundOutcomes: harness.state.outcomes,
+    protocolOccurrences: harness.state.occurrences,
+  });
+  remaining = screen.getByRole("region", { name: "Remaining today" });
+  expect(within(remaining).getByText("Partially completed")).toBeInTheDocument();
+  expect(within(remaining).getByText(/Not yet:/).closest("p")).toHaveTextContent("B12");
+});
+
+test("Taken plus Skipped resolves a Protocol without logging the skipped compound", () => {
+  const harness = protocolResultHarness();
+  const view = renderPage({
+    protocols: [multiCompoundProtocol()],
+    saveProtocolCompoundResults: harness.save,
+    undoProtocolCompoundResult: harness.undo,
+  }, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Complete protocol Recovery protocol" }));
+  const dialog = screen.getByRole("dialog", { name: "What did you take?" });
+  const peptideResult = within(dialog).getByRole("radiogroup", { name: "Peptide A result" });
+  fireEvent.click(within(peptideResult).getByRole("radio", { name: "Skipped" }));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Save Results" }));
+  expect(harness.state.entries).toHaveLength(1);
+  expect(harness.state.outcomes[0].components.map(({ status }) => status)).toEqual(["taken", "skipped"]);
+
+  view.rerenderPage({
+    protocolCompoundOutcomes: harness.state.outcomes,
+    protocolOccurrences: harness.state.occurrences,
+  });
+  const completed = screen.getByRole("region", { name: "Completed today" });
+  expect(within(completed).getByText(/Taken 1/)).toHaveTextContent("Skipped 1");
+  expect(within(completed).getByRole("button", { name: "Undo skip for Peptide A" })).toBeInTheDocument();
+});
+
+test("Protocol result storage failure stays open and retryable with an accessible error", () => {
+  const save = jest.fn(() => ({ status: "error", message: "Protocol results could not be saved; previous data was restored." }));
+  renderPage({
+    protocols: [multiCompoundProtocol()],
+    saveProtocolCompoundResults: save,
+  }, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Complete protocol Recovery protocol" }));
+  const dialog = screen.getByRole("dialog", { name: "What did you take?" });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Save Results" }));
+  expect(within(dialog).getByRole("alert")).toHaveTextContent("previous data was restored");
+  expect(within(dialog).getByRole("button", { name: "Save Results" })).toBeEnabled();
+  expect(within(dialog).getByRole("button", { name: "Cancel" })).toBeEnabled();
+  expect(save).toHaveBeenCalledTimes(1);
+});
+
+test("Protocol result focus scrolling respects Reduced Motion and remains contained at 320px", async () => {
+  const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+  const originalBounds = Element.prototype.getBoundingClientRect;
+  const originalScroll = Element.prototype.scrollIntoView;
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
+  Element.prototype.getBoundingClientRect = jest.fn(() => ({
+    top: 900,
+    bottom: 950,
+    left: 0,
+    right: 300,
+    width: 300,
+    height: 50,
+  }));
+  Element.prototype.scrollIntoView = jest.fn();
+  const shell = document.createElement("div");
+  shell.className = "trace-app-shell";
+  shell.dataset.motion = "reduced";
+  document.body.appendChild(shell);
+  const harness = protocolResultHarness();
+  renderPage({
+    protocols: [multiCompoundProtocol()],
+    saveProtocolCompoundResults: harness.save,
+    undoProtocolCompoundResult: harness.undo,
+  }, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Complete protocol Recovery protocol" }));
+  fireEvent.click(screen.getByRole("dialog", { name: "What did you take?" }).querySelector("button[type='submit']"));
+
+  await waitFor(() => expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "auto",
+    block: "nearest",
+  }));
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
+  shell.remove();
+  Element.prototype.getBoundingClientRect = originalBounds;
+  Element.prototype.scrollIntoView = originalScroll;
+  if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
 });
 
 test("direct Complete works for meeting, errand, medication, and supplement cards", () => {
@@ -1740,5 +1986,310 @@ test("calendar overlay stays contained at exactly 390px", () => {
   expect(dialog).toHaveClass("trace-calendar-day-dialog");
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
   fireEvent.click(within(dialog).getByRole("button", { name: "Close selected day" }));
+  if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
+});
+
+function medicationSchedule(overrides = {}) {
+  const { id = "schedule:vitamin-d", ...draftOverrides } = overrides;
+  return createMedicationDoseSchedule({
+    name: "Vitamin D",
+    classification: "supplement",
+    dose: { amount: 2, unit: "capsule" },
+    route: { code: "oral" },
+    notes: "Take with breakfast",
+    source: { type: "saved-compound", id: "deleted-source" },
+    repeat: { type: "daily" },
+    startDate: "2026-08-22",
+    endDate: null,
+    time: "09:00",
+    ...draftOverrides,
+  }, { id, now: CREATED_AT });
+}
+
+test("scheduled medication doses sort by local time and show compact and focused snapshot details", () => {
+  const scheduledDose = medicationSchedule();
+  const scheduledProtocol = protocol({}, { schedule: { type: "weekly-days", weekdays: [6], time: "08:00" } });
+  renderPage({
+    protocols: [scheduledProtocol],
+    medicationDoseSchedules: [scheduledDose],
+    dailyActions: [dailyAction({ time: "10:00" })],
+  }, { expanded: false });
+
+  const cards = [...document.querySelectorAll(".trace-today-summary__card")];
+  expect(cards.map((card) => card.dataset.scheduleItemType)).toEqual(["protocol", "medication-dose", "daily-action"]);
+  const doseCard = document.querySelector('[data-schedule-item-type="medication-dose"]');
+  expect(doseCard).toHaveTextContent("Vitamin D");
+  expect(doseCard).toHaveTextContent("2 capsule");
+  expect(doseCard).toHaveTextContent("9:00 AM");
+
+  fireEvent.click(within(doseCard).getByRole("button", { name: "Open scheduled dose Vitamin D" }));
+  const details = screen.getByRole("region", { name: "Scheduled dose Vitamin D" });
+  expect(details).toHaveTextContent("Supplement");
+  expect(details).toHaveTextContent("Oral");
+  expect(details).toHaveTextContent("August 22, 2026");
+  expect(details).toHaveTextContent("Every day");
+  expect(details).toHaveTextContent("Take with breakfast");
+});
+
+test("deleted schedules remove untouched Today doses while ended schedules preserve today's pending dose", () => {
+  const active = medicationSchedule();
+  const ended = endDoseScheduleRecord(active, "2026-08-22", new Date("2026-08-22T14:00:00.000Z"));
+  const deleted = deleteDoseScheduleRecord(ended, "2026-08-22", new Date("2026-08-22T15:00:00.000Z"));
+  const view = renderPage({ medicationDoseSchedules: [active] }, { expanded: false });
+  expect(screen.getByText("1 scheduled item")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Complete scheduled dose Vitamin D" })).toBeInTheDocument();
+
+  view.rerenderPage({ medicationDoseSchedules: [ended] });
+  expect(screen.getByText("1 scheduled item")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Complete scheduled dose Vitamin D" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Open scheduled dose Vitamin D" }));
+  const endedDetails = screen.getByRole("region", { name: "Scheduled dose Vitamin D" });
+  expect(within(endedDetails).getByRole("button", { name: "Complete" })).toBeInTheDocument();
+  expect(within(endedDetails).getByRole("button", { name: "Skip" })).toBeInTheDocument();
+  expect(within(endedDetails).getByRole("button", { name: "Remove" })).toBeInTheDocument();
+  expect(within(endedDetails).queryByRole("button", { name: "Reschedule" })).not.toBeInTheDocument();
+
+  view.rerenderPage({ medicationDoseSchedules: [deleted] });
+  expect(screen.getByText("No scheduled items")).toBeInTheDocument();
+  expect(screen.queryByText("Vitamin D")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Complete scheduled dose/ })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Skip scheduled dose/ })).not.toBeInTheDocument();
+});
+
+test("deleted schedules retain completed and skipped outcomes without resolution actions", () => {
+  const active = medicationSchedule();
+  const completed = completeDoseRecord(
+    medicationDoseOccurrenceItem(active, "2026-08-22"),
+    new Date("2026-08-22T15:00:00.000Z")
+  );
+  const second = medicationSchedule({ id: "schedule:second", name: "Vitamin C" });
+  const skipped = skipDoseRecord(
+    medicationDoseOccurrenceItem(second, "2026-08-22"),
+    "Travel",
+    "",
+    new Date("2026-08-22T15:05:00.000Z")
+  );
+  const deletedCompleted = deleteDoseScheduleRecord(active, "2026-08-22");
+  const deletedSkipped = deleteDoseScheduleRecord(second, "2026-08-22");
+  renderPage({
+    medicationDoseSchedules: [deletedCompleted, deletedSkipped],
+    medicationDoseOccurrences: [completed, skipped],
+  }, { expanded: false });
+
+  expect(screen.getByRole("heading", { name: "Completed today" })).toBeInTheDocument();
+  expect(screen.getByText("Vitamin D")).toBeInTheDocument();
+  expect(screen.getByText("Vitamin C")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Complete scheduled dose Vitamin C" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Skip scheduled dose Vitamin C" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Undo completion for scheduled dose Vitamin D" })).toBeInTheDocument();
+});
+
+test("completing a scheduled dose targets one occurrence and completed doses become historical", () => {
+  const scheduledDose = medicationSchedule();
+  const view = renderPage({ medicationDoseSchedules: [scheduledDose] }, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Complete scheduled dose Vitamin D" }));
+  expect(view.completeMedicationDoseOccurrence).toHaveBeenCalledWith(expect.objectContaining({
+    scheduleId: scheduledDose.id,
+    originalDate: "2026-08-22",
+    status: "scheduled",
+  }));
+  expect(view.showToast).toHaveBeenCalledWith("Vitamin D completed and added to Medication History.");
+
+  const item = medicationDoseOccurrenceItem(scheduledDose, "2026-08-22");
+  const completed = completeDoseRecord(item, new Date("2026-08-22T15:00:00.000Z"));
+  view.rerenderPage({ medicationDoseSchedules: [scheduledDose], medicationDoseOccurrences: [completed] });
+  expect(screen.getByRole("heading", { name: "Completed today" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Open scheduled dose Vitamin D" }));
+  const details = screen.getByRole("region", { name: "Scheduled dose Vitamin D" });
+  expect(details).toHaveTextContent("Completed and added to Medication History.");
+  expect(within(details).queryByRole("button", { name: "Reschedule" })).not.toBeInTheDocument();
+  expect(within(details).queryByRole("button", { name: "Remove" })).not.toBeInTheDocument();
+});
+
+test("undo completion returns a completed dose to Remaining today and restores its actions and focus", async () => {
+  const scheduledDose = medicationSchedule();
+  const item = medicationDoseOccurrenceItem(scheduledDose, "2026-08-22");
+  const completed = completeDoseRecord(item, new Date("2026-08-22T15:00:00.000Z"));
+  const restored = {
+    ...completed,
+    status: "scheduled",
+    completedAt: null,
+    historyEntryId: null,
+    updatedAt: "2026-08-22T15:05:00.000Z",
+  };
+  const view = renderPage({
+    medicationDoseSchedules: [scheduledDose],
+    medicationDoseOccurrences: [completed],
+  }, { expanded: false });
+
+  const undo = screen.getByRole("button", { name: "Undo completion for scheduled dose Vitamin D" });
+  expect(undo).toHaveTextContent("Undo completion");
+  fireEvent.click(undo);
+  expect(view.undoMedicationDoseCompletion).toHaveBeenCalledTimes(1);
+  expect(view.undoMedicationDoseCompletion).toHaveBeenCalledWith(expect.objectContaining({
+    id: completed.id,
+    status: "completed",
+    historyEntryId: completed.historyEntryId,
+  }));
+  expect(view.showToast).toHaveBeenCalledWith("Vitamin D completion undone. Medication History updated.");
+
+  view.rerenderPage({
+    medicationDoseSchedules: [scheduledDose],
+    medicationDoseOccurrences: [restored],
+  });
+  expect(screen.getByRole("heading", { name: "Remaining today" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Completed today" })).not.toBeInTheDocument();
+  const complete = screen.getByRole("button", { name: "Complete scheduled dose Vitamin D" });
+  expect(screen.getByRole("button", { name: "Skip scheduled dose Vitamin D" })).toBeInTheDocument();
+  await waitFor(() => expect(complete).toHaveFocus());
+});
+
+test("undo completion failure remains retryable and exposes an accessible error", () => {
+  const scheduledDose = medicationSchedule();
+  const completed = completeDoseRecord(
+    medicationDoseOccurrenceItem(scheduledDose, "2026-08-22"),
+    new Date("2026-08-22T15:00:00.000Z")
+  );
+  const undoMedicationDoseCompletion = jest.fn(() => ({
+    status: "error",
+    message: "Medication dose completion undo could not be saved; previous data was restored.",
+  }));
+  renderPage({
+    medicationDoseSchedules: [scheduledDose],
+    medicationDoseOccurrences: [completed],
+    undoMedicationDoseCompletion,
+  }, { expanded: false });
+
+  const undo = screen.getByRole("button", { name: "Undo completion for scheduled dose Vitamin D" });
+  fireEvent.click(undo);
+  expect(screen.getByRole("alert")).toHaveTextContent("previous data was restored");
+  expect(undo).toBeEnabled();
+  expect(screen.getByRole("heading", { name: "Completed today" })).toBeInTheDocument();
+});
+
+test("undo focus scrolling respects Reduced Motion and remains contained at 320px", async () => {
+  const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+  const originalBounds = Element.prototype.getBoundingClientRect;
+  const originalScroll = Element.prototype.scrollIntoView;
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
+  Element.prototype.getBoundingClientRect = jest.fn(() => ({
+    top: 900,
+    bottom: 950,
+    left: 0,
+    right: 300,
+    width: 300,
+    height: 50,
+  }));
+  Element.prototype.scrollIntoView = jest.fn();
+  const shell = document.createElement("div");
+  shell.className = "trace-app-shell";
+  shell.dataset.motion = "reduced";
+  document.body.appendChild(shell);
+  const scheduledDose = medicationSchedule();
+  const completed = completeDoseRecord(
+    medicationDoseOccurrenceItem(scheduledDose, "2026-08-22"),
+    new Date("2026-08-22T15:00:00.000Z")
+  );
+  const restored = {
+    ...completed,
+    status: "scheduled",
+    completedAt: null,
+    historyEntryId: null,
+    updatedAt: "2026-08-22T15:05:00.000Z",
+  };
+  const view = renderPage({
+    medicationDoseSchedules: [scheduledDose],
+    medicationDoseOccurrences: [completed],
+  }, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Undo completion for scheduled dose Vitamin D" }));
+  view.rerenderPage({
+    medicationDoseSchedules: [scheduledDose],
+    medicationDoseOccurrences: [restored],
+  });
+
+  await waitFor(() => expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "auto",
+    block: "nearest",
+  }));
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
+  shell.remove();
+  Element.prototype.getBoundingClientRect = originalBounds;
+  Element.prototype.scrollIntoView = originalScroll;
+  if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
+});
+
+test("skip, reschedule, and remove act on only the focused dose occurrence", () => {
+  const originalConfirm = window.confirm;
+  window.confirm = jest.fn(() => true);
+  const scheduledDose = medicationSchedule();
+  const view = renderPage({ medicationDoseSchedules: [scheduledDose] }, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Open scheduled dose Vitamin D" }));
+  const details = screen.getByRole("region", { name: "Scheduled dose Vitamin D" });
+
+  fireEvent.click(within(details).getByRole("button", { name: "Skip" }));
+  const skipDialog = screen.getByRole("dialog", { name: "Skip scheduled dose Vitamin D" });
+  fireEvent.change(within(skipDialog).getByLabelText("Skip reason"), { target: { value: "Schedule conflict" } });
+  fireEvent.click(within(skipDialog).getByRole("button", { name: "Save skip" }));
+  expect(view.skipMedicationDoseOccurrence).toHaveBeenCalledWith(
+    expect.objectContaining({ scheduleId: scheduledDose.id, originalDate: "2026-08-22" }),
+    "Schedule conflict",
+    ""
+  );
+
+  fireEvent.click(within(details).getByRole("button", { name: "Reschedule" }));
+  const reschedule = within(details).getByRole("form", { name: "Reschedule Vitamin D" });
+  fireEvent.change(within(reschedule).getByLabelText("Date"), { target: { value: "2026-08-23" } });
+  fireEvent.change(within(reschedule).getByLabelText("Time"), { target: { value: "11:30" } });
+  fireEvent.click(within(reschedule).getByRole("button", { name: "Save reschedule" }));
+  expect(view.rescheduleMedicationDoseOccurrence).toHaveBeenCalledWith(
+    expect.objectContaining({ scheduleId: scheduledDose.id, originalDate: "2026-08-22" }),
+    "2026-08-23",
+    "11:30",
+    false
+  );
+
+  fireEvent.click(within(details).getByRole("button", { name: "Remove" }));
+  expect(view.removeMedicationDoseOccurrence).toHaveBeenCalledWith(expect.objectContaining({
+    scheduleId: scheduledDose.id,
+    originalDate: "2026-08-22",
+  }));
+  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("Medication History will not be deleted"));
+  window.confirm = originalConfirm;
+});
+
+test("recurring dose occurrence records remain independent across dates", () => {
+  const scheduledDose = medicationSchedule();
+  const first = medicationDoseOccurrenceItem(scheduledDose, "2026-08-22");
+  const skipped = skipDoseRecord(first, "Low energy", "", CREATED_AT);
+  expect(skipped.status).toBe("skipped");
+  expect(medicationDoseOccurrenceItem(scheduledDose, "2026-08-23").status).toBe("scheduled");
+  const moved = rescheduleDoseRecord(first, "2026-08-24", "07:30", CREATED_AT);
+  expect(moved).toMatchObject({ status: "scheduled", scheduledDate: "2026-08-24" });
+  expect(removeDoseRecord(first, CREATED_AT).status).toBe("removed");
+});
+
+test("future medication doses render without early completion but remain reschedulable and contained on mobile", () => {
+  const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
+  const futureDate = "2026-08-23";
+  const scheduledDose = medicationSchedule({ startDate: futureDate });
+  renderPage({
+    scheduleView: "calendar",
+    currentDate: new Date(2026, 7, 23, 12),
+    browserDate: TODAY,
+    selectedDateKey: futureDate,
+    visibleMonthKey: "2026-08",
+    medicationDoseSchedules: [scheduledDose],
+  }, { expanded: false });
+  fireEvent.click(document.querySelector(`[data-calendar-date="${futureDate}"]`));
+  const dayDialog = screen.getByRole("dialog", { name: "August 23, 2026" });
+  expect(within(dayDialog).queryByRole("button", { name: "Complete scheduled dose Vitamin D" })).not.toBeInTheDocument();
+  expect(within(dayDialog).queryByRole("button", { name: "Skip scheduled dose Vitamin D" })).not.toBeInTheDocument();
+  fireEvent.click(within(dayDialog).getByRole("button", { name: "Open scheduled dose Vitamin D" }));
+  const details = screen.getByRole("region", { name: "Scheduled dose Vitamin D" });
+  expect(within(details).queryByRole("button", { name: "Complete" })).not.toBeInTheDocument();
+  expect(within(details).getByRole("button", { name: "Reschedule" })).toBeInTheDocument();
+  expect(within(details).getByRole("button", { name: "Remove" })).toBeInTheDocument();
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
   if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
 });

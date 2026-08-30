@@ -5,6 +5,11 @@ import ScheduleCalendar, {
   calendarEventSummariesForDate,
   localDateKey,
 } from "./ScheduleCalendar";
+import {
+  createMedicationDoseSchedule,
+  deleteMedicationDoseSchedule,
+  endMedicationDoseSchedule,
+} from "../services/medicationDoseSchedule";
 
 function protocolForWednesday() {
   return {
@@ -148,4 +153,77 @@ test("calendar grid stays contained at exactly 390px", () => {
   expect(screen.getByRole("grid", { name: "August 2026" }).children).toHaveLength(42);
   expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
   if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
+});
+
+test("calendar labels medication and supplement dose snapshots without needing their sources", () => {
+  const medicationDoseSchedules = [
+    createMedicationDoseSchedule({
+      name: "Morning medicine",
+      classification: "medication",
+      dose: { amount: 5, unit: "mg" },
+      route: { code: "oral" },
+      notes: "",
+      source: { type: "medication-entry", id: "source-that-no-longer-exists" },
+      repeat: { type: "daily" },
+      startDate: "2026-08-12",
+      endDate: null,
+      time: "07:00",
+    }, { id: "schedule:medicine", now: new Date("2026-08-01T12:00:00.000Z") }),
+    createMedicationDoseSchedule({
+      name: "Evening supplement",
+      classification: "supplement",
+      dose: { amount: 1, unit: "capsule" },
+      route: { code: "oral" },
+      notes: "",
+      source: { type: "saved-compound", id: "another-deleted-source" },
+      repeat: { type: "once" },
+      startDate: "2026-08-12",
+      endDate: null,
+      time: "19:00",
+    }, { id: "schedule:supplement", now: new Date("2026-08-01T12:00:00.000Z") }),
+  ];
+  renderCalendar({ medicationDoseSchedules });
+  const day = document.querySelector('[data-calendar-date="2026-08-12"]');
+  expect(day).toHaveAccessibleName(/scheduled: Medication, Supplement/);
+  expect(within(day).getByText("Medication")).toHaveClass("trace-schedule-calendar__event--medication");
+  expect(within(day).getByText("Supplement")).toHaveClass("trace-schedule-calendar__event--supplement");
+
+  const summaries = calendarEventSummariesForDate(
+    { plannedWorkouts: [], protocols: [], dailyActions: [], medicationDoseSchedules, medicationDoseOccurrences: [] },
+    new Date(2026, 7, 12, 23, 30)
+  );
+  expect(summaries.map(({ label }) => label)).toEqual(["Medication", "Supplement"]);
+});
+
+test("calendar excludes deleted doses and dates beyond an ended schedule boundary", () => {
+  const active = createMedicationDoseSchedule({
+    name: "Calendar medicine",
+    classification: "medication",
+    dose: { amount: 5, unit: "mg" },
+    route: { code: "oral" },
+    notes: "",
+    source: { type: "direct-entry", id: "medication-dose-source:calendar-lifecycle" },
+    repeat: { type: "daily" },
+    startDate: "2026-08-12",
+    endDate: null,
+    time: "07:00",
+  }, { id: "schedule:calendar-lifecycle", now: new Date("2026-08-01T12:00:00.000Z") });
+  const ended = endMedicationDoseSchedule(active, "2026-08-12");
+  const deleted = deleteMedicationDoseSchedule(ended, "2026-08-12");
+  const endedSources = {
+    plannedWorkouts: [],
+    protocols: [],
+    dailyActions: [],
+    medicationDoseSchedules: [ended],
+    medicationDoseOccurrences: [],
+  };
+
+  expect(calendarEventSummariesForDate(endedSources, new Date(2026, 7, 12, 12))).toEqual([
+    expect.objectContaining({ label: "Medication" }),
+  ]);
+  expect(calendarEventSummariesForDate(endedSources, new Date(2026, 7, 13, 12))).toEqual([]);
+  expect(calendarEventSummariesForDate(
+    { ...endedSources, medicationDoseSchedules: [deleted] },
+    new Date(2026, 7, 12, 12)
+  )).toEqual([]);
 });

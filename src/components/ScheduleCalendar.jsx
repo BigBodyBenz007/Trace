@@ -1,6 +1,7 @@
 import { useMemo, useRef } from "react";
 import { DAILY_ACTION_TYPES, dailyActionsForDate } from "../services/dailyAction";
 import { parseDateOnlyLocal } from "../services/dateOnly";
+import { medicationDoseOccurrencesForDate } from "../services/medicationDoseSchedule";
 import { protocolItemsScheduledForDate } from "../services/protocol";
 
 export function localDateKey(value = new Date()) {
@@ -35,6 +36,9 @@ const ACTION_LABELS = new Map(DAILY_ACTION_TYPES.map(({ value, label }) => [valu
 const MAX_CELL_SUMMARIES = 2;
 
 function eventStartTime(event) {
+  if (event.type === "medication" || event.type === "supplement") {
+    return event.record.time;
+  }
   if (event.type === "daily-action") {
     return event.record.time || event.record.timeWindow?.start || null;
   }
@@ -44,7 +48,13 @@ function eventStartTime(event) {
   return event.record.scheduledTime || event.record.time || null;
 }
 
-export function calendarEventSummariesForDate({ plannedWorkouts, protocols, dailyActions }, date) {
+export function calendarEventSummariesForDate({
+  plannedWorkouts = [],
+  protocols = [],
+  dailyActions = [],
+  medicationDoseSchedules = [],
+  medicationDoseOccurrences = [],
+}, date) {
   const dateKey = localDateKey(date);
   const workouts = plannedWorkouts
     .filter(({ scheduledDate }) => scheduledDate === dateKey)
@@ -56,13 +66,23 @@ export function calendarEventSummariesForDate({ plannedWorkouts, protocols, dail
       record: item,
       sourceOrder: workouts.length + index,
     }));
+  const doses = medicationDoseOccurrencesForDate(
+    medicationDoseSchedules,
+    medicationDoseOccurrences,
+    dateKey
+  ).map((record, index) => ({
+    type: record.snapshot.classification,
+    label: record.snapshot.classification === "medication" ? "Medication" : "Supplement",
+    record,
+    sourceOrder: workouts.length + protocolItems.length + index,
+  }));
   const actions = dailyActionsForDate(dailyActions, dateKey).map((record, index) => ({
     type: record.actionType || "other",
     label: ACTION_LABELS.get(record.actionType) || "Other",
     record,
-    sourceOrder: workouts.length + protocolItems.length + index,
+    sourceOrder: workouts.length + protocolItems.length + doses.length + index,
   }));
-  return [...workouts, ...protocolItems, ...actions].sort((first, second) => {
+  return [...workouts, ...protocolItems, ...doses, ...actions].sort((first, second) => {
     const firstTime = eventStartTime(first);
     const secondTime = eventStartTime(second);
     if (firstTime && !secondTime) return -1;
@@ -99,6 +119,8 @@ function ScheduleCalendar({
   plannedWorkouts = [],
   protocols = [],
   dailyActions = [],
+  medicationDoseSchedules = [],
+  medicationDoseOccurrences = [],
   browserToday = new Date(),
 }) {
   const dates = useMemo(() => calendarDates(visibleMonthKey), [visibleMonthKey]);
@@ -150,7 +172,13 @@ function ScheduleCalendar({
       <div className="trace-schedule-calendar__grid" role="grid" aria-label={heading}>
         {dates.map((date) => {
           const dateKey = localDateKey(date);
-          const summaries = calendarEventSummariesForDate({ plannedWorkouts, protocols, dailyActions }, date);
+          const summaries = calendarEventSummariesForDate({
+            plannedWorkouts,
+            protocols,
+            dailyActions,
+            medicationDoseSchedules,
+            medicationDoseOccurrences,
+          }, date);
           const marked = summaries.length > 0;
           const visibleSummaries = summaries.slice(0, MAX_CELL_SUMMARIES);
           const additionalCount = summaries.length - visibleSummaries.length;

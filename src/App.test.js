@@ -13,6 +13,14 @@ import {
   restoreTraceBackup,
   traceBackupFilename,
 } from "./services/traceBackup";
+import {
+  createMedicationDoseSchedule,
+  deleteMedicationDoseSchedule,
+  medicationDoseOccurrenceItem,
+  skipMedicationDoseOccurrence,
+} from "./services/medicationDoseSchedule";
+import { createProtocolCompoundOutcome } from "./services/protocolCompoundOutcome";
+import { completeProtocolOccurrence as createCompletedProtocolOccurrence } from "./services/protocolOccurrence";
 
 jest.mock("./storage/photoStorage", () => ({
   clearCompletedMigrationBackup: jest.fn(),
@@ -924,7 +932,47 @@ test("Today reads scheduled protocol items from the existing protocol collection
   expect(localStorage.getItem("medicationEntries")).toBeNull();
 });
 
-test("Today persists completed and skipped protocol occurrences by date without altering the recurring protocol", () => {
+test("legacy completed Protocol occurrences remain completed without fabricated compound outcomes or Medication History", () => {
+  const today = new Date();
+  const date = localCalendarDateKey(today);
+  const weekday = today.getDay() || 7;
+  const storedProtocol = {
+    id: "protocol:legacy-completed",
+    schemaVersion: 1,
+    name: "Legacy completed Protocol",
+    startDate: date,
+    endDate: null,
+    status: "active",
+    notes: "Predates compound result logging",
+    items: [{
+      id: "protocol-item:legacy-completed",
+      compound: { name: "Legacy B12" },
+      dose: { amount: 1, unit: "ml" },
+      route: { code: "subcutaneous" },
+      schedule: { type: "weekly-days", weekdays: [weekday] },
+      notes: "Historical completion only",
+    }],
+    createdAt: "2026-08-01T00:00:00.000Z",
+    updatedAt: "2026-08-01T00:00:00.000Z",
+    endedAt: null,
+  };
+  const occurrence = createCompletedProtocolOccurrence(null, {
+    protocolId: storedProtocol.id,
+    itemId: storedProtocol.items[0].id,
+    date,
+  }, new Date());
+  localStorage.setItem("protocols", JSON.stringify([storedProtocol]));
+  localStorage.setItem("protocolOccurrences", JSON.stringify({ schemaVersion: 1, occurrences: [occurrence] }));
+
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  const completed = screen.getByRole("region", { name: "Completed today" });
+  expect(within(completed).getByRole("button", { name: "Open protocol Legacy B12" })).toHaveTextContent("Completed");
+  expect(localStorage.getItem("protocolCompoundOutcomes")).toBeNull();
+  expect(localStorage.getItem("medicationEntries")).toBeNull();
+});
+
+test("Today persists compound-level Protocol results, history links, undo, and remount state without altering recurrence", () => {
   const today = new Date();
   const date = localCalendarDateKey(today);
   const isoWeekday = today.getDay() || 7;
@@ -949,47 +997,60 @@ test("Today persists completed and skipped protocol occurrences by date without 
   const first = render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
   let remaining = screen.getByRole("list", { name: "Today's schedule summary" });
-  let protocolCard = within(remaining).getByRole("button", { name: "Open protocol B12" }).closest("li");
-  fireEvent.click(within(protocolCard).getByRole("button", { name: "Complete protocol B12" }));
-  remaining = screen.getByRole("list", { name: "Today's schedule summary" });
-  protocolCard = within(remaining).getByRole("button", { name: "Open protocol Vitamin C" }).closest("li");
-  fireEvent.click(within(protocolCard).getByRole("button", { name: "Skip protocol Vitamin C" }));
-  fireEvent.change(screen.getByLabelText("Skip reason"), { target: { value: "Schedule conflict" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save skip" }));
+  let protocolCard = within(remaining).getByRole("button", { name: "Open protocol Recurring protocol" }).closest("li");
+  fireEvent.click(within(protocolCard).getByRole("button", { name: "Complete protocol Recurring protocol" }));
+  let review = screen.getByRole("dialog", { name: "What did you take?" });
+  const vitaminC = within(review).getByRole("radiogroup", { name: "Vitamin C result" });
+  fireEvent.click(within(vitaminC).getByRole("radio", { name: "Skipped" }));
+  fireEvent.click(within(review).getByRole("button", { name: "Save Results" }));
 
   const occurrences = JSON.parse(localStorage.getItem("protocolOccurrences"));
   expect(occurrences).toMatchObject({ schemaVersion: 1 });
   expect(occurrences.occurrences).toHaveLength(2);
   expect(occurrences.occurrences).toEqual(expect.arrayContaining([
     expect.objectContaining({ protocolId: storedProtocol.id, itemId: "protocol-item:complete", date, status: "completed" }),
-    expect.objectContaining({ protocolId: storedProtocol.id, itemId: "protocol-item:skip", date, status: "skipped", skipReason: "Schedule conflict" }),
+    expect.objectContaining({ protocolId: storedProtocol.id, itemId: "protocol-item:skip", date, status: "completed" }),
   ]));
+  const outcomes = JSON.parse(localStorage.getItem("protocolCompoundOutcomes"));
+  expect(outcomes).toMatchObject({ schemaVersion: 1 });
+  expect(outcomes.occurrences).toHaveLength(1);
+  expect(outcomes.occurrences[0].components).toEqual(expect.arrayContaining([
+    expect.objectContaining({ sourceItemId: "protocol-item:complete", status: "taken", historyEntryId: expect.any(String) }),
+    expect.objectContaining({ sourceItemId: "protocol-item:skip", status: "skipped", historyEntryId: null }),
+  ]));
+  let medicationEntries = JSON.parse(localStorage.getItem("medicationEntries"));
+  expect(medicationEntries).toHaveLength(1);
+  expect(medicationEntries[0]).toMatchObject({
+    name: "B12",
+    protocolId: storedProtocol.id,
+    protocolOccurrenceDate: date,
+    protocolComponentId: "protocol-item:complete",
+    protocolSourceSnapshot: { protocolName: "Recurring protocol" },
+  });
   expect(JSON.parse(localStorage.getItem("protocols"))).toEqual([storedProtocol]);
-  expect(localStorage.getItem("medicationEntries")).toBeNull();
 
   first.unmount();
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
-  expect(within(screen.getByRole("region", { name: "Completed today" })).getByText("B12 · 1 mL"))
-    .toBeInTheDocument();
+  let completedRegion = screen.getByRole("region", { name: "Completed today" });
+  expect(within(completedRegion).getByText(/Taken 1/)).toHaveTextContent("Skipped 1");
+  fireEvent.click(within(completedRegion).getByRole("button", { name: "Undo skip for Vitamin C" }));
+  expect(JSON.parse(localStorage.getItem("protocolOccurrences")).occurrences).toEqual([]);
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toHaveLength(1);
   const remainingRegion = screen.getByRole("region", { name: "Remaining today" });
-  expect(within(remainingRegion).getByRole("button", { name: "Open protocol Vitamin C" })).toHaveTextContent("Skipped");
-  fireEvent.click(within(remainingRegion).getByRole("button", { name: "Open protocol Vitamin C" }));
-  expect(screen.getByText("Reason: Schedule conflict")).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Complete" }));
-  const completedOccurrence = JSON.parse(localStorage.getItem("protocolOccurrences"))
-    .occurrences.find(({ itemId }) => itemId === "protocol-item:skip");
-  expect(completedOccurrence).toMatchObject({
-    date,
-    status: "completed",
-    skipReason: "Schedule conflict",
-  });
-  expect(completedOccurrence.completedAt).toBeTruthy();
-  expect(completedOccurrence.skippedAt).toBeTruthy();
+  expect(within(remainingRegion).getByText("Partially completed")).toBeInTheDocument();
+  expect(within(remainingRegion).getByText(/Not yet:/).closest("p")).toHaveTextContent("Vitamin C");
+
+  fireEvent.click(within(remainingRegion).getByRole("button", { name: "Complete protocol Recurring protocol" }));
+  review = screen.getByRole("dialog", { name: "What did you take?" });
+  expect(within(review).getByRole("group", { name: "B12" })).toHaveTextContent("Saved result: Taken");
+  fireEvent.click(within(review).getByRole("button", { name: "Save Results" }));
+  medicationEntries = JSON.parse(localStorage.getItem("medicationEntries"));
+  expect(medicationEntries).toHaveLength(2);
+  expect(new Set(medicationEntries.map(({ id }) => id)).size).toBe(2);
   expect(JSON.parse(localStorage.getItem("protocols"))).toEqual([storedProtocol]);
-  fireEvent.click(screen.getByRole("button", { name: "Back to Today's Schedule" }));
-  expect(within(screen.getByRole("region", { name: "Completed today" }))
-    .getByRole("button", { name: "Open protocol Vitamin C" })).toBeInTheDocument();
+  completedRegion = screen.getByRole("region", { name: "Completed today" });
+  expect(within(completedRegion).getByText(/Taken 2/)).toBeInTheDocument();
 });
 
 test("Today persists daily action create, edit, skip, navigation, and delete without creating workout history", async () => {
@@ -4107,4 +4168,395 @@ test("persists related custom squat exercises separately and surfaces both in un
       name: "Select Trace exercise Barbell Back Squat",
     })
   ).toBeInTheDocument();
+});
+
+test("Save & Schedule logs only on first completion and remains idempotent after remount", () => {
+  const view = render(<App />);
+  openMedications();
+  fireEvent.change(screen.getByLabelText("Compound search"), { target: { value: "metformin" } });
+  fireEvent.click(screen.getByRole("button", { name: "Select Trace compound Metformin" }));
+  fireEvent.change(screen.getByLabelText("Amount / dose"), { target: { value: "2.5" } });
+  fireEvent.change(screen.getByLabelText("Dose unit"), { target: { value: "mg" } });
+  fireEvent.change(screen.getByLabelText("Method / route"), { target: { value: "subcutaneous" } });
+  fireEvent.change(screen.getByLabelText("Notes (optional)"), { target: { value: "Direct scheduling" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save & Schedule" }));
+
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toBeNull();
+  const scheduler = screen.getByRole("form", { name: "Schedule dose for Metformin" });
+  expect(within(scheduler).getByLabelText("Medication or supplement classification")).toHaveValue("medication");
+  expect(within(scheduler).getByLabelText("Scheduled time")).toHaveValue("");
+  expect(screen.getByText("Review and confirm the dose schedule below. No dose has been logged yet.")).toHaveAttribute("role", "status");
+  fireEvent.change(within(scheduler).getByLabelText("Scheduled time"), { target: { value: "08:40" } });
+  fireEvent.click(within(scheduler).getByRole("button", { name: "Schedule Dose" }));
+
+  const schedules = JSON.parse(localStorage.getItem("medicationDoseSchedules"));
+  expect(schedules.schedules[0].revisions[0]).toMatchObject({
+    source: {
+      type: "direct-entry",
+      id: expect.stringMatching(/^medication-dose-source:/),
+    },
+    compoundReference: expect.objectContaining({
+      source: "trace-catalog",
+      category: "medication",
+      modified: false,
+    }),
+  });
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "View Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Complete scheduled dose Metformin" }));
+  const entries = JSON.parse(localStorage.getItem("medicationEntries"));
+  expect(entries).toHaveLength(1);
+  expect(entries[0]).toMatchObject({
+    name: "Metformin",
+    dose: { amount: 2.5, unit: "mg" },
+    route: { code: "subcutaneous" },
+    notes: "Direct scheduling",
+    scheduledDoseScheduleId: schedules.schedules[0].id,
+  });
+  expect(screen.queryByRole("button", { name: "Complete scheduled dose Metformin" })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Undo completion for scheduled dose Metformin" }));
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toEqual([]);
+  expect(JSON.parse(localStorage.getItem("medicationDoseOccurrences")).occurrences).toEqual([
+    expect.objectContaining({
+      status: "scheduled",
+      completedAt: null,
+      historyEntryId: null,
+    }),
+  ]);
+  expect(screen.getByRole("heading", { name: "Remaining today" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Complete scheduled dose Metformin" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Skip scheduled dose Metformin" })).toBeInTheDocument();
+
+  view.unmount();
+  const restoredView = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toEqual([]);
+  expect(screen.getByRole("heading", { name: "Remaining today" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Complete scheduled dose Metformin" }));
+  const completedAgainEntries = JSON.parse(localStorage.getItem("medicationEntries"));
+  expect(completedAgainEntries).toHaveLength(1);
+  expect(completedAgainEntries[0].scheduledDoseScheduleId).toBe(schedules.schedules[0].id);
+
+  restoredView.unmount();
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toEqual(completedAgainEntries);
+  expect(screen.getByRole("heading", { name: "Completed today" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Complete scheduled dose Metformin" })).not.toBeInTheDocument();
+});
+
+test("Medication scheduling updates Today immediately without duplicating the source and completion logs exactly once", () => {
+  const originalConfirm = window.confirm;
+  window.confirm = jest.fn(() => true);
+  const view = render(<App />);
+  openMedications();
+  logTraceCompound("metformin", "Metformin");
+  const originalEntry = JSON.parse(localStorage.getItem("medicationEntries"))[0];
+
+  fireEvent.click(screen.getByRole("button", { name: "Schedule dose from logged entry Metformin" }));
+  const scheduler = screen.getByRole("form", { name: "Schedule dose for Metformin" });
+  expect(within(scheduler).getByLabelText("Medication or supplement classification")).toHaveValue("medication");
+  fireEvent.change(within(scheduler).getByLabelText("Scheduled time"), { target: { value: "08:05" } });
+  fireEvent.click(within(scheduler).getByRole("button", { name: "Schedule Dose" }));
+
+  const storedSchedules = JSON.parse(localStorage.getItem("medicationDoseSchedules"));
+  expect(storedSchedules).toMatchObject({ schemaVersion: 1, schedules: [expect.objectContaining({ status: "active" })] });
+  expect(storedSchedules.schedules[0].revisions[0]).toMatchObject({
+    name: "Metformin",
+    dose: { amount: 1, unit: "mg" },
+    route: { code: "oral" },
+    source: { type: "medication-entry", id: originalEntry.id },
+    time: "08:05",
+  });
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toEqual([originalEntry]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Amount / dose"), { target: { value: "9" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(JSON.parse(localStorage.getItem("medicationDoseSchedules"))).toEqual(storedSchedules);
+  const sourceCard = document.querySelector(`[data-entry-id="${originalEntry.id}"]`);
+  fireEvent.click(within(sourceCard).getByRole("button", { name: "Delete" }));
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toEqual([]);
+  expect(JSON.parse(localStorage.getItem("medicationDoseSchedules"))).toEqual(storedSchedules);
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  const doseCard = document.querySelector('[data-schedule-item-type="medication-dose"]');
+  expect(doseCard).toHaveTextContent("Metformin");
+  expect(doseCard).toHaveTextContent("1 mg");
+  fireEvent.click(screen.getByRole("button", { name: "Complete scheduled dose Metformin" }));
+
+  const completedEntries = JSON.parse(localStorage.getItem("medicationEntries"));
+  const occurrenceCollection = JSON.parse(localStorage.getItem("medicationDoseOccurrences"));
+  expect(completedEntries).toHaveLength(1);
+  expect(completedEntries[0]).toMatchObject({
+    name: "Metformin",
+    scheduledDoseScheduleId: storedSchedules.schedules[0].id,
+    scheduledDoseOccurrenceId: occurrenceCollection.occurrences[0].id,
+  });
+  expect(occurrenceCollection.occurrences).toHaveLength(1);
+  expect(occurrenceCollection.occurrences[0].status).toBe("completed");
+
+  view.unmount();
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(screen.getByRole("heading", { name: "Completed today" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Complete scheduled dose Metformin" })).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toHaveLength(1);
+  window.confirm = originalConfirm;
+});
+
+test("Medication schedule storage failure leaves source data unchanged and does not show success", () => {
+  render(<App />);
+  openMedications();
+  logTraceCompound("metformin", "Metformin");
+  const originalEntries = localStorage.getItem("medicationEntries");
+  const originalSetItem = Storage.prototype.setItem;
+  const setItemSpy = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function setItem(key, value) {
+    if (key === "medicationDoseSchedules") throw new Error("quota");
+    return originalSetItem.call(this, key, value);
+  });
+  try {
+    fireEvent.click(screen.getByRole("button", { name: "Schedule dose from logged entry Metformin" }));
+    const scheduler = screen.getByRole("form", { name: "Schedule dose for Metformin" });
+    fireEvent.change(within(scheduler).getByLabelText("Scheduled time"), { target: { value: "08:05" } });
+    fireEvent.click(within(scheduler).getByRole("button", { name: "Schedule Dose" }));
+    expect(within(scheduler).getByRole("alert")).toHaveTextContent("could not be saved");
+    expect(localStorage.getItem("medicationDoseSchedules")).toBeNull();
+    expect(localStorage.getItem("medicationEntries")).toBe(originalEntries);
+    expect(screen.queryByText("Metformin scheduled.")).not.toBeInTheDocument();
+  } finally {
+    setItemSpy.mockRestore();
+  }
+});
+
+test("ending and deleting a medication schedule update management, Today, storage, and remount consistently", () => {
+  const originalConfirm = window.confirm;
+  window.confirm = jest.fn(() => true);
+  const today = localCalendarDateKey();
+  const schedule = createMedicationDoseSchedule({
+    name: "Lifecycle medicine",
+    classification: "medication",
+    dose: { amount: 5, unit: "mg" },
+    route: { code: "oral" },
+    notes: "Keep history",
+    source: { type: "direct-entry", id: "medication-dose-source:lifecycle" },
+    repeat: { type: "daily" },
+    startDate: today,
+    endDate: null,
+    time: "07:10",
+  }, { id: "schedule:lifecycle-app", now: new Date() });
+  const manualEntry = {
+    id: "entry:manual-lifecycle",
+    schemaVersion: 1,
+    name: "Lifecycle medicine",
+    dose: { amount: 5, unit: "mg" },
+    route: { code: "oral" },
+    occurredAt: new Date().toISOString(),
+    notes: "Manual entry",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  localStorage.setItem("medicationEntries", JSON.stringify([manualEntry]));
+  localStorage.setItem("medicationDoseSchedules", JSON.stringify({ schemaVersion: 1, schedules: [schedule] }));
+
+  const view = render(<App />);
+  openMedications();
+  fireEvent.click(screen.getByRole("button", { name: "End dose schedule for Lifecycle medicine" }));
+  const endedCollection = JSON.parse(localStorage.getItem("medicationDoseSchedules"));
+  expect(endedCollection.schedules[0]).toMatchObject({ status: "ended", inactiveFrom: today });
+  const disclosure = screen.getByRole("button", { name: "Ended schedules (1)" });
+  expect(disclosure).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("heading", { name: "Lifecycle medicine", level: 3 })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(screen.getByRole("button", { name: "Complete scheduled dose Lifecycle medicine" })).toBeInTheDocument();
+  expect(screen.getByText("1 scheduled item")).toBeInTheDocument();
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  openMedications();
+  fireEvent.click(screen.getByRole("button", { name: "Ended schedules (1)" }));
+  fireEvent.click(screen.getByRole("button", { name: "Delete dose schedule for Lifecycle medicine" }));
+  const deletedCollection = JSON.parse(localStorage.getItem("medicationDoseSchedules"));
+  expect(deletedCollection.schedules[0]).toMatchObject({ status: "deleted", inactiveFrom: today });
+  expect(screen.queryByRole("heading", { name: "Lifecycle medicine", level: 3 })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Ended schedules/ })).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toEqual([manualEntry]);
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(screen.getByText("No scheduled items")).toBeInTheDocument();
+  view.unmount();
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(screen.getByText("No scheduled items")).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("medicationEntries"))).toEqual([manualEntry]);
+  window.confirm = originalConfirm;
+});
+
+test("failed medication schedule deletion leaves management and Today aligned with persisted storage", () => {
+  const originalConfirm = window.confirm;
+  window.confirm = jest.fn(() => true);
+  const today = localCalendarDateKey();
+  const schedule = createMedicationDoseSchedule({
+    name: "Retained medicine",
+    classification: "medication",
+    dose: { amount: 2, unit: "mg" },
+    route: { code: "oral" },
+    notes: "",
+    source: { type: "direct-entry", id: "medication-dose-source:failure" },
+    repeat: { type: "daily" },
+    startDate: today,
+    endDate: null,
+    time: "08:10",
+  }, { id: "schedule:failure-app", now: new Date() });
+  localStorage.setItem("medicationDoseSchedules", JSON.stringify({ schemaVersion: 1, schedules: [schedule] }));
+  const originalSetItem = Storage.prototype.setItem;
+  const setItemSpy = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function setItem(key, value) {
+    if (key === "medicationDoseSchedules") throw new Error("quota");
+    return originalSetItem.call(this, key, value);
+  });
+  try {
+    render(<App />);
+    openMedications();
+    fireEvent.click(screen.getByRole("button", { name: "Delete dose schedule for Retained medicine" }));
+    expect(screen.getByRole("heading", { name: "Retained medicine", level: 3 })).toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem("medicationDoseSchedules")).schedules[0].status).toBe("active");
+    fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+    expect(screen.getByRole("button", { name: "Complete scheduled dose Retained medicine" })).toBeInTheDocument();
+  } finally {
+    setItemSpy.mockRestore();
+    window.confirm = originalConfirm;
+  }
+});
+
+test("same-tab restore refreshes medication entries, compounds, dose schedules, occurrences, and Today", async () => {
+  const today = localCalendarDateKey();
+  const compound = createCompoundDefinition({
+    name: "Restored supplement",
+    defaultDoseAmount: "1",
+    doseUnit: "capsule",
+    customDoseUnit: "",
+    route: "oral",
+    customRoute: "",
+  });
+  const now = new Date().toISOString();
+  const entry = {
+    id: "entry:restored-dose-source",
+    schemaVersion: 1,
+    name: "Restored supplement",
+    dose: { amount: 1, unit: "capsule" },
+    route: { code: "oral" },
+    occurredAt: now,
+    notes: "Restored source",
+    createdAt: now,
+    updatedAt: now,
+  };
+  const schedule = createMedicationDoseSchedule({
+    name: "Restored supplement",
+    classification: "supplement",
+    dose: { amount: 1, unit: "capsule" },
+    route: { code: "oral" },
+    notes: "Restored schedule snapshot",
+    source: { type: "saved-compound", id: compound.id },
+    repeat: { type: "daily" },
+    startDate: today,
+    endDate: null,
+    time: "06:40",
+  }, { id: "schedule:restored", now: new Date() });
+  const skipped = skipMedicationDoseOccurrence(
+    medicationDoseOccurrenceItem(schedule, today),
+    "Schedule conflict",
+    "",
+    new Date()
+  );
+  const deletedRestoredSchedule = deleteMedicationDoseSchedule(
+    createMedicationDoseSchedule({
+      name: "Deleted restored dose",
+      classification: "medication",
+      dose: { amount: 10, unit: "mg" },
+      route: { code: "oral" },
+      notes: "Retained tombstone",
+      source: { type: "direct-entry", id: "medication-dose-source:restored-deleted" },
+      repeat: { type: "daily" },
+      startDate: today,
+      endDate: null,
+      time: "06:20",
+    }, { id: "schedule:restored-deleted", now: new Date() }),
+    today
+  );
+  const weekday = new Date().getDay() || 7;
+  const restoredProtocol = {
+    id: "protocol:restored-results",
+    schemaVersion: 1,
+    name: "Restored Protocol",
+    startDate: today,
+    endDate: null,
+    status: "active",
+    notes: "Restored snapshot source",
+    items: [{
+      id: "protocol-item:restored",
+      compound: { name: "Restored peptide" },
+      dose: { amount: 100, unit: "mcg" },
+      route: { code: "subcutaneous" },
+      schedule: { type: "weekly-days", weekdays: [weekday] },
+      notes: "Restored result",
+    }],
+    createdAt: now,
+    updatedAt: now,
+    endedAt: null,
+  };
+  const restoredOutcomeBase = createProtocolCompoundOutcome(restoredProtocol, restoredProtocol.items, today, new Date());
+  const restoredOutcome = {
+    ...restoredOutcomeBase,
+    components: restoredOutcomeBase.components.map((component) => ({
+      ...component,
+      status: "skipped",
+      skippedAt: now,
+    })),
+    updatedAt: now,
+  };
+  const restoredBackup = { createdAt: now, data: { structured: {}, photos: [] } };
+  const summary = { memories: 0, photos: 0, medicationEntries: 1, savedCompounds: 1, medicationDoseSchedules: 2, medicationDoseOccurrences: 1, protocolCompoundOutcomes: 1 };
+  parseTraceBackupText.mockReturnValue({ backup: restoredBackup, summary });
+  restoreTraceBackup.mockImplementation(async () => {
+    localStorage.setItem("medicationEntries", JSON.stringify([entry]));
+    localStorage.setItem("medicationCompounds", JSON.stringify([compound]));
+    localStorage.setItem("medicationDoseSchedules", JSON.stringify({ schemaVersion: 1, schedules: [schedule, deletedRestoredSchedule] }));
+    localStorage.setItem("medicationDoseOccurrences", JSON.stringify({ schemaVersion: 1, occurrences: [skipped] }));
+    localStorage.setItem("protocols", JSON.stringify([restoredProtocol]));
+    localStorage.setItem("protocolCompoundOutcomes", JSON.stringify({ schemaVersion: 1, occurrences: [restoredOutcome] }));
+    return summary;
+  });
+  window.confirm = jest.fn(() => true);
+  render(<App />);
+  openBackupFromSettings();
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["backup"], "trace-backup.json", { type: "application/json" })] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  expect(await screen.findByRole("heading", { name: /Trace restored successfully/ })).toBeInTheDocument();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+
+  openMedications();
+  expect(screen.getByText("Restored source")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Restored supplement", level: 3 })).toBeInTheDocument();
+  expect(screen.queryByText("Deleted restored dose")).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Compound search"), { target: { value: "restored" } });
+  expect(screen.getByRole("button", { name: "Select saved compound Restored supplement" })).toBeInTheDocument();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  const doseCard = document.querySelector('[data-schedule-item-type="medication-dose"]');
+  expect(doseCard).toHaveTextContent("Restored supplement");
+  expect(doseCard).toHaveTextContent("Skipped");
+  expect(doseCard).toHaveTextContent("6:40 AM");
+  expect(screen.queryByText("Deleted restored dose")).not.toBeInTheDocument();
+  const protocolCard = document.querySelector('[data-schedule-item-type="protocol"]');
+  expect(protocolCard).toHaveTextContent("Restored peptide");
+  expect(protocolCard).toHaveTextContent("Taken 0 · Skipped 1");
 });

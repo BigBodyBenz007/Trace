@@ -9,6 +9,7 @@ function CompoundSearch({
   onSelectBuiltInCompound = () => {},
   onUseCustomCompound = () => {},
   onEditCompound,
+  onScheduleCompound = null,
   inputStyle,
   resetKey,
 }) {
@@ -86,6 +87,11 @@ function CompoundSearch({
                     <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit saved compound ${compound.name}`} onClick={() => onEditCompound(compound)} style={{ background: "#4b5563", border: "none", borderRadius: "8px", color: "white", cursor: "pointer", padding: "8px 16px" }}>
                       Edit Saved Compound
                     </button>
+                    {onScheduleCompound && (
+                      <button className="trace-action trace-action--brass" type="button" aria-label={`Schedule dose for saved compound ${compound.name}`} onClick={(event) => onScheduleCompound(compound, event.currentTarget)}>
+                        Schedule Dose
+                      </button>
+                    )}
                   </div>
                 </div>
               );

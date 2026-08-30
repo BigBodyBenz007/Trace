@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import CompoundSearch from "./CompoundSearch";
 import SavedCompoundEditor from "./SavedCompoundEditor";
+import MedicationDoseScheduler from "./MedicationDoseScheduler";
 import { motionScrollBehavior } from "../services/motionPreference";
 import {
   DOSE_UNIT_OPTIONS,
@@ -11,6 +12,7 @@ import {
   formatDoseUnit,
   formatRoute,
   getMedicationEntryError,
+  localDateTimeToIso,
 } from "../services/medicationEntry";
 import { getCompoundDefinitionError } from "../services/compoundCatalog";
 import {
@@ -18,6 +20,15 @@ import {
   getMedicationEntryLocalDateKey,
   getVisibleMedicationHistory,
 } from "../services/medicationHistory";
+import { formatDateOnly } from "../services/dateOnly";
+import {
+  currentMedicationDoseRevision,
+  formatMedicationDoseRepeat,
+  medicationDoseDateKey,
+  medicationDoseDirectSourceId,
+  medicationDoseSchedulePresentation,
+  medicationDoseScheduleOccursOnDate,
+} from "../services/medicationDoseSchedule";
 
 function getCurrentLocalDateTime() {
   const now = new Date();
@@ -47,6 +58,13 @@ function getLocalDateTimeFromTimestamp(timestamp) {
   };
 }
 
+function localTimeLabel(time) {
+  const match = /^(\d{2}):(\d{2})$/.exec(String(time || ""));
+  if (!match) return "";
+  return new Date(2000, 0, 1, Number(match[1]), Number(match[2]))
+    .toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+}
+
 function MedicationPage({
   onBack,
   medicationEntries,
@@ -63,6 +81,13 @@ function MedicationPage({
   }),
   updateMedicationEntry,
   deleteMedicationEntry,
+  medicationDoseSchedules = [],
+  medicationDoseOccurrences = [],
+  saveMedicationDoseSchedule = () => ({ status: "error", message: "The dose schedule could not be saved." }),
+  updateMedicationDoseSchedule = () => ({ status: "error", message: "The dose schedule could not be updated." }),
+  endMedicationDoseSchedule = () => false,
+  deleteMedicationDoseSchedule = () => false,
+  onOpenToday = null,
   buttonStyle,
   inputStyle,
   containerStyle,
@@ -88,6 +113,11 @@ function MedicationPage({
   const [editingCompound, setEditingCompound] = useState(null);
   const [historyQuery, setHistoryQuery] = useState("");
   const [formNavigationRequest, setFormNavigationRequest] = useState(0);
+  const [scheduleSeed, setScheduleSeed] = useState(null);
+  const [editingScheduleId, setEditingScheduleId] = useState(null);
+  const [scheduledDoseMessage, setScheduledDoseMessage] = useState("");
+  const [endedSchedulesExpanded, setEndedSchedulesExpanded] = useState(false);
+  const [entrySaveInProgress, setEntrySaveInProgress] = useState(false);
   const pageTopRef = useRef(null);
   const editHeadingRef = useRef(null);
   const compoundSearchRef = useRef(null);
@@ -96,10 +126,25 @@ function MedicationPage({
   const historyGroupRefs = useRef(new Map());
   const editOriginRef = useRef(null);
   const selectionOriginRef = useRef(false);
+  const scheduleOriginRef = useRef(null);
+  const entrySaveInProgressRef = useRef(false);
+  const nameRef = useRef(null);
+  const doseAmountRef = useRef(null);
+  const doseUnitRef = useRef(null);
+  const customDoseUnitRef = useRef(null);
+  const routeRef = useRef(null);
+  const customRouteRef = useRef(null);
+  const dateRef = useRef(null);
+  const timeRef = useRef(null);
+  const saveAndScheduleRef = useRef(null);
+  const activeSchedulesHeadingRef = useRef(null);
+  const endedSchedulesToggleRef = useRef(null);
   const visibleHistoryGroups = getVisibleMedicationHistory(
     medicationEntries,
     historyQuery
   );
+  const activeDoseSchedules = medicationDoseSchedules.filter(({ status }) => status === "active");
+  const endedDoseSchedules = medicationDoseSchedules.filter(({ status }) => status === "ended");
 
   const formInputStyle = {
     ...inputStyle,
@@ -169,87 +214,130 @@ function MedicationPage({
     });
   }
 
-  function saveEntry(event) {
+  function focusFirstInvalidEntry(entryDraft) {
+    let target = null;
+    if (!/[a-z0-9]/i.test(String(entryDraft.name || "").trim())) target = nameRef.current;
+    else if (!(Number(entryDraft.doseAmount) > 0)) target = doseAmountRef.current;
+    else if (!entryDraft.doseUnit) target = doseUnitRef.current;
+    else if (entryDraft.doseUnit === "custom" && !/[a-z0-9]/i.test(String(entryDraft.customDoseUnit || "").trim())) {
+      target = customDoseUnitRef.current;
+    } else if (!entryDraft.route) target = routeRef.current;
+    else if (entryDraft.route === "other" && !/[a-z0-9]/i.test(String(entryDraft.customRoute || "").trim())) {
+      target = customRouteRef.current;
+    } else if (!localDateTimeToIso(entryDraft.date, entryDraft.time)) {
+      target = localDateTimeToIso(entryDraft.date, "12:00") ? timeRef.current : dateRef.current;
+    }
+    target?.focus();
+  }
+
+  function saveEntry(event, intent = "save") {
     event.preventDefault();
+    if (entrySaveInProgressRef.current) return;
+    setEntryStatusMessage("");
 
     const entryDraft = draft();
     const validationError = getMedicationEntryError(entryDraft);
     if (validationError) {
       setFormError(validationError);
+      focusFirstInvalidEntry(entryDraft);
       return;
     }
+
+    const scheduleDirectly = editingEntryId === null && intent === "save-and-schedule";
 
     const existingEntry = medicationEntries.find(
       (entry) => entry.id === editingEntryId
     );
     let resolvedCompoundReference = compoundReference;
     let compoundResult = null;
+    entrySaveInProgressRef.current = true;
+    setEntrySaveInProgress(true);
 
-    if (!compoundReference && saveAsReusableCompound) {
-      const compoundDraft = {
-        name,
-        defaultDoseAmount,
-        doseUnit,
-        customDoseUnit,
-        route,
-        customRoute,
-      };
-      const compoundError = getCompoundDefinitionError(compoundDraft);
-      if (compoundError) {
-        setFormError(compoundError);
+    try {
+      if (scheduleDirectly) {
+        const entry = createMedicationEntry(entryDraft);
+        openDoseScheduler({
+          name: entry.name,
+          dose: { ...entry.dose },
+          route: { ...entry.route },
+          notes: entry.notes || "",
+          source: { type: "direct-entry", id: medicationDoseDirectSourceId() },
+          ...(entry.compoundReference
+            ? { compoundReference: { ...entry.compoundReference } }
+            : {}),
+        }, saveAndScheduleRef.current);
+        setEntryStatusMessage(
+          "Review and confirm the dose schedule below. No dose has been logged yet."
+        );
         return;
       }
 
-      compoundResult = saveCompoundDefinition(compoundDraft);
-
-      if (
-        compoundResult?.compound &&
-        (compoundResult.status === "added" || compoundResult.matchesDefinition)
-      ) {
-        resolvedCompoundReference = {
-          source: "user-saved",
-          sourceId: compoundResult.compound.id,
-          modified: false,
+      if (!compoundReference && saveAsReusableCompound) {
+        const compoundDraft = {
+          name,
+          defaultDoseAmount,
+          doseUnit,
+          customDoseUnit,
+          route,
+          customRoute,
         };
+        const compoundError = getCompoundDefinitionError(compoundDraft);
+        if (compoundError) {
+          setFormError(compoundError);
+          return;
+        }
+
+        compoundResult = saveCompoundDefinition(compoundDraft);
+
+        if (
+          compoundResult?.compound &&
+          (compoundResult.status === "added" || compoundResult.matchesDefinition)
+        ) {
+          resolvedCompoundReference = {
+            source: "user-saved",
+            sourceId: compoundResult.compound.id,
+            modified: false,
+          };
+        }
       }
-    }
 
-    const entry = createMedicationEntry(
-      { ...entryDraft, compoundReference: resolvedCompoundReference },
-      existingEntry
-    );
-
-    const wasEditing = editingEntryId !== null;
-    if (!wasEditing) {
-      if (!saveMedicationEntry(entry)) return;
-    } else if (!updateMedicationEntry(editingEntryId, entry)) {
-      return;
-    }
-
-    if (compoundResult?.status === "duplicate") {
-      setEntryStatusMessage(
-        `Entry logged. Your existing saved ${compoundResult.compound.name} was kept.`
+      const entry = createMedicationEntry(
+        { ...entryDraft, compoundReference: resolvedCompoundReference },
+        existingEntry
       );
-    } else if (compoundResult?.status === "error") {
-      setEntryStatusMessage(
-        "Entry logged, but the reusable compound could not be saved."
-      );
-    } else {
-      setEntryStatusMessage("");
-    }
 
-    resetForm();
-    setCompoundSearchResetKey((currentKey) => currentKey + 1);
-    if (wasEditing) {
-      scrollToHistoryContext({
-        entryId: editingEntryId,
-        dateKey: getMedicationEntryLocalDateKey(entry),
-      });
-      editOriginRef.current = null;
-    } else {
-      pageTopRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
+      const wasEditing = editingEntryId !== null;
+      if (!wasEditing) {
+        const saveResult = saveMedicationEntry(entry);
+        if (!saveResult) return;
+      } else if (!updateMedicationEntry(editingEntryId, entry)) {
+        return;
+      }
+
+      let statusMessage = "";
+      if (compoundResult?.status === "duplicate") {
+        statusMessage = `Entry logged. Your existing saved ${compoundResult.compound.name} was kept.`;
+      } else if (compoundResult?.status === "error") {
+        statusMessage = "Entry logged, but the reusable compound could not be saved.";
+      }
+      setEntryStatusMessage(statusMessage);
+
+      resetForm();
+      setCompoundSearchResetKey((currentKey) => currentKey + 1);
+      if (wasEditing) {
+        scrollToHistoryContext({
+          entryId: editingEntryId,
+          dateKey: getMedicationEntryLocalDateKey(entry),
+        });
+        editOriginRef.current = null;
+      } else {
+        pageTopRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
+      }
+      selectionOriginRef.current = false;
+    } finally {
+      entrySaveInProgressRef.current = false;
+      setEntrySaveInProgress(false);
     }
-    selectionOriginRef.current = false;
   }
 
   function editEntry(entry) {
@@ -407,6 +495,165 @@ function MedicationPage({
     setFormNavigationRequest((request) => request + 1);
   }
 
+  function openDoseScheduler(seed, trigger = null, scheduleId = null) {
+    scheduleOriginRef.current = trigger || document.activeElement;
+    setScheduleSeed(seed);
+    setEditingScheduleId(scheduleId);
+    setScheduledDoseMessage("");
+    setEditingCompound(null);
+  }
+
+  function scheduleSavedCompound(compound, trigger) {
+    openDoseScheduler({
+      name: compound.name,
+      dose: { ...compound.defaults.dose },
+      route: { ...compound.defaults.route },
+      notes: "",
+      source: { type: "saved-compound", id: compound.id },
+      compoundReference: {
+        source: "user-saved",
+        sourceId: compound.id,
+        modified: false,
+      },
+    }, trigger);
+  }
+
+  function scheduleLoggedEntry(entry, trigger) {
+    openDoseScheduler({
+      name: entry.name,
+      dose: { ...entry.dose },
+      route: { ...entry.route },
+      notes: entry.notes || "",
+      source: { type: "medication-entry", id: entry.id },
+      ...(entry.compoundReference
+        ? { compoundReference: { ...entry.compoundReference } }
+        : {}),
+    }, trigger);
+  }
+
+  function editDoseSchedule(schedule, trigger) {
+    const revision = currentMedicationDoseRevision(schedule);
+    if (!revision) return;
+    openDoseScheduler({
+      ...revision,
+      dose: { ...revision.dose },
+      route: { ...revision.route },
+      source: { ...revision.source },
+      repeat: {
+        ...revision.repeat,
+        ...(revision.repeat.weekdays ? { weekdays: [...revision.repeat.weekdays] } : {}),
+      },
+      ...(revision.compoundReference
+        ? { compoundReference: { ...revision.compoundReference } }
+        : {}),
+    }, trigger, schedule.id);
+  }
+
+  function restoreScheduleFocus() {
+    const target = scheduleOriginRef.current;
+    window.requestAnimationFrame(() => {
+      if (target instanceof HTMLElement && target.isConnected) target.focus();
+      else saveAndScheduleRef.current?.focus();
+    });
+  }
+
+  function focusScheduleManagement(targetRef) {
+    window.requestAnimationFrame(() => {
+      const target = targetRef.current;
+      if (!target) return;
+      target.focus();
+      const bounds = target.getBoundingClientRect?.();
+      if (bounds && (bounds.top < 0 || bounds.bottom > window.innerHeight)) {
+        target.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "nearest" });
+      }
+    });
+  }
+
+  function closeDoseScheduler() {
+    if (scheduleSeed?.source?.type === "direct-entry") {
+      setEntryStatusMessage("Scheduling canceled. No dose was logged.");
+    }
+    setScheduleSeed(null);
+    setEditingScheduleId(null);
+    restoreScheduleFocus();
+  }
+
+  function doseScheduleSaved(schedule) {
+    const revision = currentMedicationDoseRevision(schedule);
+    if (revision?.source?.type === "direct-entry") {
+      resetForm();
+      setCompoundSearchResetKey((currentKey) => currentKey + 1);
+    }
+    setScheduleSeed(null);
+    setEditingScheduleId(null);
+    setEntryStatusMessage("");
+    setScheduledDoseMessage(`${revision?.name || "Dose"} scheduled.`);
+    restoreScheduleFocus();
+  }
+
+  function endDoseSchedule(schedule) {
+    const revision = currentMedicationDoseRevision(schedule);
+    if (!window.confirm(`End the dose schedule for “${revision?.name || "this dose"}” today? Past occurrence records and Medication History will be preserved.`)) return;
+    if (endMedicationDoseSchedule(schedule.id)) {
+      setEndedSchedulesExpanded(false);
+      setScheduledDoseMessage(`${revision.name} schedule ended. Future doses were removed; any pending dose today remains available.`);
+      focusScheduleManagement(endedSchedulesToggleRef);
+    }
+  }
+
+  function deleteDoseSchedule(schedule) {
+    const revision = currentMedicationDoseRevision(schedule);
+    if (!window.confirm(`Delete future occurrences in the dose schedule for “${revision?.name || "this dose"}”? Past occurrence records and Medication History will be preserved.`)) return;
+    if (deleteMedicationDoseSchedule(schedule.id)) {
+      setScheduledDoseMessage(`${revision.name} schedule deleted. Its untouched Today and upcoming doses were removed.`);
+      focusScheduleManagement(activeSchedulesHeadingRef);
+    }
+  }
+
+  function renderDoseScheduleCard(schedule) {
+    const revision = currentMedicationDoseRevision(schedule);
+    if (!revision) return null;
+    const presentation = medicationDoseSchedulePresentation(
+      schedule,
+      medicationDoseOccurrences,
+      medicationDoseDateKey()
+    );
+    if (!presentation) return null;
+    const statusLabel = schedule.status === "ended"
+      ? "Ended schedule"
+      : presentation.type === "once"
+        ? presentation.statusLabel
+        : presentation.primaryStatusLabel;
+    return (
+      <article className="trace-data-card trace-medication-dose-schedule" key={schedule.id}>
+        <div className="trace-medication-dose-schedule__heading">
+          <h3>{revision.name}</h3>
+          <span aria-label={`Dose status: ${statusLabel}`}>{statusLabel}</span>
+        </div>
+        <p>{revision.dose.amount} {formatDoseUnit(revision.dose)} · {formatRoute(revision.route)}</p>
+        <p>{formatMedicationDoseRepeat(revision.repeat)} · {revision.time} · starts {revision.startDate}{revision.endDate ? ` · ends ${revision.endDate}` : ""}</p>
+        {(presentation.type === "recurring" || schedule.status === "ended") && (
+          <p>{schedule.status === "ended" ? "Schedule ended" : presentation.lifecycleText}</p>
+        )}
+        {presentation.nextOccurrence && (
+          <p>
+            Next dose: {formatDateOnly(presentation.nextOccurrence.scheduledDate)} at {localTimeLabel(presentation.nextOccurrence.time)}
+          </p>
+        )}
+        {revision.notes && <p className="trace-medication-dose-schedule__notes">{revision.notes}</p>}
+        <div className="trace-medication-dose-schedule__actions">
+          {schedule.status === "active" && (
+            <>
+              <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit dose schedule for ${revision.name}`} onClick={(event) => editDoseSchedule(schedule, event.currentTarget)}>Edit Schedule</button>
+              {revision.repeat.type !== "once" && <button className="trace-action trace-action--secondary" type="button" aria-label={`End dose schedule for ${revision.name}`} onClick={() => endDoseSchedule(schedule)}>End Schedule</button>}
+            </>
+          )}
+          <button className="trace-action trace-action--danger" type="button" aria-label={`Delete dose schedule for ${revision.name}`} onClick={() => deleteDoseSchedule(schedule)}>Delete Schedule</button>
+        </div>
+      </article>
+    );
+  }
+
   const backButtonStyle = {
     ...buttonStyle,
     backgroundColor: "#666",
@@ -452,6 +699,7 @@ function MedicationPage({
             onSelectBuiltInCompound={selectBuiltInCompound}
             onUseCustomCompound={useCustomCompound}
             onEditCompound={setEditingCompound}
+            onScheduleCompound={scheduleSavedCompound}
             inputStyle={inputStyle}
             resetKey={compoundSearchResetKey}
           />
@@ -472,13 +720,42 @@ function MedicationPage({
       {entryStatusMessage && (
         <p
           role="status"
+          aria-live="polite"
           style={{ color: "#d1d5db", maxWidth: "700px", width: "100%" }}
         >
           {entryStatusMessage}
         </p>
       )}
 
-      <form
+      {scheduledDoseMessage && (
+        <div className="trace-medication-dose-status" role="status" aria-live="polite">
+          <span>{scheduledDoseMessage}</span>
+          {onOpenToday && medicationDoseSchedules.some((schedule) =>
+            schedule.status === "active" && medicationDoseScheduleOccursOnDate(schedule, medicationDoseDateKey())
+          ) && (
+            <button className="trace-action trace-action--secondary" type="button" onClick={onOpenToday}>
+              View Today&apos;s Schedule
+            </button>
+          )}
+        </div>
+      )}
+
+      {scheduleSeed && (
+        <MedicationDoseScheduler
+          key={`${editingScheduleId || "new"}:${scheduleSeed.source.id}`}
+          seed={scheduleSeed}
+          editing={Boolean(editingScheduleId)}
+          onSave={(draft, confirmed) => editingScheduleId
+            ? updateMedicationDoseSchedule(editingScheduleId, draft, confirmed)
+            : saveMedicationDoseSchedule(draft, confirmed)}
+          onCancel={closeDoseScheduler}
+          onSaved={doseScheduleSaved}
+          buttonStyle={buttonStyle}
+          inputStyle={inputStyle}
+        />
+      )}
+
+      {!scheduleSeed && <form
         className="trace-feature-surface trace-feature-form trace-medication-entry"
         onSubmit={saveEntry}
         style={{
@@ -499,8 +776,9 @@ function MedicationPage({
 
         <label style={{ display: "block" }}>
           Name
-          <input
-            maxLength={120}
+            <input
+              ref={nameRef}
+              maxLength={120}
             required
             style={formInputStyle}
             value={name}
@@ -522,6 +800,7 @@ function MedicationPage({
           <label style={{ display: "block" }}>
             Amount / dose
             <input
+              ref={doseAmountRef}
               type="number"
               min="0"
               step="any"
@@ -536,6 +815,7 @@ function MedicationPage({
           <label style={{ display: "block" }}>
             Dose unit
             <select
+              ref={doseUnitRef}
               style={formInputStyle}
               value={doseUnit}
               onChange={(event) =>
@@ -555,8 +835,9 @@ function MedicationPage({
         {doseUnit === "custom" && (
           <label style={{ display: "block", marginTop: "16px" }}>
             Custom dose unit
-            <input
-              maxLength={30}
+              <input
+                ref={customDoseUnitRef}
+                maxLength={30}
               required
               style={formInputStyle}
               value={customDoseUnit}
@@ -574,6 +855,7 @@ function MedicationPage({
         <label style={{ display: "block", marginTop: "16px" }}>
           Method / route
           <select
+            ref={routeRef}
             style={formInputStyle}
             value={route}
             onChange={(event) =>
@@ -593,6 +875,7 @@ function MedicationPage({
           <label style={{ display: "block", marginTop: "16px" }}>
             Other method / route
             <input
+              ref={customRouteRef}
               maxLength={80}
               required
               style={formInputStyle}
@@ -619,8 +902,9 @@ function MedicationPage({
         >
           <label style={{ display: "block" }}>
             Date
-            <input
-              type="date"
+              <input
+                ref={dateRef}
+                type="date"
               style={formInputStyle}
               value={date}
               onChange={(event) => changeDraft(setDate, event.target.value)}
@@ -629,8 +913,9 @@ function MedicationPage({
 
           <label style={{ display: "block" }}>
             Time
-            <input
-              type="time"
+              <input
+                ref={timeRef}
+                type="time"
               style={formInputStyle}
               value={time}
               onChange={(event) => changeDraft(setTime, event.target.value)}
@@ -698,15 +983,93 @@ function MedicationPage({
           </p>
         )}
 
-        <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-          <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
+        <div className="trace-medication-entry__actions" style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+          <button className="trace-action trace-action--primary" type="submit" disabled={entrySaveInProgress} style={buttonStyle}>
             {editingEntryId === null ? "Save Entry" : "Save Changes"}
           </button>
-          <button className="trace-action trace-action--secondary" type="button" onClick={cancelEntry} style={backButtonStyle}>
+          {editingEntryId === null && (
+            <button
+              ref={saveAndScheduleRef}
+              className="trace-action trace-action--brass"
+              type="button"
+              disabled={entrySaveInProgress}
+              onClick={(event) => saveEntry(event, "save-and-schedule")}
+              style={buttonStyle}
+            >
+              Save &amp; Schedule
+            </button>
+          )}
+          <button className="trace-action trace-action--secondary" type="button" disabled={entrySaveInProgress} onClick={cancelEntry} style={backButtonStyle}>
             Cancel Entry
           </button>
         </div>
-      </form>
+      </form>}
+
+      <section className="trace-feature-section trace-medication-dose-schedules">
+        <h2 ref={activeSchedulesHeadingRef} tabIndex={-1}>Scheduled Doses</h2>
+        {activeDoseSchedules.length === 0 ? (
+          <p style={{ color: "#bbb" }}>No active dose schedules.</p>
+        ) : (
+          <div className="trace-medication-dose-schedules__list">
+            {activeDoseSchedules.map((schedule) => {
+              const revision = currentMedicationDoseRevision(schedule);
+              if (!revision) return null;
+              const presentation = medicationDoseSchedulePresentation(
+                schedule,
+                medicationDoseOccurrences,
+                medicationDoseDateKey()
+              );
+              if (!presentation) return null;
+              return (
+                <article className="trace-data-card trace-medication-dose-schedule" key={schedule.id}>
+                  <div className="trace-medication-dose-schedule__heading">
+                    <h3>{revision.name}</h3>
+                    <span aria-label={`Dose status: ${presentation.type === "once" ? presentation.statusLabel : presentation.primaryStatusLabel}`}>
+                      {presentation.type === "once" ? presentation.statusLabel : presentation.primaryStatusLabel}
+                    </span>
+                  </div>
+                  <p>{revision.dose.amount} {formatDoseUnit(revision.dose)} · {formatRoute(revision.route)}</p>
+                  <p>{formatMedicationDoseRepeat(revision.repeat)} · {revision.time} · starts {revision.startDate}{revision.endDate ? ` · ends ${revision.endDate}` : ""}</p>
+                  {presentation.type === "recurring" && <p>{presentation.lifecycleText}</p>}
+                  {presentation.nextOccurrence && (
+                    <p>
+                      Next dose: {formatDateOnly(presentation.nextOccurrence.scheduledDate)} at {localTimeLabel(presentation.nextOccurrence.time)}
+                    </p>
+                  )}
+                  {revision.notes && <p className="trace-medication-dose-schedule__notes">{revision.notes}</p>}
+                  {schedule.status === "active" && (
+                    <div className="trace-medication-dose-schedule__actions">
+                      <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit dose schedule for ${revision.name}`} onClick={(event) => editDoseSchedule(schedule, event.currentTarget)}>Edit Schedule</button>
+                      {revision.repeat.type !== "once" && <button className="trace-action trace-action--secondary" type="button" aria-label={`End dose schedule for ${revision.name}`} onClick={() => endDoseSchedule(schedule)}>End Schedule</button>}
+                      <button className="trace-action trace-action--danger" type="button" aria-label={`Delete dose schedule for ${revision.name}`} onClick={() => deleteDoseSchedule(schedule)}>Delete Schedule</button>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        )}
+        {endedDoseSchedules.length > 0 && (
+          <section className="trace-medication-dose-schedules__ended" aria-labelledby="trace-ended-dose-schedules-toggle">
+            <button
+              id="trace-ended-dose-schedules-toggle"
+              ref={endedSchedulesToggleRef}
+              className="trace-medication-dose-schedules__disclosure"
+              type="button"
+              aria-expanded={endedSchedulesExpanded}
+              aria-controls="trace-ended-dose-schedules"
+              onClick={() => setEndedSchedulesExpanded((expanded) => !expanded)}
+            >
+              Ended schedules ({endedDoseSchedules.length})
+            </button>
+            {endedSchedulesExpanded && (
+              <div id="trace-ended-dose-schedules" className="trace-medication-dose-schedules__list">
+                {endedDoseSchedules.map(renderDoseScheduleCard)}
+              </div>
+            )}
+          </section>
+        )}
+      </section>
 
       <section
         className="trace-feature-section trace-feature-history trace-medication-history"
@@ -804,7 +1167,7 @@ function MedicationPage({
                     {entry.notes}
                   </p>
                 )}
-                <div style={{ display: "flex", gap: "10px", marginTop: "16px" }}>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "16px" }}>
                   <button
                     className="trace-action trace-action--secondary"
                     type="button"
@@ -834,6 +1197,14 @@ function MedicationPage({
                     }}
                   >
                     Delete
+                  </button>
+                  <button
+                    className="trace-action trace-action--brass"
+                    type="button"
+                    aria-label={`Schedule dose from logged entry ${entry.name}`}
+                    onClick={(event) => scheduleLoggedEntry(entry, event.currentTarget)}
+                  >
+                    Schedule Dose
                   </button>
                 </div>
                         </article>

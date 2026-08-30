@@ -21,6 +21,16 @@ import {
   normalizeInjectionSiteCollection,
   normalizeInjectionSiteSettings,
 } from "./injectionSite";
+import {
+  emptyMedicationDoseOccurrenceCollection,
+  emptyMedicationDoseScheduleCollection,
+  normalizeMedicationDoseOccurrenceCollection,
+  normalizeMedicationDoseScheduleCollection,
+} from "./medicationDoseSchedule";
+import {
+  emptyProtocolCompoundOutcomeCollection,
+  normalizeProtocolCompoundOutcomeCollection,
+} from "./protocolCompoundOutcome";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
 export const TRACE_BACKUP_SCHEMA_VERSION = 1;
@@ -33,8 +43,11 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
   "appSettings",
   "medicationEntries",
   "medicationCompounds",
+  "medicationDoseSchedules",
+  "medicationDoseOccurrences",
   "protocols",
   "protocolOccurrences",
+  "protocolCompoundOutcomes",
   "injectionSiteEntries",
   "injectionSiteSettings",
   "plannedWorkouts",
@@ -47,7 +60,7 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
 ]);
 
 const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
-const SPECIAL_KEYS = new Set(["workoutDraft", "dailyActions", "protocolOccurrences", "injectionSiteEntries", "injectionSiteSettings"]);
+const SPECIAL_KEYS = new Set(["workoutDraft", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences"]);
 const ARRAY_KEYS = new Set(TRACE_STORAGE_KEYS.filter(
   (key) => !OBJECT_KEYS.has(key) && !SPECIAL_KEYS.has(key)
 ));
@@ -130,6 +143,15 @@ function readStructuredData(storage) {
     if (raw === null && key === "protocolOccurrences") {
       return [key, emptyProtocolOccurrenceCollection()];
     }
+    if (raw === null && key === "protocolCompoundOutcomes") {
+      return [key, emptyProtocolCompoundOutcomeCollection()];
+    }
+    if (raw === null && key === "medicationDoseSchedules") {
+      return [key, emptyMedicationDoseScheduleCollection()];
+    }
+    if (raw === null && key === "medicationDoseOccurrences") {
+      return [key, emptyMedicationDoseOccurrenceCollection()];
+    }
     if (raw === null && key === "injectionSiteEntries") {
       return [key, emptyInjectionSiteCollection()];
     }
@@ -155,6 +177,21 @@ function readStructuredData(storage) {
         if (!normalized) throw new Error("Invalid protocol occurrence data.");
         return [key, normalized];
       }
+      if (key === "protocolCompoundOutcomes") {
+        const normalized = normalizeProtocolCompoundOutcomeCollection(parsed);
+        if (!normalized) throw new Error("Invalid protocol compound outcome data.");
+        return [key, normalized];
+      }
+      if (key === "medicationDoseSchedules") {
+        const normalized = normalizeMedicationDoseScheduleCollection(parsed);
+        if (!normalized) throw new Error("Invalid medication dose schedule data.");
+        return [key, normalized];
+      }
+      if (key === "medicationDoseOccurrences") {
+        const normalized = normalizeMedicationDoseOccurrenceCollection(parsed);
+        if (!normalized) throw new Error("Invalid medication dose occurrence data.");
+        return [key, normalized];
+      }
       if (key === "injectionSiteEntries") {
         const normalized = normalizeInjectionSiteCollection(parsed, protocols);
         if (!normalized) throw new Error("Invalid injection site data.");
@@ -178,7 +215,7 @@ function validateStructuredData(structuredData) {
   }
   TRACE_STORAGE_KEYS.forEach((key) => {
     const value = structuredData[key];
-    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", "plannedWorkouts", "dailyActions", "protocolOccurrences", "injectionSiteEntries", "injectionSiteSettings", "workoutDraft"].includes(key) && value === undefined)) return;
+    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", "plannedWorkouts", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "workoutDraft"].includes(key) && value === undefined)) return;
     if (ARRAY_KEYS.has(key) && !Array.isArray(value)) {
       throw new Error(`The backup contains invalid ${key} data.`);
     }
@@ -228,6 +265,27 @@ function validateStructuredData(structuredData) {
     throw new Error("The backup contains invalid protocol occurrence data.");
   }
   if (
+    structuredData.protocolCompoundOutcomes !== undefined &&
+    structuredData.protocolCompoundOutcomes !== null &&
+    !normalizeProtocolCompoundOutcomeCollection(structuredData.protocolCompoundOutcomes)
+  ) {
+    throw new Error("The backup contains invalid Protocol compound outcome data.");
+  }
+  if (
+    structuredData.medicationDoseSchedules !== undefined &&
+    structuredData.medicationDoseSchedules !== null &&
+    !normalizeMedicationDoseScheduleCollection(structuredData.medicationDoseSchedules)
+  ) {
+    throw new Error("The backup contains invalid medication dose schedule data.");
+  }
+  if (
+    structuredData.medicationDoseOccurrences !== undefined &&
+    structuredData.medicationDoseOccurrences !== null &&
+    !normalizeMedicationDoseOccurrenceCollection(structuredData.medicationDoseOccurrences)
+  ) {
+    throw new Error("The backup contains invalid medication dose occurrence data.");
+  }
+  if (
     structuredData.injectionSiteEntries !== undefined &&
     structuredData.injectionSiteEntries !== null &&
     !normalizeInjectionSiteCollection(structuredData.injectionSiteEntries, structuredData.protocols || [])
@@ -271,8 +329,11 @@ export function summarizeTraceBackup(backup) {
     activeWorkoutDraft: Boolean(data.workoutDraft),
     workouts: data.workoutEntries?.length || 0,
     medicationEntries: data.medicationEntries?.length || 0,
+    medicationDoseSchedules: data.medicationDoseSchedules?.schedules?.length || 0,
+    medicationDoseOccurrences: data.medicationDoseOccurrences?.occurrences?.length || 0,
     protocols: data.protocols?.length || 0,
     protocolOccurrences: data.protocolOccurrences?.occurrences?.length || 0,
+    protocolCompoundOutcomes: data.protocolCompoundOutcomes?.occurrences?.length || 0,
     injectionSiteEntries: data.injectionSiteEntries?.shots?.length || 0,
     trophyCaseEntries: data.trophyCaseEntries?.length || 0,
     savedExercises: data.savedExercises?.length || 0,
@@ -312,6 +373,15 @@ export function validateTraceBackup(value) {
   );
   normalizedBackup.data.structured.protocolOccurrences = normalizeProtocolOccurrenceCollection(
     normalizedBackup.data.structured.protocolOccurrences ?? emptyProtocolOccurrenceCollection()
+  );
+  normalizedBackup.data.structured.protocolCompoundOutcomes = normalizeProtocolCompoundOutcomeCollection(
+    normalizedBackup.data.structured.protocolCompoundOutcomes ?? emptyProtocolCompoundOutcomeCollection()
+  );
+  normalizedBackup.data.structured.medicationDoseSchedules = normalizeMedicationDoseScheduleCollection(
+    normalizedBackup.data.structured.medicationDoseSchedules ?? emptyMedicationDoseScheduleCollection()
+  );
+  normalizedBackup.data.structured.medicationDoseOccurrences = normalizeMedicationDoseOccurrenceCollection(
+    normalizedBackup.data.structured.medicationDoseOccurrences ?? emptyMedicationDoseOccurrenceCollection()
   );
   normalizedBackup.data.structured.injectionSiteEntries = normalizeInjectionSiteCollection(
     normalizedBackup.data.structured.injectionSiteEntries ?? emptyInjectionSiteCollection(),

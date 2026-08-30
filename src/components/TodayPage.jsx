@@ -6,6 +6,7 @@ import {
 } from "../constants/workoutOptions";
 import { getExerciseDefinitionError } from "../services/exerciseCatalog";
 import { formatDateOnly } from "../services/dateOnly";
+import { motionScrollBehavior } from "../services/motionPreference";
 import { formatDoseUnit, formatRoute } from "../services/medicationEntry";
 import {
   getPlannedWorkoutError,
@@ -22,6 +23,16 @@ import {
   dailyActionsForDate,
 } from "../services/dailyAction";
 import { findProtocolOccurrence } from "../services/protocolOccurrence";
+import {
+  createProtocolCompoundOutcome,
+  findProtocolCompoundOutcome,
+  protocolCompoundOutcomeCounts,
+  protocolCompoundOutcomeStatus,
+} from "../services/protocolCompoundOutcome";
+import {
+  formatMedicationDoseRepeat,
+  medicationDoseOccurrencesForDate,
+} from "../services/medicationDoseSchedule";
 import ScheduleCalendar from "./ScheduleCalendar";
 
 export function localScheduledDate(value = new Date()) {
@@ -170,6 +181,7 @@ function protocolActionSummary(item) {
 }
 
 function scheduleStartTime(scheduleItem) {
+  if (scheduleItem.type === "medication-dose") return scheduleItem.doseOccurrence.time;
   if (scheduleItem.type === "daily-action") {
     return scheduleItem.action.time || scheduleItem.action.timeWindow?.start || null;
   }
@@ -199,6 +211,7 @@ const STATUS_LABELS = {
   scheduled: "Scheduled",
   started: "Started",
   completed: "Completed",
+  partial: "Partially completed",
   skipped: "Skipped",
 };
 
@@ -207,6 +220,127 @@ function TodayStatus({ status }) {
     <span className={`trace-today-item-status trace-today-item-status--${status}`} data-today-status={status}>
       {STATUS_LABELS[status] || status}
     </span>
+  );
+}
+
+function protocolItemsFromOutcome(outcome) {
+  return outcome.components.map((component) => ({
+    id: component.sourceItemId || component.id,
+    compound: {
+      name: component.snapshot.name,
+      ...(component.snapshot.compoundReference
+        ? { reference: component.snapshot.compoundReference }
+        : {}),
+    },
+    dose: component.snapshot.dose,
+    route: component.snapshot.route,
+    notes: component.snapshot.notes,
+    schedule: component.snapshot.schedule,
+  }));
+}
+
+function ProtocolResultsDialog({
+  review,
+  onDecision,
+  onSave,
+  onCancel,
+  isSaving,
+  error,
+  buttonStyle,
+}) {
+  const dialogRef = useRef(null);
+  const headingRef = useRef(null);
+  const cancelRef = useRef(onCancel);
+  cancelRef.current = onCancel;
+
+  useEffect(() => {
+    headingRef.current?.focus();
+
+    function handleKeyDown(event) {
+      if (event.key === "Escape" && !isSaving) {
+        event.preventDefault();
+        cancelRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+      const focusable = Array.from(dialogRef.current?.querySelectorAll(
+        "button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex='-1'])"
+      ) || []);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isSaving]);
+
+  return (
+    <div className="trace-skip-overlay" role="presentation">
+      <section
+        ref={dialogRef}
+        className="trace-feature-surface trace-protocol-results"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="trace-protocol-results-heading"
+      >
+        <h2 id="trace-protocol-results-heading" ref={headingRef} tabIndex="-1">What did you take?</h2>
+        <p>Review each compound from {review.candidate.protocolSnapshot.name}. Only compounds marked Taken are added to Medication History.</p>
+        <form onSubmit={onSave}>
+          <div className="trace-protocol-results__components">
+            {review.candidate.components.map((component) => {
+              const resolved = component.status !== "not-yet";
+              return (
+                <fieldset className="trace-protocol-results__component" key={component.id}>
+                  <legend>{component.snapshot.name}</legend>
+                  <p className="trace-protocol-results__dose">{component.snapshot.dose.amount} {formatDoseUnit(component.snapshot.dose)}</p>
+                  {component.snapshot.route && <p><strong>Route:</strong> {formatRoute(component.snapshot.route)}</p>}
+                  <p><strong>Protocol schedule:</strong> {formatProtocolSchedule(component.snapshot.schedule)}{scheduleTimeLabel(component.snapshot) ? ` · ${scheduleTimeLabel(component.snapshot)}` : ""}</p>
+                  {component.snapshot.notes && <p><strong>Details:</strong> {component.snapshot.notes}</p>}
+                  {resolved ? (
+                    <div className="trace-protocol-results__resolved">
+                      <p><strong>Saved result:</strong> {component.status === "taken" ? "Taken" : "Skipped"}</p>
+                    </div>
+                  ) : (
+                    <div className="trace-protocol-results__choices" role="radiogroup" aria-label={`${component.snapshot.name} result`}>
+                      {[
+                        ["taken", "Taken"],
+                        ["skipped", "Skipped"],
+                        ["not-yet", "Not yet"],
+                      ].map(([value, label]) => (
+                        <label key={value}>
+                          <input
+                            type="radio"
+                            name={`protocol-result-${component.id}`}
+                            value={value}
+                            checked={review.decisions[component.id] === value}
+                            disabled={isSaving}
+                            onChange={() => onDecision(component.id, value)}
+                          />
+                          <span>{label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                </fieldset>
+              );
+            })}
+          </div>
+          {error && <p role="alert" className="trace-today-page__error">{error}</p>}
+          <div className="trace-protocol-results__actions">
+            <button className="trace-action trace-action--primary" type="submit" disabled={isSaving} style={buttonStyle}>{isSaving ? "Saving results..." : "Save Results"}</button>
+            <button className="trace-action trace-action--secondary" type="button" disabled={isSaving} onClick={onCancel} style={buttonStyle}>Cancel</button>
+          </div>
+        </form>
+      </section>
+    </div>
   );
 }
 
@@ -376,9 +510,12 @@ function TodayPage({
   plannedWorkouts = [],
   protocols = [],
   protocolOccurrences = [],
+  protocolCompoundOutcomes = [],
   workoutEntries = [],
   activeWorkoutDraft = null,
   dailyActions = [],
+  medicationDoseSchedules = [],
+  medicationDoseOccurrences = [],
   savedExercises = [],
   saveExerciseDefinitions = () => [],
   createPlannedWorkout,
@@ -404,6 +541,13 @@ function TodayPage({
   skipDailyAction = () => ({ status: "error", message: "The daily action could not be skipped." }),
   completeProtocolOccurrence = () => ({ status: "error", message: "The protocol occurrence could not be completed." }),
   skipProtocolOccurrence = () => ({ status: "error", message: "The protocol occurrence could not be skipped." }),
+  saveProtocolCompoundResults = null,
+  undoProtocolCompoundResult = null,
+  completeMedicationDoseOccurrence = () => ({ status: "error", message: "The scheduled dose could not be completed." }),
+  undoMedicationDoseCompletion = () => ({ status: "error", message: "The medication dose completion could not be undone." }),
+  skipMedicationDoseOccurrence = () => ({ status: "error", message: "The scheduled dose could not be skipped." }),
+  rescheduleMedicationDoseOccurrence = () => ({ status: "error", message: "The scheduled dose could not be rescheduled." }),
+  removeMedicationDoseOccurrence = () => ({ status: "error", message: "The scheduled dose could not be removed." }),
   showToast = () => {},
   currentDate = new Date(),
   browserDate = new Date(),
@@ -434,9 +578,40 @@ function TodayPage({
     () => protocolItemsScheduledForDate(protocols, currentDate),
     [protocols, currentDate]
   );
+  const todaysProtocolGroups = useMemo(() => {
+    const groups = new Map();
+    todaysProtocolItems.forEach(({ protocol, item }) => {
+      const group = groups.get(protocol.id) || { protocol, items: [] };
+      group.items.push(item);
+      groups.set(protocol.id, group);
+    });
+    protocolCompoundOutcomes
+      .filter(({ date }) => date === todayKey)
+      .forEach((outcome) => {
+        const protocol = {
+          id: outcome.protocolId,
+          name: outcome.protocolSnapshot.name,
+          notes: outcome.protocolSnapshot.notes,
+        };
+        groups.set(outcome.protocolId, {
+          protocol,
+          items: protocolItemsFromOutcome(outcome),
+          outcome,
+        });
+      });
+    return Array.from(groups.values());
+  }, [todaysProtocolItems, protocolCompoundOutcomes, todayKey]);
   const todaysDailyActions = useMemo(
     () => dailyActionsForDate(dailyActions, todayKey),
     [dailyActions, todayKey]
+  );
+  const todaysMedicationDoses = useMemo(
+    () => medicationDoseOccurrencesForDate(
+      medicationDoseSchedules,
+      medicationDoseOccurrences,
+      todayKey
+    ),
+    [medicationDoseSchedules, medicationDoseOccurrences, todayKey]
   );
   const completedWorkoutByPlanId = useMemo(() => {
     const completed = new Map();
@@ -462,33 +637,60 @@ function TodayPage({
           ? "started"
           : isPlannedWorkoutSkippedOnDate(plan, todayKey) ? "skipped" : "planned",
     })),
-    ...todaysProtocolItems.map(({ protocol, item }, index) => {
-      const occurrence = findProtocolOccurrence(protocolOccurrences, protocol.id, item.id, todayKey);
+    ...todaysProtocolGroups.map(({ protocol, items, outcome: storedOutcome }, index) => {
+      const outcome = storedOutcome || findProtocolCompoundOutcome(protocolCompoundOutcomes, protocol.id, todayKey);
+      const displayItems = outcome ? protocolItemsFromOutcome(outcome) : items;
+      const item = displayItems[0];
+      const occurrences = displayItems.map((candidate) => (
+        findProtocolOccurrence(protocolOccurrences, protocol.id, candidate.id, todayKey)
+      )).filter(Boolean);
+      const legacyStatus = occurrences.length === displayItems.length
+        && occurrences.every(({ status }) => status === "completed")
+        ? "completed"
+        : occurrences.length > 0 && occurrences.every(({ status }) => status === "skipped")
+          ? "skipped"
+          : "scheduled";
       return {
-      id: `${protocol.id}:${item.id}`,
+      id: `${protocol.id}:${todayKey}`,
       type: "protocol",
-      sourceType: "protocol-item",
-      sourceId: item.id,
+      sourceType: "protocol-occurrence",
+      sourceId: protocol.id,
       sourceOrder: todaysPlans.length + index,
-      title: protocolActionSummary(item),
-      subtitle: `${protocol.name} · ${formatRoute(item.route)}`,
+      title: displayItems.length === 1 ? protocolActionSummary(item) : protocol.name,
+      subtitle: displayItems.length === 1
+        ? `${protocol.name} · ${formatRoute(item.route)}`
+        : `${displayItems.length} compounds · ${displayItems.map(({ compound }) => compound.name).join(", ")}`,
       protocol,
       item,
-      occurrence,
-      status: occurrence?.status || "scheduled",
+      protocolItems: displayItems,
+      occurrences,
+      occurrence: occurrences[0] || null,
+      outcome,
+      status: outcome ? protocolCompoundOutcomeStatus(outcome) : legacyStatus,
     };
     }),
+    ...todaysMedicationDoses.map((doseOccurrence, index) => ({
+      id: doseOccurrence.id,
+      type: "medication-dose",
+      sourceType: "medication-dose-occurrence",
+      sourceId: doseOccurrence.id,
+      sourceOrder: todaysPlans.length + todaysProtocolGroups.length + index,
+      title: doseOccurrence.snapshot.name,
+      subtitle: `${doseOccurrence.snapshot.dose.amount} ${formatDoseUnit(doseOccurrence.snapshot.dose)}`,
+      doseOccurrence,
+      status: doseOccurrence.status,
+    })),
     ...todaysDailyActions.map((action, index) => ({
       id: action.id,
       type: "daily-action",
       sourceType: "daily-action",
       sourceId: action.id,
-      sourceOrder: todaysPlans.length + todaysProtocolItems.length + index,
+      sourceOrder: todaysPlans.length + todaysProtocolGroups.length + todaysMedicationDoses.length + index,
       title: action.title,
       action,
       status: action.status,
     })),
-  ]), [todaysPlans, todaysProtocolItems, todaysDailyActions, completedWorkoutByPlanId, activeWorkoutDraft, protocolOccurrences, todayKey]);
+  ]), [todaysPlans, todaysProtocolGroups, todaysMedicationDoses, todaysDailyActions, completedWorkoutByPlanId, activeWorkoutDraft, protocolOccurrences, protocolCompoundOutcomes, todayKey]);
   const remainingScheduleItems = useMemo(
     () => scheduleItems.filter(({ status }) => status !== "completed"),
     [scheduleItems]
@@ -517,12 +719,28 @@ function TodayPage({
   const [pendingProtocolSkip, setPendingProtocolSkip] = useState(null);
   const [protocolSkipReason, setProtocolSkipReason] = useState("");
   const [protocolCustomSkipReason, setProtocolCustomSkipReason] = useState("");
+  const [protocolReview, setProtocolReview] = useState(null);
+  const [isSavingProtocolResults, setIsSavingProtocolResults] = useState(false);
+  const [undoingProtocolComponentIds, setUndoingProtocolComponentIds] = useState(() => new Set());
+  const [pendingDoseSkip, setPendingDoseSkip] = useState(null);
+  const [doseSkipReason, setDoseSkipReason] = useState("");
+  const [doseCustomSkipReason, setDoseCustomSkipReason] = useState("");
+  const [doseRescheduleDraft, setDoseRescheduleDraft] = useState(null);
+  const [undoingDoseIds, setUndoingDoseIds] = useState(() => new Set());
   const [isScheduleExpanded, setIsScheduleExpanded] = useState(false);
   const [internalCalendarOverlayOpen, setInternalCalendarOverlayOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 600);
   const initialDraftRef = useRef(null);
   const initialActionDraftRef = useRef(null);
   const startButtonRefs = useRef(new Map());
+  const doseCompleteButtonRefs = useRef(new Map());
+  const protocolCardButtonRefs = useRef(new Map());
+  const doseUndoInProgressRef = useRef(new Set());
+  const protocolResultInProgressRef = useRef(false);
+  const protocolUndoInProgressRef = useRef(new Set());
+  const protocolReviewOriginRef = useRef(null);
+  const restoreProtocolFocusIdRef = useRef(null);
+  const restoreDoseFocusIdRef = useRef(null);
   const restoreStartFocusPlanIdRef = useRef(null);
   const lastTouchStartRef = useRef({ planId: null, activatedAt: 0 });
   const calendarDialogRef = useRef(null);
@@ -552,6 +770,40 @@ function TodayPage({
     restoreStartFocusPlanIdRef.current = null;
     startButtonRefs.current.get(planId)?.focus();
   }, [draftConflict]);
+
+  useEffect(() => {
+    const occurrenceId = restoreDoseFocusIdRef.current;
+    if (!occurrenceId) return undefined;
+    const frameId = window.requestAnimationFrame(() => {
+      const target = doseCompleteButtonRefs.current.get(occurrenceId);
+      if (!target) return;
+      restoreDoseFocusIdRef.current = null;
+      const bounds = target.getBoundingClientRect();
+      const needsScroll = bounds.top < 0 || bounds.bottom > window.innerHeight;
+      target.focus();
+      if (needsScroll) {
+        target.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "nearest" });
+      }
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [medicationDoseOccurrences]);
+
+  useEffect(() => {
+    const scheduleItemId = restoreProtocolFocusIdRef.current;
+    if (!scheduleItemId || protocolReview) return undefined;
+    const frameId = window.requestAnimationFrame(() => {
+      const target = protocolCardButtonRefs.current.get(scheduleItemId);
+      if (!target) return;
+      restoreProtocolFocusIdRef.current = null;
+      const bounds = target.getBoundingClientRect();
+      const needsScroll = bounds.top < 0 || bounds.bottom > window.innerHeight;
+      target.focus();
+      if (needsScroll) {
+        target.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "nearest" });
+      }
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [protocolCompoundOutcomes, protocolOccurrences, protocolReview]);
 
   useEffect(() => {
     if (!isCalendarView || !isCalendarDayOpen) return undefined;
@@ -740,6 +992,12 @@ function TodayPage({
     setFormError("");
   }
 
+  function focusMedicationDose(scheduleItem) {
+    setFocusedScheduleItem({ type: "medication-dose", id: scheduleItem.id });
+    setDoseRescheduleDraft(null);
+    setFormError("");
+  }
+
   function focusDailyAction(scheduleItem) {
     setFocusedScheduleItem({ type: "daily-action", id: scheduleItem.id });
     setFormError("");
@@ -753,10 +1011,17 @@ function TodayPage({
     setPendingProtocolSkip(null);
     setProtocolSkipReason("");
     setProtocolCustomSkipReason("");
+    setPendingDoseSkip(null);
+    setDoseSkipReason("");
+    setDoseCustomSkipReason("");
+    setDoseRescheduleDraft(null);
     setFormError("");
   }
 
   function markProtocolComplete(scheduleItem) {
+    if (saveProtocolCompoundResults && scheduleItem.protocolItems?.length) {
+      if (openProtocolReview(scheduleItem, "taken")) return;
+    }
     const result = completeProtocolOccurrence(
       scheduleItem.protocol.id,
       scheduleItem.item.id,
@@ -771,9 +1036,217 @@ function TodayPage({
     if (isCalendarView) closeFocusedItem();
   }
 
+  function openProtocolReview(scheduleItem, defaultStatus = "taken") {
+    const candidate = scheduleItem.outcome || createProtocolCompoundOutcome(
+      scheduleItem.protocol,
+      scheduleItem.protocolItems,
+      todayKey
+    );
+    if (!candidate) {
+      return false;
+    }
+    protocolReviewOriginRef.current = document.activeElement;
+    setProtocolReview({
+      scheduleItemId: scheduleItem.id,
+      candidate,
+      decisions: Object.fromEntries(candidate.components.map((component) => [
+        component.id,
+        component.status === "not-yet" ? defaultStatus : component.status,
+      ])),
+    });
+    setFormError("");
+    return true;
+  }
+
+  function cancelProtocolReview() {
+    if (protocolResultInProgressRef.current) return;
+    const origin = protocolReviewOriginRef.current;
+    origin?.focus?.();
+    setProtocolReview(null);
+    protocolReviewOriginRef.current = null;
+  }
+
+  function updateProtocolDecision(componentId, status) {
+    setProtocolReview((current) => current ? {
+      ...current,
+      decisions: { ...current.decisions, [componentId]: status },
+    } : current);
+  }
+
+  function submitProtocolResults(event) {
+    event.preventDefault();
+    if (!protocolReview || protocolResultInProgressRef.current) return;
+    protocolResultInProgressRef.current = true;
+    setIsSavingProtocolResults(true);
+    try {
+      const result = saveProtocolCompoundResults(protocolReview.candidate, protocolReview.decisions);
+      if (result?.status !== "saved") {
+        setFormError(result?.message || "The Protocol compound results could not be saved.");
+        return;
+      }
+      const counts = protocolCompoundOutcomeCounts(result.outcome);
+      const scheduleItemId = protocolReview.scheduleItemId;
+      restoreProtocolFocusIdRef.current = scheduleItemId;
+      setProtocolReview(null);
+      protocolReviewOriginRef.current = null;
+      setFormError("");
+      if (result.completionStatus === "partial") {
+        showToast(`${result.outcome.protocolSnapshot.name} partially completed. ${counts.notYet} ${counts.notYet === 1 ? "compound is" : "compounds are"} still not yet.`);
+      } else if (result.completionStatus === "completed") {
+        showToast(`${result.outcome.protocolSnapshot.name} completed: ${counts.taken} taken, ${counts.skipped} skipped.`);
+      } else {
+        showToast(`${result.outcome.protocolSnapshot.name} results saved. All compounds remain not yet.`);
+      }
+    } finally {
+      protocolResultInProgressRef.current = false;
+      setIsSavingProtocolResults(false);
+    }
+  }
+
+  function undoProtocolResult(scheduleItemId, outcome, component) {
+    if (!undoProtocolCompoundResult || protocolUndoInProgressRef.current.has(component.id)) return;
+    protocolUndoInProgressRef.current.add(component.id);
+    setUndoingProtocolComponentIds((current) => new Set(current).add(component.id));
+    try {
+      const result = undoProtocolCompoundResult(outcome.id, component.id);
+      if (result?.status !== "saved") {
+        setFormError(result?.message || `The ${component.status === "taken" ? "taken" : "skipped"} result could not be undone.`);
+        return;
+      }
+      setFormError("");
+      showToast(`${component.snapshot.name} ${component.status === "taken" ? "taken result" : "skip"} undone. It is not yet.`);
+      restoreProtocolFocusIdRef.current = scheduleItemId;
+    } finally {
+      protocolUndoInProgressRef.current.delete(component.id);
+      setUndoingProtocolComponentIds((current) => {
+        const next = new Set(current);
+        next.delete(component.id);
+        return next;
+      });
+    }
+  }
+
+  function markDoseComplete(scheduleItem) {
+    const result = completeMedicationDoseOccurrence(scheduleItem.doseOccurrence);
+    if (result?.status !== "saved") {
+      setFormError(result?.message || "The scheduled dose could not be completed.");
+      return;
+    }
+    setFormError("");
+    showToast(`${scheduleItem.doseOccurrence.snapshot.name} completed and added to Medication History.`);
+    if (isCalendarView) closeFocusedItem();
+  }
+
+  function undoDoseCompletion(scheduleItem) {
+    const dose = scheduleItem.doseOccurrence;
+    if (doseUndoInProgressRef.current.has(dose.id)) return;
+    doseUndoInProgressRef.current.add(dose.id);
+    setUndoingDoseIds((current) => new Set(current).add(dose.id));
+    try {
+      const result = undoMedicationDoseCompletion(dose);
+      if (result?.status !== "saved") {
+        setFormError(result?.message || "The medication dose completion could not be undone.");
+        return;
+      }
+      restoreDoseFocusIdRef.current = dose.id;
+      setFormError("");
+      showToast(`${dose.snapshot.name} completion undone. Medication History updated.`);
+    } finally {
+      doseUndoInProgressRef.current.delete(dose.id);
+      setUndoingDoseIds((current) => {
+        const next = new Set(current);
+        next.delete(dose.id);
+        return next;
+      });
+    }
+  }
+
+  function requestDoseSkip(scheduleItem) {
+    setPendingSkipPlan(null);
+    setPendingProtocolSkip(null);
+    setPendingActionSkip(null);
+    setPendingDoseSkip(scheduleItem);
+    setDoseSkipReason("");
+    setDoseCustomSkipReason("");
+  }
+
+  function confirmDoseSkip(withoutReason = false) {
+    if (!pendingDoseSkip) return;
+    const reason = withoutReason ? "" : doseSkipReason;
+    const customReason = reason === "Other" ? doseCustomSkipReason : "";
+    const result = skipMedicationDoseOccurrence(
+      pendingDoseSkip.doseOccurrence,
+      reason,
+      customReason
+    );
+    if (result?.status !== "saved") {
+      setFormError(result?.message || "The scheduled dose could not be skipped.");
+      return;
+    }
+    setPendingDoseSkip(null);
+    setDoseSkipReason("");
+    setDoseCustomSkipReason("");
+    setFormError("");
+    showToast(`${pendingDoseSkip.doseOccurrence.snapshot.name} skipped.`);
+    if (isCalendarView) closeFocusedItem();
+  }
+
+  function openDoseReschedule(scheduleItem) {
+    setDoseRescheduleDraft({
+      id: scheduleItem.id,
+      date: scheduleItem.doseOccurrence.scheduledDate,
+      time: scheduleItem.doseOccurrence.time,
+    });
+    setFormError("");
+  }
+
+  function saveDoseReschedule(event, scheduleItem) {
+    event.preventDefault();
+    let result = rescheduleMedicationDoseOccurrence(
+      scheduleItem.doseOccurrence,
+      doseRescheduleDraft.date,
+      doseRescheduleDraft.time,
+      false
+    );
+    if (result?.status === "duplicate") {
+      const confirmed = window.confirm(
+        `A dose of ${scheduleItem.doseOccurrence.snapshot.name} is already scheduled for ${doseRescheduleDraft.date} at ${doseRescheduleDraft.time}. Add another dose?`
+      );
+      if (!confirmed) return;
+      result = rescheduleMedicationDoseOccurrence(
+        scheduleItem.doseOccurrence,
+        doseRescheduleDraft.date,
+        doseRescheduleDraft.time,
+        true
+      );
+    }
+    if (result?.status !== "saved") {
+      setFormError(result?.message || "The scheduled dose could not be rescheduled.");
+      return;
+    }
+    setDoseRescheduleDraft(null);
+    setFormError("");
+    showToast(`${scheduleItem.doseOccurrence.snapshot.name} rescheduled.`);
+    if (isCalendarView) closeFocusedItem();
+  }
+
+  function removeDoseOccurrence(scheduleItem) {
+    const name = scheduleItem.doseOccurrence.snapshot.name;
+    if (!window.confirm(`Remove this scheduled occurrence of “${name}”? The dose schedule and Medication History will not be deleted.`)) return;
+    const result = removeMedicationDoseOccurrence(scheduleItem.doseOccurrence);
+    if (result?.status !== "saved") {
+      setFormError(result?.message || "The scheduled dose could not be removed.");
+      return;
+    }
+    setFormError("");
+    showToast(`${name} occurrence removed.`);
+    closeFocusedItem();
+  }
+
   function requestProtocolSkip(scheduleItem) {
     setPendingSkipPlan(null);
     setPendingActionSkip(null);
+    setPendingDoseSkip(null);
     setPendingProtocolSkip(scheduleItem);
     setProtocolSkipReason("");
     setProtocolCustomSkipReason("");
@@ -816,6 +1289,7 @@ function TodayPage({
   function requestActionSkip(action) {
     setPendingSkipPlan(null);
     setPendingProtocolSkip(null);
+    setPendingDoseSkip(null);
     setPendingActionSkip(action);
     setActionSkipReason("");
     setActionCustomSkipReason("");
@@ -1100,6 +1574,7 @@ function TodayPage({
   function requestSkipPlan(plan) {
     setPendingActionSkip(null);
     setPendingProtocolSkip(null);
+    setPendingDoseSkip(null);
     setPendingSkipPlan(plan);
     setSkipReason("");
     setCustomSkipReason("");
@@ -1155,6 +1630,45 @@ function TodayPage({
   };
   const backStyle = { ...buttonStyle, backgroundColor: "#666" };
 
+  function requestProtocolSkipOrReview(scheduleItem) {
+    if (saveProtocolCompoundResults && scheduleItem.protocolItems?.length) {
+      if (openProtocolReview(scheduleItem, "skipped")) return;
+    }
+    requestProtocolSkip(scheduleItem);
+  }
+
+  function renderProtocolOutcomeSummary(scheduleItem) {
+    const { outcome } = scheduleItem;
+    if (!outcome) return null;
+    const counts = protocolCompoundOutcomeCounts(outcome);
+    const outstanding = outcome.components
+      .filter(({ status }) => status === "not-yet")
+      .map(({ snapshot }) => snapshot.name);
+    return (
+      <div className="trace-protocol-outcome" aria-label={`${outcome.protocolSnapshot.name} compound results`}>
+        <p><strong>{scheduleItem.status === "partial" ? "Partially completed" : "Results"}:</strong> Taken {counts.taken} · Skipped {counts.skipped}</p>
+        {outstanding.length > 0 && <p><strong>Not yet:</strong> {outstanding.join(", ")}</p>}
+        {canExecuteSelectedDate && undoProtocolCompoundResult && outcome.components.some(({ status }) => status !== "not-yet") && (
+          <div className="trace-protocol-outcome__actions">
+            {outcome.components.filter(({ status }) => status !== "not-yet").map((component) => (
+              <button
+                className="trace-action trace-action--secondary"
+                type="button"
+                key={component.id}
+                disabled={undoingProtocolComponentIds.has(component.id)}
+                aria-label={`${component.status === "taken" ? "Undo taken" : "Undo skip"} for ${component.snapshot.name}`}
+                onClick={() => undoProtocolResult(scheduleItem.id, outcome, component)}
+                style={compactButtonStyle}
+              >
+                {component.status === "taken" ? "Undo taken" : "Undo skip"}: {component.snapshot.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   function renderCompactScheduleItem(scheduleItem) {
     if (scheduleItem.type === "workout") {
       const volume = plannedWorkoutVolume(scheduleItem.plan.exercises);
@@ -1176,17 +1690,46 @@ function TodayPage({
       );
     }
     if (scheduleItem.type === "protocol") {
-      const actionable = scheduleItem.status === "scheduled" || scheduleItem.status === "skipped";
+      const actionable = ["scheduled", "partial", "skipped"].includes(scheduleItem.status);
+      const protocolLabel = scheduleItem.protocolItems.length === 1
+        ? scheduleItem.item.compound.name
+        : scheduleItem.protocol.name;
       return (
         <li className="trace-today-summary__card" data-schedule-item-type="protocol" key={scheduleItem.id}>
-          <button className="trace-today-summary__item" type="button" aria-label={`Open protocol ${scheduleItem.item.compound.name}`} onClick={() => focusProtocol(scheduleItem)}>
+          <button ref={(node) => { if (node) protocolCardButtonRefs.current.set(scheduleItem.id, node); else protocolCardButtonRefs.current.delete(scheduleItem.id); }} className="trace-today-summary__item" type="button" aria-label={`Open protocol ${protocolLabel}`} onClick={() => focusProtocol(scheduleItem)}>
             <span className="trace-today-item__meta"><span className="trace-today-summary__type trace-today-summary__type--protocol">Protocol</span><TodayStatus status={scheduleItem.status} /></span>
             <span className="trace-today-summary__copy"><strong>{scheduleItem.title}</strong><small>{scheduleItem.subtitle}</small></span>
           </button>
+          {renderProtocolOutcomeSummary(scheduleItem)}
           {actionable && canExecuteSelectedDate && (
-            <div className="trace-today-summary__actions" aria-label={`${scheduleItem.item.compound.name} actions`}>
-              <button className="trace-action trace-action--primary" type="button" aria-label={`Complete protocol ${scheduleItem.item.compound.name}`} onClick={() => markProtocolComplete(scheduleItem)} style={compactButtonStyle}>Complete</button>
-              <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip protocol ${scheduleItem.item.compound.name}`} onClick={() => requestProtocolSkip(scheduleItem)} style={compactButtonStyle}>Skip</button>
+            <div className="trace-today-summary__actions" aria-label={`${protocolLabel} actions`}>
+              <button className="trace-action trace-action--primary" type="button" aria-label={`Complete protocol ${protocolLabel}`} onClick={() => markProtocolComplete(scheduleItem)} style={compactButtonStyle}>Complete</button>
+              <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip protocol ${protocolLabel}`} onClick={() => requestProtocolSkipOrReview(scheduleItem)} style={compactButtonStyle}>Skip</button>
+            </div>
+          )}
+        </li>
+      );
+    }
+    if (scheduleItem.type === "medication-dose") {
+      const dose = scheduleItem.doseOccurrence;
+      const actionable = dose.schedule?.status !== "deleted"
+        && (dose.status === "scheduled" || dose.status === "skipped");
+      const undoing = undoingDoseIds.has(dose.id);
+      return (
+        <li className="trace-today-summary__card" data-schedule-item-type="medication-dose" key={scheduleItem.id}>
+          <button className="trace-today-summary__item" type="button" aria-label={`Open scheduled dose ${dose.snapshot.name}`} onClick={() => focusMedicationDose(scheduleItem)}>
+            <span className="trace-today-item__meta"><span className={`trace-today-summary__type trace-today-summary__type--${dose.snapshot.classification}`}>{dose.snapshot.classification === "medication" ? "Medication" : "Supplement"}</span><TodayStatus status={dose.status} /></span>
+            <span className="trace-today-summary__copy"><strong>{dose.snapshot.name}</strong><small>{dose.snapshot.dose.amount} {formatDoseUnit(dose.snapshot.dose)} · {localTimeLabel(dose.time)}</small></span>
+          </button>
+          {actionable && canExecuteSelectedDate && (
+            <div className="trace-today-summary__actions" aria-label={`${dose.snapshot.name} dose actions`}>
+              <button ref={(node) => { if (node) doseCompleteButtonRefs.current.set(dose.id, node); else doseCompleteButtonRefs.current.delete(dose.id); }} className="trace-action trace-action--primary" type="button" aria-label={`Complete scheduled dose ${dose.snapshot.name}`} onClick={() => markDoseComplete(scheduleItem)} style={compactButtonStyle}>Complete</button>
+              <button className="trace-action trace-action--secondary" type="button" aria-label={`Skip scheduled dose ${dose.snapshot.name}`} onClick={() => requestDoseSkip(scheduleItem)} style={compactButtonStyle}>Skip</button>
+            </div>
+          )}
+          {dose.status === "completed" && canExecuteSelectedDate && (
+            <div className="trace-today-summary__actions" aria-label={`${dose.snapshot.name} completed dose actions`}>
+              <button className="trace-action trace-action--secondary" type="button" disabled={undoing} aria-label={`Undo completion for scheduled dose ${dose.snapshot.name}`} onClick={() => undoDoseCompletion(scheduleItem)} style={compactButtonStyle}>Undo completion</button>
             </div>
           )}
         </li>
@@ -1214,22 +1757,63 @@ function TodayPage({
 
   function renderExpandedScheduleItem(scheduleItem) {
     if (scheduleItem.type === "protocol") {
-      const { protocol, item } = scheduleItem;
+      const { protocol, item, protocolItems } = scheduleItem;
+      const actionable = ["scheduled", "partial", "skipped"].includes(scheduleItem.status);
       return (
         <article className="trace-data-card trace-today-protocol" data-schedule-item-type="protocol" key={scheduleItem.id}>
           <div className="trace-today-item__meta"><span className="trace-today-summary__type trace-today-summary__type--protocol">Protocol</span><TodayStatus status={scheduleItem.status} /></div>
-          <h3><button className="trace-today-plan__open" type="button" aria-label={`Open protocol ${item.compound.name}`} onClick={() => focusProtocol(scheduleItem)}>{item.compound.name}</button></h3>
-          <p className="trace-today-protocol__action-summary">{protocolActionSummary(item)}</p>
-          <dl className="trace-today-protocol__details">
-            <div><dt>Protocol</dt><dd>{protocol.name}</dd></div>
-            <div><dt>Dose</dt><dd>{item.dose.amount} {formatDoseUnit(item.dose)}</dd></div>
-            <div><dt>Route / method</dt><dd>{formatRoute(item.route)}</dd></div>
-            <div><dt>Schedule</dt><dd>{formatProtocolSchedule(item.schedule)}{scheduleTimeLabel(item) ? ` · ${scheduleTimeLabel(item)}` : ""}</dd></div>
-          </dl>
-          {item.notes && <p className="trace-today-protocol__notes"><strong>Item notes:</strong> <span>{item.notes}</span></p>}
+          <h3><button className="trace-today-plan__open" type="button" aria-label={`Open protocol ${protocolItems.length === 1 ? item.compound.name : protocol.name}`} onClick={() => focusProtocol(scheduleItem)}>{protocolItems.length === 1 ? item.compound.name : protocol.name}</button></h3>
+          {protocolItems.length === 1 ? (
+            <>
+              <p className="trace-today-protocol__action-summary">{protocolActionSummary(item)}</p>
+              <dl className="trace-today-protocol__details">
+                <div><dt>Protocol</dt><dd>{protocol.name}</dd></div>
+                <div><dt>Dose</dt><dd>{item.dose.amount} {formatDoseUnit(item.dose)}</dd></div>
+                <div><dt>Route / method</dt><dd>{formatRoute(item.route)}</dd></div>
+                <div><dt>Schedule</dt><dd>{formatProtocolSchedule(item.schedule)}{scheduleTimeLabel(item) ? ` · ${scheduleTimeLabel(item)}` : ""}</dd></div>
+              </dl>
+              {item.notes && <p className="trace-today-protocol__notes"><strong>Item notes:</strong> <span>{item.notes}</span></p>}
+            </>
+          ) : <div className="trace-today-protocol__components">
+            {protocolItems.map((component) => (
+              <section key={component.id} className="trace-today-protocol__component" aria-label={`${component.compound.name} dose`}>
+                <h4>{component.compound.name}</h4>
+                <p className="trace-today-protocol__action-summary">{protocolActionSummary(component)}</p>
+                <dl className="trace-today-protocol__details">
+                  <div><dt>Dose</dt><dd>{component.dose.amount} {formatDoseUnit(component.dose)}</dd></div>
+                  <div><dt>Route / method</dt><dd>{formatRoute(component.route)}</dd></div>
+                  <div><dt>Schedule</dt><dd>{formatProtocolSchedule(component.schedule)}{scheduleTimeLabel(component) ? ` · ${scheduleTimeLabel(component)}` : ""}</dd></div>
+                </dl>
+                {component.notes && <p className="trace-today-protocol__notes"><strong>Item notes:</strong> <span>{component.notes}</span></p>}
+              </section>
+            ))}
+          </div>}
           {protocol.notes && <p className="trace-today-protocol__notes"><strong>Protocol notes:</strong> <span>{protocol.notes}</span></p>}
           {skipProvenanceLabel(scheduleItem.occurrence, scheduleItem.status === "completed") && <p className="trace-today-plan__skipped">{skipProvenanceLabel(scheduleItem.occurrence, scheduleItem.status === "completed")}</p>}
-          {canExecuteSelectedDate && ["scheduled", "skipped"].includes(scheduleItem.status) && <div className="trace-today-exercise__actions"><button className="trace-action trace-action--primary" type="button" onClick={() => markProtocolComplete(scheduleItem)} style={compactButtonStyle}>Complete</button><button className="trace-action trace-action--secondary" type="button" onClick={() => requestProtocolSkip(scheduleItem)} style={compactButtonStyle}>Skip</button></div>}
+          {renderProtocolOutcomeSummary(scheduleItem)}
+          {canExecuteSelectedDate && actionable && <div className="trace-today-exercise__actions"><button className="trace-action trace-action--primary" type="button" onClick={() => markProtocolComplete(scheduleItem)} style={compactButtonStyle}>Complete</button><button className="trace-action trace-action--secondary" type="button" onClick={() => requestProtocolSkipOrReview(scheduleItem)} style={compactButtonStyle}>Skip</button></div>}
+        </article>
+      );
+    }
+    if (scheduleItem.type === "medication-dose") {
+      const dose = scheduleItem.doseOccurrence;
+      const undoing = undoingDoseIds.has(dose.id);
+      const actionable = dose.schedule?.status !== "deleted"
+        && ["scheduled", "skipped"].includes(dose.status);
+      return (
+        <article className="trace-data-card trace-today-medication-dose" data-schedule-item-type="medication-dose" key={dose.id}>
+          <div className="trace-today-item__meta"><span className={`trace-today-summary__type trace-today-summary__type--${dose.snapshot.classification}`}>{dose.snapshot.classification === "medication" ? "Medication" : "Supplement"}</span><TodayStatus status={dose.status} /></div>
+          <h3><button className="trace-today-plan__open" type="button" aria-label={`Open scheduled dose ${dose.snapshot.name}`} onClick={() => focusMedicationDose(scheduleItem)}>{dose.snapshot.name}</button></h3>
+          <dl className="trace-today-protocol__details">
+            <div><dt>Dose</dt><dd>{dose.snapshot.dose.amount} {formatDoseUnit(dose.snapshot.dose)}</dd></div>
+            <div><dt>Route / method</dt><dd>{formatRoute(dose.snapshot.route)}</dd></div>
+            <div><dt>Date</dt><dd>{formatDateOnly(dose.scheduledDate)}</dd></div>
+            <div><dt>Time</dt><dd>{localTimeLabel(dose.time)}</dd></div>
+            <div><dt>Repeat</dt><dd>{formatMedicationDoseRepeat(dose.snapshot.repeat)}</dd></div>
+          </dl>
+          {dose.snapshot.notes && <p className="trace-today-protocol__notes"><strong>Notes:</strong> <span>{dose.snapshot.notes}</span></p>}
+          {canExecuteSelectedDate && actionable && <div className="trace-today-exercise__actions"><button className="trace-action trace-action--primary" type="button" onClick={() => markDoseComplete(scheduleItem)} style={compactButtonStyle}>Complete</button><button className="trace-action trace-action--secondary" type="button" onClick={() => requestDoseSkip(scheduleItem)} style={compactButtonStyle}>Skip</button></div>}
+          {canExecuteSelectedDate && dose.status === "completed" && <div className="trace-today-exercise__actions"><button className="trace-action trace-action--secondary" type="button" disabled={undoing} aria-label={`Undo completion for scheduled dose ${dose.snapshot.name}`} onClick={() => undoDoseCompletion(scheduleItem)} style={compactButtonStyle}>Undo completion</button></div>}
         </article>
       );
     }
@@ -1283,8 +1867,8 @@ function TodayPage({
         <h1>{isCalendarView ? "Upcoming Schedule" : "Today's Schedule"}</h1>
         <p className="trace-feature-page__lede">
           {isCalendarView
-            ? "Check upcoming workouts, protocols, and daily actions without changing their authoritative records."
-            : "Review today's workouts, protocols, and daily actions. Each source stays separate from completed workout history."}
+            ? "Check upcoming workouts, protocols, medication and supplement doses, and daily actions without changing their authoritative records."
+            : "Review today's workouts, protocols, medication and supplement doses, and daily actions. Each source stays separate from completed history."}
         </p>
       </header>
 
@@ -1326,6 +1910,8 @@ function TodayPage({
           plannedWorkouts={plannedWorkouts}
           protocols={protocols}
           dailyActions={dailyActions}
+          medicationDoseSchedules={medicationDoseSchedules}
+          medicationDoseOccurrences={medicationDoseOccurrences}
           browserToday={browserDate}
         />
       )}
@@ -1644,24 +2230,104 @@ function TodayPage({
       )}
 
       {!draft && !actionDraft && !previewPlan && focusedItem?.type === "protocol" && (
-        <section className="trace-feature-surface trace-today-focused" aria-label={`Protocol details ${focusedItem.item.compound.name}`}>
+        <section className="trace-feature-surface trace-today-focused" aria-label={`Protocol details ${focusedItem.protocolItems.length === 1 ? focusedItem.item.compound.name : focusedItem.protocol.name}`}>
           <article className="trace-data-card trace-today-protocol" data-schedule-item-type="protocol">
             <div className="trace-today-item__meta"><span className="trace-today-summary__type trace-today-summary__type--protocol">Protocol</span><TodayStatus status={focusedItem.status} /></div>
-            <h2>{focusedItem.item.compound.name}</h2>
-            <p className="trace-today-protocol__action-summary">{protocolActionSummary(focusedItem.item)}</p>
-            <dl className="trace-today-protocol__details">
-              <div><dt>Protocol</dt><dd>{focusedItem.protocol.name}</dd></div>
-              <div><dt>Dose</dt><dd>{focusedItem.item.dose.amount} {formatDoseUnit(focusedItem.item.dose)}</dd></div>
-              <div><dt>Route / method</dt><dd>{formatRoute(focusedItem.item.route)}</dd></div>
-              <div><dt>Schedule</dt><dd>{formatProtocolSchedule(focusedItem.item.schedule)}{scheduleTimeLabel(focusedItem.item) ? ` · ${scheduleTimeLabel(focusedItem.item)}` : ""}</dd></div>
-            </dl>
-            {focusedItem.item.notes && <p className="trace-today-protocol__notes"><strong>Item notes:</strong> <span>{focusedItem.item.notes}</span></p>}
+            <h2>{focusedItem.protocolItems.length === 1 ? focusedItem.item.compound.name : focusedItem.protocol.name}</h2>
+            {focusedItem.protocolItems.length === 1 ? (
+              <>
+                <p className="trace-today-protocol__action-summary">{protocolActionSummary(focusedItem.item)}</p>
+                <dl className="trace-today-protocol__details">
+                  <div><dt>Protocol</dt><dd>{focusedItem.protocol.name}</dd></div>
+                  <div><dt>Dose</dt><dd>{focusedItem.item.dose.amount} {formatDoseUnit(focusedItem.item.dose)}</dd></div>
+                  <div><dt>Route / method</dt><dd>{formatRoute(focusedItem.item.route)}</dd></div>
+                  <div><dt>Schedule</dt><dd>{formatProtocolSchedule(focusedItem.item.schedule)}{scheduleTimeLabel(focusedItem.item) ? ` · ${scheduleTimeLabel(focusedItem.item)}` : ""}</dd></div>
+                </dl>
+                {focusedItem.item.notes && <p className="trace-today-protocol__notes"><strong>Item notes:</strong> <span>{focusedItem.item.notes}</span></p>}
+              </>
+            ) : <div className="trace-today-protocol__components">
+              {focusedItem.protocolItems.map((component) => (
+                <section key={component.id} className="trace-today-protocol__component" aria-label={`${component.compound.name} dose`}>
+                  <h3>{component.compound.name}</h3>
+                  <p className="trace-today-protocol__action-summary">{protocolActionSummary(component)}</p>
+                  <dl className="trace-today-protocol__details">
+                    <div><dt>Dose</dt><dd>{component.dose.amount} {formatDoseUnit(component.dose)}</dd></div>
+                    <div><dt>Route / method</dt><dd>{formatRoute(component.route)}</dd></div>
+                    <div><dt>Schedule</dt><dd>{formatProtocolSchedule(component.schedule)}{scheduleTimeLabel(component) ? ` · ${scheduleTimeLabel(component)}` : ""}</dd></div>
+                  </dl>
+                  {component.notes && <p className="trace-today-protocol__notes"><strong>Item notes:</strong> <span>{component.notes}</span></p>}
+                </section>
+              ))}
+            </div>}
             {focusedItem.protocol.notes && <p className="trace-today-protocol__notes"><strong>Protocol notes:</strong> <span>{focusedItem.protocol.notes}</span></p>}
             {skipProvenanceLabel(focusedItem.occurrence, focusedItem.status === "completed") && <p className="trace-today-plan__skipped">{skipProvenanceLabel(focusedItem.occurrence, focusedItem.status === "completed")}</p>}
-            {canExecuteSelectedDate && ["scheduled", "skipped"].includes(focusedItem.status) && <div className="trace-today-exercise__actions"><button className="trace-action trace-action--primary" type="button" onClick={() => markProtocolComplete(focusedItem)} style={compactButtonStyle}>Complete</button><button className="trace-action trace-action--secondary" type="button" onClick={() => requestProtocolSkip(focusedItem)} style={compactButtonStyle}>Skip</button></div>}
+            {renderProtocolOutcomeSummary(focusedItem)}
+            {canExecuteSelectedDate && ["scheduled", "partial", "skipped"].includes(focusedItem.status) && <div className="trace-today-exercise__actions"><button className="trace-action trace-action--primary" type="button" onClick={() => markProtocolComplete(focusedItem)} style={compactButtonStyle}>Complete</button><button className="trace-action trace-action--secondary" type="button" onClick={() => requestProtocolSkipOrReview(focusedItem)} style={compactButtonStyle}>Skip</button></div>}
           </article>
         </section>
       )}
+
+      {!draft && !actionDraft && !previewPlan && focusedItem?.type === "medication-dose" && (() => {
+        const dose = focusedItem.doseOccurrence;
+        const scheduleStatus = dose.schedule?.status;
+        const canResolveOccurrence = scheduleStatus !== "deleted"
+          && ["scheduled", "skipped"].includes(dose.status);
+        const canRescheduleOccurrence = scheduleStatus === "active"
+          && dose.status !== "completed";
+        const canRemoveOccurrence = scheduleStatus !== "deleted"
+          && dose.status !== "completed";
+        const isRescheduling = doseRescheduleDraft?.id === dose.id;
+        return (
+          <section className="trace-feature-surface trace-today-focused" aria-label={`Scheduled dose ${dose.snapshot.name}`}>
+            <article className="trace-data-card trace-today-medication-dose" data-schedule-item-type="medication-dose" data-dose-status={dose.status}>
+              <div className="trace-today-item__meta"><span className={`trace-today-summary__type trace-today-summary__type--${dose.snapshot.classification}`}>{dose.snapshot.classification === "medication" ? "Medication" : "Supplement"}</span><TodayStatus status={dose.status} /></div>
+              <h2>{dose.snapshot.name}</h2>
+              <dl className="trace-today-protocol__details">
+                <div><dt>Dose</dt><dd>{dose.snapshot.dose.amount} {formatDoseUnit(dose.snapshot.dose)}</dd></div>
+                <div><dt>Route / method</dt><dd>{formatRoute(dose.snapshot.route)}</dd></div>
+                <div><dt>Date</dt><dd>{formatDateOnly(dose.scheduledDate)}</dd></div>
+                <div><dt>Time</dt><dd>{localTimeLabel(dose.time)}</dd></div>
+                <div><dt>Repeat</dt><dd>{formatMedicationDoseRepeat(dose.snapshot.repeat)}</dd></div>
+              </dl>
+              {dose.rescheduledAt && (dose.originalDate !== dose.scheduledDate || dose.originalTime !== dose.time) && (
+                <p className="trace-today-plan__notes">Originally scheduled {formatDateOnly(dose.originalDate)} at {localTimeLabel(dose.originalTime)}.</p>
+              )}
+              {dose.snapshot.notes && <p className="trace-today-protocol__notes"><strong>Notes:</strong> <span>{dose.snapshot.notes}</span></p>}
+              {skipProvenanceLabel(dose, dose.status === "completed") && <p className="trace-today-plan__skipped">{skipProvenanceLabel(dose, dose.status === "completed")}</p>}
+              {dose.status === "completed" && <p className="trace-today-plan__completion">Completed and added to Medication History.</p>}
+
+              {isRescheduling ? (
+                <form className="trace-dose-reschedule" aria-label={`Reschedule ${dose.snapshot.name}`} onSubmit={(event) => saveDoseReschedule(event, focusedItem)}>
+                  <h3>Reschedule this occurrence</h3>
+                  <div className="trace-dose-reschedule__fields">
+                    <label>
+                      Date
+                      <input autoFocus required type="date" value={doseRescheduleDraft.date} onChange={(event) => setDoseRescheduleDraft((current) => ({ ...current, date: event.target.value }))} style={fieldStyle} />
+                    </label>
+                    <label>
+                      Time
+                      <input required type="time" value={doseRescheduleDraft.time} onChange={(event) => setDoseRescheduleDraft((current) => ({ ...current, time: event.target.value }))} style={fieldStyle} />
+                    </label>
+                  </div>
+                  {formError && <p role="alert" className="trace-today-page__error">{formError}</p>}
+                  <div className="trace-today-exercise__actions">
+                    <button className="trace-action trace-action--primary" type="submit" style={compactButtonStyle}>Save reschedule</button>
+                    <button className="trace-action trace-action--secondary" type="button" onClick={() => { setDoseRescheduleDraft(null); setFormError(""); }} style={compactButtonStyle}>Cancel</button>
+                  </div>
+                </form>
+              ) : (
+                <div className="trace-today-exercise__actions">
+                  {canExecuteSelectedDate && canResolveOccurrence && <button className="trace-action trace-action--primary" type="button" onClick={() => markDoseComplete(focusedItem)} style={compactButtonStyle}>Complete</button>}
+                  {canExecuteSelectedDate && canResolveOccurrence && <button className="trace-action trace-action--secondary" type="button" onClick={() => requestDoseSkip(focusedItem)} style={compactButtonStyle}>Skip</button>}
+                  {canExecuteSelectedDate && dose.status === "completed" && <button className="trace-action trace-action--secondary" type="button" disabled={undoingDoseIds.has(dose.id)} aria-label={`Undo completion for scheduled dose ${dose.snapshot.name}`} onClick={() => undoDoseCompletion(focusedItem)} style={compactButtonStyle}>Undo completion</button>}
+                  {canRescheduleOccurrence && <button className="trace-action trace-action--secondary" type="button" onClick={() => openDoseReschedule(focusedItem)} style={compactButtonStyle}>Reschedule</button>}
+                  {canRemoveOccurrence && <button className="trace-action trace-action--danger" type="button" onClick={() => removeDoseOccurrence(focusedItem)} style={compactButtonStyle}>Remove</button>}
+                </div>
+              )}
+            </article>
+          </section>
+        );
+      })()}
 
       {!draft && !actionDraft && !previewPlan && focusedItem?.type === "daily-action" && (
         <section className="trace-feature-surface trace-today-focused" aria-label={`Daily action ${focusedItem.action.title}`}>
@@ -1701,7 +2367,7 @@ function TodayPage({
               </div>
             </div>
             {scheduleItems.length === 0 ? (
-              <div className="trace-today-empty"><h3>{isCalendarView ? "Nothing scheduled for this day." : "Nothing scheduled for today."}</h3><p>Add a daily action, create a workout plan, or choose another date.</p></div>
+              <div className="trace-today-empty"><h3>{isCalendarView ? "Nothing scheduled for this day." : "Nothing scheduled for today."}</h3><p>Add a daily action, schedule a medication or supplement dose, create a workout plan, or choose another date.</p></div>
             ) : (
               <div className="trace-today-schedule__sections">
                 {remainingScheduleItems.length > 0 && <section className="trace-today-schedule__group" aria-label={remainingLabel}><h3 className="trace-today-schedule__group-title">{remainingLabel}</h3><ul className="trace-today-summary" aria-label={isCalendarView ? "Selected day schedule summary" : "Today's schedule summary"}>{remainingScheduleItems.map(renderCompactScheduleItem)}</ul></section>}
@@ -1720,6 +2386,18 @@ function TodayPage({
       )}
           </section>
         </div>
+      )}
+
+      {!draft && !actionDraft && protocolReview && (
+        <ProtocolResultsDialog
+          review={protocolReview}
+          onDecision={updateProtocolDecision}
+          onSave={submitProtocolResults}
+          onCancel={cancelProtocolReview}
+          isSaving={isSavingProtocolResults}
+          error={formError}
+          buttonStyle={compactButtonStyle}
+        />
       )}
 
       {!draft && pendingSkipPlan && (
@@ -1759,6 +2437,22 @@ function TodayPage({
           onSave={() => confirmProtocolSkip(false)}
           onSkipWithoutReason={() => confirmProtocolSkip(true)}
           onCancel={() => { setPendingProtocolSkip(null); if (isCalendarView) closeFocusedItem(); }}
+          fieldStyle={fieldStyle}
+          buttonStyle={compactButtonStyle}
+        />
+      )}
+
+      {!draft && !actionDraft && pendingDoseSkip && (
+        <SkipReasonDialog
+          ariaLabel={`Skip scheduled dose ${pendingDoseSkip.doseOccurrence.snapshot.name}`}
+          prompt={isCalendarView ? `Why are you skipping this dose on ${formatDateOnly(todayKey)}?` : "Why are you skipping this dose today?"}
+          reason={doseSkipReason}
+          customReason={doseCustomSkipReason}
+          setReason={setDoseSkipReason}
+          setCustomReason={setDoseCustomSkipReason}
+          onSave={() => confirmDoseSkip(false)}
+          onSkipWithoutReason={() => confirmDoseSkip(true)}
+          onCancel={() => { setPendingDoseSkip(null); if (isCalendarView) closeFocusedItem(); }}
           fieldStyle={fieldStyle}
           buttonStyle={compactButtonStyle}
         />

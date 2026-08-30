@@ -2721,6 +2721,10 @@ code {
   color: var(--trace-brass-strong);
 }
 
+.trace-today-item-status--partial {
+  color: var(--trace-brass-strong);
+}
+
 .trace-today-item-status--completed {
   color: #8fe0ad;
 }
@@ -3069,6 +3073,94 @@ code {
   white-space: pre-wrap;
 }
 
+.trace-today-protocol__components,
+.trace-protocol-results__components {
+  display: grid;
+  gap: var(--trace-space-3);
+  min-width: 0;
+}
+
+.trace-today-protocol__component,
+.trace-protocol-results__component {
+  border: 1px solid var(--trace-border);
+  border-radius: var(--trace-radius-md);
+  box-sizing: border-box;
+  margin: 0;
+  min-width: 0;
+  padding: var(--trace-space-3);
+}
+
+.trace-today-protocol__component h3,
+.trace-today-protocol__component h4,
+.trace-protocol-results__component legend {
+  overflow-wrap: anywhere;
+}
+
+.trace-protocol-outcome {
+  border-top: 1px solid var(--trace-border);
+  margin: 0 var(--trace-space-3);
+  overflow-wrap: anywhere;
+  padding: var(--trace-space-3) 0;
+}
+
+.trace-protocol-outcome p {
+  margin: 0 0 var(--trace-space-2);
+}
+
+.trace-protocol-outcome__actions,
+.trace-protocol-results__actions,
+.trace-protocol-results__resolved {
+  align-items: stretch;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--trace-space-2);
+}
+
+.trace-protocol-results {
+  box-sizing: border-box;
+  margin: 0;
+  max-height: calc(100dvh - (2 * var(--trace-space-4)));
+  max-width: 720px;
+  min-width: 0;
+  overflow-y: auto;
+  width: 100%;
+}
+
+.trace-protocol-results h2:focus {
+  outline: none;
+}
+
+.trace-protocol-results h2:focus-visible {
+  outline: 3px solid var(--trace-focus);
+  outline-offset: 4px;
+}
+
+.trace-protocol-results__dose {
+  font-weight: var(--trace-weight-bold);
+}
+
+.trace-protocol-results__choices {
+  display: grid;
+  gap: var(--trace-space-2);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.trace-protocol-results__choices label {
+  align-items: center;
+  border: 1px solid var(--trace-border);
+  border-radius: var(--trace-radius-sm);
+  cursor: pointer;
+  display: flex;
+  gap: var(--trace-space-2);
+  min-height: 44px;
+  min-width: 0;
+  padding: var(--trace-space-2);
+}
+
+.trace-protocol-results__actions {
+  margin-top: var(--trace-space-4);
+}
+
 .trace-today-plan h3 {
   margin-bottom: var(--trace-space-2);
 }
@@ -3403,6 +3495,16 @@ code {
 
   .trace-today-protocol__details {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trace-protocol-results__choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trace-protocol-results__actions > .trace-action,
+  .trace-protocol-outcome__actions > .trace-action {
+    flex: 1 1 100%;
+    width: 100%;
   }
 }
 
@@ -4986,5 +5088,203 @@ code {
   .trace-injection-recent__row > span:last-child {
     grid-column: 3;
     grid-row: 1 / span 2;
+  }
+}
+
+/* Medication and supplement dose scheduling */
+.trace-medication-dose-scheduler,
+.trace-medication-dose-schedules,
+.trace-today-medication-dose,
+.trace-dose-reschedule {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: left;
+}
+
+.trace-medication-dose-scheduler {
+  margin-bottom: var(--trace-space-6);
+}
+
+.trace-medication-dose-scheduler__name {
+  color: var(--trace-text-muted);
+  font-size: 1.05rem;
+  margin: 0 0 16px;
+}
+
+.trace-medication-dose-scheduler__grid,
+.trace-dose-reschedule__fields {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.trace-medication-dose-scheduler__grid label,
+.trace-medication-dose-scheduler__notes,
+.trace-dose-reschedule__fields label {
+  display: grid;
+  min-width: 0;
+}
+
+.trace-medication-dose-scheduler__grid input,
+.trace-medication-dose-scheduler__grid select,
+.trace-medication-dose-scheduler__notes textarea,
+.trace-dose-reschedule__fields input {
+  min-width: 0;
+}
+
+.trace-medication-dose-scheduler__weekdays {
+  border: 1px solid var(--trace-border);
+  border-radius: var(--trace-radius-md);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin: 16px 0 0;
+  min-width: 0;
+  padding: 14px;
+}
+
+.trace-medication-dose-scheduler__weekdays legend {
+  padding: 0 6px;
+}
+
+.trace-medication-dose-scheduler__notes {
+  margin-top: 16px;
+}
+
+.trace-medication-dose-scheduler__actions,
+.trace-medication-dose-schedule__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.trace-medication-dose-scheduler__actions .trace-action,
+.trace-medication-dose-schedule__actions .trace-action {
+  margin: 0 !important;
+}
+
+.trace-medication-entry__actions .trace-action {
+  margin: 0 !important;
+}
+
+.trace-medication-dose-scheduler__error {
+  color: var(--trace-danger-text, #fecaca);
+  margin: 12px 0 0;
+}
+
+.trace-medication-dose-schedules {
+  margin-top: var(--trace-space-6);
+}
+
+.trace-medication-dose-schedules__list {
+  display: grid;
+  gap: 14px;
+}
+
+.trace-medication-dose-schedules__ended {
+  border-top: 1px solid var(--trace-border);
+  margin-top: 20px;
+  padding-top: 16px;
+}
+
+.trace-medication-dose-schedules__disclosure {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--trace-text-muted);
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 700;
+  margin: 0 0 14px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 8px 0;
+  text-align: left;
+}
+
+.trace-medication-dose-schedules__disclosure::before {
+  content: "▸";
+  flex: 0 0 auto;
+  margin-right: 8px;
+}
+
+.trace-medication-dose-schedules__disclosure[aria-expanded="true"]::before {
+  content: "▾";
+}
+
+.trace-medication-dose-schedule__heading {
+  align-items: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.trace-medication-dose-schedule__heading h3 {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.trace-medication-dose-schedule__heading span {
+  background: rgba(42, 55, 74, 0.9);
+  border: 1px solid var(--trace-border);
+  border-radius: 999px;
+  color: var(--trace-text-muted);
+  flex: 0 0 auto;
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 4px 9px;
+  text-transform: uppercase;
+}
+
+.trace-today-summary__type--medication,
+.trace-schedule-calendar__event--medication {
+  background: #214b52;
+  color: #d7fbff;
+}
+
+.trace-today-summary__type--supplement,
+.trace-schedule-calendar__event--supplement {
+  background: #4a3d24;
+  color: #fff0bd;
+}
+
+.trace-dose-reschedule {
+  border-top: 1px solid var(--trace-border);
+  margin-top: 18px;
+  padding-top: 16px;
+}
+
+.trace-dose-reschedule h3 {
+  margin-top: 0;
+}
+
+@media (max-width: 600px) {
+  .trace-medication-dose-scheduler__grid,
+  .trace-dose-reschedule__fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trace-medication-dose-scheduler__actions,
+  .trace-medication-dose-schedule__actions,
+  .trace-medication-entry__actions,
+  .trace-today-medication-dose .trace-today-exercise__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trace-medication-dose-scheduler__actions .trace-action,
+  .trace-medication-dose-schedule__actions .trace-action,
+  .trace-medication-entry__actions .trace-action,
+  .trace-today-medication-dose .trace-today-exercise__actions .trace-action {
+    justify-content: center;
+    max-width: 100%;
+    white-space: normal;
+    width: 100%;
   }
 }

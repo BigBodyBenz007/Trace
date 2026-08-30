@@ -1,6 +1,19 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import MedicationPage from "./MedicationPage";
 import { createCompoundDefinition } from "../services/compoundCatalog";
+import { formatDateOnly } from "../services/dateOnly";
+import {
+  completeMedicationDoseOccurrence,
+  createMedicationDoseSchedule,
+  deleteMedicationDoseSchedule as deleteDoseScheduleRecord,
+  endMedicationDoseSchedule as endDoseScheduleRecord,
+  medicationDoseDateKey,
+  medicationDoseOccurrenceItem,
+  removeMedicationDoseOccurrence,
+  shiftMedicationDoseDate,
+  skipMedicationDoseOccurrence,
+  undoMedicationDoseCompletion,
+} from "../services/medicationDoseSchedule";
 
 function localTimestamp(year, month, day, hour = 12, minute = 0) {
   return new Date(year, month, day, hour, minute).toISOString();
@@ -29,7 +42,7 @@ function renderMedicationPage(overrides = {}) {
   const props = {
     onBack: jest.fn(),
     medicationEntries: [],
-    saveMedicationEntry: jest.fn(() => true),
+    saveMedicationEntry: jest.fn((entry) => ({ ...entry, id: "entry:saved" })),
     saveCompoundDefinition,
     updateCompoundDefinition: jest.fn(() => ({ status: "updated" })),
     updateMedicationEntry: jest.fn(() => true),
@@ -166,7 +179,139 @@ test("saves a trimmed historical entry with decimal precision", () => {
       updatedAt: expect.any(String),
     })
   );
+  expect(screen.queryByRole("form", { name: /Schedule dose for/ })).not.toBeInTheDocument();
   expect(form.getByLabelText("Name")).toHaveValue("");
+});
+
+test("Save & Schedule opens a prefilled direct scheduler without logging a history entry", () => {
+  const saveMedicationEntry = jest.fn();
+  const saveMedicationDoseSchedule = jest.fn((record) => saveDoseResult(record, "schedule:from-add-entry"));
+  renderMedicationPage({ saveMedicationEntry, saveMedicationDoseSchedule });
+  fireEvent.change(screen.getByLabelText("Compound search"), { target: { value: "metformin" } });
+  fireEvent.click(screen.getByRole("button", { name: "Select Trace compound Metformin" }));
+  const form = entryForm();
+  fillRequiredFields(form, { name: "Metformin", doseAmount: "2.5", route: "subcutaneous" });
+  fireEvent.change(form.getByLabelText("Notes (optional)"), { target: { value: "After breakfast" } });
+  fireEvent.click(form.getByRole("button", { name: "Save & Schedule" }));
+
+  expect(saveMedicationEntry).not.toHaveBeenCalled();
+  expect(screen.getByRole("status")).toHaveTextContent(
+    "Review and confirm the dose schedule below. No dose has been logged yet."
+  );
+  const scheduler = screen.getByRole("form", { name: "Schedule dose for Metformin" });
+  expect(screen.getByRole("heading", { name: "Schedule Dose" })).toHaveFocus();
+  expect(within(scheduler).getByLabelText("Medication or supplement classification")).toHaveValue("medication");
+  expect(within(scheduler).getByLabelText("Dose amount")).toHaveValue(2.5);
+  expect(within(scheduler).getByLabelText("Dose unit")).toHaveValue("mg");
+  expect(within(scheduler).getByLabelText("Saved route")).toHaveValue("Subcutaneous (SC)");
+  expect(within(scheduler).getByLabelText("Saved route")).toHaveAttribute("readonly");
+  expect(within(scheduler).getByLabelText("Schedule notes (optional)")).toHaveValue("After breakfast");
+  expect(within(scheduler).getByLabelText("Start date")).toHaveValue(medicationDoseDateKey());
+  expect(within(scheduler).getByLabelText("Scheduled time")).toHaveValue("");
+
+  fireEvent.change(within(scheduler).getByLabelText("Scheduled time"), { target: { value: "09:30" } });
+  fireEvent.click(within(scheduler).getByRole("button", { name: "Schedule Dose" }));
+  expect(saveMedicationDoseSchedule).toHaveBeenCalledWith(expect.objectContaining({
+    classification: "medication",
+    source: {
+      type: "direct-entry",
+      id: expect.stringMatching(/^medication-dose-source:/),
+    },
+    compoundReference: expect.objectContaining({
+      source: "trace-catalog",
+      category: "medication",
+      modified: false,
+    }),
+  }), false);
+  expect(saveMedicationEntry).not.toHaveBeenCalled();
+  expect(entryForm().getByLabelText("Name")).toHaveValue("");
+});
+
+test("Save & Schedule validation creates neither history nor scheduler", () => {
+  const saveMedicationEntry = jest.fn(() => false);
+  renderMedicationPage({ saveMedicationEntry });
+  const form = entryForm();
+  fireEvent.change(form.getByLabelText("Name"), { target: { value: "Ipamorelin" } });
+  fireEvent.click(form.getByRole("button", { name: "Save & Schedule" }));
+  expect(saveMedicationEntry).not.toHaveBeenCalled();
+  expect(form.getByRole("alert")).toHaveTextContent("Enter a dose amount greater than zero.");
+  expect(form.getByLabelText("Amount / dose")).toHaveFocus();
+  expect(screen.queryByRole("form", { name: /Schedule dose for/ })).not.toBeInTheDocument();
+
+  fillRequiredFields(form, { name: "Ipamorelin" });
+  fireEvent.click(form.getByRole("button", { name: "Save & Schedule" }));
+  expect(saveMedicationEntry).not.toHaveBeenCalled();
+  expect(screen.getByRole("form", { name: "Schedule dose for Ipamorelin" })).toBeInTheDocument();
+});
+
+test("canceling direct scheduling creates nothing, preserves Add Entry values, and restores focus", () => {
+  const scroll = installDeferredScrollMocks();
+  const saveMedicationEntry = jest.fn();
+  const saveMedicationDoseSchedule = jest.fn();
+  renderMedicationPage({ saveMedicationEntry, saveMedicationDoseSchedule });
+  const form = entryForm();
+  fillRequiredFields(form, { name: "Ipamorelin", doseAmount: "2.5" });
+  fireEvent.change(form.getByLabelText("Notes (optional)"), { target: { value: "Keep this draft" } });
+  fireEvent.click(form.getByRole("button", { name: "Save & Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  scroll.flush();
+
+  const restoredForm = entryForm();
+  expect(saveMedicationEntry).not.toHaveBeenCalled();
+  expect(saveMedicationDoseSchedule).not.toHaveBeenCalled();
+  expect(restoredForm.getByLabelText("Name")).toHaveValue("Ipamorelin");
+  expect(restoredForm.getByLabelText("Amount / dose")).toHaveValue(2.5);
+  expect(restoredForm.getByLabelText("Notes (optional)")).toHaveValue("Keep this draft");
+  expect(restoredForm.getByRole("button", { name: "Save & Schedule" })).toHaveFocus();
+  expect(screen.getByRole("status")).toHaveTextContent("Scheduling canceled. No dose was logged.");
+  scroll.restore();
+});
+
+test("a direct scheduling failure keeps its scheduler draft without creating history", () => {
+  const saveMedicationEntry = jest.fn();
+  const saveMedicationDoseSchedule = jest.fn(() => ({
+    status: "error",
+    message: "Storage is unavailable.",
+  }));
+  renderMedicationPage({ saveMedicationEntry, saveMedicationDoseSchedule });
+  const form = entryForm();
+  fillRequiredFields(form, { name: "Ipamorelin" });
+  fireEvent.click(form.getByRole("button", { name: "Save & Schedule" }));
+  const scheduler = screen.getByRole("form", { name: "Schedule dose for Ipamorelin" });
+  fireEvent.change(within(scheduler).getByLabelText("Medication or supplement classification"), { target: { value: "medication" } });
+  fireEvent.change(within(scheduler).getByLabelText("Scheduled time"), { target: { value: "10:45" } });
+  fireEvent.click(within(scheduler).getByRole("button", { name: "Schedule Dose" }));
+  fireEvent.click(within(scheduler).getByRole("button", { name: "Schedule Dose" }));
+
+  expect(within(scheduler).getByRole("alert")).toHaveTextContent("Storage is unavailable.");
+  expect(within(scheduler).getByLabelText("Scheduled time")).toHaveValue("10:45");
+  expect(saveMedicationDoseSchedule).toHaveBeenCalledTimes(2);
+  expect(saveMedicationEntry).not.toHaveBeenCalled();
+});
+
+test("Save & Schedule uses reduced-motion scrolling and mobile-safe Add Entry actions", () => {
+  const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+  const originalScrollIntoView = Element.prototype.scrollIntoView;
+  Element.prototype.scrollIntoView = jest.fn();
+  const shell = document.createElement("div");
+  shell.className = "trace-app-shell";
+  shell.dataset.motion = "reduced";
+  document.body.appendChild(shell);
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+  renderMedicationPage();
+  const form = entryForm();
+  fillRequiredFields(form, { name: "Ipamorelin" });
+  const actions = form.getByRole("button", { name: "Save & Schedule" }).closest("div");
+  expect(actions).toHaveClass("trace-medication-entry__actions");
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
+  fireEvent.click(form.getByRole("button", { name: "Save & Schedule" }));
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: "auto", block: "start" });
+
+  shell.remove();
+  Element.prototype.scrollIntoView = originalScrollIntoView;
+  if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
 });
 
 test("logs medication, peptide, and supplement names without classification", () => {
@@ -998,4 +1143,379 @@ test("cancel resets the form without navigating away", () => {
   ).toBeInTheDocument();
   window.confirm = originalConfirm;
   window.requestAnimationFrame = originalRequestAnimationFrame;
+});
+
+function saveDoseResult(record, id = "schedule:test") {
+  const schedule = createMedicationDoseSchedule(record, {
+    id,
+    now: new Date("2026-08-29T12:00:00.000Z"),
+  });
+  return schedule
+    ? { status: "saved", schedule }
+    : { status: "invalid", message: "Invalid schedule" };
+}
+
+function doseScheduleForDisplay(repeat = { type: "once" }, id = "schedule:display") {
+  return createMedicationDoseSchedule({
+    name: "Ipamorelin",
+    classification: "medication",
+    dose: { amount: 5, unit: "mg" },
+    route: { code: "subcutaneous" },
+    notes: "Display snapshot",
+    source: { type: "medication-entry", id: "entry-ipamorelin" },
+    repeat,
+    startDate: medicationDoseDateKey(),
+    endDate: null,
+    time: "08:15",
+  }, { id, now: new Date("2026-08-29T12:00:00.000Z") });
+}
+
+test("completed one-time schedule displays Taken after rerender from its linked occurrence", () => {
+  const schedule = doseScheduleForDisplay();
+  const completed = completeMedicationDoseOccurrence(
+    medicationDoseOccurrenceItem(schedule, medicationDoseDateKey()),
+    new Date("2026-08-29T13:00:00.000Z")
+  );
+  const props = renderMedicationPage({
+    medicationDoseSchedules: [schedule],
+    medicationDoseOccurrences: [completed],
+  });
+  const card = screen.getByRole("heading", { name: "Ipamorelin" }).closest("article");
+  expect(within(card).getByLabelText("Dose status: Taken")).toHaveTextContent("Taken");
+  expect(within(card).queryByText("Active")).not.toBeInTheDocument();
+
+  props.rerenderPage({ medicationDoseOccurrences: [completed] });
+  expect(within(card).getByLabelText("Dose status: Taken")).toHaveTextContent("Taken");
+
+  const restored = undoMedicationDoseCompletion(completed, new Date("2026-08-29T14:00:00.000Z"));
+  props.rerenderPage({ medicationDoseOccurrences: [restored] });
+  expect(within(card).getByLabelText("Dose status: Scheduled")).toHaveTextContent("Scheduled");
+});
+
+test.each([
+  ["Scheduled", (item) => null],
+  ["Skipped", (item) => skipMedicationDoseOccurrence(item, "Travel", "", new Date("2026-08-29T13:00:00.000Z"))],
+  ["Removed", (item) => removeMedicationDoseOccurrence(item, new Date("2026-08-29T13:00:00.000Z"))],
+])("one-time schedule displays %s from its occurrence state", (label, occurrenceFromItem) => {
+  const schedule = doseScheduleForDisplay();
+  const item = medicationDoseOccurrenceItem(schedule, medicationDoseDateKey());
+  const occurrence = occurrenceFromItem(item);
+  renderMedicationPage({
+    medicationDoseSchedules: [schedule],
+    medicationDoseOccurrences: occurrence ? [occurrence] : [],
+  });
+  const card = screen.getByRole("heading", { name: "Ipamorelin" }).closest("article");
+  expect(within(card).getByLabelText(`Dose status: ${label}`)).toHaveTextContent(label);
+});
+
+test("recurring schedule prioritizes Taken today, keeps lifecycle text, next dose, and rerender state", () => {
+  const schedule = doseScheduleForDisplay({ type: "daily" }, "schedule:daily-display");
+  const completed = completeMedicationDoseOccurrence(
+    medicationDoseOccurrenceItem(schedule, medicationDoseDateKey()),
+    new Date("2026-08-29T13:00:00.000Z")
+  );
+  const props = renderMedicationPage({
+    medicationDoseSchedules: [schedule],
+    medicationDoseOccurrences: [completed],
+  });
+  const card = screen.getByRole("heading", { name: "Ipamorelin" }).closest("article");
+  expect(within(card).getByLabelText("Dose status: Taken today")).toHaveTextContent("Taken today");
+  expect(within(card).getByText("Schedule active")).toBeInTheDocument();
+  const nextDose = within(card).getByText((content, element) => (
+    element.tagName === "P" && content.startsWith("Next dose:")
+  ));
+  expect(nextDose).toHaveTextContent(formatDateOnly(shiftMedicationDoseDate(medicationDoseDateKey(), 1)));
+  expect(nextDose).toHaveTextContent("8:15");
+
+  props.rerenderPage({ medicationDoseOccurrences: [completed] });
+  expect(within(card).getByLabelText("Dose status: Taken today")).toBeInTheDocument();
+
+  const restored = undoMedicationDoseCompletion(completed, new Date("2026-08-29T14:00:00.000Z"));
+  props.rerenderPage({ medicationDoseOccurrences: [restored] });
+  expect(within(card).getByLabelText("Dose status: Scheduled today")).toBeInTheDocument();
+  expect(within(card).getByText("Schedule active")).toBeInTheDocument();
+});
+
+test.each([
+  ["Scheduled today", (item) => null],
+  ["Skipped today", (item) => skipMedicationDoseOccurrence(item, "Travel", "", new Date("2026-08-29T13:00:00.000Z"))],
+  ["Removed today", (item) => removeMedicationDoseOccurrence(item, new Date("2026-08-29T13:00:00.000Z"))],
+])("recurring schedule uses %s as its primary current badge", (label, occurrenceFromItem) => {
+  const schedule = doseScheduleForDisplay({ type: "daily" }, `schedule:${label}`);
+  const item = medicationDoseOccurrenceItem(schedule, medicationDoseDateKey());
+  const occurrence = occurrenceFromItem(item);
+  renderMedicationPage({
+    medicationDoseSchedules: [schedule],
+    medicationDoseOccurrences: occurrence ? [occurrence] : [],
+  });
+  const card = screen.getByRole("heading", { name: "Ipamorelin" }).closest("article");
+  expect(within(card).getByLabelText(`Dose status: ${label}`)).toHaveTextContent(label);
+  expect(within(card).getByText("Schedule active")).toBeInTheDocument();
+});
+
+test("recurring schedule without an occurrence today uses lifecycle as its primary badge", () => {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowWeekday = tomorrow.getDay() === 0 ? 7 : tomorrow.getDay();
+  const schedule = doseScheduleForDisplay(
+    { type: "weekdays", weekdays: [tomorrowWeekday] },
+    "schedule:no-occurrence-today"
+  );
+  renderMedicationPage({ medicationDoseSchedules: [schedule] });
+  const card = screen.getByRole("heading", { name: "Ipamorelin" }).closest("article");
+  expect(within(card).getByLabelText("Dose status: Active schedule")).toHaveTextContent("Active schedule");
+  expect(within(card).getByText("Schedule active")).toBeInTheDocument();
+});
+
+test("saved compounds open an inline one-time scheduler with editable dose and read-only route", () => {
+  const compound = savedCompound({ defaultDoseAmount: "3.5" });
+  const saveMedicationDoseSchedule = jest.fn((record) => saveDoseResult(record));
+  renderMedicationPage({ compounds: [compound], saveMedicationDoseSchedule });
+  fireEvent.change(screen.getByLabelText("Compound search"), { target: { value: "SS-31" } });
+  const trigger = screen.getByRole("button", { name: "Schedule dose for saved compound SS-31" });
+  fireEvent.click(trigger);
+
+  const form = screen.getByRole("form", { name: "Schedule dose for SS-31" });
+  expect(within(form).getByLabelText("Dose amount")).toHaveValue(3.5);
+  expect(within(form).getByLabelText("Dose unit")).toHaveValue("mg");
+  expect(within(form).getByLabelText("Saved route")).toHaveValue("Subcutaneous (SC)");
+  expect(within(form).getByLabelText("Saved route")).toHaveAttribute("readonly");
+  expect(within(form).getByLabelText("Medication or supplement classification")).toHaveValue("");
+  expect(within(form).getByLabelText("Start date")).toHaveValue(medicationDoseDateKey());
+  expect(within(form).getByLabelText("Scheduled time")).toHaveValue("");
+
+  fireEvent.click(within(form).getByRole("button", { name: "Schedule Dose" }));
+  expect(within(form).getByRole("alert")).toHaveTextContent("Choose Medication or Supplement");
+  expect(within(form).getByLabelText("Medication or supplement classification")).toHaveFocus();
+
+  fireEvent.change(within(form).getByLabelText("Medication or supplement classification"), { target: { value: "supplement" } });
+  fireEvent.change(within(form).getByLabelText("Dose amount"), { target: { value: "4" } });
+  fireEvent.change(within(form).getByLabelText("Dose unit"), { target: { value: "custom" } });
+  fireEvent.change(within(form).getByLabelText("Custom dose unit"), { target: { value: "micro scoop" } });
+  fireEvent.change(within(form).getByLabelText("Scheduled time"), { target: { value: "08:30" } });
+  fireEvent.click(within(form).getByRole("button", { name: "Schedule Dose" }));
+
+  expect(saveMedicationDoseSchedule).toHaveBeenCalledWith(expect.objectContaining({
+    name: "SS-31",
+    classification: "supplement",
+    dose: { amount: "4", unit: "custom", customUnit: "micro scoop" },
+    route: { code: "subcutaneous" },
+    repeat: { type: "once" },
+    time: "08:30",
+    source: { type: "saved-compound", id: compound.id },
+  }), false);
+  expect(screen.getByRole("status")).toHaveTextContent("SS-31 scheduled.");
+});
+
+test("logged history opens a prefilled recurring scheduler and infers a catalog medication", () => {
+  const entry = savedEntry({
+    name: "Catalog medicine",
+    compoundReference: { source: "trace-catalog", sourceId: "catalog-med", category: "medication", modified: false },
+  });
+  const saveMedicationDoseSchedule = jest.fn((record) => saveDoseResult(record, "schedule:recurring"));
+  renderMedicationPage({ medicationEntries: [entry], saveMedicationDoseSchedule });
+  fireEvent.click(screen.getByRole("button", { name: "Schedule dose from logged entry Catalog medicine" }));
+
+  const form = screen.getByRole("form", { name: "Schedule dose for Catalog medicine" });
+  expect(within(form).getByLabelText("Medication or supplement classification")).toHaveValue("medication");
+  expect(within(form).getByLabelText("Schedule notes (optional)")).toHaveValue("Historical note");
+  fireEvent.change(within(form).getByLabelText("Dose recurrence"), { target: { value: "weekdays" } });
+  expect(within(form).getByRole("group", { name: "Selected weekdays" })).toBeInTheDocument();
+  fireEvent.click(within(form).getByLabelText("Monday"));
+  fireEvent.change(within(form).getByLabelText("End date (optional)"), { target: { value: "2026-12-31" } });
+  fireEvent.change(within(form).getByLabelText("Scheduled time"), { target: { value: "21:05" } });
+  fireEvent.click(within(form).getByRole("button", { name: "Schedule Dose" }));
+
+  expect(saveMedicationDoseSchedule).toHaveBeenCalledWith(expect.objectContaining({
+    repeat: { type: "weekdays", weekdays: [1] },
+    endDate: "2026-12-31",
+    time: "21:05",
+    source: { type: "medication-entry", id: entry.id },
+  }), false);
+});
+
+test("dirty scheduler cancellation confirms and restores focus to its compound-specific trigger", () => {
+  const scroll = installDeferredScrollMocks();
+  const originalConfirm = window.confirm;
+  window.confirm = jest.fn(() => false);
+  renderMedicationPage({ medicationEntries: [savedEntry()] });
+  const trigger = screen.getByRole("button", { name: "Schedule dose from logged entry Medication A" });
+  fireEvent.click(trigger);
+  const form = screen.getByRole("form", { name: "Schedule dose for Medication A" });
+  fireEvent.change(within(form).getByLabelText("Dose amount"), { target: { value: "2" } });
+  fireEvent.click(within(form).getByRole("button", { name: "Cancel" }));
+  expect(form).toBeInTheDocument();
+
+  window.confirm.mockReturnValue(true);
+  fireEvent.click(within(form).getByRole("button", { name: "Cancel" }));
+  scroll.flush();
+  expect(screen.queryByRole("form", { name: "Schedule dose for Medication A" })).not.toBeInTheDocument();
+  expect(trigger).toHaveFocus();
+  expect(window.confirm).toHaveBeenCalledWith("Cancel scheduling this dose? Your unsaved changes will be lost.");
+  window.confirm = originalConfirm;
+  scroll.restore();
+});
+
+test("duplicate scheduling warns, allows explicit confirmation, and surfaces storage failure", () => {
+  const originalConfirm = window.confirm;
+  window.confirm = jest.fn(() => true);
+  const saveMedicationDoseSchedule = jest.fn((record, confirmed) => confirmed
+    ? saveDoseResult(record, "schedule:intentional-duplicate")
+    : { status: "duplicate", duplicate: { date: record.startDate, time: record.time } });
+  renderMedicationPage({ medicationEntries: [savedEntry()], saveMedicationDoseSchedule });
+  fireEvent.click(screen.getByRole("button", { name: "Schedule dose from logged entry Medication A" }));
+  const form = screen.getByRole("form", { name: "Schedule dose for Medication A" });
+  fireEvent.change(within(form).getByLabelText("Medication or supplement classification"), { target: { value: "medication" } });
+  fireEvent.change(within(form).getByLabelText("Scheduled time"), { target: { value: "12:45" } });
+  fireEvent.click(within(form).getByRole("button", { name: "Schedule Dose" }));
+  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("Add another dose?"));
+  expect(saveMedicationDoseSchedule.mock.calls.map((call) => call[1])).toEqual([false, true]);
+
+  window.confirm = originalConfirm;
+});
+
+test("Scheduled Doses supports series edit, end, and destructive deletion without hiding history", () => {
+  const originalConfirm = window.confirm;
+  window.confirm = jest.fn(() => true);
+  const value = createMedicationDoseSchedule({
+    name: "Managed dose",
+    classification: "medication",
+    dose: { amount: 5, unit: "mg" },
+    route: { code: "oral" },
+    notes: "Snapshot notes",
+    source: { type: "medication-entry", id: "entry-managed" },
+    repeat: { type: "daily" },
+    startDate: "2026-08-29",
+    endDate: null,
+    time: "07:00",
+  }, { id: "schedule:managed", now: new Date("2026-08-29T12:00:00.000Z") });
+  const endMedicationDoseSchedule = jest.fn(() => true);
+  const deleteMedicationDoseSchedule = jest.fn(() => true);
+  renderMedicationPage({
+    medicationEntries: [savedEntry()],
+    medicationDoseSchedules: [value],
+    endMedicationDoseSchedule,
+    deleteMedicationDoseSchedule,
+  });
+  const section = screen.getByRole("heading", { name: "Scheduled Doses" }).closest("section");
+  expect(within(section).getByText("Managed dose")).toBeInTheDocument();
+  expect(within(section).getByText(/Every day/)).toBeInTheDocument();
+  fireEvent.click(within(section).getByRole("button", { name: "Edit dose schedule for Managed dose" }));
+  expect(screen.getByRole("form", { name: "Edit dose schedule for Managed dose" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  fireEvent.click(within(section).getByRole("button", { name: "End dose schedule for Managed dose" }));
+  fireEvent.click(within(section).getByRole("button", { name: "Delete dose schedule for Managed dose" }));
+  expect(endMedicationDoseSchedule).toHaveBeenCalledWith(value.id);
+  expect(deleteMedicationDoseSchedule).toHaveBeenCalledWith(value.id);
+  expect(screen.getByText("Medication A")).toBeInTheDocument();
+  expect(window.confirm.mock.calls.join(" ")).toMatch(/Medication History will be preserved/);
+  window.confirm = originalConfirm;
+});
+
+test("ending moves a schedule into an accessible collapsed section and deletion hides its card", () => {
+  const originalConfirm = window.confirm;
+  const originalBounds = Element.prototype.getBoundingClientRect;
+  const shell = document.createElement("div");
+  shell.className = "trace-app-shell";
+  shell.dataset.motion = "reduced";
+  document.body.appendChild(shell);
+  window.confirm = jest.fn(() => true);
+  Element.prototype.getBoundingClientRect = jest.fn(() => ({
+    top: 900,
+    bottom: 950,
+    left: 0,
+    right: 300,
+    width: 300,
+    height: 50,
+  }));
+  const scroll = installDeferredScrollMocks();
+  const active = createMedicationDoseSchedule({
+    name: "Lifecycle dose",
+    classification: "medication",
+    dose: { amount: 5, unit: "mg" },
+    route: { code: "oral" },
+    notes: "",
+    source: { type: "medication-entry", id: "entry-lifecycle" },
+    repeat: { type: "daily" },
+    startDate: medicationDoseDateKey(),
+    endDate: null,
+    time: "07:00",
+  }, { id: "schedule:lifecycle", now: new Date("2026-08-29T12:00:00.000Z") });
+  const ended = endDoseScheduleRecord(active, medicationDoseDateKey());
+  const deleted = deleteDoseScheduleRecord(ended, medicationDoseDateKey());
+  const endMedicationDoseSchedule = jest.fn(() => true);
+  const deleteMedicationDoseSchedule = jest.fn(() => true);
+  const view = renderMedicationPage({
+    medicationEntries: [savedEntry()],
+    medicationDoseSchedules: [active],
+    endMedicationDoseSchedule,
+    deleteMedicationDoseSchedule,
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "End dose schedule for Lifecycle dose" }));
+  view.rerenderPage({ medicationDoseSchedules: [ended] });
+  scroll.flush();
+  const disclosure = screen.getByRole("button", { name: "Ended schedules (1)" });
+  expect(disclosure).toHaveAttribute("aria-expanded", "false");
+  expect(disclosure).toHaveFocus();
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: "auto", block: "nearest" });
+  expect(screen.queryByText("Lifecycle dose")).not.toBeInTheDocument();
+  expect(screen.getByRole("status")).toHaveTextContent("Future doses were removed");
+
+  fireEvent.click(disclosure);
+  expect(disclosure).toHaveAttribute("aria-expanded", "true");
+  const endedCard = screen.getByText("Lifecycle dose").closest("article");
+  expect(within(endedCard).getByLabelText("Dose status: Ended schedule")).toHaveTextContent("Ended schedule");
+  expect(within(endedCard).getByText("Schedule ended")).toBeInTheDocument();
+  expect(within(endedCard).queryByText(/Next dose:/)).not.toBeInTheDocument();
+  expect(within(endedCard).getByRole("button", { name: "Delete dose schedule for Lifecycle dose" })).toBeInTheDocument();
+
+  fireEvent.click(within(endedCard).getByRole("button", { name: "Delete dose schedule for Lifecycle dose" }));
+  view.rerenderPage({ medicationDoseSchedules: [deleted] });
+  scroll.flush();
+  expect(screen.queryByText("Lifecycle dose")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /Ended schedules/ })).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Scheduled Doses" })).toHaveFocus();
+  expect(screen.getByRole("status")).toHaveTextContent("Today and upcoming doses were removed");
+  expect(screen.getByText("Medication A")).toBeInTheDocument();
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
+
+  scroll.restore();
+  Element.prototype.getBoundingClientRect = originalBounds;
+  window.confirm = originalConfirm;
+  shell.remove();
+});
+
+test("scheduler reports save failures, uses reduced-motion scrolling, and remains contained at 390px and 320px", () => {
+  const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
+  const originalScrollIntoView = Element.prototype.scrollIntoView;
+  Element.prototype.scrollIntoView = jest.fn();
+  const shell = document.createElement("div");
+  shell.className = "trace-app-shell";
+  shell.dataset.motion = "reduced";
+  document.body.appendChild(shell);
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+  const longName = "A very long medication or supplement name that must wrap safely without widening the page";
+  renderMedicationPage({
+    medicationEntries: [savedEntry({
+      name: longName,
+      dose: { amount: 1, unit: "custom", customUnit: "an intentionally long custom unit name" },
+    })],
+    saveMedicationDoseSchedule: jest.fn(() => ({ status: "error", message: "Storage is unavailable." })),
+  });
+  fireEvent.click(screen.getByRole("button", { name: `Schedule dose from logged entry ${longName}` }));
+  const form = screen.getByRole("form", { name: `Schedule dose for ${longName}` });
+  expect(within(form).getByLabelText("Custom dose unit")).toHaveValue("an intentionally long custom unit name");
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ behavior: "auto" }));
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(390);
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 320 });
+  expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(320);
+  fireEvent.change(within(form).getByLabelText("Medication or supplement classification"), { target: { value: "medication" } });
+  fireEvent.change(within(form).getByLabelText("Scheduled time"), { target: { value: "12:45" } });
+  fireEvent.click(within(form).getByRole("button", { name: "Schedule Dose" }));
+  expect(within(form).getByRole("alert")).toHaveTextContent("Storage is unavailable.");
+  expect(screen.queryByText(`${longName} scheduled.`)).not.toBeInTheDocument();
+  shell.remove();
+  Element.prototype.scrollIntoView = originalScrollIntoView;
+  if (originalWidth) Object.defineProperty(window, "innerWidth", originalWidth);
 });

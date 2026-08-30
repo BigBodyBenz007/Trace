@@ -22,6 +22,21 @@ import {
   defaultInjectionSiteSettings,
   emptyInjectionSiteCollection,
 } from "./injectionSite";
+import {
+  MEDICATION_DOSE_COMPLETION_TRANSACTION_KEY,
+  createMedicationDoseSchedule,
+  deleteMedicationDoseSchedule,
+  emptyMedicationDoseOccurrenceCollection,
+  emptyMedicationDoseScheduleCollection,
+  medicationDoseOccurrenceItem,
+  medicationDoseOccurrencesForDate,
+  skipMedicationDoseOccurrence,
+} from "./medicationDoseSchedule";
+import {
+  PROTOCOL_COMPOUND_TRANSACTION_KEY,
+  createProtocolCompoundOutcome,
+  emptyProtocolCompoundOutcomeCollection,
+} from "./protocolCompoundOutcome";
 
 function makeStorage(initial = {}, failOnSet = null) {
   const values = new Map(Object.entries(initial));
@@ -78,6 +93,12 @@ function emptyStructured(overrides = {}) {
       ? emptyDailyActionCollection()
       : key === "protocolOccurrences"
         ? emptyProtocolOccurrenceCollection()
+      : key === "protocolCompoundOutcomes"
+        ? emptyProtocolCompoundOutcomeCollection()
+      : key === "medicationDoseSchedules"
+        ? emptyMedicationDoseScheduleCollection()
+      : key === "medicationDoseOccurrences"
+        ? emptyMedicationDoseOccurrenceCollection()
       : key === "injectionSiteEntries"
         ? emptyInjectionSiteCollection()
       : key === "injectionSiteSettings"
@@ -106,6 +127,22 @@ function protocolOccurrence() {
     itemId: "protocol-item:one",
     date: "2026-08-22",
   }, new Date("2026-08-22T14:00:00.000Z"));
+}
+
+function protocolCompoundOutcome() {
+  const item = {
+    id: "protocol-item:one",
+    compound: { name: "Backup peptide" },
+    dose: { amount: 250, unit: "mcg" },
+    route: { code: "subcutaneous" },
+    schedule: { type: "weekly-days", weekdays: [6] },
+    notes: "Immutable backup snapshot",
+  };
+  return createProtocolCompoundOutcome({
+    id: "protocol:one",
+    name: "Backup Protocol",
+    notes: "Protocol snapshot",
+  }, [item], "2026-08-22", new Date("2026-08-22T12:00:00.000Z"));
 }
 
 function injectionSiteEntry() {
@@ -213,6 +250,7 @@ test("exports empty Trace data with stable version metadata and filename", async
   expect(result.data.structured.workoutDraft).toBeNull();
   expect(result.data.structured.dailyActions).toEqual(emptyDailyActionCollection());
   expect(result.data.structured.protocolOccurrences).toEqual(emptyProtocolOccurrenceCollection());
+  expect(result.data.structured.protocolCompoundOutcomes).toEqual(emptyProtocolCompoundOutcomeCollection());
   expect(result.data.structured.injectionSiteEntries).toEqual(emptyInjectionSiteCollection());
   expect(result.data.structured.injectionSiteSettings).toEqual(defaultInjectionSiteSettings());
   expect(traceBackupFilename(new Date(result.createdAt))).toBe("trace-backup-2026-08-12T10-20-30-000Z.json");
@@ -522,6 +560,33 @@ test("accepts older backups without protocol occurrence statuses and clears curr
   expect(JSON.parse(storage.value("protocolOccurrences"))).toEqual(emptyProtocolOccurrenceCollection());
 });
 
+test("round-trips Protocol compound outcomes with preview counts and safely defaults older backups", async () => {
+  const collection = { schemaVersion: 1, occurrences: [protocolCompoundOutcome()] };
+  const storage = makeStorage({ protocolCompoundOutcomes: JSON.stringify(collection) });
+  const exported = await createTraceBackup({ storage, openDatabase: async () => makePhotoDatabase() });
+  expect(exported.data.structured.protocolCompoundOutcomes).toEqual(collection);
+  expect(validateTraceBackup(exported).summary.protocolCompoundOutcomes).toBe(1);
+
+  const restoredStorage = makeStorage();
+  await restoreTraceBackup(exported, {
+    confirmed: true,
+    storage: restoredStorage,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(JSON.parse(restoredStorage.value("protocolCompoundOutcomes"))).toEqual(collection);
+
+  const olderStructured = emptyStructured();
+  delete olderStructured.protocolCompoundOutcomes;
+  const older = backup({ data: { structured: olderStructured, photos: [] } });
+  expect(validateTraceBackup(older).summary.protocolCompoundOutcomes).toBe(0);
+  await restoreTraceBackup(older, {
+    confirmed: true,
+    storage: restoredStorage,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(JSON.parse(restoredStorage.value("protocolCompoundOutcomes"))).toEqual(emptyProtocolCompoundOutcomeCollection());
+});
+
 test("accepts older backups without injection sites and replaces current site history with a safe empty collection", async () => {
   const structured = emptyStructured();
   delete structured.injectionSiteEntries;
@@ -583,6 +648,24 @@ test("rejects malformed protocol occurrence statuses before restore mutates stor
     openDatabase: async () => makePhotoDatabase(),
   })).rejects.toThrow("invalid protocol occurrence data");
   expect(storage.value("protocolOccurrences")).toBe(current);
+});
+
+test("rejects malformed Protocol compound outcomes before restore mutates storage", async () => {
+  const current = JSON.stringify({ schemaVersion: 1, occurrences: [protocolCompoundOutcome()] });
+  const malformed = {
+    schemaVersion: 1,
+    occurrences: [{ ...protocolCompoundOutcome(), date: "2026-02-30" }],
+  };
+  const value = backup({ data: { structured: emptyStructured({ protocolCompoundOutcomes: malformed }), photos: [] } });
+  const storage = makeStorage({ protocolCompoundOutcomes: current });
+
+  expect(() => validateTraceBackup(value)).toThrow("invalid Protocol compound outcome data");
+  await expect(restoreTraceBackup(value, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  })).rejects.toThrow("invalid Protocol compound outcome data");
+  expect(storage.value("protocolCompoundOutcomes")).toBe(current);
 });
 
 test("rejects malformed daily actions before restore mutates existing data", async () => {
@@ -878,8 +961,129 @@ test("photo transaction failure rolls already-written structured data back", asy
 });
 
 test("only audited Trace storage is exported; caches and migration markers are absent", async () => {
-  const storage = makeStorage({ memories: "[]", unrelated: JSON.stringify({ secret: true }) });
+  const storage = makeStorage({
+    memories: "[]",
+    unrelated: JSON.stringify({ secret: true }),
+    [MEDICATION_DOSE_COMPLETION_TRANSACTION_KEY]: JSON.stringify({ operation: "undo-completion" }),
+    [PROTOCOL_COMPOUND_TRANSACTION_KEY]: JSON.stringify({ operation: "save-results" }),
+  });
   const result = await createTraceBackup({ storage, openDatabase: async () => makePhotoDatabase() });
   expect(Object.keys(result.data.structured)).toEqual(TRACE_STORAGE_KEYS);
-  expect(JSON.stringify(result)).not.toMatch(/unrelated|service-worker|trace-app-shell|migrations/);
+  expect(JSON.stringify(result)).not.toMatch(/unrelated|service-worker|trace-app-shell|migrations|undo-completion|save-results/);
+});
+
+function backedUpDoseSchedule() {
+  return createMedicationDoseSchedule({
+    name: "Backup supplement",
+    classification: "supplement",
+    dose: { amount: 1, unit: "capsule" },
+    route: { code: "oral" },
+    notes: "Preserve this snapshot",
+    source: { type: "direct-entry", id: "medication-dose-source:backup" },
+    repeat: { type: "daily" },
+    startDate: "2026-08-22",
+    endDate: "2026-09-22",
+    time: "08:00",
+  }, { id: "schedule:backup", now: new Date("2026-08-20T12:00:00.000Z") });
+}
+
+test("backup round-trips dose schedules and occurrence state with preview counts", async () => {
+  const schedule = backedUpDoseSchedule();
+  const occurrence = skipMedicationDoseOccurrence(
+    medicationDoseOccurrenceItem(schedule, "2026-08-22"),
+    "Schedule conflict",
+    "",
+    new Date("2026-08-22T13:00:00.000Z")
+  );
+  const scheduleCollection = { schemaVersion: 1, schedules: [schedule] };
+  const occurrenceCollection = { schemaVersion: 1, occurrences: [occurrence] };
+  const storage = makeStorage({
+    medicationDoseSchedules: JSON.stringify(scheduleCollection),
+    medicationDoseOccurrences: JSON.stringify(occurrenceCollection),
+  });
+  const value = await createTraceBackup({ storage, openDatabase: async () => makePhotoDatabase() });
+  const validated = validateTraceBackup(value);
+  expect(validated.summary).toMatchObject({ medicationDoseSchedules: 1, medicationDoseOccurrences: 1 });
+  expect(validated.backup.data.structured.medicationDoseSchedules).toEqual(scheduleCollection);
+  expect(validated.backup.data.structured.medicationDoseOccurrences).toEqual(occurrenceCollection);
+
+  const restored = makeStorage();
+  await restoreTraceBackup(value, { confirmed: true, storage: restored, openDatabase: async () => makePhotoDatabase() });
+  expect(JSON.parse(restored.value("medicationDoseSchedules"))).toEqual(scheduleCollection);
+  expect(JSON.parse(restored.value("medicationDoseOccurrences"))).toEqual(occurrenceCollection);
+});
+
+test("backup round-trips deleted schedule tombstones without restoring actionable doses", async () => {
+  const deleted = deleteMedicationDoseSchedule(backedUpDoseSchedule(), "2026-08-22");
+  const scheduleCollection = { schemaVersion: 1, schedules: [deleted] };
+  const storage = makeStorage({
+    medicationDoseSchedules: JSON.stringify(scheduleCollection),
+    medicationDoseOccurrences: JSON.stringify(emptyMedicationDoseOccurrenceCollection()),
+  });
+  const value = await createTraceBackup({ storage, openDatabase: async () => makePhotoDatabase() });
+  const restored = makeStorage();
+  await restoreTraceBackup(value, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  const restoredSchedules = JSON.parse(restored.value("medicationDoseSchedules")).schedules;
+  expect(restoredSchedules).toEqual([deleted]);
+  expect(medicationDoseOccurrencesForDate(restoredSchedules, [], "2026-08-22")).toEqual([]);
+});
+
+test("older backups without dose scheduling collections restore safe empty versioned defaults", async () => {
+  const structured = emptyStructured();
+  delete structured.medicationDoseSchedules;
+  delete structured.medicationDoseOccurrences;
+  const value = backup({ data: { structured, photos: [] } });
+  const result = validateTraceBackup(value);
+  expect(result.summary).toMatchObject({ medicationDoseSchedules: 0, medicationDoseOccurrences: 0 });
+  const restored = makeStorage({
+    medicationDoseSchedules: JSON.stringify({ schemaVersion: 1, schedules: [backedUpDoseSchedule()] }),
+    medicationDoseOccurrences: JSON.stringify({ schemaVersion: 1, occurrences: [] }),
+  });
+  await restoreTraceBackup(value, { confirmed: true, storage: restored, openDatabase: async () => makePhotoDatabase() });
+  expect(JSON.parse(restored.value("medicationDoseSchedules"))).toEqual(emptyMedicationDoseScheduleCollection());
+  expect(JSON.parse(restored.value("medicationDoseOccurrences"))).toEqual(emptyMedicationDoseOccurrenceCollection());
+});
+
+test("malformed dose scheduling data is rejected before mutation", async () => {
+  const current = JSON.stringify({ schemaVersion: 1, schedules: [backedUpDoseSchedule()] });
+  const malformedSchedule = backedUpDoseSchedule();
+  const malformed = {
+    schemaVersion: 1,
+    schedules: [{
+      ...malformedSchedule,
+      revisions: [{ ...malformedSchedule.revisions[0], time: "99:00" }],
+    }],
+  };
+  const value = backup({ data: { structured: emptyStructured({ medicationDoseSchedules: malformed }), photos: [] } });
+  const storage = makeStorage({ medicationDoseSchedules: current });
+  expect(() => validateTraceBackup(value)).toThrow("invalid medication dose schedule data");
+  await expect(restoreTraceBackup(value, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  })).rejects.toThrow("invalid medication dose schedule data");
+  expect(storage.value("medicationDoseSchedules")).toBe(current);
+});
+
+test("dose occurrence restore failure rolls the already-written schedule collection back", async () => {
+  const oldSchedules = JSON.stringify(emptyMedicationDoseScheduleCollection());
+  const oldOccurrences = JSON.stringify(emptyMedicationDoseOccurrenceCollection());
+  const storage = makeStorage({
+    medicationDoseSchedules: oldSchedules,
+    medicationDoseOccurrences: oldOccurrences,
+  }, "medicationDoseOccurrences");
+  const value = backup({ data: { structured: emptyStructured({
+    medicationDoseSchedules: { schemaVersion: 1, schedules: [backedUpDoseSchedule()] },
+  }), photos: [] } });
+  await expect(restoreTraceBackup(value, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  })).rejects.toThrow("previous data was restored");
+  expect(storage.value("medicationDoseSchedules")).toBe(oldSchedules);
+  expect(storage.value("medicationDoseOccurrences")).toBe(oldOccurrences);
 });

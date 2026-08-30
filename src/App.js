@@ -109,6 +109,33 @@ import {
   writeProtocolOccurrences,
 } from "./services/protocolOccurrence";
 import {
+  createMedicationDoseSchedule,
+  deleteMedicationDoseSchedule as createDeletedMedicationDoseSchedule,
+  endMedicationDoseSchedule as createEndedMedicationDoseSchedule,
+  findMedicationDoseDuplicate,
+  findMedicationDoseOccurrenceDuplicate,
+  getMedicationDoseScheduleError,
+  medicationDoseDateKey,
+  persistMedicationDoseCompletion,
+  persistMedicationDoseCompletionUndo,
+  readMedicationDoseOccurrences,
+  readMedicationDoseSchedules,
+  recoverPendingMedicationDoseCompletion,
+  removeMedicationDoseOccurrence as createRemovedMedicationDoseOccurrence,
+  rescheduleMedicationDoseOccurrence as createRescheduledMedicationDoseOccurrence,
+  skipMedicationDoseOccurrence as createSkippedMedicationDoseOccurrence,
+  updateMedicationDoseSchedule as createUpdatedMedicationDoseSchedule,
+  upsertMedicationDoseOccurrence,
+  writeMedicationDoseOccurrences,
+  writeMedicationDoseSchedules,
+} from "./services/medicationDoseSchedule";
+import {
+  persistProtocolCompoundResults,
+  persistProtocolCompoundUndo,
+  readProtocolCompoundOutcomes,
+  recoverPendingProtocolCompoundTransaction,
+} from "./services/protocolCompoundOutcome";
+import {
   appendInjectionSession,
   createInjectionSession,
   defaultInjectionSiteSettings,
@@ -240,8 +267,11 @@ function App() {
     document.documentElement.setAttribute("data-trace-theme", appSettings.themeId);
   }, [appSettings.themeId]);
   const [medicationEntries, setMedicationEntries] = useState([]);
+  const [medicationDoseSchedules, setMedicationDoseSchedules] = useState([]);
+  const [medicationDoseOccurrences, setMedicationDoseOccurrences] = useState([]);
   const [protocols, setProtocols] = useState([]);
   const [protocolOccurrences, setProtocolOccurrences] = useState([]);
+  const [protocolCompoundOutcomes, setProtocolCompoundOutcomes] = useState([]);
   const [injectionSiteData, setInjectionSiteData] = useState(() => emptyInjectionSiteCollection());
   const [injectionSiteSettings, setInjectionSiteSettings] = useState(() => defaultInjectionSiteSettings());
   const [plannedWorkouts, setPlannedWorkouts] = useState([]);
@@ -482,6 +512,17 @@ function App() {
 
   useEffect(() => {
     try {
+      recoverPendingMedicationDoseCompletion(localStorage);
+      recoverPendingProtocolCompoundTransaction(localStorage);
+    } catch (error) {
+      setStorageError(
+        "Trace couldn't recover an interrupted medication or Protocol result update. The pending data was left unchanged."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
       const savedMedicationEntries = localStorage.getItem("medicationEntries");
       if (!savedMedicationEntries) return;
       const parsedEntries = JSON.parse(savedMedicationEntries);
@@ -508,10 +549,24 @@ function App() {
 
   useEffect(() => {
     try {
-      setProtocolOccurrences(readProtocolOccurrences(localStorage));
+      const savedMedicationDoseSchedules = readMedicationDoseSchedules(localStorage);
+      const savedMedicationDoseOccurrences = readMedicationDoseOccurrences(localStorage);
+      setMedicationDoseSchedules(savedMedicationDoseSchedules);
+      setMedicationDoseOccurrences(savedMedicationDoseOccurrences);
     } catch (error) {
       setStorageError(
-        "Trace couldn't read the saved protocol occurrence statuses. The stored value was left unchanged."
+        "Trace couldn't read the saved medication dose schedules. The stored value was left unchanged."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setProtocolOccurrences(readProtocolOccurrences(localStorage));
+      setProtocolCompoundOutcomes(readProtocolCompoundOutcomes(localStorage));
+    } catch (error) {
+      setStorageError(
+        "Trace couldn't read the saved protocol occurrence results. The stored value was left unchanged."
       );
     }
   }, []);
@@ -918,11 +973,22 @@ function App() {
 
   async function synchronizeRestoredAppState() {
     try {
+      recoverPendingMedicationDoseCompletion(localStorage);
+      recoverPendingProtocolCompoundTransaction(localStorage);
+      const restoredMedicationEntriesRaw = localStorage.getItem("medicationEntries");
+      const restoredMedicationEntries = restoredMedicationEntriesRaw
+        ? JSON.parse(restoredMedicationEntriesRaw)
+        : [];
+      if (!Array.isArray(restoredMedicationEntries)) throw new Error("Invalid medication data.");
       const restoredAppSettings = readAppSettings(localStorage);
       const restoredPlannedWorkouts = readPlannedWorkouts(localStorage);
       const restoredDailyActions = readDailyActions(localStorage);
       const restoredProtocols = readProtocols(localStorage);
       const restoredProtocolOccurrences = readProtocolOccurrences(localStorage);
+      const restoredProtocolCompoundOutcomes = readProtocolCompoundOutcomes(localStorage);
+      const restoredMedicationDoseSchedules = readMedicationDoseSchedules(localStorage);
+      const restoredMedicationDoseOccurrences = readMedicationDoseOccurrences(localStorage);
+      const restoredMedicationCompounds = readCompoundDefinitions(localStorage);
       const restoredInjectionSiteData = readInjectionSiteData(localStorage, restoredProtocols);
       const restoredInjectionSiteSettings = readInjectionSiteSettings(localStorage);
       const restoredWorkoutDraft = readWorkoutDraft(localStorage);
@@ -931,10 +997,15 @@ function App() {
         onCreateObjectUrl: (url) => activeObjectUrlsRef.current.add(url),
       }))) || [];
       setAppSettings(restoredAppSettings);
+      setMedicationEntries(restoredMedicationEntries);
+      setMedicationCompounds(restoredMedicationCompounds);
+      setMedicationDoseSchedules(restoredMedicationDoseSchedules);
+      setMedicationDoseOccurrences(restoredMedicationDoseOccurrences);
       setPlannedWorkouts(restoredPlannedWorkouts);
       setDailyActions(restoredDailyActions);
       setProtocols(restoredProtocols);
       setProtocolOccurrences(restoredProtocolOccurrences);
+      setProtocolCompoundOutcomes(restoredProtocolCompoundOutcomes);
       setInjectionSiteData(restoredInjectionSiteData);
       setInjectionSiteSettings(restoredInjectionSiteSettings);
       setActiveWorkoutDraft(restoredWorkoutDraft);
@@ -1073,7 +1144,7 @@ function App() {
       setMedicationEntries(updatedEntries);
       showConfirmation(medicationEntryConfirmation(newEntry));
       setStorageError("");
-      return true;
+      return newEntry;
     } catch (error) {
       setStorageError(storageMessage("save this medication entry"));
       return false;
@@ -1359,6 +1430,217 @@ function App() {
     }
   }
 
+  function saveMedicationDoseSchedule(draft, duplicateConfirmed = false) {
+    const schedule = createMedicationDoseSchedule(draft);
+    if (!schedule) {
+      return { status: "invalid", message: getMedicationDoseScheduleError(draft) };
+    }
+    const duplicate = findMedicationDoseDuplicate(
+      medicationDoseSchedules,
+      medicationDoseOccurrences,
+      schedule
+    );
+    if (duplicate && !duplicateConfirmed) return { status: "duplicate", duplicate };
+    try {
+      const saved = writeMedicationDoseSchedules(localStorage, [
+        ...medicationDoseSchedules,
+        schedule,
+      ]);
+      setMedicationDoseSchedules(saved);
+      setStorageError("");
+      showConfirmation("Dose scheduled");
+      return { status: "saved", schedule };
+    } catch (error) {
+      setStorageError(storageMessage("schedule this dose"));
+      return { status: "error", message: "The dose schedule could not be saved." };
+    }
+  }
+
+  function updateMedicationDoseSeries(id, draft, duplicateConfirmed = false) {
+    const existing = medicationDoseSchedules.find((schedule) => schedule.id === id);
+    const effectiveFrom = medicationDoseDateKey();
+    const schedule = createUpdatedMedicationDoseSchedule(
+      existing,
+      draft,
+      effectiveFrom
+    );
+    if (!schedule) {
+      return { status: "invalid", message: getMedicationDoseScheduleError(draft) };
+    }
+    const duplicate = findMedicationDoseDuplicate(
+      medicationDoseSchedules,
+      medicationDoseOccurrences,
+      schedule,
+      { excludeScheduleId: id }
+    );
+    if (duplicate && !duplicateConfirmed) return { status: "duplicate", duplicate };
+    const updated = medicationDoseSchedules.map((item) => item.id === id ? schedule : item);
+    try {
+      const saved = writeMedicationDoseSchedules(localStorage, updated);
+      setMedicationDoseSchedules(saved);
+      setStorageError("");
+      showConfirmation("Dose schedule updated");
+      return { status: "saved", schedule };
+    } catch (error) {
+      setStorageError(storageMessage("update this dose schedule"));
+      return { status: "error", message: "The dose schedule could not be updated." };
+    }
+  }
+
+  function endMedicationDoseSeries(id) {
+    const existing = medicationDoseSchedules.find((schedule) => schedule.id === id);
+    const schedule = createEndedMedicationDoseSchedule(existing, medicationDoseDateKey());
+    if (!schedule) return false;
+    try {
+      const saved = writeMedicationDoseSchedules(
+        localStorage,
+        medicationDoseSchedules.map((item) => item.id === id ? schedule : item)
+      );
+      setMedicationDoseSchedules(saved);
+      setStorageError("");
+      showConfirmation("Dose schedule ended");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("end this dose schedule"));
+      return false;
+    }
+  }
+
+  function deleteMedicationDoseSeries(id) {
+    const existing = medicationDoseSchedules.find((schedule) => schedule.id === id);
+    const schedule = createDeletedMedicationDoseSchedule(existing, medicationDoseDateKey());
+    if (!schedule) return false;
+    try {
+      const saved = writeMedicationDoseSchedules(
+        localStorage,
+        medicationDoseSchedules.map((item) => item.id === id ? schedule : item)
+      );
+      setMedicationDoseSchedules(saved);
+      setStorageError("");
+      showConfirmation("Dose schedule deleted");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this dose schedule"));
+      return false;
+    }
+  }
+
+  function medicationDoseActionIsAllowed(item, activeOnly = false) {
+    const schedule = medicationDoseSchedules.find(({ id }) => id === item?.scheduleId);
+    if (!schedule || schedule.status === "deleted") return false;
+    if (activeOnly && schedule.status !== "active") return false;
+    if (!schedule.inactiveFrom) return true;
+    return schedule.status === "ended"
+      ? item.scheduledDate <= schedule.inactiveFrom
+      : item.scheduledDate < schedule.inactiveFrom;
+  }
+
+  function completeScheduledMedicationDose(item) {
+    if (!medicationDoseActionIsAllowed(item)) {
+      return { status: "error", message: "This dose is no longer available because its schedule ended or was deleted." };
+    }
+    try {
+      const result = persistMedicationDoseCompletion({
+        storage: localStorage,
+        medicationEntries,
+        occurrences: medicationDoseOccurrences,
+        item,
+      });
+      if (!result) {
+        return { status: "error", message: "The scheduled dose could not be completed." };
+      }
+      if (!result.alreadyCompleted) {
+        setMedicationEntries(result.medicationEntries);
+        setMedicationDoseOccurrences(result.occurrences);
+      }
+      setStorageError("");
+      return { status: "saved", occurrence: result.occurrence, historyEntry: result.historyEntry };
+    } catch (error) {
+      setStorageError(storageMessage("complete this scheduled dose"));
+      return { status: "error", message: error.message || "The scheduled dose could not be completed." };
+    }
+  }
+
+  function undoCompletedScheduledMedicationDose(item) {
+    try {
+      const result = persistMedicationDoseCompletionUndo({
+        storage: localStorage,
+        medicationEntries,
+        occurrences: medicationDoseOccurrences,
+        item,
+      });
+      if (!result) {
+        return { status: "error", message: "The medication dose completion could not be undone." };
+      }
+      if (!result.alreadyUndone) {
+        setMedicationEntries(result.medicationEntries);
+        setMedicationDoseOccurrences(result.occurrences);
+      }
+      setStorageError("");
+      return { status: "saved", occurrence: result.occurrence };
+    } catch (error) {
+      setStorageError(storageMessage("undo this medication dose completion"));
+      return {
+        status: "error",
+        message: error.message || "The medication dose completion could not be undone.",
+      };
+    }
+  }
+
+  function saveMedicationDoseOccurrence(occurrence, action) {
+    const updated = occurrence && upsertMedicationDoseOccurrence(
+      medicationDoseOccurrences,
+      occurrence
+    );
+    if (!updated) return { status: "error", message: `The scheduled dose could not be ${action}.` };
+    try {
+      const saved = writeMedicationDoseOccurrences(localStorage, updated);
+      setMedicationDoseOccurrences(saved);
+      setStorageError("");
+      return { status: "saved", occurrence };
+    } catch (error) {
+      setStorageError(storageMessage(`${action} this scheduled dose`));
+      return { status: "error", message: `The scheduled dose could not be ${action}.` };
+    }
+  }
+
+  function skipScheduledMedicationDose(item, reason = "", customReason = "") {
+    if (!medicationDoseActionIsAllowed(item)) {
+      return { status: "error", message: "This dose is no longer available because its schedule ended or was deleted." };
+    }
+    return saveMedicationDoseOccurrence(
+      createSkippedMedicationDoseOccurrence(item, reason, customReason),
+      "skipped"
+    );
+  }
+
+  function rescheduleScheduledMedicationDose(item, date, time, duplicateConfirmed = false) {
+    if (!medicationDoseActionIsAllowed(item, true)) {
+      return { status: "error", message: "Only an active dose schedule can be rescheduled." };
+    }
+    const duplicate = findMedicationDoseOccurrenceDuplicate(
+      medicationDoseSchedules,
+      medicationDoseOccurrences,
+      { ...item, scheduledDate: date, time },
+      { excludeOccurrenceId: item.id }
+    );
+    if (duplicate && !duplicateConfirmed) return { status: "duplicate", duplicate };
+    return saveMedicationDoseOccurrence(
+      createRescheduledMedicationDoseOccurrence(item, date, time),
+      "rescheduled"
+    );
+  }
+
+  function removeScheduledMedicationDose(item) {
+    if (!medicationDoseActionIsAllowed(item)) {
+      return { status: "error", message: "This dose is no longer available because its schedule ended or was deleted." };
+    }
+    return saveMedicationDoseOccurrence(
+      createRemovedMedicationDoseOccurrence(item),
+      "removed"
+    );
+  }
+
   function restorePlannedWorkout(plannedWorkout, originalIndex) {
     if (plannedWorkouts.some(({ id }) => id === plannedWorkout?.id)) {
       return {
@@ -1531,6 +1813,56 @@ function App() {
 
   function skipProtocolOccurrence(protocolId, itemId, date, reason = "", customReason = "") {
     return saveProtocolOccurrenceStatus(protocolId, itemId, date, "skipped", reason, customReason);
+  }
+
+  function saveProtocolCompoundResults(candidate, decisions) {
+    try {
+      const result = persistProtocolCompoundResults({
+        storage: localStorage,
+        outcomes: protocolCompoundOutcomes,
+        protocolOccurrences,
+        medicationEntries,
+        candidate,
+        decisions,
+      });
+      if (!result) {
+        return { status: "error", message: "The Protocol compound results could not be saved." };
+      }
+      setMedicationEntries(result.medicationEntries);
+      setProtocolCompoundOutcomes(result.outcomes);
+      setProtocolOccurrences(result.protocolOccurrences);
+      setStorageError("");
+      return { status: "saved", outcome: result.outcome, completionStatus: result.status };
+    } catch (error) {
+      setStorageError(storageMessage("save these Protocol compound results"));
+      return { status: "error", message: error.message || "The Protocol compound results could not be saved." };
+    }
+  }
+
+  function undoProtocolCompoundResult(outcomeId, componentId) {
+    try {
+      const result = persistProtocolCompoundUndo({
+        storage: localStorage,
+        outcomes: protocolCompoundOutcomes,
+        protocolOccurrences,
+        medicationEntries,
+        outcomeId,
+        componentId,
+      });
+      if (!result) {
+        return { status: "error", message: "The Protocol compound result could not be undone." };
+      }
+      if (!result.alreadyUndone) {
+        setMedicationEntries(result.medicationEntries);
+        setProtocolCompoundOutcomes(result.outcomes);
+        setProtocolOccurrences(result.protocolOccurrences);
+      }
+      setStorageError("");
+      return { status: "saved", outcome: result.outcome };
+    } catch (error) {
+      setStorageError(storageMessage("undo this Protocol compound result"));
+      return { status: "error", message: error.message || "The Protocol compound result could not be undone." };
+    }
   }
 
   function saveInjectionSession(draft) {
@@ -2158,9 +2490,12 @@ function App() {
           plannedWorkouts={plannedWorkouts}
           protocols={protocols}
           protocolOccurrences={protocolOccurrences}
+          protocolCompoundOutcomes={protocolCompoundOutcomes}
           workoutEntries={workoutEntries}
           activeWorkoutDraft={activeWorkoutDraft}
           dailyActions={dailyActions}
+          medicationDoseSchedules={medicationDoseSchedules}
+          medicationDoseOccurrences={medicationDoseOccurrences}
           savedExercises={savedExercises}
           saveExerciseDefinitions={saveExerciseDefinitions}
           createPlannedWorkout={createPlannedWorkout}
@@ -2179,6 +2514,13 @@ function App() {
           skipDailyAction={skipDailyAction}
           completeProtocolOccurrence={completeProtocolOccurrence}
           skipProtocolOccurrence={skipProtocolOccurrence}
+          saveProtocolCompoundResults={saveProtocolCompoundResults}
+          undoProtocolCompoundResult={undoProtocolCompoundResult}
+          completeMedicationDoseOccurrence={completeScheduledMedicationDose}
+          undoMedicationDoseCompletion={undoCompletedScheduledMedicationDose}
+          skipMedicationDoseOccurrence={skipScheduledMedicationDose}
+          rescheduleMedicationDoseOccurrence={rescheduleScheduledMedicationDose}
+          removeMedicationDoseOccurrence={removeScheduledMedicationDose}
           showToast={showConfirmation}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
@@ -2210,6 +2552,13 @@ function App() {
           onBack={() => setPage("home")}
           medicationEntries={medicationEntries}
           compounds={medicationCompounds}
+          medicationDoseSchedules={medicationDoseSchedules}
+          medicationDoseOccurrences={medicationDoseOccurrences}
+          saveMedicationDoseSchedule={saveMedicationDoseSchedule}
+          updateMedicationDoseSchedule={updateMedicationDoseSeries}
+          endMedicationDoseSchedule={endMedicationDoseSeries}
+          deleteMedicationDoseSchedule={deleteMedicationDoseSeries}
+          onOpenToday={() => setPage("today")}
           saveMedicationEntry={saveMedicationEntry}
           saveCompoundDefinition={saveCompoundDefinition}
           updateCompoundDefinition={updateSavedCompound}
