@@ -6,6 +6,7 @@ import {
 } from "../services/journalVaultCrypto";
 import JournalCredentialField, { JournalPasswordField } from "./JournalCredentialField";
 import JournalDisableDialog from "./JournalDisableDialog";
+import JournalPasswordSaveControls from "./JournalPasswordSaveControls";
 import JournalRecoveryKey from "./JournalRecoveryKey";
 import PrivacyDialog from "./PrivacyDialog";
 
@@ -31,6 +32,7 @@ export default function JournalPrivacySettings({
   const [passphrase, setPassphrase] = useState("");
   const [confirmPassphrase, setConfirmPassphrase] = useState("");
   const [recoveryPhrase, setRecoveryPhrase] = useState("");
+  const [passwordAcknowledged, setPasswordAcknowledged] = useState(false);
   const [recoveryAcknowledged, setRecoveryAcknowledged] = useState(false);
   const [credentialType, setCredentialType] = useState("passphrase");
   const [credentialValue, setCredentialValue] = useState("");
@@ -45,6 +47,7 @@ export default function JournalPrivacySettings({
     setPassphrase("");
     setConfirmPassphrase("");
     setRecoveryPhrase("");
+    setPasswordAcknowledged(false);
     setRecoveryAcknowledged(false);
     setCredentialValue("");
     setCredentialType("passphrase");
@@ -55,6 +58,9 @@ export default function JournalPrivacySettings({
     setStatus("");
     setError("");
     setDialog(nextDialog);
+    if (nextDialog === "setup" || nextDialog === "change-passphrase") {
+      setPasswordAcknowledged(false);
+    }
     if (nextDialog === "rotate") {
       try {
         setRecoveryPhrase(generateRecoveryPhrase());
@@ -76,6 +82,10 @@ export default function JournalPrivacySettings({
       setError("The Journal passwords do not match.");
       return;
     }
+    if (!passwordAcknowledged) {
+      setError("Confirm that you saved your Journal password before continuing.");
+      return;
+    }
     try {
       setRecoveryPhrase(generateRecoveryPhrase());
       setRecoveryAcknowledged(false);
@@ -88,6 +98,11 @@ export default function JournalPrivacySettings({
 
   async function finishSetup(event) {
     event.preventDefault();
+    if (!passwordAcknowledged) {
+      setStep("credentials");
+      setError("Confirm that you saved your Journal password before enabling Journal Lock.");
+      return;
+    }
     if (!recoveryAcknowledged) {
       setError("Confirm that you saved your recovery phrase before enabling Journal Lock.");
       return;
@@ -102,12 +117,11 @@ export default function JournalPrivacySettings({
       setPassphrase("");
       setConfirmPassphrase("");
       setRecoveryPhrase("");
+      setPasswordAcknowledged(false);
       setRecoveryAcknowledged(false);
     } catch (setupError) {
       setError("Journal Lock could not be enabled. Your previous Journal data was left unchanged.");
       setStep("credentials");
-      setPassphrase("");
-      setConfirmPassphrase("");
       setRecoveryPhrase("");
       setRecoveryAcknowledged(false);
     } finally {
@@ -125,6 +139,10 @@ export default function JournalPrivacySettings({
       setError("The new Journal passwords do not match.");
       return;
     }
+    if (!passwordAcknowledged) {
+      setError("Confirm that you saved your Journal password before changing it.");
+      return;
+    }
     setBusy(true);
     setError("");
     try {
@@ -134,10 +152,8 @@ export default function JournalPrivacySettings({
       setCredentialValue("");
       setPassphrase("");
       setConfirmPassphrase("");
+      setPasswordAcknowledged(false);
     } catch (changeError) {
-      setCredentialValue("");
-      setPassphrase("");
-      setConfirmPassphrase("");
       setError("Journal credentials could not be verified. Nothing was changed.");
     } finally {
       setBusy(false);
@@ -223,10 +239,10 @@ export default function JournalPrivacySettings({
         <PrivacyDialog title="Set up Journal Lock" description="Choose a Journal password, then save the one-time recovery phrase." onCancel={closeDialog}>
           {step === "credentials" ? (
             <form onSubmit={continueSetup}>
-              <JournalPasswordField id="journal-setup-passphrase" label="Journal password" value={passphrase} setValue={setPassphrase} autoComplete="new-password" />
+              <JournalPasswordField id="journal-setup-passphrase" label="Journal password" value={passphrase} setValue={(value) => { setPassphrase(value); setPasswordAcknowledged(false); }} autoComplete="new-password" copyable />
               <JournalPasswordField id="journal-setup-confirm" label="Confirm Journal password" value={confirmPassphrase} setValue={setConfirmPassphrase} autoComplete="new-password" />
               <p>Use at least 12 characters. Long pasted password-manager values are welcome.</p>
-              <p><strong>Trace cannot recover your Journal password or recovery phrase. If you lose both, your existing encrypted Journal is permanently unrecoverable. Your only option will be to erase it and start over.</strong></p>
+              <JournalPasswordSaveControls acknowledged={passwordAcknowledged} setAcknowledged={setPasswordAcknowledged} />
               {error && <p className="journal-error" role="alert">{error}</p>}
               <div className="journal-actions">
                 <button className="trace-action trace-action--primary" type="submit">Continue</button>
@@ -250,8 +266,9 @@ export default function JournalPrivacySettings({
         <PrivacyDialog title="Change Journal Password" description="Verify access, then create a new Journal password. Journal content will not be re-encrypted." onCancel={closeDialog}>
           <form onSubmit={changePassphrase}>
             <JournalCredentialField type={credentialType} setType={setCredentialType} value={credentialValue} setValue={setCredentialValue} recoveryFormat={recoveryFormat} />
-            <JournalPasswordField id="journal-new-passphrase" label="New Journal password" value={passphrase} setValue={setPassphrase} autoComplete="new-password" />
+            <JournalPasswordField id="journal-new-passphrase" label="New Journal password" value={passphrase} setValue={(value) => { setPassphrase(value); setPasswordAcknowledged(false); }} autoComplete="new-password" copyable />
             <JournalPasswordField id="journal-confirm-new-passphrase" label="Confirm new Journal password" value={confirmPassphrase} setValue={setConfirmPassphrase} autoComplete="new-password" />
+            <JournalPasswordSaveControls acknowledged={passwordAcknowledged} setAcknowledged={setPasswordAcknowledged} />
             {error && <p className="journal-error" role="alert">{error}</p>}
             <div className="journal-actions"><button className="trace-action trace-action--primary" disabled={busy} type="submit">Change Journal Password</button><button className="trace-action trace-action--secondary" disabled={busy} type="button" onClick={closeDialog}>Cancel</button></div>
           </form>

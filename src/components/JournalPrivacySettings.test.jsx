@@ -5,6 +5,11 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { APP_THEMES } from "../services/appThemes";
 import { JOURNAL_RECOVERY_FORMAT_LEGACY } from "../services/journalVaultCrypto";
 import JournalPrivacySettings from "./JournalPrivacySettings";
+import {
+  JOURNAL_PASSWORD_ACKNOWLEDGMENT,
+  JOURNAL_PASSWORD_LOSS_WARNING,
+  JOURNAL_PASSWORD_SAVE_HELPER,
+} from "./JournalPasswordSaveControls";
 
 const callbacks = {
   onAutoLockChange: jest.fn(),
@@ -45,15 +50,23 @@ test("privacy dialog is named, traps focus, closes safely with Escape, and resto
   expect(setup).toHaveFocus();
 });
 
-test("setup requires matching passphrases and recovery-phrase acknowledgment", async () => {
+test("setup preserves validation failures and requires separate password and recovery acknowledgments", async () => {
   render(<JournalPrivacySettings enabled={false} unlocked={false} {...callbacks} />);
   fireEvent.click(screen.getByRole("button", { name: "Set up Journal Lock" }));
   fireEvent.change(screen.getByLabelText("Journal password"), { target: { value: "twelve characters plus" } });
   fireEvent.change(screen.getByLabelText("Confirm Journal password"), { target: { value: "different passphrase" } });
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   expect(screen.getByRole("alert")).toHaveTextContent("do not match");
+  expect(screen.getByLabelText("Journal password")).toHaveValue("twelve characters plus");
+  expect(screen.getByLabelText("Confirm Journal password")).toHaveValue("different passphrase");
 
   fireEvent.change(screen.getByLabelText("Confirm Journal password"), { target: { value: "twelve characters plus" } });
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("saved your Journal password");
+  expect(screen.queryByRole("heading", { name: "Your Journal Recovery Phrase" })).not.toBeInTheDocument();
+  expect(screen.getByText(JOURNAL_PASSWORD_SAVE_HELPER)).toBeInTheDocument();
+  expect(screen.getByText(JOURNAL_PASSWORD_LOSS_WARNING)).toBeInTheDocument();
+  fireEvent.click(screen.getByLabelText(JOURNAL_PASSWORD_ACKNOWLEDGMENT));
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   expect(screen.getByRole("heading", { name: "Your Journal Recovery Phrase" })).toBeInTheDocument();
   expect(within(screen.getByTestId("journal-recovery-phrase")).getAllByRole("listitem")).toHaveLength(12);
@@ -75,6 +88,7 @@ test("recovery phrase copy failure leaves a selectable manual fallback", async (
   fireEvent.click(screen.getByRole("button", { name: "Set up Journal Lock" }));
   fireEvent.change(screen.getByLabelText("Journal password"), { target: { value: "twelve characters plus" } });
   fireEvent.change(screen.getByLabelText("Confirm Journal password"), { target: { value: "twelve characters plus" } });
+  fireEvent.click(screen.getByLabelText(JOURNAL_PASSWORD_ACKNOWLEDGMENT));
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
   const fallback = screen.getByLabelText("Recovery phrase for manual selection");
   expect(fallback).toHaveAttribute("readonly");
@@ -107,9 +121,16 @@ test("legacy vaults alone expose legacy-key labels and the 12-word replacement a
 test("change-passphrase and shared turn-off dialogs require a credential", async () => {
   render(<JournalPrivacySettings enabled unlocked autoLockMinutes={5} {...callbacks} />);
   fireEvent.click(screen.getByRole("button", { name: "Change Journal Password" }));
-  fireEvent.change(screen.getByLabelText("Current Journal password"), { target: { value: "current credential" } });
+  const currentPassword = screen.getByLabelText("Current Journal password");
+  expect(currentPassword).toHaveAttribute("autocomplete", "current-password");
+  expect(currentPassword).toHaveAttribute("name", "password");
+  expect(screen.getByLabelText("New Journal password")).toHaveAttribute("autocomplete", "new-password");
+  expect(screen.getByLabelText("New Journal password")).toHaveAttribute("name", "password");
+  expect(within(screen.getByRole("dialog")).getByRole("button", { name: "Copy Journal Password" })).toBeInTheDocument();
+  fireEvent.change(currentPassword, { target: { value: "current credential" } });
   fireEvent.change(screen.getByLabelText("New Journal password"), { target: { value: "replacement passphrase" } });
   fireEvent.change(screen.getByLabelText("Confirm new Journal password"), { target: { value: "replacement passphrase" } });
+  fireEvent.click(screen.getByLabelText(JOURNAL_PASSWORD_ACKNOWLEDGMENT));
   fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Change Journal Password" }));
   await waitFor(() => expect(callbacks.onChangePassphrase).toHaveBeenCalledWith(
     { type: "passphrase", value: "current credential" },
@@ -124,16 +145,62 @@ test("change-passphrase and shared turn-off dialogs require a credential", async
   expect(screen.getByRole("status")).toHaveTextContent("Journal Lock turned off.");
 });
 
-test("privacy surfaces use shared theme tokens and contain recovery content at mobile widths in all six themes", () => {
+test("change password requires acknowledgment and preserves generated values after validation failure", async () => {
+  render(<JournalPrivacySettings enabled unlocked autoLockMinutes={5} {...callbacks} />);
+  fireEvent.click(screen.getByRole("button", { name: "Change Journal Password" }));
+  const dialog = screen.getByRole("dialog", { name: "Change Journal Password" });
+  const generatedPassword = "Apple generated change value 11!";
+  fireEvent.change(screen.getByLabelText("Current Journal password"), { target: { value: "current credential" } });
+  fireEvent.change(screen.getByLabelText("New Journal password"), { target: { value: generatedPassword } });
+  fireEvent.change(screen.getByLabelText("Confirm new Journal password"), { target: { value: "different generated value" } });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Change Journal Password" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("do not match");
+  expect(screen.getByLabelText("New Journal password")).toHaveValue(generatedPassword);
+  fireEvent.change(screen.getByLabelText("Confirm new Journal password"), { target: { value: generatedPassword } });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Change Journal Password" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("saved your Journal password");
+  expect(callbacks.onChangePassphrase).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByLabelText(JOURNAL_PASSWORD_ACKNOWLEDGMENT));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Change Journal Password" }));
+  await waitFor(() => expect(callbacks.onChangePassphrase).toHaveBeenCalledWith(
+    { type: "passphrase", value: "current credential" },
+    generatedPassword
+  ));
+});
+
+test("a generated or pasted setup password submits unchanged", async () => {
+  render(<JournalPrivacySettings enabled={false} unlocked={false} {...callbacks} />);
+  fireEvent.click(screen.getByRole("button", { name: "Set up Journal Lock" }));
+  const generatedPassword = "iOS generated & pasted value 12! Z";
+  fireEvent.paste(screen.getByLabelText("Journal password"), { clipboardData: { getData: () => generatedPassword } });
+  fireEvent.change(screen.getByLabelText("Journal password"), { target: { value: generatedPassword } });
+  fireEvent.change(screen.getByLabelText("Confirm Journal password"), { target: { value: generatedPassword } });
+  fireEvent.click(screen.getByLabelText(JOURNAL_PASSWORD_ACKNOWLEDGMENT));
+  fireEvent.click(screen.getByRole("button", { name: "Continue" }));
+  const recoveryPhrase = screen.getByLabelText("Recovery phrase for manual selection").value;
+  fireEvent.click(screen.getByLabelText("I saved my recovery phrase and understand that if I lose both it and my Journal password, my existing Journal cannot be recovered."));
+  fireEvent.click(screen.getByRole("button", { name: "Confirm and Enable Lock" }));
+  await waitFor(() => expect(callbacks.onEnable).toHaveBeenCalledWith({ passphrase: generatedPassword, recoveryPhrase }));
+});
+
+test("password controls use shared theme tokens and remain contained at 320px and 390px in all themes and motion modes", () => {
   expect(APP_THEMES).toHaveLength(6);
-  APP_THEMES.forEach(({ id }) => {
-    document.documentElement.setAttribute("data-trace-theme", id);
-    const view = render(<JournalPrivacySettings enabled={false} unlocked={false} {...callbacks} />);
-    expect(screen.getByRole("heading", { name: "Journal Privacy" })).toBeInTheDocument();
-    view.unmount();
+  [320, 390].forEach((width) => {
+    Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+    APP_THEMES.forEach(({ id }) => {
+      [false, true].forEach((reducedMotion) => {
+        document.documentElement.setAttribute("data-trace-theme", id);
+        window.matchMedia = jest.fn(() => ({ matches: reducedMotion, addEventListener: jest.fn(), removeEventListener: jest.fn() }));
+        const view = render(<JournalPrivacySettings enabled={false} unlocked={false} {...callbacks} />);
+        fireEvent.click(screen.getByRole("button", { name: "Set up Journal Lock" }));
+        expect(screen.getByRole("button", { name: "Copy Journal Password" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Show journal password" })).toBeInTheDocument();
+        view.unmount();
+      });
+    });
   });
   const css = fs.readFileSync(path.join(process.cwd(), "src", "index.css"), "utf8");
   expect(css).toMatch(/\.journal-privacy-card,[\s\S]*?background:\s*var\(--trace-surface/);
-  expect(css).toMatch(/\.journal-recovery-words\s*\{[\s\S]*?repeat\(3,\s*minmax\(0,\s*1fr\)\)/);
-  expect(css).toMatch(/@media\s*\(max-width:\s*430px\)[\s\S]*?\.journal-recovery-words\s*\{[\s\S]*?repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+  expect(css).toMatch(/@media\s*\(max-width:\s*430px\)[\s\S]*?\.journal-privacy-password\s*\{[\s\S]*?grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+  expect(css).toMatch(/@media\s*\(max-width:\s*430px\)[\s\S]*?\.journal-password-copy \.trace-action\s*\{[\s\S]*?width:\s*100%/);
 });

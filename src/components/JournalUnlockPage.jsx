@@ -4,6 +4,7 @@ import {
   JOURNAL_RECOVERY_FORMAT_LEGACY,
 } from "../services/journalVaultCrypto";
 import { JournalPasswordField } from "./JournalCredentialField";
+import JournalPasswordSaveControls from "./JournalPasswordSaveControls";
 import JournalRecoveryKey from "./JournalRecoveryKey";
 import JournalResetDialog from "./JournalResetDialog";
 
@@ -23,6 +24,7 @@ export default function JournalUnlockPage({
   const [recoveryCredential, setRecoveryCredential] = useState("");
   const [newPassphrase, setNewPassphrase] = useState("");
   const [confirmPassphrase, setConfirmPassphrase] = useState("");
+  const [passwordAcknowledged, setPasswordAcknowledged] = useState(false);
   const [rotateRecovery, setRotateRecovery] = useState(true);
   const [nextRecoveryPhrase, setNextRecoveryPhrase] = useState("");
   const [recoveryAcknowledged, setRecoveryAcknowledged] = useState(false);
@@ -85,6 +87,7 @@ export default function JournalUnlockPage({
     setRecoveryCredential("");
     setNewPassphrase("");
     setConfirmPassphrase("");
+    setPasswordAcknowledged(false);
     setNextRecoveryPhrase("");
     setRecoveryAcknowledged(false);
     setRotateRecovery(true);
@@ -113,6 +116,10 @@ export default function JournalUnlockPage({
       setError("The new Journal passwords do not match.");
       return;
     }
+    if (!passwordAcknowledged) {
+      setError("Confirm that you saved your Journal password before recovering the Journal.");
+      return;
+    }
     if (rotateRecovery && !recoveryAcknowledged) {
       setError("Confirm that you saved your new recovery phrase.");
       return;
@@ -130,14 +137,13 @@ export default function JournalUnlockPage({
       setRecoveryCredential("");
       setNewPassphrase("");
       setConfirmPassphrase("");
+      setPasswordAcknowledged(false);
       setNextRecoveryPhrase("");
       setRecoveryAcknowledged(false);
     } catch (unlockError) {
       const nextFailures = failures + 1;
       setFailures(nextFailures);
       setRecoveryCredential("");
-      setNewPassphrase("");
-      setConfirmPassphrase("");
       setNextRecoveryPhrase("");
       setRecoveryAcknowledged(false);
       setRotateRecovery(false);
@@ -177,8 +183,9 @@ export default function JournalUnlockPage({
             <span>{legacy ? "Legacy recovery key" : "Recovery phrase"}</span>
             <textarea autoCapitalize="none" autoComplete="off" id="journal-recovery-input" onChange={(event) => setRecoveryCredential(event.target.value)} spellCheck="false" value={recoveryCredential} />
           </label>
-          <JournalPasswordField id="journal-recovery-new-passphrase" label="New Journal password" value={newPassphrase} setValue={setNewPassphrase} autoComplete="new-password" />
+          <JournalPasswordField id="journal-recovery-new-passphrase" label="New Journal password" value={newPassphrase} setValue={(value) => { setNewPassphrase(value); setPasswordAcknowledged(false); }} autoComplete="new-password" copyable />
           <JournalPasswordField id="journal-recovery-confirm-passphrase" label="Confirm new Journal password" value={confirmPassphrase} setValue={setConfirmPassphrase} autoComplete="new-password" />
+          <JournalPasswordSaveControls acknowledged={passwordAcknowledged} setAcknowledged={setPasswordAcknowledged} />
           <label className="journal-privacy-check">
             <input checked={rotateRecovery} onChange={(event) => changeRecoveryRotation(event.target.checked)} type="checkbox" />
             Replace with a new 12-word recovery phrase (strongly recommended)
