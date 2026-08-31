@@ -31,6 +31,21 @@ test("locked Journal renders unlock controls without Journal content or metadata
   expect(screen.queryByRole("searchbox")).not.toBeInTheDocument();
 });
 
+test("password-manager input changes never unlock until the form is explicitly submitted", async () => {
+  const onUnlock = jest.fn(async () => {});
+  renderUnlock({ onUnlock });
+  const password = screen.getByLabelText("Journal password");
+  expect(password).toHaveValue("");
+  fireEvent.input(password, { target: { value: "password-manager populated value" } });
+  await Promise.resolve();
+  expect(onUnlock).not.toHaveBeenCalled();
+  expect(screen.getByRole("heading", { name: "Journal locked" })).toBeInTheDocument();
+
+  fireEvent.submit(password.closest("form"));
+  await waitFor(() => expect(onUnlock).toHaveBeenCalledTimes(1));
+  expect(onUnlock).toHaveBeenCalledWith("password-manager populated value");
+});
+
 test("wrong credentials use one generic error and prevent rapid double submission", async () => {
   let rejectUnlock;
   const onUnlock = jest.fn(() => new Promise((resolve, reject) => { rejectUnlock = reject; }));

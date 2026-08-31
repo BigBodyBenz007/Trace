@@ -186,13 +186,20 @@ test("Journal setup at 390px preserves entries and drafts, verifies both credent
   expect(recoverySession.payload.domains).toEqual(passwordSession.payload.domains);
 
   fireEvent.click(lockAction);
-  await screen.findByRole("heading", { name: "Journal locked" });
-  expect(screen.getByLabelText("Journal password")).toHaveFocus();
-  expect(screen.getByRole("button", { name: "Unlock Journal" })).toBeInTheDocument();
+  await screen.findByRole("button", { name: "Open locked Journal" });
+  expect(screen.getByRole("status")).toHaveTextContent("Journal locked.");
+  expect(screen.queryByRole("heading", { name: "Journal locked" })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Journal password")).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Set Up Journal Lock" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Lock Journal" })).not.toBeInTheDocument();
 
-  fireEvent.change(screen.getByLabelText("Journal password"), { target: { value: setupPassword } });
+  fireEvent.click(screen.getByRole("button", { name: "Open locked Journal" }));
+  const cleanPasswordField = screen.getByLabelText("Journal password");
+  expect(cleanPasswordField).toHaveValue("");
+  expect(cleanPasswordField).toHaveFocus();
+  fireEvent.input(cleanPasswordField, { target: { value: setupPassword } });
+  expect(screen.getByRole("heading", { name: "Journal locked" })).toBeInTheDocument();
+  expect(screen.queryByText(secretTitle)).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Unlock Journal" }));
   const relockedAction = await screen.findByRole("button", { name: "Lock Journal" }, { timeout: 15000 });
   expect(relockedAction).toBeInTheDocument();
@@ -201,11 +208,12 @@ test("Journal setup at 390px preserves entries and drafts, verifies both credent
   expect(screen.getByText(secretTitle)).toBeInTheDocument();
   expect(screen.getByLabelText("Entry")).toHaveValue(draft.form.body);
   fireEvent.click(relockedAction);
-  await screen.findByRole("heading", { name: "Journal locked" });
+  await screen.findByRole("button", { name: "Open locked Journal" });
+  expect(screen.queryByRole("heading", { name: "Journal locked" })).not.toBeInTheDocument();
 });
 
-test("direct Lock Journal clears the active session without changing encrypted or unrelated data and focuses unlock", async () => {
-  Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+test.each([1280, 390])("direct Lock Journal at %ipx returns to Timeline, clears the session, and requires a fresh explicit unlock", async (width) => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
   await prepareLockedJournal();
   render(<App />);
   expect(screen.getByRole("button", { name: "Open locked Journal" })).toBeInTheDocument();
@@ -238,10 +246,12 @@ test("direct Lock Journal clears the active session without changing encrypted o
   localStorage.setItem("journal-lock-unrelated", "exact unrelated bytes");
 
   fireEvent.click(mobileLockAction);
-  await screen.findByRole("heading", { name: "Journal locked" });
+  await screen.findByRole("button", { name: "Open locked Journal" });
+  expect(screen.getByRole("status")).toHaveTextContent("Journal locked.");
+  expect(screen.queryByRole("heading", { name: "Journal locked" })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Journal password")).not.toBeInTheDocument();
   expect(document.body).not.toHaveTextContent(secretTitle);
   expect(document.body).not.toHaveTextContent(secretBody);
-  expect(screen.getByLabelText("Journal password")).toHaveFocus();
   expect(localStorage.getItem("journalVault")).toBe(vaultBeforeLock);
   expect(localStorage.getItem("journalVaultTransaction")).toBeNull();
   expect(localStorage.getItem("journalEntries")).toBeNull();
@@ -252,6 +262,26 @@ test("direct Lock Journal clears the active session without changing encrypted o
   expect(channel.messages.at(-1)).toEqual({ schemaVersion: 1, type: "lock" });
   expect(JSON.stringify(channel.messages)).not.toContain(secretBody);
   expect(JSON.stringify(channel.messages)).not.toContain(passphrase);
+
+  fireEvent.click(screen.getByRole("button", { name: "Open locked Journal" }));
+  const reopenedPassword = screen.getByLabelText("Journal password");
+  expect(reopenedPassword).toHaveValue("");
+  fireEvent.input(reopenedPassword, { target: { value: passphrase } });
+  await waitFor(() => expect(screen.getByRole("heading", { name: "Journal locked" })).toBeInTheDocument());
+  expect(document.body).not.toHaveTextContent(secretBody);
+  expect(screen.queryByRole("button", { name: "Lock Journal" })).not.toBeInTheDocument();
+  expect(localStorage.getItem("journalVault")).toBe(vaultBeforeLock);
+
+  fireEvent.submit(reopenedPassword.closest("form"));
+  const unlockedLockAction = await screen.findByRole("button", { name: "Lock Journal" }, { timeout: 15000 });
+  expect(unlockedLockAction).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Journal" })).toBeInTheDocument();
+  expect(screen.getByText(secretTitle)).toBeInTheDocument();
+  expect(localStorage.getItem("journalVault")).toBe(vaultBeforeLock);
+  expect(localStorage.getItem("journal-lock-unrelated")).toBe("exact unrelated bytes");
+
+  fireEvent.click(unlockedLockAction);
+  await screen.findByRole("button", { name: "Open locked Journal" });
 });
 
 test("visibility, pagehide, inactivity, and cross-tab Lock Now each clear rendered Journal data", async () => {

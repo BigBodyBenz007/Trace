@@ -2538,7 +2538,7 @@ function App() {
     broadcastJournalPrivacy("recovery-rotated");
   }
 
-  async function lockJournal({ automatic = false, broadcast = true } = {}) {
+  async function lockJournal({ automatic = false, broadcast = true, confirmationPage = page } = {}) {
     const context = journalSessionContextRef.current;
     if (!context) return true;
     if (!automatic) {
@@ -2554,8 +2554,13 @@ function App() {
     setJournalEntries([]);
     setJournalPrivacy((current) => ({ ...current, enabled: true, unlocked: false }));
     if (broadcast) broadcastJournalPrivacy("lock");
-    showConfirmation(automatic ? "Journal locked automatically" : "Journal locked");
+    showConfirmation(automatic ? "Journal locked automatically" : "Journal locked.", confirmationPage);
     return true;
+  }
+
+  async function lockJournalFromJournal() {
+    await lockJournal({ confirmationPage: "home" });
+    setPage("home");
   }
 
   journalLockRef.current = lockJournal;
@@ -3037,7 +3042,7 @@ function App() {
             removeDraft={removeJournalDraft}
             onBack={() => setPage("home")}
             onEnablePrivacy={enableJournalPrivacy}
-            onLock={journalPrivacy.enabled ? () => lockJournal() : undefined}
+            onLock={journalPrivacy.enabled ? lockJournalFromJournal : undefined}
             onDisable={journalPrivacy.enabled ? disableJournalPrivacy : undefined}
             recoveryFormat={journalPrivacy.recoveryFormat}
             saveEntry={saveJournalEntry}
