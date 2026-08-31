@@ -2094,12 +2094,33 @@ code {
   }
 
   .journal-page__header--with-action {
-    column-gap: 10px;
-    grid-template-columns: 38px minmax(0, 1fr) auto;
+    column-gap: 0;
+    grid-template-columns: 38px minmax(0, 1fr) 38px;
+    grid-template-rows: auto auto;
+    row-gap: 14px;
+  }
+
+  .journal-page__header--with-action > svg {
+    grid-column: 1;
+    grid-row: 1;
   }
 
   .journal-page__header--with-action .journal-page__header-copy {
-    overflow-wrap: anywhere;
+    grid-column: 1 / -1;
+    grid-row: 1;
+    overflow-wrap: normal;
+    padding-inline: 50px;
+  }
+
+  .journal-page__header--with-action .journal-page__header-copy h1 {
+    white-space: nowrap;
+  }
+
+  .journal-page__header--with-action .journal-page__privacy-action {
+    box-sizing: border-box;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    justify-self: center;
   }
 }
 

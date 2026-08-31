@@ -56,8 +56,26 @@ test("keeps the unlocked Lock Journal action inside the responsive Journal headi
   expect(within(header).getByRole("button", { name: "Lock Journal" })).toBeInTheDocument();
   const css = fs.readFileSync(path.join(process.cwd(), "src", "index.css"), "utf8");
   expect(css).toMatch(/\.journal-page__header--with-action\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(128px,\s*1fr\)\s+minmax\(0,\s*2fr\)\s+minmax\(128px,\s*1fr\)/);
-  expect(css).toMatch(/@media\s*\(max-width:\s*430px\)[\s\S]*?\.journal-page__header--with-action\s*\{[^}]*grid-template-columns:\s*38px\s+minmax\(0,\s*1fr\)\s+auto/);
   expect(css).toMatch(/\.journal-page__privacy-action\s*\{[^}]*max-width:\s*100%[^}]*white-space:\s*normal/);
+});
+
+test.each([390, 430])("stacks the privacy action below an uncompressed Journal heading at %ipx", (width) => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+  render(<JournalPage {...baseProps} onEnablePrivacy={jest.fn()} />);
+  const heading = screen.getByRole("heading", { name: "Journal" });
+  const copy = heading.parentElement;
+  const header = copy.parentElement;
+  const action = within(header).getByRole("button", { name: "Set Up Journal Lock" });
+  expect(header).toHaveClass("journal-page__header--with-action");
+  expect(action).toHaveClass("journal-page__privacy-action");
+  expect(action.parentElement).toBe(header);
+  expect(header.nextElementSibling).toHaveClass("journal-page__navigation");
+
+  const css = fs.readFileSync(path.join(process.cwd(), "src", "index.css"), "utf8");
+  expect(css).toMatch(/@media\s*\(max-width:\s*430px\)[\s\S]*?\.journal-page__header--with-action\s*\{[^}]*grid-template-columns:\s*38px\s+minmax\(0,\s*1fr\)\s+38px[^}]*grid-template-rows:\s*auto\s+auto[^}]*row-gap:\s*14px/);
+  expect(css).toMatch(/@media\s*\(max-width:\s*430px\)[\s\S]*?\.journal-page__header--with-action \.journal-page__header-copy\s*\{[^}]*grid-column:\s*1\s*\/\s*-1[^}]*grid-row:\s*1[^}]*overflow-wrap:\s*normal[^}]*padding-inline:\s*50px/);
+  expect(css).toMatch(/@media\s*\(max-width:\s*430px\)[\s\S]*?\.journal-page__header--with-action \.journal-page__header-copy h1\s*\{[^}]*white-space:\s*nowrap/);
+  expect(css).toMatch(/@media\s*\(max-width:\s*430px\)[\s\S]*?\.journal-page__header--with-action \.journal-page__privacy-action\s*\{[^}]*box-sizing:\s*border-box[^}]*grid-column:\s*1\s*\/\s*-1[^}]*grid-row:\s*2[^}]*justify-self:\s*center/);
 });
 
 test("keeps Set Up Journal Lock in the same responsive heading when privacy is disabled", () => {

@@ -92,14 +92,27 @@ afterEach(() => {
   else delete document.visibilityState;
 });
 
-test.each([1280, 390])("disabled Journal keeps Set Up Journal Lock contained in the heading at %ipx", (width) => {
-  Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+test("disabled Journal keeps Set Up Journal Lock beside the heading at 1280px", () => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 1280 });
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "Open Journal" }));
 
   const journalHeader = screen.getByRole("heading", { name: "Journal" }).closest("header");
   expect(journalHeader).toHaveClass("journal-page__header--with-action");
   expect(within(journalHeader).getByRole("button", { name: "Set Up Journal Lock" })).toBeInTheDocument();
+});
+
+test.each([390, 430])("disabled Journal keeps its full heading above a contained setup action at %ipx", (width) => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Open Journal" }));
+
+  const journalHeader = screen.getByRole("heading", { name: "Journal" }).closest("header");
+  const setupAction = within(journalHeader).getByRole("button", { name: "Set Up Journal Lock" });
+  expect(journalHeader).toHaveClass("journal-page__header--with-action");
+  expect(setupAction).toHaveClass("journal-page__privacy-action");
+  expect(setupAction.parentElement).toBe(journalHeader);
+  expect(journalHeader.nextElementSibling).toHaveClass("journal-page__navigation");
   expect(screen.queryByRole("button", { name: "Lock Journal" })).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Unlock Journal" })).not.toBeInTheDocument();
 });
