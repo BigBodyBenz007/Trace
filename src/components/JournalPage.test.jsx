@@ -49,14 +49,23 @@ test("keeps the unlocked Lock Journal action inside the responsive Journal headi
   const heading = screen.getByRole("heading", { name: "Journal" });
   const copy = heading.parentElement;
   const header = copy.parentElement;
-  expect(header).toHaveClass("journal-page__header", "journal-page__header--unlocked");
+  expect(header).toHaveClass("journal-page__header", "journal-page__header--with-action");
   expect(copy).toHaveClass("journal-page__header-copy");
   expect(header.firstElementChild).toMatchObject({ tagName: "svg" });
   expect(header.firstElementChild).toHaveAttribute("aria-hidden", "true");
   expect(within(header).getByRole("button", { name: "Lock Journal" })).toBeInTheDocument();
   const css = fs.readFileSync(path.join(process.cwd(), "src", "index.css"), "utf8");
-  expect(css).toMatch(/\.journal-page__header--unlocked\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(128px,\s*1fr\)\s+minmax\(0,\s*2fr\)\s+minmax\(128px,\s*1fr\)/);
-  expect(css).toMatch(/@media\s*\(max-width:\s*430px\)[\s\S]*?\.journal-page__header--unlocked\s*\{[^}]*grid-template-columns:\s*38px\s+minmax\(0,\s*1fr\)\s+auto/);
+  expect(css).toMatch(/\.journal-page__header--with-action\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(128px,\s*1fr\)\s+minmax\(0,\s*2fr\)\s+minmax\(128px,\s*1fr\)/);
+  expect(css).toMatch(/@media\s*\(max-width:\s*430px\)[\s\S]*?\.journal-page__header--with-action\s*\{[^}]*grid-template-columns:\s*38px\s+minmax\(0,\s*1fr\)\s+auto/);
+  expect(css).toMatch(/\.journal-page__privacy-action\s*\{[^}]*max-width:\s*100%[^}]*white-space:\s*normal/);
+});
+
+test("keeps Set Up Journal Lock in the same responsive heading when privacy is disabled", () => {
+  render(<JournalPage {...baseProps} onEnablePrivacy={jest.fn()} />);
+  const header = screen.getByRole("heading", { name: "Journal" }).closest("header");
+  expect(header).toHaveClass("journal-page__header--with-action");
+  expect(within(header).getByRole("button", { name: "Set Up Journal Lock" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Lock Journal" })).not.toBeInTheDocument();
 });
 
 test("keeps native Journal date and time inputs contained without changing the 360px stack breakpoint", () => {

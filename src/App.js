@@ -3036,6 +3036,7 @@ function App() {
             persistDraft={persistJournalDraft}
             removeDraft={removeJournalDraft}
             onBack={() => setPage("home")}
+            onEnablePrivacy={enableJournalPrivacy}
             onLock={journalPrivacy.enabled ? () => lockJournal() : undefined}
             onDisable={journalPrivacy.enabled ? disableJournalPrivacy : undefined}
             recoveryFormat={journalPrivacy.recoveryFormat}

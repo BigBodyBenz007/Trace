@@ -37,7 +37,7 @@ test("Journal Lock is optional and canceling setup changes nothing", () => {
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 });
 
-test("privacy dialog is named, traps focus, closes safely with Escape, and restores focus", () => {
+test("privacy dialog initializes focus on each open, traps focus, closes safely with Escape, and restores focus", () => {
   render(<JournalPrivacySettings enabled={false} unlocked={false} {...callbacks} />);
   const setup = screen.getByRole("button", { name: "Set up Journal Lock" });
   setup.focus();
@@ -47,6 +47,10 @@ test("privacy dialog is named, traps focus, closes safely with Escape, and resto
   expect(screen.getByLabelText("Journal password")).toHaveFocus();
   fireEvent.keyDown(dialog, { key: "Escape" });
   expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  expect(setup).toHaveFocus();
+  fireEvent.click(setup);
+  expect(screen.getByLabelText("Journal password")).toHaveFocus();
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   expect(setup).toHaveFocus();
 });
 

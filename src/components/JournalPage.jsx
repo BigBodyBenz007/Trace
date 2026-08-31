@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { motionScrollBehavior } from "../services/motionPreference";
 import JournalDisableDialog from "./JournalDisableDialog";
+import JournalLockSetupDialog, { journalPrivacySetupAvailable } from "./JournalLockSetupDialog";
 import {
   JOURNAL_MOODS,
   clearJournalDraft,
@@ -60,6 +61,7 @@ export default function JournalPage({
   journalPrivacyUnlocked = false,
   persistDraft = (value) => writeJournalDraft(localStorage, value),
   removeDraft = () => clearJournalDraft(localStorage),
+  onEnablePrivacy,
   onLock,
   onDisable,
   recoveryFormat,
@@ -79,6 +81,7 @@ export default function JournalPage({
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [expandedIds, setExpandedIds] = useState(() => new Set());
+  const [setupOpen, setSetupOpen] = useState(false);
   const [disableOpen, setDisableOpen] = useState(false);
   const [privacyStatus, setPrivacyStatus] = useState("");
   const editorRef = useRef(null);
@@ -123,7 +126,9 @@ export default function JournalPage({
     width: "100%",
   };
   const smallButtonStyle = { ...buttonStyle, fontSize: "16px", marginTop: 0, minHeight: "44px", padding: "10px 14px" };
+  const showSetupAction = !journalPrivacyEnabled && Boolean(onEnablePrivacy);
   const showLockAction = journalPrivacyEnabled && journalPrivacyUnlocked && Boolean(onLock);
+  const showPrivacyAction = showSetupAction || showLockAction;
 
   function change(field, value) {
     setDraftActive(true);
@@ -273,6 +278,16 @@ export default function JournalPage({
     }
   }
 
+  async function enableJournalLock(credentials) {
+    try {
+      await persistCurrentDraft();
+    } catch (error) {
+      onDraftStorageError();
+      throw error;
+    }
+    await Promise.resolve(onEnablePrivacy(credentials));
+  }
+
   async function openTurnOffDialog() {
     try {
       await persistCurrentDraft();
@@ -285,19 +300,37 @@ export default function JournalPage({
 
   return (
     <main className="trace-feature-page trace-feature-page--journal journal-page" style={{ ...containerStyle, justifyContent: "flex-start" }}>
-      <header className={`trace-feature-page__identity journal-page__header${showLockAction ? " journal-page__header--unlocked" : ""}`}>
+      <header className={`trace-feature-page__identity journal-page__header${showPrivacyAction ? " journal-page__header--with-action" : ""}`}>
         <BookIcon size={38} />
         <div className="journal-page__header-copy">
           <h1 style={{ margin: 0 }}>Journal</h1>
           <p style={{ color: "#c8b99f", margin: "5px 0 0" }}>Private reflections in Trace. Entries are never shared.</p>
         </div>
-        {showLockAction && <button className="trace-action trace-action--brass journal-page__lock-action" type="button" onClick={lockJournal} style={{ ...smallButtonStyle, backgroundColor: "#75583d" }}>Lock Journal</button>}
+        {showSetupAction && (
+          <button
+            className="trace-action trace-action--primary journal-page__privacy-action"
+            disabled={!journalPrivacySetupAvailable()}
+            type="button"
+            onClick={() => setSetupOpen(true)}
+            style={smallButtonStyle}
+          >
+            Set Up Journal Lock
+          </button>
+        )}
+        {showLockAction && <button className="trace-action trace-action--brass journal-page__privacy-action" type="button" onClick={lockJournal} style={{ ...smallButtonStyle, backgroundColor: "#75583d" }}>Lock Journal</button>}
       </header>
       <div className="journal-actions journal-page__navigation">
         <button className="trace-action trace-action--secondary" type="button" onClick={backToTimeline} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Timeline</button>
       </div>
 
       {privacyStatus && <p className="journal-privacy-page-status" role="status">{privacyStatus}</p>}
+      {setupOpen && onEnablePrivacy && (
+        <JournalLockSetupDialog
+          onCancel={() => setSetupOpen(false)}
+          onComplete={() => setSetupOpen(false)}
+          onEnable={enableJournalLock}
+        />
+      )}
       {onDisable && (
         <section className="journal-section journal-page-privacy-controls" aria-labelledby="journal-page-privacy-heading">
           <h2 id="journal-page-privacy-heading">Journal Lock: On</h2>

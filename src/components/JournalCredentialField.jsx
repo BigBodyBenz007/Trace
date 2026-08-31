@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { JOURNAL_RECOVERY_FORMAT_LEGACY } from "../services/journalVaultCrypto";
 
 export async function copyTextToClipboard(value, {
@@ -31,6 +31,14 @@ export async function copyTextToClipboard(value, {
   }
 }
 
+function restoreInputFocus(focusState) {
+  if (!focusState?.input?.isConnected) return;
+  focusState.input.focus();
+  if (focusState.selectionStart !== null && focusState.selectionEnd !== null) {
+    focusState.input.setSelectionRange(focusState.selectionStart, focusState.selectionEnd);
+  }
+}
+
 export function JournalPasswordField({
   id,
   label,
@@ -42,6 +50,32 @@ export function JournalPasswordField({
 }) {
   const [visible, setVisible] = useState(false);
   const [copyStatus, setCopyStatus] = useState("");
+  const passwordInputRef = useRef(null);
+  const visibilityFocusRef = useRef(null);
+  const copyFocusRef = useRef(null);
+
+  const setPasswordInputRef = useCallback((node) => {
+    passwordInputRef.current = node;
+    if (typeof inputRef === "function") inputRef(node);
+    else if (inputRef) inputRef.current = node;
+  }, [inputRef]);
+
+  function focusedInputSelection() {
+    const input = passwordInputRef.current;
+    if (!input || document.activeElement !== input) return null;
+    return {
+      input,
+      selectionEnd: input.selectionEnd,
+      selectionStart: input.selectionStart,
+    };
+  }
+
+  useEffect(() => {
+    if (!visibilityFocusRef.current) return;
+    const focusState = visibilityFocusRef.current;
+    visibilityFocusRef.current = null;
+    restoreInputFocus(focusState);
+  }, [visible]);
 
   function changeValue(event) {
     setCopyStatus("");
@@ -49,24 +83,43 @@ export function JournalPasswordField({
   }
 
   async function copyPassword() {
+    const focusState = copyFocusRef.current || focusedInputSelection();
+    copyFocusRef.current = null;
+    restoreInputFocus(focusState);
     try {
       await copyTextToClipboard(value);
       setCopyStatus("Journal password copied. Save it in your password manager before continuing.");
     } catch (copyError) {
       setCopyStatus("Journal password could not be copied. Show it and copy it manually before continuing.");
+    } finally {
+      restoreInputFocus(focusState);
     }
+  }
+
+  function toggleVisibility() {
+    const input = passwordInputRef.current;
+    visibilityFocusRef.current = {
+      input,
+      selectionEnd: input?.selectionEnd ?? null,
+      selectionStart: input?.selectionStart ?? null,
+    };
+    setVisible((current) => !current);
+  }
+
+  function rememberCopyFocus() {
+    copyFocusRef.current = focusedInputSelection();
   }
 
   return (
     <div className="journal-privacy-field">
       <label htmlFor={id}>{label}</label>
       <div className="journal-privacy-password">
-        <input autoComplete={autoComplete} id={id} name="password" onChange={changeValue} ref={inputRef} type={visible ? "text" : "password"} value={value} />
-        <button aria-controls={id} aria-label={`${visible ? "Hide" : "Show"} ${label.toLowerCase()}`} aria-pressed={visible} onClick={() => setVisible((current) => !current)} type="button">{visible ? "Hide" : "Show"}</button>
+        <input autoComplete={autoComplete} id={id} name="password" onChange={changeValue} ref={setPasswordInputRef} type={visible ? "text" : "password"} value={value} />
+        <button aria-controls={id} aria-label={`${visible ? "Hide" : "Show"} ${label.toLowerCase()}`} aria-pressed={visible} onClick={toggleVisibility} type="button">{visible ? "Hide" : "Show"}</button>
       </div>
       {copyable && (
         <div className="journal-password-copy">
-          <button className="trace-action trace-action--secondary" disabled={!value} onClick={copyPassword} type="button">Copy Journal Password</button>
+          <button className="trace-action trace-action--secondary" disabled={!value} onClick={copyPassword} onMouseDown={rememberCopyFocus} onPointerDown={rememberCopyFocus} type="button">Copy Journal Password</button>
           {copyStatus && <p aria-live="polite" role="status">{copyStatus}</p>}
         </div>
       )}

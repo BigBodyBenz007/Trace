@@ -11,6 +11,8 @@ const FOCUSABLE = [
 
 export default function PrivacyDialog({ title, description, onCancel, children }) {
   const dialogRef = useRef(null);
+  const onCancelRef = useRef(onCancel);
+  onCancelRef.current = onCancel;
 
   useEffect(() => {
     const previousFocus = document.activeElement;
@@ -21,7 +23,7 @@ export default function PrivacyDialog({ title, description, onCancel, children }
     function keyDown(event) {
       if (event.key === "Escape") {
         event.preventDefault();
-        onCancel();
+        onCancelRef.current();
         return;
       }
       if (event.key !== "Tab") return;
@@ -43,7 +45,7 @@ export default function PrivacyDialog({ title, description, onCancel, children }
       dialog?.removeEventListener("keydown", keyDown);
       previousFocus?.focus?.();
     };
-  }, [onCancel]);
+  }, []);
 
   return (
     <div className="journal-privacy-dialog-backdrop">

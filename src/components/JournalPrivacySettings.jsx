@@ -6,6 +6,7 @@ import {
 } from "../services/journalVaultCrypto";
 import JournalCredentialField, { JournalPasswordField } from "./JournalCredentialField";
 import JournalDisableDialog from "./JournalDisableDialog";
+import JournalLockSetupDialog, { journalPrivacySetupAvailable } from "./JournalLockSetupDialog";
 import JournalPasswordSaveControls from "./JournalPasswordSaveControls";
 import JournalRecoveryKey from "./JournalRecoveryKey";
 import PrivacyDialog from "./PrivacyDialog";
@@ -28,7 +29,6 @@ export default function JournalPrivacySettings({
   onDisable,
 }) {
   const [dialog, setDialog] = useState(null);
-  const [step, setStep] = useState("credentials");
   const [passphrase, setPassphrase] = useState("");
   const [confirmPassphrase, setConfirmPassphrase] = useState("");
   const [recoveryPhrase, setRecoveryPhrase] = useState("");
@@ -43,7 +43,6 @@ export default function JournalPrivacySettings({
   const closeDialog = useCallback(() => {
     if (busy) return;
     setDialog(null);
-    setStep("credentials");
     setPassphrase("");
     setConfirmPassphrase("");
     setRecoveryPhrase("");
@@ -58,7 +57,7 @@ export default function JournalPrivacySettings({
     setStatus("");
     setError("");
     setDialog(nextDialog);
-    if (nextDialog === "setup" || nextDialog === "change-passphrase") {
+    if (nextDialog === "change-passphrase") {
       setPasswordAcknowledged(false);
     }
     if (nextDialog === "rotate") {
@@ -69,63 +68,6 @@ export default function JournalPrivacySettings({
         setDialog(null);
         setStatus("Secure browser cryptography is unavailable. Journal privacy cannot be changed here.");
       }
-    }
-  }
-
-  function continueSetup(event) {
-    event.preventDefault();
-    if (passphrase.length < 12) {
-      setError("Use a Journal password of at least 12 characters.");
-      return;
-    }
-    if (passphrase !== confirmPassphrase) {
-      setError("The Journal passwords do not match.");
-      return;
-    }
-    if (!passwordAcknowledged) {
-      setError("Confirm that you saved your Journal password before continuing.");
-      return;
-    }
-    try {
-      setRecoveryPhrase(generateRecoveryPhrase());
-      setRecoveryAcknowledged(false);
-      setError("");
-      setStep("recovery");
-    } catch (cryptoError) {
-      setError("Secure browser cryptography is unavailable. Journal Lock was not enabled.");
-    }
-  }
-
-  async function finishSetup(event) {
-    event.preventDefault();
-    if (!passwordAcknowledged) {
-      setStep("credentials");
-      setError("Confirm that you saved your Journal password before enabling Journal Lock.");
-      return;
-    }
-    if (!recoveryAcknowledged) {
-      setError("Confirm that you saved your recovery phrase before enabling Journal Lock.");
-      return;
-    }
-    setBusy(true);
-    setError("");
-    try {
-      await onEnable({ passphrase, recoveryPhrase });
-      setStatus("Journal Lock enabled. Your Journal is encrypted and unlocked in this tab.");
-      setDialog(null);
-      setStep("credentials");
-      setPassphrase("");
-      setConfirmPassphrase("");
-      setRecoveryPhrase("");
-      setPasswordAcknowledged(false);
-      setRecoveryAcknowledged(false);
-    } catch (setupError) {
-      setError("Journal Lock could not be enabled. Your previous Journal data was left unchanged.");
-      setStep("credentials");
-      setRecoveryPhrase("");
-      setRecoveryAcknowledged(false);
-    } finally {
-      setBusy(false);
     }
   }
 
@@ -199,7 +141,7 @@ export default function JournalPrivacySettings({
     }
   }
 
-  const cryptoAvailable = Boolean(window.crypto?.subtle && window.crypto?.getRandomValues);
+  const cryptoAvailable = journalPrivacySetupAvailable();
   const legacy = recoveryFormat === JOURNAL_RECOVERY_FORMAT_LEGACY;
 
   return (
@@ -236,30 +178,14 @@ export default function JournalPrivacySettings({
       {!cryptoAvailable && !enabled && <p role="alert">Secure browser cryptography is unavailable, so Journal Lock cannot be set up in this browser.</p>}
 
       {dialog === "setup" && (
-        <PrivacyDialog title="Set up Journal Lock" description="Choose a Journal password, then save the one-time recovery phrase." onCancel={closeDialog}>
-          {step === "credentials" ? (
-            <form onSubmit={continueSetup}>
-              <JournalPasswordField id="journal-setup-passphrase" label="Journal password" value={passphrase} setValue={(value) => { setPassphrase(value); setPasswordAcknowledged(false); }} autoComplete="new-password" copyable />
-              <JournalPasswordField id="journal-setup-confirm" label="Confirm Journal password" value={confirmPassphrase} setValue={setConfirmPassphrase} autoComplete="new-password" />
-              <p>Use at least 12 characters. Long pasted password-manager values are welcome.</p>
-              <JournalPasswordSaveControls acknowledged={passwordAcknowledged} setAcknowledged={setPasswordAcknowledged} />
-              {error && <p className="journal-error" role="alert">{error}</p>}
-              <div className="journal-actions">
-                <button className="trace-action trace-action--primary" type="submit">Continue</button>
-                <button className="trace-action trace-action--secondary" type="button" onClick={closeDialog}>Cancel</button>
-              </div>
-            </form>
-          ) : (
-            <form onSubmit={finishSetup}>
-              <JournalRecoveryKey recoveryPhrase={recoveryPhrase} acknowledged={recoveryAcknowledged} setAcknowledged={setRecoveryAcknowledged} />
-              {error && <p className="journal-error" role="alert">{error}</p>}
-              <div className="journal-actions">
-                <button className="trace-action trace-action--primary" disabled={busy || !recoveryAcknowledged} type="submit">{busy ? "Encrypting Journal…" : "Confirm and Enable Lock"}</button>
-                <button className="trace-action trace-action--secondary" disabled={busy} type="button" onClick={closeDialog}>Cancel</button>
-              </div>
-            </form>
-          )}
-        </PrivacyDialog>
+        <JournalLockSetupDialog
+          onCancel={closeDialog}
+          onComplete={() => {
+            setStatus("Journal Lock enabled. Your Journal is encrypted and unlocked in this tab.");
+            setDialog(null);
+          }}
+          onEnable={onEnable}
+        />
       )}
 
       {dialog === "change-passphrase" && (

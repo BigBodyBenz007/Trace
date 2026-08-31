@@ -48,9 +48,13 @@ test("Show and Hide preserve the complete generated or pasted password and remai
   show.focus();
   expect(show).toHaveFocus();
   fireEvent.click(show);
+  expect(password).toHaveFocus();
   expect(password).toHaveAttribute("type", "text");
   expect(password).toHaveValue(generatedPassword);
-  fireEvent.click(screen.getByRole("button", { name: "Hide journal password" }));
+  const hide = screen.getByRole("button", { name: "Hide journal password" });
+  hide.focus();
+  fireEvent.click(hide);
+  expect(password).toHaveFocus();
   expect(password).toHaveAttribute("type", "password");
   expect(password).toHaveValue(generatedPassword);
 });
@@ -71,11 +75,16 @@ test("Copy Journal Password falls back to a transient selection and removes it i
   const execCommand = jest.fn(() => true);
   Object.defineProperty(document, "execCommand", { configurable: true, value: execCommand });
   render(<PasswordHarness />);
-  fireEvent.change(screen.getByLabelText("Journal password"), { target: { value: "fallback Journal password 9!" } });
+  const password = screen.getByLabelText("Journal password");
+  fireEvent.change(password, { target: { value: "fallback Journal password 9!" } });
+  password.focus();
+  password.setSelectionRange(4, 4);
   fireEvent.click(screen.getByRole("button", { name: "Copy Journal Password" }));
   await waitFor(() => expect(execCommand).toHaveBeenCalledWith("copy"));
   expect(await screen.findByRole("status")).toHaveTextContent("Journal password copied");
   expect(document.querySelector('textarea[aria-hidden="true"][readonly]')).toBeNull();
+  expect(password).toHaveFocus();
+  expect(password.selectionStart).toBe(4);
 });
 
 test("copy failure is accessible and does not expose the password in storage, URL, logs, or error feedback", async () => {

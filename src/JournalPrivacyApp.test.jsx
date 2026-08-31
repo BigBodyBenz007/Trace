@@ -3,7 +3,8 @@ import { TextDecoder, TextEncoder } from "util";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import App from "./App";
 import { writeAppSettings } from "./services/appSettings";
-import { enableJournalVault } from "./services/journalVault";
+import { writeJournalDraft } from "./services/journalEntry";
+import { enableJournalVault, unlockJournalVault } from "./services/journalVault";
 
 jest.mock("./storage/photoStorage", () => ({
   clearCompletedMigrationBackup: jest.fn(),
@@ -91,6 +92,105 @@ afterEach(() => {
   else delete document.visibilityState;
 });
 
+test.each([1280, 390])("disabled Journal keeps Set Up Journal Lock contained in the heading at %ipx", (width) => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Open Journal" }));
+
+  const journalHeader = screen.getByRole("heading", { name: "Journal" }).closest("header");
+  expect(journalHeader).toHaveClass("journal-page__header--with-action");
+  expect(within(journalHeader).getByRole("button", { name: "Set Up Journal Lock" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Lock Journal" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Unlock Journal" })).not.toBeInTheDocument();
+});
+
+test("Journal setup at 390px preserves entries and drafts, verifies both credentials, and transitions through unlocked and locked states", async () => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
+  const setupPassword = "inside Journal password";
+  const draft = {
+    editingId: null,
+    form: {
+      title: "Exact setup draft",
+      body: "Preserve this draft during Journal setup",
+      date: "2026-08-30",
+      time: "09:45",
+      mood: "Calm",
+      tags: "setup, private",
+    },
+  };
+  localStorage.setItem("journalEntries", JSON.stringify([journalEntry()]));
+  writeJournalDraft(localStorage, draft);
+
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Open Journal" }));
+  const initialHeader = screen.getByRole("heading", { name: "Journal" }).closest("header");
+  fireEvent.click(within(initialHeader).getByRole("button", { name: "Set Up Journal Lock" }));
+
+  let dialog = screen.getByRole("dialog", { name: "Set up Journal Lock" });
+  const setupPasswordField = within(dialog).getByLabelText("Journal password");
+  const setupConfirmationField = within(dialog).getByLabelText("Confirm Journal password");
+  expect(setupPasswordField).toHaveFocus();
+  fireEvent.change(setupPasswordField, { target: { value: setupPassword } });
+  setupConfirmationField.focus();
+  fireEvent.change(setupConfirmationField, { target: { value: setupPassword } });
+  expect(setupConfirmationField).toHaveFocus();
+  fireEvent.click(within(dialog).getByLabelText("I saved my Journal password and understand that Trace cannot recover it."));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Continue" }));
+
+  dialog = screen.getByRole("dialog", { name: "Set up Journal Lock" });
+  expect(within(dialog).getByRole("heading", { name: "Your Journal Recovery Phrase" })).toBeInTheDocument();
+  expect(within(dialog).getAllByRole("listitem")).toHaveLength(12);
+  const recoveryPhrase = within(dialog).getByLabelText("Recovery phrase for manual selection").value;
+  expect(recoveryPhrase.trim().split(/\s+/u)).toHaveLength(12);
+  fireEvent.click(within(dialog).getByLabelText("I saved my recovery phrase and understand that if I lose both it and my Journal password, my existing Journal cannot be recovered."));
+  fireEvent.click(within(dialog).getByRole("button", { name: "Confirm and Enable Lock" }));
+
+  const lockAction = await screen.findByRole("button", { name: "Lock Journal" }, { timeout: 20000 });
+  const unlockedHeader = screen.getByRole("heading", { name: "Journal" }).closest("header");
+  expect(lockAction).toBe(within(unlockedHeader).getByRole("button", { name: "Lock Journal" }));
+  expect(unlockedHeader).toHaveClass("journal-page__header--with-action");
+  expect(screen.queryByRole("button", { name: "Set Up Journal Lock" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Unlock Journal" })).not.toBeInTheDocument();
+  expect(screen.getByText(secretTitle)).toBeInTheDocument();
+  expect(screen.getByLabelText("Title")).toHaveValue(draft.form.title);
+  expect(screen.getByLabelText("Entry")).toHaveValue(draft.form.body);
+  expect(localStorage.getItem("journalEntries")).toBeNull();
+  expect(localStorage.getItem("journalDraft")).toBeNull();
+  expect(localStorage.getItem("journalVault")).not.toBeNull();
+
+  const passwordSession = await unlockJournalVault(
+    localStorage,
+    { type: "passphrase", value: setupPassword },
+    { cryptoProvider: webcrypto }
+  );
+  expect(JSON.parse(passwordSession.payload.domains.journalEntries)).toEqual([journalEntry()]);
+  expect(JSON.parse(passwordSession.payload.domains.journalDraft)).toEqual({ schemaVersion: 1, ...draft });
+  const recoverySession = await unlockJournalVault(
+    localStorage,
+    { type: "recovery-phrase", value: recoveryPhrase },
+    { cryptoProvider: webcrypto }
+  );
+  expect(recoverySession.payload.domains).toEqual(passwordSession.payload.domains);
+
+  fireEvent.click(lockAction);
+  await screen.findByRole("heading", { name: "Journal locked" });
+  expect(screen.getByLabelText("Journal password")).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Unlock Journal" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Set Up Journal Lock" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Lock Journal" })).not.toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText("Journal password"), { target: { value: setupPassword } });
+  fireEvent.click(screen.getByRole("button", { name: "Unlock Journal" }));
+  const relockedAction = await screen.findByRole("button", { name: "Lock Journal" }, { timeout: 15000 });
+  expect(relockedAction).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Set Up Journal Lock" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Unlock Journal" })).not.toBeInTheDocument();
+  expect(screen.getByText(secretTitle)).toBeInTheDocument();
+  expect(screen.getByLabelText("Entry")).toHaveValue(draft.form.body);
+  fireEvent.click(relockedAction);
+  await screen.findByRole("heading", { name: "Journal locked" });
+});
+
 test("direct Lock Journal clears the active session without changing encrypted or unrelated data and focuses unlock", async () => {
   Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
   await prepareLockedJournal();
@@ -107,7 +207,7 @@ test("direct Lock Journal clears the active session without changing encrypted o
   const journalHeading = screen.getByRole("heading", { name: "Journal" });
   const journalHeader = journalHeading.closest("header");
   const mobileLockAction = within(journalHeader).getByRole("button", { name: "Lock Journal" });
-  expect(journalHeader).toHaveClass("journal-page__header--unlocked");
+  expect(journalHeader).toHaveClass("journal-page__header--with-action");
   expect(screen.getByText(secretTitle)).toBeInTheDocument();
   expect(screen.getByText(secretBody)).toBeInTheDocument();
   expect(localStorage.getItem("journalEntries")).toBeNull();
@@ -191,7 +291,7 @@ test("Turn Off Journal Lock from Journal preserves exact entries and draft and s
 
   fireEvent.change(screen.getByLabelText("Entry"), { target: { value: "exact unfinished encrypted draft" } });
   fireEvent.click(screen.getByRole("button", { name: "Turn Off Journal Lock" }));
-  const dialog = await screen.findByRole("dialog", { name: "Turn Off Journal Lock" });
+  const dialog = await screen.findByRole("dialog", { name: "Turn Off Journal Lock" }, { timeout: 15000 });
   fireEvent.change(within(dialog).getByLabelText("Current Journal password"), { target: { value: passphrase } });
   fireEvent.click(within(dialog).getByRole("button", { name: "Turn Off Journal Lock" }));
 
