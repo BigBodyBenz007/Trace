@@ -46,7 +46,7 @@ test("persists normalized current settings with only themeId", () => {
   expect(storage.raw).not.toContain("lifeCurrentThemeId");
 });
 
-test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-space-journey"])(
+test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-space-journey", "to-kingdoms-ahead"])(
   "migrates legacy lifeCurrentThemeId %s without changing the selected theme",
   (lifeCurrentThemeId) => {
     expect(normalizeAppSettings({

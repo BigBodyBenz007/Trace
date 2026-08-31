@@ -56,6 +56,19 @@ test("pre-paint theme bootstrap preserves legacy selection and survives malforme
   localStorage.clear();
 });
 
+test("pre-paint theme bootstrap restores To Kingdoms Ahead without a wrong-theme flash", () => {
+  const html = fs.readFileSync(publicPath("index.html"), "utf8");
+  const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+
+  localStorage.setItem("appSettings", JSON.stringify({ themeId: "to-kingdoms-ahead" }));
+  window.eval(bootstrap);
+  expect(document.documentElement).toHaveAttribute(
+    "data-trace-theme",
+    "to-kingdoms-ahead"
+  );
+  localStorage.clear();
+});
+
 test.each([
   ["trace-icon-192.png", 192],
   ["trace-icon-512.png", 512],

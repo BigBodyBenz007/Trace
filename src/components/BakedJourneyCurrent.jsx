@@ -32,14 +32,30 @@ function BakedJourneySection({ classPrefix, dataPrefix, onImageError, section })
     [`data-${dataPrefix}-loop-boundary`]: section.loopBoundary ? "true" : "false",
     [`data-${dataPrefix}-overlap-before`]: section.overlapBefore || 0,
   };
+  if (section.overlapBeforeSourcePixels !== undefined) {
+    attributes[`data-${dataPrefix}-overlap-before-source-px`] =
+      section.overlapBeforeSourcePixels;
+  }
+  if (section.overlapToNextSourcePixels !== undefined) {
+    attributes[`data-${dataPrefix}-overlap-to-next-source-px`] =
+      section.overlapToNextSourcePixels;
+  }
 
   return (
     <div
       className={`baked-current-section ${classPrefix}-current-section`}
       data-image-ready={imageReady ? "true" : "false"}
       style={{
+        "--baked-overlap-before": `${section.overlapBefore || 0}px`,
         "--baked-section-left": `${section.left}px`,
+        ...(section.renderedWidth ? {
+          "--baked-section-width": `${section.renderedWidth}px`,
+        } : {}),
+        [`--${dataPrefix}-overlap-before`]: `${section.overlapBefore || 0}px`,
         [`--${dataPrefix}-section-left`]: `${section.left}px`,
+        ...(section.renderedWidth ? {
+          [`--${dataPrefix}-section-width`]: `${section.renderedWidth}px`,
+        } : {}),
       }}
       {...attributes}
     >

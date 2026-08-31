@@ -1292,6 +1292,10 @@ code {
   background: linear-gradient(145deg, #152739, #326677 48%, #735f82 72%, #101725);
 }
 
+.life-current-theme-swatch--to-kingdoms-ahead {
+  background: linear-gradient(145deg, #8da6ae, #53706d 38%, #947346 62%, #34362d);
+}
+
 .life-current-theme-option__copy,
 .life-current-theme-option__heading,
 .life-current-theme-option__description {
@@ -1788,6 +1792,12 @@ code {
   outline: none;
 }
 
+.life-current-theme--to-kingdoms-ahead {
+  background: #39433f;
+  border-radius: 0;
+  outline: none;
+}
+
 .baked-current-scene {
   height: var(--baked-scenery-height, 260px);
 }
@@ -1840,6 +1850,29 @@ code {
 
 .gnome-current-scene {
   background: #17231c;
+}
+
+.to-kingdoms-ahead-current-scene {
+  background: #39433f;
+}
+
+.to-kingdoms-ahead-current-section:not(
+  [data-to-kingdoms-ahead-overlap-before-source-px="0"]
+) {
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    rgba(0, 0, 0, 0.22) calc(var(--to-kingdoms-ahead-overlap-before) * 0.34),
+    #000 var(--to-kingdoms-ahead-overlap-before),
+    #000 100%
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    rgba(0, 0, 0, 0.22) calc(var(--to-kingdoms-ahead-overlap-before) * 0.34),
+    #000 var(--to-kingdoms-ahead-overlap-before),
+    #000 100%
+  );
 }
 
 @media (max-width: 780px) {

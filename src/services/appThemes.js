@@ -120,6 +120,23 @@ export const APP_THEMES = Object.freeze([
     },
     tokenMetadata: { foundation: "modern-heirloom", status: "future-full-app" },
   }),
+  theme({
+    id: "to-kingdoms-ahead",
+    label: "To Kingdoms Ahead",
+    description: "A continuous medieval journey from the royal gate to kingdoms ahead.",
+    immersive: true,
+    presentation: {
+      renderer: "to-kingdoms-ahead",
+      className: "life-current-theme--to-kingdoms-ahead",
+      colors: {
+        year: "#fff1d1", month: "#ddc9a2", fallback: "#776249", stem: "#776249",
+        node: "#d9aa63", selectedNode: "#ffe0a3", nodeBorder: "#29251f",
+        nodeGlow: "rgba(217, 170, 99, 0.76)", card: "#302a24",
+        selectedCardRing: "#d9aa63", selectedCardGlow: "rgba(217, 170, 99, 0.2)",
+      },
+    },
+    tokenMetadata: { foundation: "modern-heirloom", status: "future-full-app" },
+  }),
 ]);
 
 const THEMES_BY_ID = new Map(APP_THEMES.map((entry) => [entry.id, entry]));

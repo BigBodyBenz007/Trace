@@ -6,6 +6,10 @@ import LifeCurrent, {
 } from "./LifeCurrent";
 import { deriveLifeCurrent } from "../services/lifeCurrent";
 import { deriveLifeCurrentLayout } from "../services/lifeCurrentLayout";
+import {
+  TO_KINGDOMS_AHEAD_SCENERY_WIDTH,
+  getToKingdomsAheadSection,
+} from "../services/toKingdomsAheadScenes";
 
 function layout(points) {
   return { points };
@@ -632,6 +636,136 @@ test("Outer Space Journey decodes locked scenes and safely falls back to River",
     .toHaveAttribute("data-life-current-renderer", "river-current");
   expect(screen.getByTestId("life-current"))
     .toHaveAttribute("data-theme-id", "outer-space-journey");
+});
+
+test("To Kingdoms Ahead mounts exactly one opener followed by the manifest loop", () => {
+  render(
+    <React.StrictMode>
+      <RiverHarness
+        points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+        themeId="to-kingdoms-ahead"
+        viewportWidth={390}
+      />
+    </React.StrictMode>
+  );
+  const current = screen.getByTestId("life-current");
+  const scenery = screen.getByTestId("life-current-to-kingdoms-ahead-scenery");
+  const sections = [...scenery.querySelectorAll("[data-to-kingdoms-ahead-section]")];
+
+  expect(current).toHaveAttribute("aria-hidden", "true");
+  expect(current).toHaveAttribute("data-theme-id", "to-kingdoms-ahead");
+  expect(current).toHaveAttribute("data-life-current-renderer", "to-kingdoms-ahead");
+  expect(current).toHaveAttribute("data-to-kingdoms-ahead-catalog", "manifest-v1");
+  expect(current).toHaveAttribute(
+    "data-current-to-kingdoms-ahead-section",
+    "00-royal-gate-opener"
+  );
+  expect(sections.slice(0, 2).map((section) =>
+    section.getAttribute("data-to-kingdoms-ahead-section")
+  )).toEqual(["00-royal-gate-opener", "01-rugged-coast"]);
+  expect(scenery.querySelectorAll(
+    '[data-to-kingdoms-ahead-section="00-royal-gate-opener"]'
+  )).toHaveLength(1);
+  expect(scenery.querySelector("picture, svg, [data-to-kingdoms-ahead-overlay]"))
+    .not.toBeInTheDocument();
+  sections.forEach((section) => {
+    expect(section.querySelector("img")).toHaveAttribute("alt", "");
+    expect(section.querySelector("img")).toHaveAttribute("decoding", "async");
+    expect(section.querySelector("img")).toHaveAttribute("width", "1983");
+    expect(section.querySelector("img")).toHaveAttribute("height", "793");
+    expect(section.querySelector("img").getAttribute("src")).toMatch(/\.webp$/);
+  });
+});
+
+test("To Kingdoms Ahead recycling bypasses the opener and closes scene 15 into scene 01", () => {
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const frames = [];
+  window.requestAnimationFrame = jest.fn((callback) => {
+    frames.push(callback);
+    return frames.length;
+  });
+  window.cancelAnimationFrame = jest.fn();
+  const { unmount } = render(<RiverHarness
+    points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+    scrollWidth={50000}
+    themeId="to-kingdoms-ahead"
+    viewportWidth={1000}
+  />);
+  const viewport = screen.getByTestId("memory-timeline-viewport");
+  const current = screen.getByTestId("life-current");
+  const scene15 = getToKingdomsAheadSection(15);
+  const recycledScene01 = getToKingdomsAheadSection(16);
+
+  viewport.scrollLeft = scene15.left;
+  fireEvent.scroll(viewport);
+  act(() => frames.shift()());
+  expect(current).toHaveAttribute(
+    "data-current-to-kingdoms-ahead-section",
+    "15-rugged-coast-closure"
+  );
+  const mountedScene15 = current.querySelector(
+    '[data-to-kingdoms-ahead-section="15-rugged-coast-closure"]'
+  );
+  const mountedRecycledScene01 = current.querySelector(
+    '[data-to-kingdoms-ahead-section="01-rugged-coast"][data-to-kingdoms-ahead-cycle="1"]'
+  );
+  expect(mountedScene15).toBeInTheDocument();
+  expect(mountedRecycledScene01).toBeInTheDocument();
+  expect(mountedRecycledScene01).toHaveAttribute(
+    "data-to-kingdoms-ahead-overlap-before-source-px",
+    "400"
+  );
+  expect(mountedRecycledScene01.style.getPropertyValue(
+    "--to-kingdoms-ahead-overlap-before"
+  )).toBe(`${400 * 260 / 793}px`);
+  expect(
+    Number.parseFloat(mountedScene15.style.getPropertyValue("--to-kingdoms-ahead-section-left")) +
+      TO_KINGDOMS_AHEAD_SCENERY_WIDTH -
+      Number.parseFloat(mountedRecycledScene01.style.getPropertyValue(
+        "--to-kingdoms-ahead-section-left"
+      ))
+  ).toBeCloseTo(400 * 260 / 793, 8);
+
+  viewport.scrollLeft = recycledScene01.left;
+  fireEvent.scroll(viewport);
+  act(() => frames.shift()());
+  expect(current).toHaveAttribute(
+    "data-current-to-kingdoms-ahead-section",
+    "01-rugged-coast"
+  );
+  expect(current.querySelector(
+    '[data-to-kingdoms-ahead-section="00-royal-gate-opener"]'
+  )).not.toBeInTheDocument();
+
+  unmount();
+  window.requestAnimationFrame = originalRequestAnimationFrame;
+  window.cancelAnimationFrame = originalCancelAnimationFrame;
+});
+
+test("To Kingdoms Ahead decodes nearby scenes and safely falls back to River", async () => {
+  render(<RiverHarness
+    points={[point("2020-01-01", 0), point("2026-01-01", 1)]}
+    themeId="to-kingdoms-ahead"
+    viewportWidth={390}
+  />);
+  const current = screen.getByTestId("life-current");
+  const opener = current.querySelector(
+    '[data-to-kingdoms-ahead-section="00-royal-gate-opener"]'
+  );
+  expect(opener).toHaveAttribute("data-image-ready", "false");
+
+  await act(async () => {
+    fireEvent.load(opener.querySelector("img"));
+    await Promise.resolve();
+  });
+  expect(opener).toHaveAttribute("data-image-ready", "true");
+
+  fireEvent.error(opener.querySelector("img"));
+  expect(screen.getByTestId("life-current"))
+    .toHaveAttribute("data-life-current-renderer", "river-current");
+  expect(screen.getByTestId("life-current"))
+    .toHaveAttribute("data-theme-id", "to-kingdoms-ahead");
 });
 
 test("invalid theme IDs safely render Modern Heirloom", () => {

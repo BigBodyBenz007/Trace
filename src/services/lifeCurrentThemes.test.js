@@ -5,7 +5,7 @@ import {
   normalizeLifeCurrentThemeId,
 } from "./lifeCurrentThemes";
 
-test("compatibility exports expose the authoritative six-theme app registry", () => {
+test("compatibility exports expose the authoritative seven-theme app registry", () => {
   expect(LIFE_CURRENT_THEMES.map(({ id }) => id)).toEqual([
     "modern-heirloom",
     "river",
@@ -13,6 +13,7 @@ test("compatibility exports expose the authoritative six-theme app registry", ()
     "gnome-village",
     "desert-journey",
     "outer-space-journey",
+    "to-kingdoms-ahead",
   ]);
   expect(DEFAULT_LIFE_CURRENT_THEME_ID).toBe("modern-heirloom");
   expect(getLifeCurrentTheme("modern-heirloom")).toMatchObject({
@@ -39,6 +40,10 @@ test("compatibility exports expose the authoritative six-theme app registry", ()
     name: "Outer Space Journey",
     description: "A continuous expedition through an ancient alien world.",
     presentation: { renderer: "outer-space-journey" },
+  });
+  expect(getLifeCurrentTheme("to-kingdoms-ahead")).toMatchObject({
+    name: "To Kingdoms Ahead",
+    presentation: { renderer: "to-kingdoms-ahead" },
   });
 });
 

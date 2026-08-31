@@ -188,7 +188,7 @@ test("a generated or pasted setup password submits unchanged", async () => {
 });
 
 test("password controls use shared theme tokens and remain contained at 320px and 390px in all themes and motion modes", () => {
-  expect(APP_THEMES).toHaveLength(6);
+  expect(APP_THEMES).toHaveLength(7);
   [320, 390].forEach((width) => {
     Object.defineProperty(window, "innerWidth", { configurable: true, value: width });
     APP_THEMES.forEach(({ id }) => {

@@ -6,7 +6,7 @@ import {
   normalizeAppThemeId,
 } from "./appThemes";
 
-test("registers six unique app themes with exactly one Modern Heirloom default", () => {
+test("registers seven unique app themes with exactly one Modern Heirloom default", () => {
   const ids = APP_THEMES.map(({ id }) => id);
   expect(ids).toEqual([
     "modern-heirloom",
@@ -15,6 +15,7 @@ test("registers six unique app themes with exactly one Modern Heirloom default",
     "gnome-village",
     "desert-journey",
     "outer-space-journey",
+    "to-kingdoms-ahead",
   ]);
   expect(new Set(ids)).toHaveProperty("size", ids.length);
   expect(APP_THEMES.filter(({ isDefault }) => isDefault)).toEqual([
@@ -30,6 +31,11 @@ test("registers six unique app themes with exactly one Modern Heirloom default",
     label: "River",
     immersive: true,
     presentation: { renderer: "river-current" },
+  });
+  expect(getAppTheme("to-kingdoms-ahead")).toMatchObject({
+    label: "To Kingdoms Ahead",
+    immersive: true,
+    presentation: { renderer: "to-kingdoms-ahead" },
   });
 });
 

@@ -768,7 +768,7 @@ test("rejects malformed nested workout drafts before restore mutates storage or 
   expect(storage.value("workoutDraft")).toBe(original);
 });
 
-test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-space-journey"])(
+test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-space-journey", "to-kingdoms-ahead"])(
   "backups migrate and restore the selected legacy %s theme",
   async (lifeCurrentThemeId) => {
     const source = makeStorage({

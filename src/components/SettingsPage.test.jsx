@@ -21,13 +21,14 @@ test("renders compact global unit controls and saves each preference", () => {
   expect(screen.getByRole("heading", { name: "App Theme" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Motion & Effects" })).toBeInTheDocument();
   const themes = within(screen.getByRole("radiogroup", { name: "App Theme" })).getAllByRole("radio");
-  expect(themes).toHaveLength(6);
+  expect(themes).toHaveLength(7);
   expect(screen.getByRole("radio", { name: /Modern Heirloom/ })).toBeChecked();
   expect(screen.getByRole("radio", { name: /^River/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Haunted Forest/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Gnome Village/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Desert Journey/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Outer Space Journey/ })).not.toBeChecked();
+  expect(screen.getByRole("radio", { name: /To Kingdoms Ahead/ })).not.toBeChecked();
   expect(screen.getByText("A clean, non-illustrated Life Current with Trace’s deep navy heirloom texture.")).toBeInTheDocument();
   expect(screen.getByText("A flowing current through your timeline.")).toBeInTheDocument();
   expect(screen.getByText("A winding path through a darker world.")).toBeInTheDocument();
@@ -35,6 +36,8 @@ test("renders compact global unit controls and saves each preference", () => {
   expect(screen.getByText("One connected golden-ochre road through an ancient desert world."))
     .toBeInTheDocument();
   expect(screen.getByText("A continuous expedition through an ancient alien world."))
+    .toBeInTheDocument();
+  expect(screen.getByText("A continuous medieval journey from the royal gate to kingdoms ahead."))
     .toBeInTheDocument();
   expect(screen.getByText("✓ Selected")).toBeInTheDocument();
   fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
@@ -204,6 +207,30 @@ test("selects Outer Space Journey through the shared theme control", () => {
   expect(updateSettings).toHaveBeenLastCalledWith({
     ...DEFAULT_APP_SETTINGS,
     themeId: "outer-space-journey",
+  });
+});
+
+test("selects To Kingdoms Ahead through the shared theme control", () => {
+  const updateSettings = jest.fn(() => true);
+  render(
+    <SettingsPage
+      settings={DEFAULT_APP_SETTINGS}
+      updateSettings={updateSettings}
+      onBack={jest.fn()}
+      buttonStyle={{}}
+      containerStyle={{}}
+    />
+  );
+
+  const kingdoms = screen.getByRole("radio", { name: /To Kingdoms Ahead/ });
+  expect(kingdoms).toHaveAttribute(
+    "aria-describedby",
+    "app-theme-to-kingdoms-ahead-description"
+  );
+  fireEvent.click(kingdoms);
+  expect(updateSettings).toHaveBeenLastCalledWith({
+    ...DEFAULT_APP_SETTINGS,
+    themeId: "to-kingdoms-ahead",
   });
 });
 

@@ -5,6 +5,7 @@ import HauntedForestCurrent from "./HauntedForestCurrent";
 import OuterSpaceJourneyCurrent from "./OuterSpaceJourneyCurrent";
 import RiverCurrent from "./RiverCurrent";
 import ModernHeirloomCurrent from "./ModernHeirloomCurrent";
+import ToKingdomsAheadCurrent from "./ToKingdomsAheadCurrent";
 import { getLifeCurrentTheme } from "../services/lifeCurrentThemes";
 
 const VIEWBOX_WIDTH = 1000;
@@ -85,6 +86,17 @@ export function LifeCurrentScenery({
   if (theme.presentation.renderer === "outer-space-journey") {
     return (
       <OuterSpaceJourneyCurrent
+        active={active}
+        points={points}
+        themeId={theme.id}
+        viewportRef={viewportRef}
+      />
+    );
+  }
+
+  if (theme.presentation.renderer === "to-kingdoms-ahead") {
+    return (
+      <ToKingdomsAheadCurrent
         active={active}
         points={points}
         themeId={theme.id}
