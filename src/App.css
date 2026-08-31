@@ -44,7 +44,10 @@
 .trace-save-confirmation {
   background: var(--trace-toast-bg) !important;
   border: 1px solid var(--trace-toast-border);
+  border-radius: var(--trace-toast-radius) !important;
   color: var(--trace-toast-text) !important;
+  box-shadow: var(--trace-toast-shadow);
+  text-shadow: var(--trace-toast-text-shadow);
   left: auto;
   pointer-events: none;
   right: max(16px, calc((100vw - 1120px) / 2));

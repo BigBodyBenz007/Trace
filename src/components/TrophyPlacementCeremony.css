@@ -12,12 +12,14 @@
 }
 
 .trophy-ceremony {
-  background: var(--trace-dialog-surface, #0c1b24);
-  border: 1px solid var(--trace-accent-secondary, rgba(190, 145, 80, 0.72));
-  border-radius: 14px;
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.42);
+  background: var(--trace-dialog-background, #0c1b24);
+  background-clip: var(--trace-dialog-background-clip, border-box);
+  background-origin: var(--trace-dialog-background-origin, padding-box);
+  border: var(--trace-dialog-border-width, 1px) solid var(--trace-dialog-border, rgba(190, 145, 80, 0.72));
+  border-radius: var(--trace-trophy-dialog-radius, 14px);
+  box-shadow: var(--trace-trophy-dialog-shadow, 0 16px 36px rgba(0, 0, 0, 0.42));
   box-sizing: border-box;
-  color: var(--trace-text-primary, #f5efe4);
+  color: var(--trace-dialog-text, #f5efe4);
   max-height: calc(100svh - max(32px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
   max-width: 560px;
   min-width: 0;
