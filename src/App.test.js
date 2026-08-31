@@ -226,7 +226,10 @@ test("default theme and motion identities coexist on the HTML root and app shell
 
   const shell = screen.getByTestId("trace-app-shell");
   expect(document.documentElement).toHaveAttribute("data-trace-theme", "modern-heirloom");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "modern-heirloom");
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#07131f");
   expect(shell).toHaveAttribute("data-trace-theme", "modern-heirloom");
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "modern-heirloom");
   expect(shell).toHaveAttribute("data-motion", "standard");
   expect(await screen.findByTestId("life-current"))
     .toHaveAttribute("data-life-current-renderer", "modern-heirloom-current");
@@ -238,6 +241,8 @@ test("malformed settings fail safely to matching Modern Heirloom root attributes
   expect(document.documentElement).toHaveAttribute("data-trace-theme", "modern-heirloom");
   expect(screen.getByTestId("trace-app-shell"))
     .toHaveAttribute("data-trace-theme", "modern-heirloom");
+  expect(screen.getByTestId("trace-app-shell"))
+    .toHaveAttribute("data-trace-shell-theme", "modern-heirloom");
 });
 
 test("loads and preserves planned workouts separately from completed workout storage", async () => {
@@ -2314,21 +2319,52 @@ test.each([
     units: { weight: "lb", height: "ft-in", circumference: "in" },
   });
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-theme", themeId);
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute(
+    "data-trace-shell-theme",
+    themeId === "to-kingdoms-ahead" ? "to-kingdoms-ahead" : "modern-heirloom"
+  );
   expect(document.documentElement).toHaveAttribute("data-trace-theme", themeId);
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
+    "content",
+    themeId === "to-kingdoms-ahead" ? "#171712" : "#07131f"
+  );
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", themeId);
   first.unmount();
 
   render(<App />);
   expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", themeId);
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute(
+    "data-trace-shell-theme",
+    themeId === "to-kingdoms-ahead" ? "to-kingdoms-ahead" : "modern-heirloom"
+  );
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
   expect(screen.getByRole("radio", { name: new RegExp(themeName) })).toBeChecked();
   fireEvent.click(screen.getByRole("radio", { name: /River/ }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
     themeId: "river",
   });
+  expect(screen.getByTestId("trace-app-shell"))
+    .toHaveAttribute("data-trace-shell-theme", "modern-heirloom");
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", "river");
+});
+
+test("To Kingdoms Ahead shell remains active through Settings, Nutrition, and same-tab Home navigation", () => {
+  localStorage.setItem("appSettings", JSON.stringify({ themeId: "to-kingdoms-ahead" }));
+  render(<App />);
+
+  const shell = screen.getByTestId("trace-app-shell");
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "to-kingdoms-ahead");
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByTestId("settings-page")).toBeInTheDocument();
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "to-kingdoms-ahead");
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  expect(screen.getByRole("heading", { name: "Nutrition" })).toBeInTheDocument();
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "to-kingdoms-ahead");
+  expect(document.documentElement)
+    .toHaveAttribute("data-trace-shell-theme", "to-kingdoms-ahead");
 });
 
 test("standalone Journal navigation creates private entries and keeps content inside Journal", async () => {

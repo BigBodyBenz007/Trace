@@ -1,9 +1,12 @@
 import {
   APP_THEMES,
   DEFAULT_APP_THEME_ID,
+  DEFAULT_SHELL_THEME_ID,
   getAppTheme,
+  getAppShellThemeColor,
   isAppThemeId,
   normalizeAppThemeId,
+  resolveAppShellThemeId,
 } from "./appThemes";
 
 test("registers seven unique app themes with exactly one Modern Heirloom default", () => {
@@ -22,6 +25,7 @@ test("registers seven unique app themes with exactly one Modern Heirloom default
     expect.objectContaining({ id: "modern-heirloom", immersive: false }),
   ]);
   expect(DEFAULT_APP_THEME_ID).toBe("modern-heirloom");
+  expect(DEFAULT_SHELL_THEME_ID).toBe("modern-heirloom");
   expect(getAppTheme("modern-heirloom")).toMatchObject({
     label: "Modern Heirloom",
     description: "A clean, non-illustrated Life Current with Trace’s deep navy heirloom texture.",
@@ -36,7 +40,27 @@ test("registers seven unique app themes with exactly one Modern Heirloom default
     label: "To Kingdoms Ahead",
     immersive: true,
     presentation: { renderer: "to-kingdoms-ahead" },
+    tokenMetadata: { foundation: "to-kingdoms-ahead", status: "active" },
   });
+});
+
+test("resolves only Phase 1 full-app themes to distinct shell token sets", () => {
+  expect(resolveAppShellThemeId("modern-heirloom")).toBe("modern-heirloom");
+  expect(resolveAppShellThemeId("to-kingdoms-ahead")).toBe("to-kingdoms-ahead");
+  expect(getAppShellThemeColor("modern-heirloom")).toBe("#07131f");
+  expect(getAppShellThemeColor("to-kingdoms-ahead")).toBe("#171712");
+});
+
+test.each([
+  "river",
+  "haunted-forest",
+  "gnome-village",
+  "desert-journey",
+  "outer-space-journey",
+  "obsolete-theme",
+])("uses the Modern Heirloom shell fallback for %s", (themeId) => {
+  expect(resolveAppShellThemeId(themeId)).toBe("modern-heirloom");
+  expect(getAppShellThemeColor(themeId)).toBe("#07131f");
 });
 
 test.each([undefined, null, "", "obsolete", {}, []])(

@@ -39,6 +39,8 @@ test("HTML applies a fail-safe app theme before React starts", () => {
   expect(html).toContain("settings && settings.themeId");
   expect(html).toContain("settings && settings.lifeCurrentThemeId");
   expect(html).toContain('document.documentElement.setAttribute("data-trace-theme", themeId)');
+  expect(html).toContain('"data-trace-shell-theme"');
+  expect(html).toContain('meta[name="theme-color"]');
   expect(html.indexOf("data-trace-theme")).toBeLessThan(html.indexOf('<div id="root"></div>'));
 });
 
@@ -49,10 +51,14 @@ test("pre-paint theme bootstrap preserves legacy selection and survives malforme
   localStorage.setItem("appSettings", JSON.stringify({ lifeCurrentThemeId: "gnome-village" }));
   window.eval(bootstrap);
   expect(document.documentElement).toHaveAttribute("data-trace-theme", "gnome-village");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "modern-heirloom");
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#07131f");
 
   localStorage.setItem("appSettings", "not-json");
   window.eval(bootstrap);
   expect(document.documentElement).toHaveAttribute("data-trace-theme", "modern-heirloom");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "modern-heirloom");
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#07131f");
   localStorage.clear();
 });
 
@@ -66,6 +72,11 @@ test("pre-paint theme bootstrap restores To Kingdoms Ahead without a wrong-theme
     "data-trace-theme",
     "to-kingdoms-ahead"
   );
+  expect(document.documentElement).toHaveAttribute(
+    "data-trace-shell-theme",
+    "to-kingdoms-ahead"
+  );
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#171712");
   localStorage.clear();
 });
 

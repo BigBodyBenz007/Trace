@@ -1,4 +1,9 @@
 export const DEFAULT_APP_THEME_ID = "modern-heirloom";
+export const DEFAULT_SHELL_THEME_ID = DEFAULT_APP_THEME_ID;
+export const APP_SHELL_THEME_COLORS = Object.freeze({
+  "modern-heirloom": "#07131f",
+  "to-kingdoms-ahead": "#171712",
+});
 
 function theme({ description, id, immersive, isDefault = false, label, presentation, tokenMetadata }) {
   return Object.freeze({
@@ -135,7 +140,7 @@ export const APP_THEMES = Object.freeze([
         selectedCardRing: "#d9aa63", selectedCardGlow: "rgba(217, 170, 99, 0.2)",
       },
     },
-    tokenMetadata: { foundation: "modern-heirloom", status: "future-full-app" },
+    tokenMetadata: { foundation: "to-kingdoms-ahead", status: "active" },
   }),
 ]);
 
@@ -151,4 +156,15 @@ export function normalizeAppThemeId(value) {
 
 export function getAppTheme(value) {
   return THEMES_BY_ID.get(normalizeAppThemeId(value));
+}
+
+export function resolveAppShellThemeId(value) {
+  const foundation = getAppTheme(value).tokenMetadata.foundation;
+  return foundation === "to-kingdoms-ahead"
+    ? foundation
+    : DEFAULT_SHELL_THEME_ID;
+}
+
+export function getAppShellThemeColor(value) {
+  return APP_SHELL_THEME_COLORS[resolveAppShellThemeId(value)];
 }

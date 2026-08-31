@@ -42,11 +42,26 @@
 }
 
 .trace-save-confirmation {
+  background: var(--trace-toast-bg) !important;
+  border: 1px solid var(--trace-toast-border);
+  color: var(--trace-toast-text) !important;
   left: auto;
   pointer-events: none;
   right: max(16px, calc((100vw - 1120px) / 2));
   top: calc(16px + env(safe-area-inset-top));
   transform: none;
+}
+
+.trace-app-alert {
+  background: var(--trace-surface-elevated) !important;
+  border-color: var(--trace-border-default) !important;
+  color: var(--trace-text-primary) !important;
+}
+
+.trace-app-alert--error {
+  background: var(--trace-error-bg) !important;
+  border-color: var(--trace-error-border) !important;
+  color: var(--trace-error-text) !important;
 }
 
 @media (max-width: 600px) {

@@ -1,6 +1,6 @@
 .trophy-ceremony-overlay {
   align-items: center;
-  background: rgba(3, 9, 13, 0.88);
+  background: var(--trace-overlay, rgba(3, 9, 13, 0.88));
   box-sizing: border-box;
   display: flex;
   inset: 0;
@@ -12,12 +12,12 @@
 }
 
 .trophy-ceremony {
-  background: #0c1b24;
-  border: 1px solid rgba(190, 145, 80, 0.72);
+  background: var(--trace-dialog-surface, #0c1b24);
+  border: 1px solid var(--trace-accent-secondary, rgba(190, 145, 80, 0.72));
   border-radius: 14px;
   box-shadow: 0 16px 36px rgba(0, 0, 0, 0.42);
   box-sizing: border-box;
-  color: #f5efe4;
+  color: var(--trace-text-primary, #f5efe4);
   max-height: calc(100svh - max(32px, env(safe-area-inset-top) + env(safe-area-inset-bottom)));
   max-width: 560px;
   min-width: 0;
@@ -65,7 +65,7 @@
 }
 
 .trophy-ceremony__close:focus-visible {
-  outline: 3px solid #e0bd75;
+  outline: 3px solid var(--trace-focus-ring, #e0bd75);
   outline-offset: 3px;
 }
 

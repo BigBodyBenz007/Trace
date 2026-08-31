@@ -77,6 +77,7 @@ import {
   workoutCalorieEstimateNeedsRefresh,
 } from "./services/workoutCalorieEstimateSnapshot";
 import { useReducedMotion } from "./services/motionPreference";
+import { getAppShellThemeColor, resolveAppShellThemeId } from "./services/appThemes";
 import { createPhotoUrlLoader } from "./services/photoUrlLoader";
 import {
   JOURNAL_DRAFT_STORAGE_KEY,
@@ -332,6 +333,17 @@ function App() {
 
   useLayoutEffect(() => {
     document.documentElement.setAttribute("data-trace-theme", appSettings.themeId);
+    document.documentElement.setAttribute(
+      "data-trace-shell-theme",
+      resolveAppShellThemeId(appSettings.themeId)
+    );
+    let themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (!themeColorMeta) {
+      themeColorMeta = document.createElement("meta");
+      themeColorMeta.setAttribute("name", "theme-color");
+      document.head.appendChild(themeColorMeta);
+    }
+    themeColorMeta.setAttribute("content", getAppShellThemeColor(appSettings.themeId));
   }, [appSettings.themeId]);
   const [medicationEntries, setMedicationEntries] = useState([]);
   const [medicationDoseSchedules, setMedicationDoseSchedules] = useState([]);
@@ -2831,6 +2843,7 @@ function App() {
       aria-hidden={ceremonyEntry ? "true" : undefined}
       className="trace-app-shell"
       data-motion={reducedMotion ? "reduced" : "standard"}
+      data-trace-shell-theme={resolveAppShellThemeId(appSettings.themeId)}
       data-trace-theme={appSettings.themeId}
       data-testid="trace-app-shell"
       data-planned-workout-count={plannedWorkouts.length}
@@ -2849,6 +2862,7 @@ function App() {
       />
       {storageError && (
         <div
+          className="trace-app-alert trace-app-alert--error"
           role="alert"
           style={{
             background: "#7f1d1d",

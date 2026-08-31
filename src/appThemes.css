@@ -1,0 +1,159 @@
+/*
+ * Trace full-app theme contract.
+ *
+ * Components consume semantic tokens from this file. A selected Life Current
+ * theme resolves to one effective shell theme, so artwork and app chrome can
+ * evolve independently without introducing a second theme preference.
+ */
+:root,
+:root[data-trace-shell-theme="modern-heirloom"] {
+  color-scheme: dark;
+
+  /* App canvas and decorative hooks. */
+  --trace-app-background-color: #07131f;
+  --trace-app-background:
+    radial-gradient(circle at 50% -12%, rgba(27, 111, 106, 0.12), transparent 34rem),
+    linear-gradient(180deg, #07131f 0, #0a1a28 420px, #081722 100%);
+  --trace-app-decoration: linear-gradient(90deg, transparent, #bd9362, transparent);
+  --trace-header-background: rgba(16, 37, 56, 0.9);
+  --trace-header-border: #314859;
+
+  /* Surfaces. */
+  --trace-surface-primary: #102538;
+  --trace-surface-secondary: #163044;
+  --trace-surface-elevated: #1b3a4d;
+  --trace-surface-subtle: #0d2030;
+  --trace-dialog-surface: #182c3b;
+
+  /* Content and dividers. */
+  --trace-text-primary: #f2eadc;
+  --trace-text-secondary: #b9b0a2;
+  --trace-text-on-accent: #ffffff;
+  --trace-border-default: #314859;
+  --trace-divider: rgba(49, 72, 89, 0.72);
+
+  /* Brand and interaction accents. */
+  --trace-accent-primary: #1d746e;
+  --trace-accent-primary-hover: #23847d;
+  --trace-accent-primary-border: #79c9bf;
+  --trace-accent-secondary: #bd9362;
+  --trace-accent-secondary-strong: #d2ad78;
+  --trace-accent-secondary-surface: #6d5135;
+  --trace-focus-ring: #83d8cf;
+
+  /* Controls. */
+  --trace-button-primary-bg: #1d746e;
+  --trace-button-primary-hover: #23847d;
+  --trace-button-primary-border: #79c9bf;
+  --trace-button-primary-text: #ffffff;
+  --trace-button-secondary-bg: #163044;
+  --trace-button-secondary-hover: #214356;
+  --trace-button-secondary-border: #314859;
+  --trace-button-secondary-text: #f2eadc;
+  --trace-button-accent-bg: #6d5135;
+  --trace-button-accent-border: #d2ad78;
+  --trace-button-accent-text: #fff8eb;
+  --trace-button-danger-bg: #722f37;
+  --trace-button-danger-border: #d37b80;
+  --trace-button-danger-text: #fff7f3;
+  --trace-input-bg: #091722;
+  --trace-input-text: #f2eadc;
+  --trace-input-border: #52697a;
+  --trace-input-placeholder: #9ca6ad;
+  --trace-control-label: #ddd4c6;
+
+  /* Feedback, overlays, and progress. */
+  --trace-toast-bg: #153d36;
+  --trace-toast-border: #4b9a89;
+  --trace-toast-text: #f4fffc;
+  --trace-error-bg: #3d2228;
+  --trace-error-border: #b46069;
+  --trace-error-text: #ffd7d8;
+  --trace-overlay: rgba(3, 8, 12, 0.8);
+  --trace-progress-track: #263d4d;
+  --trace-progress-fill: #79c9bf;
+
+  /* Compatibility aliases used by established Trace components. */
+  --trace-bg-deep: var(--trace-app-background-color);
+  --trace-bg: #0a1a28;
+  --trace-surface-1: var(--trace-surface-primary);
+  --trace-surface-2: var(--trace-surface-secondary);
+  --trace-surface-raised: var(--trace-surface-elevated);
+  --trace-surface: var(--trace-surface-primary);
+  --trace-text: var(--trace-text-primary);
+  --trace-text-muted: var(--trace-text-secondary);
+  --trace-teal: var(--trace-accent-primary);
+  --trace-teal-strong: var(--trace-accent-primary);
+  --trace-teal-soft: var(--trace-accent-primary-border);
+  --trace-brass: var(--trace-accent-secondary);
+  --trace-brass-strong: var(--trace-accent-secondary-strong);
+  --trace-border: var(--trace-border-default);
+  --trace-border-warm: #6e604e;
+  --trace-focus: var(--trace-focus-ring);
+  --trace-danger: var(--trace-button-danger-bg);
+}
+
+:root[data-trace-shell-theme="to-kingdoms-ahead"] {
+  --trace-app-background-color: #171712;
+  --trace-app-background:
+    radial-gradient(circle at 82% 5%, rgba(190, 126, 56, 0.16), transparent 25rem),
+    radial-gradient(circle at 14% 28%, rgba(99, 107, 87, 0.14), transparent 32rem),
+    repeating-linear-gradient(94deg, rgba(255, 244, 213, 0.018) 0 1px, transparent 1px 7px),
+    linear-gradient(180deg, #25251e 0, #1d201b 32rem, #151713 100%);
+  --trace-app-decoration: linear-gradient(90deg, transparent, #b8874f, transparent);
+  --trace-header-background: rgba(38, 37, 29, 0.94);
+  --trace-header-border: #6f634e;
+
+  --trace-surface-primary: #292a22;
+  --trace-surface-secondary: #34362c;
+  --trace-surface-elevated: #3d3b2f;
+  --trace-surface-subtle: #23251f;
+  --trace-dialog-surface: #302f27;
+
+  --trace-text-primary: #f3ead8;
+  --trace-text-secondary: #c8bda8;
+  --trace-text-on-accent: #fff8e9;
+  --trace-border-default: #625d4e;
+  --trace-divider: rgba(111, 99, 78, 0.76);
+
+  --trace-accent-primary: #7c4b2f;
+  --trace-accent-primary-hover: #925a34;
+  --trace-accent-primary-border: #c6975e;
+  --trace-accent-secondary: #b8874f;
+  --trace-accent-secondary-strong: #ddb475;
+  --trace-accent-secondary-surface: #62452c;
+  --trace-focus-ring: #f0c77d;
+
+  --trace-button-primary-bg: #7c4b2f;
+  --trace-button-primary-hover: #925a34;
+  --trace-button-primary-border: #c6975e;
+  --trace-button-primary-text: #fff8e9;
+  --trace-button-secondary-bg: #3a3b31;
+  --trace-button-secondary-hover: #49483a;
+  --trace-button-secondary-border: #77705d;
+  --trace-button-secondary-text: #f3ead8;
+  --trace-button-accent-bg: #62452c;
+  --trace-button-accent-border: #ddb475;
+  --trace-button-accent-text: #fff4dc;
+  --trace-button-danger-bg: #6e302d;
+  --trace-button-danger-border: #d28576;
+  --trace-button-danger-text: #fff2e9;
+  --trace-input-bg: #1d1f1a;
+  --trace-input-text: #f5ecdb;
+  --trace-input-border: #756d59;
+  --trace-input-placeholder: #aaa18f;
+  --trace-control-label: #e0d5c0;
+
+  --trace-toast-bg: #334534;
+  --trace-toast-border: #76906e;
+  --trace-toast-text: #f4f4df;
+  --trace-error-bg: #482826;
+  --trace-error-border: #b86d61;
+  --trace-error-text: #ffe0d3;
+  --trace-overlay: rgba(12, 12, 9, 0.82);
+  --trace-progress-track: #47483b;
+  --trace-progress-fill: #c6975e;
+
+  --trace-bg: #1d201b;
+  --trace-border-warm: #79694f;
+}

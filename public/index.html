@@ -2,9 +2,12 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
+    <meta name="theme-color" content="#07131f" />
     <script>
       (function () {
         var fallbackTheme = "modern-heirloom";
+        var fullAppThemes = ["modern-heirloom", "to-kingdoms-ahead"];
+        var themeColors = { "modern-heirloom": "#07131f", "to-kingdoms-ahead": "#171712" };
         var validThemes = [
           "modern-heirloom",
           "river",
@@ -26,11 +29,21 @@
           themeId = fallbackTheme;
         }
         document.documentElement.setAttribute("data-trace-theme", themeId);
+        document.documentElement.setAttribute(
+          "data-trace-shell-theme",
+          fullAppThemes.indexOf(themeId) !== -1 ? themeId : fallbackTheme
+        );
+        var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+        if (!themeColorMeta) {
+          themeColorMeta = document.createElement("meta");
+          themeColorMeta.setAttribute("name", "theme-color");
+          document.head.appendChild(themeColorMeta);
+        }
+        themeColorMeta.setAttribute("content", themeColors[themeId] || themeColors[fallbackTheme]);
       }());
     </script>
     <link rel="icon" type="image/png" href="%PUBLIC_URL%/trace-icon-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#111827" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Trace" />
