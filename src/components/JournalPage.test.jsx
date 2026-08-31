@@ -44,15 +44,19 @@ test("uses the scoped reflective presentation while retaining the Journal paper"
   expect(screen.getByRole("heading", { name: "New Journal Entry" }).nextElementSibling).toHaveClass("journal-paper");
 });
 
-test("separates the decorative book icon from the centered Journal header copy", () => {
-  render(<JournalPage {...baseProps} />);
+test("keeps the unlocked Lock Journal action inside the responsive Journal heading", () => {
+  render(<JournalPage {...baseProps} journalPrivacyEnabled journalPrivacyUnlocked onLock={jest.fn()} />);
   const heading = screen.getByRole("heading", { name: "Journal" });
   const copy = heading.parentElement;
   const header = copy.parentElement;
-  expect(header).toHaveClass("journal-page__header");
+  expect(header).toHaveClass("journal-page__header", "journal-page__header--unlocked");
   expect(copy).toHaveClass("journal-page__header-copy");
   expect(header.firstElementChild).toMatchObject({ tagName: "svg" });
   expect(header.firstElementChild).toHaveAttribute("aria-hidden", "true");
+  expect(within(header).getByRole("button", { name: "Lock Journal" })).toBeInTheDocument();
+  const css = fs.readFileSync(path.join(process.cwd(), "src", "index.css"), "utf8");
+  expect(css).toMatch(/\.journal-page__header--unlocked\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(128px,\s*1fr\)\s+minmax\(0,\s*2fr\)\s+minmax\(128px,\s*1fr\)/);
+  expect(css).toMatch(/@media\s*\(max-width:\s*430px\)[\s\S]*?\.journal-page__header--unlocked\s*\{[^}]*grid-template-columns:\s*38px\s+minmax\(0,\s*1fr\)\s+auto/);
 });
 
 test("keeps native Journal date and time inputs contained without changing the 360px stack breakpoint", () => {
@@ -175,12 +179,15 @@ test("unlocked Journal exposes a direct Lock Journal page action that persists t
     <JournalPage
       {...baseProps}
       initialDraft={draft}
+      journalPrivacyEnabled
+      journalPrivacyUnlocked
       persistDraft={persistDraft}
       onLock={onLock}
     />
   );
   const lock = screen.getByRole("button", { name: "Lock Journal" });
-  expect(lock.closest(".journal-page__navigation")).toBeInTheDocument();
+  expect(lock.closest(".journal-page__header")).toBeInTheDocument();
+  expect(screen.getAllByRole("button", { name: "Back to Timeline" })[0].closest(".journal-page__navigation")).not.toContainElement(lock);
   fireEvent.click(lock);
   await waitFor(() => expect(persistDraft).toHaveBeenCalledWith(draft));
   await waitFor(() => expect(onLock).toHaveBeenCalledTimes(1));

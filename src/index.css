@@ -2006,6 +2006,29 @@ code {
   width: 100%;
 }
 
+.journal-page__header--unlocked {
+  column-gap: 14px;
+  display: grid;
+  grid-template-columns: minmax(128px, 1fr) minmax(0, 2fr) minmax(128px, 1fr);
+}
+
+.journal-page__header--unlocked > svg {
+  justify-self: start;
+  position: static;
+  transform: none;
+}
+
+.journal-page__header--unlocked .journal-page__header-copy {
+  padding-inline: 0;
+}
+
+.journal-page__lock-action {
+  justify-self: end;
+  margin: 0 !important;
+  max-width: 100%;
+  white-space: normal;
+}
+
 .journal-section {
   margin-top: 32px;
   max-width: 700px;
@@ -2068,6 +2091,15 @@ code {
   .journal-date-time input {
     /* iOS WebKit miscalculates padded native date/time inputs at width: 100%. */
     padding-inline: 0 !important;
+  }
+
+  .journal-page__header--unlocked {
+    column-gap: 10px;
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+  }
+
+  .journal-page__header--unlocked .journal-page__header-copy {
+    overflow-wrap: anywhere;
   }
 }
 

@@ -92,6 +92,7 @@ afterEach(() => {
 });
 
 test("direct Lock Journal clears the active session without changing encrypted or unrelated data and focuses unlock", async () => {
+  Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
   await prepareLockedJournal();
   render(<App />);
   expect(screen.getByRole("button", { name: "Open locked Journal" })).toBeInTheDocument();
@@ -103,6 +104,10 @@ test("direct Lock Journal clears the active session without changing encrypted o
   expect(screen.getByLabelText("Journal password")).toHaveFocus();
   expect(document.body).not.toHaveTextContent(secretTitle);
   await unlockFromPage();
+  const journalHeading = screen.getByRole("heading", { name: "Journal" });
+  const journalHeader = journalHeading.closest("header");
+  const mobileLockAction = within(journalHeader).getByRole("button", { name: "Lock Journal" });
+  expect(journalHeader).toHaveClass("journal-page__header--unlocked");
   expect(screen.getByText(secretTitle)).toBeInTheDocument();
   expect(screen.getByText(secretBody)).toBeInTheDocument();
   expect(localStorage.getItem("journalEntries")).toBeNull();
@@ -119,7 +124,7 @@ test("direct Lock Journal clears the active session without changing encrypted o
   const settingsBeforeLock = localStorage.getItem("appSettings");
   localStorage.setItem("journal-lock-unrelated", "exact unrelated bytes");
 
-  fireEvent.click(screen.getByRole("button", { name: "Lock Journal" }));
+  fireEvent.click(mobileLockAction);
   await screen.findByRole("heading", { name: "Journal locked" });
   expect(document.body).not.toHaveTextContent(secretTitle);
   expect(document.body).not.toHaveTextContent(secretBody);

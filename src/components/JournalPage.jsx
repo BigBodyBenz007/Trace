@@ -56,6 +56,8 @@ export default function JournalPage({
   saveEntry,
   deleteEntry,
   initialDraft,
+  journalPrivacyEnabled = false,
+  journalPrivacyUnlocked = false,
   persistDraft = (value) => writeJournalDraft(localStorage, value),
   removeDraft = () => clearJournalDraft(localStorage),
   onLock,
@@ -121,6 +123,7 @@ export default function JournalPage({
     width: "100%",
   };
   const smallButtonStyle = { ...buttonStyle, fontSize: "16px", marginTop: 0, minHeight: "44px", padding: "10px 14px" };
+  const showLockAction = journalPrivacyEnabled && journalPrivacyUnlocked && Boolean(onLock);
 
   function change(field, value) {
     setDraftActive(true);
@@ -282,15 +285,15 @@ export default function JournalPage({
 
   return (
     <main className="trace-feature-page trace-feature-page--journal journal-page" style={{ ...containerStyle, justifyContent: "flex-start" }}>
-      <header className="trace-feature-page__identity journal-page__header">
+      <header className={`trace-feature-page__identity journal-page__header${showLockAction ? " journal-page__header--unlocked" : ""}`}>
         <BookIcon size={38} />
         <div className="journal-page__header-copy">
           <h1 style={{ margin: 0 }}>Journal</h1>
           <p style={{ color: "#c8b99f", margin: "5px 0 0" }}>Private reflections in Trace. Entries are never shared.</p>
         </div>
+        {showLockAction && <button className="trace-action trace-action--brass journal-page__lock-action" type="button" onClick={lockJournal} style={{ ...smallButtonStyle, backgroundColor: "#75583d" }}>Lock Journal</button>}
       </header>
       <div className="journal-actions journal-page__navigation">
-        {onLock && <button className="trace-action trace-action--brass" type="button" onClick={lockJournal} style={{ ...smallButtonStyle, backgroundColor: "#75583d" }}>Lock Journal</button>}
         <button className="trace-action trace-action--secondary" type="button" onClick={backToTimeline} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Timeline</button>
       </div>
 

@@ -3028,6 +3028,8 @@ function App() {
         ) : (
           <JournalPage
             entries={journalEntries}
+            journalPrivacyEnabled={journalPrivacy.enabled}
+            journalPrivacyUnlocked={journalPrivacy.unlocked}
             initialDraft={journalPrivacy.enabled
               ? journalDraftFromVaultPayload(journalSessionContextRef.current.session.payload)
               : undefined}
