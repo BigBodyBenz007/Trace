@@ -2786,14 +2786,21 @@ code {
   background: var(--trace-input-bg) !important;
   border: 1px solid var(--trace-input-border) !important;
   border-radius: var(--trace-control-radius) !important;
+  box-sizing: border-box;
   box-shadow: var(--trace-control-shadow);
   color: var(--trace-input-text) !important;
   color-scheme: var(--trace-control-color-scheme);
+  display: block;
   font-family: var(--trace-font-sans) !important;
   font-size: 1rem !important;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  max-width: 100%;
+  min-inline-size: 0;
   min-width: 0;
   outline: var(--trace-control-outline);
   outline-offset: var(--trace-control-outline-offset);
+  width: 100%;
 }
 
 .trace-feature-page select {
@@ -5331,11 +5338,16 @@ code {
   }
 
   .trace-feature-page input[type="date"],
-  .trace-feature-page input[type="time"] {
+  .trace-feature-page input[type="datetime-local"],
+  .trace-feature-page input[type="month"],
+  .trace-feature-page input[type="time"],
+  .trace-feature-page input[type="week"] {
     display: block;
     inline-size: 100%;
     max-inline-size: 100%;
     min-inline-size: 0;
+    /* iOS WebKit includes horizontal padding beyond width: 100% for native temporal inputs. */
+    padding-inline: 0 !important;
   }
 
   .trace-backup-actions {
