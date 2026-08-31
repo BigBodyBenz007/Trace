@@ -1,4 +1,5 @@
 import {
+  WORKOUT_INTENSITY_OPTIONS,
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
 } from "../constants/workoutOptions";
@@ -6,6 +7,7 @@ import { resolveBuiltInExerciseName } from "./exerciseIdentity";
 
 const LOAD_MODES = new Set(WORKOUT_LOAD_MODES.map(({ value }) => value));
 const WEIGHT_UNITS = new Set(WORKOUT_WEIGHT_UNITS.map(({ value }) => value));
+const INTENSITIES = new Set(WORKOUT_INTENSITY_OPTIONS.map(({ value }) => value));
 
 function meaningfulText(value) {
   return /[a-z0-9]/i.test(String(value || "").trim());
@@ -62,6 +64,19 @@ export function getWorkoutEntryIssues(draft) {
   }
   if (!workoutLocalDateTimeToIso(draft?.date, draft?.time)) {
     issues.push({ field: "dateTime", message: "Enter a valid date and time." });
+  }
+  const activeDuration = String(draft?.activeDurationMinutes ?? "").trim();
+  if (activeDuration) {
+    const minutes = Number(activeDuration);
+    if (!Number.isInteger(minutes) || minutes <= 0) {
+      issues.push({
+        field: "activeDurationMinutes",
+        message: "Enter active workout time as a whole number of minutes greater than zero.",
+      });
+    }
+  }
+  if (!INTENSITIES.has(draft?.intensity || "")) {
+    issues.push({ field: "intensity", message: "Choose a valid workout intensity." });
   }
   if (!Array.isArray(draft?.exercises) || draft.exercises.length === 0) {
     issues.push({ field: "exercises", message: "Add at least one exercise." });
@@ -195,6 +210,10 @@ export function createWorkoutEntry(draft, existingEntry = null, now = new Date()
   const timestamp = now.toISOString();
   const occurredAt = workoutLocalDateTimeToIso(draft.date, draft.time);
   const startedAt = existingEntry?.startedAt || draft.startedAt || occurredAt;
+  const activeDurationMinutes = String(draft.activeDurationMinutes ?? "").trim() === ""
+    ? null
+    : Number(draft.activeDurationMinutes);
+  const intensity = draft.intensity || "";
   const plannedWorkoutId = cleanText(
     existingEntry?.plannedWorkoutId || draft.plannedWorkoutId
   );
@@ -203,6 +222,8 @@ export function createWorkoutEntry(draft, existingEntry = null, now = new Date()
     type: "strength",
     title: cleanText(draft.title),
     occurredAt,
+    ...(activeDurationMinutes === null ? {} : { activeDurationMinutes }),
+    ...(intensity ? { intensity } : {}),
     ...(plannedWorkoutId ? { plannedWorkoutId } : {}),
     ...(!existingEntry || existingEntry.startedAt ? { startedAt } : {}),
     ...(!existingEntry

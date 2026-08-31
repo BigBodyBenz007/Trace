@@ -4,6 +4,7 @@ import {
   workoutLocalDateTimeToIso,
 } from "./workoutEntry";
 import {
+  WORKOUT_INTENSITY_OPTIONS,
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
 } from "../constants/workoutOptions";
@@ -14,6 +15,7 @@ export const WORKOUT_DRAFT_SCHEMA_VERSION = 1;
 
 const LOAD_MODES = new Set(WORKOUT_LOAD_MODES.map(({ value }) => value));
 const WEIGHT_UNITS = new Set(WORKOUT_WEIGHT_UNITS.map(({ value }) => value));
+const INTENSITIES = new Set(WORKOUT_INTENSITY_OPTIONS.map(({ value }) => value));
 const ROADMAP_STATUSES = new Set(["pending", "completed", "skipped"]);
 
 function isObject(value) {
@@ -150,6 +152,8 @@ function normalizeDraftExercise(exercise, usedIds) {
 }
 
 export function normalizeWorkoutDraft(value) {
+  const activeDurationMinutes = optionalString(value?.form?.activeDurationMinutes);
+  const intensity = optionalString(value?.form?.intensity);
   if (
     !isObject(value) ||
     value.schemaVersion !== WORKOUT_DRAFT_SCHEMA_VERSION ||
@@ -160,6 +164,9 @@ export function normalizeWorkoutDraft(value) {
     typeof value.form.date !== "string" ||
     typeof value.form.time !== "string" ||
     typeof value.form.notes !== "string" ||
+    activeDurationMinutes === null ||
+    intensity === null ||
+    !INTENSITIES.has(intensity) ||
     !workoutLocalDateTimeToIso(value.form.date, value.form.time) ||
     !Array.isArray(value.form.exercises) ||
     (
@@ -215,6 +222,8 @@ export function normalizeWorkoutDraft(value) {
       title: value.form.title,
       date: value.form.date,
       time: value.form.time,
+      activeDurationMinutes,
+      intensity,
       notes: value.form.notes,
       exercises,
     },
@@ -288,6 +297,8 @@ export function createWorkoutDraftFromPlannedWorkout(
       title: plan.title,
       date: current.date,
       time: current.time,
+      activeDurationMinutes: "",
+      intensity: "",
       notes: plan.notes || "",
       exercises: plan.exercises.map((exercise) => {
         const firstTarget = exercise.targetSets[0];

@@ -4017,6 +4017,45 @@ code {
   max-width: 840px;
 }
 
+.workout-readiness-fields {
+  border: 1px solid var(--trace-border);
+  border-radius: var(--trace-radius-sm);
+  margin: 16px 0 0;
+  padding: 12px 14px 14px;
+}
+
+.workout-readiness-fields legend {
+  color: var(--trace-text-muted);
+  font-size: 0.9rem;
+  font-weight: var(--trace-weight-bold);
+  padding: 0 6px;
+}
+
+.workout-readiness-fields__grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.workout-readiness-fields label {
+  min-width: 0;
+}
+
+.workout-readiness-fields small {
+  color: var(--trace-text-muted);
+  display: block;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  margin-top: 6px;
+}
+
+.workout-readiness-fields__minutes {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(0, 110px) max-content;
+}
+
 .trace-workout-exercise {
   background: var(--trace-surface-1) !important;
   border: 1px solid var(--trace-border-warm);
@@ -4776,6 +4815,15 @@ code {
     row-gap: 12px !important;
   }
 
+  .workout-readiness-fields__grid {
+    gap: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .workout-readiness-fields__minutes {
+    grid-template-columns: minmax(0, 72px) max-content;
+  }
+
   .trace-trophy-cabinet {
     padding: 12px;
   }
@@ -4797,6 +4845,16 @@ code {
   .trace-trophy-detail__heading .trace-action {
     align-self: flex-start;
     margin-top: 0 !important;
+  }
+}
+
+@media (max-width: 369px) {
+  .workout-readiness-fields__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .workout-readiness-fields__minutes {
+    grid-template-columns: minmax(0, 110px) max-content;
   }
 }
 

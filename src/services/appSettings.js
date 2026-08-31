@@ -10,11 +10,12 @@ import {
   MOTION_PREFERENCES,
   normalizeMotionPreference,
 } from "./motionPreference";
+import { parseDateOnlyLocal } from "./dateOnly";
 
 export { MOTION_PREFERENCES, normalizeMotionPreference } from "./motionPreference";
 
 export const APP_SETTINGS_STORAGE_KEY = "appSettings";
-export const APP_SETTINGS_SCHEMA_VERSION = 5;
+export const APP_SETTINGS_SCHEMA_VERSION = 6;
 export const JOURNAL_AUTO_LOCK_MINUTES = Object.freeze([1, 5, 15, 30]);
 export const DEFAULT_APP_SETTINGS = Object.freeze({
   schemaVersion: APP_SETTINGS_SCHEMA_VERSION,
@@ -23,6 +24,7 @@ export const DEFAULT_APP_SETTINGS = Object.freeze({
   homeVisibility: DEFAULT_HOME_VISIBILITY,
   motionPreference: MOTION_PREFERENCES.STANDARD,
   journalPrivacy: Object.freeze({ autoLockMinutes: 5 }),
+  personalDetails: Object.freeze({ dateOfBirth: "" }),
 });
 
 const VALID_UNITS = { weight: ["lb", "kg"], height: ["ft-in", "cm"], circumference: ["in", "cm"] };
@@ -40,6 +42,13 @@ function normalizeJournalPrivacy(value) {
   };
 }
 
+function normalizePersonalDetails(value) {
+  const dateOfBirth = String(value?.dateOfBirth || "");
+  return {
+    dateOfBirth: parseDateOnlyLocal(dateOfBirth) ? dateOfBirth : "",
+  };
+}
+
 export function normalizeAppSettings(value) {
   const units = value?.units || {};
   return {
@@ -52,6 +61,7 @@ export function normalizeAppSettings(value) {
     homeVisibility: normalizeHomeVisibility(value?.homeVisibility),
     motionPreference: normalizeMotionPreference(value?.motionPreference),
     journalPrivacy: normalizeJournalPrivacy(value?.journalPrivacy),
+    personalDetails: normalizePersonalDetails(value?.personalDetails),
   };
 }
 

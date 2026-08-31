@@ -6,14 +6,15 @@ import {
 } from "./appSettings";
 import { DEFAULT_HOME_VISIBILITY } from "./homeModules";
 
-test("defaults new and missing settings to Modern Heirloom schema v5", () => {
+test("defaults new and missing settings to Modern Heirloom schema v6", () => {
   expect(readAppSettings({ getItem: () => null })).toEqual(DEFAULT_APP_SETTINGS);
   expect(DEFAULT_APP_SETTINGS).toMatchObject({
-    schemaVersion: 5,
+    schemaVersion: 6,
     themeId: "modern-heirloom",
     homeVisibility: DEFAULT_HOME_VISIBILITY,
     motionPreference: "standard",
     journalPrivacy: { autoLockMinutes: 5 },
+    personalDetails: { dateOfBirth: "" },
   });
   expect(DEFAULT_APP_SETTINGS).not.toHaveProperty("lifeCurrentThemeId");
 });
@@ -33,12 +34,13 @@ test("persists normalized current settings with only themeId", () => {
   });
 
   expect(saved).toEqual({
-    schemaVersion: 5,
+    schemaVersion: 6,
     units: { weight: "kg", height: "cm", circumference: "cm" },
     themeId: "haunted-forest",
     homeVisibility: { ...DEFAULT_HOME_VISIBILITY, workouts: false },
     motionPreference: "reduced",
     journalPrivacy: { autoLockMinutes: 5 },
+    personalDetails: { dateOfBirth: "" },
   });
   expect(JSON.parse(storage.raw)).toEqual(saved);
   expect(storage.raw).not.toContain("lifeCurrentThemeId");
@@ -54,12 +56,13 @@ test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-
       homeVisibility: { ...DEFAULT_HOME_VISIBILITY, journal: false },
       motionPreference: "reduced",
     })).toEqual({
-      schemaVersion: 5,
+      schemaVersion: 6,
       units: { weight: "kg", height: "cm", circumference: "cm" },
       themeId: lifeCurrentThemeId,
       homeVisibility: { ...DEFAULT_HOME_VISIBILITY, journal: false },
       motionPreference: "reduced",
       journalPrivacy: { autoLockMinutes: 5 },
+      personalDetails: { dateOfBirth: "" },
     });
   }
 );
@@ -105,13 +108,24 @@ test("schema-v3 migration preserves units, Home visibility, and Motion & Effects
     homeVisibility,
     motionPreference: "reduced",
   })).toEqual({
-    schemaVersion: 5,
+    schemaVersion: 6,
     units: { weight: "kg", height: "cm", circumference: "cm" },
     themeId: "river",
     homeVisibility,
     motionPreference: "reduced",
     journalPrivacy: { autoLockMinutes: 5 },
+    personalDetails: { dateOfBirth: "" },
   });
+});
+
+test("preserves a valid date of birth and safely defaults missing or invalid personal details", () => {
+  expect(normalizeAppSettings({
+    personalDetails: { dateOfBirth: "1990-08-30" },
+  }).personalDetails).toEqual({ dateOfBirth: "1990-08-30" });
+  expect(normalizeAppSettings({}).personalDetails).toEqual({ dateOfBirth: "" });
+  expect(normalizeAppSettings({
+    personalDetails: { dateOfBirth: "1990-02-30" },
+  }).personalDetails).toEqual({ dateOfBirth: "" });
 });
 
 test("missing or invalid theme and motion values use safe defaults", () => {

@@ -633,7 +633,7 @@ test("Settings opens and global unit preferences survive remount into a fresh He
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' }));
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({
-    schemaVersion: 5,
+    schemaVersion: 6,
     units: { weight: "kg", height: "cm", circumference: "cm" },
     themeId: "modern-heirloom",
     homeVisibility: {
@@ -648,6 +648,7 @@ test("Settings opens and global unit preferences survive remount into a fresh He
     },
     motionPreference: "standard",
     journalPrivacy: { autoLockMinutes: 5 },
+    personalDetails: { dateOfBirth: "" },
   });
   first.unmount();
   render(<App />);
@@ -668,6 +669,24 @@ test("Timeline opens Protocols and returns to Timeline at the top", () => {
   expectDestinationScrolledToTop();
 });
 
+test("Health Personal Details stores optional date of birth and restores it after remount", () => {
+  const first = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Health" }));
+  fireEvent.change(screen.getByLabelText("Date of Birth"), {
+    target: { value: "1990-08-30" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Personal Details" }));
+  expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
+    schemaVersion: 6,
+    personalDetails: { dateOfBirth: "1990-08-30" },
+  });
+  first.unmount();
+
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Health" }));
+  expect(screen.getByLabelText("Date of Birth")).toHaveValue("1990-08-30");
+});
+
 test("Motion preference applies immediately and persists after remount", () => {
   const first = render(<App />);
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "standard");
@@ -675,7 +694,7 @@ test("Motion preference applies immediately and persists after remount", () => {
   fireEvent.click(screen.getByRole("radio", { name: /Reduced motion/ }));
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
-    schemaVersion: 5,
+    schemaVersion: 6,
     motionPreference: "reduced",
   });
   first.unmount();
@@ -3551,6 +3570,8 @@ test("workouts persist separately and reload as complete snapshots", () => {
   const firstRender = render(<App />);
   openWorkouts();
   fillBodyweightWorkout("Push Day");
+  fireEvent.change(screen.getByLabelText("Active workout time"), { target: { value: "42" } });
+  fireEvent.change(screen.getByLabelText("Workout intensity"), { target: { value: "moderate" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
 
   const stored = JSON.parse(localStorage.getItem("workoutEntries"));
@@ -3559,6 +3580,8 @@ test("workouts persist separately and reload as complete snapshots", () => {
     schemaVersion: 1,
     type: "strength",
     title: "Push Day",
+    activeDurationMinutes: 42,
+    intensity: "moderate",
     exercises: [
       {
         name: "Dips",
@@ -3578,6 +3601,8 @@ test("workouts persist separately and reload as complete snapshots", () => {
   expect(screen.getByRole("heading", { name: "Push Day" })).toBeInTheDocument();
   expandCompletedWorkout("Push Day");
   expect(screen.getByText(/Bodyweight.*6 reps/)).toBeInTheDocument();
+  expect(screen.getByText("42 min")).toBeInTheDocument();
+  expect(screen.getByText("Moderate", { selector: "dd" })).toBeInTheDocument();
 });
 
 test("completed workout drops persist recursively and reload in Workout History", () => {
@@ -3910,6 +3935,8 @@ test("workout edits and confirmed deletion update only workout storage", () => {
     type: "strength",
     title: "Original Workout",
     occurredAt: "2026-08-09T18:30:00.000Z",
+    activeDurationMinutes: 63,
+    intensity: "high",
     notes: "",
     exercises: [
       {
@@ -3946,6 +3973,8 @@ test("workout edits and confirmed deletion update only workout storage", () => {
     id: storedEntry.id,
     createdAt: storedEntry.createdAt,
     title: "Updated Workout",
+    activeDurationMinutes: 63,
+    intensity: "high",
     exercises: [
       {
         id: "exercise-existing",

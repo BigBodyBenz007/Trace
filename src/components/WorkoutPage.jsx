@@ -5,6 +5,7 @@ import ExerciseHistory from "./ExerciseHistory";
 import WorkoutPhotos from "./WorkoutPhotos";
 import { motionScrollBehavior } from "../services/motionPreference";
 import {
+  WORKOUT_INTENSITY_OPTIONS,
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
 } from "../constants/workoutOptions";
@@ -122,27 +123,94 @@ function roadmapVolume(exercises) {
 }
 
 function WorkoutTiming({ entry }) {
-  if (!entry.startedAt || !entry.finishedAt) return null;
   const start = new Date(entry.startedAt);
   const finish = new Date(entry.finishedAt);
-  if (!Number.isFinite(start.getTime()) || !Number.isFinite(finish.getTime())) {
-    return null;
-  }
-  const duration = formatWorkoutDuration(entry.startedAt, entry.finishedAt);
+  const hasElapsedTiming = entry.startedAt
+    && entry.finishedAt
+    && Number.isFinite(start.getTime())
+    && Number.isFinite(finish.getTime());
+  const duration = hasElapsedTiming
+    ? formatWorkoutDuration(entry.startedAt, entry.finishedAt)
+    : null;
+  const hasActiveDuration = Number.isInteger(entry.activeDurationMinutes)
+    && entry.activeDurationMinutes > 0;
+  const intensityLabel = WORKOUT_INTENSITY_OPTIONS.find(
+    ({ value }) => value && value === entry.intensity
+  )?.label;
+  if (!hasElapsedTiming && !hasActiveDuration && !intensityLabel) return null;
 
   return (
     <dl style={{ display: "grid", gap: "6px", gridTemplateColumns: "max-content minmax(0, 1fr)", margin: "10px 0", maxWidth: "100%" }}>
-      <dt style={{ color: "#9ca3af" }}>Start</dt>
-      <dd style={{ margin: 0, overflowWrap: "anywhere" }}>{start.toLocaleString()}</dd>
-      <dt style={{ color: "#9ca3af" }}>Finish</dt>
-      <dd style={{ margin: 0, overflowWrap: "anywhere" }}>{finish.toLocaleString()}</dd>
+      {hasElapsedTiming && <>
+        <dt style={{ color: "#9ca3af" }}>Start</dt>
+        <dd style={{ margin: 0, overflowWrap: "anywhere" }}>{start.toLocaleString()}</dd>
+        <dt style={{ color: "#9ca3af" }}>Finish</dt>
+        <dd style={{ margin: 0, overflowWrap: "anywhere" }}>{finish.toLocaleString()}</dd>
+      </>}
       {duration && (
         <>
           <dt style={{ color: "#9ca3af" }}>Duration</dt>
           <dd style={{ margin: 0 }}>{duration}</dd>
         </>
       )}
+      {hasActiveDuration && <>
+        <dt style={{ color: "#9ca3af" }}>Active workout time</dt>
+        <dd style={{ margin: 0 }}>{entry.activeDurationMinutes} min</dd>
+      </>}
+      {intensityLabel && <>
+        <dt style={{ color: "#9ca3af" }}>Intensity</dt>
+        <dd style={{ margin: 0 }}>{intensityLabel}</dd>
+      </>}
     </dl>
+  );
+}
+
+function WorkoutReadinessFields({
+  activeDurationMinutes,
+  intensity,
+  onActiveDurationChange,
+  onIntensityChange,
+  formInputStyle,
+  durationInvalid = false,
+}) {
+  return (
+    <fieldset className="workout-readiness-fields">
+      <legend>Workout details (optional)</legend>
+      <div className="workout-readiness-fields__grid">
+        <label>
+          Active workout time
+          <span className="workout-readiness-fields__minutes">
+            <input
+              aria-label="Active workout time"
+              aria-invalid={durationInvalid || undefined}
+              inputMode="numeric"
+              min="1"
+              step="1"
+              type="number"
+              value={activeDurationMinutes}
+              onChange={(event) => onActiveDurationChange(event.target.value)}
+              style={formInputStyle}
+            />
+            <span>minutes</span>
+          </span>
+          <small>Time actually exercising, excluding long breaks or time the workout was left open.</small>
+        </label>
+        <label>
+          Workout intensity
+          <select
+            aria-label="Workout intensity"
+            value={intensity}
+            onChange={(event) => onIntensityChange(event.target.value)}
+            style={formInputStyle}
+          >
+            {WORKOUT_INTENSITY_OPTIONS.map((option) => (
+              <option key={option.value || "not-specified"} value={option.value}>{option.label}</option>
+            ))}
+          </select>
+          <small>Applies to the workout as a whole.</small>
+        </label>
+      </div>
+    </fieldset>
   );
 }
 
@@ -214,6 +282,10 @@ function WorkoutPage({
   const [title, setTitle] = useState(restoredForm?.title || "");
   const [date, setDate] = useState(restoredForm?.date || initialDateTime.date);
   const [time, setTime] = useState(restoredForm?.time || initialDateTime.time);
+  const [activeDurationMinutes, setActiveDurationMinutes] = useState(
+    restoredForm?.activeDurationMinutes || ""
+  );
+  const [intensity, setIntensity] = useState(restoredForm?.intensity || "");
   const [notes, setNotes] = useState(restoredForm?.notes || "");
   const [exercises, setExercises] = useState(() => restoredForm?.exercises || [emptyExercise()]);
   const [collapsedExerciseIds, setCollapsedExerciseIds] = useState(
@@ -303,7 +375,7 @@ function WorkoutPage({
         : {}),
       startedAt: startedAtRef.current,
       updatedAt: new Date().toISOString(),
-      form: { title, date, time, notes, exercises },
+      form: { title, date, time, activeDurationMinutes, intensity, notes, exercises },
       context: {
         activeSearchExerciseId,
         roadmapEditingExerciseId,
@@ -329,7 +401,7 @@ function WorkoutPage({
       window.removeEventListener("pagehide", flush);
       persist();
     };
-  }, [title, date, time, notes, exercises, activeSearchExerciseId, roadmapEditingExerciseId, collapsedExerciseIds, editingEntryId, isDirty, onWorkoutDraftChange]);
+  }, [title, date, time, activeDurationMinutes, intensity, notes, exercises, activeSearchExerciseId, roadmapEditingExerciseId, collapsedExerciseIds, editingEntryId, isDirty, onWorkoutDraftChange]);
 
   useLayoutEffect(() => {
     if (!focusDropId) return;
@@ -699,6 +771,8 @@ function WorkoutPage({
     setTitle("");
     setDate(current.date);
     setTime(current.time);
+    setActiveDurationMinutes("");
+    setIntensity("");
     setNotes("");
     setExercises([emptyExercise()]);
     setCollapsedExerciseIds(new Set());
@@ -728,6 +802,8 @@ function WorkoutPage({
       title,
       date,
       time,
+      activeDurationMinutes,
+      intensity,
       startedAt: startedAtRef.current,
       ...(plannedWorkoutIdRef.current
         ? { plannedWorkoutId: plannedWorkoutIdRef.current }
@@ -810,7 +886,7 @@ function WorkoutPage({
         plannedWorkoutId: plannedWorkoutIdRef.current,
         startedAt: startedAtRef.current,
         updatedAt: new Date().toISOString(),
-        form: { title, date, time, notes, exercises },
+        form: { title, date, time, activeDurationMinutes, intensity, notes, exercises },
         context: {
           activeSearchExerciseId,
           roadmapEditingExerciseId,
@@ -976,6 +1052,16 @@ function WorkoutPage({
     setTitle(entry.title);
     setDate(entryDateTime.date);
     setTime(entryDateTime.time);
+    setActiveDurationMinutes(
+      Number.isInteger(entry.activeDurationMinutes) && entry.activeDurationMinutes > 0
+        ? String(entry.activeDurationMinutes)
+        : ""
+    );
+    setIntensity(
+      WORKOUT_INTENSITY_OPTIONS.some(({ value }) => value && value === entry.intensity)
+        ? entry.intensity
+        : ""
+    );
     setNotes(entry.notes || "");
     setExercises(
       entry.exercises.map((exercise) => ({
@@ -1253,6 +1339,14 @@ function WorkoutPage({
             <li><strong>{volume.warmUp}</strong> warm-up</li>
             <li><strong>{volume.working}</strong> working</li>
           </ul>
+          <WorkoutReadinessFields
+            activeDurationMinutes={activeDurationMinutes}
+            intensity={intensity}
+            onActiveDurationChange={(value) => changeField(setActiveDurationMinutes, value)}
+            onIntensityChange={(value) => changeField(setIntensity, value)}
+            formInputStyle={formInputStyle}
+            durationInvalid={validationIssues.some(({ field }) => field === "activeDurationMinutes")}
+          />
           <div className="trace-workout-roadmap__list">
             {exercises.map((exercise, exerciseIndex) => {
               const isEditing = roadmapEditingExerciseId === exercise.id;
@@ -1379,6 +1473,14 @@ function WorkoutPage({
             />
           </label>
         </div>
+        <WorkoutReadinessFields
+          activeDurationMinutes={activeDurationMinutes}
+          intensity={intensity}
+          onActiveDurationChange={(value) => changeField(setActiveDurationMinutes, value)}
+          onIntensityChange={(value) => changeField(setIntensity, value)}
+          formInputStyle={formInputStyle}
+          durationInvalid={validationIssues.some(({ field }) => field === "activeDurationMinutes")}
+        />
         <label style={{ display: "block", marginTop: "16px" }}>
           Workout notes (optional)
           <textarea

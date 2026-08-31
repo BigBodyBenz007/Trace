@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { HEALTH_MEASUREMENT_FIELDS, validateHealthMeasurementDraft } from "../services/healthMeasurements";
 import { DEFAULT_APP_SETTINGS } from "../services/appSettings";
 import { motionScrollBehavior } from "../services/motionPreference";
+import { parseDateOnlyLocal } from "../services/dateOnly";
 
 function localDateTime(value = new Date()) {
   const date = new Date(value);
@@ -20,8 +21,11 @@ function initialDraft(settings) {
   return { ...localDateTime(), measurements: emptyMeasurements(settings), height: { unit: settings.units.height, feet: "", inches: "", centimeters: "" }, notes: "" };
 }
 
-export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SETTINGS, saveEntry, updateEntry, deleteEntry, buttonStyle, inputStyle, containerStyle }) {
+export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SETTINGS, updateSettings = () => false, saveEntry, updateEntry, deleteEntry, buttonStyle, inputStyle, containerStyle }) {
   const [draft, setDraft] = useState(() => initialDraft(settings));
+  const [dateOfBirth, setDateOfBirth] = useState(settings.personalDetails?.dateOfBirth || "");
+  const [personalDetailsStatus, setPersonalDetailsStatus] = useState("");
+  const [personalDetailsError, setPersonalDetailsError] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
   const editorRef = useRef(null);
@@ -65,6 +69,29 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
     resetDraft();
   }
 
+  function savePersonalDetails(event) {
+    event.preventDefault();
+    if (dateOfBirth && !parseDateOnlyLocal(dateOfBirth)) {
+      setPersonalDetailsError("Enter a valid date of birth.");
+      setPersonalDetailsStatus("");
+      return;
+    }
+    const saved = updateSettings({
+      ...settings,
+      personalDetails: {
+        ...settings.personalDetails,
+        dateOfBirth,
+      },
+    });
+    if (!saved) {
+      setPersonalDetailsError("Trace could not save these personal details.");
+      setPersonalDetailsStatus("");
+      return;
+    }
+    setPersonalDetailsError("");
+    setPersonalDetailsStatus("Personal details saved");
+  }
+
   function beginEdit(entry) {
     const dateTime = localDateTime(entry.occurredAt);
     const measurements = emptyMeasurements(settings);
@@ -100,6 +127,27 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
         <p className="trace-feature-page__lede" style={{ color: "#bbb", marginTop: 0 }}>Record longitudinal health information without interpretation.</p>
       </header>
       <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Timeline</button>
+
+      <section className="trace-feature-section trace-health-personal-details" aria-labelledby="personal-details-heading" style={{ marginTop: "32px", maxWidth: "700px", width: "100%" }}>
+        <h2 id="personal-details-heading">Personal Details</h2>
+        <p style={{ color: "#bbb", marginTop: 0 }}>Optional details can support future Health and workout estimates.</p>
+        <form className="trace-feature-surface trace-feature-form" onSubmit={savePersonalDetails} style={{ background: "#111827", border: "1px solid #374151", borderRadius: "12px", boxSizing: "border-box", padding: "16px", width: "100%" }}>
+          <label style={{ display: "block", maxWidth: "240px" }}>
+            Date of Birth (optional)
+            <input
+              aria-label="Date of Birth"
+              type="date"
+              value={dateOfBirth}
+              onChange={(event) => { setDateOfBirth(event.target.value); setPersonalDetailsError(""); setPersonalDetailsStatus(""); }}
+              style={fieldInputStyle}
+            />
+          </label>
+          <p style={{ color: "#9ca3af", marginBottom: 0 }}>Trace stores the date, then derives age for the date of a workout when needed.</p>
+          {personalDetailsError && <p role="alert" style={{ color: "#fca5a5" }}>{personalDetailsError}</p>}
+          {personalDetailsStatus && <p role="status" style={{ color: "#86efac" }}>{personalDetailsStatus}</p>}
+          <button className="trace-action trace-action--primary" type="submit" style={{ ...smallButtonStyle, backgroundColor: "#2563eb", marginTop: "14px" }}>Save Personal Details</button>
+        </form>
+      </section>
 
       <section className="trace-feature-section" ref={editorRef} aria-labelledby="body-measurements-heading" style={{ marginTop: "32px", maxWidth: "700px", scrollMarginTop: "16px", width: "100%" }}>
         <h2 id="body-measurements-heading">Body Measurements</h2>

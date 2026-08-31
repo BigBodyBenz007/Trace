@@ -2902,6 +2902,7 @@ function App() {
           onBack={() => setPage("home")}
           entries={healthMeasurementEntries}
           settings={appSettings}
+          updateSettings={updateAppSettings}
           saveEntry={saveHealthMeasurement}
           updateEntry={updateHealthMeasurement}
           deleteEntry={deleteHealthMeasurement}

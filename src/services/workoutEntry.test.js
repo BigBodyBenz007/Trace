@@ -161,6 +161,26 @@ test("accepts zero reps and preserves failure fields", () => {
   });
 });
 
+test("stores optional active workout time and workout-wide intensity while legacy drafts omit both", () => {
+  const entry = createWorkoutEntry(validDraft({
+    activeDurationMinutes: "47",
+    intensity: "high",
+  }));
+  expect(entry).toMatchObject({ activeDurationMinutes: 47, intensity: "high" });
+
+  const legacy = createWorkoutEntry(validDraft());
+  expect(legacy).not.toHaveProperty("activeDurationMinutes");
+  expect(legacy).not.toHaveProperty("intensity");
+});
+
+test.each([
+  [{ activeDurationMinutes: "0" }, /whole number of minutes greater than zero/],
+  [{ activeDurationMinutes: "12.5" }, /whole number of minutes greater than zero/],
+  [{ intensity: "extreme" }, /valid workout intensity/],
+])("validates optional workout readiness fields", (overrides, expected) => {
+  expect(getWorkoutEntryError(validDraft(overrides))).toMatch(expected);
+});
+
 test("reports all exercise and field locations without changing the first validation error", () => {
   const draft = validDraft({ title: "" });
   draft.exercises[0].name = "";
@@ -324,6 +344,8 @@ test("validates external load amount, controlled unit, and load mode", () => {
 
 test("preserves nested order, ids, createdAt, and completion timing during editing", () => {
   const draft = validDraft({
+    activeDurationMinutes: "65",
+    intensity: "moderate",
     exercises: [
       validDraft().exercises[0],
       {
@@ -356,6 +378,7 @@ test("preserves nested order, ids, createdAt, and completion timing during editi
   expect(entry.updatedAt).toBe("2026-01-01T00:00:00.000Z");
   expect(entry.startedAt).toBe(existing.startedAt);
   expect(entry.finishedAt).toBe(existing.finishedAt);
+  expect(entry).toMatchObject({ activeDurationMinutes: 65, intensity: "moderate" });
 });
 
 test("does not fabricate completion timing when editing a legacy workout", () => {

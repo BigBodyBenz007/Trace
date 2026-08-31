@@ -12,8 +12,9 @@ beforeEach(() => {
   window.requestAnimationFrame = (callback) => { callback(); return 1; };
 });
 
-function Harness({ initialEntries = [], settings = DEFAULT_APP_SETTINGS }) {
+function Harness({ initialEntries = [], settings: initialSettings = DEFAULT_APP_SETTINGS }) {
   const [entries, setEntries] = useState(initialEntries);
+  const [settings, setSettings] = useState(initialSettings);
   const saveEntry = (draft) => {
     const entry = createHealthMeasurementEntry(draft, { id: `entry-${++ids}`, now: () => new Date("2026-08-14T12:00:00Z") }).value;
     setEntries((current) => [...current, entry]);
@@ -25,7 +26,8 @@ function Harness({ initialEntries = [], settings = DEFAULT_APP_SETTINGS }) {
     return saved;
   };
   const deleteEntry = (id) => { setEntries((current) => current.filter((entry) => entry.id !== id)); return true; };
-  return <HealthPage onBack={jest.fn()} entries={entries} settings={settings} saveEntry={saveEntry} updateEntry={updateEntry} deleteEntry={deleteEntry} buttonStyle={{}} inputStyle={{}} containerStyle={{}} />;
+  const updateSettings = (nextSettings) => { setSettings(nextSettings); return true; };
+  return <HealthPage onBack={jest.fn()} entries={entries} settings={settings} updateSettings={updateSettings} saveEntry={saveEntry} updateEntry={updateEntry} deleteEntry={deleteEntry} buttonStyle={{}} inputStyle={{}} containerStyle={{}} />;
 }
 
 function enter(label, value) {
@@ -37,6 +39,23 @@ test("uses the scoped calm-record presentation and explicit action hierarchy", (
   expect(screen.getByRole("heading", { name: "Health" }).closest("main")).toHaveClass("trace-feature-page--health");
   expect(screen.getByRole("heading", { name: "Body Measurements" }).closest("section")).toHaveClass("trace-feature-section");
   expect(screen.getByRole("button", { name: "Save Measurement" })).toHaveClass("trace-action--primary");
+});
+
+test("stores and clears optional date of birth in Personal Details without adding it to measurement cards", () => {
+  render(<Harness />);
+  enter("Date of Birth", "1990-08-30");
+  fireEvent.click(screen.getByRole("button", { name: "Save Personal Details" }));
+  expect(screen.getByRole("status")).toHaveTextContent("Personal details saved");
+  expect(screen.getByLabelText("Date of Birth")).toHaveValue("1990-08-30");
+
+  enter("Weight", "200");
+  fireEvent.click(screen.getByRole("button", { name: "Save Measurement" }));
+  expect(screen.getByRole("article")).not.toHaveTextContent("1990-08-30");
+  expect(screen.getByRole("article")).not.toHaveTextContent("Date of Birth");
+
+  enter("Date of Birth", "");
+  fireEvent.click(screen.getByRole("button", { name: "Save Personal Details" }));
+  expect(screen.getByLabelText("Date of Birth")).toHaveValue("");
 });
 
 test("creates partial histories, preserves units, accumulates, and renders only populated values newest first", () => {

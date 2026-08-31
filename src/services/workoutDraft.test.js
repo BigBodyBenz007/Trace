@@ -71,6 +71,8 @@ test("creates a fresh actual workout draft from planned intentions", () => {
       title: "Planned Strength",
       date: "2026-08-22",
       time: "14:37",
+      activeDurationMinutes: "",
+      intensity: "",
       notes: "Plan notes",
     },
   });
@@ -292,6 +294,8 @@ test("normalizes every nested active-draft field while preserving entered set va
     new Date(2026, 7, 22, 9, 5)
   );
   draft.plannedWorkoutId = "  planned-workout:orphaned  ";
+  draft.form.activeDurationMinutes = "52";
+  draft.form.intensity = "moderate";
   draft.form.exercises[0].sets[0] = {
     ...draft.form.exercises[0].sets[0],
     reps: "11",
@@ -311,6 +315,10 @@ test("normalizes every nested active-draft field while preserving entered set va
 
   const normalized = normalizeWorkoutDraft(draft);
   expect(normalized.plannedWorkoutId).toBe("planned-workout:orphaned");
+  expect(normalized.form).toMatchObject({
+    activeDurationMinutes: "52",
+    intensity: "moderate",
+  });
   expect(normalized.form.exercises[0].sets[0]).toMatchObject({
     reps: "11",
     weightAmount: "72.5",
@@ -320,6 +328,24 @@ test("normalizes every nested active-draft field while preserving entered set va
       weightAmount: "55",
     })],
   });
+});
+
+test("normalizes legacy readiness fields as optional and rejects malformed new values", () => {
+  const legacy = createWorkoutDraftFromPlannedWorkout(
+    plannedWorkout(),
+    new Date(2026, 7, 22, 9, 5)
+  );
+  delete legacy.form.activeDurationMinutes;
+  delete legacy.form.intensity;
+  expect(normalizeWorkoutDraft(legacy).form).toMatchObject({
+    activeDurationMinutes: "",
+    intensity: "",
+  });
+
+  const invalidDuration = { ...legacy, form: { ...legacy.form, activeDurationMinutes: 45 } };
+  expect(normalizeWorkoutDraft(invalidDuration)).toBeNull();
+  const invalidIntensity = { ...legacy, form: { ...legacy.form, intensity: "extreme" } };
+  expect(normalizeWorkoutDraft(invalidIntensity)).toBeNull();
 });
 
 test("rejects malformed nested active-draft data", () => {

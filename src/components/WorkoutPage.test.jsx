@@ -53,14 +53,25 @@ test("persists new-workout changes and restores the original start and form stat
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), { target: { value: "225" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "5" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 notes"), { target: { value: "Solid" } });
+  fireEvent.change(screen.getByLabelText("Active workout time"), { target: { value: "48" } });
+  fireEvent.change(screen.getByLabelText("Workout intensity"), { target: { value: "moderate" } });
 
-  await waitFor(() =>
-    expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).form.exercises[0].sets[0].notes).toBe("Solid")
-  );
+  await waitFor(() => {
+    const stored = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+    expect(stored.form.exercises[0].sets[0].notes).toBe("Solid");
+    expect(stored.form.activeDurationMinutes).toBe("48");
+    expect(stored.form.intensity).toBe("moderate");
+  });
   const draft = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
   expect(draft).toMatchObject({
     schemaVersion: 1,
-    form: { title: "Survives reload", date: originalDate, time: originalTime },
+    form: {
+      title: "Survives reload",
+      date: originalDate,
+      time: originalTime,
+      activeDurationMinutes: "48",
+      intensity: "moderate",
+    },
   });
   expect(draft.form.exercises[0]).toMatchObject({
     name: "Squat", notes: "Deep", sets: [expect.objectContaining({ reps: "5", weightAmount: "225", notes: "Solid" })],
@@ -71,6 +82,8 @@ test("persists new-workout changes and restores the original start and form stat
   expect(screen.getByLabelText("Workout title")).toHaveValue("Survives reload");
   expect(screen.getByLabelText("Date")).toHaveValue(originalDate);
   expect(screen.getByLabelText("Time")).toHaveValue(originalTime);
+  expect(screen.getByLabelText("Active workout time")).toHaveValue(48);
+  expect(screen.getByLabelText("Workout intensity")).toHaveValue("moderate");
   expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(225);
 }, 10000);
 
@@ -117,6 +130,8 @@ test("restores planned prefills and saves one normal entry with its backlink", (
   const exercise = screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" });
   expect(within(exercise).getByText("1 planned set")).toBeInTheDocument();
   expect(within(exercise).getByText("Warm-up · 60 kg × 8")).toBeInTheDocument();
+  expect(screen.getByLabelText("Active workout time")).toHaveValue(null);
+  expect(screen.getByLabelText("Workout intensity")).toHaveValue("");
   const volume = screen.getByRole("list", { name: "Workout set summary" });
   expect(volume).toHaveTextContent("1 total set");
   expect(volume).toHaveTextContent("1 warm-up");
@@ -127,6 +142,8 @@ test("restores planned prefills and saves one normal entry with its backlink", (
   expect(screen.getByLabelText("Exercise 1 set 1 weight unit")).toHaveValue("kg");
   expect(screen.getByLabelText("Exercise 1 set 1 type")).toHaveValue("warm-up");
   expect(screen.getByLabelText("Exercise 1 set 1 notes")).toHaveValue("Target notes");
+  fireEvent.change(screen.getByLabelText("Active workout time"), { target: { value: "38" } });
+  fireEvent.change(screen.getByLabelText("Workout intensity"), { target: { value: "high" } });
 
   fireEvent.click(within(exercise).getByRole("button", { name: "Completed" }));
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
@@ -134,6 +151,8 @@ test("restores planned prefills and saves one normal entry with its backlink", (
   expect(view.saveWorkoutEntry).toHaveBeenCalledWith(expect.objectContaining({
     plannedWorkoutId: plan.id,
     title: plan.title,
+    activeDurationMinutes: 38,
+    intensity: "high",
   }));
   expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
 });
@@ -365,6 +384,37 @@ afterEach(() => {
   Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
   window.scrollTo = originalScrollTo;
   jest.restoreAllMocks();
+});
+
+test("saving and editing preserves optional workout details while legacy workouts remain unspecified", () => {
+  const props = renderPageProps({
+    workoutEntries: [entry({ activeDurationMinutes: 55, intensity: "light" })],
+  });
+  const firstView = render(<WorkoutPage {...props} />);
+  const card = expandWorkout();
+  expect(within(card).getByText("55 min")).toBeInTheDocument();
+  expect(within(card).getByText("Light")).toBeInTheDocument();
+  fireEvent.click(within(card).getByRole("button", { name: "Edit" }));
+  expect(screen.getByLabelText("Active workout time")).toHaveValue(55);
+  expect(screen.getByLabelText("Workout intensity")).toHaveValue("light");
+  fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Updated title only" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(props.updateWorkoutEntry).toHaveBeenCalledWith(
+    "workout-1",
+    expect.objectContaining({ activeDurationMinutes: 55, intensity: "light" })
+  );
+
+  firstView.unmount();
+  props.updateWorkoutEntry.mockClear();
+  const savedWithElapsedOnly = entry({
+    id: "legacy-workout",
+    startedAt: "2026-08-09T18:00:00.000Z",
+    finishedAt: "2026-08-09T19:00:00.000Z",
+  });
+  const { unmount } = render(<WorkoutPage {...renderPageProps({ workoutEntries: [savedWithElapsedOnly] })} />);
+  expect(screen.getByLabelText("Active workout time")).toHaveValue(null);
+  expect(screen.getByLabelText("Workout intensity")).toHaveValue("");
+  unmount();
 });
 
 function entry(overrides = {}) {
