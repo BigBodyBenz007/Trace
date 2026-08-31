@@ -18,6 +18,7 @@ const OPTIONS = [
   { key: "weight", label: "Body Weight", values: [["lb", "Pounds (lb)"], ["kg", "Kilograms (kg)"]] },
   { key: "height", label: "Height", values: [["ft-in", "Feet + inches (ft/in)"], ["cm", "Centimeters (cm)"]] },
   { key: "circumference", label: "Body Measurements / Circumference", values: [["in", "Inches (in)"], ["cm", "Centimeters (cm)"]] },
+  { key: "water", label: "Water Intake", values: [["oz", "Fluid ounces (oz)"], ["mL", "Milliliters (mL)"]] },
 ];
 
 export default function SettingsPage({

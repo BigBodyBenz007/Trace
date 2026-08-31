@@ -69,6 +69,10 @@ import {
 } from "./services/healthMeasurements";
 import { readAppSettings, writeAppSettings } from "./services/appSettings";
 import {
+  readWaterEntries,
+  writeWaterEntries,
+} from "./services/waterTracker";
+import {
   createWorkoutCalorieEstimateSnapshot,
   workoutCalorieEstimateNeedsRefresh,
 } from "./services/workoutCalorieEstimateSnapshot";
@@ -308,6 +312,7 @@ function App() {
   const [memories, setMemories] = useState([]);
   const [memoryCount, setMemoryCount] = useState(0);
   const [nutritionEntries, setNutritionEntries] = useState([]);
+  const [waterEntries, setWaterEntries] = useState(() => readWaterEntries(localStorage).entries);
   const [healthMeasurementEntries, setHealthMeasurementEntries] = useState([]);
   const [appSettings, setAppSettings] = useState(() => readAppSettings(localStorage));
   const reducedMotion = useReducedMotion(appSettings.motionPreference);
@@ -1133,6 +1138,7 @@ function App() {
         : [];
       if (!Array.isArray(restoredMedicationEntries)) throw new Error("Invalid medication data.");
       const restoredAppSettings = readAppSettings(localStorage);
+      const restoredWaterEntries = readWaterEntries(localStorage).entries;
       const restoredJournalPrivacyState = journalVaultStorageState(localStorage);
       const restoredJournalEntries = restoredJournalPrivacyState.enabled
         ? []
@@ -1153,6 +1159,7 @@ function App() {
         onCreateObjectUrl: (url) => activeObjectUrlsRef.current.add(url),
       }))) || [];
       setAppSettings(restoredAppSettings);
+      setWaterEntries(restoredWaterEntries);
       setJournalEntries(restoredJournalEntries);
       setJournalPrivacy({
         enabled: restoredJournalPrivacyState.enabled,
@@ -1472,6 +1479,62 @@ function App() {
       setStorageError(storageMessage("delete this protocol"));
       return false;
     }
+  }
+
+  function saveWaterEntry(entry) {
+    const newEntry = {
+      ...entry,
+      id: createId(new Set(waterEntries.map((item) => item.id))),
+    };
+    try {
+      const saved = writeWaterEntries(localStorage, {
+        entries: [...waterEntries, newEntry],
+      });
+      setWaterEntries(saved.entries);
+      setStorageError("");
+      return newEntry;
+    } catch (error) {
+      setStorageError(storageMessage("save this water entry"));
+      return false;
+    }
+  }
+
+  function updateWaterEntry(id, entry) {
+    const updatedEntries = waterEntries.map((existingEntry) =>
+      existingEntry.id === id
+        ? { ...existingEntry, ...entry, id: existingEntry.id }
+        : existingEntry
+    );
+    try {
+      const saved = writeWaterEntries(localStorage, { entries: updatedEntries });
+      setWaterEntries(saved.entries);
+      setStorageError("");
+      return saved.entries.find((savedEntry) => savedEntry.id === id) || false;
+    } catch (error) {
+      setStorageError(storageMessage("update this water entry"));
+      return false;
+    }
+  }
+
+  function deleteWaterEntry(id) {
+    try {
+      const saved = writeWaterEntries(localStorage, {
+        entries: waterEntries.filter((entry) => entry.id !== id),
+      });
+      setWaterEntries(saved.entries);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this water entry"));
+      return false;
+    }
+  }
+
+  function changeWaterUnit(water) {
+    return updateAppSettings({
+      ...appSettings,
+      units: { ...appSettings.units, water },
+    });
   }
 
   function createPlannedWorkout(draft) {
@@ -2860,6 +2923,12 @@ function App() {
           updateNutritionEntry={updateNutritionEntry}
           deleteNutritionEntry={deleteNutritionEntry}
           saveNutritionGoals={saveNutritionGoals}
+          waterEntries={waterEntries}
+          waterUnit={appSettings.units.water}
+          changeWaterUnit={changeWaterUnit}
+          saveWaterEntry={saveWaterEntry}
+          updateWaterEntry={updateWaterEntry}
+          deleteWaterEntry={deleteWaterEntry}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}

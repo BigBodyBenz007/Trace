@@ -11,6 +11,7 @@ import { readAppSettings } from "./appSettings";
 import { DEFAULT_HOME_VISIBILITY } from "./homeModules";
 import { createUserFood } from "./userFoodCatalog";
 import { createWorkoutDraftFromPlannedWorkout } from "./workoutDraft";
+import { emptyWaterCollection } from "./waterTracker";
 import { createDailyAction, emptyDailyActionCollection } from "./dailyAction";
 import {
   completeProtocolOccurrence,
@@ -89,7 +90,9 @@ function makePhotoDatabase(initial = [], { failWriteCount = 0 } = {}) {
 function emptyStructured(overrides = {}) {
   return Object.fromEntries(TRACE_STORAGE_KEYS.map((key) => [
     key,
-    key === "dailyActions"
+    key === "waterEntries"
+      ? emptyWaterCollection()
+      : key === "dailyActions"
       ? emptyDailyActionCollection()
       : key === "protocolOccurrences"
         ? emptyProtocolOccurrenceCollection()
@@ -245,9 +248,10 @@ test("exports empty Trace data with stable version metadata and filename", async
     openDatabase: async () => database,
     now: () => new Date("2026-08-12T10:20:30.000Z"),
   });
-  expect(result).toMatchObject({ format: "trace-backup", schemaVersion: 2, createdAt: "2026-08-12T10:20:30.000Z" });
+  expect(result).toMatchObject({ format: "trace-backup", schemaVersion: 3, createdAt: "2026-08-12T10:20:30.000Z" });
   expect(result.data.photos).toEqual([]);
   expect(result.data.structured.workoutDraft).toBeNull();
+  expect(result.data.structured.waterEntries).toEqual(emptyWaterCollection());
   expect(result.data.structured.dailyActions).toEqual(emptyDailyActionCollection());
   expect(result.data.structured.protocolOccurrences).toEqual(emptyProtocolOccurrenceCollection());
   expect(result.data.structured.protocolCompoundOutcomes).toEqual(emptyProtocolCompoundOutcomeCollection());
@@ -388,6 +392,67 @@ test("backs up and restores custom grocery foods and nullable meal snapshots unc
   expect(JSON.parse(restored.value("nutritionEntries"))).toEqual([meal]);
 });
 
+test("backs up and restores valid water entries while filtering malformed records", async () => {
+  const waterEntry = {
+    id: "water-1",
+    amountMl: 473.176473,
+    loggedAt: "2026-08-31T14:30:00.000Z",
+  };
+  const storage = makeStorage({
+    waterEntries: JSON.stringify({
+      schemaVersion: 1,
+      entries: [waterEntry, { id: "broken", amountMl: -1, loggedAt: "not-a-date" }],
+    }),
+  });
+  const created = await createTraceBackup({
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(created.data.structured.waterEntries).toEqual({
+    schemaVersion: 1,
+    entries: [waterEntry],
+  });
+  expect(validateTraceBackup(created).summary.waterEntries).toBe(1);
+
+  const restored = makeStorage();
+  await restoreTraceBackup(created, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(JSON.parse(restored.value("waterEntries"))).toEqual({
+    schemaVersion: 1,
+    entries: [waterEntry],
+  });
+});
+
+test("restores an older backup without water data as an empty water collection", async () => {
+  const structured = emptyStructured();
+  delete structured.waterEntries;
+  const value = { ...backup({ data: { structured, photos: [] } }), schemaVersion: 2 };
+  const storage = makeStorage({
+    waterEntries: JSON.stringify({
+      schemaVersion: 1,
+      entries: [{ id: "current", amountMl: 250, loggedAt: "2026-08-31T12:00:00.000Z" }],
+    }),
+  });
+
+  const validated = validateTraceBackup(value);
+  expect(validated.summary.waterEntries).toBe(0);
+  await restoreTraceBackup(value, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(JSON.parse(storage.value("waterEntries"))).toEqual(emptyWaterCollection());
+});
+
+test("rejects a malformed water collection in a backup", () => {
+  const structured = emptyStructured({ waterEntries: { schemaVersion: 1, entries: "broken" } });
+  expect(() => validateTraceBackup(backup({ data: { structured, photos: [] } })))
+    .toThrow("invalid water entry data");
+});
+
 test("backs up saved private Journal entries but excludes unfinished drafts", async () => {
   const journalEntry = {
     id: "journal-1", schemaVersion: 1, visibility: "private", title: "", body: "Kept privately",
@@ -417,7 +482,7 @@ test("validates summaries and rejects corrupt, future, and missing-reference bac
   }), photos: [encodedPhoto()] } });
   expect(validateTraceBackup(valid).summary).toMatchObject({ memories: 1, photos: 1, nutritionEntries: 1, healthMeasurementEntries: 1, plannedWorkouts: 1, activeWorkoutDraft: true, workouts: 1, medicationEntries: 1, protocols: 1, protocolOccurrences: 1, injectionSiteEntries: 1, dailyActions: 1, trophyCaseEntries: 1 });
   expect(() => parseTraceBackupText("not json")).toThrow("not valid JSON");
-  expect(() => validateTraceBackup({ ...valid, schemaVersion: 3 })).toThrow("newer");
+  expect(() => validateTraceBackup({ ...valid, schemaVersion: 4 })).toThrow("newer");
   expect(() => validateTraceBackup({ ...valid, data: { ...valid.data, photos: [] } })).toThrow("missing referenced photo");
 });
 
@@ -498,7 +563,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1", sodium: 640 }]);
   expect(JSON.parse(storage.value("nutritionGoals"))).toEqual({ calories: 2000, sodium: 2300 });
   expect(JSON.parse(storage.value("healthMeasurementEntries"))).toEqual([{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }]);
-  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 6, units: { weight: "kg", height: "cm", circumference: "cm" }, themeId: "modern-heirloom", homeVisibility: DEFAULT_HOME_VISIBILITY, motionPreference: "standard", journalPrivacy: { autoLockMinutes: 5 }, personalDetails: { dateOfBirth: "1990-08-30" } });
+  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 7, units: { weight: "kg", height: "cm", circumference: "cm", water: "oz" }, themeId: "modern-heirloom", homeVisibility: DEFAULT_HOME_VISIBILITY, motionPreference: "standard", journalPrivacy: { autoLockMinutes: 5 }, personalDetails: { dateOfBirth: "1990-08-30" } });
   expect(JSON.parse(storage.value("workoutEntries"))).toEqual([workoutWithDrops]);
   expect(JSON.parse(storage.value("medicationEntries"))).toEqual([{ id: "dose-1" }]);
   expect(JSON.parse(storage.value("protocols"))).toEqual([{ id: "protocol-1" }]);
@@ -783,7 +848,7 @@ test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-
       openDatabase: async () => makePhotoDatabase(),
     });
     expect(value.data.structured.appSettings).toMatchObject({
-      schemaVersion: 6,
+      schemaVersion: 7,
       themeId: lifeCurrentThemeId,
     });
     expect(value.data.structured.appSettings).not.toHaveProperty("lifeCurrentThemeId");
@@ -816,7 +881,7 @@ test("backup export and restore preserve a current themeId", async () => {
     openDatabase: async () => makePhotoDatabase(),
   });
   expect(value.data.structured.appSettings).toMatchObject({
-    schemaVersion: 6,
+    schemaVersion: 7,
     themeId: "modern-heirloom",
   });
 
@@ -848,8 +913,8 @@ test("missing and invalid backup theme values safely default to Modern Heirloom"
     });
     const validated = validateTraceBackup(value).backup;
     expect(validated.data.structured.appSettings).toEqual({
-      schemaVersion: 6,
-      units: { weight: "kg", height: "cm", circumference: "cm" },
+      schemaVersion: 7,
+      units: { weight: "kg", height: "cm", circumference: "cm", water: "oz" },
       themeId: "modern-heirloom",
       homeVisibility: DEFAULT_HOME_VISIBILITY,
       motionPreference: "standard",

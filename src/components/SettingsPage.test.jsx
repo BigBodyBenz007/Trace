@@ -18,6 +18,7 @@ test("renders compact global unit controls and saves each preference", () => {
   expect(screen.getByLabelText("Pounds (lb)")).toBeChecked();
   expect(screen.getByLabelText("Feet + inches (ft/in)")).toBeChecked();
   expect(screen.getByLabelText("Inches (in)")).toBeChecked();
+  expect(screen.getByLabelText("Fluid ounces (oz)")).toBeChecked();
   expect(screen.getByRole("heading", { name: "App Theme" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Motion & Effects" })).toBeInTheDocument();
   const themes = within(screen.getByRole("radiogroup", { name: "App Theme" })).getAllByRole("radio");
@@ -42,6 +43,8 @@ test("renders compact global unit controls and saves each preference", () => {
   expect(screen.getByText("✓ Selected")).toBeInTheDocument();
   fireEvent.click(screen.getByLabelText("Kilograms (kg)"));
   expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ units: expect.objectContaining({ weight: "kg" }) }));
+  fireEvent.click(screen.getByLabelText("Milliliters (mL)"));
+  expect(updateSettings).toHaveBeenCalledWith(expect.objectContaining({ units: expect.objectContaining({ water: "mL" }) }));
   expect(screen.getAllByRole("button", { name: "Back to Timeline" })).toHaveLength(2);
 });
 

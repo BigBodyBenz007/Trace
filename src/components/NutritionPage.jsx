@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import FoodSearch from "./FoodSearch";
 import GroceryFoodForm from "./GroceryFoodForm";
 import ConfirmationMessage from "./ConfirmationMessage";
+import WaterTrackerSection from "./WaterTrackerSection";
 import { motionScrollBehavior } from "../services/motionPreference";
 import {
   FOOD_NUTRIENT_KEYS,
@@ -220,6 +221,12 @@ function NutritionPage({
   updateNutritionEntry,
   deleteNutritionEntry,
   saveNutritionGoals,
+  waterEntries = [],
+  waterUnit = "oz",
+  changeWaterUnit = () => false,
+  saveWaterEntry = () => false,
+  updateWaterEntry = () => false,
+  deleteWaterEntry = () => false,
   buttonStyle,
   inputStyle,
   containerStyle,
@@ -780,6 +787,16 @@ function NutritionPage({
           </button>
         </form>
       </section>
+
+      <WaterTrackerSection
+        entries={waterEntries}
+        unit={waterUnit}
+        changeUnit={changeWaterUnit}
+        saveEntry={saveWaterEntry}
+        updateEntry={updateWaterEntry}
+        deleteEntry={deleteWaterEntry}
+        showConfirmation={showConfirmation}
+      />
 
       <FoodSearch
         onSelectFood={selectFood}

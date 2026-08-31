@@ -6,10 +6,10 @@ import {
 } from "./appSettings";
 import { DEFAULT_HOME_VISIBILITY } from "./homeModules";
 
-test("defaults new and missing settings to Modern Heirloom schema v6", () => {
+test("defaults new and missing settings to Modern Heirloom schema v7", () => {
   expect(readAppSettings({ getItem: () => null })).toEqual(DEFAULT_APP_SETTINGS);
   expect(DEFAULT_APP_SETTINGS).toMatchObject({
-    schemaVersion: 6,
+    schemaVersion: 7,
     themeId: "modern-heirloom",
     homeVisibility: DEFAULT_HOME_VISIBILITY,
     motionPreference: "standard",
@@ -34,8 +34,8 @@ test("persists normalized current settings with only themeId", () => {
   });
 
   expect(saved).toEqual({
-    schemaVersion: 6,
-    units: { weight: "kg", height: "cm", circumference: "cm" },
+    schemaVersion: 7,
+    units: { weight: "kg", height: "cm", circumference: "cm", water: "oz" },
     themeId: "haunted-forest",
     homeVisibility: { ...DEFAULT_HOME_VISIBILITY, workouts: false },
     motionPreference: "reduced",
@@ -56,8 +56,8 @@ test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-
       homeVisibility: { ...DEFAULT_HOME_VISIBILITY, journal: false },
       motionPreference: "reduced",
     })).toEqual({
-      schemaVersion: 6,
-      units: { weight: "kg", height: "cm", circumference: "cm" },
+      schemaVersion: 7,
+      units: { weight: "kg", height: "cm", circumference: "cm", water: "oz" },
       themeId: lifeCurrentThemeId,
       homeVisibility: { ...DEFAULT_HOME_VISIBILITY, journal: false },
       motionPreference: "reduced",
@@ -95,7 +95,7 @@ test("malformed storage and invalid settings fail safely without losing unrelate
     motionPreference: { reduced: true },
   })).toEqual({
     ...DEFAULT_APP_SETTINGS,
-    units: { weight: "lb", height: "cm", circumference: "cm" },
+    units: { weight: "lb", height: "cm", circumference: "cm", water: "oz" },
   });
 });
 
@@ -108,8 +108,8 @@ test("schema-v3 migration preserves units, Home visibility, and Motion & Effects
     homeVisibility,
     motionPreference: "reduced",
   })).toEqual({
-    schemaVersion: 6,
-    units: { weight: "kg", height: "cm", circumference: "cm" },
+    schemaVersion: 7,
+    units: { weight: "kg", height: "cm", circumference: "cm", water: "oz" },
     themeId: "river",
     homeVisibility,
     motionPreference: "reduced",
@@ -132,6 +132,11 @@ test("missing or invalid theme and motion values use safe defaults", () => {
   expect(normalizeAppSettings({}).themeId).toBe("modern-heirloom");
   expect(normalizeAppSettings({ themeId: "lost-world" }).themeId).toBe("modern-heirloom");
   expect(normalizeAppSettings({ motionPreference: "excessive" }).motionPreference).toBe("standard");
+});
+
+test("persists the supported water display unit and defaults invalid values", () => {
+  expect(normalizeAppSettings({ units: { water: "mL" } }).units.water).toBe("mL");
+  expect(normalizeAppSettings({ units: { water: "liters" } }).units.water).toBe("oz");
 });
 
 test.each([1, 5, 15, 30])("preserves the supported %s-minute Journal auto-lock choice", (autoLockMinutes) => {

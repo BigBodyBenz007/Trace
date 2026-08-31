@@ -15,11 +15,11 @@ import { parseDateOnlyLocal } from "./dateOnly";
 export { MOTION_PREFERENCES, normalizeMotionPreference } from "./motionPreference";
 
 export const APP_SETTINGS_STORAGE_KEY = "appSettings";
-export const APP_SETTINGS_SCHEMA_VERSION = 6;
+export const APP_SETTINGS_SCHEMA_VERSION = 7;
 export const JOURNAL_AUTO_LOCK_MINUTES = Object.freeze([1, 5, 15, 30]);
 export const DEFAULT_APP_SETTINGS = Object.freeze({
   schemaVersion: APP_SETTINGS_SCHEMA_VERSION,
-  units: Object.freeze({ weight: "lb", height: "ft-in", circumference: "in" }),
+  units: Object.freeze({ weight: "lb", height: "ft-in", circumference: "in", water: "oz" }),
   themeId: DEFAULT_APP_THEME_ID,
   homeVisibility: DEFAULT_HOME_VISIBILITY,
   motionPreference: MOTION_PREFERENCES.STANDARD,
@@ -27,7 +27,7 @@ export const DEFAULT_APP_SETTINGS = Object.freeze({
   personalDetails: Object.freeze({ dateOfBirth: "" }),
 });
 
-const VALID_UNITS = { weight: ["lb", "kg"], height: ["ft-in", "cm"], circumference: ["in", "cm"] };
+const VALID_UNITS = { weight: ["lb", "kg"], height: ["ft-in", "cm"], circumference: ["in", "cm"], water: ["oz", "mL"] };
 
 function resolveThemeId(value) {
   if (isAppThemeId(value?.themeId)) return value.themeId;

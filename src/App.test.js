@@ -657,8 +657,8 @@ test("Settings opens and global unit preferences survive remount into a fresh He
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' }));
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({
-    schemaVersion: 6,
-    units: { weight: "kg", height: "cm", circumference: "cm" },
+    schemaVersion: 7,
+    units: { weight: "kg", height: "cm", circumference: "cm", water: "oz" },
     themeId: "modern-heirloom",
     homeVisibility: {
       schedule: true,
@@ -701,7 +701,7 @@ test("Health Personal Details stores optional date of birth and restores it afte
   });
   fireEvent.click(screen.getByRole("button", { name: "Save Personal Details" }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
-    schemaVersion: 6,
+    schemaVersion: 7,
     personalDetails: { dateOfBirth: "1990-08-30" },
   });
   first.unmount();
@@ -718,7 +718,7 @@ test("Motion preference applies immediately and persists after remount", () => {
   fireEvent.click(screen.getByRole("radio", { name: /Reduced motion/ }));
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
-    schemaVersion: 6,
+    schemaVersion: 7,
     motionPreference: "reduced",
   });
   first.unmount();
@@ -856,6 +856,28 @@ test("Nutrition creates, persists, searches, and logs a custom grocery food", as
       brand: "Market Pantry",
     },
   });
+});
+
+test("Nutrition water quick-add and display unit persist across remount", () => {
+  const first = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  fireEvent.click(screen.getByRole("button", { name: "Log 8 oz water" }));
+  const storedBeforeUnitChange = JSON.parse(localStorage.getItem("waterEntries"));
+  expect(storedBeforeUnitChange).toMatchObject({
+    schemaVersion: 1,
+    entries: [{ amountMl: 236.588236 }],
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Display water in milliliters" }));
+  expect(JSON.parse(localStorage.getItem("waterEntries"))).toEqual(storedBeforeUnitChange);
+  expect(JSON.parse(localStorage.getItem("appSettings")).units.water).toBe("mL");
+  first.unmount();
+
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  expect(within(screen.getByLabelText("Water intake summary")).getByText("Today").closest("article"))
+    .toHaveTextContent("237 mL");
+  expect(screen.getByRole("button", { name: "Display water in milliliters" }))
+    .toHaveAttribute("aria-pressed", "true");
 });
 
 test("Timeline opens Today's Schedule and returns to Timeline at the top", () => {

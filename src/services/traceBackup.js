@@ -8,6 +8,10 @@ import { normalizeAppSettings } from "./appSettings";
 import { normalizePlannedWorkouts } from "./plannedWorkout";
 import { normalizeWorkoutDraft } from "./workoutDraft";
 import {
+  emptyWaterCollection,
+  normalizeWaterCollection,
+} from "./waterTracker";
+import {
   emptyDailyActionCollection,
   normalizeDailyActionCollection,
 } from "./dailyAction";
@@ -43,12 +47,13 @@ import {
 } from "./journalVaultCrypto";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
-export const TRACE_BACKUP_SCHEMA_VERSION = 2;
+export const TRACE_BACKUP_SCHEMA_VERSION = 3;
 export const TRACE_STORAGE_KEYS = Object.freeze([
   "memories",
   "nutritionGoals",
   "userFoods",
   "nutritionEntries",
+  "waterEntries",
   "healthMeasurementEntries",
   "appSettings",
   "medicationEntries",
@@ -71,7 +76,7 @@ export const TRACE_STORAGE_KEYS = Object.freeze([
 ]);
 
 const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
-const SPECIAL_KEYS = new Set(["workoutDraft", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", JOURNAL_VAULT_STORAGE_KEY]);
+const SPECIAL_KEYS = new Set(["waterEntries", "workoutDraft", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", JOURNAL_VAULT_STORAGE_KEY]);
 const ARRAY_KEYS = new Set(TRACE_STORAGE_KEYS.filter(
   (key) => !OBJECT_KEYS.has(key) && !SPECIAL_KEYS.has(key)
 ));
@@ -151,6 +156,9 @@ function readStructuredData(storage) {
     if (raw === null && key === "dailyActions") {
       return [key, emptyDailyActionCollection()];
     }
+    if (raw === null && key === "waterEntries") {
+      return [key, emptyWaterCollection()];
+    }
     if (raw === null && key === "protocolOccurrences") {
       return [key, emptyProtocolOccurrenceCollection()];
     }
@@ -172,6 +180,11 @@ function readStructuredData(storage) {
     if (raw === null) return [key, null];
     try {
       const parsed = JSON.parse(raw);
+      if (key === "waterEntries") {
+        const normalized = normalizeWaterCollection(parsed);
+        if (!normalized) throw new Error("Invalid water entry data.");
+        return [key, normalized];
+      }
       if (key === "workoutDraft") {
         if (parsed === null) return [key, null];
         const normalized = normalizeWorkoutDraft(parsed);
@@ -230,7 +243,7 @@ function validateStructuredData(structuredData) {
   }
   TRACE_STORAGE_KEYS.forEach((key) => {
     const value = structuredData[key];
-    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", JOURNAL_VAULT_STORAGE_KEY, "plannedWorkouts", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "workoutDraft"].includes(key) && value === undefined)) return;
+    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", JOURNAL_VAULT_STORAGE_KEY, "plannedWorkouts", "waterEntries", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "workoutDraft"].includes(key) && value === undefined)) return;
     if (ARRAY_KEYS.has(key) && !Array.isArray(value)) {
       throw new Error(`The backup contains invalid ${key} data.`);
     }
@@ -238,6 +251,13 @@ function validateStructuredData(structuredData) {
       throw new Error(`The backup contains invalid ${key} data.`);
     }
   });
+  if (
+    structuredData.waterEntries !== undefined &&
+    structuredData.waterEntries !== null &&
+    !normalizeWaterCollection(structuredData.waterEntries)
+  ) {
+    throw new Error("The backup contains invalid water entry data.");
+  }
   if (Array.isArray(structuredData.journalEntries)) {
     const ids = new Set();
     structuredData.journalEntries.forEach((entry) => {
@@ -344,6 +364,7 @@ export function summarizeTraceBackup(backup) {
     memories: data.memories?.length || 0,
     photos: backup.data.photos.length,
     nutritionEntries: data.nutritionEntries?.length || 0,
+    waterEntries: data.waterEntries?.entries?.length || 0,
     healthMeasurementEntries: data.healthMeasurementEntries?.length || 0,
     plannedWorkouts: data.plannedWorkouts?.length || 0,
     dailyActions: data.dailyActions?.actions?.length || 0,
@@ -374,7 +395,7 @@ export function validateTraceBackup(value) {
   if (value.schemaVersion > TRACE_BACKUP_SCHEMA_VERSION) {
     throw new Error("This Trace backup was created by a newer, unsupported backup version.");
   }
-  if (![1, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
+  if (![1, 2, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
   if (!value.createdAt || Number.isNaN(Date.parse(value.createdAt))) throw new Error("The Trace backup timestamp is invalid.");
   validateStructuredData(value.data?.structured);
   const normalizedBackup = cloneJson(value);
@@ -387,6 +408,9 @@ export function validateTraceBackup(value) {
       normalizedBackup.data.structured.appSettings
     );
   }
+  normalizedBackup.data.structured.waterEntries = normalizeWaterCollection(
+    normalizedBackup.data.structured.waterEntries ?? emptyWaterCollection()
+  );
   if (normalizedBackup.data.structured.plannedWorkouts != null) {
     normalizedBackup.data.structured.plannedWorkouts = normalizePlannedWorkouts(
       normalizedBackup.data.structured.plannedWorkouts
