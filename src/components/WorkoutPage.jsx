@@ -17,6 +17,7 @@ import {
 } from "../services/workoutEntry";
 import { getExerciseDefinitionError } from "../services/exerciseCatalog";
 import { formatWorkoutDuration } from "../services/workoutDuration";
+import { workoutCalorieEstimateSaveMessage } from "../services/workoutCalorieEstimateSnapshot";
 import {
   clearWorkoutDraft,
   readWorkoutDraft,
@@ -154,7 +155,7 @@ function WorkoutTiming({ entry }) {
         </>
       )}
       {hasActiveDuration && <>
-        <dt style={{ color: "#9ca3af" }}>Active workout time</dt>
+        <dt style={{ color: "#9ca3af" }}>Approximate workout duration</dt>
         <dd style={{ margin: 0 }}>{entry.activeDurationMinutes} min</dd>
       </>}
       {intensityLabel && <>
@@ -178,13 +179,14 @@ function WorkoutReadinessFields({
       <legend>Workout details (optional)</legend>
       <div className="workout-readiness-fields__grid">
         <label>
-          Active workout time
+          Approximate workout duration
           <span className="workout-readiness-fields__minutes">
             <input
-              aria-label="Active workout time"
+              aria-label="Approximate workout duration"
               aria-invalid={durationInvalid || undefined}
               inputMode="numeric"
               min="1"
+              placeholder="Example: 45 minutes"
               step="1"
               type="number"
               value={activeDurationMinutes}
@@ -193,7 +195,10 @@ function WorkoutReadinessFields({
             />
             <span>minutes</span>
           </span>
-          <small>Time actually exercising, excluding long breaks or time the workout was left open.</small>
+          <small>
+            From your first set to your last, including normal rest between sets. Exclude long
+            interruptions.
+          </small>
         </label>
         <label>
           Workout intensity
@@ -245,6 +250,64 @@ function CompletedDropSegments({ drops }) {
         </div>
       ))}
     </div>
+  );
+}
+
+function unavailableCalorieEstimateMessage(snapshot) {
+  if (!snapshot) return "No saved estimate is available for this workout.";
+  const missingWeight = snapshot.requiredInputs?.bodyWeight !== "provided";
+  const missingDuration = snapshot.requiredInputs?.activeDuration !== "provided";
+  if (missingWeight || missingDuration) {
+    const missing = [
+      ...(missingWeight ? ["body weight"] : []),
+      ...(missingDuration ? ["workout duration"] : []),
+    ];
+    return `Add ${missing.join(" and ")} to receive an estimate.`;
+  }
+  if (snapshot.code === "unsupported-age") {
+    return "An estimate is not available for a known age under 19.";
+  }
+  if (snapshot.code === "no-completed-work") {
+    return "An estimate is not available because no completed workout segments were recorded.";
+  }
+  return "A saved estimate is not available for this workout.";
+}
+
+function WorkoutCalorieEstimate({ snapshot }) {
+  const hasRange = snapshot?.status === "calculated"
+    && Number.isFinite(snapshot.lowerKcal)
+    && Number.isFinite(snapshot.upperKcal)
+    && snapshot.lowerKcal <= snapshot.upperKcal;
+
+  return (
+    <section className="workout-calorie-estimate" aria-label="Estimated calories burned">
+      <h4>Estimated calories burned</h4>
+      {hasRange ? (
+        <p className="workout-calorie-estimate__range">
+          About {snapshot.lowerKcal.toLocaleString()}{"\u2013"}{snapshot.upperKcal.toLocaleString()} kcal
+        </p>
+      ) : (
+        <p className="workout-calorie-estimate__unavailable">
+          {unavailableCalorieEstimateMessage(snapshot)}
+        </p>
+      )}
+      <p className="workout-calorie-estimate__disclaimer">
+        This is a broad estimate, not an exact measurement.
+      </p>
+      <details className="workout-calorie-estimate__details">
+        <summary>How is this estimated?</summary>
+        <p>
+          Trace uses body weight, approximate workout duration including normal between-set rest,
+          age when supplied, selected intensity, exercises, warm-up and working sets, reps, drops,
+          and failure information.
+        </p>
+        <p>More complete information can narrow the range.</p>
+        <p>
+          Individual metabolism, rest periods, exercise technique, pace, and other factors can
+          change actual calorie burn. Trace does not claim this range is an exact measurement.
+        </p>
+      </details>
+    </section>
   );
 }
 
@@ -990,7 +1053,10 @@ function WorkoutPage({
         ? saveWorkoutEntry(entry)
         : updateWorkoutEntry(editingEntryId, entry);
 
-    function finishSave(saved) {
+    function finishSave(saveOutcome) {
+      const saved = saveOutcome && typeof saveOutcome === "object"
+        ? saveOutcome.saved
+        : saveOutcome;
       if (!saved) return;
       const savedEditingEntryId = editingEntryId;
       const returnToSchedule = savedEditingEntryId === null
@@ -999,6 +1065,10 @@ function WorkoutPage({
         && plannedRoadmapIsComplete;
       resetForm({ clearDraft: savedEditingEntryId === null });
       const messages = [];
+      const estimateMessage = saveOutcome && typeof saveOutcome === "object"
+        ? workoutCalorieEstimateSaveMessage(saveOutcome.calorieEstimate)
+        : "";
+      if (estimateMessage) messages.push(estimateMessage);
       if (conflicts.length > 0) {
         messages.push(
           `Your existing saved ${conflicts.join(", ")} definition${
@@ -1952,6 +2022,7 @@ function WorkoutPage({
                   {expanded && (
                     <div id={detailId} className="trace-workout-history-card__details">
                       <WorkoutTiming entry={entry} />
+                <WorkoutCalorieEstimate snapshot={entry.calorieEstimate} />
                 {entry.notes && <p style={{ whiteSpace: "pre-wrap" }}>{entry.notes}</p>}
                 <WorkoutPhotos photos={entry.photos} label={`${entry.title} photos`} />
                 {entry.exercises.map((exercise) => (

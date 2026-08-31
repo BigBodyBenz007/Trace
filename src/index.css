@@ -4056,6 +4056,55 @@ code {
   grid-template-columns: minmax(0, 110px) max-content;
 }
 
+.workout-calorie-estimate {
+  background: color-mix(in srgb, var(--trace-surface-1) 86%, transparent);
+  border: 1px solid color-mix(in srgb, var(--trace-accent, #60a5fa) 42%, var(--trace-border));
+  border-radius: var(--trace-radius-sm);
+  box-sizing: border-box;
+  margin: 14px 0;
+  max-width: 100%;
+  padding: 12px 14px;
+}
+
+.workout-calorie-estimate h4,
+.workout-calorie-estimate p {
+  margin: 0;
+}
+
+.workout-calorie-estimate__range {
+  font-size: 1.08rem;
+  font-weight: var(--trace-weight-bold);
+  margin-top: 4px !important;
+  overflow-wrap: anywhere;
+}
+
+.workout-calorie-estimate__unavailable,
+.workout-calorie-estimate__disclaimer {
+  color: var(--trace-text-muted);
+  margin-top: 6px !important;
+}
+
+.workout-calorie-estimate__disclaimer {
+  font-size: 0.9rem;
+}
+
+.workout-calorie-estimate__details {
+  margin-top: 9px;
+}
+
+.workout-calorie-estimate__details summary {
+  cursor: pointer;
+  font-weight: var(--trace-weight-bold);
+  min-height: 24px;
+}
+
+.workout-calorie-estimate__details p {
+  color: var(--trace-text-muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin-top: 8px;
+}
+
 .trace-workout-exercise {
   background: var(--trace-surface-1) !important;
   border: 1px solid var(--trace-border-warm);

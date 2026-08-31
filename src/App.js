@@ -68,6 +68,10 @@ import {
   writeHealthMeasurementEntries,
 } from "./services/healthMeasurements";
 import { readAppSettings, writeAppSettings } from "./services/appSettings";
+import {
+  createWorkoutCalorieEstimateSnapshot,
+  workoutCalorieEstimateNeedsRefresh,
+} from "./services/workoutCalorieEstimateSnapshot";
 import { useReducedMotion } from "./services/motionPreference";
 import { createPhotoUrlLoader } from "./services/photoUrlLoader";
 import {
@@ -2230,6 +2234,24 @@ function App() {
     return { prepared, newIds: newRecords.map(({ id }) => id), removed };
   }
 
+  function calorieEstimateForWorkout(entry, existingEntry = null) {
+    if (
+      existingEntry?.calorieEstimate
+      && !workoutCalorieEstimateNeedsRefresh(existingEntry, entry)
+    ) {
+      return existingEntry.calorieEstimate;
+    }
+    try {
+      return createWorkoutCalorieEstimateSnapshot({
+        workout: entry,
+        healthMeasurementEntries,
+        dateOfBirth: appSettings.personalDetails?.dateOfBirth || "",
+      });
+    } catch (error) {
+      return null;
+    }
+  }
+
   function saveWorkoutEntry(entry) {
     const plannedWorkoutId = entry.plannedWorkoutId || null;
     if (
@@ -2253,10 +2275,12 @@ function App() {
       if (saved) completedPlannedWorkoutIdsRef.current.add(plannedWorkoutId);
     };
     const id = createId(new Set(workoutEntries.map((item) => item.id)));
+    const calorieEstimate = calorieEstimateForWorkout(entry);
     const persist = async (photoResult) => {
       const newEntry = {
         ...entry,
         id,
+        calorieEstimate,
         ...(photoResult.prepared.length ? { photos: photoResult.prepared } : {}),
       };
       const updatedEntries = [...workoutEntries, newEntry];
@@ -2265,7 +2289,7 @@ function App() {
         setWorkoutEntries(updatedEntries);
         setStorageError("");
         finishPlannedWorkoutSave(true);
-        return true;
+        return { saved: true, calorieEstimate };
       } catch (error) {
         if (photoResult.newIds.length) {
           await Promise.resolve(deletePhotos(photoDatabaseRef.current, photoResult.newIds)).catch(() => {});
@@ -2276,14 +2300,14 @@ function App() {
       }
     };
     if (!(entry.photos || []).length) {
-      const newEntry = { ...entry, id };
+      const newEntry = { ...entry, id, calorieEstimate };
       const updatedEntries = [...workoutEntries, newEntry];
       try {
         localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
         setWorkoutEntries(updatedEntries);
         setStorageError("");
         finishPlannedWorkoutSave(true);
-        return true;
+        return { saved: true, calorieEstimate };
       } catch (error) {
         setStorageError(storageMessage("save this workout"));
         finishPlannedWorkoutSave(false);
@@ -2362,14 +2386,17 @@ function App() {
 
   function updateWorkoutEntry(id, entry) {
     const existingEntry = workoutEntries.find((item) => item.id === id);
+    const calorieEstimate = calorieEstimateForWorkout(entry, existingEntry);
     const hasPhotos = (entry.photos || []).length > 0 || (existingEntry?.photos || []).length > 0;
     if (!hasPhotos) {
-      const updatedEntries = workoutEntries.map((item) => item.id === id ? { ...item, ...entry, id: item.id } : item);
+      const updatedEntries = workoutEntries.map((item) => item.id === id
+        ? { ...item, ...entry, calorieEstimate, id: item.id }
+        : item);
       try {
         localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
         setWorkoutEntries(updatedEntries);
         setStorageError("");
-        return true;
+        return { saved: true, calorieEstimate };
       } catch (error) {
         setStorageError(storageMessage("update this workout"));
         return false;
@@ -2377,7 +2404,7 @@ function App() {
     }
     return prepareWorkoutPhotos(entry, id, existingEntry).then(async (photoResult) => {
       const updatedEntries = workoutEntries.map((item) => item.id === id
-        ? { ...item, ...entry, photos: photoResult.prepared, id: item.id }
+        ? { ...item, ...entry, calorieEstimate, photos: photoResult.prepared, id: item.id }
         : item);
       try {
         localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
@@ -2386,7 +2413,7 @@ function App() {
         if (removedIds.length) await Promise.resolve(deletePhotos(photoDatabaseRef.current, removedIds)).catch(() => setStorageError("The workout was saved, but Trace couldn't clean up removed photos."));
         photoResult.removed.forEach(({ url }) => { if (url) { URL.revokeObjectURL(url); activeObjectUrlsRef.current.delete(url); } });
         setStorageError("");
-        return true;
+        return { saved: true, calorieEstimate };
       } catch (error) {
         if (photoResult.newIds.length) await Promise.resolve(deletePhotos(photoDatabaseRef.current, photoResult.newIds)).catch(() => {});
         setStorageError(storageMessage("update this workout"));

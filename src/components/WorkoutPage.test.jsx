@@ -53,7 +53,7 @@ test("persists new-workout changes and restores the original start and form stat
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), { target: { value: "225" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "5" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 notes"), { target: { value: "Solid" } });
-  fireEvent.change(screen.getByLabelText("Active workout time"), { target: { value: "48" } });
+  fireEvent.change(screen.getByLabelText("Approximate workout duration"), { target: { value: "48" } });
   fireEvent.change(screen.getByLabelText("Workout intensity"), { target: { value: "moderate" } });
 
   await waitFor(() => {
@@ -82,10 +82,22 @@ test("persists new-workout changes and restores the original start and form stat
   expect(screen.getByLabelText("Workout title")).toHaveValue("Survives reload");
   expect(screen.getByLabelText("Date")).toHaveValue(originalDate);
   expect(screen.getByLabelText("Time")).toHaveValue(originalTime);
-  expect(screen.getByLabelText("Active workout time")).toHaveValue(48);
+  expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(48);
   expect(screen.getByLabelText("Workout intensity")).toHaveValue("moderate");
   expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(225);
 }, 10000);
+
+test("explains approximate workout duration as first-to-last set time with normal rests", () => {
+  render(<WorkoutPage {...renderPageProps()} />);
+  const durationInput = screen.getByLabelText("Approximate workout duration");
+  const durationLabel = durationInput.closest("label");
+
+  expect(durationInput).toHaveAttribute("placeholder", "Example: 45 minutes");
+  expect(durationLabel).toHaveTextContent("Approximate workout duration");
+  expect(durationLabel).toHaveTextContent(
+    "From your first set to your last, including normal rest between sets. Exclude long interruptions."
+  );
+});
 
 test("ordinary unmount keeps a draft while explicit discard clears it", async () => {
   const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
@@ -130,7 +142,7 @@ test("restores planned prefills and saves one normal entry with its backlink", (
   const exercise = screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" });
   expect(within(exercise).getByText("1 planned set")).toBeInTheDocument();
   expect(within(exercise).getByText("Warm-up · 60 kg × 8")).toBeInTheDocument();
-  expect(screen.getByLabelText("Active workout time")).toHaveValue(null);
+  expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(null);
   expect(screen.getByLabelText("Workout intensity")).toHaveValue("");
   const volume = screen.getByRole("list", { name: "Workout set summary" });
   expect(volume).toHaveTextContent("1 total set");
@@ -142,7 +154,7 @@ test("restores planned prefills and saves one normal entry with its backlink", (
   expect(screen.getByLabelText("Exercise 1 set 1 weight unit")).toHaveValue("kg");
   expect(screen.getByLabelText("Exercise 1 set 1 type")).toHaveValue("warm-up");
   expect(screen.getByLabelText("Exercise 1 set 1 notes")).toHaveValue("Target notes");
-  fireEvent.change(screen.getByLabelText("Active workout time"), { target: { value: "38" } });
+  fireEvent.change(screen.getByLabelText("Approximate workout duration"), { target: { value: "38" } });
   fireEvent.change(screen.getByLabelText("Workout intensity"), { target: { value: "high" } });
 
   fireEvent.click(within(exercise).getByRole("button", { name: "Completed" }));
@@ -386,16 +398,17 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
-test("saving and editing preserves optional workout details while legacy workouts remain unspecified", () => {
+test("existing saved duration values load unchanged while legacy workouts remain unspecified", () => {
   const props = renderPageProps({
     workoutEntries: [entry({ activeDurationMinutes: 55, intensity: "light" })],
   });
   const firstView = render(<WorkoutPage {...props} />);
   const card = expandWorkout();
+  expect(within(card).getByText("Approximate workout duration")).toBeInTheDocument();
   expect(within(card).getByText("55 min")).toBeInTheDocument();
   expect(within(card).getByText("Light")).toBeInTheDocument();
   fireEvent.click(within(card).getByRole("button", { name: "Edit" }));
-  expect(screen.getByLabelText("Active workout time")).toHaveValue(55);
+  expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(55);
   expect(screen.getByLabelText("Workout intensity")).toHaveValue("light");
   fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Updated title only" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
@@ -412,7 +425,7 @@ test("saving and editing preserves optional workout details while legacy workout
     finishedAt: "2026-08-09T19:00:00.000Z",
   });
   const { unmount } = render(<WorkoutPage {...renderPageProps({ workoutEntries: [savedWithElapsedOnly] })} />);
-  expect(screen.getByLabelText("Active workout time")).toHaveValue(null);
+  expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(null);
   expect(screen.getByLabelText("Workout intensity")).toHaveValue("");
   unmount();
 });
@@ -441,6 +454,32 @@ function entry(overrides = {}) {
     ],
     createdAt: "2026-08-09T20:00:00.000Z",
     updatedAt: "2026-08-09T20:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function calorieEstimate(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    estimateKind: "broad-estimate",
+    status: "calculated",
+    code: null,
+    estimatorMethodName: "trace-workout-calorie-range",
+    estimatorMethodVersion: 2,
+    estimatedAt: "2026-08-09T20:00:00.000Z",
+    bodyWeightKg: 80,
+    sourceHealthWeightEntryId: "health-1",
+    age: 35,
+    ageBasis: "adult",
+    activeDurationMinutes: 60,
+    selectedIntensity: "moderate",
+    confidence: { level: "moderate", uncertaintyReasons: [] },
+    requiredInputs: { bodyWeight: "provided", activeDuration: "provided" },
+    optionalInputs: { age: "provided", intensity: "provided" },
+    inputFingerprint: "workout-calorie-input-v1:test",
+    inputSummary: { completedSegments: 1 },
+    lowerKcal: 300,
+    upperKcal: 440,
     ...overrides,
   };
 }
@@ -474,6 +513,89 @@ function expandWorkout(title = "Chest Day") {
   );
   return screen.getByText(title).closest("article");
 }
+
+test("save outcome shows the approved immediate broad-range wording", () => {
+  const props = renderPage({
+    saveWorkoutEntry: jest.fn(() => ({
+      saved: true,
+      calorieEstimate: calorieEstimate(),
+    })),
+  });
+  fillFirstSet();
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(props.showToast).toHaveBeenCalledWith(
+    "Workout traced. Estimated calories burned: about 300\u2013440 kcal.",
+    undefined
+  );
+});
+
+test.each([
+  [
+    { bodyWeight: "missing", activeDuration: "provided" },
+    "Workout traced. Add body weight to receive an estimate.",
+  ],
+  [
+    { bodyWeight: "provided", activeDuration: "missing" },
+    "Workout traced. Add workout duration to receive an estimate.",
+  ],
+  [
+    { bodyWeight: "missing", activeDuration: "missing" },
+    "Workout traced. Add body weight and workout duration to receive an estimate.",
+  ],
+])("save outcome names only missing required estimate inputs", (requiredInputs, message) => {
+  const snapshot = calorieEstimate({
+    status: "missing-required-inputs",
+    code: "missing-required-inputs",
+    requiredInputs,
+  });
+  delete snapshot.lowerKcal;
+  delete snapshot.upperKcal;
+  const props = renderPage({
+    saveWorkoutEntry: jest.fn(() => ({ saved: true, calorieEstimate: snapshot })),
+  });
+  fillFirstSet();
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(props.showToast).toHaveBeenCalledWith(message, undefined);
+});
+
+test("expanded history displays only the saved range and a native keyboard disclosure", () => {
+  renderPage({ workoutEntries: [entry({ calorieEstimate: calorieEstimate() })] });
+  expect(screen.queryByRole("region", { name: "Estimated calories burned" })).not.toBeInTheDocument();
+  const card = expandWorkout();
+  const estimate = within(card).getByRole("region", { name: "Estimated calories burned" });
+  expect(estimate).toHaveTextContent("About 300\u2013440 kcal");
+  expect(estimate).toHaveTextContent("This is a broad estimate, not an exact measurement.");
+  const disclosure = within(estimate).getByText("How is this estimated?");
+  expect(disclosure.tagName).toBe("SUMMARY");
+  fireEvent.click(disclosure);
+  expect(disclosure.closest("details")).toHaveAttribute("open");
+  expect(estimate).toHaveTextContent(
+    "approximate workout duration including normal between-set rest"
+  );
+  expect(estimate).toHaveTextContent("More complete information can narrow the range.");
+  expect(estimate).not.toHaveTextContent(/\bMET\b|fingerprint|health-1|formula/i);
+});
+
+test("legacy and non-calculable history entries render safely only after expansion", () => {
+  const missingSnapshot = calorieEstimate({
+    status: "missing-required-inputs",
+    code: "missing-required-inputs",
+    requiredInputs: { bodyWeight: "missing", activeDuration: "provided" },
+  });
+  delete missingSnapshot.lowerKcal;
+  delete missingSnapshot.upperKcal;
+  renderPage({
+    workoutEntries: [
+      entry({ id: "legacy", title: "Legacy Workout" }),
+      entry({ id: "missing", title: "Missing Weight", calorieEstimate: missingSnapshot }),
+    ],
+  });
+  expect(screen.queryByText("No saved estimate is available for this workout.")).not.toBeInTheDocument();
+  expandWorkout("Legacy Workout");
+  expect(screen.getByText("No saved estimate is available for this workout.")).toBeInTheDocument();
+  expandWorkout("Missing Weight");
+  expect(screen.getByText("Add body weight to receive an estimate.")).toBeInTheDocument();
+});
 
 function plannedExecution() {
   return createPlannedWorkout({

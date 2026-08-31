@@ -7,30 +7,44 @@
  * - Ages 60+ use the Older Adult Compendium MET60+ bands and its
  *   2.7 mL O2/kg/min equation basis.
  *
- * Trace set-mixture policy:
+ * Trace set-mixture and density policy:
  * Every completed main set and drop is one effort segment. Recorded reps are a
- * bounded proxy for relative time under effort: each segment has a minimum
- * weight of 1 and a maximum weight of 20. A missing rep count uses weight 1 and
- * widens that segment to the full supported MET boundary. Segment MET bands are
- * averaged first; body weight and the full active duration are then applied
- * exactly once to that session-average range.
+ * bounded proxy for relative work: each segment has a minimum weight of 1 and a
+ * maximum weight of 20. Segment weights and their published MET bands form a
+ * clamped, square-root density signal per user-entered workout minute. The
+ * selected intensity band remains the session baseline; warm-ups contribute a
+ * smaller density factor, while published high-effort bands add a separately
+ * clamped signal. Missing reps use the neutral minimum weight and widen the
+ * range. Body weight and the full approximate workout duration are applied
+ * exactly once after the session-average MET range is established.
  *
  * This transparent mixture is a Trace estimation policy operating within the
- * published MET boundaries, not a clinically validated per-set calorie model.
- * It never converts reps, sets, exercise identity, or external load into fixed
- * calories, never adds set calories, and excludes post-workout "afterburn."
+ * published MET boundaries, not a clinically validated per-set calorie or
+ * assumed-minutes equation. It never converts reps, sets, exercise identity, or
+ * external load into fixed calories, never adds set calories, and excludes
+ * post-workout "afterburn."
  */
 
 export const WORKOUT_CALORIE_ESTIMATOR_METHOD = Object.freeze({
   id: "trace-workout-calorie-range",
-  version: 2,
+  version: 3,
   estimateKind: "broad-estimate",
-  mixturePolicy: "bounded-rep-set-mixture",
+  mixturePolicy: "bounded-rep-density-mixture",
 });
 
 export const WORKOUT_CALORIE_REP_WEIGHT_POLICY = Object.freeze({
   minimum: 1,
   maximum: 20,
+});
+
+export const WORKOUT_CALORIE_DENSITY_POLICY = Object.freeze({
+  effortRepWeightPerMinuteCap: 4,
+  highEffortRepWeightPerMinuteCap: 1,
+  maximumDensityShiftBandFraction: 0.5,
+  maximumHighEffortShiftBandFraction: 0.5,
+  missingDataUncertaintyBandFraction: 0.25,
+  effortFactorMinimum: 0.5,
+  effortFactorMaximum: 1.5,
 });
 
 const INTENSITIES = new Set(["light", "moderate", "high"]);
@@ -288,21 +302,128 @@ function effortBandLabel(segment, intensity) {
   return intensity ? `working-${intensity}` : "working-unspecified";
 }
 
-function combinedMetRange(segments, basis, intensity) {
-  const totalWeight = segments.reduce((sum, segment) => sum + segment.repWeight, 0);
-  let weightedLower = 0;
-  let weightedUpper = 0;
+function clamp(value, minimum, maximum) {
+  return Math.max(minimum, Math.min(value, maximum));
+}
 
-  segments.forEach((segment) => {
+function midpoint([lower, upper]) {
+  return (lower + upper) / 2;
+}
+
+function sessionBaselineBand(segments, basis, intensity) {
+  const warmUpOnly = segments.every(
+    (segment) => segment.setType === "warm-up" && !segment.toFailure
+  );
+  return warmUpOnly
+    ? basis.ranges.warmUp
+    : basis.ranges[intensity || "unspecified"];
+}
+
+/*
+ * Exact Trace density refinement, where T is entered workout duration and W is
+ * the selected baseline band's width:
+ *   effortFactor_i = clamp(mid(segmentBand_i) / mid(baselineBand), 0.5, 1.5)
+ *   density = min(sum(repWeight_i * effortFactor_i) / T, 4)
+ *   densityShift = 0.5 * W * sqrt(density / 4)
+ *   highFactor_i = clamp((mid(segmentBand_i) - mid(baselineBand)) / W, 0, 1)
+ *   highDensity = min(sum(repWeight_i * highFactor_i) / T, 1)
+ *   highShift = 0.5 * W * sqrt(highDensity)
+ *   uncertainty = 0.25 * W * uncertainSegmentCount / completedSegmentCount
+ * The two shifts move both bounds upward; uncertainty expands them outward;
+ * final bounds are clamped to the applicable adult or MET60+ overall boundary.
+ * Missing/unknown segments use effortFactor 1 and highFactor 0.
+ */
+function combinedMetProfile(segments, basis, intensity, activeDurationMinutes) {
+  const baselineBand = sessionBaselineBand(segments, basis, intensity);
+  const baselineMidpoint = midpoint(baselineBand);
+  const baselineWidth = baselineBand[1] - baselineBand[0];
+  let effortRepWeight = 0;
+  let highEffortRepWeight = 0;
+
+  const segmentDensity = segments.map((segment) => {
     const band = assignedBand(segment, basis, intensity);
-    weightedLower += band[0] * segment.repWeight;
-    weightedUpper += band[1] * segment.repWeight;
+    const uncertain = segment.repsStatus === "missing" || segment.setType === "unknown";
+    const effortFactor = uncertain
+      ? 1
+      : clamp(
+        midpoint(band) / baselineMidpoint,
+        WORKOUT_CALORIE_DENSITY_POLICY.effortFactorMinimum,
+        WORKOUT_CALORIE_DENSITY_POLICY.effortFactorMaximum
+      );
+    const highEffortFactor = uncertain || baselineWidth <= 0
+      ? 0
+      : clamp((midpoint(band) - baselineMidpoint) / baselineWidth, 0, 1);
+    effortRepWeight += segment.repWeight * effortFactor;
+    highEffortRepWeight += segment.repWeight * highEffortFactor;
+    return { effortFactor, highEffortFactor };
   });
 
-  return [
-    Math.max(basis.overall[0], Math.min(weightedLower / totalWeight, basis.overall[1])),
-    Math.max(basis.overall[0], Math.min(weightedUpper / totalWeight, basis.overall[1])),
+  const rawDensity = effortRepWeight / activeDurationMinutes;
+  const boundedDensity = Math.min(
+    rawDensity,
+    WORKOUT_CALORIE_DENSITY_POLICY.effortRepWeightPerMinuteCap
+  );
+  const densityScore = Math.sqrt(
+    boundedDensity / WORKOUT_CALORIE_DENSITY_POLICY.effortRepWeightPerMinuteCap
+  );
+  const densityShift = densityScore
+    * baselineWidth
+    * WORKOUT_CALORIE_DENSITY_POLICY.maximumDensityShiftBandFraction;
+
+  const rawHighEffortDensity = highEffortRepWeight / activeDurationMinutes;
+  const boundedHighEffortDensity = Math.min(
+    rawHighEffortDensity,
+    WORKOUT_CALORIE_DENSITY_POLICY.highEffortRepWeightPerMinuteCap
+  );
+  const highEffortScore = Math.sqrt(
+    boundedHighEffortDensity
+      / WORKOUT_CALORIE_DENSITY_POLICY.highEffortRepWeightPerMinuteCap
+  );
+  const highEffortShift = highEffortScore
+    * baselineWidth
+    * WORKOUT_CALORIE_DENSITY_POLICY.maximumHighEffortShiftBandFraction;
+
+  const uncertainSegments = segments.filter(
+    (segment) => segment.repsStatus === "missing" || segment.setType === "unknown"
+  ).length;
+  const uncertaintyExpansion = uncertainSegments / segments.length
+    * baselineWidth
+    * WORKOUT_CALORIE_DENSITY_POLICY.missingDataUncertaintyBandFraction;
+  const totalShift = densityShift + highEffortShift;
+  const metRange = [
+    clamp(
+      baselineBand[0] + totalShift - uncertaintyExpansion,
+      basis.overall[0],
+      basis.overall[1]
+    ),
+    clamp(
+      baselineBand[1] + totalShift + uncertaintyExpansion,
+      basis.overall[0],
+      basis.overall[1]
+    ),
   ];
+
+  return {
+    metRange,
+    density: {
+      baselineBand,
+      effortRepWeight,
+      rawDensity,
+      boundedDensity,
+      densityScore,
+      densityShift,
+      densityClamped: rawDensity > boundedDensity,
+      highEffortRepWeight,
+      rawHighEffortDensity,
+      boundedHighEffortDensity,
+      highEffortScore,
+      highEffortShift,
+      highEffortDensityClamped: rawHighEffortDensity > boundedHighEffortDensity,
+      uncertainSegments,
+      uncertaintyExpansion,
+      segmentDensity,
+    },
+  };
 }
 
 function rawCalorieRange(basis, metRange, bodyWeightKg, activeDurationMinutes) {
@@ -363,16 +484,50 @@ function response(status, code, result, completeness, structure, segments, profi
       },
       workoutStructure: structure,
       effortProfile: {
-        policy: WORKOUT_CALORIE_REP_WEIGHT_POLICY,
-        segments: segments.map((segment) => ({
+        policy: {
+          repWeight: WORKOUT_CALORIE_REP_WEIGHT_POLICY,
+          density: WORKOUT_CALORIE_DENSITY_POLICY,
+        },
+        segments: segments.map((segment, index) => ({
           ...segment,
           effortBand: effortBandLabel(segment, profile?.intensity),
           uncertaintyWidened: segment.repsStatus === "missing" || segment.setType === "unknown",
+          densityEffortFactor: profile?.density?.segmentDensity[index]
+            ? roundedMet(profile.density.segmentDensity[index].effortFactor)
+            : null,
+          highEffortFactor: profile?.density?.segmentDensity[index]
+            ? roundedMet(profile.density.segmentDensity[index].highEffortFactor)
+            : null,
         })),
         combinedMetRange: profile?.metRange
           ? {
               lowerMet: roundedMet(profile.metRange[0]),
               upperMet: roundedMet(profile.metRange[1]),
+            }
+          : null,
+        density: profile?.density
+          ? {
+              baselineMetRange: {
+                lowerMet: roundedMet(profile.density.baselineBand[0]),
+                upperMet: roundedMet(profile.density.baselineBand[1]),
+              },
+              effortRepWeight: roundedMet(profile.density.effortRepWeight),
+              rawEffortRepWeightPerMinute: roundedMet(profile.density.rawDensity),
+              boundedEffortRepWeightPerMinute: roundedMet(profile.density.boundedDensity),
+              densityScore: roundedMet(profile.density.densityScore),
+              densityShiftMet: roundedMet(profile.density.densityShift),
+              densityClamped: profile.density.densityClamped,
+              highEffortRepWeight: roundedMet(profile.density.highEffortRepWeight),
+              rawHighEffortRepWeightPerMinute: roundedMet(
+                profile.density.rawHighEffortDensity
+              ),
+              boundedHighEffortRepWeightPerMinute: roundedMet(
+                profile.density.boundedHighEffortDensity
+              ),
+              highEffortShiftMet: roundedMet(profile.density.highEffortShift),
+              highEffortDensityClamped: profile.density.highEffortDensityClamped,
+              uncertainSegments: profile.density.uncertainSegments,
+              uncertaintyExpansionMet: roundedMet(profile.density.uncertaintyExpansion),
             }
           : null,
       },
@@ -435,8 +590,20 @@ export function estimateWorkoutCalorieRange({ workout, bodyWeight, age } = {}) {
   let profile;
 
   if (completeness.optional.age === "missing") {
-    const adultMetRange = combinedMetRange(segments, ADULT_BASIS, selectedIntensity);
-    const olderMetRange = combinedMetRange(segments, OLDER_ADULT_BASIS, selectedIntensity);
+    const adultProfile = combinedMetProfile(
+      segments,
+      ADULT_BASIS,
+      selectedIntensity,
+      activeDuration
+    );
+    const olderProfile = combinedMetProfile(
+      segments,
+      OLDER_ADULT_BASIS,
+      selectedIntensity,
+      activeDuration
+    );
+    const adultMetRange = adultProfile.metRange;
+    const olderMetRange = olderProfile.metRange;
     const adultCalories = rawCalorieRange(
       ADULT_BASIS,
       adultMetRange,
@@ -458,10 +625,17 @@ export function estimateWorkoutCalorieRange({ workout, bodyWeight, age } = {}) {
         Math.min(adultMetRange[0], olderMetRange[0]),
         Math.max(adultMetRange[1], olderMetRange[1]),
       ],
+      density: adultProfile.density,
     };
   } else {
     const basis = age >= 60 ? OLDER_ADULT_BASIS : ADULT_BASIS;
-    const metRange = combinedMetRange(segments, basis, selectedIntensity);
+    const metProfile = combinedMetProfile(
+      segments,
+      basis,
+      selectedIntensity,
+      activeDuration
+    );
+    const metRange = metProfile.metRange;
     [rawLower, rawUpper] = rawCalorieRange(
       basis,
       metRange,
@@ -472,6 +646,7 @@ export function estimateWorkoutCalorieRange({ workout, bodyWeight, age } = {}) {
       ageBasis: basis.id,
       intensity: selectedIntensity,
       metRange,
+      density: metProfile.density,
     };
   }
 

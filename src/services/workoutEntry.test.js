@@ -161,7 +161,7 @@ test("accepts zero reps and preserves failure fields", () => {
   });
 });
 
-test("stores optional active workout time and workout-wide intensity while legacy drafts omit both", () => {
+test("stores optional approximate workout duration and workout-wide intensity while legacy drafts omit both", () => {
   const entry = createWorkoutEntry(validDraft({
     activeDurationMinutes: "47",
     intensity: "high",

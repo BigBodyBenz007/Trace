@@ -452,6 +452,28 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   restoredDraft.form.intensity = "moderate";
   workoutWithDrops.activeDurationMinutes = 51;
   workoutWithDrops.intensity = "high";
+  workoutWithDrops.calorieEstimate = {
+    schemaVersion: 1,
+    estimateKind: "broad-estimate",
+    status: "calculated",
+    code: null,
+    estimatorMethodName: "trace-workout-calorie-range",
+    estimatorMethodVersion: 2,
+    estimatedAt: "2026-08-30T12:00:00.000Z",
+    bodyWeightKg: 80,
+    sourceHealthWeightEntryId: "health-1",
+    age: 36,
+    ageBasis: "adult",
+    activeDurationMinutes: 51,
+    selectedIntensity: "high",
+    confidence: { level: "moderate", uncertaintyReasons: [] },
+    requiredInputs: { bodyWeight: "provided", activeDuration: "provided" },
+    optionalInputs: { age: "provided", intensity: "provided" },
+    inputFingerprint: "workout-calorie-input-v1:backup",
+    inputSummary: { completedSegments: 3 },
+    lowerKcal: 340,
+    upperKcal: 470,
+  };
   const structured = emptyStructured({
     memories: [{ id: "memory-1", date: "1999-06-12", categories: ["Family"], tags: ["legacy"], images: ["photo-1"] }],
     nutritionEntries: [{ id: "meal-1", sodium: 640 }], healthMeasurementEntries: [{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }], appSettings: { schemaVersion: 5, units: { weight: "kg", height: "cm", circumference: "cm" }, personalDetails: { dateOfBirth: "1990-08-30" } }, workoutEntries: [workoutWithDrops],

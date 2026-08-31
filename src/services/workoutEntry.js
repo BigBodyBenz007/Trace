@@ -71,7 +71,7 @@ export function getWorkoutEntryIssues(draft) {
     if (!Number.isInteger(minutes) || minutes <= 0) {
       issues.push({
         field: "activeDurationMinutes",
-        message: "Enter active workout time as a whole number of minutes greater than zero.",
+        message: "Enter approximate workout duration as a whole number of minutes greater than zero.",
       });
     }
   }
