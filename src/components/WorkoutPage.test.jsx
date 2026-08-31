@@ -92,7 +92,7 @@ test("explains approximate workout duration as first-to-last set time with norma
   const durationInput = screen.getByLabelText("Approximate workout duration");
   const durationLabel = durationInput.closest("label");
 
-  expect(durationInput).toHaveAttribute("placeholder", "Example: 45 minutes");
+  expect(durationInput).not.toHaveAttribute("placeholder");
   expect(durationLabel).toHaveTextContent("Approximate workout duration");
   expect(durationLabel).toHaveTextContent(
     "From your first set to your last, including normal rest between sets. Exclude long interruptions."

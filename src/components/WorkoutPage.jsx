@@ -186,7 +186,6 @@ function WorkoutReadinessFields({
               aria-invalid={durationInvalid || undefined}
               inputMode="numeric"
               min="1"
-              placeholder="Example: 45 minutes"
               step="1"
               type="number"
               value={activeDurationMinutes}
