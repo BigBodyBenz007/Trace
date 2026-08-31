@@ -880,6 +880,30 @@ test("Nutrition water quick-add and display unit persist across remount", () => 
     .toHaveAttribute("aria-pressed", "true");
 });
 
+test("Nutrition Water goal persists canonically and unit switches do not progressively round it", () => {
+  const first = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition Goals" }));
+  fireEvent.change(screen.getByLabelText("Daily water goal in oz"), { target: { value: "80" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Goals" }));
+  const canonicalGoal = JSON.parse(localStorage.getItem("nutritionGoals")).waterGoalMl;
+  expect(canonicalGoal).toBe(2365.882365);
+
+  fireEvent.click(screen.getByRole("button", { name: "Display water in milliliters" }));
+  expect(screen.getByLabelText("Daily water goal in mL")).toHaveValue(2366);
+  expect(JSON.parse(localStorage.getItem("nutritionGoals")).waterGoalMl).toBe(canonicalGoal);
+  fireEvent.click(screen.getByRole("button", { name: "Display water in fluid ounces" }));
+  expect(screen.getByLabelText("Daily water goal in oz")).toHaveValue(80);
+  expect(JSON.parse(localStorage.getItem("nutritionGoals")).waterGoalMl).toBe(canonicalGoal);
+  first.unmount();
+
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition Goals" }));
+  expect(screen.getByLabelText("Daily water goal in oz")).toHaveValue(80);
+  expect(JSON.parse(localStorage.getItem("nutritionGoals")).waterGoalMl).toBe(canonicalGoal);
+});
+
 test("Timeline opens Today's Schedule and returns to Timeline at the top", () => {
   renderAppAtTimeline();
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
@@ -2158,7 +2182,7 @@ test("successful same-tab restore immediately synchronizes theme, units, and mot
     motionPreference: "reduced",
   };
   localStorage.setItem("appSettings", JSON.stringify(backedUpSettings));
-  localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 2450 }));
+  localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 2450, waterGoalMl: 2365.882365 }));
   const backedUpDailyActions = { schemaVersion: 1, actions: [{
     schemaVersion: 1,
     id: "daily-action:restored",
@@ -2226,7 +2250,7 @@ test("successful same-tab restore immediately synchronizes theme, units, and mot
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "standard");
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-theme", "river");
   expect(document.documentElement).toHaveAttribute("data-trace-theme", "river");
-  localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 1800 }));
+  localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 1800, waterGoalMl: 1000 }));
   localStorage.setItem("dailyActions", JSON.stringify({ schemaVersion: 1, actions: [] }));
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
 
@@ -2248,10 +2272,15 @@ test("successful same-tab restore immediately synchronizes theme, units, and mot
   expect(await screen.findByRole("heading", { name: "Review Backup" })).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
   expect(await screen.findByRole("heading", { name: /Trace restored successfully/ })).toBeInTheDocument();
-  expect(JSON.parse(localStorage.getItem("nutritionGoals"))).toEqual({ calories: 2450 });
+  expect(JSON.parse(localStorage.getItem("nutritionGoals"))).toEqual({ calories: 2450, waterGoalMl: 2365.882365 });
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-theme", "haunted-forest");
   expect(document.documentElement).toHaveAttribute("data-trace-theme", "haunted-forest");
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition Goals" }));
+  expect(screen.getByLabelText("Daily water goal in oz")).toHaveValue(80);
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
 
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));

@@ -4121,6 +4121,16 @@ code {
   margin-top: 12px;
 }
 
+.trace-water__history-list .trace-water__show-more {
+  margin: 4px 0 0 !important;
+  width: 100%;
+}
+
+.trace-feature-history .trace-nutrition__show-more {
+  margin: 4px 0 0 !important;
+  width: 100%;
+}
+
 .trace-water__history-entry {
   background: rgba(4, 18, 28, 0.52);
   border: 1px solid #28485b;

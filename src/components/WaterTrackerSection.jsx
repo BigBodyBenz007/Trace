@@ -11,6 +11,7 @@ const QUICK_AMOUNTS = Object.freeze({
   [WATER_UNITS.OUNCES]: [8, 12, 16],
   [WATER_UNITS.MILLILITERS]: [250, 500, 750],
 });
+const HISTORY_BATCH_SIZE = 10;
 
 function dateTimeFields(loggedAt) {
   const date = new Date(loggedAt);
@@ -64,12 +65,16 @@ export default function WaterTrackerSection({
   const [editDate, setEditDate] = useState("");
   const [editTime, setEditTime] = useState("");
   const [error, setError] = useState("");
+  const [visibleHistoryCount, setVisibleHistoryCount] = useState(HISTORY_BATCH_SIZE);
   const previousUnitRef = useRef(unit);
   const customInputRef = useRef(null);
   const summary = calculateWaterSummary(entries);
   const sortedEntries = [...entries].sort(
     (first, second) => new Date(second.loggedAt) - new Date(first.loggedAt)
   );
+  const visibleEntries = sortedEntries.slice(0, visibleHistoryCount);
+  const remainingEntryCount = Math.max(0, sortedEntries.length - visibleEntries.length);
+  const nextBatchCount = Math.min(HISTORY_BATCH_SIZE, remainingEntryCount);
 
   useEffect(() => {
     if (customExpanded) customInputRef.current?.focus();
@@ -224,13 +229,26 @@ export default function WaterTrackerSection({
 
       {error && <p className="trace-water__error" role="alert">{error}</p>}
 
-      <details className="trace-water__history">
-        <summary>Water history ({entries.length})</summary>
+      <details
+        className="trace-water__history"
+        onToggle={(event) => {
+          if (!event.currentTarget.open) setVisibleHistoryCount(HISTORY_BATCH_SIZE);
+        }}
+      >
+        <summary
+          onClick={(event) => {
+            if (event.currentTarget.parentElement.open) {
+              setVisibleHistoryCount(HISTORY_BATCH_SIZE);
+            }
+          }}
+        >
+          Water history ({entries.length})
+        </summary>
         {sortedEntries.length === 0 ? (
           <p>No water entries yet.</p>
         ) : (
           <div className="trace-water__history-list">
-            {sortedEntries.map((entry) => {
+            {visibleEntries.map((entry) => {
               const loggedDate = new Date(entry.loggedAt);
               const amountLabel = formatWaterAmount(entry.amountMl, unit);
               const dateLabel = loggedDate.toLocaleDateString(undefined, {
@@ -283,6 +301,16 @@ export default function WaterTrackerSection({
                 </article>
               );
             })}
+            {remainingEntryCount > 0 && (
+              <button
+                aria-label={`Show ${nextBatchCount} more older water entries`}
+                className="trace-action trace-action--secondary trace-water__show-more"
+                onClick={() => setVisibleHistoryCount((count) => count + HISTORY_BATCH_SIZE)}
+                type="button"
+              >
+                Show more ({remainingEntryCount} older)
+              </button>
+            )}
           </div>
         )}
       </details>

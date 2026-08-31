@@ -447,6 +447,28 @@ test("restores an older backup without water data as an empty water collection",
   expect(JSON.parse(storage.value("waterEntries"))).toEqual(emptyWaterCollection());
 });
 
+test("round-trips a canonical Water goal through existing Nutrition goals and accepts older goals without it", async () => {
+  const nutritionGoals = { calories: 2100, protein: 140, waterGoalMl: 2365.882365 };
+  const source = makeStorage({ nutritionGoals: JSON.stringify(nutritionGoals) });
+  const created = await createTraceBackup({
+    storage: source,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(created.data.structured.nutritionGoals).toEqual(nutritionGoals);
+
+  const restored = makeStorage();
+  await restoreTraceBackup(created, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(JSON.parse(restored.value("nutritionGoals"))).toEqual(nutritionGoals);
+
+  const olderGoals = { calories: 2000, protein: 120 };
+  const older = backup({ data: { structured: emptyStructured({ nutritionGoals: olderGoals }), photos: [] } });
+  expect(validateTraceBackup(older).backup.data.structured.nutritionGoals).toEqual(olderGoals);
+});
+
 test("rejects a malformed water collection in a backup", () => {
   const structured = emptyStructured({ waterEntries: { schemaVersion: 1, entries: "broken" } });
   expect(() => validateTraceBackup(backup({ data: { structured, photos: [] } })))

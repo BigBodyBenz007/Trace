@@ -186,6 +186,7 @@ const DEFAULT_NUTRITION_GOALS = {
   carbohydrates: 0,
   fat: 0,
   sodium: 0,
+  waterGoalMl: 0,
 };
 
 function toNonNegativeNumber(value) {
@@ -227,6 +228,18 @@ function workoutMetadata(entries) {
 
 function storageMessage(action) {
   return `Trace couldn't ${action} because browser storage is unavailable or full. Your existing data has not been intentionally removed.`;
+}
+
+function normalizeNutritionGoals(value) {
+  const goals = value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  return {
+    calories: toNonNegativeNumber(goals.calories),
+    protein: toNonNegativeNumber(goals.protein),
+    carbohydrates: toNonNegativeNumber(goals.carbohydrates),
+    fat: toNonNegativeNumber(goals.fat),
+    sodium: toNonNegativeNumber(goals.sodium),
+    waterGoalMl: toNonNegativeNumber(goals.waterGoalMl),
+  };
 }
 
 function memoryDisplayMetadata(memories) {
@@ -528,13 +541,7 @@ function App() {
       if (!savedNutritionGoals) return;
       const savedGoals = JSON.parse(savedNutritionGoals);
 
-      setNutritionGoals({
-        calories: toNonNegativeNumber(savedGoals.calories),
-        protein: toNonNegativeNumber(savedGoals.protein),
-        carbohydrates: toNonNegativeNumber(savedGoals.carbohydrates),
-        fat: toNonNegativeNumber(savedGoals.fat),
-        sodium: toNonNegativeNumber(savedGoals.sodium),
-      });
+      setNutritionGoals(normalizeNutritionGoals(savedGoals));
     } catch (error) {
       setStorageError("Trace couldn't read the saved nutrition goals. The stored value was left unchanged.");
     }
@@ -1139,6 +1146,10 @@ function App() {
       if (!Array.isArray(restoredMedicationEntries)) throw new Error("Invalid medication data.");
       const restoredAppSettings = readAppSettings(localStorage);
       const restoredWaterEntries = readWaterEntries(localStorage).entries;
+      const restoredNutritionGoalsRaw = localStorage.getItem("nutritionGoals");
+      const restoredNutritionGoals = normalizeNutritionGoals(
+        restoredNutritionGoalsRaw ? JSON.parse(restoredNutritionGoalsRaw) : null
+      );
       const restoredJournalPrivacyState = journalVaultStorageState(localStorage);
       const restoredJournalEntries = restoredJournalPrivacyState.enabled
         ? []
@@ -1160,6 +1171,7 @@ function App() {
       }))) || [];
       setAppSettings(restoredAppSettings);
       setWaterEntries(restoredWaterEntries);
+      setNutritionGoals(restoredNutritionGoals);
       setJournalEntries(restoredJournalEntries);
       setJournalPrivacy({
         enabled: restoredJournalPrivacyState.enabled,
@@ -1280,13 +1292,7 @@ function App() {
   }
 
   function saveNutritionGoals(goals) {
-    const updatedGoals = {
-      calories: toNonNegativeNumber(goals.calories),
-      protein: toNonNegativeNumber(goals.protein),
-      carbohydrates: toNonNegativeNumber(goals.carbohydrates),
-      fat: toNonNegativeNumber(goals.fat),
-      sodium: toNonNegativeNumber(goals.sodium),
-    };
+    const updatedGoals = normalizeNutritionGoals(goals);
 
     try {
       localStorage.setItem("nutritionGoals", JSON.stringify(updatedGoals));

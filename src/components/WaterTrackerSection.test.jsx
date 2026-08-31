@@ -36,6 +36,18 @@ function todaySummary() {
   return within(screen.getByLabelText("Water intake summary")).getByText("Today").closest("article");
 }
 
+function historyEntries(count) {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `water-history-${index + 1}`,
+    amountMl: 100 + index,
+    loggedAt: new Date(2026, 7, index + 1, 12).toISOString(),
+  }));
+}
+
+function visibleHistoryEntries() {
+  return [...document.querySelectorAll(".trace-water__history-entry")];
+}
+
 test("quick-add logs water immediately and updates today's total", () => {
   const spies = { saveEntry: jest.fn(), showConfirmation: jest.fn() };
   render(<Harness spies={spies} />);
@@ -118,5 +130,59 @@ test("confirms and deletes a water entry", () => {
   expect(spies.deleteEntry).toHaveBeenCalledWith("water-delete");
   expect(todaySummary()).toHaveTextContent("0 mL");
   expect(screen.getByText("Water history (0)")).toBeInTheDocument();
+  window.confirm = originalConfirm;
+});
+
+test("shows the 10 newest history entries first and reveals older entries in a batch", () => {
+  render(<Harness initialEntries={historyEntries(12)} initialUnit="mL" />);
+  fireEvent.click(screen.getByText("Water history (12)"));
+
+  expect(visibleHistoryEntries()).toHaveLength(10);
+  expect(visibleHistoryEntries().map((entry) => entry.querySelector("strong").textContent))
+    .toEqual(["111 mL", "110 mL", "109 mL", "108 mL", "107 mL", "106 mL", "105 mL", "104 mL", "103 mL", "102 mL"]);
+  expect(screen.getByRole("button", { name: "Show 2 more older water entries" }))
+    .toHaveTextContent("Show more (2 older)");
+
+  fireEvent.click(screen.getByRole("button", { name: "Show 2 more older water entries" }));
+  expect(visibleHistoryEntries()).toHaveLength(12);
+  expect(visibleHistoryEntries()[11]).toHaveTextContent("100 mL");
+  expect(screen.queryByRole("button", { name: /more older water entries/ })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByText("Water history (12)"));
+  fireEvent.click(screen.getByText("Water history (12)"));
+  expect(visibleHistoryEntries()).toHaveLength(10);
+  expect(screen.getByRole("button", { name: "Show 2 more older water entries" })).toBeInTheDocument();
+});
+
+test("does not offer Show more when water history has 10 or fewer entries", () => {
+  render(<Harness initialEntries={historyEntries(10)} initialUnit="mL" />);
+  fireEvent.click(screen.getByText("Water history (10)"));
+
+  expect(visibleHistoryEntries()).toHaveLength(10);
+  expect(screen.queryByRole("button", { name: /more older water entries/ })).not.toBeInTheDocument();
+});
+
+test("editing and deleting update a limited history without altering older stored entries", () => {
+  const originalConfirm = window.confirm;
+  window.confirm = jest.fn(() => true);
+  const spies = { updateEntry: jest.fn(), deleteEntry: jest.fn() };
+  render(<Harness initialEntries={historyEntries(12)} initialUnit="mL" spies={spies} />);
+  fireEvent.click(screen.getByText("Water history (12)"));
+
+  fireEvent.click(screen.getByRole("button", { name: /Edit 111 mL water entry/ }));
+  fireEvent.change(screen.getByLabelText("Edit water amount in mL"), { target: { value: "500" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Water Changes" }));
+  expect(spies.updateEntry).toHaveBeenCalledWith("water-history-12", expect.objectContaining({ amountMl: 500 }));
+  expect(visibleHistoryEntries()).toHaveLength(10);
+
+  fireEvent.click(screen.getByRole("button", { name: /Delete 500 mL water entry/ }));
+  expect(spies.deleteEntry).toHaveBeenCalledWith("water-history-12");
+  expect(screen.getByText("Water history (11)")).toBeInTheDocument();
+  expect(visibleHistoryEntries()).toHaveLength(10);
+  expect(screen.getByRole("button", { name: "Show 1 more older water entries" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Show 1 more older water entries" }));
+  expect(visibleHistoryEntries()).toHaveLength(11);
+  expect(visibleHistoryEntries()[10]).toHaveTextContent("100 mL");
   window.confirm = originalConfirm;
 });

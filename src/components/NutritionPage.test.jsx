@@ -123,8 +123,27 @@ function renderNutritionPage(overrides = {}) {
     ...overrides,
   };
 
-  render(<NutritionPage {...props} />);
-  return props;
+  const view = render(<NutritionPage {...props} />);
+  return { ...props, ...view, props };
+}
+
+function historyEntry(index) {
+  return {
+    id: `food-history-${index}`,
+    name: `Food ${index}`,
+    loggedAt: new Date(2026, 7, index, 12).toISOString(),
+    calories: index,
+    protein: index,
+    carbohydrates: index,
+    fat: index,
+    fiber: index,
+    sodium: index,
+    notes: "",
+  };
+}
+
+function savedEntriesSection() {
+  return screen.getByRole("heading", { name: "Saved Entries" }).closest("section");
 }
 
 function selectBanana() {
@@ -157,6 +176,73 @@ test("uses the scoped Nutrition ledger presentation without changing semantic co
   expect(screen.getByRole("heading", { name: "Daily Totals" }).closest("section")).toHaveClass("trace-nutrition-today");
   expandNutritionGoals();
   expect(screen.getByRole("button", { name: "Save Goals" })).toHaveClass("trace-action--primary");
+});
+
+test("places Water directly below the food entry form", () => {
+  renderNutritionPage();
+  const foodEntryForm = screen.getByRole("heading", { name: "Add Nutrition Entry" }).closest("form");
+  const waterSection = screen.getByRole("heading", { name: "Water" }).closest("section");
+
+  expect(foodEntryForm.nextElementSibling).toBe(waterSection);
+});
+
+test("shows only the 10 newest food entries before progressively revealing older entries", () => {
+  renderNutritionPage({
+    nutritionEntries: Array.from({ length: 12 }, (_, index) => historyEntry(index + 1)),
+  });
+  const history = within(savedEntriesSection());
+  const visibleNames = history.getAllByRole("heading", { level: 3 }).map((heading) => heading.textContent);
+
+  expect(visibleNames).toEqual([
+    "Food 12", "Food 11", "Food 10", "Food 9", "Food 8",
+    "Food 7", "Food 6", "Food 5", "Food 4", "Food 3",
+  ]);
+  expect(history.queryByRole("heading", { name: "Food 2" })).not.toBeInTheDocument();
+  const showMore = history.getByRole("button", { name: "Show 2 more older food entries" });
+  expect(showMore).toHaveTextContent("Show more (2 older)");
+
+  fireEvent.click(showMore);
+
+  expect(history.getAllByRole("heading", { level: 3 })).toHaveLength(12);
+  expect(history.getByRole("heading", { name: "Food 1" })).toBeInTheDocument();
+  expect(history.queryByRole("button", { name: /more older food entries/ })).not.toBeInTheDocument();
+});
+
+test("does not offer Show more for 10 or fewer food entries", () => {
+  renderNutritionPage({
+    nutritionEntries: Array.from({ length: 10 }, (_, index) => historyEntry(index + 1)),
+  });
+
+  expect(within(savedEntriesSection()).queryByRole("button", { name: /more older food entries/ }))
+    .not.toBeInTheDocument();
+});
+
+test("food edit and delete controls remain correct with the limited history view", () => {
+  window.confirm = jest.fn(() => true);
+  const entries = Array.from({ length: 12 }, (_, index) => historyEntry(index + 1));
+  const view = renderNutritionPage({ nutritionEntries: entries });
+  let history = within(savedEntriesSection());
+
+  fireEvent.click(within(history.getByRole("heading", { name: "Food 12" }).closest("article"))
+    .getByRole("button", { name: "Delete" }));
+  expect(view.deleteNutritionEntry).toHaveBeenCalledWith("food-history-12");
+
+  view.rerender(<NutritionPage {...view.props} nutritionEntries={entries.slice(0, -1)} />);
+  history = within(savedEntriesSection());
+  expect(history.getAllByRole("heading", { level: 3 })).toHaveLength(10);
+  expect(history.getByRole("heading", { name: "Food 2" })).toBeInTheDocument();
+  expect(history.getByRole("button", { name: "Show 1 more older food entries" })).toBeInTheDocument();
+
+  fireEvent.click(history.getByRole("button", { name: "Show 1 more older food entries" }));
+  fireEvent.click(within(history.getByRole("heading", { name: "Food 1" }).closest("article"))
+    .getByRole("button", { name: "Edit" }));
+  expect(entryForm().getByLabelText("Food / meal name")).toHaveValue("Food 1");
+  fireEvent.change(entryForm().getByLabelText("Food / meal name"), { target: { value: "Edited oldest food" } });
+  fireEvent.click(entryForm().getByRole("button", { name: "Save Changes" }));
+  expect(view.updateNutritionEntry).toHaveBeenCalledWith(
+    "food-history-1",
+    expect.objectContaining({ name: "Edited oldest food" })
+  );
 });
 
 test("collapses Nutrition Goals by default and preserves edits across disclosure toggles", () => {
@@ -209,6 +295,89 @@ test("saves an optional sodium goal", () => {
   fireEvent.change(within(goalsForm).getByLabelText("Sodium (mg)"), { target: { value: "2300" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Goals" }));
   expect(props.saveNutritionGoals).toHaveBeenCalledWith(expect.objectContaining({ sodium: 2300 }));
+});
+
+test("creates and edits an optional Water goal in the active display unit", () => {
+  const view = renderNutritionPage({ waterUnit: "oz" });
+  expandNutritionGoals();
+  const waterGoal = screen.getByLabelText("Daily water goal in oz");
+  expect(waterGoal).toHaveValue(null);
+
+  fireEvent.change(waterGoal, { target: { value: "80" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Goals" }));
+  expect(view.saveNutritionGoals).toHaveBeenLastCalledWith(expect.objectContaining({
+    waterGoalMl: 2365.882365,
+  }));
+
+  fireEvent.change(waterGoal, { target: { value: "96" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Goals" }));
+  expect(view.saveNutritionGoals).toHaveBeenLastCalledWith(expect.objectContaining({
+    waterGoalMl: 2839.058838,
+  }));
+});
+
+test("accepts a metric Water goal and keeps the no-goal state optional", () => {
+  const view = renderNutritionPage({ waterUnit: "mL" });
+  const totals = within(screen.getByRole("heading", { name: "Daily Totals" }).closest("section"));
+
+  expect(totals.getByText("0 mL")).toBeInTheDocument();
+  expect(totals.queryByLabelText("Water progress")).not.toBeInTheDocument();
+  expandNutritionGoals();
+  fireEvent.change(screen.getByLabelText("Daily water goal in mL"), { target: { value: "2400" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Goals" }));
+  expect(view.saveNutritionGoals).toHaveBeenCalledWith(expect.objectContaining({ waterGoalMl: 2400 }));
+});
+
+test("Water goal unit switches display from the exact canonical draft without saving", () => {
+  const goalMl = 80 * 29.5735295625;
+  const view = renderNutritionPage({
+    nutritionGoals: { calories: 0, protein: 0, carbohydrates: 0, fat: 0, sodium: 0, waterGoalMl: goalMl },
+    waterUnit: "oz",
+  });
+  expandNutritionGoals();
+  expect(screen.getByLabelText("Daily water goal in oz")).toHaveValue(80);
+
+  view.rerender(<NutritionPage {...view.props} waterUnit="mL" />);
+  expect(screen.getByLabelText("Daily water goal in mL")).toHaveValue(2366);
+  view.rerender(<NutritionPage {...view.props} waterUnit="oz" />);
+  expect(screen.getByLabelText("Daily water goal in oz")).toHaveValue(80);
+  view.rerender(<NutritionPage
+    {...view.props}
+    nutritionGoals={{ ...view.props.nutritionGoals, waterGoalMl: 1000 }}
+    waterUnit="mL"
+  />);
+  expect(screen.getByLabelText("Daily water goal in mL")).toHaveValue(1000);
+  expect(view.saveNutritionGoals).not.toHaveBeenCalled();
+});
+
+test("shows today's Water against its goal and updates progress with Water entry changes", () => {
+  const today = new Date().toISOString();
+  const view = renderNutritionPage({
+    nutritionGoals: { calories: 0, protein: 0, carbohydrates: 0, fat: 0, sodium: 0, waterGoalMl: 1000 },
+    waterEntries: [{ id: "water-one", amountMl: 250, loggedAt: today }],
+    waterUnit: "mL",
+  });
+  let totals = within(screen.getByRole("heading", { name: "Daily Totals" }).closest("section"));
+  expect(totals.getByText("250 mL / 1,000 mL")).toBeInTheDocument();
+  expect(totals.getByText("25%")).toBeInTheDocument();
+
+  view.rerender(<NutritionPage
+    {...view.props}
+    waterEntries={[
+      { id: "water-one", amountMl: 500, loggedAt: today },
+      { id: "water-two", amountMl: 250, loggedAt: today },
+    ]}
+  />);
+  totals = within(screen.getByRole("heading", { name: "Daily Totals" }).closest("section"));
+  expect(totals.getByText("750 mL / 1,000 mL")).toBeInTheDocument();
+  expect(totals.getByText("75%")).toBeInTheDocument();
+
+  view.rerender(<NutritionPage
+    {...view.props}
+    waterEntries={[{ id: "water-two", amountMl: 250, loggedAt: today }]}
+  />);
+  expect(within(screen.getByRole("heading", { name: "Daily Totals" }).closest("section"))
+    .getByText("250 mL / 1,000 mL")).toBeInTheDocument();
 });
 
 test("shows today's sodium total and an incomplete warning", () => {

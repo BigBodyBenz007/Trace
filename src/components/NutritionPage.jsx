@@ -5,6 +5,13 @@ import ConfirmationMessage from "./ConfirmationMessage";
 import WaterTrackerSection from "./WaterTrackerSection";
 import { motionScrollBehavior } from "../services/motionPreference";
 import {
+  WATER_UNITS,
+  calculateWaterSummary,
+  formatWaterAmount,
+  millilitersToWaterAmount,
+  waterAmountToMilliliters,
+} from "../services/waterTracker";
+import {
   FOOD_NUTRIENT_KEYS,
   NUTRIENT_KEYS,
   TRACKED_NUTRIENT_KEYS,
@@ -20,6 +27,17 @@ function toNutritionNumber(value) {
   const number = Number(value);
 
   return Number.isFinite(number) ? Math.max(0, number) : 0;
+}
+
+const FOOD_HISTORY_BATCH_SIZE = 10;
+
+function waterGoalInputValue(amountMl, unit) {
+  const amount = toNutritionNumber(amountMl);
+  if (amount <= 0) return "";
+  const displayed = millilitersToWaterAmount(amount, unit);
+  return String(unit === WATER_UNITS.OUNCES
+    ? Number(displayed.toFixed(1))
+    : Math.round(displayed));
 }
 
 function formatNutrient(value, unit = "") {
@@ -260,11 +278,14 @@ function NutritionPage({
   const [entryStatusMessage, setEntryStatusMessage] = useState("");
   const [confirmationMessage, setConfirmationMessage] = useState("");
   const [goalsExpanded, setGoalsExpanded] = useState(false);
+  const [visibleEntryCount, setVisibleEntryCount] = useState(FOOD_HISTORY_BATCH_SIZE);
   const confirmationTimerRef = useRef(null);
   const nutritionPageTopRef = useRef(null);
   const todaySectionRef = useRef(null);
   const entryFormRef = useRef(null);
   const nameInputRef = useRef(null);
+  const previousWaterUnitRef = useRef(waterUnit);
+  const savedWaterGoalMlRef = useRef(toNutritionNumber(nutritionGoals.waterGoalMl));
   const [goalValues, setGoalValues] = useState({
     calories: String(nutritionGoals.calories),
     protein: String(nutritionGoals.protein),
@@ -272,6 +293,12 @@ function NutritionPage({
     fat: String(nutritionGoals.fat),
     sodium: String(nutritionGoals.sodium ?? 0),
   });
+  const [waterGoalDraftMl, setWaterGoalDraftMl] = useState(
+    toNutritionNumber(nutritionGoals.waterGoalMl)
+  );
+  const [waterGoalValue, setWaterGoalValue] = useState(
+    waterGoalInputValue(nutritionGoals.waterGoalMl, waterUnit)
+  );
 
   useEffect(() => () => clearTimeout(confirmationTimerRef.current), []);
 
@@ -291,9 +318,27 @@ function NutritionPage({
     });
   }, [nutritionGoals]);
 
+  useEffect(() => {
+    const savedWaterGoalMl = toNutritionNumber(nutritionGoals.waterGoalMl);
+    if (savedWaterGoalMl === savedWaterGoalMlRef.current) return;
+    savedWaterGoalMlRef.current = savedWaterGoalMl;
+    previousWaterUnitRef.current = waterUnit;
+    setWaterGoalDraftMl(savedWaterGoalMl);
+    setWaterGoalValue(waterGoalInputValue(savedWaterGoalMl, waterUnit));
+  }, [nutritionGoals.waterGoalMl, waterUnit]);
+
+  useEffect(() => {
+    if (previousWaterUnitRef.current === waterUnit) return;
+    setWaterGoalValue(waterGoalInputValue(waterGoalDraftMl, waterUnit));
+    previousWaterUnitRef.current = waterUnit;
+  }, [waterGoalDraftMl, waterUnit]);
+
   const sortedEntries = [...nutritionEntries].sort(
     (a, b) => new Date(b.loggedAt) - new Date(a.loggedAt)
   );
+  const visibleEntries = sortedEntries.slice(0, visibleEntryCount);
+  const remainingEntryCount = Math.max(0, sortedEntries.length - visibleEntries.length);
+  const nextEntryBatchCount = Math.min(FOOD_HISTORY_BATCH_SIZE, remainingEntryCount);
   const today = new Date();
   const todayTotals = nutritionEntries.reduce(
     (totals, entry) => {
@@ -325,6 +370,12 @@ function NutritionPage({
   const hasSodiumGoal = sodiumGoal > 0;
   const sodiumProgress = hasSodiumGoal
     ? (todayTotals.sodium / sodiumGoal) * 100
+    : 0;
+  const waterSummary = calculateWaterSummary(waterEntries, today);
+  const waterGoalMl = toNutritionNumber(nutritionGoals.waterGoalMl);
+  const hasWaterGoal = waterGoalMl > 0;
+  const waterProgress = hasWaterGoal
+    ? (waterSummary.todayMl / waterGoalMl) * 100
     : 0;
   const averagePeriods = [
     { key: "lastSevenDays", label: "Weekly Totals" },
@@ -682,6 +733,7 @@ function NutritionPage({
       carbohydrates: toNutritionNumber(goalValues.carbohydrates),
       fat: toNutritionNumber(goalValues.fat),
       sodium: toNutritionNumber(goalValues.sodium),
+      waterGoalMl: waterGoalDraftMl,
     })) showConfirmation("Goals traced");
   }
 
@@ -780,6 +832,25 @@ function NutritionPage({
                 />
               </label>
             ))}
+            <label style={{ display: "block" }}>
+              Water ({waterUnit})
+              <input
+                aria-label={`Daily water goal in ${waterUnit}`}
+                inputMode="decimal"
+                min="0"
+                step={waterUnit === WATER_UNITS.OUNCES ? "0.1" : "1"}
+                style={formInputStyle}
+                type="number"
+                value={waterGoalValue}
+                onChange={(event) => {
+                  const value = event.target.value;
+                  setWaterGoalValue(value);
+                  setWaterGoalDraftMl(value === ""
+                    ? 0
+                    : waterAmountToMilliliters(value, waterUnit) ?? 0);
+                }}
+              />
+            </label>
           </div>
 
           <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
@@ -787,16 +858,6 @@ function NutritionPage({
           </button>
         </form>
       </section>
-
-      <WaterTrackerSection
-        entries={waterEntries}
-        unit={waterUnit}
-        changeUnit={changeWaterUnit}
-        saveEntry={saveWaterEntry}
-        updateEntry={updateWaterEntry}
-        deleteEntry={deleteWaterEntry}
-        showConfirmation={showConfirmation}
-      />
 
       <FoodSearch
         onSelectFood={selectFood}
@@ -1126,6 +1187,16 @@ function NutritionPage({
         </div>
       </form>
 
+      <WaterTrackerSection
+        entries={waterEntries}
+        unit={waterUnit}
+        changeUnit={changeWaterUnit}
+        saveEntry={saveWaterEntry}
+        updateEntry={updateWaterEntry}
+        deleteEntry={deleteWaterEntry}
+        showConfirmation={showConfirmation}
+      />
+
       <section
         className="trace-feature-surface trace-nutrition-today"
         ref={todaySectionRef}
@@ -1246,7 +1317,39 @@ function NutritionPage({
             </>
           )}
         </div>
-        <div aria-hidden="true" />
+        <div className="trace-stat-card">
+          <strong>Water ({waterUnit})</strong>
+          <p style={{ marginBottom: hasWaterGoal ? "8px" : 0 }}>
+            {hasWaterGoal
+              ? `${formatWaterAmount(waterSummary.todayMl, waterUnit)} / ${formatWaterAmount(waterGoalMl, waterUnit)}`
+              : formatWaterAmount(waterSummary.todayMl, waterUnit)}
+          </p>
+          {hasWaterGoal && (
+            <>
+              <div
+                aria-label="Water progress"
+                style={{
+                  background: "#374151",
+                  borderRadius: "999px",
+                  height: "8px",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    background: "#5ec8ff",
+                    borderRadius: "999px",
+                    height: "100%",
+                    width: `${Math.min(waterProgress, 100)}%`,
+                  }}
+                />
+              </div>
+              <p style={{ color: "#9ca3af", marginBottom: 0 }}>
+                {Math.round(waterProgress)}%
+              </p>
+            </>
+          )}
+        </div>
         <div aria-hidden="true" />
         <div aria-hidden="true" />
         </div>
@@ -1325,7 +1428,7 @@ function NutritionPage({
           <p style={{ color: "#bbb" }}>No food entries yet.</p>
         ) : (
           <div style={{ display: "grid", gap: "12px" }}>
-            {sortedEntries.map((entry) => (
+            {visibleEntries.map((entry) => (
               <article
                 className="trace-data-card"
                 key={entry.id}
@@ -1408,6 +1511,16 @@ function NutritionPage({
                 </div>
               </article>
             ))}
+            {remainingEntryCount > 0 && (
+              <button
+                aria-label={`Show ${nextEntryBatchCount} more older food entries`}
+                className="trace-action trace-action--secondary trace-nutrition__show-more"
+                onClick={() => setVisibleEntryCount((count) => count + FOOD_HISTORY_BATCH_SIZE)}
+                type="button"
+              >
+                Show more ({remainingEntryCount} older)
+              </button>
+            )}
           </div>
         )}
       </section>
