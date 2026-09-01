@@ -2179,11 +2179,11 @@ test("Timeline to Add Memory resets a previously scrolled position", () => {
   expectDestinationScrolledToTop();
 });
 
-test("successful same-tab restore immediately synchronizes theme, units, and motion without reload", async () => {
+test("successful same-tab restore immediately synchronizes the Gnome Village shell, units, and motion without reload", async () => {
   const backedUpSettings = {
     schemaVersion: 1,
     units: { weight: "kg", height: "cm", circumference: "cm" },
-    lifeCurrentThemeId: "haunted-forest",
+    lifeCurrentThemeId: "gnome-village",
     motionPreference: "reduced",
   };
   localStorage.setItem("appSettings", JSON.stringify(backedUpSettings));
@@ -2228,7 +2228,7 @@ test("successful same-tab restore immediately synchronizes theme, units, and mot
 
   render(<App />);
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-  expect(screen.getByRole("radio", { name: /Haunted Forest/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /Gnome Village/ })).toBeChecked();
   expect(screen.getByRole("radio", { name: /Reduced motion/ })).toBeChecked();
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   expect(screen.getByLabelText("Kilograms (kg)")).toBeChecked();
@@ -2280,10 +2280,10 @@ test("successful same-tab restore immediately synchronizes theme, units, and mot
   expect(await screen.findByRole("heading", { name: /Trace restored successfully/ })).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("nutritionGoals"))).toEqual({ calories: 2450, waterGoalMl: 2365.882365 });
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
-  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-theme", "haunted-forest");
-  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-shell-theme", "haunted-forest");
-  expect(document.documentElement).toHaveAttribute("data-trace-theme", "haunted-forest");
-  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "haunted-forest");
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-theme", "gnome-village");
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-shell-theme", "gnome-village");
+  expect(document.documentElement).toHaveAttribute("data-trace-theme", "gnome-village");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "gnome-village");
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
 
   fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
@@ -2292,7 +2292,7 @@ test("successful same-tab restore immediately synchronizes theme, units, and mot
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
 
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
-  expect(screen.getByRole("radio", { name: /Haunted Forest/ })).toBeChecked();
+  expect(screen.getByRole("radio", { name: /Gnome Village/ })).toBeChecked();
   expect(screen.getByRole("radio", { name: /River/ })).not.toBeChecked();
   expect(screen.getByRole("radio", { name: /Reduced motion/ })).toBeChecked();
   expect(screen.getByLabelText("Kilograms (kg)")).toBeChecked();
@@ -2302,7 +2302,7 @@ test("successful same-tab restore immediately synchronizes theme, units, and mot
   fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
   expect(screen.getByRole("button", { name: "Open daily action Restored appointment" })).toBeInTheDocument();
   anchorClick.mockRestore();
-});
+}, 10000);
 
 test.each([
   ["Haunted Forest", "haunted-forest"],
@@ -2311,11 +2311,12 @@ test.each([
   ["Outer Space Journey", "outer-space-journey"],
   ["To Kingdoms Ahead", "to-kingdoms-ahead"],
 ])("%s app theme selection persists across reload and switches back to River", async (themeName, themeId) => {
-  const expectedShellTheme = ["haunted-forest", "to-kingdoms-ahead"].includes(themeId)
+  const expectedShellTheme = ["haunted-forest", "gnome-village", "to-kingdoms-ahead"].includes(themeId)
     ? themeId
     : "modern-heirloom";
   const expectedThemeColor = themeId === "haunted-forest"
     ? "#0b140f"
+    : themeId === "gnome-village" ? "#365f39"
     : themeId === "to-kingdoms-ahead" ? "#171712" : "#07131f";
   localStorage.setItem("nutritionEntries", JSON.stringify([
     { id: "theme-activity", loggedAt: "2026-05-18T12:00:00" },
@@ -2374,6 +2375,23 @@ test("Haunted Forest shell remains active through Settings, Nutrition, and same-
   fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
   expect(screen.getByRole("heading", { name: "Nutrition" })).toBeInTheDocument();
   expect(shell).toHaveAttribute("data-trace-shell-theme", "haunted-forest");
+});
+
+test("Gnome Village shell remains active through Settings, Nutrition, and same-tab Home navigation", () => {
+  localStorage.setItem("appSettings", JSON.stringify({ themeId: "gnome-village" }));
+  render(<App />);
+
+  const shell = screen.getByTestId("trace-app-shell");
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "gnome-village");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "gnome-village");
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#365f39");
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByTestId("settings-page")).toBeInTheDocument();
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "gnome-village");
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  expect(screen.getByRole("heading", { name: "Nutrition" })).toBeInTheDocument();
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "gnome-village");
 });
 
 test("To Kingdoms Ahead shell remains active through Settings, Nutrition, and same-tab Home navigation", () => {

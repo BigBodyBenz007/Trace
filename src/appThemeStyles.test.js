@@ -53,6 +53,7 @@ test("defines the full-app semantic and shared-component contracts for every act
   expect(css).toContain(':root[data-trace-shell-theme="modern-heirloom"]');
   expect(css).toContain(':root[data-trace-shell-theme="river"]');
   expect(css).toContain(':root[data-trace-shell-theme="haunted-forest"]');
+  expect(css).toContain(':root[data-trace-shell-theme="gnome-village"]');
   expect(css).toContain(':root[data-trace-shell-theme="to-kingdoms-ahead"]');
 });
 
@@ -66,6 +67,7 @@ test("shared controls, surfaces, feedback, and nutrition progress consume compon
   expect(css).toMatch(/\.trace-data-card,[\s\S]*--trace-card-background/);
   expect(css).toMatch(/\.trace-home-visibility-option[\s\S]*--trace-option-background/);
   expect(css).toMatch(/\.trace-home-visibility-option__track[\s\S]*--trace-toggle-track/);
+  expect(css).toMatch(/gnome-village[\s\S]*trace-feature-page--journal[\s\S]*trace-action--brass[\s\S]*--trace-material-carved-wood/);
   expect(css).toMatch(/\.journal-privacy-dialog-backdrop[\s\S]*--trace-overlay/);
   expect(css).toMatch(/\.journal-privacy-dialog[\s\S]*--trace-dialog-background/);
   expect(css).toMatch(/progress"\][\s\S]*--trace-progress-track/);
@@ -135,6 +137,28 @@ test("Haunted Forest defines an environmental shell and its own organic material
   expect(hauntedBlock).toContain("--trace-dialog-hardware-display: block");
   expect(hauntedBlock).not.toContain("--trace-material-driftwood");
   expect(hauntedBlock).not.toContain("--trace-material-iron: var(--trace-material-wet-rock)");
+});
+
+test("Gnome Village defines a bright environmental shell and playful material hierarchy", () => {
+  const css = source("appThemes.css");
+  const gnomeStart = css.indexOf(':root[data-trace-shell-theme="gnome-village"]');
+  const kingdomStart = css.indexOf(':root[data-trace-shell-theme="to-kingdoms-ahead"]');
+  const gnomeBlock = css.slice(gnomeStart, kingdomStart);
+
+  expect(gnomeBlock).toContain('url("./assets/app-themes/gnome-village/gnome-village-environment.jpg")');
+  expect(gnomeBlock).toMatch(/--trace-material-carved-wood:[\s\S]*repeating-linear-gradient/);
+  expect(gnomeBlock).toMatch(/--trace-material-storybook-stone:[\s\S]*radial-gradient/);
+  expect(gnomeBlock).toMatch(/--trace-material-passive-storybook-stone:[\s\S]*radial-gradient/);
+  expect(gnomeBlock).toMatch(/--trace-material-storybook-glass:[\s\S]*repeating-radial-gradient/);
+  expect(gnomeBlock).toContain("--trace-button-primary-bg: var(--trace-material-carved-wood)");
+  expect(gnomeBlock).toContain("--trace-button-secondary-bg: var(--trace-material-storybook-stone)");
+  expect(gnomeBlock).toContain("--trace-input-bg: var(--trace-material-storybook-glass)");
+  expect(gnomeBlock).toContain("--trace-stat-card-background: var(--trace-material-passive-storybook-stone)");
+  expect(gnomeBlock).toContain("--trace-water-stat-background: var(--trace-material-passive-storybook-stone)");
+  expect(gnomeBlock).toContain("--trace-document-dialog-hardware-display: block");
+  expect(gnomeBlock).toContain("--trace-progress-fill: #86b93e");
+  expect(gnomeBlock).not.toContain("--trace-material-aged-wood");
+  expect(gnomeBlock).not.toContain("--trace-material-driftwood");
 });
 
 test("To Kingdoms Ahead defines visibly distinct reusable physical materials", () => {

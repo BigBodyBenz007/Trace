@@ -51,8 +51,8 @@ test("pre-paint theme bootstrap preserves legacy selection and survives malforme
   localStorage.setItem("appSettings", JSON.stringify({ lifeCurrentThemeId: "gnome-village" }));
   window.eval(bootstrap);
   expect(document.documentElement).toHaveAttribute("data-trace-theme", "gnome-village");
-  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "modern-heirloom");
-  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#07131f");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "gnome-village");
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#365f39");
 
   localStorage.setItem("appSettings", "not-json");
   window.eval(bootstrap);
@@ -101,6 +101,18 @@ test("pre-paint theme bootstrap restores Haunted Forest without a wrong-theme fl
   expect(document.documentElement).toHaveAttribute("data-trace-theme", "haunted-forest");
   expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "haunted-forest");
   expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#0b140f");
+  localStorage.clear();
+});
+
+test("pre-paint theme bootstrap restores Gnome Village without a wrong-theme flash", () => {
+  const html = fs.readFileSync(publicPath("index.html"), "utf8");
+  const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+
+  localStorage.setItem("appSettings", JSON.stringify({ themeId: "gnome-village" }));
+  window.eval(bootstrap);
+  expect(document.documentElement).toHaveAttribute("data-trace-theme", "gnome-village");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "gnome-village");
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#365f39");
   localStorage.clear();
 });
 
