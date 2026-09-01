@@ -2,6 +2,7 @@ export const DEFAULT_APP_THEME_ID = "modern-heirloom";
 export const DEFAULT_SHELL_THEME_ID = DEFAULT_APP_THEME_ID;
 export const APP_SHELL_THEME_COLORS = Object.freeze({
   "modern-heirloom": "#07131f",
+  river: "#0b2426",
   "to-kingdoms-ahead": "#171712",
 });
 
@@ -55,7 +56,7 @@ export const APP_THEMES = Object.freeze([
         selectedCardRing: "#5ec8ff", selectedCardGlow: "rgba(94, 200, 255, 0.2)",
       },
     },
-    tokenMetadata: { foundation: "modern-heirloom", status: "future-full-app" },
+    tokenMetadata: { foundation: "river", status: "active" },
   }),
   theme({
     id: "haunted-forest",
@@ -160,7 +161,7 @@ export function getAppTheme(value) {
 
 export function resolveAppShellThemeId(value) {
   const foundation = getAppTheme(value).tokenMetadata.foundation;
-  return foundation === "to-kingdoms-ahead"
+  return Object.prototype.hasOwnProperty.call(APP_SHELL_THEME_COLORS, foundation)
     ? foundation
     : DEFAULT_SHELL_THEME_ID;
 }

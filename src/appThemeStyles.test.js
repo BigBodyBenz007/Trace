@@ -3,7 +3,7 @@ import path from "path";
 
 const source = (file) => fs.readFileSync(path.join(process.cwd(), "src", file), "utf8");
 
-test("defines the full-app semantic and shared-component contracts for both shell themes", () => {
+test("defines the full-app semantic and shared-component contracts for every active shell theme", () => {
   const css = source("appThemes.css");
   const requiredTokens = [
     "--trace-app-background",
@@ -51,6 +51,7 @@ test("defines the full-app semantic and shared-component contracts for both shel
 
   requiredTokens.forEach((token) => expect(css).toContain(token));
   expect(css).toContain(':root[data-trace-shell-theme="modern-heirloom"]');
+  expect(css).toContain(':root[data-trace-shell-theme="river"]');
   expect(css).toContain(':root[data-trace-shell-theme="to-kingdoms-ahead"]');
 });
 
@@ -78,7 +79,7 @@ test("shared controls, surfaces, feedback, and nutrition progress consume compon
 
 test("Modern Heirloom keeps its established component geometry and motion defaults", () => {
   const css = source("appThemes.css");
-  const modernBlock = css.slice(0, css.indexOf(':root[data-trace-shell-theme="to-kingdoms-ahead"]'));
+  const modernBlock = css.slice(0, css.indexOf(':root[data-trace-shell-theme="river"]'));
 
   expect(modernBlock).toContain("--trace-button-hover-transform: none");
   expect(modernBlock).toContain("--trace-control-shadow: none");
@@ -87,6 +88,31 @@ test("Modern Heirloom keeps its established component geometry and motion defaul
   expect(modernBlock).toContain("--trace-trophy-dialog-radius: 14px");
   expect(modernBlock).toContain("--trace-stat-card-background: #0d2030");
   expect(modernBlock).toContain("--trace-dialog-hardware-display: none");
+});
+
+test("River defines distinct natural materials without Kingdom construction", () => {
+  const css = source("appThemes.css");
+  const riverStart = css.indexOf(':root[data-trace-shell-theme="river"]');
+  const kingdomStart = css.indexOf(':root[data-trace-shell-theme="to-kingdoms-ahead"]');
+  const riverBlock = css.slice(riverStart, kingdomStart);
+
+  expect(riverBlock).toMatch(/--trace-material-driftwood:[\s\S]*repeating-linear-gradient/);
+  expect(riverBlock).toMatch(/--trace-material-wet-rock:[\s\S]*radial-gradient/);
+  expect(riverBlock).toMatch(/--trace-material-river-stone:[\s\S]*radial-gradient/);
+  expect(riverBlock).toMatch(/--trace-material-river-glass:[\s\S]*repeating-radial-gradient/);
+  expect(riverBlock).toContain("--trace-material-timber: var(--trace-material-driftwood)");
+  expect(riverBlock).toContain("--trace-material-iron: var(--trace-material-wet-rock)");
+  expect(riverBlock).toContain("--trace-material-stone: var(--trace-material-river-stone)");
+  expect(riverBlock).toContain("--trace-material-parchment: var(--trace-material-river-glass)");
+  expect(riverBlock).toContain("--trace-button-primary-bg: var(--trace-material-driftwood)");
+  expect(riverBlock).toContain("--trace-button-secondary-bg: var(--trace-material-wet-rock)");
+  expect(riverBlock).toContain("--trace-input-bg: var(--trace-material-river-glass)");
+  expect(riverBlock).toContain("--trace-stat-card-background: var(--trace-material-river-stone-passive)");
+  expect(riverBlock).toContain('url("./assets/app-themes/river/riverbed-environment.jpg")');
+  expect(riverBlock).toContain('url("./assets/app-themes/river/water-caustics.jpg")');
+  expect(riverBlock).toContain("--trace-app-background-blend-mode: normal, normal, normal, screen, normal");
+  expect(riverBlock).toContain("--trace-dialog-hardware-display: none");
+  expect(riverBlock).not.toMatch(/rivet|forged|parchment-gradient|brass corner/i);
 });
 
 test("To Kingdoms Ahead defines visibly distinct reusable physical materials", () => {

@@ -65,6 +65,7 @@ code {
 
 .trace-app-shell {
   background: var(--trace-app-background);
+  background-blend-mode: var(--trace-app-background-blend-mode, normal);
   color: var(--trace-text);
   font-family: var(--trace-font-sans);
   transition: background-color var(--trace-motion-standard) ease, color var(--trace-motion-standard) ease;
@@ -172,6 +173,7 @@ code {
   background: var(--trace-utility-settings-background);
   border-color: var(--trace-utility-settings-border);
   border-radius: 50%;
+  color: var(--trace-utility-settings-text);
   font-size: 20px;
   order: 1;
   padding: 0;
@@ -206,14 +208,14 @@ code {
 .trace-journal-button {
   background: var(--trace-utility-journal-background);
   border-color: var(--trace-utility-journal-border);
-  color: #ead8b8;
+  color: var(--trace-utility-journal-text);
   box-shadow: var(--trace-utility-journal-shadow);
 }
 
 .trace-trophy-button {
   background: var(--trace-utility-trophy-background);
   border-color: var(--trace-utility-trophy-border);
-  color: #f1ddbd;
+  color: var(--trace-utility-trophy-text);
   box-shadow: var(--trace-utility-trophy-shadow);
 }
 
@@ -231,7 +233,7 @@ code {
 }
 
 .trace-utility-button__eyebrow {
-  color: var(--trace-text-muted);
+  color: var(--trace-utility-journal-eyebrow);
   font-size: 0.625rem;
   font-weight: var(--trace-weight-bold);
   letter-spacing: 0.08em;
@@ -240,7 +242,7 @@ code {
 }
 
 .trace-trophy-button .trace-utility-button__eyebrow {
-  color: #d7bd97;
+  color: var(--trace-utility-trophy-eyebrow);
 }
 
 .trace-utility-button__label {
@@ -873,6 +875,72 @@ code {
 .trace-memory-editor__action--secondary {
   background: var(--trace-surface-1);
   color: var(--trace-text);
+}
+
+/* River's Memory experience uses the same semantic material hierarchy as the
+   shell instead of inheriting Modern Heirloom's paper-like editor controls. */
+.trace-app-shell[data-trace-shell-theme="river"] .trace-memory-editor__field {
+  background: var(--trace-input-bg);
+  border-color: var(--trace-input-border);
+  border-radius: var(--trace-control-radius);
+  box-shadow: var(--trace-control-shadow);
+  color: var(--trace-input-text);
+  outline: var(--trace-control-outline);
+  outline-offset: var(--trace-control-outline-offset);
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-memory-editor__field::placeholder,
+.trace-app-shell[data-trace-shell-theme="river"] .trace-memory-editor__date-placeholder {
+  color: var(--trace-input-placeholder);
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-memory-editor__field--date:not([value=""]) {
+  color: var(--trace-input-text);
+  -webkit-text-fill-color: var(--trace-input-text);
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-memory-editor__close,
+.trace-app-shell[data-trace-shell-theme="river"] .trace-memory-editor__category,
+.trace-app-shell[data-trace-shell-theme="river"] .trace-memory-editor__action--secondary {
+  background: var(--trace-button-secondary-bg);
+  border-color: var(--trace-button-secondary-border);
+  border-radius: var(--trace-button-radius);
+  box-shadow: var(--trace-button-secondary-shadow);
+  color: var(--trace-button-secondary-text);
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-memory-editor__category[aria-pressed="true"] {
+  background: var(--trace-option-selected-background);
+  border-color: var(--trace-option-selected-border);
+  color: var(--trace-segment-selected-text);
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-memory-editor__photo-picker,
+.trace-app-shell[data-trace-shell-theme="river"] .trace-memory-editor__action--primary {
+  background: var(--trace-button-primary-bg);
+  border-color: var(--trace-button-primary-border);
+  border-radius: var(--trace-button-radius);
+  box-shadow: var(--trace-button-primary-shadow);
+  color: var(--trace-button-primary-text);
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-memory-editor__section {
+  border-color: var(--trace-divider);
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] :is(
+  .trace-memory-editor__photo-placeholder,
+  .trace-memory-detail__photo-placeholder,
+  .trace-memory-detail__thumbnail-placeholder,
+  .trace-memory-viewer__placeholder
+) {
+  background: var(--trace-material-river-stone-passive);
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-memory-detail__description {
+  background: var(--trace-material-river-stone-passive);
+  border-color: var(--trace-accent-secondary);
+  color: var(--trace-text-primary);
 }
 
 .trace-memory-detail {
@@ -4343,18 +4411,91 @@ code {
   font-weight: var(--trace-weight-medium);
 }
 
-.trace-app-shell[data-trace-shell-theme="to-kingdoms-ahead"] .trace-feature-page fieldset {
+.trace-app-shell:is(
+  [data-trace-shell-theme="river"],
+  [data-trace-shell-theme="to-kingdoms-ahead"]
+) .trace-feature-page fieldset {
   border-color: var(--trace-fieldset-border) !important;
   box-shadow: var(--trace-fieldset-shadow);
 }
 
-.trace-app-shell[data-trace-shell-theme="to-kingdoms-ahead"] .trace-feature-page [style*="color: rgb(156, 163, 175)"],
-.trace-app-shell[data-trace-shell-theme="to-kingdoms-ahead"] .trace-feature-page [style*="color:#9ca3af"],
-.trace-app-shell[data-trace-shell-theme="to-kingdoms-ahead"] .trace-feature-page [style*="color: #9ca3af"],
-.trace-app-shell[data-trace-shell-theme="to-kingdoms-ahead"] .trace-feature-page [style*="color: rgb(209, 213, 219)"],
-.trace-app-shell[data-trace-shell-theme="to-kingdoms-ahead"] .trace-feature-page [style*="color:#d1d5db"],
-.trace-app-shell[data-trace-shell-theme="to-kingdoms-ahead"] .trace-feature-page [style*="color: #d1d5db"] {
+.trace-app-shell:is(
+  [data-trace-shell-theme="river"],
+  [data-trace-shell-theme="to-kingdoms-ahead"]
+) .trace-feature-page [style*="color: rgb(156, 163, 175)"],
+.trace-app-shell:is(
+  [data-trace-shell-theme="river"],
+  [data-trace-shell-theme="to-kingdoms-ahead"]
+) .trace-feature-page [style*="color:#9ca3af"],
+.trace-app-shell:is(
+  [data-trace-shell-theme="river"],
+  [data-trace-shell-theme="to-kingdoms-ahead"]
+) .trace-feature-page [style*="color: #9ca3af"],
+.trace-app-shell:is(
+  [data-trace-shell-theme="river"],
+  [data-trace-shell-theme="to-kingdoms-ahead"]
+) .trace-feature-page [style*="color: rgb(209, 213, 219)"],
+.trace-app-shell:is(
+  [data-trace-shell-theme="river"],
+  [data-trace-shell-theme="to-kingdoms-ahead"]
+) .trace-feature-page [style*="color:#d1d5db"],
+.trace-app-shell:is(
+  [data-trace-shell-theme="river"],
+  [data-trace-shell-theme="to-kingdoms-ahead"]
+) .trace-feature-page [style*="color: #d1d5db"] {
   color: var(--trace-text-secondary) !important;
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-feature-page--journal :is(.journal-paper, .journal-card) {
+  background: var(--trace-panel-background) !important;
+  border-color: var(--trace-panel-border);
+  box-shadow: var(--trace-panel-shadow);
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-feature-page--journal .journal-paper textarea {
+  background: var(--trace-input-bg) !important;
+  color: var(--trace-input-text) !important;
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-feature-page--journal .journal-card__body {
+  color: var(--trace-text-primary);
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-feature-page--journal .journal-mood-options button[aria-pressed="true"] {
+  background: var(--trace-option-selected-background) !important;
+  border-color: var(--trace-option-selected-border);
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-feature-page--health :is(
+  [data-testid="measurement-header"],
+  [data-testid="measurement-fields"]
+) {
+  background: var(--trace-material-river-stone-passive);
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-feature-page .trace-today-exercise-action {
+  background: var(--trace-button-secondary-bg) !important;
+  border-color: var(--trace-button-secondary-border) !important;
+  box-shadow: var(--trace-button-secondary-shadow);
+  color: var(--trace-button-secondary-text) !important;
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-feature-page .trace-today-exercise-action:hover:not(:disabled) {
+  background: var(--trace-button-secondary-hover) !important;
+  border-color: var(--trace-accent-secondary) !important;
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] :is(
+  .trace-today-summary li,
+  .trace-schedule-calendar__day
+) {
+  background: var(--trace-material-river-stone-passive);
+  border-color: var(--trace-card-border);
+}
+
+.trace-app-shell[data-trace-shell-theme="river"] .trace-schedule-calendar__day[aria-pressed="true"] {
+  background: var(--trace-option-selected-background);
+  box-shadow: inset 0 0 0 2px var(--trace-option-selected-border);
 }
 
 /* Health: calm measurements with date, units, and values separated. */

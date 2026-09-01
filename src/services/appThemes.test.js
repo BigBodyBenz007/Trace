@@ -35,6 +35,7 @@ test("registers seven unique app themes with exactly one Modern Heirloom default
     label: "River",
     immersive: true,
     presentation: { renderer: "river-current" },
+    tokenMetadata: { foundation: "river", status: "active" },
   });
   expect(getAppTheme("to-kingdoms-ahead")).toMatchObject({
     label: "To Kingdoms Ahead",
@@ -44,15 +45,16 @@ test("registers seven unique app themes with exactly one Modern Heirloom default
   });
 });
 
-test("resolves only Phase 1 full-app themes to distinct shell token sets", () => {
+test("resolves active full-app themes to distinct shell token sets", () => {
   expect(resolveAppShellThemeId("modern-heirloom")).toBe("modern-heirloom");
+  expect(resolveAppShellThemeId("river")).toBe("river");
   expect(resolveAppShellThemeId("to-kingdoms-ahead")).toBe("to-kingdoms-ahead");
   expect(getAppShellThemeColor("modern-heirloom")).toBe("#07131f");
+  expect(getAppShellThemeColor("river")).toBe("#0b2426");
   expect(getAppShellThemeColor("to-kingdoms-ahead")).toBe("#171712");
 });
 
 test.each([
-  "river",
   "haunted-forest",
   "gnome-village",
   "desert-journey",

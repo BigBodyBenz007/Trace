@@ -80,6 +80,18 @@ test("pre-paint theme bootstrap restores To Kingdoms Ahead without a wrong-theme
   localStorage.clear();
 });
 
+test("pre-paint theme bootstrap restores River without a wrong-theme flash", () => {
+  const html = fs.readFileSync(publicPath("index.html"), "utf8");
+  const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+
+  localStorage.setItem("appSettings", JSON.stringify({ themeId: "river" }));
+  window.eval(bootstrap);
+  expect(document.documentElement).toHaveAttribute("data-trace-theme", "river");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "river");
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#0b2426");
+  localStorage.clear();
+});
+
 test.each([
   ["trace-icon-192.png", 192],
   ["trace-icon-512.png", 512],

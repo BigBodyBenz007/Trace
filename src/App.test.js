@@ -2254,6 +2254,7 @@ test("successful same-tab restore immediately synchronizes theme, units, and mot
   });
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "standard");
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-theme", "river");
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-shell-theme", "river");
   expect(document.documentElement).toHaveAttribute("data-trace-theme", "river");
   localStorage.setItem("nutritionGoals", JSON.stringify({ calories: 1800, waterGoalMl: 1000 }));
   localStorage.setItem("dailyActions", JSON.stringify({ schemaVersion: 1, actions: [] }));
@@ -2345,7 +2346,7 @@ test.each([
     themeId: "river",
   });
   expect(screen.getByTestId("trace-app-shell"))
-    .toHaveAttribute("data-trace-shell-theme", "modern-heirloom");
+    .toHaveAttribute("data-trace-shell-theme", "river");
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", "river");
 });
@@ -2365,6 +2366,24 @@ test("To Kingdoms Ahead shell remains active through Settings, Nutrition, and sa
   expect(shell).toHaveAttribute("data-trace-shell-theme", "to-kingdoms-ahead");
   expect(document.documentElement)
     .toHaveAttribute("data-trace-shell-theme", "to-kingdoms-ahead");
+});
+
+test("River shell remains active through Settings, Nutrition, and same-tab Home navigation", () => {
+  localStorage.setItem("appSettings", JSON.stringify({ themeId: "river" }));
+  render(<App />);
+
+  const shell = screen.getByTestId("trace-app-shell");
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "river");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "river");
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#0b2426");
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByTestId("settings-page")).toBeInTheDocument();
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "river");
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  expect(screen.getByRole("heading", { name: "Nutrition" })).toBeInTheDocument();
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "river");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "river");
 });
 
 test("standalone Journal navigation creates private entries and keeps content inside Journal", async () => {
