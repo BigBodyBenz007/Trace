@@ -2311,13 +2311,14 @@ test.each([
   ["Outer Space Journey", "outer-space-journey"],
   ["To Kingdoms Ahead", "to-kingdoms-ahead"],
 ])("%s app theme selection persists across reload and switches back to River", async (themeName, themeId) => {
-  const expectedShellTheme = ["haunted-forest", "gnome-village", "desert-journey", "to-kingdoms-ahead"].includes(themeId)
+  const expectedShellTheme = ["haunted-forest", "gnome-village", "desert-journey", "outer-space-journey", "to-kingdoms-ahead"].includes(themeId)
     ? themeId
     : "modern-heirloom";
   const expectedThemeColor = themeId === "haunted-forest"
     ? "#0b140f"
     : themeId === "gnome-village" ? "#365f39"
     : themeId === "desert-journey" ? "#9b5a24"
+    : themeId === "outer-space-journey" ? "#06162b"
     : themeId === "to-kingdoms-ahead" ? "#171712" : "#07131f";
   localStorage.setItem("nutritionEntries", JSON.stringify([
     { id: "theme-activity", loggedAt: "2026-05-18T12:00:00" },
@@ -2410,6 +2411,23 @@ test("Desert Journey shell remains active through Settings, Nutrition, and same-
   fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
   expect(screen.getByRole("heading", { name: "Nutrition" })).toBeInTheDocument();
   expect(shell).toHaveAttribute("data-trace-shell-theme", "desert-journey");
+});
+
+test("Outer Space Journey shell remains active through Settings, Nutrition, and same-tab Home navigation", () => {
+  localStorage.setItem("appSettings", JSON.stringify({ themeId: "outer-space-journey" }));
+  render(<App />);
+
+  const shell = screen.getByTestId("trace-app-shell");
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "outer-space-journey");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "outer-space-journey");
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#06162b");
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByTestId("settings-page")).toBeInTheDocument();
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "outer-space-journey");
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  expect(screen.getByRole("heading", { name: "Nutrition" })).toBeInTheDocument();
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "outer-space-journey");
 });
 
 test("To Kingdoms Ahead shell remains active through Settings, Nutrition, and same-tab Home navigation", () => {

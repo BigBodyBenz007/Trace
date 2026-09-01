@@ -1823,6 +1823,382 @@
   --trace-danger: var(--trace-button-danger-bg);
 }
 
+:root[data-trace-shell-theme="outer-space-journey"] {
+  color-scheme: dark;
+
+  /* Observation-deck depth and illuminated composites unique to Outer Space Journey. */
+  --trace-material-wall:
+    radial-gradient(circle at 50% 24%, rgba(77, 185, 255, 0.08), transparent 32rem) center / cover fixed,
+    linear-gradient(180deg, rgba(1, 7, 19, 0.04), rgba(1, 7, 18, 0.22)) center / cover fixed,
+    url("./assets/app-themes/outer-space-journey/outer-space-journey-environment.jpg") center top / cover no-repeat fixed;
+  --trace-material-luminescent-core:
+    radial-gradient(ellipse at 50% 116%, rgba(143, 69, 255, 0.3), transparent 44%),
+    radial-gradient(ellipse at 50% -18%, rgba(76, 221, 255, 0.28), transparent 48%),
+    linear-gradient(90deg, transparent 5%, rgba(81, 215, 255, 0.72) 5% 6%, transparent 6% 94%, rgba(140, 76, 255, 0.66) 94% 95%, transparent 95%),
+    repeating-linear-gradient(92deg, rgba(133, 220, 255, 0.035) 0 1px, transparent 1px 17px),
+    linear-gradient(165deg, #123453, #0a233c 46%, #08182b 74%, #0c1530);
+  --trace-material-metallic-composite:
+    radial-gradient(circle at 11px 50%, #70ddff 0 1px, #235a77 2px 3px, transparent 4px),
+    radial-gradient(circle at calc(100% - 11px) 50%, #9c7cff 0 1px, #493976 2px 3px, transparent 4px),
+    repeating-linear-gradient(96deg, rgba(143, 195, 222, 0.045) 0 1px, transparent 1px 13px),
+    linear-gradient(156deg, #213447, #152738 48%, #0b1b2b 78%, #071321);
+  --trace-material-passive-graphite:
+    radial-gradient(circle at 15% 18%, rgba(112, 220, 255, 0.08) 0 1px, transparent 4px),
+    radial-gradient(circle at 78% 72%, rgba(151, 96, 255, 0.08) 0 1px, transparent 5px),
+    repeating-linear-gradient(124deg, rgba(148, 192, 215, 0.024) 0 1px, transparent 1px 15px),
+    linear-gradient(148deg, rgba(22, 42, 58, 0.96), rgba(13, 29, 43, 0.98) 55%, rgba(7, 19, 31, 0.99));
+  --trace-material-illuminated-glass:
+    radial-gradient(ellipse at 26% -18%, rgba(241, 253, 255, 0.58), transparent 48%),
+    repeating-linear-gradient(6deg, rgba(12, 57, 83, 0.04) 0 1px, transparent 1px 8px),
+    linear-gradient(145deg, rgba(199, 226, 238, 0.98), rgba(155, 193, 211, 0.98) 56%, rgba(113, 157, 181, 0.98));
+  --trace-material-power-channel:
+    repeating-linear-gradient(90deg, rgba(80, 205, 255, 0.08) 0 2px, transparent 2px 8px),
+    repeating-linear-gradient(0deg, rgba(113, 74, 210, 0.08) 0 1px, transparent 1px 7px),
+    linear-gradient(180deg, #10283d, #091b2c 62%, #06121f);
+  --trace-material-space-panel:
+    radial-gradient(ellipse at 12% 10%, rgba(72, 188, 244, 0.11), transparent 36%),
+    radial-gradient(ellipse at 88% 86%, rgba(126, 70, 224, 0.12), transparent 43%),
+    repeating-linear-gradient(118deg, rgba(139, 198, 228, 0.018) 0 1px, transparent 1px 15px),
+    linear-gradient(145deg, rgba(15, 35, 52, 0.92), rgba(7, 24, 39, 0.95) 52%, rgba(4, 15, 28, 0.97));
+
+  --trace-material-hardware: #50ccee;
+  --trace-material-edge-wear: rgba(103, 205, 241, 0.23);
+  --trace-app-background-color: #06162b;
+  --trace-app-background: var(--trace-material-wall);
+  --trace-app-background-blend-mode: normal;
+  --trace-app-decoration: linear-gradient(90deg, transparent, #2b6d92 16%, #55d9ff 50%, #7252ba 84%, transparent);
+  --trace-header-background: rgba(7, 24, 40, 0.91);
+  --trace-header-border: #3a8fb7;
+
+  --trace-surface-primary: #0c263b;
+  --trace-surface-secondary: #15344b;
+  --trace-surface-elevated: #1c435d;
+  --trace-surface-subtle: #071b2d;
+  --trace-dialog-surface: #0a2236;
+  --trace-text-primary: #ecf8ff;
+  --trace-text-secondary: #a9cfdf;
+  --trace-text-on-accent: #f4fbff;
+  --trace-border-default: #397c9e;
+  --trace-divider: rgba(67, 163, 205, 0.68);
+
+  --trace-accent-primary: #2a9fc8;
+  --trace-accent-primary-hover: #3db8df;
+  --trace-accent-primary-border: #63d9ff;
+  --trace-accent-secondary: #8d65dc;
+  --trace-accent-secondary-strong: #c49bff;
+  --trace-accent-secondary-surface: #33265c;
+  --trace-focus-ring: #79e4ff;
+
+  --trace-button-primary-bg: var(--trace-material-luminescent-core);
+  --trace-button-primary-hover:
+    radial-gradient(ellipse at 50% -14%, rgba(120, 229, 255, 0.3), transparent 52%),
+    var(--trace-material-luminescent-core);
+  --trace-button-primary-border: #58cdec;
+  --trace-button-primary-text: #effbff;
+  --trace-button-secondary-bg: var(--trace-material-metallic-composite);
+  --trace-button-secondary-hover:
+    radial-gradient(ellipse at 50% -14%, rgba(112, 216, 255, 0.16), transparent 50%),
+    var(--trace-material-metallic-composite);
+  --trace-button-secondary-border: #3b7897;
+  --trace-button-secondary-text: #e4f5fc;
+  --trace-button-accent-bg:
+    radial-gradient(ellipse at 50% -18%, rgba(197, 162, 255, 0.25), transparent 50%),
+    linear-gradient(155deg, #6947a9, #3c337c 58%, #1d2855);
+  --trace-button-accent-border: #a783ee;
+  --trace-button-accent-text: #f4edff;
+  --trace-button-danger-bg:
+    radial-gradient(ellipse at 50% -18%, rgba(255, 135, 135, 0.12), transparent 50%),
+    linear-gradient(155deg, #69303c, #461f2c 58%, #2b1521);
+  --trace-button-danger-border: #a85062;
+  --trace-button-danger-text: #ffe9ed;
+
+  --trace-input-bg: var(--trace-material-illuminated-glass);
+  --trace-input-text: #071724;
+  --trace-input-border: #4a9abd;
+  --trace-input-placeholder: #35596c;
+  --trace-control-label: #b7d9e7;
+
+  --trace-header-panel-background: var(--trace-material-space-panel);
+  --trace-header-panel-border: #4aaad0;
+  --trace-header-panel-border-width: 3px;
+  --trace-header-panel-radius: 8px 18px 8px 18px;
+  --trace-header-panel-shadow:
+    inset 0 1px 0 rgba(146, 226, 255, 0.17),
+    inset 0 -6px 10px rgba(1, 8, 18, 0.56),
+    inset 0 0 0 2px rgba(20, 77, 104, 0.5),
+    0 14px 30px rgba(1, 7, 20, 0.48),
+    0 0 18px rgba(47, 169, 218, 0.12);
+  --trace-header-panel-outline: 1px solid rgba(112, 214, 249, 0.3);
+  --trace-header-panel-outline-offset: -7px;
+  --trace-navigation-background: var(--trace-material-metallic-composite);
+  --trace-navigation-border: #3d83a5;
+  --trace-navigation-border-width: 2px;
+  --trace-navigation-radius: 6px 14px 6px 14px;
+  --trace-navigation-shadow:
+    inset 0 1px 0 rgba(155, 220, 245, 0.12),
+    inset 0 -5px 8px rgba(1, 9, 20, 0.48),
+    0 8px 17px rgba(1, 8, 20, 0.38);
+  --trace-navigation-outline: 1px solid rgba(91, 185, 222, 0.2);
+  --trace-navigation-outline-offset: -5px;
+  --trace-panel-background: var(--trace-material-space-panel);
+  --trace-panel-border: #326f8f;
+  --trace-panel-radius: 7px 16px 7px 16px;
+  --trace-panel-shadow:
+    inset 0 1px 0 rgba(139, 214, 243, 0.1),
+    inset 0 -4px 8px rgba(1, 8, 17, 0.46),
+    0 10px 22px rgba(1, 7, 19, 0.4);
+  --trace-panel-outline: 1px solid rgba(68, 157, 194, 0.19);
+  --trace-panel-outline-offset: -5px;
+  --trace-card-background: var(--trace-material-passive-graphite);
+  --trace-card-border: #315f79;
+  --trace-card-shadow:
+    inset 0 1px 0 rgba(128, 202, 230, 0.08),
+    inset 0 -3px 7px rgba(1, 8, 17, 0.4),
+    0 5px 12px rgba(1, 7, 19, 0.32);
+  --trace-card-outline: 1px solid rgba(77, 150, 180, 0.14);
+  --trace-card-outline-offset: -4px;
+
+  --trace-button-radius: 5px 12px 5px 12px;
+  --trace-button-large-radius: 7px 15px 7px 15px;
+  --trace-button-primary-shadow:
+    inset 0 1px 0 rgba(173, 237, 255, 0.3),
+    inset 0 -4px 8px rgba(1, 10, 23, 0.52),
+    0 3px 0 #071522,
+    0 0 12px rgba(70, 204, 244, 0.25),
+    0 8px 14px rgba(1, 7, 20, 0.36);
+  --trace-feature-primary-shadow: var(--trace-button-primary-shadow);
+  --trace-button-secondary-shadow:
+    inset 0 1px 0 rgba(145, 207, 232, 0.12),
+    inset 0 -4px 7px rgba(1, 8, 18, 0.46),
+    0 3px 0 #06131f,
+    0 7px 12px rgba(1, 7, 18, 0.32);
+  --trace-button-hover-shadow:
+    inset 0 1px 0 rgba(161, 227, 252, 0.23),
+    inset 0 -4px 7px rgba(1, 9, 20, 0.42),
+    0 4px 0 #071827,
+    0 0 14px rgba(82, 211, 250, 0.22),
+    0 9px 16px rgba(1, 7, 20, 0.38);
+  --trace-button-active-shadow:
+    inset 0 5px 9px rgba(1, 8, 19, 0.66),
+    inset 0 1px 0 rgba(126, 214, 246, 0.12),
+    0 1px 0 #040d16;
+  --trace-button-disabled-filter: saturate(0.42) brightness(0.7);
+  --trace-button-hover-transform: translateY(-1px);
+  --trace-button-active-transform: translateY(2px);
+  --trace-button-text-shadow: 0 1px 3px rgba(1, 7, 18, 0.88);
+  --trace-feature-core-background: var(--trace-material-metallic-composite);
+  --trace-feature-core-border: #3e819f;
+  --trace-feature-brass-background: var(--trace-button-accent-bg);
+  --trace-feature-brass-border: var(--trace-button-accent-border);
+  --trace-feature-brass-text: var(--trace-button-accent-text);
+
+  --trace-control-radius: 5px 11px 5px 11px;
+  --trace-control-shadow:
+    inset 0 1px 1px rgba(239, 253, 255, 0.58),
+    inset 0 -3px 6px rgba(26, 78, 104, 0.2),
+    0 0 8px rgba(73, 194, 230, 0.14),
+    0 3px 8px rgba(1, 8, 19, 0.32);
+  --trace-control-outline: 1px solid rgba(33, 92, 118, 0.55);
+  --trace-control-outline-offset: -4px;
+  --trace-control-color-scheme: light;
+  --trace-toolbar-control-background: var(--trace-material-illuminated-glass);
+  --trace-toolbar-control-border: var(--trace-input-border);
+  --trace-toolbar-control-radius: var(--trace-control-radius);
+  --trace-toolbar-control-shadow: var(--trace-control-shadow);
+  --trace-toolbar-control-text: var(--trace-input-text);
+  --trace-toolbar-control-placeholder: var(--trace-input-placeholder);
+  --trace-editor-panel-background: var(--trace-material-space-panel);
+  --trace-editor-panel-border: var(--trace-panel-border);
+  --trace-editor-panel-radius: var(--trace-panel-radius);
+  --trace-editor-panel-shadow: var(--trace-panel-shadow);
+
+  --trace-option-background: var(--trace-material-metallic-composite);
+  --trace-option-selected-background:
+    radial-gradient(ellipse at 50% -18%, rgba(116, 224, 255, 0.25), transparent 48%),
+    linear-gradient(155deg, #1e6d96, #214b7c 56%, #392f73);
+  --trace-option-border: #386f8b;
+  --trace-option-selected-border: #6cddff;
+  --trace-option-shadow: var(--trace-button-secondary-shadow);
+  --trace-option-outline: 1px solid rgba(82, 179, 217, 0.16);
+  --trace-option-outline-offset: -4px;
+  --trace-segment-selected-background: var(--trace-option-selected-background);
+  --trace-segment-selected-border: var(--trace-option-selected-border);
+  --trace-segment-selected-text: #e9fbff;
+
+  --trace-toggle-track: var(--trace-material-power-channel);
+  --trace-toggle-border: #315f7a;
+  --trace-toggle-radius: 4px 12px 4px 12px;
+  --trace-toggle-height: 30px;
+  --trace-toggle-width: 52px;
+  --trace-toggle-track-shadow:
+    inset 0 3px 7px rgba(1, 7, 18, 0.72),
+    0 1px 0 rgba(89, 175, 210, 0.18);
+  --trace-toggle-selected:
+    repeating-linear-gradient(90deg, rgba(129, 232, 255, 0.12) 0 2px, transparent 2px 8px),
+    linear-gradient(180deg, #174f73, #103855 62%, #0c263e);
+  --trace-toggle-selected-border: #57ccea;
+  --trace-toggle-thumb:
+    radial-gradient(circle at 36% 32%, #9dafbb 0 9%, #536b7b 35%, #263b4a 68%, #101f2b);
+  --trace-toggle-thumb-selected:
+    radial-gradient(circle at 35% 30%, #f0fdff 0 9%, #78e4ff 34%, #279dcc 66%, #2f3e8b);
+  --trace-toggle-thumb-border: #102536;
+  --trace-toggle-thumb-radius: 50%;
+  --trace-toggle-thumb-height: 22px;
+  --trace-toggle-thumb-width: 22px;
+  --trace-toggle-thumb-shadow:
+    inset 0 1px 1px rgba(238, 253, 255, 0.5),
+    0 0 8px rgba(80, 216, 255, 0.35),
+    0 2px 4px rgba(1, 7, 18, 0.62);
+  --trace-toggle-thumb-translate: 22px;
+  --trace-segment-radius: 5px 12px 5px 12px;
+  --trace-segment-button-radius: 4px 10px 4px 10px;
+
+  --trace-heading-shadow: 0 1px 3px rgba(1, 7, 18, 0.86);
+  --trace-divider-decoration:
+    radial-gradient(circle, #79e2ff 0 2px, transparent 3px) center / 28px 5px repeat-x,
+    linear-gradient(90deg, transparent, #2c7699 14%, #5bdcff 50%, #654aa6 86%, transparent);
+  --trace-identity-divider-display: block;
+  --trace-empty-background: var(--trace-material-passive-graphite);
+  --trace-empty-border: #326783;
+  --trace-empty-radius: 5px 13px 5px 13px;
+  --trace-empty-padding: 12px 14px;
+
+  --trace-dialog-background: var(--trace-material-space-panel);
+  --trace-dialog-border: #3c85a8;
+  --trace-dialog-border-width: 7px;
+  --trace-dialog-background-clip: padding-box;
+  --trace-dialog-background-origin: border-box;
+  --trace-dialog-radius: 7px 17px 7px 17px;
+  --trace-dialog-shadow:
+    inset 0 1px 0 rgba(139, 220, 248, 0.13),
+    inset 0 -6px 11px rgba(1, 7, 18, 0.58),
+    0 0 20px rgba(65, 190, 232, 0.15),
+    0 22px 58px rgba(1, 5, 15, 0.65);
+  --trace-dialog-text: var(--trace-text-primary);
+  --trace-dialog-hardware-display: block;
+  --trace-dialog-hardware-background:
+    linear-gradient(90deg, #3ca8d0, #78e2ff, #6750a8) top left / 82px 3px no-repeat,
+    linear-gradient(180deg, #6750a8, #78e2ff, #3ca8d0) bottom right / 3px 82px no-repeat;
+  --trace-document-dialog-background:
+    radial-gradient(ellipse at 18% -10%, rgba(76, 205, 249, 0.13), transparent 42%) padding-box,
+    repeating-linear-gradient(92deg, rgba(119, 192, 220, 0.025) 0 1px, transparent 1px 14px) padding-box,
+    linear-gradient(145deg, #112c43, #091f33 52%, #071527) padding-box,
+    var(--trace-material-metallic-composite) border-box;
+  --trace-document-dialog-border: transparent;
+  --trace-document-dialog-border-width: 10px;
+  --trace-document-dialog-background-clip: padding-box, padding-box, padding-box, border-box;
+  --trace-document-dialog-background-origin: border-box;
+  --trace-document-dialog-radius: 7px 18px 7px 18px;
+  --trace-document-dialog-shadow: var(--trace-dialog-shadow);
+  --trace-document-dialog-text: #eaf8ff;
+  --trace-document-dialog-hardware-display: block;
+  --trace-document-dialog-hardware-background: var(--trace-dialog-hardware-background);
+  --trace-dialog-control-border: var(--trace-input-border);
+  --trace-dialog-button-background: var(--trace-material-metallic-composite);
+  --trace-dialog-button-border: var(--trace-button-secondary-border);
+  --trace-dialog-button-radius: var(--trace-button-radius);
+  --trace-dialog-button-shadow: var(--trace-button-secondary-shadow);
+  --trace-memory-dialog-shadow: var(--trace-dialog-shadow);
+  --trace-trophy-dialog-radius: var(--trace-dialog-radius);
+  --trace-trophy-dialog-shadow: var(--trace-dialog-shadow);
+
+  --trace-toast-bg: var(--trace-material-luminescent-core);
+  --trace-toast-border: #5bd6f4;
+  --trace-toast-text: #eefbff;
+  --trace-toast-shadow:
+    inset 0 1px 0 rgba(170, 238, 255, 0.22),
+    inset 0 -4px 7px rgba(1, 8, 20, 0.54),
+    0 0 14px rgba(75, 204, 246, 0.25),
+    0 7px 18px rgba(1, 6, 18, 0.5);
+  --trace-toast-radius: 5px 13px 5px 13px;
+  --trace-toast-text-shadow: var(--trace-button-text-shadow);
+  --trace-error-bg: #522633;
+  --trace-error-border: #ad5267;
+  --trace-error-text: #ffeaf0;
+  --trace-overlay: rgba(1, 7, 19, 0.68);
+
+  --trace-progress-track: #061726;
+  --trace-progress-border: #316d8b;
+  --trace-progress-border-width: 2px;
+  --trace-progress-height: 11px;
+  --trace-progress-radius: 4px 10px 4px 10px;
+  --trace-progress-track-shadow:
+    inset 0 3px 6px rgba(1, 6, 16, 0.76),
+    inset 0 0 0 1px rgba(48, 111, 140, 0.42),
+    0 1px 0 rgba(95, 195, 229, 0.16);
+  --trace-progress-fill: #53d9ff;
+  --trace-progress-fill-background:
+    repeating-linear-gradient(90deg, rgba(232, 253, 255, 0.28) 0 2px, transparent 2px 9px),
+    linear-gradient(90deg, #3bc4ef, #58ddff 56%, #8c70ef);
+  --trace-progress-fill-shadow:
+    inset 0 1px 0 rgba(239, 254, 255, 0.7),
+    0 0 8px rgba(74, 213, 255, 0.44);
+
+  --trace-water-background: var(--trace-material-space-panel);
+  --trace-water-border: #347b9c;
+  --trace-water-radius: var(--trace-panel-radius);
+  --trace-water-shadow: var(--trace-panel-shadow);
+  --trace-water-eyebrow: #72d9f5;
+  --trace-water-segment-background: #071b2c;
+  --trace-water-stat-background: var(--trace-material-passive-graphite);
+  --trace-water-stat-border: #336b87;
+  --trace-water-stat-radius: 5px 12px 5px 12px;
+  --trace-water-stat-shadow:
+    inset 0 1px 0 rgba(127, 207, 235, 0.09),
+    inset 0 -3px 7px rgba(1, 7, 17, 0.46),
+    0 5px 11px rgba(1, 7, 18, 0.34);
+  --trace-water-stat-text: #e8f7fc;
+  --trace-water-divider: #315e76;
+  --trace-water-history-text: #a9ccda;
+  --trace-water-row-background: var(--trace-material-passive-graphite);
+  --trace-water-row-border: #32647e;
+  --trace-water-row-radius: 5px 12px 5px 12px;
+  --trace-water-selected-border: #5ed8f6;
+  --trace-stat-card-background: var(--trace-material-passive-graphite);
+  --trace-stat-card-border: #336b87;
+  --trace-stat-card-radius: 5px 12px 5px 12px;
+  --trace-stat-card-shadow: var(--trace-water-stat-shadow);
+  --trace-stat-card-outline: 1px solid rgba(77, 155, 187, 0.14);
+  --trace-stat-card-outline-offset: -4px;
+  --trace-fieldset-border: #376d87;
+  --trace-fieldset-shadow:
+    inset 0 1px 0 rgba(124, 205, 234, 0.08),
+    0 4px 10px rgba(1, 7, 18, 0.28);
+
+  --trace-utility-settings-background: var(--trace-material-metallic-composite);
+  --trace-utility-settings-border: #397d9c;
+  --trace-utility-settings-text: #e5f5fb;
+  --trace-utility-journal-background: var(--trace-material-luminescent-core);
+  --trace-utility-journal-border: #58cdeb;
+  --trace-utility-journal-shadow: var(--trace-button-primary-shadow);
+  --trace-utility-journal-text: #effbff;
+  --trace-utility-journal-eyebrow: #a9dbe9;
+  --trace-utility-trophy-background: var(--trace-button-accent-bg);
+  --trace-utility-trophy-border: #a37ee8;
+  --trace-utility-trophy-shadow: var(--trace-button-secondary-shadow);
+  --trace-utility-trophy-text: #f5efff;
+  --trace-utility-trophy-eyebrow: #ccb5f1;
+  --trace-utility-radius: 5px 12px 5px 12px;
+
+  --trace-bg-deep: var(--trace-app-background-color);
+  --trace-bg: #081d30;
+  --trace-surface-1: var(--trace-surface-primary);
+  --trace-surface-2: var(--trace-surface-secondary);
+  --trace-surface-raised: var(--trace-surface-elevated);
+  --trace-surface: var(--trace-surface-primary);
+  --trace-text: var(--trace-text-primary);
+  --trace-text-muted: var(--trace-text-secondary);
+  --trace-teal: var(--trace-button-primary-bg);
+  --trace-teal-strong: #35b7df;
+  --trace-teal-soft: var(--trace-button-primary-border);
+  --trace-brass: var(--trace-accent-secondary);
+  --trace-brass-strong: var(--trace-accent-secondary-strong);
+  --trace-border: var(--trace-border-default);
+  --trace-border-warm: #536ea8;
+  --trace-focus: var(--trace-focus-ring);
+  --trace-danger: var(--trace-button-danger-bg);
+}
+
 :root[data-trace-shell-theme="to-kingdoms-ahead"] {
   /* Reusable physical materials for the Kingdom shell. */
   --trace-material-wall:

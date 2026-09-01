@@ -52,6 +52,11 @@ test("registers seven unique app themes with exactly one Modern Heirloom default
     presentation: { renderer: "desert-journey" },
     tokenMetadata: { foundation: "desert-journey", status: "active" },
   });
+  expect(getAppTheme("outer-space-journey")).toMatchObject({
+    immersive: true,
+    presentation: { renderer: "outer-space-journey" },
+    tokenMetadata: { foundation: "outer-space-journey", status: "active" },
+  });
   expect(getAppTheme("to-kingdoms-ahead")).toMatchObject({
     label: "To Kingdoms Ahead",
     immersive: true,
@@ -66,17 +71,18 @@ test("resolves active full-app themes to distinct shell token sets", () => {
   expect(resolveAppShellThemeId("haunted-forest")).toBe("haunted-forest");
   expect(resolveAppShellThemeId("gnome-village")).toBe("gnome-village");
   expect(resolveAppShellThemeId("desert-journey")).toBe("desert-journey");
+  expect(resolveAppShellThemeId("outer-space-journey")).toBe("outer-space-journey");
   expect(resolveAppShellThemeId("to-kingdoms-ahead")).toBe("to-kingdoms-ahead");
   expect(getAppShellThemeColor("modern-heirloom")).toBe("#07131f");
   expect(getAppShellThemeColor("river")).toBe("#0b2426");
   expect(getAppShellThemeColor("haunted-forest")).toBe("#0b140f");
   expect(getAppShellThemeColor("gnome-village")).toBe("#365f39");
   expect(getAppShellThemeColor("desert-journey")).toBe("#9b5a24");
+  expect(getAppShellThemeColor("outer-space-journey")).toBe("#06162b");
   expect(getAppShellThemeColor("to-kingdoms-ahead")).toBe("#171712");
 });
 
 test.each([
-  "outer-space-journey",
   "obsolete-theme",
 ])("uses the Modern Heirloom shell fallback for %s", (themeId) => {
   expect(resolveAppShellThemeId(themeId)).toBe("modern-heirloom");

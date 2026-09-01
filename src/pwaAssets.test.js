@@ -128,6 +128,18 @@ test("pre-paint theme bootstrap restores Desert Journey without a wrong-theme fl
   localStorage.clear();
 });
 
+test("pre-paint theme bootstrap restores Outer Space Journey without a wrong-theme flash", () => {
+  const html = fs.readFileSync(publicPath("index.html"), "utf8");
+  const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+
+  localStorage.setItem("appSettings", JSON.stringify({ themeId: "outer-space-journey" }));
+  window.eval(bootstrap);
+  expect(document.documentElement).toHaveAttribute("data-trace-theme", "outer-space-journey");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "outer-space-journey");
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#06162b");
+  localStorage.clear();
+});
+
 test.each([
   ["trace-icon-192.png", 192],
   ["trace-icon-512.png", 512],

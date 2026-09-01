@@ -55,6 +55,7 @@ test("defines the full-app semantic and shared-component contracts for every act
   expect(css).toContain(':root[data-trace-shell-theme="haunted-forest"]');
   expect(css).toContain(':root[data-trace-shell-theme="gnome-village"]');
   expect(css).toContain(':root[data-trace-shell-theme="desert-journey"]');
+  expect(css).toContain(':root[data-trace-shell-theme="outer-space-journey"]');
   expect(css).toContain(':root[data-trace-shell-theme="to-kingdoms-ahead"]');
 });
 
@@ -165,8 +166,8 @@ test("Gnome Village defines a bright environmental shell and playful material hi
 test("Desert Journey defines an open sunlit shell and its own travel-worn material hierarchy", () => {
   const css = source("appThemes.css");
   const desertStart = css.indexOf(':root[data-trace-shell-theme="desert-journey"]');
-  const kingdomStart = css.indexOf(':root[data-trace-shell-theme="to-kingdoms-ahead"]');
-  const desertBlock = css.slice(desertStart, kingdomStart);
+  const spaceStart = css.indexOf(':root[data-trace-shell-theme="outer-space-journey"]');
+  const desertBlock = css.slice(desertStart, spaceStart);
 
   expect(desertBlock).toContain('url("./assets/app-themes/desert-journey/desert-journey-environment.jpg")');
   expect(desertBlock).toMatch(/--trace-material-sun-wood:[\s\S]*repeating-linear-gradient/);
@@ -183,6 +184,29 @@ test("Desert Journey defines an open sunlit shell and its own travel-worn materi
   expect(desertBlock).toContain("--trace-progress-fill: #d99632");
   expect(desertBlock).not.toContain("--trace-material-timber:");
   expect(desertBlock).not.toContain("--trace-material-carved-wood");
+});
+
+test("Outer Space Journey defines a deep-space shell and its own illuminated composite hierarchy", () => {
+  const css = source("appThemes.css");
+  const spaceStart = css.indexOf(':root[data-trace-shell-theme="outer-space-journey"]');
+  const kingdomStart = css.indexOf(':root[data-trace-shell-theme="to-kingdoms-ahead"]');
+  const spaceBlock = css.slice(spaceStart, kingdomStart);
+
+  expect(spaceBlock).toContain('url("./assets/app-themes/outer-space-journey/outer-space-journey-environment.jpg")');
+  expect(spaceBlock).toMatch(/--trace-material-luminescent-core:[\s\S]*linear-gradient/);
+  expect(spaceBlock).toMatch(/--trace-material-metallic-composite:[\s\S]*repeating-linear-gradient/);
+  expect(spaceBlock).toMatch(/--trace-material-passive-graphite:[\s\S]*radial-gradient/);
+  expect(spaceBlock).toMatch(/--trace-material-illuminated-glass:[\s\S]*linear-gradient/);
+  expect(spaceBlock).toMatch(/--trace-material-power-channel:[\s\S]*repeating-linear-gradient/);
+  expect(spaceBlock).toContain("--trace-button-primary-bg: var(--trace-material-luminescent-core)");
+  expect(spaceBlock).toContain("--trace-button-secondary-bg: var(--trace-material-metallic-composite)");
+  expect(spaceBlock).toContain("--trace-input-bg: var(--trace-material-illuminated-glass)");
+  expect(spaceBlock).toContain("--trace-stat-card-background: var(--trace-material-passive-graphite)");
+  expect(spaceBlock).toContain("--trace-water-stat-background: var(--trace-material-passive-graphite)");
+  expect(spaceBlock).toContain("--trace-document-dialog-hardware-display: block");
+  expect(spaceBlock).toContain("--trace-progress-fill: #53d9ff");
+  expect(spaceBlock).not.toContain("--trace-material-driftwood");
+  expect(spaceBlock).not.toContain("--trace-material-sun-wood");
 });
 
 test("To Kingdoms Ahead defines visibly distinct reusable physical materials", () => {

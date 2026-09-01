@@ -2579,7 +2579,8 @@ code {
   [data-trace-shell-theme="to-kingdoms-ahead"],
   [data-trace-shell-theme="haunted-forest"],
   [data-trace-shell-theme="gnome-village"],
-  [data-trace-shell-theme="desert-journey"]
+  [data-trace-shell-theme="desert-journey"],
+  [data-trace-shell-theme="outer-space-journey"]
 ) .journal-privacy-dialog {
   --trace-control-label: var(--trace-document-dialog-text);
   --trace-text: var(--trace-document-dialog-text);
@@ -2628,7 +2629,8 @@ code {
     [data-trace-shell-theme="to-kingdoms-ahead"],
     [data-trace-shell-theme="haunted-forest"],
     [data-trace-shell-theme="gnome-village"],
-    [data-trace-shell-theme="desert-journey"]
+    [data-trace-shell-theme="desert-journey"],
+    [data-trace-shell-theme="outer-space-journey"]
   ) .journal-privacy-dialog {
     border-width: 7px;
     padding: 12px;
@@ -2638,7 +2640,8 @@ code {
     [data-trace-shell-theme="to-kingdoms-ahead"],
     [data-trace-shell-theme="haunted-forest"],
     [data-trace-shell-theme="gnome-village"],
-    [data-trace-shell-theme="desert-journey"]
+    [data-trace-shell-theme="desert-journey"],
+    [data-trace-shell-theme="outer-space-journey"]
   ) .journal-privacy-dialog p {
     margin-block: 10px;
   }
@@ -2647,7 +2650,8 @@ code {
     [data-trace-shell-theme="to-kingdoms-ahead"],
     [data-trace-shell-theme="haunted-forest"],
     [data-trace-shell-theme="gnome-village"],
-    [data-trace-shell-theme="desert-journey"]
+    [data-trace-shell-theme="desert-journey"],
+    [data-trace-shell-theme="outer-space-journey"]
   ) .journal-privacy-field {
     margin-top: 10px;
   }
@@ -2656,7 +2660,8 @@ code {
     [data-trace-shell-theme="to-kingdoms-ahead"],
     [data-trace-shell-theme="haunted-forest"],
     [data-trace-shell-theme="gnome-village"],
-    [data-trace-shell-theme="desert-journey"]
+    [data-trace-shell-theme="desert-journey"],
+    [data-trace-shell-theme="outer-space-journey"]
   ) .journal-privacy-check {
     margin-top: 12px;
   }
@@ -4440,6 +4445,7 @@ code {
   [data-trace-shell-theme="river"],
   [data-trace-shell-theme="gnome-village"],
   [data-trace-shell-theme="desert-journey"],
+  [data-trace-shell-theme="outer-space-journey"],
   [data-trace-shell-theme="to-kingdoms-ahead"]
 ) .trace-feature-page fieldset {
   border-color: var(--trace-fieldset-border) !important;
@@ -4450,36 +4456,42 @@ code {
   [data-trace-shell-theme="river"],
   [data-trace-shell-theme="gnome-village"],
   [data-trace-shell-theme="desert-journey"],
+  [data-trace-shell-theme="outer-space-journey"],
   [data-trace-shell-theme="to-kingdoms-ahead"]
 ) .trace-feature-page [style*="color: rgb(156, 163, 175)"],
 .trace-app-shell:is(
   [data-trace-shell-theme="river"],
   [data-trace-shell-theme="gnome-village"],
   [data-trace-shell-theme="desert-journey"],
+  [data-trace-shell-theme="outer-space-journey"],
   [data-trace-shell-theme="to-kingdoms-ahead"]
 ) .trace-feature-page [style*="color:#9ca3af"],
 .trace-app-shell:is(
   [data-trace-shell-theme="river"],
   [data-trace-shell-theme="gnome-village"],
   [data-trace-shell-theme="desert-journey"],
+  [data-trace-shell-theme="outer-space-journey"],
   [data-trace-shell-theme="to-kingdoms-ahead"]
 ) .trace-feature-page [style*="color: #9ca3af"],
 .trace-app-shell:is(
   [data-trace-shell-theme="river"],
   [data-trace-shell-theme="gnome-village"],
   [data-trace-shell-theme="desert-journey"],
+  [data-trace-shell-theme="outer-space-journey"],
   [data-trace-shell-theme="to-kingdoms-ahead"]
 ) .trace-feature-page [style*="color: rgb(209, 213, 219)"],
 .trace-app-shell:is(
   [data-trace-shell-theme="river"],
   [data-trace-shell-theme="gnome-village"],
   [data-trace-shell-theme="desert-journey"],
+  [data-trace-shell-theme="outer-space-journey"],
   [data-trace-shell-theme="to-kingdoms-ahead"]
 ) .trace-feature-page [style*="color:#d1d5db"],
 .trace-app-shell:is(
   [data-trace-shell-theme="river"],
   [data-trace-shell-theme="gnome-village"],
   [data-trace-shell-theme="desert-journey"],
+  [data-trace-shell-theme="outer-space-journey"],
   [data-trace-shell-theme="to-kingdoms-ahead"]
 ) .trace-feature-page [style*="color: #d1d5db"] {
   color: var(--trace-text-secondary) !important;
@@ -4627,6 +4639,53 @@ code {
 }
 
 .trace-app-shell[data-trace-shell-theme="desert-journey"] .trace-schedule-calendar__day[aria-pressed="true"] {
+  background: var(--trace-option-selected-background);
+  box-shadow: inset 0 0 0 2px var(--trace-option-selected-border);
+}
+
+.trace-app-shell[data-trace-shell-theme="outer-space-journey"] .trace-feature-page--journal :is(.journal-paper, .journal-card) {
+  background: var(--trace-panel-background) !important;
+  border-color: var(--trace-panel-border);
+  box-shadow: var(--trace-panel-shadow);
+}
+
+.trace-app-shell[data-trace-shell-theme="outer-space-journey"] .trace-feature-page--journal .journal-paper textarea {
+  background: var(--trace-input-bg) !important;
+  color: var(--trace-input-text) !important;
+}
+
+.trace-app-shell[data-trace-shell-theme="outer-space-journey"] .trace-feature-page--journal .journal-card__body {
+  color: var(--trace-text-primary);
+}
+
+.trace-app-shell[data-trace-shell-theme="outer-space-journey"] .trace-feature-page--journal .journal-mood-options button[aria-pressed="true"] {
+  background: var(--trace-option-selected-background) !important;
+  border-color: var(--trace-option-selected-border);
+}
+
+.trace-app-shell[data-trace-shell-theme="outer-space-journey"] .trace-feature-page--journal .trace-action--brass {
+  background: var(--trace-material-luminescent-core) !important;
+  border-color: var(--trace-button-primary-border) !important;
+  box-shadow: var(--trace-button-primary-shadow);
+  color: var(--trace-button-primary-text) !important;
+}
+
+.trace-app-shell[data-trace-shell-theme="outer-space-journey"] .trace-feature-page--health :is(
+  [data-testid="measurement-header"],
+  [data-testid="measurement-fields"]
+) {
+  background: var(--trace-material-passive-graphite);
+}
+
+.trace-app-shell[data-trace-shell-theme="outer-space-journey"] :is(
+  .trace-today-summary li,
+  .trace-schedule-calendar__day
+) {
+  background: var(--trace-material-passive-graphite);
+  border-color: var(--trace-card-border);
+}
+
+.trace-app-shell[data-trace-shell-theme="outer-space-journey"] .trace-schedule-calendar__day[aria-pressed="true"] {
   background: var(--trace-option-selected-background);
   box-shadow: inset 0 0 0 2px var(--trace-option-selected-border);
 }
