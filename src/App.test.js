@@ -2281,7 +2281,9 @@ test("successful same-tab restore immediately synchronizes theme, units, and mot
   expect(JSON.parse(localStorage.getItem("nutritionGoals"))).toEqual({ calories: 2450, waterGoalMl: 2365.882365 });
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-theme", "haunted-forest");
+  expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-shell-theme", "haunted-forest");
   expect(document.documentElement).toHaveAttribute("data-trace-theme", "haunted-forest");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "haunted-forest");
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
 
   fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
@@ -2309,6 +2311,12 @@ test.each([
   ["Outer Space Journey", "outer-space-journey"],
   ["To Kingdoms Ahead", "to-kingdoms-ahead"],
 ])("%s app theme selection persists across reload and switches back to River", async (themeName, themeId) => {
+  const expectedShellTheme = ["haunted-forest", "to-kingdoms-ahead"].includes(themeId)
+    ? themeId
+    : "modern-heirloom";
+  const expectedThemeColor = themeId === "haunted-forest"
+    ? "#0b140f"
+    : themeId === "to-kingdoms-ahead" ? "#171712" : "#07131f";
   localStorage.setItem("nutritionEntries", JSON.stringify([
     { id: "theme-activity", loggedAt: "2026-05-18T12:00:00" },
   ]));
@@ -2322,12 +2330,12 @@ test.each([
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-theme", themeId);
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute(
     "data-trace-shell-theme",
-    themeId === "to-kingdoms-ahead" ? "to-kingdoms-ahead" : "modern-heirloom"
+    expectedShellTheme
   );
   expect(document.documentElement).toHaveAttribute("data-trace-theme", themeId);
   expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute(
     "content",
-    themeId === "to-kingdoms-ahead" ? "#171712" : "#07131f"
+    expectedThemeColor
   );
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", themeId);
@@ -2337,7 +2345,7 @@ test.each([
   expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", themeId);
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute(
     "data-trace-shell-theme",
-    themeId === "to-kingdoms-ahead" ? "to-kingdoms-ahead" : "modern-heirloom"
+    expectedShellTheme
   );
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
   expect(screen.getByRole("radio", { name: new RegExp(themeName) })).toBeChecked();
@@ -2349,6 +2357,23 @@ test.each([
     .toHaveAttribute("data-trace-shell-theme", "river");
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
   expect(await screen.findByTestId("life-current")).toHaveAttribute("data-theme-id", "river");
+});
+
+test("Haunted Forest shell remains active through Settings, Nutrition, and same-tab Home navigation", () => {
+  localStorage.setItem("appSettings", JSON.stringify({ themeId: "haunted-forest" }));
+  render(<App />);
+
+  const shell = screen.getByTestId("trace-app-shell");
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "haunted-forest");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "haunted-forest");
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#0b140f");
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByTestId("settings-page")).toBeInTheDocument();
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "haunted-forest");
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  expect(screen.getByRole("heading", { name: "Nutrition" })).toBeInTheDocument();
+  expect(shell).toHaveAttribute("data-trace-shell-theme", "haunted-forest");
 });
 
 test("To Kingdoms Ahead shell remains active through Settings, Nutrition, and same-tab Home navigation", () => {

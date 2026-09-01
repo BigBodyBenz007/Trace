@@ -3,6 +3,7 @@ export const DEFAULT_SHELL_THEME_ID = DEFAULT_APP_THEME_ID;
 export const APP_SHELL_THEME_COLORS = Object.freeze({
   "modern-heirloom": "#07131f",
   river: "#0b2426",
+  "haunted-forest": "#0b140f",
   "to-kingdoms-ahead": "#171712",
 });
 
@@ -73,7 +74,7 @@ export const APP_THEMES = Object.freeze([
         selectedCardRing: "#d6c99a", selectedCardGlow: "rgba(214, 201, 154, 0.2)",
       },
     },
-    tokenMetadata: { foundation: "modern-heirloom", status: "future-full-app" },
+    tokenMetadata: { foundation: "haunted-forest", status: "active" },
   }),
   theme({
     id: "gnome-village",

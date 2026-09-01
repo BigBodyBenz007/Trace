@@ -92,6 +92,18 @@ test("pre-paint theme bootstrap restores River without a wrong-theme flash", () 
   localStorage.clear();
 });
 
+test("pre-paint theme bootstrap restores Haunted Forest without a wrong-theme flash", () => {
+  const html = fs.readFileSync(publicPath("index.html"), "utf8");
+  const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+
+  localStorage.setItem("appSettings", JSON.stringify({ themeId: "haunted-forest" }));
+  window.eval(bootstrap);
+  expect(document.documentElement).toHaveAttribute("data-trace-theme", "haunted-forest");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "haunted-forest");
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#0b140f");
+  localStorage.clear();
+});
+
 test.each([
   ["trace-icon-192.png", 192],
   ["trace-icon-512.png", 512],

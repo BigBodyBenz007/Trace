@@ -37,6 +37,11 @@ test("registers seven unique app themes with exactly one Modern Heirloom default
     presentation: { renderer: "river-current" },
     tokenMetadata: { foundation: "river", status: "active" },
   });
+  expect(getAppTheme("haunted-forest")).toMatchObject({
+    immersive: true,
+    presentation: { renderer: "forest-path" },
+    tokenMetadata: { foundation: "haunted-forest", status: "active" },
+  });
   expect(getAppTheme("to-kingdoms-ahead")).toMatchObject({
     label: "To Kingdoms Ahead",
     immersive: true,
@@ -48,14 +53,15 @@ test("registers seven unique app themes with exactly one Modern Heirloom default
 test("resolves active full-app themes to distinct shell token sets", () => {
   expect(resolveAppShellThemeId("modern-heirloom")).toBe("modern-heirloom");
   expect(resolveAppShellThemeId("river")).toBe("river");
+  expect(resolveAppShellThemeId("haunted-forest")).toBe("haunted-forest");
   expect(resolveAppShellThemeId("to-kingdoms-ahead")).toBe("to-kingdoms-ahead");
   expect(getAppShellThemeColor("modern-heirloom")).toBe("#07131f");
   expect(getAppShellThemeColor("river")).toBe("#0b2426");
+  expect(getAppShellThemeColor("haunted-forest")).toBe("#0b140f");
   expect(getAppShellThemeColor("to-kingdoms-ahead")).toBe("#171712");
 });
 
 test.each([
-  "haunted-forest",
   "gnome-village",
   "desert-journey",
   "outer-space-journey",

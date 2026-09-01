@@ -2575,7 +2575,10 @@ code {
   width: 100%;
 }
 
-.trace-app-shell[data-trace-shell-theme="to-kingdoms-ahead"] .journal-privacy-dialog {
+.trace-app-shell:is(
+  [data-trace-shell-theme="to-kingdoms-ahead"],
+  [data-trace-shell-theme="haunted-forest"]
+) .journal-privacy-dialog {
   --trace-control-label: var(--trace-document-dialog-text);
   --trace-text: var(--trace-document-dialog-text);
   --trace-text-muted: color-mix(in srgb, var(--trace-document-dialog-text) 72%, transparent);
@@ -2619,20 +2622,32 @@ code {
 }
 
 @media (max-width: 430px) {
-  .trace-app-shell[data-trace-shell-theme="to-kingdoms-ahead"] .journal-privacy-dialog {
+  .trace-app-shell:is(
+    [data-trace-shell-theme="to-kingdoms-ahead"],
+    [data-trace-shell-theme="haunted-forest"]
+  ) .journal-privacy-dialog {
     border-width: 7px;
     padding: 12px;
   }
 
-  .trace-app-shell[data-trace-shell-theme="to-kingdoms-ahead"] .journal-privacy-dialog p {
+  .trace-app-shell:is(
+    [data-trace-shell-theme="to-kingdoms-ahead"],
+    [data-trace-shell-theme="haunted-forest"]
+  ) .journal-privacy-dialog p {
     margin-block: 10px;
   }
 
-  .trace-app-shell[data-trace-shell-theme="to-kingdoms-ahead"] .journal-privacy-field {
+  .trace-app-shell:is(
+    [data-trace-shell-theme="to-kingdoms-ahead"],
+    [data-trace-shell-theme="haunted-forest"]
+  ) .journal-privacy-field {
     margin-top: 10px;
   }
 
-  .trace-app-shell[data-trace-shell-theme="to-kingdoms-ahead"] .journal-privacy-check {
+  .trace-app-shell:is(
+    [data-trace-shell-theme="to-kingdoms-ahead"],
+    [data-trace-shell-theme="haunted-forest"]
+  ) .journal-privacy-check {
     margin-top: 12px;
   }
 

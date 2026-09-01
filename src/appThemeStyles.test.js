@@ -52,6 +52,7 @@ test("defines the full-app semantic and shared-component contracts for every act
   requiredTokens.forEach((token) => expect(css).toContain(token));
   expect(css).toContain(':root[data-trace-shell-theme="modern-heirloom"]');
   expect(css).toContain(':root[data-trace-shell-theme="river"]');
+  expect(css).toContain(':root[data-trace-shell-theme="haunted-forest"]');
   expect(css).toContain(':root[data-trace-shell-theme="to-kingdoms-ahead"]');
 });
 
@@ -93,8 +94,8 @@ test("Modern Heirloom keeps its established component geometry and motion defaul
 test("River defines distinct natural materials without Kingdom construction", () => {
   const css = source("appThemes.css");
   const riverStart = css.indexOf(':root[data-trace-shell-theme="river"]');
-  const kingdomStart = css.indexOf(':root[data-trace-shell-theme="to-kingdoms-ahead"]');
-  const riverBlock = css.slice(riverStart, kingdomStart);
+  const hauntedStart = css.indexOf(':root[data-trace-shell-theme="haunted-forest"]');
+  const riverBlock = css.slice(riverStart, hauntedStart);
 
   expect(riverBlock).toMatch(/--trace-material-driftwood:[\s\S]*repeating-linear-gradient/);
   expect(riverBlock).toMatch(/--trace-material-wet-rock:[\s\S]*radial-gradient/);
@@ -113,6 +114,27 @@ test("River defines distinct natural materials without Kingdom construction", ()
   expect(riverBlock).toContain("--trace-app-background-blend-mode: normal, normal, normal, screen, normal");
   expect(riverBlock).toContain("--trace-dialog-hardware-display: none");
   expect(riverBlock).not.toMatch(/rivet|forged|parchment-gradient|brass corner/i);
+});
+
+test("Haunted Forest defines an environmental shell and its own organic material hierarchy", () => {
+  const css = source("appThemes.css");
+  const hauntedStart = css.indexOf(':root[data-trace-shell-theme="haunted-forest"]');
+  const kingdomStart = css.indexOf(':root[data-trace-shell-theme="to-kingdoms-ahead"]');
+  const hauntedBlock = css.slice(hauntedStart, kingdomStart);
+
+  expect(hauntedBlock).toContain('url("./assets/app-themes/haunted-forest/ancient-forest-environment.jpg")');
+  expect(hauntedBlock).toMatch(/--trace-material-aged-wood:[\s\S]*repeating-linear-gradient/);
+  expect(hauntedBlock).toMatch(/--trace-material-bark:[\s\S]*repeating-linear-gradient/);
+  expect(hauntedBlock).toMatch(/--trace-material-mossy-stone:[\s\S]*radial-gradient/);
+  expect(hauntedBlock).toMatch(/--trace-material-misted-glass:[\s\S]*repeating-radial-gradient/);
+  expect(hauntedBlock).toContain("--trace-button-primary-bg: var(--trace-material-aged-wood)");
+  expect(hauntedBlock).toContain("--trace-button-secondary-bg: var(--trace-material-bark)");
+  expect(hauntedBlock).toContain("--trace-input-bg: var(--trace-material-misted-glass)");
+  expect(hauntedBlock).toContain("--trace-stat-card-background: var(--trace-material-passive-mossy-stone)");
+  expect(hauntedBlock).toContain("--trace-water-stat-background: var(--trace-material-passive-mossy-stone)");
+  expect(hauntedBlock).toContain("--trace-dialog-hardware-display: block");
+  expect(hauntedBlock).not.toContain("--trace-material-driftwood");
+  expect(hauntedBlock).not.toContain("--trace-material-iron: var(--trace-material-wet-rock)");
 });
 
 test("To Kingdoms Ahead defines visibly distinct reusable physical materials", () => {
