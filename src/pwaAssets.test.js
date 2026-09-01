@@ -116,6 +116,18 @@ test("pre-paint theme bootstrap restores Gnome Village without a wrong-theme fla
   localStorage.clear();
 });
 
+test("pre-paint theme bootstrap restores Desert Journey without a wrong-theme flash", () => {
+  const html = fs.readFileSync(publicPath("index.html"), "utf8");
+  const bootstrap = html.match(/<script>([\s\S]*?)<\/script>/)[1];
+
+  localStorage.setItem("appSettings", JSON.stringify({ themeId: "desert-journey" }));
+  window.eval(bootstrap);
+  expect(document.documentElement).toHaveAttribute("data-trace-theme", "desert-journey");
+  expect(document.documentElement).toHaveAttribute("data-trace-shell-theme", "desert-journey");
+  expect(document.querySelector('meta[name="theme-color"]')).toHaveAttribute("content", "#9b5a24");
+  localStorage.clear();
+});
+
 test.each([
   ["trace-icon-192.png", 192],
   ["trace-icon-512.png", 512],

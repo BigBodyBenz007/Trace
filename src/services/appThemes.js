@@ -5,6 +5,7 @@ export const APP_SHELL_THEME_COLORS = Object.freeze({
   river: "#0b2426",
   "haunted-forest": "#0b140f",
   "gnome-village": "#365f39",
+  "desert-journey": "#9b5a24",
   "to-kingdoms-ahead": "#171712",
 });
 
@@ -109,7 +110,7 @@ export const APP_THEMES = Object.freeze([
         selectedCardRing: "#e7b768", selectedCardGlow: "rgba(231, 183, 104, 0.2)",
       },
     },
-    tokenMetadata: { foundation: "modern-heirloom", status: "future-full-app" },
+    tokenMetadata: { foundation: "desert-journey", status: "active" },
   }),
   theme({
     id: "outer-space-journey",

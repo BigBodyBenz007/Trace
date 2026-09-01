@@ -1448,6 +1448,381 @@
   --trace-danger: var(--trace-button-danger-bg);
 }
 
+:root[data-trace-shell-theme="desert-journey"] {
+  color-scheme: light;
+
+  /* Open desert and travel-worn materials unique to Desert Journey. */
+  --trace-material-wall:
+    radial-gradient(circle at 12% 8%, rgba(255, 224, 151, 0.1), transparent 28rem) center / cover fixed,
+    linear-gradient(180deg, rgba(255, 248, 220, 0.01), rgba(104, 45, 12, 0.12)) center / cover fixed,
+    url("./assets/app-themes/desert-journey/desert-journey-environment.jpg") center top / cover no-repeat fixed;
+  --trace-material-sun-wood:
+    radial-gradient(ellipse at 18% 132%, transparent 0 34%, rgba(88, 39, 11, 0.32) 35% 38%, transparent 39%),
+    radial-gradient(ellipse at 82% -34%, transparent 0 33%, rgba(255, 224, 153, 0.18) 34% 37%, transparent 38%),
+    radial-gradient(circle at 10px 50%, #e0b466 0 1px, #71401c 2px 3px, transparent 4px),
+    radial-gradient(circle at calc(100% - 10px) 50%, #e0b466 0 1px, #71401c 2px 3px, transparent 4px),
+    repeating-linear-gradient(2deg, rgba(255, 226, 166, 0.085) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(93deg, rgba(77, 32, 10, 0.11) 0 2px, transparent 2px 19px),
+    linear-gradient(177deg, #b76a2d, #8d491f 24%, #a65a25 54%, #763a18 82%, #51280f);
+  --trace-material-aged-sandstone:
+    radial-gradient(circle at 13% 18%, rgba(255, 239, 199, 0.2) 0 1px, transparent 4px),
+    radial-gradient(circle at 72% 67%, rgba(84, 43, 18, 0.22) 0 2px, transparent 5px),
+    radial-gradient(ellipse at 12% 110%, rgba(231, 165, 72, 0.28), transparent 34%),
+    repeating-linear-gradient(118deg, rgba(255, 246, 213, 0.035) 0 1px, transparent 1px 14px),
+    linear-gradient(145deg, rgba(169, 112, 57, 0.97), rgba(126, 76, 37, 0.98) 52%, rgba(91, 51, 25, 0.99));
+  --trace-material-weathered-sandstone:
+    radial-gradient(circle at 18% 24%, rgba(255, 239, 200, 0.14) 0 1px, transparent 4px),
+    radial-gradient(circle at 76% 72%, rgba(64, 35, 19, 0.2) 0 2px, transparent 5px),
+    repeating-linear-gradient(123deg, rgba(255, 241, 203, 0.024) 0 1px, transparent 1px 16px),
+    linear-gradient(148deg, rgba(132, 86, 45, 0.95), rgba(99, 60, 32, 0.97) 54%, rgba(72, 43, 25, 0.98));
+  --trace-material-desert-parchment:
+    radial-gradient(ellipse at 24% -20%, rgba(255, 255, 231, 0.72), transparent 48%),
+    radial-gradient(ellipse at 88% 122%, rgba(177, 101, 38, 0.13), transparent 42%),
+    repeating-linear-gradient(5deg, rgba(103, 67, 31, 0.035) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(94deg, rgba(255, 250, 219, 0.06) 0 1px, transparent 1px 11px),
+    linear-gradient(145deg, rgba(244, 218, 166, 0.99), rgba(232, 193, 126, 0.99) 56%, rgba(209, 159, 90, 0.99));
+  --trace-material-woven-leather:
+    repeating-linear-gradient(45deg, rgba(255, 222, 166, 0.055) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(-45deg, rgba(66, 24, 11, 0.08) 0 2px, transparent 2px 7px),
+    linear-gradient(155deg, #8d3f27, #65291e 54%, #461c17);
+  --trace-material-desert-panel:
+    radial-gradient(ellipse at 13% 12%, rgba(242, 184, 96, 0.14), transparent 36%),
+    radial-gradient(ellipse at 88% 84%, rgba(54, 25, 11, 0.28), transparent 42%),
+    repeating-linear-gradient(118deg, rgba(255, 225, 174, 0.018) 0 1px, transparent 1px 15px),
+    linear-gradient(145deg, rgba(111, 62, 29, 0.9), rgba(78, 40, 21, 0.93) 50%, rgba(55, 28, 17, 0.95));
+
+  --trace-material-hardware: #bd7d2e;
+  --trace-material-edge-wear: rgba(241, 183, 79, 0.26);
+  --trace-app-background-color: #9b5a24;
+  --trace-app-background: var(--trace-material-wall);
+  --trace-app-background-blend-mode: normal;
+  --trace-app-decoration: linear-gradient(90deg, transparent, #a84d25 16%, #e5a640 50%, #a84d25 84%, transparent);
+  --trace-header-background: rgba(117, 59, 24, 0.9);
+  --trace-header-border: #d39a46;
+
+  --trace-surface-primary: #754521;
+  --trace-surface-secondary: #8a572c;
+  --trace-surface-elevated: #a36b36;
+  --trace-surface-subtle: #5d351d;
+  --trace-dialog-surface: #794923;
+  --trace-text-primary: #fff2d2;
+  --trace-text-secondary: #efd3a4;
+  --trace-text-on-accent: #fff8df;
+  --trace-border-default: #c48b43;
+  --trace-divider: rgba(220, 159, 70, 0.74);
+
+  --trace-accent-primary: #a24d24;
+  --trace-accent-primary-hover: #b65a27;
+  --trace-accent-primary-border: #e7ad50;
+  --trace-accent-secondary: #d99632;
+  --trace-accent-secondary-strong: #ffd47a;
+  --trace-accent-secondary-surface: #8b4b22;
+  --trace-focus-ring: #ffd56c;
+
+  --trace-button-primary-bg: var(--trace-material-sun-wood);
+  --trace-button-primary-hover:
+    radial-gradient(ellipse at 50% -14%, rgba(255, 224, 145, 0.24), transparent 50%),
+    var(--trace-material-sun-wood);
+  --trace-button-primary-border: #dda14b;
+  --trace-button-primary-text: #fff5d9;
+  --trace-button-secondary-bg: var(--trace-material-aged-sandstone);
+  --trace-button-secondary-hover:
+    radial-gradient(ellipse at 50% -14%, rgba(255, 235, 187, 0.2), transparent 50%),
+    var(--trace-material-aged-sandstone);
+  --trace-button-secondary-border: #d1a15d;
+  --trace-button-secondary-text: #fff3d2;
+  --trace-button-accent-bg:
+    radial-gradient(ellipse at 50% -18%, rgba(255, 231, 154, 0.25), transparent 50%),
+    linear-gradient(155deg, #d59a38, #a76525 58%, #784018);
+  --trace-button-accent-border: #f1c266;
+  --trace-button-accent-text: #fff7df;
+  --trace-button-danger-bg: var(--trace-material-woven-leather);
+  --trace-button-danger-border: #dc8b62;
+  --trace-button-danger-text: #fff1df;
+
+  --trace-input-bg: var(--trace-material-desert-parchment);
+  --trace-input-text: #3e2818;
+  --trace-input-border: #9d652f;
+  --trace-input-placeholder: #796044;
+  --trace-control-label: #f5dbad;
+
+  --trace-header-panel-background: var(--trace-material-sun-wood);
+  --trace-header-panel-border: #dfa34b;
+  --trace-header-panel-border-width: 4px;
+  --trace-header-panel-radius: 13px 21px 12px 19px;
+  --trace-header-panel-shadow:
+    inset 0 2px 0 rgba(255, 226, 158, 0.28),
+    inset 0 -7px 10px rgba(78, 31, 9, 0.44),
+    inset 0 0 0 2px rgba(86, 39, 14, 0.4),
+    0 14px 30px rgba(88, 42, 12, 0.3);
+  --trace-header-panel-outline: 1px solid rgba(250, 198, 96, 0.42);
+  --trace-header-panel-outline-offset: -7px;
+  --trace-navigation-background: var(--trace-material-aged-sandstone);
+  --trace-navigation-border: #d2a35e;
+  --trace-navigation-border-width: 3px;
+  --trace-navigation-radius: 9px 15px 8px 13px;
+  --trace-navigation-shadow:
+    inset 0 2px 0 rgba(255, 239, 202, 0.18),
+    inset 0 -5px 8px rgba(68, 34, 16, 0.36),
+    0 8px 17px rgba(89, 44, 14, 0.28);
+  --trace-navigation-outline: 1px solid rgba(240, 186, 91, 0.28);
+  --trace-navigation-outline-offset: -5px;
+  --trace-panel-background: var(--trace-material-desert-panel);
+  --trace-panel-border: #c58a43;
+  --trace-panel-radius: 11px 17px 10px 15px;
+  --trace-panel-shadow:
+    inset 0 1px 0 rgba(255, 230, 181, 0.15),
+    inset 0 -4px 8px rgba(52, 24, 12, 0.34),
+    0 10px 22px rgba(84, 39, 12, 0.28);
+  --trace-panel-outline: 1px solid rgba(235, 177, 83, 0.24);
+  --trace-panel-outline-offset: -5px;
+  --trace-card-background: var(--trace-material-aged-sandstone);
+  --trace-card-border: #c99555;
+  --trace-card-shadow:
+    inset 0 1px 0 rgba(255, 239, 202, 0.16),
+    inset 0 -3px 7px rgba(62, 31, 15, 0.31),
+    0 5px 12px rgba(78, 36, 13, 0.25);
+  --trace-card-outline: 1px solid rgba(237, 181, 93, 0.18);
+  --trace-card-outline-offset: -4px;
+
+  --trace-button-radius: 7px 13px 6px 11px;
+  --trace-button-large-radius: 9px 16px 8px 14px;
+  --trace-button-primary-shadow:
+    inset 0 2px 0 rgba(255, 229, 169, 0.3),
+    inset 0 -5px 7px rgba(73, 28, 8, 0.46),
+    0 4px 0 #54280f,
+    0 8px 14px rgba(80, 34, 10, 0.3);
+  --trace-feature-primary-shadow: var(--trace-button-primary-shadow);
+  --trace-button-secondary-shadow:
+    inset 0 1px 0 rgba(255, 240, 207, 0.18),
+    inset 0 -4px 7px rgba(60, 31, 16, 0.38),
+    0 3px 0 #593219,
+    0 7px 12px rgba(79, 36, 12, 0.26);
+  --trace-button-hover-shadow:
+    inset 0 2px 0 rgba(255, 239, 195, 0.32),
+    inset 0 -4px 7px rgba(66, 29, 10, 0.36),
+    0 5px 0 #623018,
+    0 10px 17px rgba(82, 34, 10, 0.32);
+  --trace-button-active-shadow:
+    inset 0 5px 9px rgba(60, 27, 10, 0.5),
+    inset 0 1px 0 rgba(255, 226, 157, 0.16),
+    0 1px 0 #49220f;
+  --trace-button-disabled-filter: saturate(0.5) brightness(0.84);
+  --trace-button-hover-transform: translateY(-1px);
+  --trace-button-active-transform: translateY(2px);
+  --trace-button-text-shadow: 0 1px 2px rgba(55, 24, 8, 0.72);
+  --trace-feature-core-background: var(--trace-material-aged-sandstone);
+  --trace-feature-core-border: #d0a05d;
+  --trace-feature-brass-background: var(--trace-button-accent-bg);
+  --trace-feature-brass-border: var(--trace-button-accent-border);
+  --trace-feature-brass-text: var(--trace-button-accent-text);
+
+  --trace-control-radius: 6px 11px 5px 10px;
+  --trace-control-shadow:
+    inset 0 1px 1px rgba(255, 255, 236, 0.62),
+    inset 0 -3px 6px rgba(145, 83, 30, 0.18),
+    0 3px 8px rgba(91, 43, 15, 0.24);
+  --trace-control-outline: 1px solid rgba(120, 71, 31, 0.48);
+  --trace-control-outline-offset: -4px;
+  --trace-control-color-scheme: light;
+  --trace-toolbar-control-background: var(--trace-material-desert-parchment);
+  --trace-toolbar-control-border: var(--trace-input-border);
+  --trace-toolbar-control-radius: var(--trace-control-radius);
+  --trace-toolbar-control-shadow: var(--trace-control-shadow);
+  --trace-toolbar-control-text: var(--trace-input-text);
+  --trace-toolbar-control-placeholder: var(--trace-input-placeholder);
+  --trace-editor-panel-background: var(--trace-material-desert-panel);
+  --trace-editor-panel-border: var(--trace-panel-border);
+  --trace-editor-panel-radius: var(--trace-panel-radius);
+  --trace-editor-panel-shadow: var(--trace-panel-shadow);
+
+  --trace-option-background: var(--trace-material-aged-sandstone);
+  --trace-option-selected-background:
+    radial-gradient(ellipse at 50% -18%, rgba(255, 223, 136, 0.2), transparent 48%),
+    linear-gradient(155deg, #b65b27, #8d3e21 58%, #64261a);
+  --trace-option-border: #c99555;
+  --trace-option-selected-border: #efb94e;
+  --trace-option-shadow: var(--trace-button-secondary-shadow);
+  --trace-option-outline: 1px solid rgba(238, 178, 83, 0.2);
+  --trace-option-outline-offset: -4px;
+  --trace-segment-selected-background: var(--trace-option-selected-background);
+  --trace-segment-selected-border: var(--trace-option-selected-border);
+  --trace-segment-selected-text: #fff0c2;
+
+  --trace-toggle-track:
+    repeating-linear-gradient(45deg, rgba(242, 198, 123, 0.1) 0 2px, transparent 2px 7px),
+    repeating-linear-gradient(-45deg, rgba(54, 22, 11, 0.13) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, #704126, #482518 64%, #321810);
+  --trace-toggle-border: #bd813f;
+  --trace-toggle-radius: 7px 13px 6px 12px;
+  --trace-toggle-height: 30px;
+  --trace-toggle-width: 52px;
+  --trace-toggle-track-shadow:
+    inset 0 3px 6px rgba(54, 24, 11, 0.58),
+    0 1px 0 rgba(246, 197, 105, 0.26);
+  --trace-toggle-selected:
+    repeating-linear-gradient(45deg, rgba(255, 226, 157, 0.12) 0 2px, transparent 2px 7px),
+    linear-gradient(180deg, #b76628, #85401f 64%, #5d2918);
+  --trace-toggle-selected-border: #e6aa45;
+  --trace-toggle-thumb:
+    radial-gradient(circle at 35% 30%, #ffe8af 0 10%, #c59653 38%, #79522d 72%, #4d311d);
+  --trace-toggle-thumb-selected:
+    radial-gradient(circle at 35% 30%, #fff1b9 0 10%, #e5ad43 42%, #af6424 72%, #713918);
+  --trace-toggle-thumb-border: #4d2b18;
+  --trace-toggle-thumb-radius: 50%;
+  --trace-toggle-thumb-height: 22px;
+  --trace-toggle-thumb-width: 22px;
+  --trace-toggle-thumb-shadow:
+    inset 0 1px 1px rgba(255, 247, 211, 0.54),
+    0 2px 4px rgba(67, 29, 10, 0.5);
+  --trace-toggle-thumb-translate: 22px;
+  --trace-segment-radius: 7px 13px 6px 12px;
+  --trace-segment-button-radius: 6px 11px 5px 10px;
+
+  --trace-heading-shadow: 0 1px 2px rgba(61, 28, 10, 0.7);
+  --trace-divider-decoration:
+    repeating-linear-gradient(90deg, transparent 0 8px, #d99b3c 8px 11px, transparent 11px 18px) center / auto 3px no-repeat,
+    linear-gradient(90deg, transparent, #a84c25 14%, #e7aa42 50%, #a84c25 86%, transparent);
+  --trace-identity-divider-display: block;
+  --trace-empty-background: var(--trace-material-weathered-sandstone);
+  --trace-empty-border: #c28d4e;
+  --trace-empty-radius: 7px 13px 6px 12px;
+  --trace-empty-padding: 12px 14px;
+
+  --trace-dialog-background: var(--trace-material-desert-panel);
+  --trace-dialog-border: #c88d42;
+  --trace-dialog-border-width: 8px;
+  --trace-dialog-background-clip: padding-box;
+  --trace-dialog-background-origin: border-box;
+  --trace-dialog-radius: 12px 19px 11px 17px;
+  --trace-dialog-shadow:
+    inset 0 1px 0 rgba(255, 231, 180, 0.16),
+    inset 0 -6px 11px rgba(57, 26, 11, 0.36),
+    0 22px 58px rgba(85, 36, 10, 0.42);
+  --trace-dialog-text: var(--trace-text-primary);
+  --trace-dialog-hardware-display: block;
+  --trace-dialog-hardware-background:
+    linear-gradient(90deg, #a64b25, #dc9a3b, #a64b25) top left / 74px 5px no-repeat,
+    linear-gradient(180deg, #a64b25, #dc9a3b, #a64b25) bottom right / 5px 74px no-repeat;
+  --trace-document-dialog-background:
+    radial-gradient(circle at 8% 12%, rgba(178, 86, 31, 0.11) 0 5px, transparent 6px) padding-box,
+    repeating-linear-gradient(5deg, rgba(105, 69, 31, 0.035) 0 1px, transparent 1px 6px) padding-box,
+    linear-gradient(106deg, #e1b973, #f0d39c 42%, #dfb66f 76%, #c98f43) padding-box,
+    var(--trace-material-sun-wood) border-box;
+  --trace-document-dialog-border: transparent;
+  --trace-document-dialog-border-width: 11px;
+  --trace-document-dialog-background-clip: padding-box, padding-box, padding-box, border-box;
+  --trace-document-dialog-background-origin: border-box;
+  --trace-document-dialog-radius: 12px 20px 11px 18px;
+  --trace-document-dialog-shadow: var(--trace-dialog-shadow);
+  --trace-document-dialog-text: #3b2516;
+  --trace-document-dialog-hardware-display: block;
+  --trace-document-dialog-hardware-background: var(--trace-dialog-hardware-background);
+  --trace-dialog-control-border: var(--trace-input-border);
+  --trace-dialog-button-background: var(--trace-material-aged-sandstone);
+  --trace-dialog-button-border: var(--trace-button-secondary-border);
+  --trace-dialog-button-radius: var(--trace-button-radius);
+  --trace-dialog-button-shadow: var(--trace-button-secondary-shadow);
+  --trace-memory-dialog-shadow: var(--trace-dialog-shadow);
+  --trace-trophy-dialog-radius: var(--trace-dialog-radius);
+  --trace-trophy-dialog-shadow: var(--trace-dialog-shadow);
+
+  --trace-toast-bg: var(--trace-material-sun-wood);
+  --trace-toast-border: #e0a74f;
+  --trace-toast-text: #fff2ce;
+  --trace-toast-shadow:
+    inset 0 2px 0 rgba(255, 230, 172, 0.23),
+    inset 0 -4px 7px rgba(72, 28, 8, 0.4),
+    0 7px 18px rgba(83, 34, 9, 0.34);
+  --trace-toast-radius: 7px 13px 6px 12px;
+  --trace-toast-text-shadow: var(--trace-button-text-shadow);
+  --trace-error-bg: #74342a;
+  --trace-error-border: #df8765;
+  --trace-error-text: #fff0dd;
+  --trace-overlay: rgba(74, 35, 14, 0.58);
+
+  --trace-progress-track: #5b351d;
+  --trace-progress-border: #c48a3c;
+  --trace-progress-border-width: 2px;
+  --trace-progress-height: 12px;
+  --trace-progress-radius: 6px 11px 5px 10px;
+  --trace-progress-track-shadow:
+    inset 0 3px 5px rgba(55, 25, 10, 0.62),
+    inset 0 0 0 2px rgba(116, 67, 29, 0.42),
+    0 1px 0 rgba(248, 205, 118, 0.24);
+  --trace-progress-fill: #d99632;
+  --trace-progress-fill-background:
+    repeating-linear-gradient(90deg, rgba(255, 247, 194, 0.24) 0 2px, transparent 2px 9px),
+    linear-gradient(180deg, #f2c45e, #d18b2f 56%, #9a521f);
+  --trace-progress-fill-shadow:
+    inset 0 1px 0 rgba(255, 252, 213, 0.66),
+    0 0 7px rgba(225, 157, 52, 0.38);
+
+  --trace-water-background: var(--trace-material-desert-panel);
+  --trace-water-border: #c58d47;
+  --trace-water-radius: var(--trace-panel-radius);
+  --trace-water-shadow: var(--trace-panel-shadow);
+  --trace-water-eyebrow: #f1bc68;
+  --trace-water-segment-background: #58331d;
+  --trace-water-stat-background: var(--trace-material-weathered-sandstone);
+  --trace-water-stat-border: #bd884c;
+  --trace-water-stat-radius: 7px 13px 6px 12px;
+  --trace-water-stat-shadow:
+    inset 0 1px 0 rgba(255, 234, 192, 0.15),
+    inset 0 -3px 7px rgba(55, 28, 15, 0.31),
+    0 5px 11px rgba(75, 34, 12, 0.24);
+  --trace-water-stat-text: #fff0cd;
+  --trace-water-divider: #a87542;
+  --trace-water-history-text: #efd2a1;
+  --trace-water-row-background: var(--trace-material-weathered-sandstone);
+  --trace-water-row-border: #b9854a;
+  --trace-water-row-radius: 7px 13px 6px 12px;
+  --trace-water-selected-border: #e8ac45;
+  --trace-stat-card-background: var(--trace-material-weathered-sandstone);
+  --trace-stat-card-border: #bd884c;
+  --trace-stat-card-radius: 7px 13px 6px 12px;
+  --trace-stat-card-shadow: var(--trace-water-stat-shadow);
+  --trace-stat-card-outline: 1px solid rgba(238, 183, 94, 0.18);
+  --trace-stat-card-outline-offset: -4px;
+  --trace-fieldset-border: #c29355;
+  --trace-fieldset-shadow:
+    inset 0 1px 0 rgba(255, 235, 194, 0.13),
+    0 4px 10px rgba(75, 33, 11, 0.22);
+
+  --trace-utility-settings-background: var(--trace-material-aged-sandstone);
+  --trace-utility-settings-border: #cc9958;
+  --trace-utility-settings-text: #fff1cf;
+  --trace-utility-journal-background: var(--trace-material-sun-wood);
+  --trace-utility-journal-border: #dfa44c;
+  --trace-utility-journal-shadow: var(--trace-button-primary-shadow);
+  --trace-utility-journal-text: #fff4d5;
+  --trace-utility-journal-eyebrow: #f2d29e;
+  --trace-utility-trophy-background: var(--trace-button-accent-bg);
+  --trace-utility-trophy-border: #edbc5d;
+  --trace-utility-trophy-shadow: var(--trace-button-secondary-shadow);
+  --trace-utility-trophy-text: #fff6d9;
+  --trace-utility-trophy-eyebrow: #f8d88f;
+  --trace-utility-radius: 7px 13px 6px 12px;
+
+  --trace-bg-deep: var(--trace-app-background-color);
+  --trace-bg: #70401f;
+  --trace-surface-1: var(--trace-surface-primary);
+  --trace-surface-2: var(--trace-surface-secondary);
+  --trace-surface-raised: var(--trace-surface-elevated);
+  --trace-surface: var(--trace-surface-primary);
+  --trace-text: var(--trace-text-primary);
+  --trace-text-muted: var(--trace-text-secondary);
+  --trace-teal: var(--trace-button-primary-bg);
+  --trace-teal-strong: #a85524;
+  --trace-teal-soft: var(--trace-button-primary-border);
+  --trace-brass: var(--trace-accent-secondary);
+  --trace-brass-strong: var(--trace-accent-secondary-strong);
+  --trace-border: var(--trace-border-default);
+  --trace-border-warm: #c89049;
+  --trace-focus: var(--trace-focus-ring);
+  --trace-danger: var(--trace-button-danger-bg);
+}
+
 :root[data-trace-shell-theme="to-kingdoms-ahead"] {
   /* Reusable physical materials for the Kingdom shell. */
   --trace-material-wall:
