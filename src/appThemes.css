@@ -679,12 +679,16 @@
 :root[data-trace-shell-theme="to-kingdoms-ahead"] {
   /* Reusable physical materials for the Kingdom shell. */
   --trace-material-wall:
-    radial-gradient(ellipse at 18% 12%, rgba(161, 128, 79, 0.09), transparent 27rem),
-    radial-gradient(ellipse at 84% 34%, rgba(7, 8, 6, 0.48), transparent 34rem),
-    radial-gradient(circle at 32% 46%, rgba(235, 216, 174, 0.035) 0 1px, transparent 2px),
-    radial-gradient(circle at 71% 73%, rgba(0, 0, 0, 0.16) 0 1px, transparent 3px),
-    repeating-linear-gradient(107deg, rgba(235, 220, 186, 0.012) 0 1px, transparent 1px 19px),
-    linear-gradient(110deg, #1b1d18, #292920 48%, #171914);
+    radial-gradient(circle at 6% 48%, rgba(207, 116, 42, 0.11), transparent 25rem) center / cover fixed,
+    radial-gradient(circle at 94% 60%, rgba(221, 131, 47, 0.1), transparent 27rem) center / cover fixed,
+    radial-gradient(ellipse at center, transparent 20%, rgba(3, 4, 3, 0.52) 100%) center / cover fixed,
+    linear-gradient(180deg, rgba(7, 10, 12, 0.16), rgba(11, 9, 6, 0.5)) center / cover fixed,
+    url("./assets/app-themes/to-kingdoms-ahead/fortress-environment.jpg") center top / cover no-repeat fixed;
+  --trace-material-fortress-panel:
+    radial-gradient(circle at 11% 18%, rgba(235, 224, 198, 0.075) 0 1px, transparent 3px),
+    radial-gradient(ellipse at 82% 78%, rgba(5, 6, 4, 0.2), transparent 38%),
+    repeating-linear-gradient(117deg, rgba(231, 220, 194, 0.014) 0 1px, transparent 1px 15px),
+    linear-gradient(145deg, rgba(67, 65, 56, 0.88), rgba(49, 50, 44, 0.91) 46%, rgba(31, 34, 30, 0.94) 100%);
   --trace-material-timber:
     radial-gradient(ellipse at 22% 130%, transparent 0 34%, rgba(38, 17, 8, 0.38) 35% 38%, transparent 39%),
     radial-gradient(ellipse at 78% -35%, transparent 0 31%, rgba(245, 184, 104, 0.12) 32% 34%, transparent 35%),
@@ -727,6 +731,7 @@
   --trace-material-edge-wear: rgba(231, 195, 132, 0.2);
   --trace-app-background-color: #171712;
   --trace-app-background: var(--trace-material-wall);
+  --trace-app-background-blend-mode: normal;
   --trace-app-decoration: linear-gradient(90deg, transparent, #b8874f, transparent);
   --trace-header-background: rgba(38, 37, 29, 0.94);
   --trace-header-border: #6f634e;
@@ -771,7 +776,9 @@
   --trace-input-placeholder: #aaa18f;
   --trace-control-label: #e0d5c0;
 
-  --trace-header-panel-background: var(--trace-material-stone);
+  --trace-header-panel-background:
+    radial-gradient(ellipse at 50% -18%, rgba(244, 219, 170, 0.1), transparent 50%),
+    linear-gradient(150deg, rgba(58, 57, 49, 0.7), rgba(26, 29, 26, 0.84));
   --trace-header-panel-border: #694124;
   --trace-header-panel-border-width: 4px;
   --trace-header-panel-radius: 3px 13px 3px 13px;
@@ -783,7 +790,9 @@
     0 16px 34px rgba(5, 5, 3, 0.45);
   --trace-header-panel-outline: 1px solid #21150e;
   --trace-header-panel-outline-offset: 2px;
-  --trace-navigation-background: var(--trace-material-iron);
+  --trace-navigation-background:
+    radial-gradient(ellipse at 50% -16%, rgba(246, 223, 180, 0.07), transparent 46%),
+    linear-gradient(158deg, rgba(45, 47, 42, 0.78), rgba(20, 22, 20, 0.89));
   --trace-navigation-border: #684326;
   --trace-navigation-border-width: 4px;
   --trace-navigation-radius: 3px 11px 3px 11px;
@@ -795,7 +804,7 @@
     0 10px 23px rgba(4, 4, 3, 0.42);
   --trace-navigation-outline: 1px solid #17130e;
   --trace-navigation-outline-offset: 2px;
-  --trace-panel-background: var(--trace-material-stone);
+  --trace-panel-background: var(--trace-material-fortress-panel);
   --trace-panel-border: #75603f;
   --trace-panel-radius: 3px 10px 3px 10px;
   --trace-panel-shadow:
@@ -1022,7 +1031,7 @@
     inset 0 1px 0 rgba(255, 249, 216, 0.64),
     2px 0 5px rgba(240, 175, 83, 0.34);
 
-  --trace-water-background: var(--trace-material-stone);
+  --trace-water-background: var(--trace-material-fortress-panel);
   --trace-water-border: #9a8053;
   --trace-water-radius: var(--trace-panel-radius);
   --trace-water-shadow: var(--trace-panel-shadow);

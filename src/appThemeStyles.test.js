@@ -129,6 +129,9 @@ test("To Kingdoms Ahead defines visibly distinct reusable physical materials", (
   expect(kingdomBlock).toContain("--trace-input-bg: var(--trace-material-parchment)");
   expect(kingdomBlock).toContain("--trace-stat-card-background: var(--trace-material-passive-stone)");
   expect(kingdomBlock).toContain("--trace-water-stat-background: var(--trace-material-passive-stone)");
+  expect(kingdomBlock).toContain('url("./assets/app-themes/to-kingdoms-ahead/fortress-environment.jpg")');
+  expect(kingdomBlock).toContain("--trace-panel-background: var(--trace-material-fortress-panel)");
+  expect(kingdomBlock).toContain("--trace-water-background: var(--trace-material-fortress-panel)");
   expect(kingdomBlock).not.toContain("--trace-water-stat-background: var(--trace-material-iron)");
   expect(kingdomBlock).toContain("--trace-dialog-hardware-display: block");
 });
