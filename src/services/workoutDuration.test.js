@@ -1,4 +1,5 @@
 import {
+  elapsedWorkoutMinutes,
   formatWorkoutDuration,
   workoutDurationMilliseconds,
 } from "./workoutDuration";
@@ -19,4 +20,16 @@ test.each([
 ])("safely rejects missing, invalid, or negative timing", (start, finish) => {
   expect(workoutDurationMilliseconds(start, finish)).toBeNull();
   expect(formatWorkoutDuration(start, finish)).toBeNull();
+});
+
+test("calculates rounded elapsed minutes without allowing a zero-minute workout", () => {
+  expect(elapsedWorkoutMinutes(
+    "2026-09-01T15:00:00.000Z",
+    new Date("2026-09-01T15:42:29.000Z")
+  )).toBe(42);
+  expect(elapsedWorkoutMinutes(
+    "2026-09-01T15:00:00.000Z",
+    new Date("2026-09-01T15:00:10.000Z")
+  )).toBe(1);
+  expect(elapsedWorkoutMinutes("invalid", new Date())).toBeNull();
 });

@@ -585,6 +585,8 @@ test("same-tab restore treats completed workout history as authoritative over a 
 });
 
 function fillBodyweightWorkout(title = "Push Day") {
+  const logButton = screen.queryByRole("button", { name: "Log Workout" });
+  if (logButton) fireEvent.click(logButton);
   fireEvent.change(screen.getByLabelText("Workout title"), {
     target: { value: title },
   });
@@ -597,6 +599,18 @@ function fillBodyweightWorkout(title = "Push Day") {
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
     target: { value: "6" },
   });
+}
+
+function reviewWorkout() {
+  const reviewButton = screen.queryByRole("button", {
+    name: /^(Finish|Review) Workout$/,
+  });
+  if (reviewButton) fireEvent.click(reviewButton);
+}
+
+function submitWorkout() {
+  reviewWorkout();
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
 }
 
 function seedWorkoutEstimateInputs({ dateOfBirth = "1990-08-21" } = {}) {
@@ -976,7 +990,7 @@ test("calendar-origin workout Back, Cancel, Continue, and Complete restore the s
   fireEvent.click(screen.getByRole("button", { name: "Start workout Calendar Strength" }));
   const roadmapExercise = screen.getByRole("article", { name: "Roadmap exercise Calendar Squat" });
   fireEvent.click(within(roadmapExercise).getByRole("button", { name: "Completed" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   await waitFor(() => expect(screen.getByRole("heading", { name: "Upcoming Schedule" })).toBeInTheDocument());
   expect(document.querySelector(`[data-calendar-date="${selectedDate}"]`)).toHaveAttribute("aria-pressed", "true");
   expect(within(screen.getByRole("region", { name: "Completed" })).getByText("Calendar Strength")).toBeInTheDocument();
@@ -1559,7 +1573,7 @@ test("executes a plan through WorkoutPage and reflects completion and deletion i
 
   expect(localStorage.getItem("plannedWorkouts")).toBe(savedPlan);
   fireEvent.click(within(roadmapExercise).getByRole("button", { name: "Completed" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   await waitFor(() => {
     expect(JSON.parse(localStorage.getItem("workoutEntries"))).toHaveLength(1);
@@ -1659,7 +1673,7 @@ test("saves a partial planned workout as resumable progress and completes it exa
   });
   fireEvent.click(screen.getByRole("button", { name: "Done editing" }));
   fireEvent.click(within(firstExercise).getByRole("button", { name: "Completed" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   expect(screen.getByRole("heading", { name: "Today's Schedule" })).toBeInTheDocument();
   expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Workout progress saved.");
@@ -1709,7 +1723,7 @@ test("saves a partial planned workout as resumable progress and completes it exa
   expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(9);
 
   fireEvent.click(within(restoredSecond).getByRole("button", { name: "Completed" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   await waitFor(() => {
     expect(JSON.parse(localStorage.getItem("workoutEntries"))).toHaveLength(1);
@@ -1801,7 +1815,7 @@ test("uses one fixed auto-dismissing toast host for planner, preview, and Roadma
     fireEvent.click(screen.getByRole("button", { name: "Start planned workout Roadmap Toast" }));
     fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Push-Up" }))
       .getByRole("button", { name: "Completed" }));
-    fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+    submitWorkout();
     expect(screen.getByTestId("save-confirmation")).toHaveTextContent("Workout progress saved.");
     expect(screen.getByTestId("save-confirmation")).toHaveClass("trace-save-confirmation");
     expect(screen.getAllByTestId("save-confirmation")).toHaveLength(1);
@@ -1989,7 +2003,7 @@ test("prevents a second completed entry for the same planned workout", async () 
     .getByRole("heading", { name: "Duplicate Guard" })).toBeInTheDocument();
   fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Dips" }))
     .getByRole("button", { name: "Completed" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   expect(JSON.parse(localStorage.getItem("workoutEntries"))).toEqual([existingEntry]);
   expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).not.toBeNull();
@@ -3781,9 +3795,10 @@ test("workouts persist separately and reload as complete snapshots", () => {
   const firstRender = render(<App />);
   openWorkouts();
   fillBodyweightWorkout("Push Day");
+  reviewWorkout();
   fireEvent.change(screen.getByLabelText("Approximate workout duration"), { target: { value: "42" } });
   fireEvent.change(screen.getByLabelText("Workout intensity"), { target: { value: "moderate" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   const stored = JSON.parse(localStorage.getItem("workoutEntries"));
   expect(stored).toHaveLength(1);
@@ -3824,7 +3839,7 @@ test("completed workout drops persist recursively and reload in Workout History"
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 1 reps"), {
     target: { value: "4" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   const stored = JSON.parse(localStorage.getItem("workoutEntries"));
   expect(stored[0].exercises[0].sets[0].drops).toEqual([
@@ -3852,7 +3867,7 @@ test("workout photo blobs stay in IndexedDB references and are cleaned up with o
   fillBodyweightWorkout("Photo Workout");
   const photo = new File(["workout image"], "workout.jpg", { type: "image/jpeg" });
   fireEvent.change(screen.getByLabelText("Choose Photos"), { target: { files: [photo] } });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   await waitFor(() => expect(JSON.parse(localStorage.getItem("workoutEntries"))).toHaveLength(1));
   const stored = JSON.parse(localStorage.getItem("workoutEntries"))[0];
@@ -3877,9 +3892,10 @@ test("workout completion snapshots the historical estimate, confirms it, and rel
   fillBodyweightWorkout("Estimated Push Day");
   fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-08-20" } });
   fireEvent.change(screen.getByLabelText("Time"), { target: { value: "18:00" } });
+  reviewWorkout();
   fireEvent.change(screen.getByLabelText("Approximate workout duration"), { target: { value: "60" } });
   fireEvent.change(screen.getByLabelText("Workout intensity"), { target: { value: "moderate" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   const stored = JSON.parse(localStorage.getItem("workoutEntries"))[0];
   expect(stored.calorieEstimate).toMatchObject({
@@ -3918,9 +3934,10 @@ test("workout edits preserve unrelated snapshots, refresh relevant dates, and re
   fillBodyweightWorkout("Editable Estimate");
   fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-08-10" } });
   fireEvent.change(screen.getByLabelText("Time"), { target: { value: "18:00" } });
+  reviewWorkout();
   fireEvent.change(screen.getByLabelText("Approximate workout duration"), { target: { value: "60" } });
   fireEvent.change(screen.getByLabelText("Workout intensity"), { target: { value: "moderate" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   const initialSnapshot = JSON.parse(localStorage.getItem("workoutEntries"))[0].calorieEstimate;
   expect(initialSnapshot.sourceHealthWeightEntryId).toBe("weight-old");
 
@@ -4079,7 +4096,7 @@ test("refreshes a resolvable curated PR after correction and freezes it after so
   render(<App />);
   openWorkouts();
   fillBodyweightWorkout("Push Day");
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   fireEvent.click(screen.getByRole("button", { name: /Dips.*1 performance/ }));
   const currentRecords = screen.getByRole("region", { name: "Dips current records" });
@@ -4138,7 +4155,7 @@ test("dedicated Trophy Case removal preserves workout history, derived PRs, and 
   render(<App />);
   openWorkouts();
   fillBodyweightWorkout("Push Day");
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   fireEvent.click(screen.getByRole("button", { name: /Dips.*1 performance/ }));
   const currentRecords = screen.getByRole("region", { name: "Dips current records" });
   fireEvent.click(within(currentRecords).getByRole("button", { name: "Add to Trophy Case" }));
@@ -4164,7 +4181,7 @@ test("adding a PR Timeline achievement keeps both Timeline and Exercise History 
   render(<App />);
   openWorkouts();
   fillBodyweightWorkout("Push Day");
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   const summary = screen.getByRole("button", { name: /Dips.*1 performance/ });
   fireEvent.click(summary);
   fireEvent.click(screen.getByRole("button", { name: "View PR Timeline" }));
@@ -4308,7 +4325,7 @@ test("creates reusable exercises separately and immediately makes them searchabl
     screen.getByLabelText("Exercise 1 reusable default load mode"),
     { target: { value: "bodyweight" } }
   );
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   const catalog = JSON.parse(localStorage.getItem("savedExercises"));
   const workouts = JSON.parse(localStorage.getItem("workoutEntries"));
@@ -4326,6 +4343,7 @@ test("creates reusable exercises separately and immediately makes them searchabl
     modified: false,
   });
 
+  fireEvent.click(screen.getByRole("button", { name: "Log Workout" }));
   fireEvent.click(
     screen.getByRole("button", {
       name: "Find an exercise for exercise 1",
@@ -4382,6 +4400,7 @@ test("editing a saved exercise refreshes defaults and never rewrites history", (
 
   const firstRender = render(<App />);
   openWorkouts();
+  fireEvent.click(screen.getByRole("button", { name: "Log Workout" }));
   fireEvent.click(screen.getByRole("button", { name: /Find an exercise/ }));
   fireEvent.change(screen.getByLabelText("Exercise search"), {
     target: { value: "dips" },
@@ -4448,6 +4467,7 @@ test("persists related custom squat exercises separately and surfaces both in un
   localStorage.setItem("savedExercises", JSON.stringify([squat]));
   render(<App />);
   openWorkouts();
+  fireEvent.click(screen.getByRole("button", { name: "Log Workout" }));
   fireEvent.change(screen.getByLabelText("Workout title"), {
     target: { value: "Leg Day" },
   });
@@ -4461,7 +4481,7 @@ test("persists related custom squat exercises separately and surfaces both in un
     target: { value: "5" },
   });
   fireEvent.click(screen.getByLabelText("Save as reusable exercise"));
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   const catalog = JSON.parse(localStorage.getItem("savedExercises"));
   expect(catalog.map(({ name }) => name)).toEqual([
@@ -4478,6 +4498,7 @@ test("persists related custom squat exercises separately and surfaces both in un
   });
   expect(loggedExercise).not.toHaveProperty("exerciseId");
 
+  fireEvent.click(screen.getByRole("button", { name: "Log Workout" }));
   fireEvent.click(
     screen.getByRole("button", { name: "Find an exercise for exercise 1" })
   );

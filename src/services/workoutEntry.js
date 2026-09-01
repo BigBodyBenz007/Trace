@@ -75,6 +75,16 @@ export function getWorkoutEntryIssues(draft) {
       });
     }
   }
+  const caloriesBurned = String(draft?.caloriesBurned ?? "").trim();
+  if (caloriesBurned) {
+    const calories = Number(caloriesBurned);
+    if (!Number.isInteger(calories) || calories <= 0) {
+      issues.push({
+        field: "caloriesBurned",
+        message: "Enter calories burned as a whole number greater than zero.",
+      });
+    }
+  }
   if (!INTENSITIES.has(draft?.intensity || "")) {
     issues.push({ field: "intensity", message: "Choose a valid workout intensity." });
   }
@@ -213,7 +223,11 @@ export function createWorkoutEntry(draft, existingEntry = null, now = new Date()
   const activeDurationMinutes = String(draft.activeDurationMinutes ?? "").trim() === ""
     ? null
     : Number(draft.activeDurationMinutes);
+  const caloriesBurned = String(draft.caloriesBurned ?? "").trim() === ""
+    ? null
+    : Number(draft.caloriesBurned);
   const intensity = draft.intensity || "";
+  const isManualHistoricalWorkout = !existingEntry && draft.timingMode === "manual";
   const plannedWorkoutId = cleanText(
     existingEntry?.plannedWorkoutId || draft.plannedWorkoutId
   );
@@ -223,12 +237,15 @@ export function createWorkoutEntry(draft, existingEntry = null, now = new Date()
     title: cleanText(draft.title),
     occurredAt,
     ...(activeDurationMinutes === null ? {} : { activeDurationMinutes }),
+    ...(caloriesBurned === null ? {} : { caloriesBurned }),
     ...(intensity ? { intensity } : {}),
     ...(plannedWorkoutId ? { plannedWorkoutId } : {}),
-    ...(!existingEntry || existingEntry.startedAt ? { startedAt } : {}),
-    ...(!existingEntry
+    ...((!existingEntry && !isManualHistoricalWorkout) || existingEntry?.startedAt
+      ? { startedAt }
+      : {}),
+    ...(!existingEntry && !isManualHistoricalWorkout
       ? { finishedAt: timestamp }
-      : existingEntry.finishedAt
+      : existingEntry?.finishedAt
         ? { finishedAt: existingEntry.finishedAt }
         : {}),
     notes: cleanText(draft.notes),

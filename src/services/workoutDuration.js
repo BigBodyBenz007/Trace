@@ -26,3 +26,14 @@ export function formatWorkoutDuration(startedAt, finishedAt) {
   if (minutes === 0) return `${hours} hr`;
   return `${hours} hr ${minutes} min`;
 }
+
+export function elapsedWorkoutMinutes(startedAt, finishedAt = new Date()) {
+  const finish = finishedAt instanceof Date
+    ? finishedAt.getTime()
+    : new Date(finishedAt).getTime();
+  const start = new Date(startedAt).getTime();
+  if (!Number.isFinite(start) || !Number.isFinite(finish) || finish < start) {
+    return null;
+  }
+  return Math.max(1, Math.round((finish - start) / 60000));
+}

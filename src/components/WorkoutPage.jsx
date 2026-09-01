@@ -16,7 +16,10 @@ import {
   getWorkoutEntryIssues,
 } from "../services/workoutEntry";
 import { getExerciseDefinitionError } from "../services/exerciseCatalog";
-import { formatWorkoutDuration } from "../services/workoutDuration";
+import {
+  elapsedWorkoutMinutes,
+  formatWorkoutDuration,
+} from "../services/workoutDuration";
 import { workoutCalorieEstimateSaveMessage } from "../services/workoutCalorieEstimateSnapshot";
 import {
   clearWorkoutDraft,
@@ -135,10 +138,12 @@ function WorkoutTiming({ entry }) {
     : null;
   const hasActiveDuration = Number.isInteger(entry.activeDurationMinutes)
     && entry.activeDurationMinutes > 0;
+  const hasCaloriesBurned = Number.isInteger(entry.caloriesBurned)
+    && entry.caloriesBurned > 0;
   const intensityLabel = WORKOUT_INTENSITY_OPTIONS.find(
     ({ value }) => value && value === entry.intensity
   )?.label;
-  if (!hasElapsedTiming && !hasActiveDuration && !intensityLabel) return null;
+  if (!hasElapsedTiming && !hasActiveDuration && !hasCaloriesBurned && !intensityLabel) return null;
 
   return (
     <dl style={{ display: "grid", gap: "6px", gridTemplateColumns: "max-content minmax(0, 1fr)", margin: "10px 0", maxWidth: "100%" }}>
@@ -158,6 +163,10 @@ function WorkoutTiming({ entry }) {
         <dt style={{ color: "#9ca3af" }}>Approximate workout duration</dt>
         <dd style={{ margin: 0 }}>{entry.activeDurationMinutes} min</dd>
       </>}
+      {hasCaloriesBurned && <>
+        <dt style={{ color: "#9ca3af" }}>Calories Burned</dt>
+        <dd style={{ margin: 0 }}>{entry.caloriesBurned} kcal</dd>
+      </>}
       {intensityLabel && <>
         <dt style={{ color: "#9ca3af" }}>Intensity</dt>
         <dd style={{ margin: 0 }}>{intensityLabel}</dd>
@@ -166,17 +175,26 @@ function WorkoutTiming({ entry }) {
   );
 }
 
-function WorkoutReadinessFields({
+function WorkoutResultFields({
   activeDurationMinutes,
+  caloriesBurned,
   intensity,
   onActiveDurationChange,
+  onCaloriesBurnedChange,
   onIntensityChange,
   formInputStyle,
   durationInvalid = false,
+  caloriesInvalid = false,
+  liveTiming = false,
 }) {
   return (
     <fieldset className="workout-readiness-fields">
-      <legend>Workout details (optional)</legend>
+      <legend>Workout results (optional)</legend>
+      {liveTiming && (
+        <p style={{ color: "#bbb", marginTop: 0 }}>
+          Trace calculated duration from when this workout was started. You can correct it before saving.
+        </p>
+      )}
       <div className="workout-readiness-fields__grid">
         <label>
           Approximate workout duration
@@ -198,6 +216,24 @@ function WorkoutReadinessFields({
             From your first set to your last, including normal rest between sets. Exclude long
             interruptions.
           </small>
+        </label>
+        <label>
+          Calories Burned
+          <span className="workout-readiness-fields__minutes">
+            <input
+              aria-label="Calories Burned"
+              aria-invalid={caloriesInvalid || undefined}
+              inputMode="numeric"
+              min="1"
+              step="1"
+              type="number"
+              value={caloriesBurned}
+              onChange={(event) => onCaloriesBurnedChange(event.target.value)}
+              style={formInputStyle}
+            />
+            <span>kcal</span>
+          </span>
+          <small>Enter a result from your watch, machine, or another measured source.</small>
         </label>
         <label>
           Workout intensity
@@ -344,8 +380,12 @@ function WorkoutPage({
   const [title, setTitle] = useState(restoredForm?.title || "");
   const [date, setDate] = useState(restoredForm?.date || initialDateTime.date);
   const [time, setTime] = useState(restoredForm?.time || initialDateTime.time);
+  const [timingMode, setTimingMode] = useState(restoredForm?.timingMode || "live");
   const [activeDurationMinutes, setActiveDurationMinutes] = useState(
     restoredForm?.activeDurationMinutes || ""
+  );
+  const [caloriesBurned, setCaloriesBurned] = useState(
+    restoredForm?.caloriesBurned || ""
   );
   const [intensity, setIntensity] = useState(restoredForm?.intensity || "");
   const [notes, setNotes] = useState(restoredForm?.notes || "");
@@ -375,8 +415,16 @@ function WorkoutPage({
   const [pendingDropRemovals, setPendingDropRemovals] = useState({});
   const [searchResetKey, setSearchResetKey] = useState(0);
   const [validationAttempted, setValidationAttempted] = useState(false);
+  const [isLoggingOpen, setIsLoggingOpen] = useState(Boolean(restoredForm));
+  const [completionReview, setCompletionReview] = useState(
+    Boolean(restoredDraftRef.current?.context?.completionReview)
+  );
   const pageTopRef = useRef(null);
   const formRef = useRef(null);
+  const formHeadingRef = useRef(null);
+  const resultsRef = useRef(null);
+  const pendingFormFocusRef = useRef(false);
+  const pendingResultsFocusRef = useRef(false);
   const workoutEntryRefs = useRef(new Map());
   const workoutEditOriginRef = useRef(null);
   const pendingWorkoutDeleteAnchorRef = useRef(null);
@@ -392,7 +440,7 @@ function WorkoutPage({
   const pendingUndoVisibilityRef = useRef(null);
   const startedAtRef = useRef(
     restoredDraftRef.current?.startedAt ||
-      new Date(`${initialDateTime.date}T${initialDateTime.time}`).toISOString()
+      null
   );
   const plannedWorkoutIdRef = useRef(
     restoredDraftRef.current?.plannedWorkoutId || null
@@ -437,11 +485,22 @@ function WorkoutPage({
         : {}),
       startedAt: startedAtRef.current,
       updatedAt: new Date().toISOString(),
-      form: { title, date, time, activeDurationMinutes, intensity, notes, exercises },
+      form: {
+        title,
+        date,
+        time,
+        timingMode,
+        activeDurationMinutes,
+        caloriesBurned,
+        intensity,
+        notes,
+        exercises,
+      },
       context: {
         activeSearchExerciseId,
         roadmapEditingExerciseId,
         collapsedExerciseIds: Array.from(collapsedExerciseIds),
+        ...(completionReview ? { completionReview: true } : {}),
         ...workoutOriginContext(),
       },
     };
@@ -463,7 +522,21 @@ function WorkoutPage({
       window.removeEventListener("pagehide", flush);
       persist();
     };
-  }, [title, date, time, activeDurationMinutes, intensity, notes, exercises, activeSearchExerciseId, roadmapEditingExerciseId, collapsedExerciseIds, editingEntryId, isDirty, onWorkoutDraftChange]);
+  }, [title, date, time, timingMode, activeDurationMinutes, caloriesBurned, intensity, notes, exercises, activeSearchExerciseId, roadmapEditingExerciseId, collapsedExerciseIds, completionReview, editingEntryId, isDirty, onWorkoutDraftChange]);
+
+  useLayoutEffect(() => {
+    if (!isLoggingOpen || !pendingFormFocusRef.current) return;
+    pendingFormFocusRef.current = false;
+    formHeadingRef.current?.focus({ preventScroll: true });
+    formRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "start" });
+  }, [isLoggingOpen, editingEntryId]);
+
+  useLayoutEffect(() => {
+    if (!completionReview || !pendingResultsFocusRef.current) return;
+    pendingResultsFocusRef.current = false;
+    resultsRef.current?.focus({ preventScroll: true });
+    resultsRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "nearest" });
+  }, [completionReview]);
 
   useLayoutEffect(() => {
     if (!focusDropId) return;
@@ -599,6 +672,20 @@ function WorkoutPage({
   };
   const backButtonStyle = { ...buttonStyle, backgroundColor: "#666" };
 
+  function openWorkoutLogger() {
+    const now = new Date();
+    const current = currentLocalDateTime();
+    startedAtRef.current = now.toISOString();
+    draftPersistenceEnabledRef.current = true;
+    pendingFormFocusRef.current = true;
+    setDate(current.date);
+    setTime(current.time);
+    setTimingMode("live");
+    setCompletionReview(false);
+    setIsDirty(true);
+    setIsLoggingOpen(true);
+    setFormError("");
+  }
 
   function markChanged() {
     draftPersistenceEnabledRef.current = true;
@@ -608,6 +695,32 @@ function WorkoutPage({
 
   function changeField(setValue, value) {
     setValue(value);
+    markChanged();
+  }
+
+  function changeTimingMode(value) {
+    if (value === "live" && timingMode !== "live") {
+      const now = new Date();
+      const current = currentLocalDateTime();
+      startedAtRef.current = now.toISOString();
+      setDate(current.date);
+      setTime(current.time);
+    }
+    setActiveDurationMinutes("");
+    setTimingMode(value);
+    setCompletionReview(false);
+    markChanged();
+  }
+
+  function reviewWorkoutResults() {
+    if (timingMode === "live" && editingEntryId === null) {
+      const calculatedMinutes = elapsedWorkoutMinutes(startedAtRef.current, new Date());
+      if (calculatedMinutes !== null) {
+        setActiveDurationMinutes(String(calculatedMinutes));
+      }
+    }
+    pendingResultsFocusRef.current = true;
+    setCompletionReview(true);
     markChanged();
   }
 
@@ -833,7 +946,9 @@ function WorkoutPage({
     setTitle("");
     setDate(current.date);
     setTime(current.time);
+    setTimingMode("live");
     setActiveDurationMinutes("");
+    setCaloriesBurned("");
     setIntensity("");
     setNotes("");
     setExercises([emptyExercise()]);
@@ -842,6 +957,8 @@ function WorkoutPage({
     setIsDirty(false);
     setFormError("");
     setValidationAttempted(false);
+    setCompletionReview(false);
+    setIsLoggingOpen(false);
     setActiveSearchExerciseId(null);
     setRoadmapEditingExerciseId(null);
     setRoadmapSkipExerciseId(null);
@@ -851,7 +968,7 @@ function WorkoutPage({
     photos.filter(({ isDraft }) => isDraft).forEach(({ url }) => url && URL.revokeObjectURL(url));
     setPhotos([]);
     setSearchResetKey((current) => current + 1);
-    startedAtRef.current = new Date(`${current.date}T${current.time}`).toISOString();
+    startedAtRef.current = null;
     plannedWorkoutIdRef.current = null;
     if (clearDraft) {
       clearWorkoutDraft();
@@ -864,7 +981,9 @@ function WorkoutPage({
       title,
       date,
       time,
+      timingMode,
       activeDurationMinutes,
+      caloriesBurned,
       intensity,
       startedAt: startedAtRef.current,
       ...(plannedWorkoutIdRef.current
@@ -948,10 +1067,21 @@ function WorkoutPage({
         plannedWorkoutId: plannedWorkoutIdRef.current,
         startedAt: startedAtRef.current,
         updatedAt: new Date().toISOString(),
-        form: { title, date, time, activeDurationMinutes, intensity, notes, exercises },
+        form: {
+          title,
+          date,
+          time,
+          timingMode,
+          activeDurationMinutes,
+          caloriesBurned,
+          intensity,
+          notes,
+          exercises,
+        },
         context: {
           activeSearchExerciseId,
           roadmapEditingExerciseId,
+          collapsedExerciseIds: Array.from(collapsedExerciseIds),
           ...workoutOriginContext(),
         },
       };
@@ -967,6 +1097,10 @@ function WorkoutPage({
       } catch (error) {
         setFormError("The workout progress could not be saved.");
       }
+      return;
+    }
+    if (editingEntryId === null && !completionReview) {
+      reviewWorkoutResults();
       return;
     }
     const error = getWorkoutEntryError(workoutDraft);
@@ -1121,9 +1255,15 @@ function WorkoutPage({
     setTitle(entry.title);
     setDate(entryDateTime.date);
     setTime(entryDateTime.time);
+    setTimingMode(entry.startedAt ? "live" : "manual");
     setActiveDurationMinutes(
       Number.isInteger(entry.activeDurationMinutes) && entry.activeDurationMinutes > 0
         ? String(entry.activeDurationMinutes)
+        : ""
+    );
+    setCaloriesBurned(
+      Number.isInteger(entry.caloriesBurned) && entry.caloriesBurned > 0
+        ? String(entry.caloriesBurned)
         : ""
     );
     setIntensity(
@@ -1186,10 +1326,12 @@ function WorkoutPage({
     setIsDirty(false);
     setFormError("");
     setValidationAttempted(false);
+    setCompletionReview(true);
+    setIsLoggingOpen(true);
     setActiveSearchExerciseId(null);
     setEditingSavedExercise(null);
     plannedWorkoutIdRef.current = entry.plannedWorkoutId || null;
-    formRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
+    pendingFormFocusRef.current = true;
   }
 
   function cancelWorkout() {
@@ -1317,6 +1459,9 @@ function WorkoutPage({
       ? "Back to Trophy Case"
       : "Back to Today's Schedule";
   const volume = isPlannedRoadmap ? roadmapVolume(exercises) : null;
+  const plannedRoadmapIsCompleteNow = isPlannedRoadmap && exercises.every(
+    ({ roadmapStatus }) => roadmapStatus === "completed" || roadmapStatus === "skipped"
+  );
   const leaveWorkout = returnsToOrigin ? returnToWorkoutOrigin : onBack;
   const leaveWorkoutLabel = returnsToOrigin ? originReturnLabel : "Back to Timeline";
   const validationIssues = validationAttempted ? getWorkoutEntryIssues(draft()) : [];
@@ -1392,15 +1537,31 @@ function WorkoutPage({
         {returnsToOrigin && <button className="trace-action trace-action--secondary" type="button" onClick={returnToWorkoutOrigin} style={{ ...backButtonStyle, marginTop: 0 }}>{originReturnLabel}</button>}
       </nav>
 
-      {isPlannedRoadmap && (
+      {!isLoggingOpen && (
+        <div style={{ maxWidth: "760px", textAlign: "left", width: "100%" }}>
+          <button
+            className="trace-action trace-action--primary"
+            type="button"
+            aria-controls="workout-entry"
+            aria-expanded="false"
+            onClick={openWorkoutLogger}
+            style={buttonStyle}
+          >
+            Log Workout
+          </button>
+        </div>
+      )}
+
+      {isLoggingOpen && isPlannedRoadmap && (
         <form
+          id="workout-entry"
           className="trace-feature-surface trace-feature-form trace-workout-roadmap"
           aria-label="Workout roadmap"
           ref={formRef}
           onSubmit={saveWorkout}
         >
           <span className="trace-badge">Active planned workout</span>
-          <h2>Workout Roadmap</h2>
+          <h2 ref={formHeadingRef} tabIndex="-1">Workout Roadmap</h2>
           <h3 className="trace-workout-roadmap__title">{title}</h3>
           {notes && <p className="trace-workout-roadmap__notes">{notes}</p>}
           <ul className="trace-workout-volume" aria-label="Workout set summary">
@@ -1408,14 +1569,6 @@ function WorkoutPage({
             <li><strong>{volume.warmUp}</strong> warm-up</li>
             <li><strong>{volume.working}</strong> working</li>
           </ul>
-          <WorkoutReadinessFields
-            activeDurationMinutes={activeDurationMinutes}
-            intensity={intensity}
-            onActiveDurationChange={(value) => changeField(setActiveDurationMinutes, value)}
-            onIntensityChange={(value) => changeField(setIntensity, value)}
-            formInputStyle={formInputStyle}
-            durationInvalid={validationIssues.some(({ field }) => field === "activeDurationMinutes")}
-          />
           <div className="trace-workout-roadmap__list">
             {exercises.map((exercise, exerciseIndex) => {
               const isEditing = roadmapEditingExerciseId === exercise.id;
@@ -1487,22 +1640,67 @@ function WorkoutPage({
               );
             })}
           </div>
+          {completionReview && (
+            <section ref={resultsRef} tabIndex="-1" aria-label="Workout completion results">
+              <WorkoutResultFields
+                activeDurationMinutes={activeDurationMinutes}
+                caloriesBurned={caloriesBurned}
+                intensity={intensity}
+                onActiveDurationChange={(value) => changeField(setActiveDurationMinutes, value)}
+                onCaloriesBurnedChange={(value) => changeField(setCaloriesBurned, value)}
+                onIntensityChange={(value) => changeField(setIntensity, value)}
+                formInputStyle={formInputStyle}
+                durationInvalid={validationIssues.some(({ field }) => field === "activeDurationMinutes")}
+                caloriesInvalid={validationIssues.some(({ field }) => field === "caloriesBurned")}
+                liveTiming
+              />
+            </section>
+          )}
           {formError && <p role="alert" style={{ color: "#fca5a5" }}>{formError}</p>}
           <div className="trace-workout-roadmap__finish-actions">
-            <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>Save Workout</button>
+            <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
+              {plannedRoadmapIsCompleteNow && !completionReview ? "Finish Workout" : "Save Workout"}
+            </button>
+            {completionReview && (
+              <button className="trace-action trace-action--secondary" type="button" onClick={() => setCompletionReview(false)} style={buttonStyle}>Continue Workout</button>
+            )}
             <button className="trace-action trace-action--secondary" type="button" onClick={cancelWorkout} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel</button>
           </div>
         </form>
       )}
 
-      {!isPlannedRoadmap && (
+      {isLoggingOpen && !isPlannedRoadmap && (
       <form
+        id="workout-entry"
         className="trace-feature-surface trace-feature-form trace-workout-form"
         ref={formRef}
         onSubmit={saveWorkout}
         style={{ maxWidth: "760px", textAlign: "left", width: "100%" }}
       >
-        <h2>{editingEntryId === null ? "Log Workout" : "Edit Workout"}</h2>
+        <h2 ref={formHeadingRef} tabIndex="-1">{editingEntryId === null ? "Log Workout" : "Edit Workout"}</h2>
+        {editingEntryId === null && (
+          <fieldset>
+            <legend>Workout timing</legend>
+            <label style={{ display: "block" }}>
+              <input
+                type="radio"
+                name="workout-timing"
+                value="live"
+                checked={timingMode === "live"}
+                onChange={(event) => changeTimingMode(event.target.value)}
+              />{" Start and track a live workout"}
+            </label>
+            <label style={{ display: "block", marginTop: "8px" }}>
+              <input
+                type="radio"
+                name="workout-timing"
+                value="manual"
+                checked={timingMode === "manual"}
+                onChange={(event) => changeTimingMode(event.target.value)}
+              />{" Log a completed or historical workout"}
+            </label>
+          </fieldset>
+        )}
         <label style={{ display: "block" }}>
           Workout title
           <input
@@ -1542,14 +1740,6 @@ function WorkoutPage({
             />
           </label>
         </div>
-        <WorkoutReadinessFields
-          activeDurationMinutes={activeDurationMinutes}
-          intensity={intensity}
-          onActiveDurationChange={(value) => changeField(setActiveDurationMinutes, value)}
-          onIntensityChange={(value) => changeField(setIntensity, value)}
-          formInputStyle={formInputStyle}
-          durationInvalid={validationIssues.some(({ field }) => field === "activeDurationMinutes")}
-        />
         <label style={{ display: "block", marginTop: "16px" }}>
           Workout notes (optional)
           <textarea
@@ -1962,9 +2152,36 @@ function WorkoutPage({
           )}
         </section>
 
+        {completionReview && (
+          <section ref={resultsRef} tabIndex="-1" aria-label="Workout completion results">
+            <WorkoutResultFields
+              activeDurationMinutes={activeDurationMinutes}
+              caloriesBurned={caloriesBurned}
+              intensity={intensity}
+              onActiveDurationChange={(value) => changeField(setActiveDurationMinutes, value)}
+              onCaloriesBurnedChange={(value) => changeField(setCaloriesBurned, value)}
+              onIntensityChange={(value) => changeField(setIntensity, value)}
+              formInputStyle={formInputStyle}
+              durationInvalid={validationIssues.some(({ field }) => field === "activeDurationMinutes")}
+              caloriesInvalid={validationIssues.some(({ field }) => field === "caloriesBurned")}
+              liveTiming={timingMode === "live" && editingEntryId === null}
+            />
+          </section>
+        )}
         {displayedFormError && <p role="alert" style={{ color: "#fca5a5" }}>{displayedFormError}</p>}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-          <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>{editingEntryId === null ? "Save Workout" : "Save Changes"}</button>
+          <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
+            {editingEntryId !== null
+              ? "Save Changes"
+              : completionReview
+                ? "Save Workout"
+                : timingMode === "live"
+                  ? "Finish Workout"
+                  : "Review Workout"}
+          </button>
+          {completionReview && editingEntryId === null && (
+            <button className="trace-action trace-action--secondary" type="button" onClick={() => setCompletionReview(false)} style={buttonStyle}>Continue Workout</button>
+          )}
           <button className="trace-action trace-action--secondary" type="button" onClick={cancelWorkout} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel</button>
         </div>
       </form>

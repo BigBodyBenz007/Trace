@@ -43,8 +43,128 @@ async function storedDraft() {
   return JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
 }
 
+function openWorkoutLogger() {
+  const button = screen.queryByRole("button", { name: "Log Workout" });
+  if (button) fireEvent.click(button);
+}
+
+function submitWorkout() {
+  const reviewButton = screen.queryByRole("button", {
+    name: /^(Finish|Review) Workout$/,
+  });
+  if (reviewButton) fireEvent.click(reviewButton);
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+}
+
+test("defaults to a history-oriented page and opens Log Workout with accessible focus", async () => {
+  render(<WorkoutPage {...renderPageProps({ workoutEntries: [entry()] })} />);
+
+  expect(screen.getByRole("heading", { name: "Workout History" })).toBeInTheDocument();
+  expect(screen.getByText("Chest Day")).toBeInTheDocument();
+  expect(document.querySelector(".trace-workout-form")).toBeNull();
+  expect(screen.queryByLabelText("Workout title")).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Log Workout" }));
+  expect(screen.getByRole("heading", { name: "Log Workout" })).toHaveFocus();
+  expect(screen.getByLabelText("Workout title")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Approximate workout duration")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Expand workout: Chest Day" }))
+    .toHaveAttribute("aria-expanded", "false");
+
+  const persisted = await storedDraft();
+  expect(persisted.form.timingMode).toBe("live");
+  expect(new Date(persisted.startedAt).getTime()).not.toBeNaN();
+});
+
+test("live timing persists across a remount, calculates elapsed minutes, and remains correctable", async () => {
+  jest.useFakeTimers().setSystemTime(new Date("2026-09-01T15:00:00.000Z"));
+  try {
+    const first = render(<WorkoutPage {...renderPageProps()} />);
+    openWorkoutLogger();
+    fillFirstSet();
+    const persisted = await storedDraft();
+    expect(persisted.startedAt).toBe("2026-09-01T15:00:00.000Z");
+    first.unmount();
+
+    jest.setSystemTime(new Date("2026-09-01T15:42:00.000Z"));
+    const props = renderPageProps();
+    render(<WorkoutPage {...props} />);
+    expect(screen.getByLabelText("Workout title")).toHaveValue("Chest Day");
+    fireEvent.click(screen.getByRole("button", { name: "Finish Workout" }));
+    expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(42);
+    fireEvent.change(screen.getByLabelText("Approximate workout duration"), {
+      target: { value: "40" },
+    });
+    fireEvent.change(screen.getByLabelText("Calories Burned"), {
+      target: { value: "315" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+    expect(props.saveWorkoutEntry).toHaveBeenCalledWith(expect.objectContaining({
+      startedAt: "2026-09-01T15:00:00.000Z",
+      finishedAt: "2026-09-01T15:42:00.000Z",
+      activeDurationMinutes: 40,
+      caloriesBurned: 315,
+    }));
+    expect(screen.getByRole("button", { name: "Log Workout" })).toBeInTheDocument();
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+test("historical logging accepts manual results without fabricated elapsed timing", () => {
+  const props = renderPage();
+  fireEvent.click(screen.getByLabelText("Log a completed or historical workout"));
+  fillFirstSet();
+  fireEvent.click(screen.getByRole("button", { name: "Review Workout" }));
+  expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(null);
+  fireEvent.change(screen.getByLabelText("Approximate workout duration"), {
+    target: { value: "55" },
+  });
+  fireEvent.change(screen.getByLabelText("Calories Burned"), {
+    target: { value: "420" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  const saved = props.saveWorkoutEntry.mock.calls[0][0];
+  expect(saved).toMatchObject({ activeDurationMinutes: 55, caloriesBurned: 420 });
+  expect(saved).not.toHaveProperty("startedAt");
+  expect(saved).not.toHaveProperty("finishedAt");
+});
+
+test("saved Calories Burned remains visible and editable in Workout History", () => {
+  const props = renderPage({ workoutEntries: [entry({ caloriesBurned: 420 })] });
+  const card = expandWorkout();
+  expect(within(card).getByText("Calories Burned")).toBeInTheDocument();
+  expect(within(card).getByText("420 kcal")).toBeInTheDocument();
+  fireEvent.click(within(card).getByRole("button", { name: "Edit" }));
+  expect(screen.getByLabelText("Calories Burned")).toHaveValue(420);
+  fireEvent.change(screen.getByLabelText("Calories Burned"), { target: { value: "430" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(props.updateWorkoutEntry).toHaveBeenCalledWith(
+    "workout-1",
+    expect.objectContaining({ caloriesBurned: 430 })
+  );
+});
+
+test("opening Log Workout uses instant scrolling when Motion & Effects is reduced", () => {
+  render(
+    <div className="trace-app-shell" data-motion="reduced">
+      <WorkoutPage {...renderPageProps()} />
+    </div>
+  );
+  Element.prototype.scrollIntoView.mockClear();
+  fireEvent.click(screen.getByRole("button", { name: "Log Workout" }));
+  expect(screen.getByRole("heading", { name: "Log Workout" })).toHaveFocus();
+  expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+    behavior: "auto",
+    block: "start",
+  });
+});
+
 test("persists new-workout changes and restores the original start and form state", async () => {
   const first = render(<WorkoutPage {...renderPageProps()} />);
+  openWorkoutLogger();
   const originalDate = screen.getByLabelText("Date").value;
   const originalTime = screen.getByLabelText("Time").value;
   fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Survives reload" } });
@@ -53,6 +173,7 @@ test("persists new-workout changes and restores the original start and form stat
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), { target: { value: "225" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "5" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 notes"), { target: { value: "Solid" } });
+  fireEvent.click(screen.getByRole("button", { name: "Finish Workout" }));
   fireEvent.change(screen.getByLabelText("Approximate workout duration"), { target: { value: "48" } });
   fireEvent.change(screen.getByLabelText("Workout intensity"), { target: { value: "moderate" } });
 
@@ -89,6 +210,8 @@ test("persists new-workout changes and restores the original start and form stat
 
 test("explains approximate workout duration as first-to-last set time with normal rests", () => {
   render(<WorkoutPage {...renderPageProps()} />);
+  openWorkoutLogger();
+  fireEvent.click(screen.getByRole("button", { name: "Finish Workout" }));
   const durationInput = screen.getByLabelText("Approximate workout duration");
   const durationLabel = durationInput.closest("label");
 
@@ -102,6 +225,7 @@ test("explains approximate workout duration as first-to-last set time with norma
 test("ordinary unmount keeps a draft while explicit discard clears it", async () => {
   const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
   const view = render(<WorkoutPage {...renderPageProps()} />);
+  openWorkoutLogger();
   fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Keep me" } });
   await storedDraft();
   view.unmount();
@@ -115,13 +239,14 @@ test("ordinary unmount keeps a draft while explicit discard clears it", async ()
 
 test("successful save clears a restored draft and does not duplicate the workout", async () => {
   const initial = render(<WorkoutPage {...renderPageProps()} />);
+  openWorkoutLogger();
   fillFirstSet();
   await storedDraft();
   initial.unmount();
 
   const props = renderPageProps();
   render(<WorkoutPage {...props} />);
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(props.saveWorkoutEntry).toHaveBeenCalledTimes(1);
   expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
   expect(props.showToast).toHaveBeenCalledWith("Workout traced", undefined);
@@ -142,8 +267,8 @@ test("restores planned prefills and saves one normal entry with its backlink", (
   const exercise = screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" });
   expect(within(exercise).getByText("1 planned set")).toBeInTheDocument();
   expect(within(exercise).getByText("Warm-up · 60 kg × 8")).toBeInTheDocument();
-  expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(null);
-  expect(screen.getByLabelText("Workout intensity")).toHaveValue("");
+  expect(screen.queryByLabelText("Approximate workout duration")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Workout intensity")).not.toBeInTheDocument();
   const volume = screen.getByRole("list", { name: "Workout set summary" });
   expect(volume).toHaveTextContent("1 total set");
   expect(volume).toHaveTextContent("1 warm-up");
@@ -154,11 +279,11 @@ test("restores planned prefills and saves one normal entry with its backlink", (
   expect(screen.getByLabelText("Exercise 1 set 1 weight unit")).toHaveValue("kg");
   expect(screen.getByLabelText("Exercise 1 set 1 type")).toHaveValue("warm-up");
   expect(screen.getByLabelText("Exercise 1 set 1 notes")).toHaveValue("Target notes");
+  fireEvent.click(within(exercise).getByRole("button", { name: "Completed" }));
+  fireEvent.click(screen.getByRole("button", { name: "Finish Workout" }));
   fireEvent.change(screen.getByLabelText("Approximate workout duration"), { target: { value: "38" } });
   fireEvent.change(screen.getByLabelText("Workout intensity"), { target: { value: "high" } });
-
-  fireEvent.click(within(exercise).getByRole("button", { name: "Completed" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(view.saveWorkoutEntry).toHaveBeenCalledTimes(1);
   expect(view.saveWorkoutEntry).toHaveBeenCalledWith(expect.objectContaining({
     plannedWorkoutId: plan.id,
@@ -278,7 +403,7 @@ test("a Today-origin Roadmap provides standardized Today navigation and returns 
   expect(onReturnToToday).toHaveBeenCalledTimes(1);
   fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
     .getByRole("button", { name: "Completed" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   expect(view.saveWorkoutEntry).toHaveBeenCalledTimes(1);
   expect(onReturnToToday).toHaveBeenCalledTimes(2);
@@ -302,7 +427,7 @@ test("a Calendar-origin Roadmap exposes calendar navigation and returns there af
 
   fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
     .getByRole("button", { name: "Completed" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(view.saveWorkoutEntry).toHaveBeenCalledTimes(1);
   expect(onReturnToCalendar).toHaveBeenCalledTimes(2);
 });
@@ -347,7 +472,7 @@ test("saving a restored draft records its original start and actual finish", () 
   jest.useFakeTimers().setSystemTime(new Date("2026-08-09T19:35:00.000Z"));
   try {
     const props = renderPage();
-    fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+    submitWorkout();
     expect(props.saveWorkoutEntry).toHaveBeenCalledWith(expect.objectContaining({
       startedAt,
       finishedAt: "2026-08-09T19:35:00.000Z",
@@ -367,13 +492,14 @@ test("unmount does not add finish timing and a failed save retains the draft", a
   expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY))).not.toHaveProperty("finishedAt");
 
   const props = renderPage({ saveWorkoutEntry: jest.fn(() => false) });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(props.saveWorkoutEntry.mock.calls[0][0]).toHaveProperty("finishedAt");
   expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).not.toBeNull();
 });
 
 test("editing a saved workout neither restores into nor clears the new-workout draft", async () => {
   const initial = render(<WorkoutPage {...renderPageProps()} />);
+  openWorkoutLogger();
   fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "New draft" } });
   await storedDraft();
   initial.unmount();
@@ -425,6 +551,9 @@ test("existing saved duration values load unchanged while legacy workouts remain
     finishedAt: "2026-08-09T19:00:00.000Z",
   });
   const { unmount } = render(<WorkoutPage {...renderPageProps({ workoutEntries: [savedWithElapsedOnly] })} />);
+  expect(screen.queryByLabelText("Approximate workout duration")).not.toBeInTheDocument();
+  const legacyCard = expandWorkout("Chest Day");
+  fireEvent.click(within(legacyCard).getByRole("button", { name: "Edit" }));
   expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(null);
   expect(screen.getByLabelText("Workout intensity")).toHaveValue("");
   unmount();
@@ -504,6 +633,7 @@ function renderPageProps(overrides = {}) {
 function renderPage(overrides = {}) {
   const props = renderPageProps(overrides);
   render(<WorkoutPage {...props} />);
+  openWorkoutLogger();
   return props;
 }
 
@@ -522,7 +652,7 @@ test("save outcome shows the approved immediate broad-range wording", () => {
     })),
   });
   fillFirstSet();
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(props.showToast).toHaveBeenCalledWith(
     "Workout traced. Estimated calories burned: about 300\u2013440 kcal.",
     undefined
@@ -554,7 +684,7 @@ test.each([
     saveWorkoutEntry: jest.fn(() => ({ saved: true, calorieEstimate: snapshot })),
   });
   fillFirstSet();
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(props.showToast).toHaveBeenCalledWith(message, undefined);
 });
 
@@ -627,6 +757,7 @@ test("uses the scoped performance-log presentation and nested workout surfaces",
 });
 
 function fillFirstSet({ bodyweight = false } = {}) {
+  openWorkoutLogger();
   fireEvent.change(screen.getByLabelText("Workout title"), {
     target: { value: "Chest Day" },
   });
@@ -706,7 +837,7 @@ test("saves decimal external load and optional notes then resets", () => {
   fireEvent.change(screen.getByLabelText("Exercise 1 notes"), {
     target: { value: "  Keep shoulders down  " },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   expect(props.saveWorkoutEntry).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -728,7 +859,8 @@ test("saves decimal external load and optional notes then resets", () => {
       ],
     })
   );
-  expect(screen.getByLabelText("Workout title")).toHaveValue("");
+  expect(screen.getByRole("button", { name: "Log Workout" })).toBeInTheDocument();
+  expect(screen.queryByLabelText("Workout title")).not.toBeInTheDocument();
   expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
     behavior: "smooth",
   });
@@ -740,7 +872,7 @@ test("saves bodyweight without hidden external load data", () => {
   expect(
     screen.queryByLabelText("Exercise 1 set 1 weight")
   ).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   expect(
     props.saveWorkoutEntry.mock.calls[0][0].exercises[0].sets[0].load
@@ -839,7 +971,7 @@ test("contextual Undo restores the exact drop ID, position, mode, unit, values, 
   expect(screen.getByLabelText("Exercise 1 set 1 drop 1 notes")).toHaveValue("Exact drop");
   expect(screen.queryByText("Drop removed")).not.toBeInTheDocument();
 
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].sets[0].drops[0]).toMatchObject({
     id: originalId,
     reps: 8,
@@ -900,6 +1032,7 @@ test("targets only the newly removed row with multiple independent parent sets",
 test("unrelated rerenders and Undo restoration do not trigger visibility scrolling", () => {
   Element.prototype.getBoundingClientRect.mockReturnValue({ top: -30, bottom: 20, left: 0, right: 300 });
   renderPage();
+  Element.prototype.scrollIntoView.mockClear();
   addExternalDrop({ weight: 55, reps: 8 });
   fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
   expect(Element.prototype.scrollIntoView).toHaveBeenCalledTimes(1);
@@ -1022,7 +1155,7 @@ test("saves normalized drops and failed save retains the complete drop draft", a
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 1 weight"), { target: { value: "55" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 drop 1 reps"), { target: { value: "8" } });
   await storedDraft();
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].sets[0].drops).toEqual([
     expect.objectContaining({ reps: 8, load: { mode: "external", amount: 55, unit: "lb" } }),
   ]);
@@ -1085,7 +1218,7 @@ test("saving after Undo expires persists the removed state", () => {
     addExternalDrop({ weight: 55, reps: 8 });
     fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 1 drop 1" }));
     act(() => jest.advanceTimersByTime(8000));
-    fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+    submitWorkout();
     expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].sets[0]).not.toHaveProperty("drops");
   } finally {
     jest.useRealTimers();
@@ -1094,14 +1227,14 @@ test("saving after Undo expires persists the removed state", () => {
 
 test("shows mechanical validation errors", () => {
   renderPage();
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(screen.getByRole("alert")).toHaveTextContent("Enter a workout title.");
 
   fillFirstSet();
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
     target: { value: "1.5" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(screen.getByRole("alert")).toHaveTextContent(
     "whole-number reps"
   );
@@ -1146,6 +1279,7 @@ test("successful Add Exercise collapses the active exercise, expands and focuses
       <WorkoutPage {...renderPageProps()} />
     </div>
   );
+  openWorkoutLogger();
   fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Squat" } });
   Element.prototype.scrollIntoView.mockClear();
   fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
@@ -1165,6 +1299,7 @@ test("Add Exercise uses instant scrolling when Motion & Effects is reduced", () 
       <WorkoutPage {...renderPageProps()} />
     </div>
   );
+  openWorkoutLogger();
   Element.prototype.scrollIntoView.mockClear();
   fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
   expect(screen.getByLabelText("Exercise 2 name")).toHaveFocus();
@@ -1241,7 +1376,7 @@ test("save validation marks every incomplete collapsed exercise and clears each 
   fireEvent.click(screen.getByRole("button", { name: "Collapse Exercise: Exercise 2" }));
   Element.prototype.scrollIntoView.mockClear();
 
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   const firstCard = screen.getByRole("region", { name: "Exercise 1" });
   const secondCard = screen.getByRole("region", { name: "Exercise 2" });
   expect(firstCard).toHaveClass("trace-workout-exercise--missing");
@@ -1275,6 +1410,7 @@ test("save validation marks every incomplete collapsed exercise and clears each 
 
 test("collapsed state and all exercise values resume through the existing workout draft", async () => {
   const first = render(<WorkoutPage {...renderPageProps()} />);
+  openWorkoutLogger();
   fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Draft Row" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), { target: { value: "88" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "12" } });
@@ -1343,7 +1479,7 @@ test("logs a to-failure set with an optional actual count and preserves exact ze
   fireEvent.click(screen.getByLabelText("Exercise 1 set 1 to failure"));
   expect(screen.getByText("Reps", { selector: "label" })).toBeInTheDocument();
   fireEvent.click(screen.getByLabelText("Exercise 1 set 1 to failure"));
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].sets[0]).toMatchObject({
     reps: 0,
     toFailure: true,
@@ -1357,7 +1493,7 @@ test("saves a blank to-failure goal as a zero-rep attempted set", () => {
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "" } });
   fireEvent.click(screen.getByLabelText("Exercise 1 set 1 to failure"));
   expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(null);
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].sets[0]).toMatchObject({
     reps: 0,
     toFailure: true,
@@ -1831,7 +1967,7 @@ test("Workout History nests drop segments without changing parent set numbering"
 test("retains a valid draft when persistence fails", () => {
   renderPage({ saveWorkoutEntry: jest.fn(() => false) });
   fillFirstSet();
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   expect(screen.getByLabelText("Workout title")).toHaveValue("Chest Day");
   expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(70.5);
@@ -1865,7 +2001,8 @@ test("cancel confirms dirty changes, resets, and scrolls to the workout top", ()
   expect(confirm).toHaveBeenCalledWith(
     "Discard this workout? Your unsaved changes will be lost."
   );
-  expect(screen.getByLabelText("Workout title")).toHaveValue("");
+  expect(screen.getByRole("button", { name: "Log Workout" })).toBeInTheDocument();
+  expect(screen.queryByLabelText("Workout title")).not.toBeInTheDocument();
   expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth" });
 });
 
@@ -1883,7 +2020,7 @@ test("adds multiple optional photos and can remove one before saving", () => {
   const removePhoto = screen.getByRole("button", { name: "Remove workout photo 1" });
   expect(removePhoto).toHaveTextContent("×");
   fireEvent.click(removePhoto);
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   expect(props.saveWorkoutEntry).toHaveBeenCalledWith(expect.objectContaining({
     photos: [expect.objectContaining({ blob: second, isDraft: true, url: "blob:second.jpg" })],
@@ -1985,7 +2122,7 @@ test("selects a saved exercise and applies defaults only to untouched and new se
   fireEvent.change(screen.getByLabelText("Exercise 1 set 2 reps"), {
     target: { value: "5" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(
     props.saveWorkoutEntry.mock.calls[0][0].exercises[0].exerciseReference
   ).toEqual({ source: "user-saved", sourceId: dips.id, modified: false });
@@ -2008,10 +2145,11 @@ test("only exercise name changes mark a selected reference modified", () => {
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "8" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 notes"), { target: { value: "Log-specific" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight unit"), { target: { value: "lb" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].exerciseReference.modified).toBe(false);
 
   props.saveWorkoutEntry.mockClear();
+  openWorkoutLogger();
   fireEvent.click(screen.getByRole("button", { name: /Find an exercise/ }));
   fireEvent.change(screen.getByLabelText("Exercise search"), { target: { value: "press" } });
   fireEvent.click(screen.getByRole("button", { name: "Select saved exercise Press" }));
@@ -2019,7 +2157,7 @@ test("only exercise name changes mark a selected reference modified", () => {
   fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Day" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), { target: { value: "25" } });
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "8" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].exerciseReference.modified).toBe(true);
 });
 
@@ -2032,7 +2170,7 @@ test("creates a per-exercise reusable definition and attaches its reference", ()
   fillFirstSet({ bodyweight: true });
   fireEvent.click(screen.getByLabelText("Save as reusable exercise"));
   fireEvent.change(screen.getByLabelText("Exercise 1 reusable default load mode"), { target: { value: "bodyweight" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   expect(saveExerciseDefinitions).toHaveBeenCalledWith([
     { name: "Dips", defaultLoadMode: "bodyweight", defaultWeightUnit: "lb" },
@@ -2050,7 +2188,7 @@ test("an exact duplicate safely attaches the existing reference", () => {
   fillFirstSet({ bodyweight: true });
   fireEvent.click(screen.getByLabelText("Save as reusable exercise"));
   fireEvent.change(screen.getByLabelText("Exercise 1 reusable default load mode"), { target: { value: "bodyweight" } });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0].exerciseReference).toEqual({ source: "user-saved", sourceId: existing.id, modified: false });
   expect(screen.queryByRole("status")).not.toBeInTheDocument();
 });
@@ -2083,7 +2221,7 @@ test("keeps conflicting historical snapshots unreferenced and combines messages"
   fireEvent.change(screen.getByLabelText("Exercise 2 set 1 weight"), { target: { value: "20" } });
   fireEvent.change(screen.getByLabelText("Exercise 2 set 1 reps"), { target: { value: "10" } });
   fireEvent.click(screen.getByLabelText("Save as reusable exercise"));
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises.every((exercise) => !exercise.exerciseReference)).toBe(true);
   expect(props.showToast).toHaveBeenCalledWith(
@@ -2100,7 +2238,7 @@ test("catalog failure does not block history and leaves no misleading reference"
   });
   fillFirstSet();
   fireEvent.click(screen.getByLabelText("Save as reusable exercise"));
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(props.saveWorkoutEntry).toHaveBeenCalledTimes(1);
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0]).not.toHaveProperty("exerciseReference");
   expect(props.showToast).toHaveBeenCalledWith(
@@ -2157,7 +2295,7 @@ test("selecting a Trace exercise saves its canonical name and built-in ID", () =
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
     target: { value: "10" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
 
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0]).toMatchObject({
     name: "Dumbbell Bench Press",
@@ -2182,7 +2320,7 @@ test("manually typed ambiguous names remain without a built-in ID", () => {
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
     target: { value: "10" },
   });
-  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  submitWorkout();
   expect(props.saveWorkoutEntry.mock.calls[0][0].exercises[0]).not.toHaveProperty(
     "exerciseId"
   );

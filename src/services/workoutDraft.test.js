@@ -71,7 +71,9 @@ test("creates a fresh actual workout draft from planned intentions", () => {
       title: "Planned Strength",
       date: "2026-08-22",
       time: "14:37",
+      timingMode: "live",
       activeDurationMinutes: "",
+      caloriesBurned: "",
       intensity: "",
       notes: "Plan notes",
     },
@@ -295,7 +297,9 @@ test("normalizes every nested active-draft field while preserving entered set va
   );
   draft.plannedWorkoutId = "  planned-workout:orphaned  ";
   draft.form.activeDurationMinutes = "52";
+  draft.form.caloriesBurned = "410";
   draft.form.intensity = "moderate";
+  draft.context.completionReview = true;
   draft.form.exercises[0].sets[0] = {
     ...draft.form.exercises[0].sets[0],
     reps: "11",
@@ -317,8 +321,10 @@ test("normalizes every nested active-draft field while preserving entered set va
   expect(normalized.plannedWorkoutId).toBe("planned-workout:orphaned");
   expect(normalized.form).toMatchObject({
     activeDurationMinutes: "52",
+    caloriesBurned: "410",
     intensity: "moderate",
   });
+  expect(normalized.context.completionReview).toBe(true);
   expect(normalized.form.exercises[0].sets[0]).toMatchObject({
     reps: "11",
     weightAmount: "72.5",
@@ -336,9 +342,13 @@ test("normalizes legacy readiness fields as optional and rejects malformed new v
     new Date(2026, 7, 22, 9, 5)
   );
   delete legacy.form.activeDurationMinutes;
+  delete legacy.form.caloriesBurned;
+  delete legacy.form.timingMode;
   delete legacy.form.intensity;
   expect(normalizeWorkoutDraft(legacy).form).toMatchObject({
+    timingMode: "live",
     activeDurationMinutes: "",
+    caloriesBurned: "",
     intensity: "",
   });
 
@@ -346,6 +356,8 @@ test("normalizes legacy readiness fields as optional and rejects malformed new v
   expect(normalizeWorkoutDraft(invalidDuration)).toBeNull();
   const invalidIntensity = { ...legacy, form: { ...legacy.form, intensity: "extreme" } };
   expect(normalizeWorkoutDraft(invalidIntensity)).toBeNull();
+  const invalidTimingMode = { ...legacy, form: { ...legacy.form, timingMode: "estimated" } };
+  expect(normalizeWorkoutDraft(invalidTimingMode)).toBeNull();
 });
 
 test("rejects malformed nested active-draft data", () => {

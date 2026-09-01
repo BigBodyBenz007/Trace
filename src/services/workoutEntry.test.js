@@ -173,6 +173,32 @@ test("stores optional approximate workout duration and workout-wide intensity wh
   expect(legacy).not.toHaveProperty("intensity");
 });
 
+test("stores optional measured calories burned and validates it as a positive whole number", () => {
+  expect(createWorkoutEntry(validDraft({ caloriesBurned: "418" })))
+    .toMatchObject({ caloriesBurned: 418 });
+  expect(createWorkoutEntry(validDraft())).not.toHaveProperty("caloriesBurned");
+  expect(getWorkoutEntryError(validDraft({ caloriesBurned: "0" })))
+    .toMatch(/calories burned as a whole number greater than zero/i);
+  expect(getWorkoutEntryError(validDraft({ caloriesBurned: "12.5" })))
+    .toMatch(/calories burned as a whole number greater than zero/i);
+});
+
+test("manual historical workouts keep entered results without fabricated timing", () => {
+  const entry = createWorkoutEntry(
+    validDraft({
+      timingMode: "manual",
+      activeDurationMinutes: "52",
+      caloriesBurned: "390",
+      startedAt: "2026-09-01T15:00:00.000Z",
+    }),
+    null,
+    new Date("2026-09-01T16:00:00.000Z")
+  );
+  expect(entry).toMatchObject({ activeDurationMinutes: 52, caloriesBurned: 390 });
+  expect(entry).not.toHaveProperty("startedAt");
+  expect(entry).not.toHaveProperty("finishedAt");
+});
+
 test.each([
   [{ activeDurationMinutes: "0" }, /whole number of minutes greater than zero/],
   [{ activeDurationMinutes: "12.5" }, /whole number of minutes greater than zero/],

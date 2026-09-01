@@ -17,6 +17,7 @@ const LOAD_MODES = new Set(WORKOUT_LOAD_MODES.map(({ value }) => value));
 const WEIGHT_UNITS = new Set(WORKOUT_WEIGHT_UNITS.map(({ value }) => value));
 const INTENSITIES = new Set(WORKOUT_INTENSITY_OPTIONS.map(({ value }) => value));
 const ROADMAP_STATUSES = new Set(["pending", "completed", "skipped"]);
+const TIMING_MODES = new Set(["live", "manual"]);
 
 function isObject(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -153,7 +154,11 @@ function normalizeDraftExercise(exercise, usedIds) {
 
 export function normalizeWorkoutDraft(value) {
   const activeDurationMinutes = optionalString(value?.form?.activeDurationMinutes);
+  const caloriesBurned = optionalString(value?.form?.caloriesBurned);
   const intensity = optionalString(value?.form?.intensity);
+  const timingMode = value?.form?.timingMode === undefined
+    ? "live"
+    : value.form.timingMode;
   if (
     !isObject(value) ||
     value.schemaVersion !== WORKOUT_DRAFT_SCHEMA_VERSION ||
@@ -165,8 +170,10 @@ export function normalizeWorkoutDraft(value) {
     typeof value.form.time !== "string" ||
     typeof value.form.notes !== "string" ||
     activeDurationMinutes === null ||
+    caloriesBurned === null ||
     intensity === null ||
     !INTENSITIES.has(intensity) ||
+    !TIMING_MODES.has(timingMode) ||
     !workoutLocalDateTimeToIso(value.form.date, value.form.time) ||
     !Array.isArray(value.form.exercises) ||
     (
@@ -193,9 +200,11 @@ export function normalizeWorkoutDraft(value) {
   const roadmapEditingExerciseId = context.roadmapEditingExerciseId ?? null;
   if (roadmapEditingExerciseId !== null && !validId(roadmapEditingExerciseId)) return null;
   const collapsedExerciseIds = context.collapsedExerciseIds ?? [];
+  const completionReview = context.completionReview ?? false;
   if (
     !Array.isArray(collapsedExerciseIds)
     || collapsedExerciseIds.some((id) => !validId(id))
+    || typeof completionReview !== "boolean"
   ) return null;
   const exerciseIds = new Set(exercises.map(({ id }) => id));
   const normalizedCollapsedExerciseIds = Array.from(new Set(
@@ -222,7 +231,9 @@ export function normalizeWorkoutDraft(value) {
       title: value.form.title,
       date: value.form.date,
       time: value.form.time,
+      timingMode,
       activeDurationMinutes,
+      caloriesBurned,
       intensity,
       notes: value.form.notes,
       exercises,
@@ -233,6 +244,7 @@ export function normalizeWorkoutDraft(value) {
       ...(normalizedCollapsedExerciseIds.length > 0
         ? { collapsedExerciseIds: normalizedCollapsedExerciseIds }
         : {}),
+      ...(completionReview ? { completionReview: true } : {}),
       ...(hasOriginPage ? { originPage } : {}),
       ...(originPage === "calendar" ? { selectedDate, visibleMonth } : {}),
     },
@@ -297,7 +309,9 @@ export function createWorkoutDraftFromPlannedWorkout(
       title: plan.title,
       date: current.date,
       time: current.time,
+      timingMode: "live",
       activeDurationMinutes: "",
+      caloriesBurned: "",
       intensity: "",
       notes: plan.notes || "",
       exercises: plan.exercises.map((exercise) => {
