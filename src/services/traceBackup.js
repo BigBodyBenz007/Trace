@@ -56,9 +56,18 @@ import {
   unlockJournalVaultEnvelope,
   validateJournalVaultEnvelope,
 } from "./journalVaultCrypto";
+import { validateTraceStructuredDomains } from "./traceBackupValidation";
+import {
+  sha256Bytes,
+  sha256CanonicalJson,
+  TRACE_BACKUP_HASH_ALGORITHM,
+  TRACE_BACKUP_INTEGRITY_FORMAT,
+  TRACE_BACKUP_INTEGRITY_VERSION,
+  validateIntegrityManifestShape,
+} from "./traceBackupIntegrity";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
-export const TRACE_BACKUP_SCHEMA_VERSION = 4;
+export const TRACE_BACKUP_SCHEMA_VERSION = 5;
 export const TRACE_STORAGE_KEYS = TRACE_BACKUP_STORAGE_KEYS;
 
 const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
@@ -129,7 +138,7 @@ function base64ToBytes(value) {
   return bytes;
 }
 
-async function encodePhoto(record) {
+async function encodePhoto(record, cryptoProvider) {
   if (!record?.id || !(record.blob instanceof Blob)) {
     throw new Error("A stored Trace photo is malformed.");
   }
@@ -143,17 +152,25 @@ async function encodePhoto(record) {
     });
   const bytes = new Uint8Array(buffer);
   const { blob, ...metadata } = record;
-  return {
+  const photo = {
     ...cloneJson(metadata),
     blob: {
       type: blob.type || "application/octet-stream",
-      size: blob.size,
+      size: bytes.byteLength,
       base64: bytesToBase64(bytes),
+    },
+  };
+  return {
+    photo,
+    integrity: {
+      id: String(record.id),
+      size: bytes.byteLength,
+      digest: await sha256Bytes(bytes, cryptoProvider),
     },
   };
 }
 
-function decodePhoto(record) {
+function decodePhotoBytes(record) {
   const encoded = record?.blob;
   if (!record?.id || !encoded || typeof encoded.base64 !== "string" || typeof encoded.type !== "string") {
     throw new Error("The backup contains a malformed photo.");
@@ -169,7 +186,12 @@ function decodePhoto(record) {
   }
   const metadata = { ...record };
   delete metadata.blob;
-  return { ...cloneJson(metadata), blob: new Blob([bytes], { type: encoded.type }) };
+  return { metadata: cloneJson(metadata), bytes, type: encoded.type };
+}
+
+function decodePhoto(record) {
+  const decoded = decodePhotoBytes(record);
+  return { ...decoded.metadata, blob: new Blob([decoded.bytes], { type: decoded.type }) };
 }
 
 function readStructuredData(storage) {
@@ -390,6 +412,7 @@ function validateStructuredData(structuredData, schemaVersion = TRACE_BACKUP_SCH
   ) {
     throw new Error("The backup contains invalid injection site settings.");
   }
+  validateTraceStructuredDomains(structuredData);
 }
 
 function photoReferenceIds(structuredData) {
@@ -440,17 +463,56 @@ export function summarizeTraceBackup(backup) {
   };
 }
 
-export function validateTraceBackup(value) {
-  if (!value || value.format !== TRACE_BACKUP_FORMAT) throw new Error("This is not a Trace backup.");
-  if (!Number.isInteger(value.schemaVersion)) throw new Error("The Trace backup version is missing.");
-  if (value.schemaVersion > TRACE_BACKUP_SCHEMA_VERSION) {
-    throw new Error("This Trace backup was created by a newer, unsupported backup version.");
+const INTEGRITY_FAILURE_MESSAGE = "This Trace backup failed its integrity check. Existing Trace data was not changed.";
+
+function integrityFailure(error) {
+  const detail = error?.message ? ` ${error.message}` : "";
+  return new Error(`${INTEGRITY_FAILURE_MESSAGE}${detail}`);
+}
+
+async function verifySchemaFiveIntegrity(value, cryptoProvider) {
+  try {
+    validateIntegrityManifestShape(value.integrity, TRACE_STORAGE_KEYS);
+    if (!value.data?.structured || typeof value.data.structured !== "object" || Array.isArray(value.data.structured)) {
+      throw new Error("The backup is missing its structured Trace data.");
+    }
+    const actualDomains = Object.keys(value.data.structured).sort();
+    const expectedDomains = [...TRACE_STORAGE_KEYS].sort();
+    if (actualDomains.length !== expectedDomains.length ||
+      actualDomains.some((domain, index) => domain !== expectedDomains[index])) {
+      throw new Error("The backup structured payload does not match its domain inventory.");
+    }
+    if (!Array.isArray(value.data?.photos)) throw new Error("The backup is missing its photo collection.");
+    if (value.integrity.photos.count !== value.data.photos.length) {
+      throw new Error("The backup photo count does not match its integrity manifest.");
+    }
+    const structuredDigest = await sha256CanonicalJson(value.data?.structured, cryptoProvider);
+    if (structuredDigest !== value.integrity.structured.digest) {
+      throw new Error("The structured Trace data digest does not match.");
+    }
+    for (let index = 0; index < value.data.photos.length; index += 1) {
+      const photo = value.data.photos[index];
+      const expected = value.integrity.photos.entries[index];
+      if (!photo?.id || photo.id !== expected?.id) {
+        throw new Error("The backup photo order or identity does not match its integrity manifest.");
+      }
+      const decoded = decodePhotoBytes(photo);
+      if (decoded.bytes.byteLength !== expected.size) {
+        throw new Error(`Backup photo ${photo.id} does not match its integrity size.`);
+      }
+      const digest = await sha256Bytes(decoded.bytes, cryptoProvider);
+      if (digest !== expected.digest) {
+        throw new Error(`Backup photo ${photo.id} does not match its integrity digest.`);
+      }
+    }
+  } catch (error) {
+    throw integrityFailure(error);
   }
-  if (![1, 2, 3, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
-  if (!value.createdAt || Number.isNaN(Date.parse(value.createdAt))) throw new Error("The Trace backup timestamp is invalid.");
+}
+
+function validateAndNormalizeBackup(value) {
   validateStructuredData(value.data?.structured, value.schemaVersion);
   const normalizedBackup = cloneJson(value);
-  normalizedBackup.schemaVersion = TRACE_BACKUP_SCHEMA_VERSION;
   TRACE_STORAGE_KEYS.forEach((key) => {
     if (normalizedBackup.data.structured[key] === undefined) {
       normalizedBackup.data.structured[key] = null;
@@ -501,11 +563,24 @@ export function validateTraceBackup(value) {
   value.data.photos.forEach((photo) => {
     if (!photo?.id || photoIds.has(photo.id)) throw new Error("The backup contains duplicate or missing photo IDs.");
     photoIds.add(photo.id);
-    decodePhoto(photo);
+    if (value.schemaVersion < TRACE_BACKUP_SCHEMA_VERSION) decodePhoto(photo);
   });
   const missingReference = photoReferenceIds(normalizedBackup.data.structured).find((id) => !photoIds.has(id));
   if (missingReference) throw new Error(`The backup is missing referenced photo ${missingReference}.`);
   return { backup: normalizedBackup, summary: summarizeTraceBackup(normalizedBackup) };
+}
+
+export function validateTraceBackup(value, { cryptoProvider } = {}) {
+  if (!value || value.format !== TRACE_BACKUP_FORMAT) throw new Error("This is not a Trace backup.");
+  if (!Number.isInteger(value.schemaVersion)) throw new Error("The Trace backup version is missing.");
+  if (value.schemaVersion > TRACE_BACKUP_SCHEMA_VERSION) {
+    throw new Error("This Trace backup was created by a newer, unsupported backup version.");
+  }
+  if (![1, 2, 3, 4, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
+  if (!value.createdAt || Number.isNaN(Date.parse(value.createdAt))) throw new Error("The Trace backup timestamp is invalid.");
+  return value.schemaVersion === TRACE_BACKUP_SCHEMA_VERSION
+    ? verifySchemaFiveIntegrity(value, cryptoProvider).then(() => validateAndNormalizeBackup(value))
+    : validateAndNormalizeBackup(value);
 }
 
 export async function createTraceBackup({
@@ -513,6 +588,7 @@ export async function createTraceBackup({
   openDatabase = openPhotoDatabase,
   now = () => new Date(),
   appVersion = packageMetadata.version,
+  cryptoProvider,
 } = {}) {
   recoverPendingBackupTransactions(storage);
   const database = await openDatabase();
@@ -520,7 +596,10 @@ export async function createTraceBackup({
   assertNoPendingBackupTransactions(storage);
   const structured = readStructuredData(storage);
   assertNoPendingBackupTransactions(storage);
-  const encodedPhotos = await Promise.all(photos.map(encodePhoto));
+  const encodedPhotoResults = await Promise.all(photos.map((photo) => encodePhoto(photo, cryptoProvider)));
+  assertNoPendingBackupTransactions(storage);
+  const encodedPhotos = encodedPhotoResults.map(({ photo }) => photo);
+  const structuredDigest = await sha256CanonicalJson(structured, cryptoProvider);
   assertNoPendingBackupTransactions(storage);
   const backup = {
     format: TRACE_BACKUP_FORMAT,
@@ -531,8 +610,24 @@ export async function createTraceBackup({
       structured,
       photos: encodedPhotos,
     },
+    integrity: {
+      format: TRACE_BACKUP_INTEGRITY_FORMAT,
+      version: TRACE_BACKUP_INTEGRITY_VERSION,
+      algorithm: TRACE_BACKUP_HASH_ALGORITHM,
+      structured: {
+        digest: structuredDigest,
+        domainCount: TRACE_STORAGE_KEYS.length,
+        domains: [...TRACE_STORAGE_KEYS],
+      },
+      photos: {
+        count: encodedPhotos.length,
+        entries: encodedPhotoResults.map(({ integrity }) => integrity),
+      },
+    },
   };
-  return validateTraceBackup(backup).backup;
+  const validated = await validateTraceBackup(backup, { cryptoProvider });
+  assertNoPendingBackupTransactions(storage);
+  return validated.backup;
 }
 
 export function traceBackupFilename(createdAt = new Date()) {
@@ -554,9 +649,10 @@ export async function restoreTraceBackup(value, {
   openDatabase = openPhotoDatabase,
   journalVaultSession = null,
   backupJournalCredential = null,
+  cryptoProvider,
 } = {}) {
   if (!confirmed) throw new Error("Restore confirmation is required.");
-  const validated = validateTraceBackup(value);
+  const validated = await validateTraceBackup(value, { cryptoProvider });
   const backup = validated.backup;
   const backupVault = backup.data.structured[JOURNAL_VAULT_STORAGE_KEY];
   if (backupVault) {
@@ -604,8 +700,8 @@ export async function restoreTraceBackup(value, {
   return summary;
 }
 
-export function parseTraceBackupText(text) {
+export async function parseTraceBackupText(text, options) {
   let value;
   try { value = JSON.parse(text); } catch (error) { throw new Error("The selected file is not valid JSON."); }
-  return validateTraceBackup(value);
+  return validateTraceBackup(value, options);
 }

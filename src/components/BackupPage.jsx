@@ -120,7 +120,7 @@ export default function BackupPage({
     setError("");
     setStatus("Validating backup…");
     try {
-      const parsed = parseTraceBackupText(await readFileText(file));
+      const parsed = await parseTraceBackupText(await readFileText(file));
       setPreview(parsed);
       setBackupCredentialType("passphrase");
       setBackupCredentialValue("");

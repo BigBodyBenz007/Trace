@@ -39,6 +39,14 @@ import {
   emptyProtocolCompoundOutcomeCollection,
 } from "./protocolCompoundOutcome";
 import { JOURNAL_VAULT_TRANSACTION_KEY } from "./journalVault";
+import {
+  canonicalJson,
+  sha256Bytes,
+  sha256CanonicalJson,
+  TRACE_BACKUP_HASH_ALGORITHM,
+  TRACE_BACKUP_INTEGRITY_FORMAT,
+  TRACE_BACKUP_INTEGRITY_VERSION,
+} from "./traceBackupIntegrity";
 
 function makeStorage(initial = {}, failOnSet = null) {
   const values = new Map(Object.entries(initial));
@@ -109,6 +117,10 @@ function emptyStructured(overrides = {}) {
         ? defaultInjectionSiteSettings()
       : ["nutritionGoals", "appSettings", "workoutDraft", "journalDraft", "journalVault"].includes(key) ? null : [],
   ]).concat(Object.entries(overrides)));
+}
+
+function cloneJsonForTest(value) {
+  return JSON.parse(JSON.stringify(value));
 }
 
 function dailyAction() {
@@ -202,7 +214,7 @@ function readBlobText(blob) {
 function backup(overrides = {}) {
   return {
     format: "trace-backup",
-    schemaVersion: TRACE_BACKUP_SCHEMA_VERSION,
+    schemaVersion: 4,
     createdAt: "2026-08-12T10:20:30.000Z",
     app: { name: "Trace", version: "0.1.0" },
     data: { structured: emptyStructured(), photos: [] },
@@ -269,7 +281,7 @@ test("exports empty Trace data with stable version metadata and filename", async
     openDatabase: async () => database,
     now: () => new Date("2026-08-12T10:20:30.000Z"),
   });
-  expect(result).toMatchObject({ format: "trace-backup", schemaVersion: 4, createdAt: "2026-08-12T10:20:30.000Z" });
+  expect(result).toMatchObject({ format: "trace-backup", schemaVersion: 5, createdAt: "2026-08-12T10:20:30.000Z" });
   expect(result.data.photos).toEqual([]);
   expect(result.data.structured.workoutDraft).toBeNull();
   expect(result.data.structured.waterEntries).toEqual(emptyWaterCollection());
@@ -319,6 +331,196 @@ test("exports structured data and multiple photos without mutating sources", asy
   expect(database.records()[0].blob).toBeInstanceOf(Blob);
   expect(memories[0].images).toEqual(["photo-1", "photo-2"]);
 });
+
+test("new exports include the complete versioned integrity manifest", async () => {
+  const result = await createTraceBackup({
+    storage: makeStorage(),
+    openDatabase: async () => makePhotoDatabase(),
+  });
+
+  expect(result.integrity).toEqual({
+    format: TRACE_BACKUP_INTEGRITY_FORMAT,
+    version: TRACE_BACKUP_INTEGRITY_VERSION,
+    algorithm: TRACE_BACKUP_HASH_ALGORITHM,
+    structured: {
+      digest: expect.stringMatching(/^[0-9a-f]{64}$/),
+      domainCount: TRACE_STORAGE_KEYS.length,
+      domains: [...TRACE_STORAGE_KEYS],
+    },
+    photos: { count: 0, entries: [] },
+  });
+});
+
+test("canonical structured hashing ignores object-key order but preserves array order", async () => {
+  const first = { zebra: 1, nested: { beta: true, alpha: null }, list: ["one", "two"] };
+  const reorderedKeys = { list: ["one", "two"], nested: { alpha: null, beta: true }, zebra: 1 };
+  const reorderedArray = { zebra: 1, nested: { beta: true, alpha: null }, list: ["two", "one"] };
+
+  expect(canonicalJson(first)).toBe(canonicalJson(reorderedKeys));
+  expect(await sha256CanonicalJson(first)).toBe(await sha256CanonicalJson(reorderedKeys));
+  expect(await sha256CanonicalJson(first)).not.toBe(await sha256CanonicalJson(reorderedArray));
+});
+
+test("each exported photo integrity entry hashes the decoded bytes", async () => {
+  const database = makePhotoDatabase([
+    { id: "photo-a", memoryId: "memory-a", blob: new Blob(["first photo"], { type: "image/png" }) },
+    { id: "photo-b", workoutId: "workout-b", blob: new Blob(["second photo"], { type: "image/jpeg" }) },
+  ]);
+  const result = await createTraceBackup({ storage: makeStorage(), openDatabase: async () => database });
+
+  expect(result.integrity.photos).toEqual({
+    count: 2,
+    entries: [
+      { id: "photo-a", size: 11, digest: await sha256Bytes(new TextEncoder().encode("first photo")) },
+      { id: "photo-b", size: 12, digest: await sha256Bytes(new TextEncoder().encode("second photo")) },
+    ],
+  });
+  await expect(validateTraceBackup(result)).resolves.toMatchObject({ summary: { photos: 2 } });
+  const restoredDatabase = makePhotoDatabase([{ id: "old-photo", blob: new Blob(["old"]) }]);
+  await expect(restoreTraceBackup(result, {
+    confirmed: true,
+    storage: makeStorage({ memories: JSON.stringify([{ id: "old-memory" }]) }),
+    openDatabase: async () => restoredDatabase,
+  })).resolves.toMatchObject({ photos: 2 });
+  expect(await readBlobText(restoredDatabase.records()[0].blob)).toBe("first photo");
+  expect(await readBlobText(restoredDatabase.records()[1].blob)).toBe("second photo");
+});
+
+test("schema-5 integrity rejects altered structured values before opening storage", async () => {
+  const exported = await createTraceBackup({ storage: makeStorage(), openDatabase: async () => makePhotoDatabase() });
+  const damaged = cloneJsonForTest(exported);
+  damaged.data.structured.nutritionGoals = { calories: 9999 };
+  const openDatabase = jest.fn();
+  const storage = makeStorage({ memories: JSON.stringify([{ id: "current" }]) });
+
+  await expect(restoreTraceBackup(damaged, { confirmed: true, storage, openDatabase }))
+    .rejects.toThrow("failed its integrity check. Existing Trace data was not changed");
+  expect(openDatabase).not.toHaveBeenCalled();
+  expect(storage.value("memories")).toBe(JSON.stringify([{ id: "current" }]));
+  expect(storage.setItem).not.toHaveBeenCalled();
+  expect(storage.removeItem).not.toHaveBeenCalled();
+});
+
+test("schema-5 integrity rejects an altered decoded photo byte", async () => {
+  const exported = await createTraceBackup({
+    storage: makeStorage(),
+    openDatabase: async () => makePhotoDatabase([
+      { id: "photo-1", blob: new Blob(["hello"], { type: "image/png" }) },
+    ]),
+  });
+  const damaged = cloneJsonForTest(exported);
+  damaged.data.photos[0].blob.base64 = btoa("jello");
+
+  await expect(validateTraceBackup(damaged)).rejects.toThrow("failed its integrity check");
+});
+
+test("schema-5 integrity rejects changed, missing, extra, and substituted photo entries", async () => {
+  const exported = await createTraceBackup({
+    storage: makeStorage(),
+    openDatabase: async () => makePhotoDatabase([
+      { id: "photo-1", blob: new Blob(["hello"], { type: "image/png" }) },
+    ]),
+  });
+  const changedHash = cloneJsonForTest(exported);
+  changedHash.integrity.photos.entries[0].digest = "0".repeat(64);
+  const missing = cloneJsonForTest(exported);
+  missing.integrity.photos.entries = [];
+  const extra = cloneJsonForTest(exported);
+  extra.integrity.photos.count = 2;
+  extra.integrity.photos.entries.push({ id: "photo-2", size: 5, digest: "1".repeat(64) });
+  const substituted = cloneJsonForTest(exported);
+  substituted.integrity.photos.entries[0].id = "photo-substitute";
+
+  await expect(validateTraceBackup(changedHash)).rejects.toThrow("integrity");
+  await expect(validateTraceBackup(missing)).rejects.toThrow("integrity");
+  await expect(validateTraceBackup(extra)).rejects.toThrow("integrity");
+  await expect(validateTraceBackup(substituted)).rejects.toThrow("integrity");
+});
+
+test("schema-5 integrity rejects reordered photo data", async () => {
+  const exported = await createTraceBackup({
+    storage: makeStorage(),
+    openDatabase: async () => makePhotoDatabase([
+      { id: "photo-1", blob: new Blob(["first"], { type: "image/png" }) },
+      { id: "photo-2", blob: new Blob(["second"], { type: "image/png" }) },
+    ]),
+  });
+  const damaged = cloneJsonForTest(exported);
+  damaged.data.photos.reverse();
+  await expect(validateTraceBackup(damaged)).rejects.toThrow("photo order or identity");
+});
+
+test.each([
+  ["missing manifest", (value) => { delete value.integrity; }],
+  ["unknown algorithm", (value) => { value.integrity.algorithm = "SHA-1"; }],
+  ["malformed digest", (value) => { value.integrity.structured.digest = "not-a-digest"; }],
+  ["domain count mismatch", (value) => { value.integrity.structured.domainCount -= 1; }],
+  ["domain inventory mismatch", (value) => { value.integrity.structured.domains[0] = "unknownDomain"; }],
+  ["photo count mismatch", (value) => { value.integrity.photos.count += 1; }],
+])("schema-5 validation rejects %s", async (label, damage) => {
+  const exported = await createTraceBackup({ storage: makeStorage(), openDatabase: async () => makePhotoDatabase() });
+  const damaged = cloneJsonForTest(exported);
+  damage(damaged);
+  await expect(validateTraceBackup(damaged)).rejects.toThrow("failed its integrity check");
+});
+
+test("schema-5 integrity rejects extra and missing structured payload domains even with matching digests", async () => {
+  const exported = await createTraceBackup({ storage: makeStorage(), openDatabase: async () => makePhotoDatabase() });
+  const extra = cloneJsonForTest(exported);
+  extra.data.structured.unexpectedDomain = [];
+  extra.integrity.structured.digest = await sha256CanonicalJson(extra.data.structured);
+  const missing = cloneJsonForTest(exported);
+  delete missing.data.structured.memories;
+  missing.integrity.structured.digest = await sha256CanonicalJson(missing.data.structured);
+
+  await expect(validateTraceBackup(extra)).rejects.toThrow("domain inventory");
+  await expect(validateTraceBackup(missing)).rejects.toThrow("domain inventory");
+});
+
+test.each(Object.entries({
+  memories: [null],
+  nutritionGoals: [],
+  userFoods: [{}],
+  nutritionEntries: [{}],
+  waterEntries: { schemaVersion: 1, entries: [{}] },
+  healthMeasurementEntries: [{}],
+  appSettings: [],
+  medicationEntries: [{}],
+  medicationCompounds: [{}],
+  medicationDoseSchedules: { schemaVersion: 1, schedules: [{}] },
+  medicationDoseOccurrences: { schemaVersion: 1, occurrences: [{}] },
+  protocols: [{}],
+  protocolOccurrences: { schemaVersion: 1, occurrences: [{}] },
+  protocolCompoundOutcomes: { schemaVersion: 1, occurrences: [{}] },
+  injectionSiteEntries: { schemaVersion: 2, sessions: [{}], shots: [] },
+  injectionSiteSettings: {},
+  plannedWorkouts: [{}],
+  dailyActions: { schemaVersion: 1, actions: [{}] },
+  workoutDraft: {},
+  workoutEntries: [{}],
+  savedExercises: [{}],
+  trophyCaseEntries: [{}],
+  journalEntries: [{}],
+  journalDraft: {},
+  journalVault: {},
+}))("deep validation rejects malformed %s durable data", (domain, malformed) => {
+  const value = backup({ data: { structured: emptyStructured({ [domain]: malformed }), photos: [] } });
+  expect(() => validateTraceBackup(value)).toThrow();
+});
+
+test.each(["memories", "userFoods", "nutritionEntries", "healthMeasurementEntries", "medicationEntries", "medicationCompounds", "protocols", "workoutEntries", "savedExercises", "trophyCaseEntries", "journalEntries"])(
+  "deep validation rejects duplicate IDs in %s",
+  (domain) => {
+    const record = domain === "journalEntries"
+      ? {
+          id: "duplicate", visibility: "private", body: "private", date: "2026-08-30", time: "12:00",
+          createdAt: "2026-08-30T12:00:00.000Z", updatedAt: "2026-08-30T12:00:00.000Z",
+        }
+      : { id: "duplicate" };
+    const value = backup({ data: { structured: emptyStructured({ [domain]: [record, { ...record }] }), photos: [] } });
+    expect(() => validateTraceBackup(value)).toThrow();
+  }
+);
 
 test("restores a valid pre-execution-flow workout draft without inventing a planned-workout backlink", async () => {
   const legacyDraft = activeWorkoutDraft();
@@ -433,7 +635,7 @@ test("backs up and restores valid water entries while filtering malformed record
     schemaVersion: 1,
     entries: [waterEntry],
   });
-  expect(validateTraceBackup(created).summary.waterEntries).toBe(1);
+  expect((await validateTraceBackup(created)).summary.waterEntries).toBe(1);
 
   const restored = makeStorage();
   await restoreTraceBackup(created, {
@@ -532,7 +734,7 @@ test("round-trips an unfinished plaintext Journal draft and previews its presenc
   const source = makeStorage({ journalDraft: JSON.stringify(draft) });
   const created = await createTraceBackup({ storage: source, openDatabase: async () => makePhotoDatabase() });
   expect(created.data.structured.journalDraft).toEqual(draft);
-  expect(validateTraceBackup(created).summary.journalDraft).toBe(true);
+  expect((await validateTraceBackup(created)).summary.journalDraft).toBe(true);
 
   const restored = makeStorage({ journalDraft: JSON.stringify(plaintextJournalDraft({ body: "replace me" })) });
   await restoreTraceBackup(created, {
@@ -549,7 +751,7 @@ test("an empty plaintext Journal draft remains empty through export and full rep
     openDatabase: async () => makePhotoDatabase(),
   });
   expect(created.data.structured.journalDraft).toBeNull();
-  expect(validateTraceBackup(created).summary.journalDraft).toBe(false);
+  expect((await validateTraceBackup(created)).summary.journalDraft).toBe(false);
 
   const restored = makeStorage({ journalDraft: JSON.stringify(plaintextJournalDraft()) });
   await restoreTraceBackup(created, {
@@ -565,7 +767,7 @@ test.each([1, 2, 3])("imports schema %i without a Journal draft using the empty 
   delete structured.journalDraft;
   const value = { ...backup({ data: { structured, photos: [] } }), schemaVersion };
   const validated = validateTraceBackup(value);
-  expect(validated.backup.schemaVersion).toBe(TRACE_BACKUP_SCHEMA_VERSION);
+  expect(validated.backup.schemaVersion).toBe(schemaVersion);
   expect(validated.backup.data.structured.journalDraft).toBeNull();
 
   const restored = makeStorage({ journalDraft: JSON.stringify(plaintextJournalDraft()) });
@@ -577,6 +779,13 @@ test.each([1, 2, 3])("imports schema %i without a Journal draft using the empty 
   expect(restored.value("journalDraft")).toBeNull();
 });
 
+test("imports a complete hashless schema-4 backup through the legacy validation path", () => {
+  const value = backup();
+  const validated = validateTraceBackup(value);
+  expect(validated.backup.schemaVersion).toBe(4);
+  expect(validated.backup.integrity).toBeUndefined();
+});
+
 test("schema 4 rejects a backup that omits any classified durable domain", () => {
   const structured = emptyStructured();
   delete structured.journalDraft;
@@ -584,7 +793,7 @@ test("schema 4 rejects a backup that omits any classified durable domain", () =>
     .toThrow("missing its journalDraft data");
 });
 
-test("validates summaries and rejects corrupt, future, and missing-reference backups", () => {
+test("validates summaries and rejects corrupt, future, and missing-reference backups", async () => {
   const valid = backup({ data: { structured: emptyStructured({
     memories: [{ id: "memory-1", date: "2026-01-02", images: ["photo-1"] }],
     nutritionEntries: [{ id: "meal" }], healthMeasurementEntries: [{ id: "health" }], plannedWorkouts: [plannedWorkout()], workoutDraft: activeWorkoutDraft(), workoutEntries: [{ id: "workout" }],
@@ -595,8 +804,8 @@ test("validates summaries and rejects corrupt, future, and missing-reference bac
     trophyCaseEntries: [{ id: "trophy" }],
   }), photos: [encodedPhoto()] } });
   expect(validateTraceBackup(valid).summary).toMatchObject({ memories: 1, photos: 1, nutritionEntries: 1, healthMeasurementEntries: 1, plannedWorkouts: 1, activeWorkoutDraft: true, workouts: 1, medicationEntries: 1, protocols: 1, protocolOccurrences: 1, injectionSiteEntries: 1, dailyActions: 1, trophyCaseEntries: 1 });
-  expect(() => parseTraceBackupText("not json")).toThrow("not valid JSON");
-  expect(() => validateTraceBackup({ ...valid, schemaVersion: 5 })).toThrow("newer");
+  await expect(parseTraceBackupText("not json")).rejects.toThrow("not valid JSON");
+  expect(() => validateTraceBackup({ ...valid, schemaVersion: 6 })).toThrow("newer");
   expect(() => validateTraceBackup({ ...valid, data: { ...valid.data, photos: [] } })).toThrow("missing referenced photo");
 });
 
@@ -604,7 +813,7 @@ test("preview validation and an unconfirmed restore never mutate storage", async
   const value = backup();
   const storage = makeStorage({ memories: JSON.stringify([{ id: "current" }]) });
   const database = makePhotoDatabase();
-  parseTraceBackupText(JSON.stringify(value));
+  await parseTraceBackupText(JSON.stringify(value));
   await expect(restoreTraceBackup(value, { storage, openDatabase: async () => database })).rejects.toThrow("confirmation");
   expect(storage.value("memories")).toBe(JSON.stringify([{ id: "current" }]));
 });
@@ -770,7 +979,7 @@ test("round-trips Protocol compound outcomes with preview counts and safely defa
   const storage = makeStorage({ protocolCompoundOutcomes: JSON.stringify(collection) });
   const exported = await createTraceBackup({ storage, openDatabase: async () => makePhotoDatabase() });
   expect(exported.data.structured.protocolCompoundOutcomes).toEqual(collection);
-  expect(validateTraceBackup(exported).summary.protocolCompoundOutcomes).toBe(1);
+  expect((await validateTraceBackup(exported)).summary.protocolCompoundOutcomes).toBe(1);
 
   const restoredStorage = makeStorage();
   await restoreTraceBackup(exported, {
@@ -1267,7 +1476,7 @@ test("backup round-trips dose schedules and occurrence state with preview counts
     medicationDoseOccurrences: JSON.stringify(occurrenceCollection),
   });
   const value = await createTraceBackup({ storage, openDatabase: async () => makePhotoDatabase() });
-  const validated = validateTraceBackup(value);
+  const validated = await validateTraceBackup(value);
   expect(validated.summary).toMatchObject({ medicationDoseSchedules: 1, medicationDoseOccurrences: 1 });
   expect(validated.backup.data.structured.medicationDoseSchedules).toEqual(scheduleCollection);
   expect(validated.backup.data.structured.medicationDoseOccurrences).toEqual(occurrenceCollection);

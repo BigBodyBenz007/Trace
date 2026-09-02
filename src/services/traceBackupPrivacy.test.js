@@ -91,7 +91,7 @@ test("encrypted backup includes only the vault and non-secret metadata, never pl
   expect(serialized).not.toContain("draft secret body");
   expect(serialized).not.toContain(passphrase);
   expect(serialized).not.toContain(enabled.recoveryPhrase);
-  expect(validateTraceBackup(backup).summary).toMatchObject({
+  expect((await validateTraceBackup(backup)).summary).toMatchObject({
     encryptedJournal: true,
     journalEntries: null,
     journalDraft: null,
