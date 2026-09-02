@@ -1,9 +1,14 @@
+import { detectRuntimePlatform } from "./services/runtimePlatform";
+
 export function registerTraceServiceWorker({
   environment = process.env.NODE_ENV,
   publicUrl = process.env.PUBLIC_URL || "",
-  serviceWorker = typeof navigator !== "undefined" ? navigator.serviceWorker : null,
+  navigatorObject = typeof navigator !== "undefined" ? navigator : null,
+  serviceWorker = navigatorObject?.serviceWorker || null,
   windowObject = typeof window !== "undefined" ? window : null,
+  runtime = detectRuntimePlatform({ windowObject, navigatorObject }),
 } = {}) {
+  if (!runtime?.allowsWebServiceWorker) return;
   if (!serviceWorker || !windowObject) return;
   const serviceWorkerUrl = `${publicUrl}/service-worker.js`;
 
