@@ -577,8 +577,13 @@ export function createVaultPayloadFromBackupEntries(envelope, journalEntries, jo
   }, envelope.vaultId);
 }
 
-export async function encryptBackupJournalWithSession(session, journalEntries, { cryptoProvider } = {}) {
-  const payload = createVaultPayloadFromBackupEntries(session.envelope, journalEntries, null);
+export async function encryptBackupJournalWithSession(
+  session,
+  journalEntries,
+  journalDraft = null,
+  { cryptoProvider } = {}
+) {
+  const payload = createVaultPayloadFromBackupEntries(session.envelope, journalEntries, journalDraft);
   const envelope = await encryptJournalVaultPayload(
     session.envelope,
     session.dataKey,

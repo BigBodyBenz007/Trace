@@ -304,6 +304,53 @@ test("successful same-tab restore immediately refreshes planned-workout App stat
   expect(localStorage.getItem("workoutEntries")).toBeNull();
 });
 
+test("same-tab restore makes a plaintext Journal draft available when Journal opens", async () => {
+  const restoredDraft = {
+    schemaVersion: 1,
+    editingId: null,
+    form: {
+      title: "Restored unfinished title",
+      body: "Restored unfinished body",
+      date: "2026-08-22",
+      time: "18:45",
+      mood: "Calm",
+      tags: "restored, private",
+    },
+  };
+  const restoredBackup = {
+    createdAt: "2026-08-22T18:00:00.000Z",
+    data: { structured: { journalDraft: restoredDraft }, photos: [] },
+  };
+  const restoredSummary = {
+    memories: 0,
+    photos: 0,
+    journalEntries: 0,
+    journalDraft: true,
+  };
+  parseTraceBackupText.mockReturnValue({ backup: restoredBackup, summary: restoredSummary });
+  restoreTraceBackup.mockImplementation(async () => {
+    localStorage.setItem("journalDraft", JSON.stringify(restoredDraft));
+    return restoredSummary;
+  });
+  window.confirm = jest.fn(() => true);
+
+  renderAppAtTimeline();
+  openBackupFromSettings();
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["backup"], "trace-backup.json", { type: "application/json" })] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  await screen.findByRole("heading", { name: /Trace restored successfully/ });
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" }).at(-1));
+  fireEvent.click(screen.getByRole("button", { name: "Open Journal" }));
+
+  expect(screen.getByLabelText("Title")).toHaveValue("Restored unfinished title");
+  expect(screen.getByLabelText("Entry")).toHaveValue("Restored unfinished body");
+  expect(screen.getByLabelText("Tags")).toHaveValue("restored, private");
+  expect(screen.getByRole("button", { name: "Calm" })).toHaveAttribute("aria-pressed", "true");
+});
+
 test("same-tab restore leaves navigation unchanged and resumes an orphaned active draft with entered sets", async () => {
   const restoredDraft = createWorkoutDraftFromPlannedWorkout(
     plannedWorkout("planned-workout:deleted", "Restored Active Workout"),

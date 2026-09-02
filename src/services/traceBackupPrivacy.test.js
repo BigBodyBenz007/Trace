@@ -75,28 +75,42 @@ function entry(id, body) {
 
 const passphrase = "backup privacy passphrase";
 
-test("encrypted backup includes only the vault and non-secret metadata, never plaintext or the transaction journal", async () => {
+test("encrypted backup includes only the vault and non-secret metadata, never plaintext", async () => {
   const privateEntry = entry("journal-private", "backup-only secret body");
   const storage = new MemoryStorage({
     journalEntries: JSON.stringify([privateEntry]),
     journalDraft: JSON.stringify({ schemaVersion: 1, editingId: null, form: { title: "draft secret", body: "draft secret body", date: "2026-08-30", time: "12:01", mood: "", tags: "" } }),
   });
   const enabled = await enableJournalVault({ storage, passphrase, cryptoProvider: webcrypto });
-  storage.setItem(JOURNAL_VAULT_TRANSACTION_KEY, JSON.stringify({ shouldNeverExport: "transaction secret" }));
   const backup = await createTraceBackup({ storage, openDatabase: async () => emptyPhotoDatabase() });
   const serialized = JSON.stringify(backup);
   expect(backup.data.structured[JOURNAL_VAULT_STORAGE_KEY]).toEqual(enabled.envelope);
   expect(backup.data.structured.journalEntries).toBeNull();
+  expect(backup.data.structured.journalDraft).toBeNull();
   expect(serialized).not.toContain("backup-only secret body");
   expect(serialized).not.toContain("draft secret body");
   expect(serialized).not.toContain(passphrase);
   expect(serialized).not.toContain(enabled.recoveryPhrase);
-  expect(serialized).not.toContain("transaction secret");
   expect(validateTraceBackup(backup).summary).toMatchObject({
     encryptedJournal: true,
     journalEntries: null,
+    journalDraft: null,
     journalRecoveryFormat: "bip39-english-12-hkdf-sha256-v1",
   });
+});
+
+test("encrypted backup refuses an unrecoverable Journal transaction without leaking it", async () => {
+  const storage = new MemoryStorage({
+    journalEntries: JSON.stringify([entry("journal-private", "backup-only secret body")]),
+  });
+  await enableJournalVault({ storage, passphrase, cryptoProvider: webcrypto });
+  storage.setItem(JOURNAL_VAULT_TRANSACTION_KEY, JSON.stringify({ shouldNeverExport: "transaction secret" }));
+
+  await expect(createTraceBackup({
+    storage,
+    openDatabase: async () => emptyPhotoDatabase(),
+  })).rejects.toThrow("Journal Privacy Lock transaction is still pending");
+  expect(storage.getItem(JOURNAL_VAULT_TRANSACTION_KEY)).toContain("transaction secret");
 });
 
 test("encrypted restore replaces the current Journal and remains locked at rest", async () => {
@@ -159,7 +173,22 @@ test("authenticated corruption and a wrong backup credential are rejected before
 });
 
 test("legacy plaintext backup restoration over an enabled vault requires an unlocked session and re-encrypts under the current key", async () => {
-  const legacySource = new MemoryStorage({ journalEntries: JSON.stringify([entry("legacy", "legacy restored secret")]) });
+  const legacyDraft = {
+    schemaVersion: 1,
+    editingId: null,
+    form: {
+      title: "Legacy unfinished",
+      body: "legacy draft secret",
+      date: "2026-08-30",
+      time: "12:01",
+      mood: "Calm",
+      tags: "private",
+    },
+  };
+  const legacySource = new MemoryStorage({
+    journalEntries: JSON.stringify([entry("legacy", "legacy restored secret")]),
+    journalDraft: JSON.stringify(legacyDraft),
+  });
   const legacyBackup = await createTraceBackup({ storage: legacySource, openDatabase: async () => emptyPhotoDatabase() });
   const current = new MemoryStorage({ journalEntries: JSON.stringify([entry("current", "current secret")]) });
   const session = await enableJournalVault({ storage: current, passphrase, cryptoProvider: webcrypto });
@@ -179,9 +208,11 @@ test("legacy plaintext backup restoration over an enabled vault requires an unlo
     journalVaultSession: session,
   });
   expect(current.getItem("journalEntries")).toBeNull();
+  expect(current.getItem("journalDraft")).toBeNull();
   const unlocked = await unlockJournalVault(current, { type: "passphrase", value: passphrase }, { cryptoProvider: webcrypto });
   expect(unlocked.payload.domains.journalEntries).toContain("legacy restored secret");
   expect(unlocked.payload.domains.journalEntries).not.toContain("current secret");
+  expect(unlocked.payload.domains.journalDraft).toBe(JSON.stringify(legacyDraft));
 });
 
 test("version-one backups without privacy settings remain plaintext when no lock is enabled", async () => {

@@ -24,7 +24,7 @@ const summary = {
   protocolCompoundOutcomes: 19,
   injectionSiteEntries: 16,
   medicationEntries: 6, protocols: 7, trophyCaseEntries: 8,
-  savedExercises: 9, savedCompounds: 10, userFoods: 11, journalEntries: 12,
+  savedExercises: 9, savedCompounds: 10, userFoods: 11, journalEntries: 12, journalDraft: true,
 };
 const parsed = { backup: { createdAt: "2026-08-12T00:00:00.000Z" }, summary };
 
@@ -98,6 +98,23 @@ test("explicit export downloads one self-contained backup file", async () => {
   click.mockRestore();
   URL.createObjectURL = originalCreateObjectURL;
   URL.revokeObjectURL = originalRevokeObjectURL;
+});
+
+test("pending transaction export failures are shown clearly and never download a file", async () => {
+  createTraceBackup.mockRejectedValue(new Error(
+    "Backup is blocked because an interrupted medication dose transaction is still pending."
+  ));
+  const originalCreateObjectURL = URL.createObjectURL;
+  URL.createObjectURL = jest.fn();
+  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "interrupted medication dose transaction is still pending"
+  );
+  expect(URL.createObjectURL).not.toHaveBeenCalled();
+  URL.createObjectURL = originalCreateObjectURL;
 });
 
 test("desktop export retains the complete JSON backup filename and MIME type", async () => {
@@ -209,6 +226,7 @@ test("validates a selected backup and previews counts without restoring", async 
   expect(screen.getByText("Protocol daily statuses: 15")).toBeInTheDocument();
   expect(screen.getByText("Protocol compound results: 19")).toBeInTheDocument();
   expect(screen.getByText("Injection shots: 16")).toBeInTheDocument();
+  expect(screen.getByText("Unfinished Journal draft: Included")).toBeInTheDocument();
   expect(screen.getByText("Active workout draft: Included — it will replace any current active workout draft")).toBeInTheDocument();
   expect(screen.getByText("No Trace data has been changed yet.")).toBeInTheDocument();
   expect(restoreTraceBackup).not.toHaveBeenCalled();

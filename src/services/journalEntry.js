@@ -133,22 +133,25 @@ export function writeJournalEntries(storage, entries) {
   storage.setItem(JOURNAL_ENTRY_STORAGE_KEY, JSON.stringify(entries));
 }
 
+export function normalizeJournalDraft(value) {
+  if (value?.schemaVersion !== JOURNAL_SCHEMA_VERSION || !value.form || typeof value.form !== "object" || Array.isArray(value.form)) return null;
+  return {
+    schemaVersion: JOURNAL_SCHEMA_VERSION,
+    editingId: value.editingId ? String(value.editingId) : null,
+    form: {
+      title: String(value.form.title || ""),
+      body: String(value.form.body || ""),
+      date: String(value.form.date || ""),
+      time: String(value.form.time || ""),
+      mood: JOURNAL_MOODS.includes(value.form.mood) ? value.form.mood : "",
+      tags: String(value.form.tags || ""),
+    },
+  };
+}
+
 export function readJournalDraft(storage = localStorage) {
   try {
-    const value = JSON.parse(storage.getItem(JOURNAL_DRAFT_STORAGE_KEY));
-    if (value?.schemaVersion !== JOURNAL_SCHEMA_VERSION || !value.form || typeof value.form !== "object") return null;
-    return {
-      schemaVersion: JOURNAL_SCHEMA_VERSION,
-      editingId: value.editingId ? String(value.editingId) : null,
-      form: {
-        title: String(value.form.title || ""),
-        body: String(value.form.body || ""),
-        date: String(value.form.date || ""),
-        time: String(value.form.time || ""),
-        mood: JOURNAL_MOODS.includes(value.form.mood) ? value.form.mood : "",
-        tags: String(value.form.tags || ""),
-      },
-    };
+    return normalizeJournalDraft(JSON.parse(storage.getItem(JOURNAL_DRAFT_STORAGE_KEY)));
   } catch (error) {
     return null;
   }

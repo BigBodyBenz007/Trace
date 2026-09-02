@@ -7,6 +7,11 @@ import packageMetadata from "../../package.json";
 import { normalizeAppSettings } from "./appSettings";
 import { normalizePlannedWorkouts } from "./plannedWorkout";
 import { normalizeWorkoutDraft } from "./workoutDraft";
+import { normalizeJournalDraft } from "./journalEntry";
+import {
+  TRACE_BACKUP_STORAGE_KEYS,
+  TRACE_RECOVERABLE_TRANSACTION_KEYS,
+} from "./storageDomainManifest";
 import {
   emptyWaterCollection,
   normalizeWaterCollection,
@@ -28,16 +33,22 @@ import {
 import {
   emptyMedicationDoseOccurrenceCollection,
   emptyMedicationDoseScheduleCollection,
+  MEDICATION_DOSE_COMPLETION_TRANSACTION_KEY,
   normalizeMedicationDoseOccurrenceCollection,
   normalizeMedicationDoseScheduleCollection,
+  recoverPendingMedicationDoseCompletion,
 } from "./medicationDoseSchedule";
 import {
   emptyProtocolCompoundOutcomeCollection,
   normalizeProtocolCompoundOutcomeCollection,
+  PROTOCOL_COMPOUND_TRANSACTION_KEY,
+  recoverPendingProtocolCompoundTransaction,
 } from "./protocolCompoundOutcome";
 import {
   encryptBackupJournalWithSession,
   JOURNAL_VAULT_STORAGE_KEY,
+  JOURNAL_VAULT_TRANSACTION_KEY,
+  recoverJournalVaultTransaction,
   validateJournalVaultPayload,
 } from "./journalVault";
 import {
@@ -47,39 +58,56 @@ import {
 } from "./journalVaultCrypto";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
-export const TRACE_BACKUP_SCHEMA_VERSION = 3;
-export const TRACE_STORAGE_KEYS = Object.freeze([
-  "memories",
-  "nutritionGoals",
-  "userFoods",
-  "nutritionEntries",
-  "waterEntries",
-  "healthMeasurementEntries",
-  "appSettings",
-  "medicationEntries",
-  "medicationCompounds",
-  "medicationDoseSchedules",
-  "medicationDoseOccurrences",
-  "protocols",
-  "protocolOccurrences",
-  "protocolCompoundOutcomes",
-  "injectionSiteEntries",
-  "injectionSiteSettings",
-  "plannedWorkouts",
-  "dailyActions",
-  "workoutDraft",
-  "workoutEntries",
-  "savedExercises",
-  "trophyCaseEntries",
-  "journalEntries",
-  JOURNAL_VAULT_STORAGE_KEY,
-]);
+export const TRACE_BACKUP_SCHEMA_VERSION = 4;
+export const TRACE_STORAGE_KEYS = TRACE_BACKUP_STORAGE_KEYS;
 
 const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
-const SPECIAL_KEYS = new Set(["waterEntries", "workoutDraft", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", JOURNAL_VAULT_STORAGE_KEY]);
+const SPECIAL_KEYS = new Set(["waterEntries", "workoutDraft", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "journalDraft", JOURNAL_VAULT_STORAGE_KEY]);
 const ARRAY_KEYS = new Set(TRACE_STORAGE_KEYS.filter(
   (key) => !OBJECT_KEYS.has(key) && !SPECIAL_KEYS.has(key)
 ));
+const LEGACY_OPTIONAL_KEYS = new Set(["healthMeasurementEntries", "appSettings", "journalEntries", "journalDraft", JOURNAL_VAULT_STORAGE_KEY, "plannedWorkouts", "waterEntries", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "workoutDraft"]);
+const RECOVERABLE_BACKUP_TRANSACTIONS = Object.freeze([
+  {
+    key: JOURNAL_VAULT_TRANSACTION_KEY,
+    label: "Journal Privacy Lock",
+    recover: recoverJournalVaultTransaction,
+  },
+  {
+    key: MEDICATION_DOSE_COMPLETION_TRANSACTION_KEY,
+    label: "medication dose",
+    recover: recoverPendingMedicationDoseCompletion,
+  },
+  {
+    key: PROTOCOL_COMPOUND_TRANSACTION_KEY,
+    label: "Protocol result",
+    recover: recoverPendingProtocolCompoundTransaction,
+  },
+]);
+
+function pendingTransactionError(label, error) {
+  const detail = error?.message ? ` Automatic recovery could not finish: ${error.message}` : "";
+  return new Error(
+    `Backup is blocked because an interrupted ${label} transaction is still pending.${detail}`
+  );
+}
+
+export function recoverPendingBackupTransactions(storage = localStorage) {
+  RECOVERABLE_BACKUP_TRANSACTIONS.forEach(({ key, label, recover }) => {
+    if (storage.getItem(key) === null) return;
+    try {
+      recover(storage);
+    } catch (error) {
+      if (storage.getItem(key) !== null) throw pendingTransactionError(label, error);
+    }
+    if (storage.getItem(key) !== null) throw pendingTransactionError(label);
+  });
+}
+
+function assertNoPendingBackupTransactions(storage) {
+  const pending = RECOVERABLE_BACKUP_TRANSACTIONS.find(({ key }) => storage.getItem(key) !== null);
+  if (pending) throw pendingTransactionError(pending.label);
+}
 
 function cloneJson(value) {
   return JSON.parse(JSON.stringify(value));
@@ -191,6 +219,11 @@ function readStructuredData(storage) {
         if (!normalized) throw new Error("Invalid workout draft data.");
         return [key, normalized];
       }
+      if (key === "journalDraft") {
+        const normalized = normalizeJournalDraft(parsed);
+        if (!normalized) throw new Error("Invalid Journal draft data.");
+        return [key, normalized];
+      }
       if (key === "dailyActions") {
         const normalized = normalizeDailyActionCollection(parsed);
         if (!normalized) throw new Error("Invalid daily action data.");
@@ -237,13 +270,23 @@ function readStructuredData(storage) {
   }));
 }
 
-function validateStructuredData(structuredData) {
+function validateStructuredData(structuredData, schemaVersion = TRACE_BACKUP_SCHEMA_VERSION) {
   if (!structuredData || typeof structuredData !== "object" || Array.isArray(structuredData)) {
     throw new Error("The backup is missing its structured Trace data.");
   }
+  if (schemaVersion >= 4) {
+    const missingKey = TRACE_STORAGE_KEYS.find((key) =>
+      !Object.prototype.hasOwnProperty.call(structuredData, key)
+    );
+    if (missingKey) throw new Error(`The backup is missing its ${missingKey} data.`);
+  }
+  const excludedKey = TRACE_RECOVERABLE_TRANSACTION_KEYS.find((key) =>
+    Object.prototype.hasOwnProperty.call(structuredData, key)
+  );
+  if (excludedKey) throw new Error("The backup contains internal transaction recovery data.");
   TRACE_STORAGE_KEYS.forEach((key) => {
     const value = structuredData[key];
-    if (value === null || (["healthMeasurementEntries", "appSettings", "journalEntries", JOURNAL_VAULT_STORAGE_KEY, "plannedWorkouts", "waterEntries", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "workoutDraft"].includes(key) && value === undefined)) return;
+    if (value === null || (LEGACY_OPTIONAL_KEYS.has(key) && value === undefined)) return;
     if (ARRAY_KEYS.has(key) && !Array.isArray(value)) {
       throw new Error(`The backup contains invalid ${key} data.`);
     }
@@ -271,9 +314,16 @@ function validateStructuredData(structuredData) {
       ids.add(String(entry.id));
     });
   }
+  if (
+    structuredData.journalDraft !== undefined &&
+    structuredData.journalDraft !== null &&
+    !normalizeJournalDraft(structuredData.journalDraft)
+  ) {
+    throw new Error("The backup contains invalid Journal draft data.");
+  }
   if (structuredData[JOURNAL_VAULT_STORAGE_KEY] != null) {
     validateJournalVaultEnvelope(structuredData[JOURNAL_VAULT_STORAGE_KEY]);
-    if (structuredData.journalEntries != null) {
+    if (structuredData.journalEntries != null || structuredData.journalDraft != null) {
       throw new Error("The backup mixes encrypted and plaintext Journal data.");
     }
   }
@@ -382,6 +432,7 @@ export function summarizeTraceBackup(backup) {
     savedCompounds: data.medicationCompounds?.length || 0,
     userFoods: data.userFoods?.length || 0,
     journalEntries: data[JOURNAL_VAULT_STORAGE_KEY] ? null : (data.journalEntries?.length || 0),
+    journalDraft: data[JOURNAL_VAULT_STORAGE_KEY] ? null : Boolean(data.journalDraft),
     encryptedJournal: Boolean(data[JOURNAL_VAULT_STORAGE_KEY]),
     journalRecoveryFormat: data[JOURNAL_VAULT_STORAGE_KEY]
       ? journalRecoveryFormat(data[JOURNAL_VAULT_STORAGE_KEY])
@@ -395,14 +446,16 @@ export function validateTraceBackup(value) {
   if (value.schemaVersion > TRACE_BACKUP_SCHEMA_VERSION) {
     throw new Error("This Trace backup was created by a newer, unsupported backup version.");
   }
-  if (![1, 2, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
+  if (![1, 2, 3, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
   if (!value.createdAt || Number.isNaN(Date.parse(value.createdAt))) throw new Error("The Trace backup timestamp is invalid.");
-  validateStructuredData(value.data?.structured);
+  validateStructuredData(value.data?.structured, value.schemaVersion);
   const normalizedBackup = cloneJson(value);
   normalizedBackup.schemaVersion = TRACE_BACKUP_SCHEMA_VERSION;
-  if (normalizedBackup.data.structured[JOURNAL_VAULT_STORAGE_KEY] === undefined) {
-    normalizedBackup.data.structured[JOURNAL_VAULT_STORAGE_KEY] = null;
-  }
+  TRACE_STORAGE_KEYS.forEach((key) => {
+    if (normalizedBackup.data.structured[key] === undefined) {
+      normalizedBackup.data.structured[key] = null;
+    }
+  });
   if (normalizedBackup.data.structured.appSettings != null) {
     normalizedBackup.data.structured.appSettings = normalizeAppSettings(
       normalizedBackup.data.structured.appSettings
@@ -461,16 +514,22 @@ export async function createTraceBackup({
   now = () => new Date(),
   appVersion = packageMetadata.version,
 } = {}) {
+  recoverPendingBackupTransactions(storage);
   const database = await openDatabase();
   const photos = await getAllPhotos(database);
+  assertNoPendingBackupTransactions(storage);
+  const structured = readStructuredData(storage);
+  assertNoPendingBackupTransactions(storage);
+  const encodedPhotos = await Promise.all(photos.map(encodePhoto));
+  assertNoPendingBackupTransactions(storage);
   const backup = {
     format: TRACE_BACKUP_FORMAT,
     schemaVersion: TRACE_BACKUP_SCHEMA_VERSION,
     createdAt: now().toISOString(),
     app: { name: "Trace", version: appVersion },
     data: {
-      structured: readStructuredData(storage),
-      photos: await Promise.all(photos.map(encodePhoto)),
+      structured,
+      photos: encodedPhotos,
     },
   };
   return validateTraceBackup(backup).backup;
@@ -514,9 +573,11 @@ export async function restoreTraceBackup(value, {
     }
     backup.data.structured[JOURNAL_VAULT_STORAGE_KEY] = await encryptBackupJournalWithSession(
       journalVaultSession,
-      backup.data.structured.journalEntries || []
+      backup.data.structured.journalEntries || [],
+      backup.data.structured.journalDraft
     );
     backup.data.structured.journalEntries = null;
+    backup.data.structured.journalDraft = null;
   }
   validateStructuredData(backup.data.structured);
   const summary = summarizeTraceBackup(backup);

@@ -218,6 +218,7 @@ export default function BackupPage({
             <li>Trophy Case entries: {summary.trophyCaseEntries}</li><li>Saved exercises: {summary.savedExercises}</li>
             <li>Saved compounds: {summary.savedCompounds}</li><li>Saved foods: {summary.userFoods}</li>
             <li>{summary.encryptedJournal ? "Encrypted Journal included" : `Journal entries: ${summary.journalEntries || 0}`}</li>
+            {!summary.encryptedJournal && <li>Unfinished Journal draft: {summary.journalDraft ? "Included" : "None"}</li>}
           </ul>
           {summary.encryptedJournal && (
             <>

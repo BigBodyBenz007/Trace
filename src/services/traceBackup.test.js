@@ -38,6 +38,7 @@ import {
   createProtocolCompoundOutcome,
   emptyProtocolCompoundOutcomeCollection,
 } from "./protocolCompoundOutcome";
+import { JOURNAL_VAULT_TRANSACTION_KEY } from "./journalVault";
 
 function makeStorage(initial = {}, failOnSet = null) {
   const values = new Map(Object.entries(initial));
@@ -106,7 +107,7 @@ function emptyStructured(overrides = {}) {
         ? emptyInjectionSiteCollection()
       : key === "injectionSiteSettings"
         ? defaultInjectionSiteSettings()
-      : ["nutritionGoals", "appSettings", "workoutDraft", "journalVault"].includes(key) ? null : [],
+      : ["nutritionGoals", "appSettings", "workoutDraft", "journalDraft", "journalVault"].includes(key) ? null : [],
   ]).concat(Object.entries(overrides)));
 }
 
@@ -209,6 +210,10 @@ function backup(overrides = {}) {
   };
 }
 
+function legacyBackup(overrides = {}) {
+  return { ...backup(overrides), schemaVersion: 3 };
+}
+
 function plannedWorkout(id = "planned-workout:one", overrides = {}) {
   return {
     id,
@@ -240,6 +245,22 @@ function activeWorkoutDraft(overrides = {}) {
   };
 }
 
+function plaintextJournalDraft(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    editingId: null,
+    form: {
+      title: "Work in progress",
+      body: "A private unfinished thought",
+      date: "2026-08-30",
+      time: "12:01",
+      mood: "Calm",
+      tags: "Reflection, private",
+      ...overrides,
+    },
+  };
+}
+
 test("exports empty Trace data with stable version metadata and filename", async () => {
   const storage = makeStorage();
   const database = makePhotoDatabase();
@@ -248,7 +269,7 @@ test("exports empty Trace data with stable version metadata and filename", async
     openDatabase: async () => database,
     now: () => new Date("2026-08-12T10:20:30.000Z"),
   });
-  expect(result).toMatchObject({ format: "trace-backup", schemaVersion: 3, createdAt: "2026-08-12T10:20:30.000Z" });
+  expect(result).toMatchObject({ format: "trace-backup", schemaVersion: 4, createdAt: "2026-08-12T10:20:30.000Z" });
   expect(result.data.photos).toEqual([]);
   expect(result.data.structured.workoutDraft).toBeNull();
   expect(result.data.structured.waterEntries).toEqual(emptyWaterCollection());
@@ -475,7 +496,7 @@ test("rejects a malformed water collection in a backup", () => {
     .toThrow("invalid water entry data");
 });
 
-test("backs up saved private Journal entries but excludes unfinished drafts", async () => {
+test("backs up saved private Journal entries and unfinished plaintext drafts", async () => {
   const journalEntry = {
     id: "journal-1", schemaVersion: 1, visibility: "private", title: "", body: "Kept privately",
     date: "2026-08-18", time: "21:00", createdAt: "2026-08-19T02:00:00.000Z",
@@ -483,13 +504,84 @@ test("backs up saved private Journal entries but excludes unfinished drafts", as
   };
   const storage = makeStorage({
     journalEntries: JSON.stringify([journalEntry]),
-    journalDraft: JSON.stringify({ form: { body: "unfinished" } }),
+    journalDraft: JSON.stringify({
+      schemaVersion: 1,
+      editingId: null,
+      form: {
+        title: "Still writing", body: "unfinished", date: "2026-08-18",
+        time: "21:05", mood: "Calm", tags: "Reflection",
+      },
+    }),
   });
   const result = await createTraceBackup({ storage, openDatabase: async () => makePhotoDatabase() });
   expect(result.data.structured.journalEntries).toEqual([journalEntry]);
-  expect(result.data.structured).not.toHaveProperty("journalDraft");
+  expect(result.data.structured.journalDraft).toEqual({
+    schemaVersion: 1,
+    editingId: null,
+    form: {
+      title: "Still writing", body: "unfinished", date: "2026-08-18",
+      time: "21:05", mood: "Calm", tags: "Reflection",
+    },
+  });
   expect(result.data.structured.journalEntries[0].visibility).toBe("private");
   expect(result.data.structured.journalEntries[0]).toMatchObject({ id: "journal-1", body: "Kept privately", mood: "Calm", tags: ["Reflection"] });
+});
+
+test("round-trips an unfinished plaintext Journal draft and previews its presence", async () => {
+  const draft = plaintextJournalDraft();
+  const source = makeStorage({ journalDraft: JSON.stringify(draft) });
+  const created = await createTraceBackup({ storage: source, openDatabase: async () => makePhotoDatabase() });
+  expect(created.data.structured.journalDraft).toEqual(draft);
+  expect(validateTraceBackup(created).summary.journalDraft).toBe(true);
+
+  const restored = makeStorage({ journalDraft: JSON.stringify(plaintextJournalDraft({ body: "replace me" })) });
+  await restoreTraceBackup(created, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(restored.value("journalDraft")).toBe(JSON.stringify(draft));
+});
+
+test("an empty plaintext Journal draft remains empty through export and full replacement restore", async () => {
+  const created = await createTraceBackup({
+    storage: makeStorage(),
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(created.data.structured.journalDraft).toBeNull();
+  expect(validateTraceBackup(created).summary.journalDraft).toBe(false);
+
+  const restored = makeStorage({ journalDraft: JSON.stringify(plaintextJournalDraft()) });
+  await restoreTraceBackup(created, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(restored.value("journalDraft")).toBeNull();
+});
+
+test.each([1, 2, 3])("imports schema %i without a Journal draft using the empty default", async (schemaVersion) => {
+  const structured = emptyStructured();
+  delete structured.journalDraft;
+  const value = { ...backup({ data: { structured, photos: [] } }), schemaVersion };
+  const validated = validateTraceBackup(value);
+  expect(validated.backup.schemaVersion).toBe(TRACE_BACKUP_SCHEMA_VERSION);
+  expect(validated.backup.data.structured.journalDraft).toBeNull();
+
+  const restored = makeStorage({ journalDraft: JSON.stringify(plaintextJournalDraft()) });
+  await restoreTraceBackup(value, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(restored.value("journalDraft")).toBeNull();
+});
+
+test("schema 4 rejects a backup that omits any classified durable domain", () => {
+  const structured = emptyStructured();
+  delete structured.journalDraft;
+  expect(() => validateTraceBackup(backup({ data: { structured, photos: [] } })))
+    .toThrow("missing its journalDraft data");
 });
 
 test("validates summaries and rejects corrupt, future, and missing-reference backups", () => {
@@ -504,7 +596,7 @@ test("validates summaries and rejects corrupt, future, and missing-reference bac
   }), photos: [encodedPhoto()] } });
   expect(validateTraceBackup(valid).summary).toMatchObject({ memories: 1, photos: 1, nutritionEntries: 1, healthMeasurementEntries: 1, plannedWorkouts: 1, activeWorkoutDraft: true, workouts: 1, medicationEntries: 1, protocols: 1, protocolOccurrences: 1, injectionSiteEntries: 1, dailyActions: 1, trophyCaseEntries: 1 });
   expect(() => parseTraceBackupText("not json")).toThrow("not valid JSON");
-  expect(() => validateTraceBackup({ ...valid, schemaVersion: 4 })).toThrow("newer");
+  expect(() => validateTraceBackup({ ...valid, schemaVersion: 5 })).toThrow("newer");
   expect(() => validateTraceBackup({ ...valid, data: { ...valid.data, photos: [] } })).toThrow("missing referenced photo");
 });
 
@@ -606,7 +698,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
 test("restores pre-Health backups with Health history empty", async () => {
   const structured = emptyStructured();
   delete structured.healthMeasurementEntries;
-  const value = backup({ data: { structured, photos: [] } });
+  const value = legacyBackup({ data: { structured, photos: [] } });
   const storage = makeStorage({ healthMeasurementEntries: JSON.stringify([{ id: "current-health" }]) });
   await restoreTraceBackup(value, { confirmed: true, storage, openDatabase: async () => makePhotoDatabase() });
   expect(storage.value("healthMeasurementEntries")).toBeNull();
@@ -616,7 +708,7 @@ test("restores pre-Settings backups with default Settings storage fallback", asy
   const structured = emptyStructured();
   delete structured.appSettings;
   const storage = makeStorage({ appSettings: JSON.stringify({ units: { weight: "kg" } }) });
-  await restoreTraceBackup(backup({ data: { structured, photos: [] } }), { confirmed: true, storage, openDatabase: async () => makePhotoDatabase() });
+  await restoreTraceBackup(legacyBackup({ data: { structured, photos: [] } }), { confirmed: true, storage, openDatabase: async () => makePhotoDatabase() });
   expect(storage.value("appSettings")).toBeNull();
   expect(readAppSettings(storage).themeId).toBe("modern-heirloom");
   expect(readAppSettings(storage).motionPreference).toBe("standard");
@@ -625,7 +717,7 @@ test("restores pre-Settings backups with default Settings storage fallback", asy
 test("accepts older backups without planned workouts and restores that domain empty", async () => {
   const structured = emptyStructured();
   delete structured.plannedWorkouts;
-  const value = backup({ data: { structured, photos: [] } });
+  const value = legacyBackup({ data: { structured, photos: [] } });
   const storage = makeStorage({
     plannedWorkouts: JSON.stringify([plannedWorkout("planned-workout:current")]),
   });
@@ -642,7 +734,7 @@ test("accepts older backups without planned workouts and restores that domain em
 test("accepts older backups without daily actions and replaces current actions with an empty collection", async () => {
   const structured = emptyStructured();
   delete structured.dailyActions;
-  const value = backup({ data: { structured, photos: [] } });
+  const value = legacyBackup({ data: { structured, photos: [] } });
   const storage = makeStorage({
     dailyActions: JSON.stringify({ schemaVersion: 1, actions: [dailyAction()] }),
   });
@@ -659,7 +751,7 @@ test("accepts older backups without daily actions and replaces current actions w
 test("accepts older backups without protocol occurrence statuses and clears current statuses", async () => {
   const structured = emptyStructured();
   delete structured.protocolOccurrences;
-  const value = backup({ data: { structured, photos: [] } });
+  const value = legacyBackup({ data: { structured, photos: [] } });
   const storage = makeStorage({
     protocolOccurrences: JSON.stringify({ schemaVersion: 1, occurrences: [protocolOccurrence()] }),
   });
@@ -690,7 +782,7 @@ test("round-trips Protocol compound outcomes with preview counts and safely defa
 
   const olderStructured = emptyStructured();
   delete olderStructured.protocolCompoundOutcomes;
-  const older = backup({ data: { structured: olderStructured, photos: [] } });
+  const older = legacyBackup({ data: { structured: olderStructured, photos: [] } });
   expect(validateTraceBackup(older).summary.protocolCompoundOutcomes).toBe(0);
   await restoreTraceBackup(older, {
     confirmed: true,
@@ -703,7 +795,7 @@ test("round-trips Protocol compound outcomes with preview counts and safely defa
 test("accepts older backups without injection sites and replaces current site history with a safe empty collection", async () => {
   const structured = emptyStructured();
   delete structured.injectionSiteEntries;
-  const value = backup({ data: { structured, photos: [] } });
+  const value = legacyBackup({ data: { structured, photos: [] } });
   const storage = makeStorage({
     injectionSiteEntries: JSON.stringify({ schemaVersion: 1, entries: [injectionSiteEntry()] }),
   });
@@ -720,7 +812,7 @@ test("accepts older backups without injection sites and replaces current site hi
 test("accepts older backups without injection body settings and restores the neutral default", async () => {
   const structured = emptyStructured();
   delete structured.injectionSiteSettings;
-  const value = backup({ data: { structured, photos: [] } });
+  const value = legacyBackup({ data: { structured, photos: [] } });
   const storage = makeStorage({
     injectionSiteSettings: JSON.stringify({ schemaVersion: 1, bodyStyleId: "feminine-fuller" }),
   });
@@ -801,8 +893,8 @@ test("accepts older backups without an active workout draft and clears the curre
   delete structured.workoutDraft;
   const storage = makeStorage({ workoutDraft: JSON.stringify(activeWorkoutDraft()) });
 
-  expect(validateTraceBackup(backup({ data: { structured, photos: [] } })).summary.activeWorkoutDraft).toBe(false);
-  await restoreTraceBackup(backup({ data: { structured, photos: [] } }), {
+  expect(validateTraceBackup(legacyBackup({ data: { structured, photos: [] } })).summary.activeWorkoutDraft).toBe(false);
+  await restoreTraceBackup(legacyBackup({ data: { structured, photos: [] } }), {
     confirmed: true,
     storage,
     openDatabase: async () => makePhotoDatabase(),
@@ -1027,7 +1119,7 @@ test("restores Journal entries and accepts older backups with no Journal collect
   const legacyStructured = emptyStructured();
   delete legacyStructured.journalEntries;
   const legacyStorage = makeStorage({ journalEntries: JSON.stringify([journalEntry]) });
-  await restoreTraceBackup(backup({ data: { structured: legacyStructured, photos: [] } }), {
+  await restoreTraceBackup(legacyBackup({ data: { structured: legacyStructured, photos: [] } }), {
     confirmed: true, storage: legacyStorage, openDatabase: async () => makePhotoDatabase(),
   });
   expect(legacyStorage.value("journalEntries")).toBeNull();
@@ -1046,20 +1138,23 @@ test("Journal backup validation enforces private visibility while optional field
 
 test("storage failure rolls structured data and photos back instead of leaving a mixed dataset", async () => {
   const originalMemories = JSON.stringify([{ id: "original" }]);
-  const storage = makeStorage({ memories: originalMemories }, "workoutEntries");
+  const originalJournalDraft = JSON.stringify(plaintextJournalDraft({ body: "exact prior draft" }));
+  const storage = makeStorage({ memories: originalMemories, journalDraft: originalJournalDraft }, "workoutEntries");
   const oldPhoto = { id: "old-photo", blob: new Blob(["old"], { type: "image/png" }) };
   const database = makePhotoDatabase([oldPhoto]);
   const value = backup({ data: { structured: emptyStructured({ memories: [{ id: "new" }] }), photos: [] } });
   await expect(restoreTraceBackup(value, { confirmed: true, storage, openDatabase: async () => database }))
     .rejects.toThrow("previous data was restored");
   expect(storage.value("memories")).toBe(originalMemories);
+  expect(storage.value("journalDraft")).toBe(originalJournalDraft);
   expect(database.records().map(({ id }) => id)).toEqual(["old-photo"]);
 });
 
 test("photo transaction failure rolls already-written structured data back", async () => {
   const originalMemories = JSON.stringify([{ id: "original" }]);
   const originalDraft = JSON.stringify(activeWorkoutDraft({ plannedWorkoutId: "planned-workout:original" }));
-  const storage = makeStorage({ memories: originalMemories, workoutDraft: originalDraft });
+  const originalJournalDraft = JSON.stringify(plaintextJournalDraft({ body: "exact prior photo-failure draft" }));
+  const storage = makeStorage({ memories: originalMemories, workoutDraft: originalDraft, journalDraft: originalJournalDraft });
   const database = makePhotoDatabase(
     [{ id: "old-photo", blob: new Blob(["old"], { type: "image/png" }) }],
     { failWriteCount: 1 }
@@ -1067,11 +1162,13 @@ test("photo transaction failure rolls already-written structured data back", asy
   const value = backup({ data: { structured: emptyStructured({
     memories: [{ id: "new" }],
     workoutDraft: activeWorkoutDraft({ plannedWorkoutId: "planned-workout:replacement" }),
+    journalDraft: plaintextJournalDraft({ body: "replacement draft" }),
   }), photos: [] } });
   await expect(restoreTraceBackup(value, { confirmed: true, storage, openDatabase: async () => database }))
     .rejects.toThrow("previous data was restored");
   expect(storage.value("memories")).toBe(originalMemories);
   expect(storage.value("workoutDraft")).toBe(originalDraft);
+  expect(storage.value("journalDraft")).toBe(originalJournalDraft);
   expect(database.records().map(({ id }) => id)).toEqual(["old-photo"]);
 });
 
@@ -1079,12 +1176,65 @@ test("only audited Trace storage is exported; caches and migration markers are a
   const storage = makeStorage({
     memories: "[]",
     unrelated: JSON.stringify({ secret: true }),
-    [MEDICATION_DOSE_COMPLETION_TRANSACTION_KEY]: JSON.stringify({ operation: "undo-completion" }),
-    [PROTOCOL_COMPOUND_TRANSACTION_KEY]: JSON.stringify({ operation: "save-results" }),
   });
   const result = await createTraceBackup({ storage, openDatabase: async () => makePhotoDatabase() });
   expect(Object.keys(result.data.structured)).toEqual(TRACE_STORAGE_KEYS);
-  expect(JSON.stringify(result)).not.toMatch(/unrelated|service-worker|trace-app-shell|migrations|undo-completion|save-results/);
+  expect(JSON.stringify(result)).not.toMatch(/unrelated|service-worker|trace-app-shell|migrations/);
+});
+
+test.each([
+  ["Journal Privacy Lock", JOURNAL_VAULT_TRANSACTION_KEY],
+  ["medication dose", MEDICATION_DOSE_COMPLETION_TRANSACTION_KEY],
+  ["Protocol result", PROTOCOL_COMPOUND_TRANSACTION_KEY],
+])("rejects export while an unrecoverable %s transaction remains pending", async (label, key) => {
+  const storage = makeStorage({ [key]: JSON.stringify({ malformed: true }) });
+  await expect(createTraceBackup({
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  })).rejects.toThrow(`${label} transaction is still pending`);
+  expect(storage.value(key)).toBe(JSON.stringify({ malformed: true }));
+});
+
+test("finishes all normal pending transaction recoveries before exporting and excludes recovery keys", async () => {
+  const medicationEntries = JSON.stringify([{ id: "recovered-dose" }]);
+  const doseOccurrences = JSON.stringify(emptyMedicationDoseOccurrenceCollection());
+  const protocolEntries = JSON.stringify([{ id: "recovered-protocol-dose" }]);
+  const protocolOutcomes = JSON.stringify(emptyProtocolCompoundOutcomeCollection());
+  const protocolOccurrences = JSON.stringify(emptyProtocolOccurrenceCollection());
+  const storage = makeStorage({
+    [JOURNAL_VAULT_TRANSACTION_KEY]: JSON.stringify({ schemaVersion: 1, operation: "reset" }),
+    journalEntries: JSON.stringify([]),
+    [MEDICATION_DOSE_COMPLETION_TRANSACTION_KEY]: JSON.stringify({
+      schemaVersion: 1,
+      operation: "complete",
+      previous: { medicationEntries: null, medicationDoseOccurrences: null },
+      next: { medicationEntries, medicationDoseOccurrences: doseOccurrences },
+    }),
+    [PROTOCOL_COMPOUND_TRANSACTION_KEY]: JSON.stringify({
+      schemaVersion: 1,
+      operation: "save-results",
+      previous: {
+        medicationEntries: null,
+        protocolCompoundOutcomes: null,
+        protocolOccurrences: null,
+      },
+      next: {
+        medicationEntries: protocolEntries,
+        protocolCompoundOutcomes: protocolOutcomes,
+        protocolOccurrences,
+      },
+    }),
+  });
+  const result = await createTraceBackup({ storage, openDatabase: async () => makePhotoDatabase() });
+  expect(storage.value(JOURNAL_VAULT_TRANSACTION_KEY)).toBeNull();
+  expect(storage.value(MEDICATION_DOSE_COMPLETION_TRANSACTION_KEY)).toBeNull();
+  expect(storage.value(PROTOCOL_COMPOUND_TRANSACTION_KEY)).toBeNull();
+  expect(result.data.structured.journalEntries).toBeNull();
+  expect(result.data.structured.medicationEntries).toEqual([{ id: "recovered-protocol-dose" }]);
+  expect(result.data.structured.medicationDoseOccurrences).toEqual(emptyMedicationDoseOccurrenceCollection());
+  expect(result.data.structured.protocolCompoundOutcomes).toEqual(emptyProtocolCompoundOutcomeCollection());
+  expect(result.data.structured.protocolOccurrences).toEqual(emptyProtocolOccurrenceCollection());
+  expect(JSON.stringify(result)).not.toMatch(/journalVaultTransaction|medicationDoseCompletionTransaction|protocolCompoundOutcomeTransaction/);
 });
 
 function backedUpDoseSchedule() {
@@ -1151,7 +1301,7 @@ test("older backups without dose scheduling collections restore safe empty versi
   const structured = emptyStructured();
   delete structured.medicationDoseSchedules;
   delete structured.medicationDoseOccurrences;
-  const value = backup({ data: { structured, photos: [] } });
+  const value = legacyBackup({ data: { structured, photos: [] } });
   const result = validateTraceBackup(value);
   expect(result.summary).toMatchObject({ medicationDoseSchedules: 0, medicationDoseOccurrences: 0 });
   const restored = makeStorage({
