@@ -4,12 +4,18 @@ export function registerTraceServiceWorker({
   environment = process.env.NODE_ENV,
   publicUrl = process.env.PUBLIC_URL || "",
   navigatorObject = typeof navigator !== "undefined" ? navigator : null,
-  serviceWorker = navigatorObject?.serviceWorker || null,
+  serviceWorker: providedServiceWorker,
   windowObject = typeof window !== "undefined" ? window : null,
-  runtime = detectRuntimePlatform({ windowObject, navigatorObject }),
+  runtime: providedRuntime,
 } = {}) {
-  if (!runtime?.allowsWebServiceWorker) return;
-  if (!serviceWorker || !windowObject) return;
+  const runtime = providedRuntime === undefined
+    ? detectRuntimePlatform({ windowObject, navigatorObject: null })
+    : providedRuntime;
+  if (!runtime?.allowsWebServiceWorker || !windowObject) return;
+  const serviceWorker = providedServiceWorker === undefined
+    ? navigatorObject?.serviceWorker || null
+    : providedServiceWorker;
+  if (!serviceWorker) return;
   const serviceWorkerUrl = `${publicUrl}/service-worker.js`;
 
   if (environment !== "production") {
