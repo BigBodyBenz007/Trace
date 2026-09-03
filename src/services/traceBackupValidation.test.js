@@ -38,3 +38,31 @@ test("rejects malformed or non-normalized product identifiers in backups", () =>
     }],
   })).toThrow("invalid nutrition entry food reference product identifiers");
 });
+
+test("accepts legacy, partial, and explicit-zero sugar data in Nutrition backups", () => {
+  expect(() => validateTraceStructuredDomains({
+    userFoods: [
+      { id: "food:legacy", nutrients: { calories: 10 } },
+      { id: "food:sugar", nutrients: { totalSugar: 4, addedSugar: 0 } },
+    ],
+    nutritionEntries: [
+      { id: "entry:legacy" },
+      { id: "entry:partial", totalSugar: 4, addedSugar: null },
+      {
+        id: "entry:basis",
+        totalSugar: 0,
+        addedSugar: 0,
+        nutritionBasis: { totalSugar: 0, addedSugar: 0 },
+      },
+    ],
+  })).not.toThrow();
+});
+
+test.each([
+  [{ nutritionEntries: [{ id: "entry:negative", totalSugar: -1 }] }, "totalSugar"],
+  [{ nutritionEntries: [{ id: "entry:relation", totalSugar: 2, addedSugar: 3 }] }, "addedSugar greater than totalSugar"],
+  [{ nutritionEntries: [{ id: "entry:basis", nutritionBasis: { totalSugar: 1, addedSugar: 2 } }] }, "addedSugar greater than totalSugar"],
+  [{ userFoods: [{ id: "food:negative", nutrients: { addedSugar: -1 } }] }, "addedSugar"],
+])("rejects invalid sugar data in backup Nutrition records", (data, message) => {
+  expect(() => validateTraceStructuredDomains(data)).toThrow(message);
+});

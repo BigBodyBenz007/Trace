@@ -30,7 +30,7 @@ test("creates a reusable one-serving food with user-added provenance", () => {
       unit: "serving",
       description: "1 serving",
     },
-    nutrients: { ...nutrients, fiber: null, sodium: null },
+    nutrients: { ...nutrients, fiber: null, sodium: null, totalSugar: null, addedSugar: null },
     provenance: {
       source: "user-added",
       sourceId: "meatloaf",
@@ -56,6 +56,8 @@ test("supports optional known sodium on reusable foods", () => {
     ...nutrients,
     fiber: null,
     sodium: 640,
+    totalSugar: null,
+    addedSugar: null,
   });
   expect(createUserFood("Soup", nutrients).nutrients.sodium).toBeNull();
 });
@@ -79,7 +81,7 @@ test("creates a grocery food with brand, category, notes, fiber, and user-entere
     categoryLabel: "Protein / meat",
     notes: "Keep refrigerated",
     sourceType: "grocery-custom",
-    nutrients: { calories: 120, protein: 26, carbohydrates: 0, fat: 2, fiber: 0, sodium: null },
+    nutrients: { calories: 120, protein: 26, carbohydrates: 0, fat: 2, fiber: 0, sodium: null, totalSugar: null, addedSugar: null },
     provenance: { source: "user-added", label: "User-entered", completeness: "complete" },
   });
 });
@@ -92,7 +94,18 @@ test("keeps every omitted grocery nutrient unknown while preserving explicit zer
     fat: null,
     fiber: null,
     sodium: null,
+    totalSugar: null,
+    addedSugar: null,
   });
+});
+
+test("preserves optional sugar including explicit zero and rejects invalid sugar", () => {
+  expect(createUserFood("Yogurt", { ...nutrients, totalSugar: 12, addedSugar: 0 }).nutrients).toMatchObject({
+    totalSugar: 12,
+    addedSugar: 0,
+  });
+  expect(createUserFood("Invalid", { ...nutrients, totalSugar: -1 })).toBeNull();
+  expect(createUserFood("Invalid", { ...nutrients, totalSugar: 3, addedSugar: 4 })).toBeNull();
 });
 
 test("persists and reads user foods from their own storage key", () => {
@@ -138,6 +151,17 @@ test("recognizes an exact duplicate without replacing the existing record", () =
     added: false,
     existingFood: original,
     matchesDefinition: true,
+  });
+});
+
+test("treats sugar as part of a reusable food definition", () => {
+  const original = createUserFood("Yogurt", { ...nutrients, totalSugar: 12, addedSugar: 4 });
+  const changedSugar = createUserFood("Yogurt", { ...nutrients, totalSugar: 12, addedSugar: 5 });
+
+  expect(addUserFood([original], changedSugar)).toMatchObject({
+    added: false,
+    existingFood: original,
+    matchesDefinition: false,
   });
 });
 

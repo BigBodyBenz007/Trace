@@ -564,10 +564,10 @@ test("restores a valid pre-execution-flow workout draft without inventing a plan
   expect(restoredDraft).not.toHaveProperty("plannedWorkoutId");
 });
 
-test("backs up and restores custom grocery foods and nullable meal snapshots unchanged", async () => {
+test("backs up and restores custom grocery foods and sugar-aware meal snapshots unchanged", async () => {
   const groceryFood = createUserFood(
     "Raw chicken breast strips",
-    { protein: 26, carbohydrates: 0 },
+    { protein: 26, carbohydrates: 0, totalSugar: 2, addedSugar: 0 },
     { amount: 4, unit: "oz", description: "4 oz" },
     {
       brand: "Market Pantry",
@@ -585,6 +585,14 @@ test("backs up and restores custom grocery foods and nullable meal snapshots unc
     fat: null,
     fiber: null,
     sodium: null,
+    totalSugar: 2,
+    addedSugar: 0,
+    portion: {
+      amount: 1,
+      unit: "serving",
+      basis: { ...groceryFood.serving },
+    },
+    nutritionBasis: { ...groceryFood.nutrients },
     foodReference: {
       source: "user-added",
       sourceId: groceryFood.provenance.sourceId,
@@ -607,6 +615,8 @@ test("backs up and restores custom grocery foods and nullable meal snapshots unc
   expect(created.data.structured.userFoods).toEqual([groceryFood]);
   expect(created.data.structured.nutritionEntries).toEqual([meal]);
   expect(created.data.structured.userFoods[0].nutrients.calories).toBeNull();
+  expect(created.data.structured.userFoods[0].nutrients).toMatchObject({ totalSugar: 2, addedSugar: 0 });
+  expect(created.data.structured.nutritionEntries[0].nutritionBasis).toMatchObject({ totalSugar: 2, addedSugar: 0 });
   expect(created.data.structured.userFoods[0].identifiers).toEqual([
     { scheme: "gtin", value: "96385074" },
   ]);

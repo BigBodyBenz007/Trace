@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { readFileSync } from "fs";
-import NutritionPage, { calculateNutritionAverages } from "./NutritionPage";
+import NutritionPage, {
+  calculateDailySugarTotals,
+  calculateNutritionAverages,
+} from "./NutritionPage";
 import { createUserFood } from "../services/userFoodCatalog";
 
 function localTimestamp(year, month, day, hour = 12) {
@@ -142,6 +145,46 @@ function historyEntry(index) {
   };
 }
 
+function dailyTotalsSection() {
+  return screen.getByRole("heading", { name: "Daily Totals" }).closest("section");
+}
+
+test("renders complete daily sugar totals including explicit zero", () => {
+  renderNutritionPage({
+    nutritionEntries: [
+      { ...historyEntry(1), loggedAt: new Date().toISOString(), totalSugar: 10, addedSugar: 4 },
+      { ...historyEntry(2), loggedAt: new Date().toISOString(), totalSugar: 0, addedSugar: 0 },
+    ],
+  });
+  const totals = within(dailyTotalsSection());
+
+  expect(totals.getByText("Total Sugar (g)")).toBeInTheDocument();
+  expect(totals.getByText("Added Sugar (g)")).toBeInTheDocument();
+  expect(totals.getByText("10g")).toBeInTheDocument();
+  expect(totals.getByText("4g")).toBeInTheDocument();
+});
+
+test("labels partial sugar totals as known and all-unknown sugar as Unknown", () => {
+  const view = renderNutritionPage({
+    nutritionEntries: [
+      { ...historyEntry(1), loggedAt: new Date().toISOString(), totalSugar: 10 },
+      { ...historyEntry(2), loggedAt: new Date().toISOString() },
+    ],
+  });
+  let totals = within(dailyTotalsSection());
+
+  expect(totals.getByText("Known Total Sugar (g)")).toBeInTheDocument();
+  expect(totals.getByText("10g")).toBeInTheDocument();
+  expect(within(totals.getByText("Added Sugar (g)").closest(".trace-stat-card")).getByText("Unknown")).toBeInTheDocument();
+
+  view.rerender(<NutritionPage {...view.props} nutritionEntries={[
+    { ...historyEntry(3), loggedAt: new Date().toISOString() },
+  ]} />);
+  totals = within(dailyTotalsSection());
+  expect(within(totals.getByText("Total Sugar (g)").closest(".trace-stat-card")).getByText("Unknown")).toBeInTheDocument();
+  expect(within(totals.getByText("Added Sugar (g)").closest(".trace-stat-card")).getByText("Unknown")).toBeInTheDocument();
+});
+
 function savedEntriesSection() {
   return screen.getByRole("heading", { name: "Saved Entries" }).closest("section");
 }
@@ -176,6 +219,29 @@ test("uses the scoped Nutrition ledger presentation without changing semantic co
   expect(screen.getByRole("heading", { name: "Daily Totals" }).closest("section")).toHaveClass("trace-nutrition-today");
   expandNutritionGoals();
   expect(screen.getByRole("button", { name: "Save Goals" })).toHaveClass("trace-action--primary");
+});
+
+test("daily sugar totals distinguish complete, partial, all-unknown, and explicit zero", () => {
+  const today = new Date(2026, 7, 8, 9);
+  const timestamp = localTimestamp(2026, 7, 8);
+
+  expect(calculateDailySugarTotals([
+    { loggedAt: timestamp, totalSugar: 10, addedSugar: 4 },
+    { loggedAt: timestamp, totalSugar: 0, addedSugar: 0 },
+  ], today)).toEqual({
+    entryCount: 2,
+    totalSugar: { knownCount: 2, value: 10 },
+    addedSugar: { knownCount: 2, value: 4 },
+  });
+
+  expect(calculateDailySugarTotals([
+    { loggedAt: timestamp, totalSugar: 10, addedSugar: null },
+    { loggedAt: timestamp },
+  ], today)).toEqual({
+    entryCount: 2,
+    totalSugar: { knownCount: 1, value: 10 },
+    addedSugar: { knownCount: 0, value: 0 },
+  });
 });
 
 test("places Water directly below the food entry form", () => {
@@ -500,7 +566,9 @@ test("selecting a search result populates the existing form", () => {
   expect(form.getByLabelText("Protein (g)")).toHaveValue(1.29);
   expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(26.9);
   expect(form.getByLabelText("Fat (g)")).toHaveValue(0.39);
-  expect(form.queryByText("Unknown")).not.toBeInTheDocument();
+  expect(form.getByLabelText("Total Sugar (g)")).toHaveValue(null);
+  expect(form.getByLabelText("Added Sugar (g)")).toHaveValue(null);
+  expect(form.getAllByText("Unknown")).toHaveLength(2);
   expect(form.getByLabelText("Number of servings")).toHaveValue(1);
   expect(form.getByText("One serving: 1 medium banana (118 g)")).toBeInTheDocument();
 });
@@ -520,6 +588,8 @@ test("selecting and logging a branded drink preserves package, caffeine, sugars,
   expect(form.getByLabelText("Calories")).toHaveValue(10);
   expect(form.getByLabelText("Protein (g)")).toHaveValue(null);
   expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(null);
+  expect(form.getByLabelText("Total Sugar (g)")).toHaveValue(0);
+  expect(form.getByLabelText("Added Sugar (g)")).toHaveValue(null);
 
   fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "2" } });
   fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
@@ -556,13 +626,24 @@ test("saves structured product identifiers in the immutable food reference snaps
     target: { value: "pepsi cola" },
   });
   fireEvent.click(screen.getByRole("button", { name: /Pepsi.*20 fl oz bottle/i }));
-  fireEvent.click(entryForm().getByRole("button", { name: "Save Entry" }));
+  const form = entryForm();
+  expect(form.getByLabelText("Total Sugar (g)")).toHaveValue(69);
+  expect(form.getByLabelText("Added Sugar (g)")).toHaveValue(69);
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "0.5" } });
+  expect(form.getByLabelText("Total Sugar (g)")).toHaveValue(34.5);
+  expect(form.getByLabelText("Added Sugar (g)")).toHaveValue(34.5);
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
 
   expect(props.saveNutritionEntry.mock.calls[0][0].foodReference).toMatchObject({
     sourceType: "beverage",
     sourceId: "beverage:pepsi:pepsi-20oz",
     identifiers: [{ scheme: "gtin", value: "00012000001291" }],
     modified: false,
+  });
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    totalSugar: 34.5,
+    addedSugar: 34.5,
+    nutritionBasis: { totalSugar: 69, addedSugar: 69 },
   });
 });
 
@@ -1040,6 +1121,12 @@ test("successfully saving a manual food clears search and requests persistence",
   fireEvent.change(form.getByLabelText("Fat (g)"), {
     target: { value: "20" },
   });
+  fireEvent.change(form.getByLabelText("Total Sugar (g)"), {
+    target: { value: "8" },
+  });
+  fireEvent.change(form.getByLabelText("Added Sugar (g)"), {
+    target: { value: "3" },
+  });
   fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
 
   expect(props.saveUserFood).toHaveBeenCalledWith({
@@ -1051,6 +1138,8 @@ test("successfully saving a manual food clears search and requests persistence",
       fat: 20,
       fiber: null,
       sodium: null,
+      totalSugar: 8,
+      addedSugar: 3,
     },
     serving: {
       amount: 1,
@@ -1083,10 +1172,41 @@ test("successfully saving a manual food clears search and requests persistence",
       carbohydrates: 18,
       fat: 20,
       sodium: null,
+      totalSugar: 8,
+      addedSugar: 3,
     },
   });
   expect(screen.getByLabelText("Food search")).toHaveValue("");
   expect(form.getByLabelText("Food / meal name")).toHaveValue("");
+});
+
+test("manual sugar rejects negative values and added sugar above total sugar", () => {
+  const props = renderNutritionPage();
+  const form = entryForm();
+  fireEvent.change(form.getByLabelText("Food / meal name"), {
+    target: { value: "Sweet snack" },
+  });
+  fireEvent.change(form.getByLabelText("Total Sugar (g)"), {
+    target: { value: "4" },
+  });
+  fireEvent.change(form.getByLabelText("Added Sugar (g)"), {
+    target: { value: "5" },
+  });
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(form.getByRole("alert")).toHaveTextContent(
+    "Added Sugar cannot exceed Total Sugar."
+  );
+  expect(props.saveNutritionEntry).not.toHaveBeenCalled();
+
+  fireEvent.change(form.getByLabelText("Added Sugar (g)"), {
+    target: { value: "-1" },
+  });
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+  expect(form.getByRole("alert")).toHaveTextContent(
+    "Added Sugar must be zero or greater."
+  );
+  expect(props.saveNutritionEntry).not.toHaveBeenCalled();
 });
 
 test("creates a custom grocery food with nullable nutrients and reusable source metadata", () => {
@@ -1117,6 +1237,12 @@ test("creates a custom grocery food with nullable nutrients and reusable source 
   fireEvent.change(within(creator).getByLabelText("Protein (g)"), {
     target: { value: "26" },
   });
+  fireEvent.change(within(creator).getByLabelText("Total Sugar (g), optional"), {
+    target: { value: "2" },
+  });
+  fireEvent.change(within(creator).getByLabelText("Added Sugar (g), optional"), {
+    target: { value: "0" },
+  });
   fireEvent.change(within(creator).getByLabelText("Food notes (optional)"), {
     target: { value: "Raw weight" },
   });
@@ -1135,6 +1261,8 @@ test("creates a custom grocery food with nullable nutrients and reusable source 
       fat: "",
       fiber: "",
       sodium: "",
+      totalSugar: "2",
+      addedSugar: "0",
     },
     notes: "Raw weight",
   }));
@@ -1148,6 +1276,8 @@ test("creates a custom grocery food with nullable nutrients and reusable source 
       fat: null,
       fiber: null,
       sodium: null,
+      totalSugar: 2,
+      addedSugar: 0,
     },
     provenance: { label: "User-entered", completeness: "partial" },
   });
@@ -1312,7 +1442,13 @@ test("searches a grocery food later and logs unknown nutrients without convertin
     }),
     nutritionCompleteness: expect.objectContaining({
       status: "partial",
-      unknownNutrients: expect.arrayContaining(["calories", "fat", "sodium"]),
+      unknownNutrients: expect.arrayContaining([
+        "calories",
+        "fat",
+        "sodium",
+        "totalSugar",
+        "addedSugar",
+      ]),
     }),
   }));
 });
@@ -1438,6 +1574,72 @@ test("catalog provenance is marked modified after a populated value changes", ()
     ...USDA_BANANA_REFERENCE,
     modified: true,
   });
+});
+
+test("editing saved sugar restores values and marks provenance modified without changing its basis", () => {
+  const savedEntry = {
+    id: "saved-pepsi",
+    name: "Pepsi",
+    calories: 250,
+    protein: 0,
+    carbohydrates: 69,
+    fat: 0,
+    fiber: null,
+    sodium: 55,
+    totalSugar: 69,
+    addedSugar: 69,
+    loggedAt: localTimestamp(2026, 7, 8),
+    notes: "",
+    foodReference: {
+      source: "official-manufacturer",
+      sourceId: "beverage:pepsi:pepsi-20oz",
+      confidence: "official-source",
+      sourceType: "beverage",
+      brand: "Pepsi",
+      category: "soda",
+      packageSize: "20 fl oz bottle",
+      caffeineMg: 63,
+      identifiers: [{ scheme: "gtin", value: "00012000001291" }],
+      modified: false,
+    },
+    portion: {
+      amount: 1,
+      unit: "serving",
+      basis: { amount: 1, unit: "item", description: "20 fl oz bottle" },
+    },
+    nutritionBasis: {
+      calories: 250,
+      protein: 0,
+      carbohydrates: 69,
+      fat: 0,
+      sodium: 55,
+      totalSugar: 69,
+      addedSugar: 69,
+    },
+  };
+  const props = renderNutritionPage({ nutritionEntries: [savedEntry] });
+
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const form = entryForm();
+  expect(form.getByLabelText("Total Sugar (g)")).toHaveValue(69);
+  expect(form.getByLabelText("Added Sugar (g)")).toHaveValue(69);
+  fireEvent.change(form.getByLabelText("Added Sugar (g)"), {
+    target: { value: "50" },
+  });
+  fireEvent.click(form.getByRole("button", { name: "Save Changes" }));
+
+  expect(props.updateNutritionEntry).toHaveBeenCalledWith(
+    "saved-pepsi",
+    expect.objectContaining({
+      totalSugar: 69,
+      addedSugar: 50,
+      nutritionBasis: savedEntry.nutritionBasis,
+      foodReference: expect.objectContaining({
+        identifiers: savedEntry.foodReference.identifiers,
+        modified: true,
+      }),
+    })
+  );
 });
 
 test("editing a catalog entry restores quantity, basis, nutrition, and provenance", () => {
@@ -1672,12 +1874,17 @@ test("legacy entries remain editable without portion metadata", () => {
     },
   };
   const props = renderNutritionPage({ nutritionEntries: [legacyEntry] });
+  const legacyCard = screen.getByRole("heading", { name: "Legacy meal" }).closest("article");
+  expect(legacyCard).not.toHaveTextContent("Total Sugar");
+  expect(legacyCard).not.toHaveTextContent("Added Sugar");
 
   fireEvent.click(screen.getByRole("button", { name: "Edit" }));
   const form = entryForm();
 
   expect(form.queryByLabelText("Number of servings")).not.toBeInTheDocument();
   expect(form.getByLabelText("Calories")).toHaveValue(300);
+  expect(form.getByLabelText("Total Sugar (g)")).toHaveValue(null);
+  expect(form.getByLabelText("Added Sugar (g)")).toHaveValue(null);
   fireEvent.click(form.getByRole("button", { name: "Save Changes" }));
 
   expect(props.updateNutritionEntry).toHaveBeenCalledWith(
@@ -1687,6 +1894,29 @@ test("legacy entries remain editable without portion metadata", () => {
       nutritionBasis: expect.anything(),
     })
   );
+});
+
+test("saved entry cards show known sugar and preserve explicit zero", () => {
+  renderNutritionPage({
+    nutritionEntries: [{
+      id: "sugar-entry",
+      name: "Sugar example",
+      calories: 100,
+      protein: 1,
+      carbohydrates: 20,
+      fat: 1,
+      fiber: null,
+      sodium: null,
+      totalSugar: 2,
+      addedSugar: 0,
+      loggedAt: new Date().toISOString(),
+      notes: "",
+    }],
+  });
+
+  const card = screen.getByRole("heading", { name: "Sugar example" }).closest("article");
+  expect(card).toHaveTextContent("Total Sugar 2 g");
+  expect(card).toHaveTextContent("Added Sugar 0 g");
 });
 
 test("cancel resets the form and smoothly scrolls the nutrition view to the top", () => {

@@ -12,9 +12,12 @@ import {
   waterAmountToMilliliters,
 } from "../services/waterTracker";
 import {
-  FOOD_NUTRIENT_KEYS,
+  NUTRITION_COMPLETENESS_NUTRIENT_KEYS,
+  NUTRITION_ENTRY_NUTRIENT_KEYS,
   NUTRIENT_KEYS,
+  SUGAR_NUTRIENT_KEYS,
   TRACKED_NUTRIENT_KEYS,
+  getSugarValidationError,
   scaleNutrition,
 } from "../services/nutritionCalculation";
 import {
@@ -117,6 +120,29 @@ function isSameLocalDate(firstDate, secondDate) {
 
 function getLocalDateKey(date) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+export function calculateDailySugarTotals(nutritionEntries, today = new Date()) {
+  const totals = {
+    entryCount: 0,
+    totalSugar: { knownCount: 0, value: 0 },
+    addedSugar: { knownCount: 0, value: 0 },
+  };
+
+  nutritionEntries.forEach((entry) => {
+    const loggedAt = new Date(entry.loggedAt);
+    if (Number.isNaN(loggedAt.getTime()) || !isSameLocalDate(loggedAt, today)) return;
+
+    totals.entryCount += 1;
+    SUGAR_NUTRIENT_KEYS.forEach((nutrient) => {
+      const value = Number(entry[nutrient]);
+      if (entry[nutrient] === null || entry[nutrient] === undefined || !Number.isFinite(value) || value < 0) return;
+      totals[nutrient].knownCount += 1;
+      totals[nutrient].value += value;
+    });
+  });
+
+  return totals;
 }
 
 function hasValidSavedCalculationBasis(entry) {
@@ -257,6 +283,8 @@ function NutritionPage({
   const [fat, setFat] = useState("");
   const [fiber, setFiber] = useState("");
   const [sodium, setSodium] = useState("");
+  const [totalSugar, setTotalSugar] = useState("");
+  const [addedSugar, setAddedSugar] = useState("");
   const [date, setDate] = useState(initialDateTime.date);
   const [time, setTime] = useState(initialDateTime.time);
   const [notes, setNotes] = useState("");
@@ -275,6 +303,7 @@ function NutritionPage({
   const [customServingDescription, setCustomServingDescription] = useState("");
   const [saveAsReusableFood, setSaveAsReusableFood] = useState(true);
   const [servingDefinitionError, setServingDefinitionError] = useState("");
+  const [nutritionValidationError, setNutritionValidationError] = useState("");
   const [entryStatusMessage, setEntryStatusMessage] = useState("");
   const [confirmationMessage, setConfirmationMessage] = useState("");
   const [goalsExpanded, setGoalsExpanded] = useState(false);
@@ -363,6 +392,11 @@ function NutritionPage({
     { key: "carbohydrates", label: "Carbohydrates", unit: "g" },
     { key: "fat", label: "Fat", unit: "g" },
   ];
+  const dailySugarTotals = calculateDailySugarTotals(nutritionEntries, today);
+  const sugarMetrics = [
+    { key: "totalSugar", label: "Total Sugar" },
+    { key: "addedSugar", label: "Added Sugar" },
+  ];
   const sodiumMetric = { key: "sodium", label: "Sodium", unit: "mg" };
   const averageMetrics = [...nutritionMetrics, sodiumMetric];
   const nutritionAverages = calculateNutritionAverages(nutritionEntries, today);
@@ -402,9 +436,24 @@ function NutritionPage({
 
     if (name.trim() === "") return;
 
+    const sugarError = getSugarValidationError({ totalSugar, addedSugar });
+    if (sugarError) {
+      setNutritionValidationError(sugarError);
+      return;
+    }
+
     const fallbackDateTime = getCurrentLocalDateTime();
-    const nutritionInputs = { calories, protein, carbohydrates, fat, fiber, sodium };
-    const enteredNutrition = Object.fromEntries(FOOD_NUTRIENT_KEYS.map((nutrient) => [
+    const nutritionInputs = {
+      calories,
+      protein,
+      carbohydrates,
+      fat,
+      fiber,
+      sodium,
+      totalSugar,
+      addedSugar,
+    };
+    const enteredNutrition = Object.fromEntries(NUTRITION_ENTRY_NUTRIENT_KEYS.map((nutrient) => [
       nutrient,
       nutritionInputs[nutrient] === ""
         ? null
@@ -458,19 +507,9 @@ function NutritionPage({
       }
     }
 
-    const completenessNutrition = entryNutritionBasis || enteredNutrition;
-    const scaledCatalogNutrition = entryNutritionBasis
-      ? scaleNutrition(entryNutritionBasis, isCreatingManualFood ? 1 : servingQuantity)
-      : null;
     const entry = {
       name: name.trim(),
       ...enteredNutrition,
-      ...(scaledCatalogNutrition && Object.prototype.hasOwnProperty.call(scaledCatalogNutrition, "totalSugar")
-        ? {
-            totalSugar: scaledCatalogNutrition.totalSugar,
-            addedSugar: scaledCatalogNutrition.addedSugar,
-          }
-        : {}),
       loggedAt: new Date(
         `${date || fallbackDateTime.date}T${time || fallbackDateTime.time}`
       ).toISOString(),
@@ -488,8 +527,8 @@ function NutritionPage({
             nutritionBasis: { ...entryNutritionBasis },
           }
         : {}),
-      ...(TRACKED_NUTRIENT_KEYS.some((nutrient) => completenessNutrition[nutrient] == null)
-        ? { nutritionCompleteness: { status: "partial", unknownNutrients: TRACKED_NUTRIENT_KEYS.filter((nutrient) => completenessNutrition[nutrient] == null) } }
+      ...(NUTRITION_COMPLETENESS_NUTRIENT_KEYS.some((nutrient) => enteredNutrition[nutrient] == null)
+        ? { nutritionCompleteness: { status: "partial", unknownNutrients: NUTRITION_COMPLETENESS_NUTRIENT_KEYS.filter((nutrient) => enteredNutrition[nutrient] == null) } }
         : {}),
     };
 
@@ -528,6 +567,8 @@ function NutritionPage({
     setFat("");
     setFiber("");
     setSodium("");
+    setTotalSugar("");
+    setAddedSugar("");
     setDate(currentDateTime.date);
     setTime(currentDateTime.time);
     setNotes("");
@@ -545,6 +586,7 @@ function NutritionPage({
     setCustomServingDescription("");
     setSaveAsReusableFood(true);
     setServingDefinitionError("");
+    setNutritionValidationError("");
   }
 
   function markSelectedFoodModified() {
@@ -561,6 +603,8 @@ function NutritionPage({
     const selectedNutritionBasis = {
       sodium: null,
       fiber: null,
+      totalSugar: null,
+      addedSugar: null,
       ...selectedOption.nutrients,
     };
     const selectedPortionBasis = {
@@ -579,7 +623,9 @@ function NutritionPage({
     setFat(selectedNutritionBasis.fat === null ? "" : String(selectedNutritionBasis.fat));
     setFiber(selectedNutritionBasis.fiber === null ? "" : String(selectedNutritionBasis.fiber));
     setSodium(selectedNutritionBasis.sodium === null ? "" : String(selectedNutritionBasis.sodium));
-    setUnknownNutritionKeys(new Set(FOOD_NUTRIENT_KEYS.filter((nutrient) => selectedNutritionBasis[nutrient] === null)));
+    setTotalSugar(selectedNutritionBasis.totalSugar === null ? "" : String(selectedNutritionBasis.totalSugar));
+    setAddedSugar(selectedNutritionBasis.addedSugar === null ? "" : String(selectedNutritionBasis.addedSugar));
+    setUnknownNutritionKeys(new Set(NUTRITION_ENTRY_NUTRIENT_KEYS.filter((nutrient) => selectedNutritionBasis[nutrient] === null)));
     setRestaurantServingOptions(servingOptions);
     setSelectedRestaurantServingId(selectedOption.id);
     setFoodReference({
@@ -629,6 +675,7 @@ function NutritionPage({
     setPortionBasis(selectedPortionBasis);
     setNutritionBasis(selectedNutritionBasis);
     setServingDefinitionError("");
+    setNutritionValidationError("");
     setEntryStatusMessage("");
     setIsDraftDirty(true);
 
@@ -641,18 +688,26 @@ function NutritionPage({
   function selectRestaurantServing(optionId) {
     const option = restaurantServingOptions.find((candidate) => candidate.id === optionId);
     if (!option) return;
+    const optionNutritionBasis = {
+      totalSugar: null,
+      addedSugar: null,
+      ...option.nutrients,
+    };
     setSelectedRestaurantServingId(option.id);
-    setCalories(option.nutrients.calories === null ? "" : String(option.nutrients.calories));
-    setProtein(option.nutrients.protein === null ? "" : String(option.nutrients.protein));
-    setCarbohydrates(option.nutrients.carbohydrates === null ? "" : String(option.nutrients.carbohydrates));
-    setFat(option.nutrients.fat === null ? "" : String(option.nutrients.fat));
-    setFiber(option.nutrients.fiber === null || option.nutrients.fiber === undefined ? "" : String(option.nutrients.fiber));
-    setSodium(option.nutrients.sodium === null ? "" : String(option.nutrients.sodium));
-    setUnknownNutritionKeys(new Set(FOOD_NUTRIENT_KEYS.filter((nutrient) => option.nutrients[nutrient] === null || option.nutrients[nutrient] === undefined)));
+    setCalories(optionNutritionBasis.calories === null ? "" : String(optionNutritionBasis.calories));
+    setProtein(optionNutritionBasis.protein === null ? "" : String(optionNutritionBasis.protein));
+    setCarbohydrates(optionNutritionBasis.carbohydrates === null ? "" : String(optionNutritionBasis.carbohydrates));
+    setFat(optionNutritionBasis.fat === null ? "" : String(optionNutritionBasis.fat));
+    setFiber(optionNutritionBasis.fiber === null || optionNutritionBasis.fiber === undefined ? "" : String(optionNutritionBasis.fiber));
+    setSodium(optionNutritionBasis.sodium === null ? "" : String(optionNutritionBasis.sodium));
+    setTotalSugar(optionNutritionBasis.totalSugar === null ? "" : String(optionNutritionBasis.totalSugar));
+    setAddedSugar(optionNutritionBasis.addedSugar === null ? "" : String(optionNutritionBasis.addedSugar));
+    setUnknownNutritionKeys(new Set(NUTRITION_ENTRY_NUTRIENT_KEYS.filter((nutrient) => optionNutritionBasis[nutrient] === null || optionNutritionBasis[nutrient] === undefined)));
     setPortionBasis({ ...option.serving });
-    setNutritionBasis({ ...option.nutrients });
+    setNutritionBasis(optionNutritionBasis);
     const completeness = NUTRIENT_KEYS.every((nutrient) => option.nutrients[nutrient] !== null) ? "complete" : "partial";
     setFoodReference((current) => current ? { ...current, sourceId: option.provenance.sourceId, completeness } : current);
+    setNutritionValidationError("");
     setIsDraftDirty(true);
   }
 
@@ -666,6 +721,8 @@ function NutritionPage({
     setFat(entry.fat === null ? "" : String(entry.fat));
     setFiber(entry.fiber === null || entry.fiber === undefined ? "" : String(entry.fiber));
     setSodium(entry.sodium === null || entry.sodium === undefined ? "" : String(entry.sodium));
+    setTotalSugar(entry.totalSugar === null || entry.totalSugar === undefined ? "" : String(entry.totalSugar));
+    setAddedSugar(entry.addedSugar === null || entry.addedSugar === undefined ? "" : String(entry.addedSugar));
     setDate(localDateTime.date);
     setTime(localDateTime.time);
     setNotes(entry.notes);
@@ -680,12 +737,14 @@ function NutritionPage({
       setNutritionBasis({ ...entry.nutritionBasis });
       setSodium(entry.nutritionBasis.sodium == null ? "" : String(entry.nutritionBasis.sodium));
       setFiber(entry.nutritionBasis.fiber == null ? "" : String(entry.nutritionBasis.fiber));
-      setUnknownNutritionKeys(new Set(FOOD_NUTRIENT_KEYS.filter((nutrient) => entry.nutritionBasis[nutrient] == null)));
+      setUnknownNutritionKeys(new Set(NUTRITION_ENTRY_NUTRIENT_KEYS.filter((nutrient) => entry.nutritionBasis[nutrient] == null)));
     } else {
       setServingQuantity("1");
       setPortionBasis(null);
       setNutritionBasis(null);
+      setUnknownNutritionKeys(new Set(NUTRITION_ENTRY_NUTRIENT_KEYS.filter((nutrient) => entry[nutrient] == null)));
     }
+    setNutritionValidationError("");
     entryFormRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
   }
 
@@ -699,6 +758,9 @@ function NutritionPage({
     setFat(scaledNutrition.fat === null ? "" : String(scaledNutrition.fat));
     setFiber(scaledNutrition.fiber === null || scaledNutrition.fiber === undefined ? "" : String(scaledNutrition.fiber));
     setSodium(scaledNutrition.sodium === null ? "" : String(scaledNutrition.sodium));
+    setTotalSugar(scaledNutrition.totalSugar === null || scaledNutrition.totalSugar === undefined ? "" : String(scaledNutrition.totalSugar));
+    setAddedSugar(scaledNutrition.addedSugar === null || scaledNutrition.addedSugar === undefined ? "" : String(scaledNutrition.addedSugar));
+    setNutritionValidationError("");
     setIsDraftDirty(true);
   }
 
@@ -981,6 +1043,8 @@ function NutritionPage({
             ["fat", "Fat (g)", fat, setFat],
             ["fiber", "Fiber (g)", fiber, setFiber],
             ["sodium", "Sodium (mg)", sodium, setSodium],
+            ["totalSugar", "Total Sugar (g)", totalSugar, setTotalSugar],
+            ["addedSugar", "Added Sugar (g)", addedSugar, setAddedSugar],
           ].map(([nutrient, label, value, setValue]) => (
             <label key={label} style={{ display: "block" }}>
               {label}
@@ -1000,6 +1064,7 @@ function NutritionPage({
                     return next;
                   });
                   setIsDraftDirty(true);
+                  setNutritionValidationError("");
                   markSelectedFoodModified();
                 }}
               />
@@ -1007,6 +1072,12 @@ function NutritionPage({
             </label>
           ))}
         </div>
+
+        {nutritionValidationError && (
+          <p role="alert" style={{ color: "#fca5a5", marginBottom: 0 }}>
+            {nutritionValidationError}
+          </p>
+        )}
 
         {isCreatingManualFood && (
           <fieldset
@@ -1353,8 +1424,25 @@ function NutritionPage({
             </>
           )}
         </div>
-        <div aria-hidden="true" />
-        <div aria-hidden="true" />
+        {sugarMetrics.map((metric) => {
+          const sugarTotal = dailySugarTotals[metric.key];
+          const hasKnownValues = sugarTotal.knownCount > 0;
+          const isPartial = hasKnownValues && sugarTotal.knownCount < dailySugarTotals.entryCount;
+
+          return (
+            <div className="trace-stat-card" key={metric.key}>
+              <strong>{isPartial ? `Known ${metric.label}` : metric.label} (g)</strong>
+              <p style={{ marginBottom: isPartial ? "8px" : 0 }}>
+                {hasKnownValues ? `${Number(sugarTotal.value.toFixed(2))}g` : "Unknown"}
+              </p>
+              {isPartial && (
+                <p style={{ color: "#9ca3af", marginBottom: 0 }}>
+                  Some logged foods have unknown {metric.label.toLowerCase()}.
+                </p>
+              )}
+            </div>
+          );
+        })}
         </div>
       </section>
 
@@ -1461,6 +1549,20 @@ function NutritionPage({
                   {formatNutrient(entry.calories)} calories · Protein {formatNutrient(entry.protein, " g")} ·
                   Carbohydrates {formatNutrient(entry.carbohydrates, " g")} · Fat {formatNutrient(entry.fat, " g")} · Fiber {formatNutrient(entry.fiber, " g")} · Sodium {formatNutrient(entry.sodium, " mg")}
                 </p>
+
+                {(entry.totalSugar !== null && entry.totalSugar !== undefined) ||
+                (entry.addedSugar !== null && entry.addedSugar !== undefined) ? (
+                  <p style={{ lineHeight: "1.6", marginBottom: 0 }}>
+                    {entry.totalSugar !== null && entry.totalSugar !== undefined && (
+                      <>Total Sugar {formatNutrient(entry.totalSugar, " g")}</>
+                    )}
+                    {entry.totalSugar !== null && entry.totalSugar !== undefined &&
+                    entry.addedSugar !== null && entry.addedSugar !== undefined && " · "}
+                    {entry.addedSugar !== null && entry.addedSugar !== undefined && (
+                      <>Added Sugar {formatNutrient(entry.addedSugar, " g")}</>
+                    )}
+                  </p>
+                ) : null}
 
                 <p style={{ color: "#9ca3af", fontSize: "13px", marginBottom: 0 }}>
                   {getEntrySourceDetails(entry.foodReference).join(" · ")}

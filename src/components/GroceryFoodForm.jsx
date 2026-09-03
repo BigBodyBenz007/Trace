@@ -7,6 +7,7 @@ import {
   createServingDefinition,
   getServingDefinitionError,
 } from "../services/servingDefinition";
+import { getSugarValidationError } from "../services/nutritionCalculation";
 
 const EMPTY_FORM = {
   name: "",
@@ -21,6 +22,8 @@ const EMPTY_FORM = {
   fat: "",
   fiber: "",
   sodium: "",
+  totalSugar: "",
+  addedSugar: "",
   notes: "",
 };
 
@@ -31,6 +34,8 @@ const NUTRIENT_FIELDS = [
   ["fat", "Fat (g)"],
   ["fiber", "Fiber (g), optional"],
   ["sodium", "Sodium (mg), optional"],
+  ["totalSugar", "Total Sugar (g), optional"],
+  ["addedSugar", "Added Sugar (g), optional"],
 ];
 
 function GroceryFoodForm({ saveUserFood, buttonStyle, inputStyle }) {
@@ -62,6 +67,7 @@ function GroceryFoodForm({ saveUserFood, buttonStyle, inputStyle }) {
       unit: form.servingUnit,
       customDescription: form.customServingDescription,
     });
+    const sugarError = getSugarValidationError(form);
 
     if (!form.name.trim()) {
       setError("Enter a food name.");
@@ -69,6 +75,10 @@ function GroceryFoodForm({ saveUserFood, buttonStyle, inputStyle }) {
     }
     if (servingError) {
       setError(servingError);
+      return;
+    }
+    if (sugarError) {
+      setError(sugarError);
       return;
     }
 

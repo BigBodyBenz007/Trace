@@ -2,6 +2,7 @@ import { normalizeFoodQuery } from "./foodSearch";
 import { createServingDefinition } from "./servingDefinition";
 import { GROCERY_FOOD_CATEGORY_OPTIONS } from "./groceryFoodCatalog";
 import { normalizeProductIdentifiers } from "./productIdentifiers";
+import { getSugarValidationError } from "./nutritionCalculation";
 
 export const USER_FOODS_STORAGE_KEY = "userFoods";
 
@@ -30,7 +31,7 @@ export function createUserFood(
 ) {
   const normalizedName = normalizeFoodQuery(name);
 
-  if (!normalizedName) return null;
+  if (!normalizedName || getSugarValidationError(nutrients)) return null;
 
   const sourceId = encodeURIComponent(normalizedName);
   const brand = normalizeOptionalText(details.brand);
@@ -50,6 +51,8 @@ export function createUserFood(
     fat: toOptionalNonNegativeNumber(nutrients?.fat),
     fiber: toOptionalNonNegativeNumber(nutrients?.fiber),
     sodium: toOptionalNonNegativeNumber(nutrients?.sodium),
+    totalSugar: toOptionalNonNegativeNumber(nutrients?.totalSugar),
+    addedSugar: toOptionalNonNegativeNumber(nutrients?.addedSugar),
   };
   const completeness = ["calories", "protein", "carbohydrates", "fat"].every(
     (nutrient) => normalizedNutrients[nutrient] !== null
@@ -81,7 +84,16 @@ export function createUserFood(
 
 function foodDefinitionsMatch(firstFood, secondFood) {
   const servingFields = ["amount", "unit", "description", "grams"];
-  const nutrientFields = ["calories", "protein", "carbohydrates", "fat", "fiber", "sodium"];
+  const nutrientFields = [
+    "calories",
+    "protein",
+    "carbohydrates",
+    "fat",
+    "fiber",
+    "sodium",
+    "totalSugar",
+    "addedSugar",
+  ];
   const metadataValue = (food, field) => {
     if (field === "sourceType") return food[field] || "grocery-custom";
     if (field === "category") return food[field] || "other";
