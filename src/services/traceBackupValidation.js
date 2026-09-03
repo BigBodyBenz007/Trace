@@ -16,6 +16,7 @@ import {
 import { validateJournalVaultEnvelope } from "./journalVaultCrypto";
 import { JOURNAL_VAULT_STORAGE_KEY } from "./journalVault";
 import { isValidLocalDate } from "./protocol";
+import { normalizeProductIdentifiers } from "./productIdentifiers";
 
 const NUTRIENT_KEYS = ["calories", "protein", "carbohydrates", "fat", "fiber", "sodium", "totalSugar", "addedSugar"];
 const DATE_FIELDS = ["createdAt", "updatedAt", "occurredAt", "loggedAt", "startedAt", "finishedAt", "endedAt", "achievedAt", "addedToTrophyCaseAt"];
@@ -79,6 +80,20 @@ function optionalObject(value, domain) {
   if (value !== undefined && value !== null) assert(object(value), `The backup contains invalid ${domain} data.`);
 }
 
+function optionalProductIdentifiers(value, domain) {
+  if (value === undefined || value === null) return;
+  const normalized = normalizeProductIdentifiers(value);
+  assert(
+    normalized !== null &&
+      normalized.length === value.length &&
+      normalized.every((identifier, index) =>
+        identifier.scheme === value[index].scheme &&
+        identifier.value === value[index].value
+      ),
+    `The backup contains invalid ${domain} product identifiers.`
+  );
+}
+
 function validateNumbers(record, fields, domain, { nullable = true, positive = false } = {}) {
   fields.forEach((field) => {
     const value = record[field];
@@ -93,6 +108,7 @@ function validateNutritionShape(record, domain) {
   optionalText(record, ["name", "notes"], domain);
   if (record.loggedAt !== undefined) assert(validTimestamp(record.loggedAt), `The backup contains an invalid ${domain} timestamp.`);
   ["foodReference", "portion", "nutritionBasis", "nutritionCompleteness"].forEach((field) => optionalObject(record[field], `${domain} ${field}`));
+  optionalProductIdentifiers(record.foodReference?.identifiers, `${domain} food reference`);
   if (record.nutritionBasis) validateNumbers(record.nutritionBasis, NUTRIENT_KEYS, `${domain} nutrition basis`);
   if (record.portion?.amount !== undefined) {
     assert(Number.isFinite(record.portion.amount) && record.portion.amount > 0, `The backup contains an invalid ${domain} portion.`);
@@ -123,6 +139,7 @@ function validateUserFood(record) {
   optionalObject(record.serving, "user food serving");
   optionalObject(record.nutrients, "user food nutrients");
   optionalObject(record.provenance, "user food provenance");
+  optionalProductIdentifiers(record.identifiers, "user food");
   if (record.nutrients) validateNumbers(record.nutrients, NUTRIENT_KEYS, "user food nutrients");
 }
 

@@ -1,11 +1,13 @@
 import { NUTRIENT_KEYS } from "./nutritionCalculation";
+import { normalizeProductIdentifiers } from "./productIdentifiers";
 
 const OPTIONAL_NUTRIENT_KEYS = ["sodium"];
 
 export const RESTAURANT_FOOD_SOURCE = "official-restaurant";
 
 export function normalizeRestaurantFood(food) {
-  if (!food?.id || !food.restaurant?.id || !food.restaurant?.name || !food.name || !food.serving?.description) return null;
+  const identifiers = normalizeProductIdentifiers(food?.identifiers);
+  if (!food?.id || !food.restaurant?.id || !food.restaurant?.name || !food.name || !food.serving?.description || identifiers === null) return null;
   const normalizeNutrients = (source) => Object.fromEntries([...NUTRIENT_KEYS, ...OPTIONAL_NUTRIENT_KEYS].map((nutrient) => {
     const value = source?.[nutrient];
     if (value === null || value === undefined || value === "") return [nutrient, null];
@@ -14,8 +16,12 @@ export function normalizeRestaurantFood(food) {
   }));
   const nutrients = normalizeNutrients(food.nutrients);
   const completeness = NUTRIENT_KEYS.every((nutrient) => nutrients[nutrient] !== null) ? "complete" : "partial";
+  const foodWithoutIdentifiers = Object.fromEntries(
+    Object.entries(food).filter(([key]) => key !== "identifiers")
+  );
   return {
-    ...food,
+    ...foodWithoutIdentifiers,
+    ...(identifiers.length ? { identifiers } : {}),
     sourceType: "restaurant",
     restaurant: { ...food.restaurant },
     nutrients,

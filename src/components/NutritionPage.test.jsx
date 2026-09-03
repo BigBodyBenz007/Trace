@@ -550,6 +550,22 @@ test("selecting and logging a branded drink preserves package, caffeine, sugars,
   }));
 });
 
+test("saves structured product identifiers in the immutable food reference snapshot", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "pepsi cola" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Pepsi.*20 fl oz bottle/i }));
+  fireEvent.click(entryForm().getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0].foodReference).toMatchObject({
+    sourceType: "beverage",
+    sourceId: "beverage:pepsi:pepsi-20oz",
+    identifiers: [{ scheme: "gtin", value: "00012000001291" }],
+    modified: false,
+  });
+});
+
 test("shows USDA grocery source, serving, and unknown nutrients for raw chicken breast strips", () => {
   const props = renderNutritionPage();
   fireEvent.change(screen.getByLabelText("Food search"), {

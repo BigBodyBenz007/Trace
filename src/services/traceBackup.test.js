@@ -569,7 +569,12 @@ test("backs up and restores custom grocery foods and nullable meal snapshots unc
     "Raw chicken breast strips",
     { protein: 26, carbohydrates: 0 },
     { amount: 4, unit: "oz", description: "4 oz" },
-    { brand: "Market Pantry", category: "protein", notes: "Raw weight" }
+    {
+      brand: "Market Pantry",
+      category: "protein",
+      notes: "Raw weight",
+      identifiers: [{ scheme: "gtin", value: "96385074" }],
+    }
   );
   const meal = {
     id: "meal-grocery-1",
@@ -587,6 +592,7 @@ test("backs up and restores custom grocery foods and nullable meal snapshots unc
       category: "protein",
       categoryLabel: "Protein / meat",
       brand: "Market Pantry",
+      identifiers: [{ scheme: "gtin", value: "96385074" }],
     },
   };
   const source = makeStorage({
@@ -601,6 +607,9 @@ test("backs up and restores custom grocery foods and nullable meal snapshots unc
   expect(created.data.structured.userFoods).toEqual([groceryFood]);
   expect(created.data.structured.nutritionEntries).toEqual([meal]);
   expect(created.data.structured.userFoods[0].nutrients.calories).toBeNull();
+  expect(created.data.structured.userFoods[0].identifiers).toEqual([
+    { scheme: "gtin", value: "96385074" },
+  ]);
   expect(TRACE_STORAGE_KEYS).not.toContain("groceryFoods");
   expect(created.data.structured).not.toHaveProperty("groceryFoods");
 

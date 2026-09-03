@@ -1,6 +1,7 @@
 import { normalizeFoodQuery } from "./foodSearch";
 import { createServingDefinition } from "./servingDefinition";
 import { GROCERY_FOOD_CATEGORY_OPTIONS } from "./groceryFoodCatalog";
+import { normalizeProductIdentifiers } from "./productIdentifiers";
 
 export const USER_FOODS_STORAGE_KEY = "userFoods";
 
@@ -34,6 +35,8 @@ export function createUserFood(
   const sourceId = encodeURIComponent(normalizedName);
   const brand = normalizeOptionalText(details.brand);
   const notes = normalizeOptionalText(details.notes);
+  const identifiers = normalizeProductIdentifiers(details.identifiers);
+  if (identifiers === null) return null;
   const category = GROCERY_FOOD_CATEGORIES.has(details.category)
     ? details.category
     : "other";
@@ -63,6 +66,7 @@ export function createUserFood(
     categoryLabel,
     ...(brand ? { brand } : {}),
     ...(notes ? { notes } : {}),
+    ...(identifiers.length ? { identifiers } : {}),
     serving: { ...serving },
     nutrients: normalizedNutrients,
     provenance: {
@@ -84,7 +88,13 @@ function foodDefinitionsMatch(firstFood, secondFood) {
     return food[field] || null;
   };
 
+  const firstIdentifiers = normalizeProductIdentifiers(firstFood.identifiers);
+  const secondIdentifiers = normalizeProductIdentifiers(secondFood.identifiers);
+  const identifiersMatch = firstIdentifiers !== null && secondIdentifiers !== null &&
+    JSON.stringify(firstIdentifiers) === JSON.stringify(secondIdentifiers);
+
   return (
+    identifiersMatch &&
     ["brand", "category", "notes", "sourceType"].every(
       (field) => metadataValue(firstFood, field) === metadataValue(secondFood, field)
     ) &&

@@ -3,6 +3,7 @@ import groceryFoodSeedsV1, {
   USDA_GROCERY_CATALOG_RELEASE,
 } from "../data/groceryFoods.v1";
 import { FOOD_NUTRIENT_KEYS } from "./nutritionCalculation";
+import { normalizeProductIdentifiers } from "./productIdentifiers";
 
 export { GROCERY_CATALOG_VERSION, USDA_GROCERY_CATALOG_RELEASE };
 
@@ -33,12 +34,14 @@ function scaledNutrient(value, grams, nutrient) {
 export function normalizeGroceryFood(seed) {
   const grams = Number(seed?.serving?.grams);
   const fdcId = Number(seed?.fdcId);
+  const identifiers = normalizeProductIdentifiers(seed?.identifiers);
   if (
     !Number.isInteger(fdcId) ||
     !String(seed?.name || "").trim() ||
     !Number.isFinite(grams) ||
     grams <= 0 ||
-    !CATEGORY_LABELS[seed?.category]
+    !CATEGORY_LABELS[seed?.category] ||
+    identifiers === null
   ) {
     return null;
   }
@@ -64,6 +67,7 @@ export function normalizeGroceryFood(seed) {
     preparationState: seed.preparationState,
     ...(seed.brand ? { brand: seed.brand } : {}),
     ...(seed.dedupeKey ? { dedupeKey: seed.dedupeKey } : {}),
+    ...(identifiers.length ? { identifiers } : {}),
     searchAliases: Object.freeze([...(seed.searchAliases || [])]),
     serving: Object.freeze({ ...seed.serving }),
     nutrients,

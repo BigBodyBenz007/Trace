@@ -18,6 +18,7 @@ function officialBeverage({
   packageSize,
   nutrients,
   caffeineMg = null,
+  identifiers,
   sourceUrl,
   sourceReference,
   aliases = [],
@@ -30,6 +31,7 @@ function officialBeverage({
     serving: { amount: 1, unit: "item", description: packageSize },
     nutrients,
     beverage: { packageSize, caffeineMg },
+    ...(identifiers?.length ? { identifiers } : {}),
     searchAliases: aliases,
     provenance: {
       source: "official-manufacturer",
@@ -53,6 +55,7 @@ const pepsico = (id, brand, name, category, packageSize, values, caffeineMg, gti
   packageSize,
   nutrients: nutrition(...values),
   caffeineMg,
+  identifiers: [{ scheme: "gtin", value: gtin }],
   aliases,
   sourceUrl: `https://www.pepsicoproductfacts.com/Home/Product?gtin=${gtin}`,
   sourceReference: `PepsiCo Product Facts FDA label, GTIN ${gtin}; label current on access date`,

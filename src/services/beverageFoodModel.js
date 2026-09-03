@@ -1,3 +1,8 @@
+import {
+  canonicalGtinKey,
+  normalizeProductIdentifiers,
+} from "./productIdentifiers";
+
 const BEVERAGE_NUTRIENT_KEYS = [
   "calories",
   "protein",
@@ -24,6 +29,7 @@ function normalizeOptionalNumber(value) {
 }
 
 export function normalizeBeverageFood(food) {
+  const identifiers = normalizeProductIdentifiers(food?.identifiers);
   if (
     !food?.id ||
     !String(food.id).startsWith("beverage:") ||
@@ -33,7 +39,8 @@ export function normalizeBeverageFood(food) {
     !food.serving?.description ||
     !food.beverage?.packageSize ||
     !food.provenance?.sourceId ||
-    !food.provenance?.verification?.sourceUrl
+    !food.provenance?.verification?.sourceUrl ||
+    identifiers === null
   ) return null;
 
   const nutrients = Object.fromEntries(BEVERAGE_NUTRIENT_KEYS.map((key) => [
@@ -44,8 +51,13 @@ export function normalizeBeverageFood(food) {
     ? "complete"
     : "partial";
 
+  const foodWithoutIdentifiers = Object.fromEntries(
+    Object.entries(food).filter(([key]) => key !== "identifiers")
+  );
+
   return {
-    ...food,
+    ...foodWithoutIdentifiers,
+    ...(identifiers.length ? { identifiers } : {}),
     sourceType: "beverage",
     categoryLabel: BEVERAGE_CATEGORIES[food.category],
     nutrients,
@@ -74,6 +86,7 @@ export function validateBeverageCatalog(foods) {
   const errors = [];
   const ids = new Set();
   const definitions = new Set();
+  const identifierOwners = new Map();
 
   (Array.isArray(foods) ? foods : []).forEach((food, index) => {
     const label = food?.id || `record ${index + 1}`;
@@ -86,6 +99,20 @@ export function validateBeverageCatalog(foods) {
       .join("|");
     if (definitions.has(definition)) errors.push(`Duplicate beverage product: ${definition}`);
     definitions.add(definition);
+
+    const identifiers = normalizeProductIdentifiers(food?.identifiers);
+    if (identifiers === null) {
+      errors.push(`${label} has invalid product identifiers.`);
+    } else {
+      identifiers.forEach((identifier) => {
+        const key = canonicalGtinKey(identifier.value);
+        const existing = identifierOwners.get(key);
+        if (existing && existing !== label) {
+          errors.push(`Duplicate beverage product identifier: ${key}`);
+        }
+        identifierOwners.set(key, label);
+      });
+    }
 
     Object.entries(food?.nutrients || {}).forEach(([key, value]) => {
       if (value !== null && (!Number.isFinite(Number(value)) || Number(value) < 0)) {
