@@ -2,6 +2,7 @@ import starterFoods from "../data/starterFoods";
 import beverageFoods from "../data/beverageFoods";
 import restaurantFoods from "../data/restaurantFoods";
 import groceryFoods from "./groceryFoodCatalog";
+import brandedPackagedFoods from "./brandedPackagedFoodCatalog";
 import { normalizeBeverageFoods } from "./beverageFoodModel";
 import { normalizeRestaurantFoods } from "./restaurantFoodModel";
 import {
@@ -12,6 +13,7 @@ import {
 
 const localBarcodeFoods = Object.freeze([
   ...groceryFoods,
+  ...brandedPackagedFoods,
   ...starterFoods,
   ...normalizeBeverageFoods(beverageFoods),
   ...normalizeRestaurantFoods(restaurantFoods),

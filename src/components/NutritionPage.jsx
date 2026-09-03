@@ -80,6 +80,13 @@ function getEntrySourceDetails(foodReference) {
       foodReference.packageSize,
     ].filter(Boolean);
   }
+  if (foodReference?.sourceType === "packaged-food") {
+    return [
+      "Packaged food",
+      foodReference.brand,
+      foodReference.packageSize,
+    ].filter(Boolean);
+  }
   if (foodReference) return ["Trace starter"];
   return ["User-entered"];
 }
@@ -661,6 +668,23 @@ function NutritionPage({
               packageSize: food.beverage.packageSize,
               caffeineMg: food.beverage.caffeineMg,
             }
+        : food.sourceType === "packaged-food"
+          ? {
+              sourceType: "packaged-food",
+              dataType: "branded",
+              brand: food.brand,
+              category: food.category,
+              categoryLabel: food.categoryLabel,
+              packageSize: food.packaged.packageSize,
+              servingsPerContainer: food.packaged.servingsPerContainer,
+              catalogVersion: food.provenance.catalogVersion,
+              catalogBatch: food.provenance.catalogBatch,
+              verification: {
+                ...food.provenance.verification,
+                secondarySources: food.provenance.verification.secondarySources
+                  .map((source) => ({ ...source })),
+              },
+            }
         : food.sourceType === "grocery-custom" || food.provenance.source === "user-added"
           ? {
               sourceType: "grocery-custom",
@@ -1008,6 +1032,11 @@ function NutritionPage({
                   </p>
                 )}
               </>
+            )}
+            {foodReference?.sourceType === "packaged-food" && (
+              <p style={{ color: "#9ca3af", marginBottom: 0, marginTop: "4px" }}>
+                Packaged food: {foodReference.brand} · {foodReference.packageSize}
+              </p>
             )}
           </div>
         )}

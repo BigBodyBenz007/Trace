@@ -81,3 +81,30 @@ test("existing food search ranking is unchanged and structured identifiers survi
     { scheme: "gtin", value: "00012000001291" },
   ]);
 });
+
+test("looks up Phase 1A yogurt, cottage cheese, and cheese snacks locally", () => {
+  expect(lookupCatalogFoodByBarcode("00070470238029")).toMatchObject({
+    status: "found",
+    food: { brand: "Yoplait", category: "yogurt" },
+  });
+  expect(lookupCatalogFoodByBarcode("036632008367")).toMatchObject({
+    status: "found",
+    food: { brand: "Oikos", category: "yogurt" },
+  });
+  expect(lookupCatalogFoodByBarcode("894700010014")).toMatchObject({
+    status: "found",
+    food: { brand: "Chobani", category: "yogurt" },
+  });
+  expect(lookupCatalogFoodByBarcode("859977005279")).toMatchObject({
+    status: "found",
+    food: { brand: "Good Culture", category: "cottage-cheese" },
+  });
+  expect(lookupCatalogFoodByBarcode("046100007150")).toMatchObject({
+    status: "found",
+    food: { brand: "Sargento", category: "cheese-snack" },
+  });
+  expect(lookupCatalogFoodByBarcode("041757025755")).toMatchObject({
+    status: "found",
+    food: { brand: "Babybel", category: "cheese-snack" },
+  });
+});

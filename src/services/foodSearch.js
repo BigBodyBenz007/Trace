@@ -2,6 +2,7 @@ import starterFoods from "../data/starterFoods";
 import restaurantFoods from "../data/restaurantFoods";
 import beverageFoods from "../data/beverageFoods";
 import groceryFoods from "./groceryFoodCatalog";
+import brandedPackagedFoods from "./brandedPackagedFoodCatalog";
 import { normalizeRestaurantFoods } from "./restaurantFoodModel";
 import { normalizeBeverageFoods } from "./beverageFoodModel";
 
@@ -84,6 +85,7 @@ export function searchFoods(
       const sourcePriority = (food) => {
         if (food.provenance?.source === "user-added" || food.dataType === "user-entered") return 0;
         if (food.sourceType === "grocery") return 1;
+        if (food.sourceType === "packaged-food") return 2;
         if (food.sourceType === "restaurant") return 2;
         if (food.sourceType === "beverage") return 3;
         return 2;
@@ -103,6 +105,7 @@ export function searchFoodCatalog(
   const foods = [
     ...userFoods,
     ...groceryFoods,
+    ...brandedPackagedFoods,
     ...starterFoods,
     ...normalizeBeverageFoods(beverageFoods),
     ...normalizeRestaurantFoods(restaurantFoods),

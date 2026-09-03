@@ -42,6 +42,9 @@ function preparationLabel(preparationState) {
 }
 
 function foodSourceLabels(food) {
+  if (food.sourceType === "packaged-food") {
+    return ["Packaged food", "Verified manufacturer label"];
+  }
   if (food.sourceType === "beverage") {
     return ["Packaged drink", "Official manufacturer source"];
   }
@@ -66,7 +69,7 @@ function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
   return (
     <section className="trace-feature-surface trace-food-search" style={{ background: "#1f2937", borderRadius: "16px", boxSizing: "border-box", marginTop: "24px", maxWidth: "700px", minWidth: 0, padding: "24px", textAlign: "left", width: "100%" }}>
       <h2 style={{ marginTop: 0 }}>Find a Food</h2>
-      <p style={{ color: "#d1d5db" }}>Search groceries, packaged drinks, restaurant menus, Trace starters, or your saved foods.</p>
+      <p style={{ color: "#d1d5db" }}>Search groceries, packaged foods and drinks, restaurant menus, Trace starters, or your saved foods.</p>
       <label style={{ display: "block" }}>
         Food search
         <input type="search" placeholder="Search foods by name, brand, or category..." value={query} onChange={(event) => setQuery(event.target.value)} style={{ ...inputStyle, boxSizing: "border-box", fontSize: "18px", marginTop: "8px", maxWidth: "100%", padding: "12px", width: "100%" }} />
@@ -105,7 +108,7 @@ function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
                 {food.beverage?.caffeineMg !== null && food.beverage?.caffeineMg !== undefined && (
                   <span className="trace-food-result__caffeine">Caffeine <strong>{food.beverage.caffeineMg} mg</strong></span>
                 )}
-                {food.provenance.completeness === "partial" && <span className="trace-food-result__completeness">{food.sourceType === "restaurant" ? "Some nutrition values are unavailable because the restaurant does not publish them." : food.sourceType === "beverage" ? "Nutrition values not published by the manufacturer remain unknown." : food.sourceType === "grocery" ? "Some USDA nutrient values are unavailable and remain unknown." : "Nutrition values left blank by the user remain unknown."}</span>}
+                {food.provenance.completeness === "partial" && <span className="trace-food-result__completeness">{food.sourceType === "restaurant" ? "Some nutrition values are unavailable because the restaurant does not publish them." : ["beverage", "packaged-food"].includes(food.sourceType) ? "Nutrition values not published by the manufacturer remain unknown." : food.sourceType === "grocery" ? "Some USDA nutrient values are unavailable and remain unknown." : "Nutrition values left blank by the user remain unknown."}</span>}
                 {food.notes && <span className="trace-food-result__notes">{food.notes}</span>}
               </span>
             </button>

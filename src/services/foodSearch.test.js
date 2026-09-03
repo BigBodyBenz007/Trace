@@ -532,3 +532,28 @@ test("every restaurant catalog record follows the normalized data contract", () 
     });
   });
 });
+
+test("searches the Phase 1A dairy catalog by brand, product, style, flavor, and alias", () => {
+  expect(searchFoodCatalog("Yoplait cherry orchard")[0]).toMatchObject({
+    id: "packaged-food:yoplait-original-cherry-orchard-6oz",
+    sourceType: "packaged-food",
+    category: "yogurt",
+  });
+  expect(searchFoodCatalog("Oikos lemon tart")[0]).toMatchObject({
+    brand: "Oikos",
+    packaged: { packageSize: "5.3 oz cup" },
+  });
+  expect(searchFoodCatalog("Chobani sugar free").every((food) => (
+    food.sourceType === "packaged-food" && food.brand === "Chobani"
+  ))).toBe(true);
+  expect(searchFoodCatalog("Good Culture lactose free")[0]).toMatchObject({
+    category: "cottage-cheese",
+    brand: "Good Culture",
+  });
+  expect(searchFoodCatalog("Babybel brown")[0]).toMatchObject({
+    id: "packaged-food:babybel-gouda-12ct",
+  });
+  expect(searchFoodCatalog("cheese snack")).toHaveLength(DEFAULT_RESULT_LIMIT);
+  expect(new Set(searchFoodCatalog("cheese snack").map((food) => food.id)).size)
+    .toBe(DEFAULT_RESULT_LIMIT);
+});

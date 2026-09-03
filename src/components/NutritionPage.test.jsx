@@ -5,6 +5,7 @@ import NutritionPage, {
   calculateNutritionAverages,
 } from "./NutritionPage";
 import { createUserFood } from "../services/userFoodCatalog";
+import brandedPackagedFoods from "../services/brandedPackagedFoodCatalog";
 
 function localTimestamp(year, month, day, hour = 12) {
   return new Date(year, month, day, hour).toISOString();
@@ -620,6 +621,39 @@ test("selecting and logging a branded drink preserves package, caffeine, sugars,
   }));
 });
 
+test("scales a branded yogurt to multiple servings and marks edited provenance", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "Chobani high protein vanilla" },
+  });
+  fireEvent.click(screen.getByRole("button", {
+    name: /Chobani.*20g Protein Lowfat Greek Yogurt Vanilla/i,
+  }));
+
+  const form = entryForm();
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "2" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(280);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(40);
+  expect(form.getByLabelText("Total Sugar (g)")).toHaveValue(14);
+  expect(form.getByLabelText("Added Sugar (g)")).toHaveValue(0);
+  fireEvent.change(form.getByLabelText("Sodium (mg)"), { target: { value: "201" } });
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry).toHaveBeenCalledWith(expect.objectContaining({
+    calories: 280,
+    protein: 40,
+    totalSugar: 14,
+    addedSugar: 0,
+    sodium: 201,
+    foodReference: expect.objectContaining({
+      sourceType: "packaged-food",
+      brand: "Chobani",
+      identifiers: [{ scheme: "gtin", value: "818290015150" }],
+      modified: true,
+    }),
+  }));
+});
+
 test("saves structured product identifiers in the immutable food reference snapshot", () => {
   const props = renderNutritionPage();
   fireEvent.change(screen.getByLabelText("Food search"), {
@@ -645,6 +679,71 @@ test("saves structured product identifiers in the immutable food reference snaps
     addedSugar: 34.5,
     nutritionBasis: { totalSugar: 69, addedSugar: 69 },
   });
+});
+
+test("selects, scales, and saves a branded dairy package with sugars and provenance", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "Good Culture lactose free" },
+  });
+  const result = screen.getByRole("button", {
+    name: /Good Culture.*Simply Lactose Free 2% Low-Fat Cottage Cheese/i,
+  });
+  expect(within(result).getByText("Packaged food")).toBeInTheDocument();
+  expect(within(result).getByText("Verified manufacturer label")).toBeInTheDocument();
+  fireEvent.click(result);
+
+  const form = entryForm();
+  expect(form.getByLabelText("Food / meal name")).toHaveValue("Simply Lactose Free 2% Low-Fat Cottage Cheese");
+  expect(form.getByText("One serving: 1/2 cup")).toBeInTheDocument();
+  expect(form.getByText("Packaged food: Good Culture · 15 oz tub")).toBeInTheDocument();
+  expect(form.getByLabelText("Calories")).toHaveValue(90);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(14);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(380);
+  expect(form.getByLabelText("Total Sugar (g)")).toHaveValue(4);
+  expect(form.getByLabelText("Added Sugar (g)")).toHaveValue(0);
+
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "0.5" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(45);
+  expect(form.getByLabelText("Total Sugar (g)")).toHaveValue(2);
+  expect(form.getByLabelText("Added Sugar (g)")).toHaveValue(0);
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry).toHaveBeenCalledWith(expect.objectContaining({
+    name: "Simply Lactose Free 2% Low-Fat Cottage Cheese",
+    calories: 45,
+    protein: 7,
+    totalSugar: 2,
+    addedSugar: 0,
+    portion: expect.objectContaining({
+      amount: 0.5,
+      basis: expect.objectContaining({ description: "1/2 cup" }),
+    }),
+    nutritionBasis: expect.objectContaining({ calories: 90, totalSugar: 4, addedSugar: 0 }),
+    foodReference: expect.objectContaining({
+      sourceType: "packaged-food",
+      dataType: "branded",
+      brand: "Good Culture",
+      category: "cottage-cheese",
+      packageSize: "15 oz tub",
+      servingsPerContainer: 4,
+      identifiers: [{ scheme: "gtin", value: "850011288252" }],
+      catalogVersion: 1,
+      catalogBatch: "yogurt-dairy-phase-1a",
+      verification: expect.objectContaining({
+        sourceUrl: "https://goodculture.com/product/simply-cottage-cheese-15-oz-lactose-free/",
+        accessedAt: "2026-09-03",
+      }),
+      modified: false,
+    }),
+  }));
+  const source = brandedPackagedFoods.find((food) => food.id === "packaged-food:good-culture-simply-lactose-free-lowfat-15oz");
+  const savedReference = props.saveNutritionEntry.mock.calls[0][0].foodReference;
+  expect(savedReference.identifiers).not.toBe(source.identifiers);
+  expect(savedReference.identifiers[0]).not.toBe(source.identifiers[0]);
+  expect(savedReference.verification).not.toBe(source.provenance.verification);
+  expect(savedReference.verification.secondarySources[0])
+    .not.toBe(source.provenance.verification.secondarySources[0]);
 });
 
 test("shows USDA grocery source, serving, and unknown nutrients for raw chicken breast strips", () => {
