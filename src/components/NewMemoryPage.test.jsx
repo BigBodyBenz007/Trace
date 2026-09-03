@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
+import { PHOTO_SELECTION_RESULT_STATUS } from "../services/photoSelectionAdapter";
 import NewMemoryPage from "./NewMemoryPage";
 
 let originalCreateObjectURL;
@@ -16,6 +17,7 @@ function renderPage({
   editingIndex = null,
   images = [],
   onCancelExistingMemory,
+  photoSelectionAdapter,
   photoLoader,
   setEditingIndex = jest.fn(),
   setImages = jest.fn(),
@@ -43,6 +45,7 @@ function renderPage({
       editingIndex={editingIndex}
       setEditingIndex={setEditingIndex}
       onCancelExistingMemory={onCancelExistingMemory}
+      photoSelectionAdapter={photoSelectionAdapter}
     />
   );
 }
@@ -67,6 +70,7 @@ test("uses isolated Modern Heirloom hierarchy for Add and Edit Memory", () => {
     "trace-memory-editor__close"
   );
   expect(screen.getByLabelText("Choose Photos")).toHaveAttribute("multiple");
+  expect(screen.getByLabelText("Choose Photos")).toHaveAttribute("accept", "image/*");
   first.unmount();
 
   renderPage({ editingIndex: "memory-edit", title: "Existing Memory" });
@@ -174,6 +178,59 @@ test("appends each photo selection from the latest image state", () => {
     []
   );
   expect(images.map(({ blob }) => blob)).toEqual([first, second, third]);
+});
+
+test("routes Edit Memory selection through the adapter while preserving existing photos and file order", () => {
+  const existing = { id: "stored-photo" };
+  const first = new File(["first"], "first.jpg", { type: "image/jpeg" });
+  const second = new File(["second"], "second.png", { type: "image/png" });
+  const photoSelectionAdapter = {
+    acquireImages: jest.fn(() => ({
+      status: PHOTO_SELECTION_RESULT_STATUS.SUCCESS,
+      files: [second, first],
+    })),
+  };
+  const setImages = jest.fn();
+  renderPage({
+    editingIndex: "memory-edit",
+    images: [existing],
+    photoSelectionAdapter,
+    setImages,
+  });
+  const input = screen.getByLabelText("Add More Photos");
+
+  fireEvent.change(input, { target: { files: [first, second] } });
+
+  expect(photoSelectionAdapter.acquireImages).toHaveBeenCalledWith({
+    input,
+    accept: "image/*",
+    multiple: true,
+  });
+  expect(setImages).toHaveBeenCalledTimes(1);
+  const updated = setImages.mock.calls[0][0]([existing]);
+  expect(updated[0]).toBe(existing);
+  expect(updated.slice(1).map(({ blob }) => blob)).toEqual([second, first]);
+  expect(URL.createObjectURL.mock.calls.map(([file]) => file)).toEqual([second, first]);
+  expect(input).toHaveValue("");
+});
+
+test.each([
+  PHOTO_SELECTION_RESULT_STATUS.CANCELED,
+  PHOTO_SELECTION_RESULT_STATUS.FAILURE,
+  PHOTO_SELECTION_RESULT_STATUS.UNSUPPORTED,
+])("a %s adapter result leaves Memory photos unchanged", (status) => {
+  const photoSelectionAdapter = {
+    acquireImages: jest.fn(() => ({ status, files: [], error: new Error("selection unavailable") })),
+  };
+  const setImages = jest.fn();
+  renderPage({ photoSelectionAdapter, setImages });
+  const input = screen.getByLabelText("Choose Photos");
+
+  fireEvent.change(input, { target: { files: [] } });
+
+  expect(setImages).not.toHaveBeenCalled();
+  expect(URL.createObjectURL).not.toHaveBeenCalled();
+  expect(input).toHaveValue("");
 });
 
 test("clears the file control after accepting photos so the same photo can be selected again", () => {

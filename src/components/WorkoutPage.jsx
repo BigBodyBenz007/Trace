@@ -5,6 +5,11 @@ import ExerciseHistory from "./ExerciseHistory";
 import WorkoutPhotos from "./WorkoutPhotos";
 import { motionScrollBehavior } from "../services/motionPreference";
 import {
+  PHOTO_SELECTION_ACCEPT,
+  PHOTO_SELECTION_RESULT_STATUS,
+  webPhotoSelectionAdapter,
+} from "../services/photoSelectionAdapter";
+import {
   WORKOUT_INTENSITY_OPTIONS,
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
@@ -373,6 +378,7 @@ function WorkoutPage({
   onReturnToTrophyCase = null,
   workoutEntryTargetId = null,
   onWorkoutEntryTargetShown = () => {},
+  photoSelectionAdapter = webPhotoSelectionAdapter,
 }) {
   const initialDateTime = currentLocalDateTime();
   const restoredDraftRef = useRef(readWorkoutDraft());
@@ -408,6 +414,26 @@ function WorkoutPage({
   const [roadmapEditingExerciseId, setRoadmapEditingExerciseId] = useState(
     restoredDraftRef.current?.context?.roadmapEditingExerciseId || null
   );
+
+  function selectWorkoutPhotos(event) {
+    const input = event.currentTarget;
+    const selection = photoSelectionAdapter.acquireImages({
+      input,
+      accept: input.accept,
+      multiple: input.multiple,
+    });
+    input.value = "";
+
+    if (selection.status !== PHOTO_SELECTION_RESULT_STATUS.SUCCESS) return;
+
+    const additions = selection.files.map((blob) => ({
+      blob,
+      isDraft: true,
+      url: URL.createObjectURL(blob),
+    }));
+    setPhotos((current) => [...current, ...additions]);
+    markChanged();
+  }
   const [roadmapSkipExerciseId, setRoadmapSkipExerciseId] = useState(null);
   const [roadmapSkipReason, setRoadmapSkipReason] = useState("");
   const [roadmapCustomReason, setRoadmapCustomReason] = useState("");
@@ -2127,14 +2153,10 @@ function WorkoutPage({
             {photos.length ? "Add More Photos" : "Choose Photos"}
             <input
               type="file"
-              accept="image/*"
+              accept={PHOTO_SELECTION_ACCEPT}
               multiple
               style={{ display: "none" }}
-              onChange={(event) => {
-                const additions = Array.from(event.target.files || []).map((blob) => ({ blob, isDraft: true, url: URL.createObjectURL(blob) }));
-                if (additions.length) { setPhotos((current) => [...current, ...additions]); markChanged(); }
-                event.target.value = "";
-              }}
+              onChange={selectWorkoutPhotos}
             />
           </label>
           {photos.length > 0 && (

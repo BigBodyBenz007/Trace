@@ -6,6 +6,7 @@ import {
   createWorkoutDraftFromPlannedWorkout,
   WORKOUT_DRAFT_STORAGE_KEY,
 } from "../services/workoutDraft";
+import { PHOTO_SELECTION_RESULT_STATUS } from "../services/photoSelectionAdapter";
 
 const originalRequestAnimationFrame = window.requestAnimationFrame;
 const originalCreateObjectURL = URL.createObjectURL;
@@ -2026,6 +2027,53 @@ test("adds multiple optional photos and can remove one before saving", () => {
     photos: [expect.objectContaining({ blob: second, isDraft: true, url: "blob:second.jpg" })],
   }));
   expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:first.jpg");
+});
+
+test("routes Workout selection through the adapter and retains its exact file order", () => {
+  const first = new File(["first"], "first.jpg", { type: "image/jpeg" });
+  const second = new File(["second"], "second.png", { type: "image/png" });
+  const photoSelectionAdapter = {
+    acquireImages: jest.fn(() => ({
+      status: PHOTO_SELECTION_RESULT_STATUS.SUCCESS,
+      files: [second, first],
+    })),
+  };
+  renderPage({ photoSelectionAdapter });
+  const input = screen.getByLabelText("Choose Photos");
+
+  fireEvent.change(input, { target: { files: [first, second] } });
+
+  expect(photoSelectionAdapter.acquireImages).toHaveBeenCalledWith({
+    input,
+    accept: "image/*",
+    multiple: true,
+  });
+  expect(screen.getByAltText("Workout attachment 1")).toHaveAttribute("src", "blob:second.png");
+  expect(screen.getByAltText("Workout attachment 2")).toHaveAttribute("src", "blob:first.jpg");
+  expect(URL.createObjectURL.mock.calls.map(([file]) => file)).toEqual([second, first]);
+  expect(input).toHaveAttribute("accept", "image/*");
+  expect(input).toHaveAttribute("multiple");
+  expect(input).toHaveValue("");
+});
+
+test.each([
+  PHOTO_SELECTION_RESULT_STATUS.CANCELED,
+  PHOTO_SELECTION_RESULT_STATUS.FAILURE,
+  PHOTO_SELECTION_RESULT_STATUS.UNSUPPORTED,
+])("a %s adapter result leaves Workout photos and its draft unchanged", async (status) => {
+  const photoSelectionAdapter = {
+    acquireImages: jest.fn(() => ({ status, files: [], error: new Error("selection unavailable") })),
+  };
+  renderPage({ photoSelectionAdapter });
+  const beforeSelection = await storedDraft();
+  const input = screen.getByLabelText("Choose Photos");
+
+  fireEvent.change(input, { target: { files: [] } });
+
+  expect(screen.queryByAltText(/Workout attachment/)).not.toBeInTheDocument();
+  expect(URL.createObjectURL).not.toHaveBeenCalled();
+  expect(input).toHaveValue("");
+  expect(await storedDraft()).toEqual(beforeSelection);
 });
 
 test("editing preserves photos and each workout history card owns its gallery", () => {

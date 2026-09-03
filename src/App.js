@@ -113,6 +113,7 @@ import {
   TRACE_BACKUP_MIME_TYPE,
   webBackupFileAdapter,
 } from "./services/backupFileAdapter";
+import { webPhotoSelectionAdapter } from "./services/photoSelectionAdapter";
 import {
   appendPlannedWorkoutExercise as appendExerciseToPlannedWorkout,
   createPlannedWorkout as createPlannedWorkoutRecord,
@@ -313,7 +314,10 @@ function initializeJournalPrivacy(storage) {
   }
 }
 
-function App({ backupFileAdapter = webBackupFileAdapter }) {
+function App({
+  backupFileAdapter = webBackupFileAdapter,
+  photoSelectionAdapter = webPhotoSelectionAdapter,
+}) {
   const [page, setPage] = useState("home");
 
   const [title, setTitle] = useState("");
@@ -3114,6 +3118,7 @@ function App({ backupFileAdapter = webBackupFileAdapter }) {
           onReturnToTrophyCase={returnToTrophyCase}
           workoutEntryTargetId={workoutEntryTargetId}
           onWorkoutEntryTargetShown={() => setWorkoutEntryTargetId(null)}
+          photoSelectionAdapter={photoSelectionAdapter}
         />
       ) : page === "protocols" ? (
         <ProtocolsPage
@@ -3223,6 +3228,7 @@ function App({ backupFileAdapter = webBackupFileAdapter }) {
               ? memoryEditorFolioRef
               : null
           }
+          photoSelectionAdapter={photoSelectionAdapter}
         />
       ))}
       {ceremonyEntry && (

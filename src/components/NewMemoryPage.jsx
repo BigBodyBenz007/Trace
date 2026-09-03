@@ -1,5 +1,10 @@
 import { useRef } from "react";
 import { CATEGORY_OPTIONS } from "../constants/categories";
+import {
+  PHOTO_SELECTION_ACCEPT,
+  PHOTO_SELECTION_RESULT_STATUS,
+  webPhotoSelectionAdapter,
+} from "../services/photoSelectionAdapter";
 import { PHOTO_LOAD_PRIORITY } from "../services/photoUrlLoader";
 import StoredPhoto from "./StoredPhoto";
 
@@ -21,11 +26,31 @@ function NewMemoryPage({
   setEditingIndex,
   onCancelExistingMemory,
   folioRef = null,
+  photoSelectionAdapter = webPhotoSelectionAdapter,
 }) {
   const initialDateRef = useRef(date);
 
   function releaseDraftPhoto(image) {
     if (image?.isDraft && image.url) URL.revokeObjectURL(image.url);
+  }
+
+  function selectPhotos(event) {
+    const input = event.currentTarget;
+    const selection = photoSelectionAdapter.acquireImages({
+      input,
+      accept: input.accept,
+      multiple: input.multiple,
+    });
+    input.value = "";
+
+    if (selection.status !== PHOTO_SELECTION_RESULT_STATUS.SUCCESS) return;
+
+    const newImages = selection.files.map((file) => ({
+      blob: file,
+      isDraft: true,
+      url: URL.createObjectURL(file),
+    }));
+    setImages((current) => [...current, ...newImages]);
   }
 
   function cancelMemory() {
@@ -174,21 +199,9 @@ function NewMemoryPage({
               {images.length ? "Add More Photos" : "Choose Photos"}
               <input
                 type="file"
-                accept="image/*"
+                accept={PHOTO_SELECTION_ACCEPT}
                 multiple
-                onChange={(event) => {
-                  const files = Array.from(event.target.files);
-
-                  if (!files.length) return;
-
-                  const newImages = files.map((file) => ({
-                    blob: file,
-                    isDraft: true,
-                    url: URL.createObjectURL(file),
-                  }));
-                  setImages((current) => [...current, ...newImages]);
-                  event.target.value = "";
-                }}
+                onChange={selectPhotos}
               />
             </label>
           </div>

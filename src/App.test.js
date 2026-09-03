@@ -6,6 +6,7 @@ import {
   createWorkoutDraftFromPlannedWorkout,
   WORKOUT_DRAFT_STORAGE_KEY,
 } from "./services/workoutDraft";
+import { PHOTO_SELECTION_RESULT_STATUS } from "./services/photoSelectionAdapter";
 import { deletePhotos, getPhoto, openPhotoDatabase, putPhotos } from "./storage/photoStorage";
 import {
   createTraceBackup,
@@ -3899,6 +3900,102 @@ test("completed workout drops persist recursively and reload in Workout History"
   expandCompletedWorkout("Drop Push Day");
   expect(screen.getByText("↳ Drop 1: Working · Bodyweight × 4 reps")).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("workoutEntries"))[0].exercises[0].sets[0].drops[0].id).toBe(dropId);
+});
+
+test("App supplies its photo-selection adapter to both Memory and Workout entry points", () => {
+  const selectedFiles = [];
+  const photoSelectionAdapter = {
+    acquireImages: jest.fn(({ input }) => {
+      const files = Array.from(input.files || []);
+      selectedFiles.push(...files);
+      return { status: PHOTO_SELECTION_RESULT_STATUS.SUCCESS, files };
+    }),
+  };
+  const memoryPhoto = new File(["memory"], "memory.jpg", { type: "image/jpeg" });
+  const workoutPhoto = new File(["workout"], "workout.jpg", { type: "image/jpeg" });
+
+  const memoryApp = render(<App photoSelectionAdapter={photoSelectionAdapter} />);
+  fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+  fireEvent.change(screen.getByLabelText("Choose Photos"), {
+    target: { files: [memoryPhoto] },
+  });
+  memoryApp.unmount();
+
+  render(<App photoSelectionAdapter={photoSelectionAdapter} />);
+  openWorkouts();
+  fireEvent.click(screen.getByRole("button", { name: "Log Workout" }));
+  fireEvent.change(screen.getByLabelText("Choose Photos"), {
+    target: { files: [workoutPhoto] },
+  });
+
+  expect(photoSelectionAdapter.acquireImages).toHaveBeenCalledTimes(2);
+  expect(selectedFiles).toEqual([memoryPhoto, workoutPhoto]);
+});
+
+test("a failed Memory metadata write rolls back newly stored selected photos", async () => {
+  const database = { name: "memory-photo-rollback" };
+  openPhotoDatabase.mockResolvedValue(database);
+  putPhotos.mockResolvedValue(undefined);
+  deletePhotos.mockResolvedValue(undefined);
+  const originalSetItem = Storage.prototype.setItem;
+  const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (key, value) {
+    if (key === "memories") throw new Error("quota full");
+    return originalSetItem.call(this, key, value);
+  });
+
+  try {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+    fireEvent.change(screen.getByPlaceholderText("Memory title..."), {
+      target: { value: "Retained Memory draft" },
+    });
+    const photo = new File(["memory image"], "memory.jpg", { type: "image/jpeg" });
+    fireEvent.change(screen.getByLabelText("Choose Photos"), { target: { files: [photo] } });
+    fireEvent.click(screen.getByRole("button", { name: "Save Memory" }));
+
+    await waitFor(() => expect(deletePhotos).toHaveBeenCalled());
+    const storedRecords = putPhotos.mock.calls.at(-1)[1];
+    expect(storedRecords).toEqual([
+      expect.objectContaining({ memoryId: expect.any(String), blob: photo }),
+    ]);
+    expect(deletePhotos).toHaveBeenCalledWith(database, [storedRecords[0].id]);
+    expect(localStorage.getItem("memories")).toBeNull();
+    expect(screen.getByPlaceholderText("Memory title...")).toHaveValue("Retained Memory draft");
+  } finally {
+    setItem.mockRestore();
+  }
+});
+
+test("a failed Workout metadata write rolls back newly stored selected photos", async () => {
+  const database = { name: "workout-photo-rollback" };
+  openPhotoDatabase.mockResolvedValue(database);
+  putPhotos.mockResolvedValue(undefined);
+  deletePhotos.mockResolvedValue(undefined);
+  render(<App />);
+  openWorkouts();
+  fillBodyweightWorkout("Retained Workout draft");
+  const photo = new File(["workout image"], "workout.jpg", { type: "image/jpeg" });
+  fireEvent.change(screen.getByLabelText("Choose Photos"), { target: { files: [photo] } });
+  const originalSetItem = Storage.prototype.setItem;
+  const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (key, value) {
+    if (key === "workoutEntries") throw new Error("quota full");
+    return originalSetItem.call(this, key, value);
+  });
+
+  try {
+    submitWorkout();
+
+    await waitFor(() => expect(deletePhotos).toHaveBeenCalled());
+    const storedRecords = putPhotos.mock.calls.at(-1)[1];
+    expect(storedRecords).toEqual([
+      expect.objectContaining({ workoutId: expect.any(String), blob: photo }),
+    ]);
+    expect(deletePhotos).toHaveBeenCalledWith(database, [storedRecords[0].id]);
+    expect(localStorage.getItem("workoutEntries")).toBeNull();
+    expect(screen.getByLabelText("Workout title")).toHaveValue("Retained Workout draft");
+  } finally {
+    setItem.mockRestore();
+  }
 });
 
 test("workout photo blobs stay in IndexedDB references and are cleaned up with only their workout", async () => {
