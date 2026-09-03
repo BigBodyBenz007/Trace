@@ -6,6 +6,7 @@ import {
   restoreTraceBackup,
   traceBackupFilename,
 } from "../services/traceBackup";
+import { BACKUP_FILE_METHOD, BACKUP_FILE_RESULT_STATUS } from "../services/backupFileAdapter";
 
 jest.mock("../services/traceBackup", () => ({
   createTraceBackup: jest.fn(),
@@ -186,7 +187,38 @@ test("iPhone export opens the native file share sheet with the complete JSON fil
   restoreNavigator();
 });
 
-test("iPhone export clearly explains when file sharing is unavailable", async () => {
+test("canceling the file share keeps the prepared backup available without showing an error", async () => {
+  createTraceBackup.mockResolvedValue({ createdAt: "2026-08-12T00:00:00.000Z", data: { structured: {}, photos: [] } });
+  const share = jest.fn().mockRejectedValue(new DOMException("Canceled", "AbortError"));
+  const restoreNavigator = mockNavigator({ canShare: jest.fn(() => true), share });
+  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Save Backup to Files" }));
+
+  expect(await screen.findByText("Trace backup sharing was canceled. Your current data was not changed.")).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Save Backup to Files" })).toBeInTheDocument();
+  restoreNavigator();
+});
+
+test("a genuine file-share failure keeps the existing accurate error behavior", async () => {
+  createTraceBackup.mockResolvedValue({ createdAt: "2026-08-12T00:00:00.000Z", data: { structured: {}, photos: [] } });
+  const share = jest.fn().mockRejectedValue(new Error("share permission denied"));
+  const restoreNavigator = mockNavigator({ canShare: jest.fn(() => true), share });
+  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Save Backup to Files" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Trace could not open the Save to Files sheet: share permission denied"
+  );
+  expect(screen.getByRole("button", { name: "Save Backup to Files" })).toBeInTheDocument();
+  restoreNavigator();
+});
+
+test("iPhone export falls back to download when file sharing rejects the backup file", async () => {
   createTraceBackup.mockResolvedValue({ createdAt: "2026-08-12T00:00:00.000Z", data: { structured: {}, photos: [] } });
   const share = jest.fn();
   const restoreNavigator = mockNavigator({
@@ -197,17 +229,116 @@ test("iPhone export clearly explains when file sharing is unavailable", async ()
     share,
   });
   const originalCreateObjectURL = URL.createObjectURL;
-  URL.createObjectURL = jest.fn();
+  const originalRevokeObjectURL = URL.revokeObjectURL;
+  URL.createObjectURL = jest.fn(() => "blob:share-fallback");
+  URL.revokeObjectURL = jest.fn();
+  const click = jest.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
 
   fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
-  await screen.findByText(/Tap Save Backup to Files/);
-  fireEvent.click(screen.getByRole("button", { name: "Save Backup to Files" }));
-  expect(await screen.findByText(/cannot open the Save to Files sheet/)).toBeInTheDocument();
+  expect(await screen.findByText("Trace backup downloaded. Your current data was not changed.")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Save Backup to Files" })).not.toBeInTheDocument();
   expect(share).not.toHaveBeenCalled();
-  expect(URL.createObjectURL).not.toHaveBeenCalled();
+  expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+  expect(URL.revokeObjectURL).toHaveBeenCalledTimes(1);
+  expect(click).toHaveBeenCalledTimes(1);
+  click.mockRestore();
   URL.createObjectURL = originalCreateObjectURL;
+  URL.revokeObjectURL = originalRevokeObjectURL;
   restoreNavigator();
+});
+
+test("an injected adapter receives the unchanged serialized export contract", async () => {
+  const backup = { createdAt: "2026-08-12T00:00:00.000Z", data: { structured: { memories: [] }, photos: [] } };
+  createTraceBackup.mockResolvedValue(backup);
+  const backupFileAdapter = {
+    prepareExport: jest.fn(() => ({
+      status: BACKUP_FILE_RESULT_STATUS.SUCCESS,
+      method: BACKUP_FILE_METHOD.DOWNLOAD,
+    })),
+    shareExport: jest.fn(),
+    readSelectedFile: jest.fn(),
+  };
+  render(<BackupPage backupFileAdapter={backupFileAdapter} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
+
+  expect(await screen.findByText("Trace backup downloaded. Your current data was not changed.")).toBeInTheDocument();
+  expect(backupFileAdapter.prepareExport).toHaveBeenCalledWith({
+    contents: JSON.stringify(backup),
+    filename: "trace-backup-test.json",
+    mimeType: "application/json",
+  });
+});
+
+test("adapter read failure never begins backup validation or restore", async () => {
+  const readError = new Error("selected file could not be read");
+  const backupFileAdapter = {
+    prepareExport: jest.fn(),
+    shareExport: jest.fn(),
+    readSelectedFile: jest.fn().mockResolvedValue({
+      status: BACKUP_FILE_RESULT_STATUS.FAILURE,
+      method: BACKUP_FILE_METHOD.READ,
+      error: readError,
+    }),
+  };
+  render(<BackupPage backupFileAdapter={backupFileAdapter} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["unreadable"], "trace.json")] },
+  });
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("selected file could not be read");
+  expect(parseTraceBackupText).not.toHaveBeenCalled();
+  expect(restoreTraceBackup).not.toHaveBeenCalled();
+});
+
+test("adapter read cancellation is silent and never begins validation or restore", async () => {
+  const backupFileAdapter = {
+    prepareExport: jest.fn(),
+    shareExport: jest.fn(),
+    readSelectedFile: jest.fn().mockResolvedValue({
+      status: BACKUP_FILE_RESULT_STATUS.CANCELED,
+      method: BACKUP_FILE_METHOD.READ,
+    }),
+  };
+  render(<BackupPage backupFileAdapter={backupFileAdapter} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["aborted"], "trace.json")] },
+  });
+
+  await waitFor(() => expect(backupFileAdapter.readSelectedFile).toHaveBeenCalledTimes(1));
+  await waitFor(() => expect(screen.queryByRole("status")).not.toBeInTheDocument());
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(parseTraceBackupText).not.toHaveBeenCalled();
+  expect(restoreTraceBackup).not.toHaveBeenCalled();
+});
+
+test("the file input resets so the same backup file can be selected again", async () => {
+  const backupFileAdapter = {
+    prepareExport: jest.fn(),
+    shareExport: jest.fn(),
+    readSelectedFile: jest.fn().mockResolvedValue({
+      status: BACKUP_FILE_RESULT_STATUS.SUCCESS,
+      method: BACKUP_FILE_METHOD.READ,
+      contents: "same backup",
+      file: { name: "same.json" },
+    }),
+  };
+  parseTraceBackupText.mockReturnValue(parsed);
+  render(<BackupPage backupFileAdapter={backupFileAdapter} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+  const input = document.querySelector('input[type="file"]');
+  const file = new File(["same backup"], "same.json", { type: "application/json" });
+
+  fireEvent.change(input, { target: { files: [file] } });
+  await waitFor(() => expect(backupFileAdapter.readSelectedFile).toHaveBeenCalledTimes(1));
+  expect(input).toHaveValue("");
+  fireEvent.change(input, { target: { files: [file] } });
+
+  await waitFor(() => expect(backupFileAdapter.readSelectedFile).toHaveBeenCalledTimes(2));
+  expect(parseTraceBackupText).toHaveBeenCalledTimes(2);
+  expect(input).toHaveValue("");
 });
 
 test("validates a selected backup and previews counts without restoring", async () => {

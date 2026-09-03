@@ -9,7 +9,7 @@ import ProtocolsPage from "./components/ProtocolsPage";
 import WorkoutPage from "./components/WorkoutPage";
 import TrophyPlacementCeremony from "./components/TrophyPlacementCeremony";
 import TrophyCasePage from "./components/TrophyCasePage";
-import BackupPage, { createBackupFile, downloadWithAnchor } from "./components/BackupPage";
+import BackupPage from "./components/BackupPage";
 import JournalPage from "./components/JournalPage";
 import JournalUnlockPage from "./components/JournalUnlockPage";
 import TodayPage from "./components/TodayPage";
@@ -107,7 +107,12 @@ import {
   JOURNAL_VAULT_STORAGE_KEY,
   JOURNAL_VAULT_TRANSACTION_KEY,
 } from "./services/journalVault";
-import { createTraceBackup } from "./services/traceBackup";
+import { createTraceBackup, traceBackupFilename } from "./services/traceBackup";
+import {
+  BACKUP_FILE_RESULT_STATUS,
+  TRACE_BACKUP_MIME_TYPE,
+  webBackupFileAdapter,
+} from "./services/backupFileAdapter";
 import {
   appendPlannedWorkoutExercise as appendExerciseToPlannedWorkout,
   createPlannedWorkout as createPlannedWorkoutRecord,
@@ -308,7 +313,7 @@ function initializeJournalPrivacy(storage) {
   }
 }
 
-function App() {
+function App({ backupFileAdapter = webBackupFileAdapter }) {
   const [page, setPage] = useState("home");
 
   const [title, setTitle] = useState("");
@@ -2690,7 +2695,14 @@ function App() {
 
   async function downloadTraceBackupForJournalReset() {
     const backup = await createTraceBackup();
-    downloadWithAnchor(createBackupFile(backup));
+    const delivery = await backupFileAdapter.downloadExport({
+      contents: JSON.stringify(backup),
+      filename: traceBackupFilename(new Date(backup.createdAt)),
+      mimeType: TRACE_BACKUP_MIME_TYPE,
+    });
+    if (delivery.status !== BACKUP_FILE_RESULT_STATUS.SUCCESS) {
+      throw delivery.error || new Error("Backup file download is unavailable.");
+    }
   }
 
   async function resetJournalPrivacy() {
@@ -3125,6 +3137,7 @@ function App() {
         />
       ) : page === "backup" ? (
         <BackupPage
+          backupFileAdapter={backupFileAdapter}
           onBack={() => setPage("home")}
           journalLockEnabled={journalPrivacy.enabled}
           journalVaultSession={journalSessionContextRef.current?.session || null}

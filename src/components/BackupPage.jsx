@@ -5,46 +5,13 @@ import {
   restoreTraceBackup,
   traceBackupFilename,
 } from "../services/traceBackup";
+import {
+  BACKUP_FILE_METHOD,
+  BACKUP_FILE_RESULT_STATUS,
+  TRACE_BACKUP_MIME_TYPE,
+  webBackupFileAdapter,
+} from "../services/backupFileAdapter";
 import { JOURNAL_RECOVERY_FORMAT_LEGACY } from "../services/journalVaultCrypto";
-
-function readFileText(file) {
-  if (typeof file.text === "function") return file.text();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error || new Error("Trace could not read the selected file."));
-    reader.readAsText(file);
-  });
-}
-
-function isIOSDevice(browserNavigator = navigator) {
-  const userAgent = browserNavigator.userAgent || "";
-  return /iPad|iPhone|iPod/.test(userAgent) || (
-    browserNavigator.platform === "MacIntel" && browserNavigator.maxTouchPoints > 1
-  );
-}
-
-export function createBackupFile(backup) {
-  const filename = traceBackupFilename(new Date(backup.createdAt));
-  const file = typeof File === "function"
-    ? new File([JSON.stringify(backup)], filename, { type: "application/json" })
-    : new Blob([JSON.stringify(backup)], { type: "application/json" });
-  if (file.name !== filename) {
-    Object.defineProperty(file, "name", { configurable: true, value: filename });
-  }
-  return file;
-}
-
-export function downloadWithAnchor(file) {
-  const url = URL.createObjectURL(file);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = file.name;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-}
 
 export default function BackupPage({
   onBack,
@@ -54,11 +21,12 @@ export default function BackupPage({
   journalVaultSession = null,
   buttonStyle,
   containerStyle,
+  backupFileAdapter = webBackupFileAdapter,
 }) {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [preview, setPreview] = useState(null);
-  const [iosBackup, setIosBackup] = useState(null);
+  const [shareBackupFile, setShareBackupFile] = useState(null);
   const [restoreComplete, setRestoreComplete] = useState(false);
   const [backupCredentialType, setBackupCredentialType] = useState("passphrase");
   const [backupCredentialValue, setBackupCredentialValue] = useState("");
@@ -72,12 +40,19 @@ export default function BackupPage({
     setStatus("Preparing backup…");
     try {
       const backup = await createTraceBackup();
-      if (isIOSDevice()) {
-        setIosBackup(backup);
+      const delivery = await backupFileAdapter.prepareExport({
+        contents: JSON.stringify(backup),
+        filename: traceBackupFilename(new Date(backup.createdAt)),
+        mimeType: TRACE_BACKUP_MIME_TYPE,
+      });
+      if (delivery.status === BACKUP_FILE_RESULT_STATUS.READY && delivery.method === BACKUP_FILE_METHOD.SHARE) {
+        setShareBackupFile(delivery.file);
         setStatus("Backup is ready. Tap Save Backup to Files to open the iPhone share sheet.");
-      } else {
-        downloadWithAnchor(createBackupFile(backup));
+      } else if (delivery.status === BACKUP_FILE_RESULT_STATUS.SUCCESS && delivery.method === BACKUP_FILE_METHOD.DOWNLOAD) {
+        setShareBackupFile(null);
         setStatus("Trace backup downloaded. Your current data was not changed.");
+      } else {
+        throw delivery.error || new Error("Backup file delivery is unavailable.");
       }
     } catch (exportError) {
       setStatus("");
@@ -86,30 +61,21 @@ export default function BackupPage({
   }
 
   async function saveBackupToFiles() {
-    if (!iosBackup) return;
-    const file = createBackupFile(iosBackup);
-    const shareData = { files: [file] };
-    if (
-      typeof navigator.share !== "function" ||
-      typeof navigator.canShare !== "function" ||
-      !navigator.canShare(shareData)
-    ) {
-      setStatus("This iPhone browser cannot open the Save to Files sheet. Open Trace in Safari and try again.");
-      return;
-    }
+    if (!shareBackupFile) return;
     setError("");
     setRestoreComplete(false);
-    try {
-      await navigator.share(shareData);
-      setIosBackup(null);
+    const delivery = await backupFileAdapter.shareExport(shareBackupFile);
+    if (delivery.status === BACKUP_FILE_RESULT_STATUS.SUCCESS && delivery.method === BACKUP_FILE_METHOD.SHARE) {
+      setShareBackupFile(null);
       setStatus("Trace backup is ready in the share sheet. Choose Save to Files to keep it.");
-    } catch (shareError) {
-      if (shareError?.name === "AbortError") {
-        setStatus("Trace backup sharing was canceled. Your current data was not changed.");
-      } else {
-        setStatus("");
-        setError(`Trace could not open the Save to Files sheet: ${shareError.message}`);
-      }
+    } else if (delivery.status === BACKUP_FILE_RESULT_STATUS.SUCCESS && delivery.method === BACKUP_FILE_METHOD.DOWNLOAD) {
+      setShareBackupFile(null);
+      setStatus("Trace backup downloaded. Your current data was not changed.");
+    } else if (delivery.status === BACKUP_FILE_RESULT_STATUS.CANCELED) {
+      setStatus("Trace backup sharing was canceled. Your current data was not changed.");
+    } else {
+      setStatus("");
+      setError(`Trace could not open the Save to Files sheet: ${delivery.error?.message || "Backup file sharing is unavailable."}`);
     }
   }
 
@@ -120,7 +86,15 @@ export default function BackupPage({
     setError("");
     setStatus("Validating backup…");
     try {
-      const parsed = await parseTraceBackupText(await readFileText(file));
+      const readResult = await backupFileAdapter.readSelectedFile(file);
+      if (readResult.status === BACKUP_FILE_RESULT_STATUS.CANCELED) {
+        setStatus("");
+        return;
+      }
+      if (readResult.status !== BACKUP_FILE_RESULT_STATUS.SUCCESS) {
+        throw readResult.error || new Error("Trace could not read the selected file.");
+      }
+      const parsed = await parseTraceBackupText(readResult.contents);
       setPreview(parsed);
       setBackupCredentialType("passphrase");
       setBackupCredentialValue("");
@@ -194,7 +168,7 @@ export default function BackupPage({
         <button className="trace-action trace-action--brass" type="button" style={{ ...buttonStyle, backgroundColor: "#475569" }} onClick={() => fileInputRef.current?.click()}>
           Select Backup to Restore
         </button>
-        {iosBackup && <button className="trace-action trace-action--primary trace-backup-actions__save" type="button" style={buttonStyle} onClick={saveBackupToFiles}>Save Backup to Files</button>}
+        {shareBackupFile && <button className="trace-action trace-action--primary trace-backup-actions__save" type="button" style={buttonStyle} onClick={saveBackupToFiles}>Save Backup to Files</button>}
         <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={selectBackup} hidden />
       </section>
       {status && <p className="trace-status" role="status">{status}</p>}
