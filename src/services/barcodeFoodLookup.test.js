@@ -108,3 +108,26 @@ test("looks up Phase 1A yogurt, cottage cheese, and cheese snacks locally", () =
     food: { brand: "Babybel", category: "cheese-snack" },
   });
 });
+
+test("looks up representative Phase 1B cereals and oatmeal locally", () => {
+  expect(lookupCatalogFoodByBarcode("016000275263")).toMatchObject({
+    status: "found",
+    food: { id: "packaged-food:cheerios-original-8-9oz", category: "cereal" },
+  });
+  expect(lookupCatalogFoodByBarcode("038000181719")).toMatchObject({
+    status: "found",
+    food: { id: "packaged-food:kelloggs-froot-loops-19-4oz", category: "cereal" },
+  });
+  expect(lookupCatalogFoodByBarcode("884912004710")).toMatchObject({
+    status: "found",
+    food: { id: "packaged-food:grape-nuts-original-20-5oz", category: "cereal" },
+  });
+  expect(lookupCatalogFoodByBarcode("030000010402")).toMatchObject({
+    status: "found",
+    food: { id: "packaged-food:quaker-old-fashioned-oats-42oz", category: "oatmeal" },
+  });
+  expect(lookupCatalogFoodByBarcode("884912491190")).toMatchObject({
+    status: "found",
+    food: { id: "packaged-food:premier-protein-apple-cinnamon-oatmeal-6ct", category: "oatmeal" },
+  });
+});

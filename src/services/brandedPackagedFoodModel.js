@@ -8,6 +8,8 @@ export const BRANDED_PACKAGED_FOOD_CATEGORIES = Object.freeze({
   yogurt: "Yogurt",
   "cottage-cheese": "Cottage cheese",
   "cheese-snack": "Cheese snack",
+  cereal: "Ready-to-eat cereal",
+  oatmeal: "Oatmeal / hot cereal",
 });
 
 export const YOGURT_DAIRY_PHASE_1A_CATEGORY_COUNTS = Object.freeze({
@@ -16,12 +18,30 @@ export const YOGURT_DAIRY_PHASE_1A_CATEGORY_COUNTS = Object.freeze({
   "cheese-snack": 8,
 });
 
+export const CEREAL_OATMEAL_PHASE_1B_CATEGORY_COUNTS = Object.freeze({
+  cereal: 28,
+  oatmeal: 12,
+});
+
+export const BRANDED_PACKAGED_COMBINED_CATEGORY_COUNTS = Object.freeze({
+  ...YOGURT_DAIRY_PHASE_1A_CATEGORY_COUNTS,
+  ...CEREAL_OATMEAL_PHASE_1B_CATEGORY_COUNTS,
+});
+
 function isNonEmptyString(value) {
   return typeof value === "string" && value.trim().length > 0;
 }
 
 function isNonNegativeNumberOrNull(value) {
   return value === null || (typeof value === "number" && Number.isFinite(value) && value >= 0);
+}
+
+function isPositiveNumberOrNull(value) {
+  return value === null || (typeof value === "number" && Number.isFinite(value) && value > 0);
+}
+
+function isPositiveNumber(value) {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
 function deepFreeze(value) {
@@ -41,7 +61,7 @@ export function normalizeBrandedPackagedFood(food) {
     || !(typeof food.serving?.amount === "number" && food.serving.amount > 0)
     || !(typeof food.serving?.grams === "number" && food.serving.grams > 0)
     || !isNonEmptyString(food.packaged?.packageSize)
-    || !(typeof food.packaged?.servingsPerContainer === "number" && food.packaged.servingsPerContainer > 0)
+    || !isPositiveNumberOrNull(food.packaged?.servingsPerContainer)
     || identifiers === null
     || identifiers.length !== 1
   ) return null;
@@ -87,6 +107,7 @@ export function validateBrandedPackagedFoodCatalog(foods, {
   expectedCount = 40,
   expectedCategoryCounts = YOGURT_DAIRY_PHASE_1A_CATEGORY_COUNTS,
   existingFoods = [],
+  allowUnknownServingsPerContainer = false,
 } = {}) {
   const records = Array.isArray(foods) ? foods : [];
   const errors = [];
@@ -142,7 +163,8 @@ export function validateBrandedPackagedFoodCatalog(foods, {
     ) errors.push(`${label} has an invalid serving definition.`);
     if (
       !isNonEmptyString(food?.packaged?.packageSize)
-      || !(typeof food?.packaged?.servingsPerContainer === "number" && food.packaged.servingsPerContainer > 0)
+      || !(isPositiveNumber(food?.packaged?.servingsPerContainer)
+        || (allowUnknownServingsPerContainer && food?.packaged?.servingsPerContainer === null))
     ) errors.push(`${label} has invalid package metadata.`);
 
     NUTRITION_ENTRY_NUTRIENT_KEYS.forEach((key) => {

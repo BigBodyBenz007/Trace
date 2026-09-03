@@ -746,6 +746,58 @@ test("selects, scales, and saves a branded dairy package with sugars and provena
     .not.toBe(source.provenance.verification.secondarySources[0]);
 });
 
+test("selects, scales, and saves Phase 1B oatmeal with its barcode-ready snapshot", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "Premier Protein maple brown sugar oatmeal" },
+  });
+  const result = screen.getByRole("button", {
+    name: /Premier Protein.*Maple & Brown Sugar Instant Oatmeal/i,
+  });
+  expect(within(result).getByText("Packaged food")).toBeInTheDocument();
+  expect(within(result).getByText("Verified manufacturer label")).toBeInTheDocument();
+  fireEvent.click(result);
+
+  const form = entryForm();
+  expect(form.getByText("One serving: 1 pouch")).toBeInTheDocument();
+  expect(form.getByLabelText("Calories")).toHaveValue(190);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(13);
+  expect(form.getByLabelText("Total Sugar (g)")).toHaveValue(8);
+  expect(form.getByLabelText("Added Sugar (g)")).toHaveValue(7);
+
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "1.5" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(285);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(19.5);
+  expect(form.getByLabelText("Added Sugar (g)")).toHaveValue(10.5);
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry).toHaveBeenCalledWith(expect.objectContaining({
+    name: "Maple & Brown Sugar Instant Oatmeal",
+    calories: 285,
+    protein: 19.5,
+    totalSugar: 12,
+    addedSugar: 10.5,
+    portion: expect.objectContaining({ amount: 1.5 }),
+    nutritionBasis: expect.objectContaining({ calories: 190, totalSugar: 8, addedSugar: 7 }),
+    foodReference: expect.objectContaining({
+      sourceType: "packaged-food",
+      dataType: "branded",
+      brand: "Premier Protein",
+      category: "oatmeal",
+      packageSize: "6 pouches (10.6 oz)",
+      servingsPerContainer: 6,
+      identifiers: [{ scheme: "gtin", value: "00884912491183" }],
+      catalogVersion: 1,
+      catalogBatch: "cereal-oatmeal-phase-1b",
+      verification: expect.objectContaining({
+        sourceUrl: "https://www.postconsumerbrands.com/brands/premier-protein/products/premier-protein-maple-brown-sugar-oatmeal/",
+        accessedAt: "2026-09-03",
+      }),
+      modified: false,
+    }),
+  }));
+});
+
 test("shows USDA grocery source, serving, and unknown nutrients for raw chicken breast strips", () => {
   const props = renderNutritionPage();
   fireEvent.change(screen.getByLabelText("Food search"), {

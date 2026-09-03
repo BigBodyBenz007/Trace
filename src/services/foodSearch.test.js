@@ -557,3 +557,28 @@ test("searches the Phase 1A dairy catalog by brand, product, style, flavor, and 
   expect(new Set(searchFoodCatalog("cheese snack").map((food) => food.id)).size)
     .toBe(DEFAULT_RESULT_LIMIT);
 });
+
+test("searches Phase 1B cereal and oatmeal by brand, product style, and aliases", () => {
+  expect(searchFoodCatalog("plain cheerios")[0]).toMatchObject({
+    id: "packaged-food:cheerios-original-8-9oz",
+    category: "cereal",
+  });
+  expect(searchFoodCatalog("Kelloggs raisin cereal")[0]).toMatchObject({
+    id: "packaged-food:kelloggs-raisin-bran-crunch-24-5oz",
+  });
+  expect(searchFoodCatalog("high protein chocolate cereal")[0]).toMatchObject({
+    id: "packaged-food:premier-protein-chocolate-almond-cereal-9oz",
+    nutrients: { protein: 20 },
+  });
+  expect(searchFoodCatalog("plain quick oatmeal")[0]).toMatchObject({
+    id: "packaged-food:quaker-quick-one-minute-oats-42oz",
+    category: "oatmeal",
+  });
+  expect(searchFoodCatalog("low sugar maple oatmeal")[0]).toMatchObject({
+    id: "packaged-food:quaker-lower-sugar-maple-brown-sugar-8ct",
+  });
+  expect(searchFoodCatalog("Post protein oatmeal", [], 20).map((food) => food.id)).toEqual(expect.arrayContaining([
+    "packaged-food:premier-protein-apple-cinnamon-oatmeal-6ct",
+    "packaged-food:premier-protein-maple-brown-sugar-oatmeal-6ct",
+  ]));
+});
