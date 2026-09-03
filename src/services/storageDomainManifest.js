@@ -23,6 +23,15 @@ const excludedLocalStorageTransaction = (key, owner, description) => ({
   description,
 });
 
+const excludedLocalStorageDerived = (key, owner, description) => ({
+  key,
+  storage: "localStorage",
+  classification: STORAGE_DOMAIN_CLASSIFICATION.DERIVED_EXCLUDED,
+  backupLocation: null,
+  owner,
+  description,
+});
+
 export const TRACE_STORAGE_DOMAIN_MANIFEST = Object.freeze([
   durableLocalStorage("memories", "App / photoStorage", "Memory metadata and IndexedDB photo references."),
   durableLocalStorage("nutritionGoals", "App", "Nutrition and water goals."),
@@ -71,6 +80,11 @@ export const TRACE_STORAGE_DOMAIN_MANIFEST = Object.freeze([
     "protocolCompoundOutcomeTransaction",
     "protocolCompoundOutcome",
     "Protocol result save and undo recovery journal."
+  ),
+  excludedLocalStorageDerived(
+    "remoteBarcodeFoodResponses",
+    "remoteBarcodeCache",
+    "Versioned, bounded, rebuildable normalized remote barcode lookup responses."
   ),
   {
     key: "tracePhotoStorage/migrations/legacy-memory-photos",

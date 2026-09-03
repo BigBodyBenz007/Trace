@@ -129,3 +129,13 @@ test("derives backup and recovery lists from manifest classifications", () => {
     classification !== STORAGE_DOMAIN_CLASSIFICATION.DURABLE_BACKUP
   ).every(({ backupLocation }) => backupLocation === null)).toBe(true);
 });
+
+test("classifies remote barcode responses as rebuildable and excludes them from backups", () => {
+  expect(TRACE_STORAGE_DOMAIN_MANIFEST).toContainEqual(expect.objectContaining({
+    key: "remoteBarcodeFoodResponses",
+    storage: "localStorage",
+    classification: STORAGE_DOMAIN_CLASSIFICATION.DERIVED_EXCLUDED,
+    backupLocation: null,
+  }));
+  expect(TRACE_BACKUP_STORAGE_KEYS).not.toContain("remoteBarcodeFoodResponses");
+});
