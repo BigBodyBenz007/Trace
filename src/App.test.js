@@ -7,6 +7,7 @@ import {
   WORKOUT_DRAFT_STORAGE_KEY,
 } from "./services/workoutDraft";
 import { PHOTO_SELECTION_RESULT_STATUS } from "./services/photoSelectionAdapter";
+import { APP_LIFECYCLE_PHASE } from "./services/appLifecycleAdapter";
 import { deletePhotos, getPhoto, openPhotoDatabase, putPhotos } from "./storage/photoStorage";
 import {
   createTraceBackup,
@@ -3930,6 +3931,29 @@ test("App supplies its photo-selection adapter to both Memory and Workout entry 
 
   expect(photoSelectionAdapter.acquireImages).toHaveBeenCalledTimes(2);
   expect(selectedFiles).toEqual([memoryPhoto, workoutPhoto]);
+});
+
+test("App supplies its lifecycle adapter to the active Workout draft flow", () => {
+  let subscriber;
+  const lifecycleAdapter = {
+    subscribe: jest.fn((nextSubscriber) => {
+      subscriber = nextSubscriber;
+      return jest.fn();
+    }),
+  };
+  render(<App lifecycleAdapter={lifecycleAdapter} />);
+  openWorkouts();
+  fireEvent.click(screen.getByRole("button", { name: "Log Workout" }));
+  fireEvent.change(screen.getByLabelText("Workout title"), {
+    target: { value: "App lifecycle draft" },
+  });
+
+  act(() => subscriber({ phase: APP_LIFECYCLE_PHASE.BACKGROUND, persisted: false }));
+
+  expect(lifecycleAdapter.subscribe).toHaveBeenCalled();
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY))).toMatchObject({
+    form: { title: "App lifecycle draft" },
+  });
 });
 
 test("a failed Memory metadata write rolls back newly stored selected photos", async () => {

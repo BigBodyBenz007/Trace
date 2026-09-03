@@ -5,6 +5,7 @@ import App from "./App";
 import { writeAppSettings } from "./services/appSettings";
 import { writeJournalDraft } from "./services/journalEntry";
 import { enableJournalVault, unlockJournalVault } from "./services/journalVault";
+import { APP_LIFECYCLE_PHASE } from "./services/appLifecycleAdapter";
 
 jest.mock("./storage/photoStorage", () => ({
   clearCompletedMigrationBackup: jest.fn(),
@@ -70,6 +71,23 @@ async function unlockFromPage() {
   fireEvent.change(screen.getByLabelText("Journal password"), { target: { value: passphrase } });
   fireEvent.click(screen.getByRole("button", { name: "Unlock Journal" }));
   await screen.findByRole("heading", { name: "Journal" }, { timeout: 15000 });
+}
+
+function lifecycleHarness() {
+  const subscribers = new Set();
+  return {
+    adapter: {
+      subscribe: jest.fn((subscriber) => {
+        subscribers.add(subscriber);
+        return () => subscribers.delete(subscriber);
+      }),
+    },
+    emit(phase, persisted = false) {
+      act(() => {
+        Array.from(subscribers).forEach((subscriber) => subscriber({ phase, persisted }));
+      });
+    },
+  };
 }
 
 let visibilityDescriptor;
@@ -322,6 +340,44 @@ test("visibility, pagehide, inactivity, and cross-tab Lock Now each clear render
   act(() => channel.emit({ schemaVersion: 1, type: "lock" }));
   await waitFor(() => expect(screen.getByRole("heading", { name: "Journal locked" })).toBeInTheDocument());
   expect(document.body).not.toHaveTextContent(secretTitle);
+});
+
+test("normalized lifecycle background locks once and foreground or resume never unlocks Journal", async () => {
+  await prepareLockedJournal();
+  const lifecycle = lifecycleHarness();
+  render(<App lifecycleAdapter={lifecycle.adapter} />);
+  fireEvent.click(screen.getByRole("button", { name: "Open locked Journal" }));
+  await unlockFromPage();
+
+  lifecycle.emit(APP_LIFECYCLE_PHASE.ACTIVE);
+  lifecycle.emit(APP_LIFECYCLE_PHASE.RESUMED, true);
+  expect(screen.getByRole("heading", { name: "Journal" })).toBeInTheDocument();
+
+  lifecycle.emit(APP_LIFECYCLE_PHASE.BACKGROUND);
+  await screen.findByRole("heading", { name: "Journal locked" });
+  const channel = MockBroadcastChannel.instances[0];
+  expect(channel.messages.filter(({ type }) => type === "lock")).toHaveLength(1);
+
+  lifecycle.emit(APP_LIFECYCLE_PHASE.SUSPENDING, true);
+  lifecycle.emit(APP_LIFECYCLE_PHASE.ACTIVE);
+  lifecycle.emit(APP_LIFECYCLE_PHASE.RESUMED, true);
+  expect(screen.getByRole("heading", { name: "Journal locked" })).toBeInTheDocument();
+  expect(channel.messages.filter(({ type }) => type === "lock")).toHaveLength(1);
+});
+
+test("plaintext Journal remains available across normalized lifecycle events", () => {
+  localStorage.setItem("journalEntries", JSON.stringify([journalEntry()]));
+  const lifecycle = lifecycleHarness();
+  render(<App lifecycleAdapter={lifecycle.adapter} />);
+  fireEvent.click(screen.getByRole("button", { name: "Open Journal" }));
+
+  lifecycle.emit(APP_LIFECYCLE_PHASE.BACKGROUND);
+  lifecycle.emit(APP_LIFECYCLE_PHASE.SUSPENDING);
+  lifecycle.emit(APP_LIFECYCLE_PHASE.RESUMED, true);
+
+  expect(screen.getByRole("heading", { name: "Journal" })).toBeInTheDocument();
+  expect(screen.getByText(secretTitle)).toBeInTheDocument();
+  expect(lifecycle.adapter.subscribe).not.toHaveBeenCalled();
 });
 
 test("Turn Off Journal Lock from Journal preserves exact entries and draft and stays usable", async () => {

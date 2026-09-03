@@ -115,6 +115,10 @@ import {
 } from "./services/backupFileAdapter";
 import { webPhotoSelectionAdapter } from "./services/photoSelectionAdapter";
 import {
+  APP_LIFECYCLE_PHASE,
+  webAppLifecycleAdapter,
+} from "./services/appLifecycleAdapter";
+import {
   appendPlannedWorkoutExercise as appendExerciseToPlannedWorkout,
   createPlannedWorkout as createPlannedWorkoutRecord,
   getPlannedWorkoutError,
@@ -317,6 +321,7 @@ function initializeJournalPrivacy(storage) {
 function App({
   backupFileAdapter = webBackupFileAdapter,
   photoSelectionAdapter = webPhotoSelectionAdapter,
+  lifecycleAdapter = webAppLifecycleAdapter,
 }) {
   const [page, setPage] = useState("home");
 
@@ -810,25 +815,27 @@ function App({
         void journalLockRef.current?.({ automatic: true });
       }, timeout);
     };
-    const lockForBackground = () => {
-      if (document.visibilityState === "hidden") void journalLockRef.current?.({ automatic: true });
+    const lifecycleChanged = ({ phase }) => {
+      if (
+        phase === APP_LIFECYCLE_PHASE.BACKGROUND ||
+        phase === APP_LIFECYCLE_PHASE.SUSPENDING
+      ) {
+        void journalLockRef.current?.({ automatic: true });
+      }
     };
-    const lockForPageHide = () => void journalLockRef.current?.({ automatic: true });
     resetTimer();
     window.addEventListener("pointerdown", resetTimer, { passive: true });
     window.addEventListener("keydown", resetTimer);
     window.addEventListener("touchstart", resetTimer, { passive: true });
-    document.addEventListener("visibilitychange", lockForBackground);
-    window.addEventListener("pagehide", lockForPageHide);
+    const unsubscribeLifecycle = lifecycleAdapter.subscribe(lifecycleChanged);
     return () => {
       clearTimeout(timerId);
       window.removeEventListener("pointerdown", resetTimer);
       window.removeEventListener("keydown", resetTimer);
       window.removeEventListener("touchstart", resetTimer);
-      document.removeEventListener("visibilitychange", lockForBackground);
-      window.removeEventListener("pagehide", lockForPageHide);
+      unsubscribeLifecycle();
     };
-  }, [appSettings.journalPrivacy.autoLockMinutes, journalPrivacy.unlocked]);
+  }, [appSettings.journalPrivacy.autoLockMinutes, journalPrivacy.unlocked, lifecycleAdapter]);
 
   useEffect(() => {
     const reconciled = reconcileWorkoutTrophyEntries(
@@ -3119,6 +3126,7 @@ function App({
           workoutEntryTargetId={workoutEntryTargetId}
           onWorkoutEntryTargetShown={() => setWorkoutEntryTargetId(null)}
           photoSelectionAdapter={photoSelectionAdapter}
+          lifecycleAdapter={lifecycleAdapter}
         />
       ) : page === "protocols" ? (
         <ProtocolsPage

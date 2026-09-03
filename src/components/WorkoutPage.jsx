@@ -10,6 +10,10 @@ import {
   webPhotoSelectionAdapter,
 } from "../services/photoSelectionAdapter";
 import {
+  APP_LIFECYCLE_PHASE,
+  webAppLifecycleAdapter,
+} from "../services/appLifecycleAdapter";
+import {
   WORKOUT_INTENSITY_OPTIONS,
   WORKOUT_LOAD_MODES,
   WORKOUT_WEIGHT_UNITS,
@@ -379,6 +383,7 @@ function WorkoutPage({
   workoutEntryTargetId = null,
   onWorkoutEntryTargetShown = () => {},
   photoSelectionAdapter = webPhotoSelectionAdapter,
+  lifecycleAdapter = webAppLifecycleAdapter,
 }) {
   const initialDateTime = currentLocalDateTime();
   const restoredDraftRef = useRef(readWorkoutDraft());
@@ -483,6 +488,7 @@ function WorkoutPage({
       : navigationOriginCalendar
   );
   const draftPersistenceEnabledRef = useRef(Boolean(restoredForm));
+  const lastPersistedDraftJsonRef = useRef(null);
 
   function workoutOriginContext() {
     if (workoutOriginPageRef.current === "calendar") {
@@ -532,8 +538,13 @@ function WorkoutPage({
     };
     const persist = () => {
       if (!draftPersistenceEnabledRef.current) return;
+      const persistedDraftJson = JSON.stringify(persistedDraft);
+      if (lastPersistedDraftJsonRef.current === persistedDraftJson) return;
       try {
+        const storedDraft = readWorkoutDraft(localStorage);
+        if (storedDraft?.updatedAt > persistedDraft.updatedAt) return;
         writeWorkoutDraft(localStorage, persistedDraft);
+        lastPersistedDraftJsonRef.current = persistedDraftJson;
         onWorkoutDraftChange(persistedDraft);
       } catch (error) {
         // Completed workout persistence reports storage failures globally. A
@@ -541,14 +552,20 @@ function WorkoutPage({
       }
     };
     const timeout = window.setTimeout(persist, 200);
-    const flush = () => persist();
-    window.addEventListener("pagehide", flush);
+    const unsubscribeLifecycle = lifecycleAdapter.subscribe(({ phase }) => {
+      if (
+        phase === APP_LIFECYCLE_PHASE.BACKGROUND ||
+        phase === APP_LIFECYCLE_PHASE.SUSPENDING
+      ) {
+        persist();
+      }
+    });
     return () => {
       window.clearTimeout(timeout);
-      window.removeEventListener("pagehide", flush);
+      unsubscribeLifecycle();
       persist();
     };
-  }, [title, date, time, timingMode, activeDurationMinutes, caloriesBurned, intensity, notes, exercises, activeSearchExerciseId, roadmapEditingExerciseId, collapsedExerciseIds, completionReview, editingEntryId, isDirty, onWorkoutDraftChange]);
+  }, [title, date, time, timingMode, activeDurationMinutes, caloriesBurned, intensity, notes, exercises, activeSearchExerciseId, roadmapEditingExerciseId, collapsedExerciseIds, completionReview, editingEntryId, isDirty, onWorkoutDraftChange, lifecycleAdapter]);
 
   useLayoutEffect(() => {
     if (!isLoggingOpen || !pendingFormFocusRef.current) return;
@@ -703,6 +720,7 @@ function WorkoutPage({
     const current = currentLocalDateTime();
     startedAtRef.current = now.toISOString();
     draftPersistenceEnabledRef.current = true;
+    lastPersistedDraftJsonRef.current = null;
     pendingFormFocusRef.current = true;
     setDate(current.date);
     setTime(current.time);
@@ -967,7 +985,10 @@ function WorkoutPage({
 
   function resetForm({ clearDraft = false } = {}) {
     clearPendingDropRemovals();
-    if (clearDraft) draftPersistenceEnabledRef.current = false;
+    if (clearDraft) {
+      draftPersistenceEnabledRef.current = false;
+      lastPersistedDraftJsonRef.current = null;
+    }
     const current = currentLocalDateTime();
     setTitle("");
     setDate(current.date);

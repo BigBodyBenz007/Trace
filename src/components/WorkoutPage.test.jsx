@@ -7,6 +7,7 @@ import {
   WORKOUT_DRAFT_STORAGE_KEY,
 } from "../services/workoutDraft";
 import { PHOTO_SELECTION_RESULT_STATUS } from "../services/photoSelectionAdapter";
+import { APP_LIFECYCLE_PHASE } from "../services/appLifecycleAdapter";
 
 const originalRequestAnimationFrame = window.requestAnimationFrame;
 const originalCreateObjectURL = URL.createObjectURL;
@@ -42,6 +43,21 @@ async function storedDraft() {
     expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).not.toBeNull()
   );
   return JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+}
+
+function lifecycleHarness() {
+  const subscribers = new Set();
+  return {
+    adapter: {
+      subscribe: jest.fn((subscriber) => {
+        subscribers.add(subscriber);
+        return () => subscribers.delete(subscriber);
+      }),
+    },
+    emit(phase, persisted = false) {
+      Array.from(subscribers).forEach((subscriber) => subscriber({ phase, persisted }));
+    },
+  };
 }
 
 function openWorkoutLogger() {
@@ -208,6 +224,73 @@ test("persists new-workout changes and restores the original start and form stat
   expect(screen.getByLabelText("Workout intensity")).toHaveValue("moderate");
   expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(225);
 }, 10000);
+
+test("background lifecycle flushes the latest active draft with its exact startedAt", () => {
+  const lifecycle = lifecycleHarness();
+  renderPage({ lifecycleAdapter: lifecycle.adapter });
+  fireEvent.change(screen.getByLabelText("Workout title"), {
+    target: { value: "Latest background workout" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), {
+    target: { value: "Background squat" },
+  });
+
+  lifecycle.emit(APP_LIFECYCLE_PHASE.BACKGROUND);
+
+  const firstPersistedBytes = localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY);
+  const firstPersisted = JSON.parse(firstPersistedBytes);
+  expect(firstPersisted.form).toMatchObject({
+    title: "Latest background workout",
+    exercises: [expect.objectContaining({ name: "Background squat" })],
+  });
+  const exactStartedAt = firstPersisted.startedAt;
+
+  const storageWrite = jest.spyOn(Storage.prototype, "setItem");
+  lifecycle.emit(APP_LIFECYCLE_PHASE.BACKGROUND);
+  lifecycle.emit(APP_LIFECYCLE_PHASE.SUSPENDING, true);
+  lifecycle.emit(APP_LIFECYCLE_PHASE.ACTIVE);
+  lifecycle.emit(APP_LIFECYCLE_PHASE.RESUMED, true);
+
+  expect(storageWrite).not.toHaveBeenCalled();
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBe(firstPersistedBytes);
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).startedAt).toBe(exactStartedAt);
+});
+
+test("lifecycle events do not create a draft when no workout is active", () => {
+  const lifecycle = lifecycleHarness();
+  render(<WorkoutPage {...renderPageProps({ lifecycleAdapter: lifecycle.adapter })} />);
+
+  lifecycle.emit(APP_LIFECYCLE_PHASE.BACKGROUND);
+  lifecycle.emit(APP_LIFECYCLE_PHASE.SUSPENDING);
+
+  expect(lifecycle.adapter.subscribe).not.toHaveBeenCalled();
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
+});
+
+test("lifecycle flush never overwrites a newer persisted workout draft", () => {
+  const lifecycle = lifecycleHarness();
+  renderPage({ lifecycleAdapter: lifecycle.adapter });
+  fireEvent.change(screen.getByLabelText("Workout title"), {
+    target: { value: "Older in-memory workout" },
+  });
+  lifecycle.emit(APP_LIFECYCLE_PHASE.BACKGROUND);
+  const inMemoryDraft = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+  const newerDraft = {
+    ...inMemoryDraft,
+    updatedAt: "2099-01-01T00:00:00.000Z",
+    form: { ...inMemoryDraft.form, title: "Newer persisted workout" },
+  };
+  const newerDraftBytes = JSON.stringify(newerDraft);
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, newerDraftBytes);
+
+  fireEvent.change(screen.getByLabelText("Workout title"), {
+    target: { value: "Stale component update" },
+  });
+  lifecycle.emit(APP_LIFECYCLE_PHASE.SUSPENDING);
+
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBe(newerDraftBytes);
+  expect(screen.getByLabelText("Workout title")).toHaveValue("Stale component update");
+});
 
 test("explains approximate workout duration as first-to-last set time with normal rests", () => {
   render(<WorkoutPage {...renderPageProps()} />);
