@@ -47,6 +47,7 @@ const AUTOMATIC_FALLBACK_ERROR_CODES = new Set([
   CAMERA_ERROR_CODES.BUSY,
   CAMERA_ERROR_CODES.UNAVAILABLE,
 ]);
+const COMPACT_LANDSCAPE_MEDIA = "(orientation: landscape) and (max-height: 600px) and (max-width: 1000px) and (pointer: coarse)";
 
 function availableScreenOrientation() {
   return typeof window === "undefined" ? null : window.screen?.orientation || null;
@@ -85,6 +86,7 @@ export default function BarcodeScannerDialog({
   const [errorMessage, setErrorMessage] = useState("");
   const [lookingUp, setLookingUp] = useState(false);
   const dialogRef = useRef(null);
+  const contentRef = useRef(null);
   const videoRef = useRef(null);
   const sessionRef = useRef(null);
   const startAbortRef = useRef(null);
@@ -362,6 +364,20 @@ export default function BarcodeScannerDialog({
     return () => window.clearTimeout(timer);
   }, []);
 
+  useEffect(() => {
+    if (cameraState !== "active") return undefined;
+    const resetCompactLandscapeScroll = () => {
+      if (
+        typeof window.matchMedia !== "function"
+        || !window.matchMedia(COMPACT_LANDSCAPE_MEDIA).matches
+      ) return;
+      if (contentRef.current) contentRef.current.scrollTop = 0;
+    };
+    resetCompactLandscapeScroll();
+    window.addEventListener("orientationchange", resetCompactLandscapeScroll);
+    return () => window.removeEventListener("orientationchange", resetCompactLandscapeScroll);
+  }, [cameraState]);
+
   const alternateFacing = facingMode === CAMERA_FACING_MODES.REAR
     ? CAMERA_FACING_MODES.FRONT
     : CAMERA_FACING_MODES.REAR;
@@ -376,6 +392,7 @@ export default function BarcodeScannerDialog({
         aria-labelledby="trace-barcode-title"
         aria-modal="true"
         className={`trace-barcode-dialog${reducedMotion ? " trace-barcode-dialog--reduced-motion" : ""}`}
+        data-camera-state={cameraState}
         data-orientation-layout="responsive"
         data-mobile-safe="true"
         data-safe-area="top-and-bottom"
@@ -391,7 +408,11 @@ export default function BarcodeScannerDialog({
             ×
           </button>
         </header>
-        <div className="trace-barcode-dialog__content" data-scroll-container="internal">
+        <div
+          className="trace-barcode-dialog__content"
+          data-scroll-container="internal"
+          ref={contentRef}
+        >
           <p id="trace-barcode-description">
             Camera access starts automatically after you choose Scan Barcode. Trace does not save or upload camera images.
           </p>

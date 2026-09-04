@@ -12,6 +12,7 @@ const access = {
 const originalScrollTo = window.scrollTo;
 const originalScrollX = Object.getOwnPropertyDescriptor(window, "scrollX");
 const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
+const originalMatchMedia = window.matchMedia;
 
 beforeEach(() => {
   window.scrollTo = jest.fn();
@@ -20,6 +21,7 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   window.scrollTo = originalScrollTo;
+  window.matchMedia = originalMatchMedia;
   document.body.removeAttribute("style");
   document.documentElement.removeAttribute("style");
   document.documentElement.style.overscrollBehavior = "";
@@ -139,6 +141,10 @@ test("labels the beta feature and automatically starts the rear camera exactly o
   expect(view.props.camera.start).toHaveBeenCalledTimes(1);
   expect(screen.getByText(/camera active/i)).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Stop Camera" })).toBeEnabled();
+  expect(screen.getByRole("dialog")).toHaveAttribute("data-camera-state", "active");
+  expect(screen.getByRole("dialog")).toHaveAccessibleDescription(
+    /Camera access starts automatically.*does not save or upload camera images/i
+  );
 });
 
 test("switches cameras and stops the active session before switching", async () => {
@@ -419,6 +425,28 @@ test("camera failure keeps scroll containment until the dialog is dismissed", as
   expect(document.body.style.overflow).toBe("");
 });
 
+test("an explicitly stopped camera retains the accessible privacy explanation", async () => {
+  setup();
+  await screen.findByText(/camera active/i);
+  fireEvent.click(screen.getByRole("button", { name: "Stop Camera" }));
+  const dialog = screen.getByRole("dialog");
+  expect(dialog).toHaveAttribute("data-camera-state", "idle");
+  expect(screen.getByText(/Camera access starts automatically/i)).toBeInTheDocument();
+  expect(dialog).toHaveAccessibleDescription(/does not save or upload camera images/i);
+});
+
+test("inactive and error states retain the accessible camera privacy explanation", async () => {
+  const denied = Object.assign(new Error("denied"), { name: "NotAllowedError" });
+  setup({ camera: { start: jest.fn().mockRejectedValue(denied) } });
+  await screen.findByRole("alert");
+  const dialog = screen.getByRole("dialog");
+  expect(dialog).toHaveAttribute("data-camera-state", "idle");
+  expect(screen.getByText(/Camera access starts automatically/i)).toBeInTheDocument();
+  expect(dialog).toHaveAccessibleDescription(
+    /Camera access starts automatically.*does not save or upload camera images/i
+  );
+});
+
 test("keeps manual entry available when camera APIs are missing", async () => {
   const unsupported = Object.assign(new Error("Camera API detail"), {
     code: "unsupported",
@@ -495,17 +523,22 @@ test("releases a successfully acquired best-effort orientation lock", async () =
 });
 
 test("viewport and orientation changes preserve the selected camera without restarting it", async () => {
+  window.matchMedia = jest.fn().mockReturnValue({ matches: true });
   const view = setup();
   await screen.findByText(/camera active/i);
   fireEvent.click(screen.getByRole("button", { name: "Use Front Camera" }));
   await waitFor(() => expect(view.props.camera.start).toHaveBeenCalledTimes(2));
+  await screen.findByText(/camera active/i);
   expect(screen.getByRole("button", { name: "Use Rear Camera" })).toBeEnabled();
+  const content = screen.getByRole("dialog").querySelector(".trace-barcode-dialog__content");
+  content.scrollTop = 140;
 
   act(() => {
     window.dispatchEvent(new Event("resize"));
     window.dispatchEvent(new Event("orientationchange"));
   });
   expect(view.props.camera.start).toHaveBeenCalledTimes(2);
+  expect(content.scrollTop).toBe(0);
   expect(screen.getByRole("dialog").querySelector("[data-camera-facing]"))
     .toHaveAttribute("data-camera-facing", "user");
 });
@@ -519,6 +552,10 @@ test("marks the dialog for safe-area and responsive orientation layout and honor
   expect(dialog).toHaveClass("trace-barcode-dialog--reduced-motion");
   expect(dialog.querySelector(".trace-barcode-dialog__content")).toBeInTheDocument();
   expect(dialog.querySelector(".trace-barcode-dialog__footer")).toBeInTheDocument();
+  const preview = dialog.querySelector(".trace-barcode-dialog__preview");
+  const returnButton = screen.getByRole("button", { name: "Return to Food Search" });
+  expect(preview).not.toContainElement(returnButton);
+  expect(returnButton.closest("footer")).toHaveClass("trace-barcode-dialog__footer");
 });
 
 test("React Strict Mode effect replay and rerender do not duplicate automatic startup", async () => {

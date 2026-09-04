@@ -301,7 +301,7 @@
   }
 }
 
-@media (orientation: landscape) and (max-height: 600px) {
+@media (orientation: landscape) and (max-height: 600px) and (max-width: 1000px) and (pointer: coarse) {
   .trace-barcode-dialog__backdrop {
     align-items: stretch;
   }
@@ -328,5 +328,45 @@
   .trace-barcode-dialog__footer {
     padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
     padding-top: 8px;
+  }
+
+  .trace-barcode-dialog[data-camera-state="active"] .trace-barcode-dialog__header {
+    padding-bottom: 4px;
+    padding-top: 6px;
+  }
+
+  .trace-barcode-dialog[data-camera-state="active"] .trace-barcode-dialog__header h2 {
+    font-size: 1.1rem;
+    margin-top: 2px;
+  }
+
+  .trace-barcode-dialog[data-camera-state="active"] #trace-barcode-description {
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    position: absolute;
+    white-space: nowrap;
+    width: 1px;
+  }
+
+  .trace-barcode-dialog[data-camera-state="active"] .trace-barcode-dialog__content {
+    padding-bottom: 4px;
+    padding-top: 0;
+  }
+
+  .trace-barcode-dialog[data-camera-state="active"] .trace-barcode-dialog__camera {
+    gap: 6px;
+    margin-top: 0;
+    padding: 5px;
+  }
+
+  .trace-barcode-dialog[data-camera-state="active"] .trace-barcode-dialog__camera video {
+    max-height: min(42dvh, 160px);
+  }
+
+  .trace-barcode-dialog[data-camera-state="active"] .trace-barcode-dialog__footer {
+    padding-top: 6px;
   }
 }
