@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { StrictMode } from "react";
 import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import { APP_LIFECYCLE_PHASE } from "../services/appLifecycleAdapter";
@@ -8,6 +8,26 @@ const access = {
   label: "Premium Preview",
   message: "Barcode scanning is available during Trace beta as a Premium Preview.",
 };
+
+const originalScrollTo = window.scrollTo;
+const originalScrollX = Object.getOwnPropertyDescriptor(window, "scrollX");
+const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
+
+beforeEach(() => {
+  window.scrollTo = jest.fn();
+});
+
+afterEach(() => {
+  cleanup();
+  window.scrollTo = originalScrollTo;
+  document.body.removeAttribute("style");
+  document.documentElement.removeAttribute("style");
+  document.documentElement.style.overscrollBehavior = "";
+  if (originalScrollX) Object.defineProperty(window, "scrollX", originalScrollX);
+  else delete window.scrollX;
+  if (originalScrollY) Object.defineProperty(window, "scrollY", originalScrollY);
+  else delete window.scrollY;
+});
 
 function localFood() {
   return {
@@ -109,28 +129,65 @@ function setup(overrides = {}, { strict = false } = {}) {
   };
 }
 
-test("labels the beta feature and waits for explicit camera activation", async () => {
+test("labels the beta feature and automatically starts the rear camera exactly once", async () => {
   const view = setup();
   expect(screen.getByText("Premium Preview")).toBeInTheDocument();
   expect(screen.getByText(/does not save or upload camera images/i)).toBeInTheDocument();
-  expect(view.props.camera.start).not.toHaveBeenCalled();
-
-  fireEvent.click(screen.getByRole("button", { name: "Start Camera" }));
   await waitFor(() => expect(view.props.camera.start).toHaveBeenCalledWith(
     expect.objectContaining({ facingMode: "environment" })
   ));
+  expect(view.props.camera.start).toHaveBeenCalledTimes(1);
   expect(screen.getByText(/camera active/i)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Stop Camera" })).toBeEnabled();
 });
 
 test("switches cameras and stops the active session before switching", async () => {
   const view = setup();
-  fireEvent.click(screen.getByRole("button", { name: "Start Camera" }));
   await screen.findByText(/camera active/i);
   fireEvent.click(screen.getByRole("button", { name: "Use Front Camera" }));
   expect(view.session.stop).toHaveBeenCalled();
   await waitFor(() => expect(view.props.camera.start).toHaveBeenLastCalledWith(
     expect.objectContaining({ facingMode: "user" })
   ));
+});
+
+test("falls back to the front camera when the preferred rear camera is unavailable", async () => {
+  const unavailableRear = Object.assign(new Error("rear unavailable"), { name: "NotFoundError" });
+  const fallbackSession = { devices: [], stop: jest.fn() };
+  const camera = {
+    start: jest.fn()
+      .mockRejectedValueOnce(unavailableRear)
+      .mockResolvedValueOnce(fallbackSession),
+  };
+  setup({ camera });
+
+  await screen.findByText(/camera active/i);
+  expect(camera.start).toHaveBeenCalledTimes(2);
+  expect(camera.start.mock.calls[0][0]).toEqual(expect.objectContaining({ facingMode: "environment" }));
+  expect(camera.start.mock.calls[1][0]).toEqual(expect.objectContaining({ facingMode: "user" }));
+  expect(screen.getByRole("button", { name: "Use Rear Camera" })).toBeEnabled();
+});
+
+test("keeps explicit camera-device selection available and stops the obsolete session", async () => {
+  const firstSession = {
+    devices: [
+      { deviceId: "rear-one", label: "Rear Camera 1" },
+      { deviceId: "rear-two", label: "Rear Camera 2" },
+    ],
+    stop: jest.fn(),
+  };
+  const secondSession = { ...firstSession, stop: jest.fn() };
+  const camera = { start: jest.fn().mockResolvedValueOnce(firstSession).mockResolvedValueOnce(secondSession) };
+  setup({ camera });
+
+  const selector = await screen.findByLabelText("Camera device");
+  fireEvent.change(selector, { target: { value: "rear-two" } });
+  await waitFor(() => expect(camera.start).toHaveBeenCalledTimes(2));
+  expect(firstSession.stop).toHaveBeenCalledTimes(1);
+  expect(camera.start).toHaveBeenLastCalledWith(expect.objectContaining({
+    deviceId: "rear-two",
+    facingMode: "environment",
+  }));
 });
 
 test("normalizes manual input, preserves leading zeroes, and blocks duplicate submissions", async () => {
@@ -156,7 +213,6 @@ test("normalizes manual input, preserves leading zeroes, and blocks duplicate su
 
 test("stops camera before lookup and ignores repeated decoder detections", async () => {
   const view = setup();
-  fireEvent.click(screen.getByRole("button", { name: "Start Camera" }));
   await screen.findByText(/camera active/i);
 
   await act(async () => {
@@ -244,7 +300,6 @@ test("stops camera on close, background, Escape, and unmount and restores focus"
   document.body.appendChild(opener);
   opener.focus();
   const view = setup();
-  fireEvent.click(screen.getByRole("button", { name: "Start Camera" }));
   await screen.findByText(/camera active/i);
   act(() => view.lifecycleSubscriber({ phase: APP_LIFECYCLE_PHASE.BACKGROUND }));
   expect(view.session.stop).toHaveBeenCalled();
@@ -259,9 +314,78 @@ test("stops camera on close, background, Escape, and unmount and restores focus"
   opener.remove();
 });
 
+test("the close control stops the camera and restores the exact scroll lock state", async () => {
+  Object.defineProperty(window, "scrollX", { configurable: true, value: 17 });
+  Object.defineProperty(window, "scrollY", { configurable: true, value: 431 });
+  document.body.style.position = "relative";
+  document.body.style.top = "3px";
+  document.body.style.left = "2px";
+  document.body.style.right = "4px";
+  document.body.style.width = "80%";
+  document.body.style.overflow = "clip";
+  document.documentElement.style.overflow = "auto";
+  document.documentElement.style.overscrollBehavior = "contain";
+  const view = setup();
+
+  await screen.findByText(/camera active/i);
+  expect(document.body).toHaveStyle({
+    left: "-17px",
+    overflow: "hidden",
+    position: "fixed",
+    top: "-431px",
+    width: "100%",
+  });
+  expect(document.documentElement).toHaveStyle({ overflow: "hidden" });
+  expect(document.documentElement.style.overscrollBehavior).toBe("none");
+  fireEvent.click(screen.getByRole("button", { name: "Close barcode scanner" }));
+  expect(view.session.stop).toHaveBeenCalled();
+  view.unmount();
+
+  expect(document.body).toHaveStyle({
+    left: "2px",
+    overflow: "clip",
+    position: "relative",
+    right: "4px",
+    top: "3px",
+    width: "80%",
+  });
+  expect(document.documentElement).toHaveStyle({ overflow: "auto" });
+  expect(document.documentElement.style.overscrollBehavior).toBe("contain");
+  expect(window.scrollTo).toHaveBeenCalledWith(17, 431);
+});
+
+test("Return to Food Search stops the camera and restores scroll and prior focus", async () => {
+  const opener = document.createElement("button");
+  document.body.appendChild(opener);
+  opener.focus();
+  const view = setup();
+  await screen.findByText(/camera active/i);
+
+  fireEvent.click(screen.getByRole("button", { name: "Return to Food Search" }));
+  expect(view.props.onClose).toHaveBeenCalledTimes(1);
+  expect(view.session.stop).toHaveBeenCalled();
+  view.unmount();
+  expect(window.scrollTo).toHaveBeenCalled();
+  expect(opener).toHaveFocus();
+  opener.remove();
+});
+
+test("locks background scrolling only while the scanner is mounted", () => {
+  const view = setup();
+  expect(document.body).toHaveStyle({ overflow: "hidden", position: "fixed" });
+  expect(document.documentElement).toHaveStyle({ overflow: "hidden" });
+  expect(document.documentElement.style.overscrollBehavior).toBe("none");
+  expect(screen.getByRole("dialog").querySelector(".trace-barcode-dialog__content"))
+    .toHaveAttribute("data-scroll-container", "internal");
+  view.unmount();
+  expect(document.body.style.position).toBe("");
+  expect(document.body.style.overflow).toBe("");
+  expect(document.documentElement.style.overflow).toBe("");
+  expect(document.documentElement.style.overscrollBehavior).toBe("");
+});
+
 test("stops camera on the suspending lifecycle phase", async () => {
   const view = setup();
-  fireEvent.click(screen.getByRole("button", { name: "Start Camera" }));
   await screen.findByText(/camera active/i);
   act(() => view.lifecycleSubscriber({ phase: APP_LIFECYCLE_PHASE.SUSPENDING }));
   expect(view.session.stop).toHaveBeenCalled();
@@ -270,11 +394,29 @@ test("stops camera on the suspending lifecycle phase", async () => {
 
 test("keeps manual entry available after a recoverable camera failure", async () => {
   const denied = Object.assign(new Error("private browser detail"), { name: "NotAllowedError" });
-  setup({ camera: { start: jest.fn().mockRejectedValue(denied) } });
-  fireEvent.click(screen.getByRole("button", { name: "Start Camera" }));
+  const camera = { start: jest.fn().mockRejectedValue(denied) };
+  setup({ camera });
   expect(await screen.findByRole("alert")).toHaveTextContent(/permission was denied/i);
+  expect(camera.start).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("button", { name: "Start Camera" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Use Front Camera" })).toBeEnabled();
   expect(screen.getByLabelText("Enter barcode manually")).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Return to Food Search" })).toBeEnabled();
   expect(screen.queryByText(/private browser detail/i)).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Start Camera" }));
+  await waitFor(() => expect(camera.start).toHaveBeenCalledTimes(2));
+});
+
+test("camera failure keeps scroll containment until the dialog is dismissed", async () => {
+  const denied = Object.assign(new Error("denied"), { name: "NotAllowedError" });
+  const view = setup({ camera: { start: jest.fn().mockRejectedValue(denied) } });
+  await screen.findByRole("alert");
+  expect(document.body).toHaveStyle({ overflow: "hidden", position: "fixed" });
+  fireEvent.click(screen.getByRole("button", { name: "Return to Food Search" }));
+  view.unmount();
+  expect(document.body.style.position).toBe("");
+  expect(document.body.style.overflow).toBe("");
 });
 
 test("keeps manual entry available when camera APIs are missing", async () => {
@@ -283,14 +425,12 @@ test("keeps manual entry available when camera APIs are missing", async () => {
     message: "This browser does not provide camera access. Enter the barcode manually instead.",
   });
   setup({ camera: { start: jest.fn().mockRejectedValue(unsupported) } });
-  fireEvent.click(screen.getByRole("button", { name: "Start Camera" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(/does not provide camera access/i);
   expect(screen.getByLabelText("Enter barcode manually")).toBeEnabled();
 });
 
 test("stops an active camera when the dialog unmounts", async () => {
   const view = setup();
-  fireEvent.click(screen.getByRole("button", { name: "Start Camera" }));
   await screen.findByText(/camera active/i);
   view.unmount();
   expect(view.session.stop).toHaveBeenCalled();
@@ -299,15 +439,15 @@ test("stops an active camera when the dialog unmounts", async () => {
 test("traps keyboard focus within the dialog", () => {
   setup();
   const closeButton = screen.getByRole("button", { name: "Close barcode scanner" });
-  const manualInput = screen.getByLabelText("Enter barcode manually");
+  const returnButton = screen.getByRole("button", { name: "Return to Food Search" });
   expect(closeButton).toHaveFocus();
 
-  manualInput.focus();
+  returnButton.focus();
   fireEvent.keyDown(screen.getByRole("dialog"), { key: "Tab" });
   expect(closeButton).toHaveFocus();
 
   fireEvent.keyDown(screen.getByRole("dialog"), { key: "Tab", shiftKey: true });
-  expect(manualInput).toHaveFocus();
+  expect(returnButton).toHaveFocus();
 });
 
 test.each([
@@ -324,17 +464,70 @@ test.each([
   expect(await screen.findByRole("alert")).toHaveTextContent(expected);
 });
 
-test("marks the dialog as mobile-safe and honors reduced motion", () => {
-  setup({ reducedMotion: true });
-  expect(screen.getByRole("dialog")).toHaveAttribute("data-mobile-safe", "true");
-  expect(screen.getByRole("dialog")).toHaveClass("trace-barcode-dialog--reduced-motion");
+test("missing or rejected orientation locking does not block camera startup", async () => {
+  const withoutOrientation = setup({ orientation: null });
+  await screen.findByText(/camera active/i);
+  expect(withoutOrientation.props.camera.start).toHaveBeenCalledTimes(1);
+  withoutOrientation.unmount();
+
+  const rejectedOrientation = {
+    lock: jest.fn().mockRejectedValue(new Error("unsupported lock")),
+    unlock: jest.fn(),
+  };
+  const rejected = setup({ orientation: rejectedOrientation });
+  await screen.findByText(/camera active/i);
+  await waitFor(() => expect(rejectedOrientation.lock).toHaveBeenCalledWith("portrait"));
+  expect(rejected.props.camera.start).toHaveBeenCalledTimes(1);
+  rejected.unmount();
+  expect(rejectedOrientation.unlock).not.toHaveBeenCalled();
 });
 
-test("remains usable after React Strict Mode effect replay", async () => {
+test("releases a successfully acquired best-effort orientation lock", async () => {
+  const orientation = {
+    lock: jest.fn().mockResolvedValue(undefined),
+    unlock: jest.fn(),
+  };
+  const view = setup({ orientation });
+  await waitFor(() => expect(orientation.lock).toHaveBeenCalledWith("portrait"));
+  await act(async () => {});
+  view.unmount();
+  expect(orientation.unlock).toHaveBeenCalledTimes(1);
+});
+
+test("viewport and orientation changes preserve the selected camera without restarting it", async () => {
+  const view = setup();
+  await screen.findByText(/camera active/i);
+  fireEvent.click(screen.getByRole("button", { name: "Use Front Camera" }));
+  await waitFor(() => expect(view.props.camera.start).toHaveBeenCalledTimes(2));
+  expect(screen.getByRole("button", { name: "Use Rear Camera" })).toBeEnabled();
+
+  act(() => {
+    window.dispatchEvent(new Event("resize"));
+    window.dispatchEvent(new Event("orientationchange"));
+  });
+  expect(view.props.camera.start).toHaveBeenCalledTimes(2);
+  expect(screen.getByRole("dialog").querySelector("[data-camera-facing]"))
+    .toHaveAttribute("data-camera-facing", "user");
+});
+
+test("marks the dialog for safe-area and responsive orientation layout and honors reduced motion", () => {
+  setup({ reducedMotion: true });
+  const dialog = screen.getByRole("dialog");
+  expect(dialog).toHaveAttribute("data-mobile-safe", "true");
+  expect(dialog).toHaveAttribute("data-safe-area", "top-and-bottom");
+  expect(dialog).toHaveAttribute("data-orientation-layout", "responsive");
+  expect(dialog).toHaveClass("trace-barcode-dialog--reduced-motion");
+  expect(dialog.querySelector(".trace-barcode-dialog__content")).toBeInTheDocument();
+  expect(dialog.querySelector(".trace-barcode-dialog__footer")).toBeInTheDocument();
+});
+
+test("React Strict Mode effect replay and rerender do not duplicate automatic startup", async () => {
   const view = setup({}, { strict: true });
-  const input = screen.getByLabelText("Enter barcode manually");
-  fireEvent.change(input, { target: { value: "00012345600012" } });
-  fireEvent.submit(input.closest("form"));
-  expect(await screen.findByRole("article", { name: "Barcode product review" })).toBeInTheDocument();
-  expect(view.props.barcodeLookup.lookup).toHaveBeenCalledTimes(1);
+  await screen.findByText(/camera active/i);
+  expect(view.props.camera.start).toHaveBeenCalledTimes(1);
+  view.rerender(
+    <StrictMode><BarcodeScannerDialog {...view.props} /></StrictMode>
+  );
+  await waitFor(() => expect(screen.getByText(/camera active/i)).toBeInTheDocument());
+  expect(view.props.camera.start).toHaveBeenCalledTimes(1);
 });

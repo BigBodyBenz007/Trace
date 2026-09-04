@@ -1,6 +1,16 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import NutritionPage from "./NutritionPage";
 
+const originalScrollTo = window.scrollTo;
+
+beforeEach(() => {
+  window.scrollTo = jest.fn();
+});
+
+afterEach(() => {
+  window.scrollTo = originalScrollTo;
+});
+
 function remoteFood() {
   return {
     sourceType: "remote-barcode",

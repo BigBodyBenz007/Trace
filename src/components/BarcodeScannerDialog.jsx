@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  CAMERA_ERROR_CODES,
   CAMERA_FACING_MODES,
   browserBarcodeCamera,
   cameraErrorFor,
@@ -10,6 +11,7 @@ import {
   APP_LIFECYCLE_PHASE,
   webAppLifecycleAdapter,
 } from "../services/appLifecycleAdapter";
+import { acquireDocumentScrollLock } from "../services/documentScrollLock";
 import "./BarcodeScannerDialog.css";
 
 const FOCUSABLE = [
@@ -40,6 +42,16 @@ const LOOKUP_MESSAGES = Object.freeze({
   unconfigured: "Remote barcode lookup is not configured here. Verified Trace catalog barcodes still work.",
 });
 
+const AUTOMATIC_FALLBACK_ERROR_CODES = new Set([
+  CAMERA_ERROR_CODES.NOT_FOUND,
+  CAMERA_ERROR_CODES.BUSY,
+  CAMERA_ERROR_CODES.UNAVAILABLE,
+]);
+
+function availableScreenOrientation() {
+  return typeof window === "undefined" ? null : window.screen?.orientation || null;
+}
+
 function nutrientValue(value, unit) {
   return value === null || value === undefined ? "Unknown" : `${value}${unit}`;
 }
@@ -60,6 +72,7 @@ export default function BarcodeScannerDialog({
   lifecycleAdapter = webAppLifecycleAdapter,
   onClose,
   onUseFood,
+  orientation = availableScreenOrientation(),
   reducedMotion = false,
 }) {
   const [manualBarcode, setManualBarcode] = useState("");
@@ -75,6 +88,10 @@ export default function BarcodeScannerDialog({
   const videoRef = useRef(null);
   const sessionRef = useRef(null);
   const startAbortRef = useRef(null);
+  const cameraStartPendingRef = useRef(false);
+  const automaticStartAttemptedRef = useRef(false);
+  const orientationLockAttemptedRef = useRef(false);
+  const startCameraRef = useRef(null);
   const acceptedBarcodeRef = useRef(false);
   const pendingLookupRef = useRef(false);
   const mountedRef = useRef(true);
@@ -83,6 +100,7 @@ export default function BarcodeScannerDialog({
   const releaseCamera = useCallback(() => {
     startAbortRef.current?.abort();
     startAbortRef.current = null;
+    cameraStartPendingRef.current = false;
     sessionRef.current?.stop?.();
     sessionRef.current = null;
   }, []);
@@ -139,48 +157,80 @@ export default function BarcodeScannerDialog({
   const startCamera = useCallback(async ({
     nextFacingMode = facingMode,
     deviceId = null,
+    allowAutomaticFallback = false,
   } = {}) => {
-    if (cameraState === "starting" || lookingUp) return;
+    if (cameraStartPendingRef.current || cameraState === "starting" || lookingUp) return;
+    if (!allowAutomaticFallback) automaticStartAttemptedRef.current = true;
     releaseCamera();
+    cameraStartPendingRef.current = true;
     acceptedBarcodeRef.current = false;
     setCandidate(null);
     setErrorMessage("");
-    setMessage(`Starting the ${nextFacingMode === CAMERA_FACING_MODES.FRONT ? "front" : "rear"} camera…`);
     setCameraState("starting");
-    setFacingMode(nextFacingMode);
     const controller = new AbortController();
     startAbortRef.current = controller;
+    const attempts = [{ facingMode: nextFacingMode, deviceId }];
+    let lastAttemptedFacingMode = nextFacingMode;
+    if (
+      allowAutomaticFallback
+      && !deviceId
+      && nextFacingMode === CAMERA_FACING_MODES.REAR
+    ) {
+      attempts.push({ facingMode: CAMERA_FACING_MODES.FRONT, deviceId: null });
+    }
 
     try {
-      const session = await camera.start({
-        videoElement: videoRef.current,
-        facingMode: nextFacingMode,
-        deviceId,
-        signal: controller.signal,
-        onDetected: (value) => submitBarcodeRef.current?.(value),
-        onDecodeError: (error) => {
-          if (!mountedRef.current) return;
-          setErrorMessage(cameraErrorFor(error, nextFacingMode).message);
-        },
-      });
+      let session = null;
+      let successfulAttempt = attempts[0];
+      for (let index = 0; index < attempts.length; index += 1) {
+        const attempt = attempts[index];
+        lastAttemptedFacingMode = attempt.facingMode;
+        setFacingMode(attempt.facingMode);
+        setMessage(`Starting the ${attempt.facingMode === CAMERA_FACING_MODES.FRONT ? "front" : "rear"} camera…`);
+        try {
+          session = await camera.start({
+            videoElement: videoRef.current,
+            facingMode: attempt.facingMode,
+            deviceId: attempt.deviceId,
+            signal: controller.signal,
+            onDetected: (value) => submitBarcodeRef.current?.(value),
+            onDecodeError: (error) => {
+              if (!mountedRef.current) return;
+              setErrorMessage(cameraErrorFor(error, attempt.facingMode).message);
+            },
+          });
+          successfulAttempt = attempt;
+          break;
+        } catch (error) {
+          const cameraError = cameraErrorFor(error, attempt.facingMode);
+          const canFallback = index === 0
+            && attempts.length > 1
+            && AUTOMATIC_FALLBACK_ERROR_CODES.has(cameraError.code);
+          if (!canFallback) throw cameraError;
+          setMessage("The rear camera is unavailable. Trying the front camera…");
+        }
+      }
       if (!mountedRef.current || controller.signal.aborted) {
-        session.stop();
+        session?.stop?.();
         return;
       }
       sessionRef.current = session;
       startAbortRef.current = null;
+      cameraStartPendingRef.current = false;
       setDevices(session.devices || []);
-      setSelectedDeviceId(deviceId || "");
+      setSelectedDeviceId(successfulAttempt.deviceId || "");
       setCameraState("active");
       setMessage("Camera active. Hold a supported product barcode inside the frame.");
     } catch (error) {
       if (!mountedRef.current || controller.signal.aborted) return;
       startAbortRef.current = null;
+      cameraStartPendingRef.current = false;
       setCameraState("idle");
       setMessage("");
-      setErrorMessage(cameraErrorFor(error, nextFacingMode).message);
+      setErrorMessage(cameraErrorFor(error, lastAttemptedFacingMode).message);
     }
   }, [camera, cameraState, facingMode, lookingUp, releaseCamera]);
+  startCameraRef.current = startCamera;
 
   function resetForAnotherScan() {
     releaseCamera();
@@ -256,6 +306,62 @@ export default function BarcodeScannerDialog({
     };
   }, [releaseCamera]);
 
+  useEffect(() => {
+    const scrollX = window.scrollX || window.pageXOffset || 0;
+    const scrollY = window.scrollY || window.pageYOffset || 0;
+    const releaseLock = acquireDocumentScrollLock({ mode: "fixed", scrollX, scrollY });
+    return () => {
+      releaseLock();
+      window.scrollTo(scrollX, scrollY);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (typeof orientation?.lock !== "function") return undefined;
+    let disposed = false;
+    let acquired = false;
+    const timer = window.setTimeout(() => {
+      if (orientationLockAttemptedRef.current) return;
+      orientationLockAttemptedRef.current = true;
+      Promise.resolve()
+        .then(() => orientation.lock("portrait"))
+        .then(() => {
+          acquired = true;
+          if (disposed) {
+            try {
+              orientation.unlock?.();
+            } catch (error) {
+              // Orientation locking is best effort and must never block scanner cleanup.
+            }
+          }
+        })
+        .catch(() => {});
+    }, 0);
+    return () => {
+      disposed = true;
+      window.clearTimeout(timer);
+      if (acquired) {
+        try {
+          orientation.unlock?.();
+        } catch (error) {
+          // Orientation locking is best effort and must never block scanner cleanup.
+        }
+      }
+    };
+  }, [orientation]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      if (automaticStartAttemptedRef.current) return;
+      automaticStartAttemptedRef.current = true;
+      startCameraRef.current?.({
+        nextFacingMode: CAMERA_FACING_MODES.REAR,
+        allowAutomaticFallback: true,
+      });
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
   const alternateFacing = facingMode === CAMERA_FACING_MODES.REAR
     ? CAMERA_FACING_MODES.FRONT
     : CAMERA_FACING_MODES.REAR;
@@ -270,7 +376,9 @@ export default function BarcodeScannerDialog({
         aria-labelledby="trace-barcode-title"
         aria-modal="true"
         className={`trace-barcode-dialog${reducedMotion ? " trace-barcode-dialog--reduced-motion" : ""}`}
+        data-orientation-layout="responsive"
         data-mobile-safe="true"
+        data-safe-area="top-and-bottom"
         ref={dialogRef}
         role="dialog"
       >
@@ -283,20 +391,23 @@ export default function BarcodeScannerDialog({
             ×
           </button>
         </header>
-        <p id="trace-barcode-description">
-          Camera access starts only when you choose Start Camera. Trace does not save or upload camera images.
-        </p>
+        <div className="trace-barcode-dialog__content" data-scroll-container="internal">
+          <p id="trace-barcode-description">
+            Camera access starts automatically after you choose Scan Barcode. Trace does not save or upload camera images.
+          </p>
 
-        <div className="trace-barcode-dialog__camera">
-          <video
-            aria-label="Barcode camera preview"
-            autoPlay
-            hidden={cameraState === "idle"}
-            muted
-            playsInline
-            ref={videoRef}
-          />
-          <div className="trace-barcode-dialog__camera-actions">
+          <div className="trace-barcode-dialog__camera" data-camera-facing={facingMode}>
+            <div className="trace-barcode-dialog__preview" hidden={cameraState === "idle"}>
+            <video
+              aria-label="Barcode camera preview"
+              autoPlay
+              muted
+              playsInline
+              ref={videoRef}
+            />
+            <span aria-hidden="true" className="trace-barcode-dialog__target" />
+            </div>
+            <div className="trace-barcode-dialog__camera-actions">
             {cameraState === "idle" ? (
               <button disabled={lookingUp} onClick={() => startCamera({ nextFacingMode: facingMode })} type="button">
                 Start Camera
@@ -321,25 +432,25 @@ export default function BarcodeScannerDialog({
             >
               {alternateLabel}
             </button>
+            </div>
+            {devices.length > 1 && cameraState === "active" && (
+              <label>
+                Camera device
+                <select
+                  value={selectedDeviceId}
+                  onChange={(event) => startCamera({
+                    nextFacingMode: facingMode,
+                    deviceId: event.target.value,
+                  })}
+                >
+                  <option value="">Automatic camera</option>
+                  {devices.map((device) => (
+                    <option key={device.deviceId} value={device.deviceId}>{device.label}</option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
-          {devices.length > 1 && cameraState === "active" && (
-            <label>
-              Camera device
-              <select
-                value={selectedDeviceId}
-                onChange={(event) => startCamera({
-                  nextFacingMode: facingMode,
-                  deviceId: event.target.value,
-                })}
-              >
-                <option value="">Automatic camera</option>
-                {devices.map((device) => (
-                  <option key={device.deviceId} value={device.deviceId}>{device.label}</option>
-                ))}
-              </select>
-            </label>
-          )}
-        </div>
 
         <form
           className="trace-barcode-dialog__manual"
@@ -416,10 +527,13 @@ export default function BarcodeScannerDialog({
             <div className="trace-barcode-dialog__review-actions">
               <button disabled={!candidate.canUse} onClick={useFood} type="button">Use This Food</button>
               <button onClick={resetForAnotherScan} type="button">Scan Again</button>
-              <button onClick={close} type="button">Return to Food Search</button>
             </div>
           </article>
         )}
+        </div>
+        <footer className="trace-barcode-dialog__footer">
+          <button onClick={close} type="button">Return to Food Search</button>
+        </footer>
       </section>
     </div>
   );

@@ -4,7 +4,11 @@
   display: flex;
   inset: 0;
   justify-content: center;
-  padding: 12px;
+  overscroll-behavior: none;
+  padding: calc(env(safe-area-inset-top, 0px) + 12px)
+    calc(env(safe-area-inset-right, 0px) + 12px)
+    calc(env(safe-area-inset-bottom, 0px) + 12px)
+    calc(env(safe-area-inset-left, 0px) + 12px);
   position: fixed;
   z-index: 10000;
 }
@@ -21,12 +25,16 @@
   border-radius: 18px;
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
   color: #f4f7f9;
+  display: flex;
+  flex-direction: column;
   max-height: min(92vh, 860px);
-  max-block-size: min(92dvh, 860px);
+  max-block-size: min(
+    calc(100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px),
+    860px
+  );
   max-inline-size: 680px;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding: clamp(16px, 4vw, 26px);
+  overflow: hidden;
+  padding: 0;
   width: 100%;
 }
 
@@ -35,6 +43,7 @@
   display: flex;
   gap: 16px;
   justify-content: space-between;
+  padding: clamp(18px, 4vw, 26px) clamp(16px, 4vw, 26px) 12px;
 }
 
 .trace-barcode-dialog__header h2 {
@@ -84,6 +93,21 @@
   padding: 0 !important;
 }
 
+.trace-barcode-dialog__content {
+  -webkit-overflow-scrolling: touch;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 0 clamp(16px, 4vw, 26px) 20px;
+  scroll-padding-bottom: 20px;
+}
+
+.trace-barcode-dialog__content > p:first-child {
+  margin-top: 0;
+}
+
 .trace-barcode-dialog__camera {
   background: rgba(4, 13, 22, 0.74);
   border: 1px solid rgba(118, 144, 160, 0.35);
@@ -94,17 +118,38 @@
   padding: 12px;
 }
 
+.trace-barcode-dialog__preview {
+  border-radius: 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.trace-barcode-dialog__preview[hidden] {
+  display: none;
+}
+
 .trace-barcode-dialog__camera video {
   aspect-ratio: 4 / 3;
   background: #02060a;
   border-radius: 10px;
   display: block;
   object-fit: cover;
+  object-position: center;
   width: 100%;
 }
 
-.trace-barcode-dialog__camera video[hidden] {
-  display: none;
+.trace-barcode-dialog__target {
+  border: 2px solid rgba(255, 255, 255, 0.78);
+  border-radius: 10px;
+  box-shadow: 0 0 0 999px rgba(2, 6, 10, 0.16);
+  height: 42%;
+  left: 50%;
+  max-width: 82%;
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 82%;
 }
 
 .trace-barcode-dialog__camera-actions,
@@ -210,6 +255,17 @@
   color: #8dd8ca;
 }
 
+.trace-barcode-dialog__footer {
+  background: #111c28;
+  border-top: 1px solid rgba(117, 183, 170, 0.28);
+  flex: 0 0 auto;
+  padding: 12px clamp(16px, 4vw, 26px) max(12px, env(safe-area-inset-bottom, 0px));
+}
+
+.trace-barcode-dialog__footer button {
+  width: 100%;
+}
+
 .trace-barcode-dialog--reduced-motion,
 .trace-barcode-dialog--reduced-motion * {
   animation: none !important;
@@ -220,14 +276,16 @@
 @media (max-width: 430px) {
   .trace-barcode-dialog__backdrop {
     align-items: stretch;
-    padding: 8px;
+    padding: calc(env(safe-area-inset-top, 0px) + 10px)
+      calc(env(safe-area-inset-right, 0px) + 8px)
+      calc(env(safe-area-inset-bottom, 0px) + 8px)
+      calc(env(safe-area-inset-left, 0px) + 8px);
   }
 
   .trace-barcode-dialog {
     border-radius: 14px;
-    max-height: calc(100vh - 16px);
-    max-block-size: calc(100dvh - 16px);
-    padding: 15px;
+    max-height: 100%;
+    max-block-size: 100%;
   }
 
   .trace-barcode-dialog__manual {
@@ -236,8 +294,39 @@
 
   .trace-barcode-dialog__manual button,
   .trace-barcode-dialog__camera-actions button,
-  .trace-barcode-dialog__review-actions button {
+  .trace-barcode-dialog__review-actions button,
+  .trace-barcode-dialog__footer button {
     flex: 1 1 150px;
     width: 100%;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 600px) {
+  .trace-barcode-dialog__backdrop {
+    align-items: stretch;
+  }
+
+  .trace-barcode-dialog {
+    max-block-size: 100%;
+    max-inline-size: 900px;
+  }
+
+  .trace-barcode-dialog__header {
+    padding-bottom: 8px;
+    padding-top: 12px;
+  }
+
+  .trace-barcode-dialog__content {
+    padding-bottom: 14px;
+  }
+
+  .trace-barcode-dialog__camera video {
+    aspect-ratio: 16 / 9;
+    max-height: 46dvh;
+  }
+
+  .trace-barcode-dialog__footer {
+    padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    padding-top: 8px;
   }
 }
