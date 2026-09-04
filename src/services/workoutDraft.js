@@ -1,4 +1,5 @@
 import { normalizePlannedWorkout } from "./plannedWorkout";
+import { normalizeWorkoutTemplate } from "./workoutTemplate";
 import {
   createWorkoutItemId,
   workoutLocalDateTimeToIso,
@@ -274,7 +275,7 @@ function emptyActualSet(defaultLoadMode = "external", defaultWeightUnit = "lb") 
   };
 }
 
-function actualSetFromTarget(target) {
+function actualSetFromTarget(target, { guidanceOnly = false } = {}) {
   const loadMode = target.load?.mode || "external";
   const weightUnit = target.load?.mode === "external"
     ? target.load.unit
@@ -288,33 +289,37 @@ function actualSetFromTarget(target) {
         ? String(target.load.amount)
         : "",
     notes: target.notes || "",
-    isUntouched: false,
+    isUntouched: guidanceOnly,
   };
 }
 
-export function createWorkoutDraftFromPlannedWorkout(
-  plannedWorkout,
-  now = new Date(),
-  { originPage = null, selectedDate = null, visibleMonth = null } = {}
+function createWorkoutDraftFromTargets(
+  source,
+  now,
+  {
+    plannedWorkoutId = null,
+    originPage = null,
+    selectedDate = null,
+    visibleMonth = null,
+    guidanceOnly = false,
+  } = {}
 ) {
-  const plan = normalizePlannedWorkout(plannedWorkout);
-  if (!plan || !Number.isFinite(now.getTime())) return null;
   const current = localDateTime(now);
   return {
     schemaVersion: WORKOUT_DRAFT_SCHEMA_VERSION,
-    plannedWorkoutId: plan.id,
+    ...(plannedWorkoutId ? { plannedWorkoutId } : {}),
     startedAt: now.toISOString(),
     updatedAt: now.toISOString(),
     form: {
-      title: plan.title,
+      title: source.title,
       date: current.date,
       time: current.time,
       timingMode: "live",
       activeDurationMinutes: "",
       caloriesBurned: "",
       intensity: "",
-      notes: plan.notes || "",
-      exercises: plan.exercises.map((exercise) => {
+      notes: source.notes || "",
+      exercises: source.exercises.map((exercise) => {
         const firstTarget = exercise.targetSets[0];
         const defaultLoadMode = firstTarget?.load?.mode || "external";
         const defaultWeightUnit = firstTarget?.load?.mode === "external"
@@ -331,10 +336,11 @@ export function createWorkoutDraftFromPlannedWorkout(
           defaultLoadMode,
           defaultWeightUnit,
           notes: exercise.notes || "",
-          roadmapStatus: "pending",
-          roadmapSkipReason: "",
+          ...(plannedWorkoutId
+            ? { roadmapStatus: "pending", roadmapSkipReason: "" }
+            : {}),
           sets: exercise.targetSets.length > 0
-            ? exercise.targetSets.map(actualSetFromTarget)
+            ? exercise.targetSets.map((target) => actualSetFromTarget(target, { guidanceOnly }))
             : [emptyActualSet(defaultLoadMode, defaultWeightUnit)],
         };
       }),
@@ -346,6 +352,31 @@ export function createWorkoutDraftFromPlannedWorkout(
       ...(originPage === "calendar" ? { selectedDate, visibleMonth } : {}),
     },
   };
+}
+
+export function createWorkoutDraftFromPlannedWorkout(
+  plannedWorkout,
+  now = new Date(),
+  { originPage = null, selectedDate = null, visibleMonth = null } = {}
+) {
+  const plan = normalizePlannedWorkout(plannedWorkout);
+  if (!plan || !Number.isFinite(now.getTime())) return null;
+  return createWorkoutDraftFromTargets(plan, now, {
+    plannedWorkoutId: plan.id,
+    originPage,
+    selectedDate,
+    visibleMonth,
+  });
+}
+
+export function createWorkoutDraftFromTemplate(template, now = new Date()) {
+  const normalized = normalizeWorkoutTemplate(template);
+  if (!normalized || !Number.isFinite(now.getTime())) return null;
+  return createWorkoutDraftFromTargets({
+    title: normalized.name,
+    notes: normalized.notes,
+    exercises: normalized.exercises,
+  }, now, { guidanceOnly: true });
 }
 
 export function readWorkoutDraft(storage = localStorage) {

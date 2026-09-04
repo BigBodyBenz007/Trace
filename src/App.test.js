@@ -148,6 +148,31 @@ function plannedWorkout(id, title = "Upper Body") {
   };
 }
 
+function reusableWorkoutTemplate(overrides = {}) {
+  return {
+    id: "workout-template:armegddon",
+    schemaVersion: 1,
+    type: "strength",
+    name: "ARMegddon",
+    notes: "Reusable arm targets",
+    exercises: [{
+      id: "template-exercise:curl",
+      name: "Cable Curl",
+      notes: "Strict",
+      targetSets: [{
+        id: "template-set:curl-1",
+        setType: "working",
+        reps: 10,
+        load: { mode: "external", amount: 40, unit: "lb" },
+        notes: "Guidance only",
+      }],
+    }],
+    createdAt: "2026-09-04T12:00:00.000Z",
+    updatedAt: "2026-09-04T12:00:00.000Z",
+    ...overrides,
+  };
+}
+
 function mockWindowScrollPosition(scrollX, scrollY) {
   const originalScrollX = Object.getOwnPropertyDescriptor(window, "scrollX");
   const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
@@ -264,6 +289,83 @@ test("loads and preserves planned workouts separately from completed workout sto
     .toHaveAttribute("data-planned-workout-count", "1"));
   expect(localStorage.getItem("plannedWorkouts")).toBe(serialized);
   expect(localStorage.getItem("workoutEntries")).toBeNull();
+});
+
+test("a persisted workout template starts fresh and schedules an independent normal planned workout", async () => {
+  const savedTemplate = reusableWorkoutTemplate();
+  localStorage.setItem("workoutTemplates", JSON.stringify([savedTemplate]));
+  renderAppAtTimeline();
+  openWorkouts();
+
+  await waitFor(() => expect(screen.getByText("1 saved template")).toBeInTheDocument());
+  fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+  fireEvent.click(screen.getByRole("button", { name: "Schedule Workout" }));
+  expect(screen.getByRole("heading", { name: "Today's Schedule" })).toBeInTheDocument();
+  expect(screen.getByRole("form", { name: "Create planned workout" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Planned workout title")).toHaveValue("ARMegddon");
+  expect(screen.getByLabelText("Exercise 1 target set 1 intended reps")).toHaveValue(10);
+  fireEvent.change(screen.getByLabelText("Planned workout title"), {
+    target: { value: "ARMegddon Friday" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save planned workout" }));
+
+  const savedPlans = JSON.parse(localStorage.getItem("plannedWorkouts"));
+  expect(savedPlans).toHaveLength(1);
+  expect(savedPlans[0]).toMatchObject({
+    scheduledDate: localCalendarDateKey(),
+    title: "ARMegddon Friday",
+    exercises: [expect.objectContaining({
+      name: "Cable Curl",
+      targetSets: [expect.objectContaining({
+        reps: 10,
+        load: { mode: "external", amount: 40, unit: "lb" },
+      })],
+    })],
+  });
+  expect(within(screen.getByRole("list", { name: "Today's schedule summary" }))
+    .getByText("ARMegddon Friday")).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("workoutTemplates"))).toEqual([savedTemplate]);
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  openWorkouts();
+  fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit Template" }));
+  fireEvent.change(screen.getByLabelText("Template name"), {
+    target: { value: "ARMegddon reusable" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Template" }));
+  expect(JSON.parse(localStorage.getItem("plannedWorkouts"))).toEqual(savedPlans);
+  fireEvent.click(screen.getByRole("button", { name: "Start Now" }));
+  expect(screen.getByLabelText("Workout title")).toHaveValue("ARMegddon reusable");
+  const activeDraft = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+  expect(activeDraft).not.toHaveProperty("plannedWorkoutId");
+  expect(activeDraft.form.exercises[0].sets[0]).toMatchObject({
+    reps: "10",
+    weightAmount: "40",
+    isUntouched: true,
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
+    target: { value: "12" },
+  });
+  expect(JSON.parse(localStorage.getItem("workoutTemplates"))[0]).toMatchObject({
+    id: savedTemplate.id,
+    name: "ARMegddon reusable",
+    exercises: [expect.objectContaining({
+      targetSets: [expect.objectContaining({ reps: 10 })],
+    })],
+  });
+  expect(JSON.parse(localStorage.getItem("plannedWorkouts"))).toEqual(savedPlans);
+  fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+  const confirmDelete = jest.spyOn(window, "confirm").mockReturnValue(true);
+  try {
+    fireEvent.click(screen.getByRole("button", { name: "Delete Template" }));
+  } finally {
+    confirmDelete.mockRestore();
+  }
+  expect(JSON.parse(localStorage.getItem("workoutTemplates"))).toEqual([]);
+  expect(JSON.parse(localStorage.getItem("plannedWorkouts"))).toEqual(savedPlans);
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).form.title)
+    .toBe("ARMegddon reusable");
 });
 
 test("successful same-tab restore immediately refreshes planned-workout App state", async () => {
@@ -4248,7 +4350,7 @@ test("Trophy Case View Workout opens the exact full completed workout and return
   });
   const workoutActions = returnToTrophyCase.closest(".trace-workout-history-card__actions");
   expect(within(workoutActions).getAllByRole("button").map((button) => button.textContent))
-    .toEqual(["Edit", "Delete", "Back to Trophy Case"]);
+    .toEqual(["Save as Template", "Edit", "Delete", "Back to Trophy Case"]);
   expect(returnToTrophyCase).toBeVisible();
   Element.prototype.scrollIntoView.mockClear();
   fireEvent.click(returnToTrophyCase);

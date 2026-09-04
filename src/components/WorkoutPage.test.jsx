@@ -8,6 +8,10 @@ import {
 } from "../services/workoutDraft";
 import { PHOTO_SELECTION_RESULT_STATUS } from "../services/photoSelectionAdapter";
 import { APP_LIFECYCLE_PHASE } from "../services/appLifecycleAdapter";
+import {
+  createWorkoutTemplate,
+  workoutTemplateDraftFromWorkoutEntry,
+} from "../services/workoutTemplate";
 
 const originalRequestAnimationFrame = window.requestAnimationFrame;
 const originalCreateObjectURL = URL.createObjectURL;
@@ -707,6 +711,11 @@ function renderPageProps(overrides = {}) {
     updateSavedExercise: jest.fn(() => ({ status: "updated" })),
     updateWorkoutEntry: jest.fn(() => true),
     deleteWorkoutEntry: jest.fn(() => true),
+    saveWorkoutTemplate: jest.fn(() => ({ status: "saved" })),
+    updateWorkoutTemplate: jest.fn(() => ({ status: "saved" })),
+    deleteWorkoutTemplate: jest.fn(() => true),
+    startWorkoutTemplate: jest.fn(() => ({ status: "started" })),
+    scheduleWorkoutTemplate: jest.fn(() => true),
     buttonStyle: {},
     inputStyle: {},
     containerStyle: {},
@@ -720,6 +729,125 @@ function renderPage(overrides = {}) {
   openWorkoutLogger();
   return props;
 }
+
+function workoutTemplate(overrides = {}) {
+  return {
+    ...createWorkoutTemplate(
+      workoutTemplateDraftFromWorkoutEntry(entry({ title: "ARMegddon" })),
+      new Date("2026-09-04T12:00:00.000Z")
+    ),
+    ...overrides,
+  };
+}
+
+test("saves a completed workout as an editable template without changing history", () => {
+  const source = entry({ title: "ARMegddon" });
+  const props = renderPageProps({ workoutEntries: [source] });
+  render(<WorkoutPage {...props} />);
+  const card = expandWorkout("ARMegddon");
+
+  fireEvent.click(within(card).getByRole("button", { name: "Save as Template" }));
+  const dialog = screen.getByRole("dialog", { name: "Save Workout as Template" });
+  expect(within(dialog).getByLabelText("Template name")).toHaveValue("ARMegddon");
+  expect(within(dialog).getByLabelText("Target reps")).toHaveValue(10);
+  expect(within(dialog).getByLabelText("Target weight")).toHaveValue(70.5);
+  fireEvent.change(within(dialog).getByLabelText("Template name"), {
+    target: { value: "ARMegddon reusable" },
+  });
+  fireEvent.click(within(dialog).getByRole("button", { name: "Create Template" }));
+
+  expect(props.saveWorkoutTemplate).toHaveBeenCalledWith(expect.objectContaining({
+    name: "ARMegddon reusable",
+    exercises: [expect.objectContaining({
+      name: "Incline Press",
+      targetSets: [expect.objectContaining({
+        reps: 10,
+        load: { mode: "external", amount: 70.5, unit: "lb" },
+      })],
+    })],
+  }));
+  expect(source.title).toBe("ARMegddon");
+  expect(screen.queryByRole("dialog", { name: "Save Workout as Template" })).not.toBeInTheDocument();
+});
+
+test("template creation reports duplicate names and Escape cancellation creates nothing", () => {
+  const saveWorkoutTemplate = jest.fn(() => ({
+    status: "duplicate",
+    message: "A workout template with that name already exists. Choose a different name.",
+  }));
+  const props = renderPageProps({ workoutEntries: [entry({ title: "ARMegddon" })], saveWorkoutTemplate });
+  const confirmCancel = jest.spyOn(window, "confirm").mockReturnValue(true);
+  try {
+    render(<WorkoutPage {...props} />);
+    const card = expandWorkout("ARMegddon");
+    const createButton = within(card).getByRole("button", { name: "Save as Template" });
+    fireEvent.click(createButton);
+    fireEvent.click(screen.getByRole("button", { name: "Create Template" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("already exists");
+    expect(screen.getByRole("dialog", { name: "Save Workout as Template" })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("Template name"), { target: { value: "Changed" } });
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(saveWorkoutTemplate).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog", { name: "Save Workout as Template" })).not.toBeInTheDocument();
+    expect(createButton).toHaveFocus();
+  } finally {
+    confirmCancel.mockRestore();
+  }
+});
+
+test("keeps templates compact and provides start, schedule, edit, and confirmed delete actions", () => {
+  const saved = workoutTemplate();
+  const props = renderPageProps({ workoutTemplates: [saved] });
+  const confirmSpy = jest.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+  try {
+    render(<WorkoutPage {...props} />);
+    expect(screen.queryByText("Incline Press")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+    expect(screen.getByText("1 exercise · 1 planned set")).toBeInTheDocument();
+    expect(screen.getByText("Incline Press")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Start Now" }));
+    expect(props.startWorkoutTemplate).toHaveBeenCalledWith(saved.id, null);
+    fireEvent.click(screen.getByRole("button", { name: "Schedule Workout" }));
+    expect(props.scheduleWorkoutTemplate).toHaveBeenCalledWith(saved.id);
+
+    fireEvent.click(screen.getByRole("button", { name: "Edit Template" }));
+    const dialog = screen.getByRole("dialog", { name: "Edit Workout Template" });
+    fireEvent.change(within(dialog).getByLabelText("Template name"), { target: { value: "Edited ARMegddon" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Save Template" }));
+    expect(props.updateWorkoutTemplate).toHaveBeenCalledWith(
+      saved.id,
+      expect.objectContaining({ name: "Edited ARMegddon" })
+    );
+    expect(saved.name).toBe("ARMegddon");
+
+    fireEvent.click(screen.getByRole("button", { name: "Delete Template" }));
+    expect(props.deleteWorkoutTemplate).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Delete Template" }));
+    expect(props.deleteWorkoutTemplate).toHaveBeenCalledWith(saved.id);
+    expect(screen.getByRole("button", { name: "Hide templates" })).toHaveFocus();
+  } finally {
+    confirmSpy.mockRestore();
+  }
+});
+
+test("template Start Now reuses active-draft collision choices", () => {
+  const saved = workoutTemplate();
+  const startWorkoutTemplate = jest.fn((id, action) => (
+    action ? { status: action === "resume" ? "resumed-existing" : "started" } : {
+      status: "draft-conflict",
+      existingDraftTitle: "Current workout",
+    }
+  ));
+  render(<WorkoutPage {...renderPageProps({ workoutTemplates: [saved], startWorkoutTemplate })} />);
+  fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+  fireEvent.click(screen.getByRole("button", { name: "Start Now" }));
+  expect(screen.getByRole("dialog", { name: "Workout already in progress" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Resume current workout" }));
+  expect(startWorkoutTemplate).toHaveBeenLastCalledWith(saved.id, "resume");
+  expect(screen.queryByRole("dialog", { name: "Workout already in progress" })).not.toBeInTheDocument();
+});
 
 function expandWorkout(title = "Chest Day") {
   fireEvent.click(
@@ -1736,7 +1864,7 @@ test("the linked completed workout shows a visible Trophy Case return only for T
   });
   const actionRow = trophyReturn.closest(".trace-workout-history-card__actions");
   expect(within(actionRow).getAllByRole("button").map((button) => button.textContent))
-    .toEqual(["Edit", "Delete", "Back to Trophy Case"]);
+    .toEqual(["Save as Template", "Edit", "Delete", "Back to Trophy Case"]);
   expect(trophyReturn).toBeVisible();
   fireEvent.click(trophyReturn);
   expect(onReturnToTrophyCase).toHaveBeenCalledTimes(1);

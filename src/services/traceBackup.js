@@ -7,6 +7,7 @@ import packageMetadata from "../../package.json";
 import { normalizeAppSettings } from "./appSettings";
 import { normalizePlannedWorkouts } from "./plannedWorkout";
 import { normalizeWorkoutDraft } from "./workoutDraft";
+import { normalizeWorkoutTemplates } from "./workoutTemplate";
 import { normalizeJournalDraft } from "./journalEntry";
 import {
   TRACE_BACKUP_STORAGE_KEYS,
@@ -67,15 +68,16 @@ import {
 } from "./traceBackupIntegrity";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
-export const TRACE_BACKUP_SCHEMA_VERSION = 5;
+export const TRACE_BACKUP_SCHEMA_VERSION = 6;
 export const TRACE_STORAGE_KEYS = TRACE_BACKUP_STORAGE_KEYS;
+const TRACE_STORAGE_KEYS_V5 = TRACE_STORAGE_KEYS.filter((key) => key !== "workoutTemplates");
 
 const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
 const SPECIAL_KEYS = new Set(["waterEntries", "workoutDraft", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "journalDraft", JOURNAL_VAULT_STORAGE_KEY]);
 const ARRAY_KEYS = new Set(TRACE_STORAGE_KEYS.filter(
   (key) => !OBJECT_KEYS.has(key) && !SPECIAL_KEYS.has(key)
 ));
-const LEGACY_OPTIONAL_KEYS = new Set(["healthMeasurementEntries", "appSettings", "journalEntries", "journalDraft", JOURNAL_VAULT_STORAGE_KEY, "plannedWorkouts", "waterEntries", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "workoutDraft"]);
+const LEGACY_OPTIONAL_KEYS = new Set(["healthMeasurementEntries", "appSettings", "journalEntries", "journalDraft", JOURNAL_VAULT_STORAGE_KEY, "plannedWorkouts", "workoutTemplates", "waterEntries", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "workoutDraft"]);
 const RECOVERABLE_BACKUP_TRANSACTIONS = Object.freeze([
   {
     key: JOURNAL_VAULT_TRANSACTION_KEY,
@@ -168,6 +170,10 @@ async function encodePhoto(record, cryptoProvider) {
       digest: await sha256Bytes(bytes, cryptoProvider),
     },
   };
+}
+
+function storageKeysForSchema(schemaVersion) {
+  return schemaVersion >= 6 ? TRACE_STORAGE_KEYS : TRACE_STORAGE_KEYS_V5;
 }
 
 function decodePhotoBytes(record) {
@@ -297,7 +303,7 @@ function validateStructuredData(structuredData, schemaVersion = TRACE_BACKUP_SCH
     throw new Error("The backup is missing its structured Trace data.");
   }
   if (schemaVersion >= 4) {
-    const missingKey = TRACE_STORAGE_KEYS.find((key) =>
+    const missingKey = storageKeysForSchema(schemaVersion).find((key) =>
       !Object.prototype.hasOwnProperty.call(structuredData, key)
     );
     if (missingKey) throw new Error(`The backup is missing its ${missingKey} data.`);
@@ -355,6 +361,13 @@ function validateStructuredData(structuredData, schemaVersion = TRACE_BACKUP_SCH
     !normalizePlannedWorkouts(structuredData.plannedWorkouts)
   ) {
     throw new Error("The backup contains invalid planned workout data.");
+  }
+  if (
+    structuredData.workoutTemplates !== undefined &&
+    structuredData.workoutTemplates !== null &&
+    !normalizeWorkoutTemplates(structuredData.workoutTemplates)
+  ) {
+    throw new Error("The backup contains invalid workout template data.");
   }
   if (
     structuredData.workoutDraft !== undefined &&
@@ -440,6 +453,7 @@ export function summarizeTraceBackup(backup) {
     waterEntries: data.waterEntries?.entries?.length || 0,
     healthMeasurementEntries: data.healthMeasurementEntries?.length || 0,
     plannedWorkouts: data.plannedWorkouts?.length || 0,
+    workoutTemplates: data.workoutTemplates?.length || 0,
     dailyActions: data.dailyActions?.actions?.length || 0,
     activeWorkoutDraft: Boolean(data.workoutDraft),
     workouts: data.workoutEntries?.length || 0,
@@ -470,14 +484,15 @@ function integrityFailure(error) {
   return new Error(`${INTEGRITY_FAILURE_MESSAGE}${detail}`);
 }
 
-async function verifySchemaFiveIntegrity(value, cryptoProvider) {
+async function verifyBackupIntegrity(value, cryptoProvider) {
   try {
-    validateIntegrityManifestShape(value.integrity, TRACE_STORAGE_KEYS);
+    const expectedStorageKeys = storageKeysForSchema(value.schemaVersion);
+    validateIntegrityManifestShape(value.integrity, expectedStorageKeys);
     if (!value.data?.structured || typeof value.data.structured !== "object" || Array.isArray(value.data.structured)) {
       throw new Error("The backup is missing its structured Trace data.");
     }
     const actualDomains = Object.keys(value.data.structured).sort();
-    const expectedDomains = [...TRACE_STORAGE_KEYS].sort();
+    const expectedDomains = [...expectedStorageKeys].sort();
     if (actualDomains.length !== expectedDomains.length ||
       actualDomains.some((domain, index) => domain !== expectedDomains[index])) {
       throw new Error("The backup structured payload does not match its domain inventory.");
@@ -531,6 +546,11 @@ function validateAndNormalizeBackup(value) {
       normalizedBackup.data.structured.plannedWorkouts
     );
   }
+  if (normalizedBackup.data.structured.workoutTemplates != null) {
+    normalizedBackup.data.structured.workoutTemplates = normalizeWorkoutTemplates(
+      normalizedBackup.data.structured.workoutTemplates
+    );
+  }
   if (normalizedBackup.data.structured.workoutDraft != null) {
     normalizedBackup.data.structured.workoutDraft = normalizeWorkoutDraft(
       normalizedBackup.data.structured.workoutDraft
@@ -563,7 +583,7 @@ function validateAndNormalizeBackup(value) {
   value.data.photos.forEach((photo) => {
     if (!photo?.id || photoIds.has(photo.id)) throw new Error("The backup contains duplicate or missing photo IDs.");
     photoIds.add(photo.id);
-    if (value.schemaVersion < TRACE_BACKUP_SCHEMA_VERSION) decodePhoto(photo);
+    if (value.schemaVersion < 5) decodePhoto(photo);
   });
   const missingReference = photoReferenceIds(normalizedBackup.data.structured).find((id) => !photoIds.has(id));
   if (missingReference) throw new Error(`The backup is missing referenced photo ${missingReference}.`);
@@ -576,10 +596,10 @@ export function validateTraceBackup(value, { cryptoProvider } = {}) {
   if (value.schemaVersion > TRACE_BACKUP_SCHEMA_VERSION) {
     throw new Error("This Trace backup was created by a newer, unsupported backup version.");
   }
-  if (![1, 2, 3, 4, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
+  if (![1, 2, 3, 4, 5, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
   if (!value.createdAt || Number.isNaN(Date.parse(value.createdAt))) throw new Error("The Trace backup timestamp is invalid.");
-  return value.schemaVersion === TRACE_BACKUP_SCHEMA_VERSION
-    ? verifySchemaFiveIntegrity(value, cryptoProvider).then(() => validateAndNormalizeBackup(value))
+  return value.schemaVersion >= 5
+    ? verifyBackupIntegrity(value, cryptoProvider).then(() => validateAndNormalizeBackup(value))
     : validateAndNormalizeBackup(value);
 }
 

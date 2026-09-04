@@ -17,7 +17,7 @@ jest.mock("../services/traceBackup", () => ({
 
 const summary = {
   memories: 2, photos: 3, nutritionEntries: 4, waterEntries: 5, healthMeasurementEntries: 12, workouts: 5,
-  plannedWorkouts: 13, activeWorkoutDraft: true,
+  plannedWorkouts: 13, workoutTemplates: 4, activeWorkoutDraft: true,
   dailyActions: 14,
   medicationDoseSchedules: 17,
   medicationDoseOccurrences: 18,
@@ -351,6 +351,7 @@ test("validates a selected backup and previews counts without restoring", async 
   expect(screen.getByText("Photos: 3")).toBeInTheDocument();
   expect(screen.getByText("Water entries: 5")).toBeInTheDocument();
   expect(screen.getByText("Planned workouts: 13")).toBeInTheDocument();
+  expect(screen.getByText("Workout templates: 4")).toBeInTheDocument();
   expect(screen.getByText("Daily actions: 14")).toBeInTheDocument();
   expect(screen.getByText("Scheduled doses: 17")).toBeInTheDocument();
   expect(screen.getByText("Dose occurrence changes: 18")).toBeInTheDocument();

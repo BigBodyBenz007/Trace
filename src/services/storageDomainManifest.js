@@ -50,6 +50,7 @@ export const TRACE_STORAGE_DOMAIN_MANIFEST = Object.freeze([
   durableLocalStorage("injectionSiteEntries", "injectionSite", "Injection Site Tracker sessions and shots."),
   durableLocalStorage("injectionSiteSettings", "injectionSite", "Injection Site Tracker body-style settings."),
   durableLocalStorage("plannedWorkouts", "plannedWorkout", "Planned workouts and Today workout state."),
+  durableLocalStorage("workoutTemplates", "workoutTemplate", "Reusable workout templates and editable target guidance."),
   durableLocalStorage("dailyActions", "dailyAction", "Versioned Today actions."),
   durableLocalStorage("workoutDraft", "workoutDraft", "Active workout draft, including its persistent start time."),
   durableLocalStorage("workoutEntries", "App", "Workout history and IndexedDB photo references."),

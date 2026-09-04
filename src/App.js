@@ -133,9 +133,19 @@ import {
 } from "./services/plannedWorkout";
 import {
   createWorkoutDraftFromPlannedWorkout,
+  createWorkoutDraftFromTemplate,
   readWorkoutDraft,
   writeWorkoutDraft,
 } from "./services/workoutDraft";
+import {
+  createWorkoutTemplate as createWorkoutTemplateRecord,
+  getWorkoutTemplateError,
+  readWorkoutTemplates,
+  updateWorkoutTemplate as updateWorkoutTemplateRecord,
+  workoutTemplateNameExists,
+  workoutTemplateToPlannedWorkoutDraft,
+  writeWorkoutTemplates,
+} from "./services/workoutTemplate";
 import {
   completeDailyAction as createCompletedDailyAction,
   createDailyAction as createDailyActionRecord,
@@ -370,12 +380,15 @@ function App({
   const [injectionSiteData, setInjectionSiteData] = useState(() => emptyInjectionSiteCollection());
   const [injectionSiteSettings, setInjectionSiteSettings] = useState(() => defaultInjectionSiteSettings());
   const [plannedWorkouts, setPlannedWorkouts] = useState([]);
+  const [workoutTemplates, setWorkoutTemplates] = useState([]);
+  const [plannedWorkoutDraftRequest, setPlannedWorkoutDraftRequest] = useState(null);
   const [dailyActions, setDailyActions] = useState([]);
   const [workoutEntries, setWorkoutEntries] = useState([]);
   const [activeWorkoutDraft, setActiveWorkoutDraft] = useState(() =>
     readWorkoutDraft(localStorage)
   );
   const [workoutEntryTargetId, setWorkoutEntryTargetId] = useState(null);
+  const [workoutPageGeneration, setWorkoutPageGeneration] = useState(0);
   const [workoutOriginPage, setWorkoutOriginPage] = useState(null);
   const [workoutOriginCalendar, setWorkoutOriginCalendar] = useState(null);
   const [calendarSelectedDate, setCalendarSelectedDate] = useState(() => localCalendarDateKey());
@@ -683,6 +696,16 @@ function App({
     } catch (error) {
       setStorageError(
         "Trace couldn't read the saved planned workouts. The stored value was left unchanged."
+      );
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      setWorkoutTemplates(readWorkoutTemplates(localStorage));
+    } catch (error) {
+      setStorageError(
+        "Trace couldn't read the saved workout templates. The stored value was left unchanged."
       );
     }
   }, []);
@@ -1185,6 +1208,7 @@ function App({
         ? []
         : readJournalEntries(localStorage);
       const restoredPlannedWorkouts = readPlannedWorkouts(localStorage);
+      const restoredWorkoutTemplates = readWorkoutTemplates(localStorage);
       const restoredDailyActions = readDailyActions(localStorage);
       const restoredProtocols = readProtocols(localStorage);
       const restoredProtocolOccurrences = readProtocolOccurrences(localStorage);
@@ -1214,6 +1238,7 @@ function App({
       setMedicationDoseSchedules(restoredMedicationDoseSchedules);
       setMedicationDoseOccurrences(restoredMedicationDoseOccurrences);
       setPlannedWorkouts(restoredPlannedWorkouts);
+      setWorkoutTemplates(restoredWorkoutTemplates);
       setDailyActions(restoredDailyActions);
       setProtocols(restoredProtocols);
       setProtocolOccurrences(restoredProtocolOccurrences);
@@ -1747,6 +1772,118 @@ function App({
     } catch (error) {
       setStorageError(storageMessage("delete this planned workout"));
       return false;
+    }
+  }
+
+  function saveWorkoutTemplate(draft) {
+    if (workoutTemplateNameExists(workoutTemplates, draft?.name)) {
+      return {
+        status: "duplicate",
+        message: "A workout template with that name already exists. Choose a different name.",
+      };
+    }
+    const template = createWorkoutTemplateRecord(draft);
+    if (!template) {
+      return { status: "invalid", message: getWorkoutTemplateError(draft) };
+    }
+    try {
+      const saved = writeWorkoutTemplates(localStorage, [...workoutTemplates, template]);
+      setWorkoutTemplates(saved);
+      setStorageError("");
+      return { status: "saved", workoutTemplate: template };
+    } catch (error) {
+      setStorageError(storageMessage("save this workout template"));
+      return { status: "error", message: "The workout template could not be saved." };
+    }
+  }
+
+  function updateWorkoutTemplate(id, draft) {
+    const existing = workoutTemplates.find((template) => template.id === id);
+    if (!existing) return { status: "error", message: "The workout template could not be found." };
+    if (workoutTemplateNameExists(workoutTemplates, draft?.name, id)) {
+      return {
+        status: "duplicate",
+        message: "A workout template with that name already exists. Choose a different name.",
+      };
+    }
+    const template = updateWorkoutTemplateRecord(existing, draft);
+    if (!template) {
+      return { status: "invalid", message: getWorkoutTemplateError(draft) };
+    }
+    try {
+      const saved = writeWorkoutTemplates(
+        localStorage,
+        workoutTemplates.map((item) => item.id === id ? template : item)
+      );
+      setWorkoutTemplates(saved);
+      setStorageError("");
+      return { status: "saved", workoutTemplate: template };
+    } catch (error) {
+      setStorageError(storageMessage("update this workout template"));
+      return { status: "error", message: "The workout template could not be updated." };
+    }
+  }
+
+  function deleteWorkoutTemplate(id) {
+    if (!workoutTemplates.some((template) => template.id === id)) return false;
+    try {
+      const saved = writeWorkoutTemplates(
+        localStorage,
+        workoutTemplates.filter((template) => template.id !== id)
+      );
+      setWorkoutTemplates(saved);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this workout template"));
+      return false;
+    }
+  }
+
+  function scheduleWorkoutTemplate(id) {
+    const template = workoutTemplates.find((item) => item.id === id);
+    const draft = workoutTemplateToPlannedWorkoutDraft(
+      template,
+      localCalendarDateKey()
+    );
+    if (!draft) return false;
+    setPlannedWorkoutDraftRequest({ templateId: id, draft });
+    setCalendarOverlayOpen(false);
+    setPage("today");
+    return true;
+  }
+
+  function startWorkoutTemplate(id, conflictAction = null) {
+    const template = workoutTemplates.find((item) => item.id === id);
+    if (!template) return { status: "error", message: "The workout template could not be found." };
+    const existingDraft = readWorkoutDraft(localStorage);
+    if (existingDraft && conflictAction === null) {
+      return {
+        status: "draft-conflict",
+        existingDraftTitle: existingDraft.form.title || "Untitled workout",
+      };
+    }
+    if (existingDraft && conflictAction === "resume") {
+      setActiveWorkoutDraft(existingDraft);
+      return { status: "resumed-existing" };
+    }
+    if (existingDraft && conflictAction !== "discard") return { status: "cancelled" };
+
+    const workoutDraft = createWorkoutDraftFromTemplate(template, new Date());
+    if (!workoutDraft) return { status: "error", message: "The workout template could not be started." };
+    try {
+      writeWorkoutDraft(localStorage, workoutDraft);
+      setActiveWorkoutDraft(workoutDraft);
+      setWorkoutEntryTargetId(null);
+      setWorkoutOriginPage(null);
+      setWorkoutOriginCalendar(null);
+      setWorkoutPageGeneration((current) => current + 1);
+      setStorageError("");
+      setPage("workouts");
+      return { status: "started", workoutTemplate: template };
+    } catch (error) {
+      setStorageError(storageMessage("start this workout template"));
+      return { status: "error", message: "The workout template could not be started." };
     }
   }
 
@@ -3060,6 +3197,8 @@ function App({
           calendarOverlayOpen={page === "calendar" ? calendarOverlayOpen : null}
           onCalendarOverlayOpenChange={setCalendarOverlayOpen}
           plannedWorkouts={plannedWorkouts}
+          plannedWorkoutDraftRequest={plannedWorkoutDraftRequest}
+          onPlannedWorkoutDraftRequestConsumed={() => setPlannedWorkoutDraftRequest(null)}
           protocols={protocols}
           protocolOccurrences={protocolOccurrences}
           protocolCompoundOutcomes={protocolCompoundOutcomes}
@@ -3151,6 +3290,7 @@ function App({
         />
       ) : page === "workouts" ? (
         <WorkoutPage
+          key={`workouts:${workoutPageGeneration}`}
           onBack={() => setPage("home")}
           navigationOriginPage={workoutOriginPage}
           navigationOriginCalendar={workoutOriginCalendar}
@@ -3172,6 +3312,7 @@ function App({
             setPage("calendar");
           }}
           workoutEntries={workoutEntries}
+          workoutTemplates={workoutTemplates}
           onWorkoutDraftChange={setActiveWorkoutDraft}
           trophyEntries={trophyCaseEntries}
           savedExercises={savedExercises}
@@ -3181,6 +3322,11 @@ function App({
           updateSavedExercise={updateSavedExercise}
           updateWorkoutEntry={updateWorkoutEntry}
           deleteWorkoutEntry={deleteWorkoutEntry}
+          saveWorkoutTemplate={saveWorkoutTemplate}
+          updateWorkoutTemplate={updateWorkoutTemplate}
+          deleteWorkoutTemplate={deleteWorkoutTemplate}
+          startWorkoutTemplate={startWorkoutTemplate}
+          scheduleWorkoutTemplate={scheduleWorkoutTemplate}
           addTrophyCaseEntry={addTrophyCaseEntry}
           removeTrophyCaseEntry={removeTrophyCaseEntry}
           buttonStyle={buttonStyle}

@@ -263,6 +263,71 @@ function openCreateAndFillBasics({ title = "Push Day", exerciseName = "Bench Pre
   fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: exerciseName } });
 }
 
+test("opens the existing planned-workout editor with a template snapshot prefilled", () => {
+  const request = {
+    templateId: "workout-template:armegddon",
+    draft: {
+      scheduledDate: "2026-08-22",
+      title: "ARMegddon",
+      notes: "Template guidance",
+      exercises: [{
+        id: "planned-exercise:curl",
+        name: "Cable Curl",
+        notes: "Strict",
+        targetSets: [{
+          id: "planned-set:curl-1",
+          setType: "working",
+          reps: 10,
+          load: { mode: "external", amount: 40, unit: "lb" },
+          notes: "Target only",
+        }],
+      }],
+    },
+  };
+  const consumed = jest.fn();
+  const { createPlannedWorkout } = renderPage({
+    plannedWorkoutDraftRequest: request,
+    onPlannedWorkoutDraftRequestConsumed: consumed,
+  }, { expanded: false });
+
+  expect(screen.getByRole("form", { name: "Create planned workout" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Planned workout title")).toHaveValue("ARMegddon");
+  expect(screen.getByLabelText("Planned workout title")).toHaveFocus();
+  expect(screen.getByLabelText("Scheduled date")).toHaveValue("2026-08-22");
+  expect(screen.getByLabelText("Exercise 1 name")).toHaveValue("Cable Curl");
+  expect(screen.getByLabelText("Exercise 1 target set 1 intended reps")).toHaveValue(10);
+  expect(screen.getByLabelText("Exercise 1 target set 1 intended weight")).toHaveValue(40);
+  expect(consumed).toHaveBeenCalledWith("workout-template:armegddon");
+
+  fireEvent.change(screen.getByLabelText("Scheduled date"), { target: { value: "2026-08-25" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 target set 1 intended reps"), { target: { value: "12" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save planned workout" }));
+  expect(createPlannedWorkout).toHaveBeenCalledWith(expect.objectContaining({
+    scheduledDate: "2026-08-25",
+    title: "ARMegddon",
+    exercises: [expect.objectContaining({
+      name: "Cable Curl",
+      targetSets: [expect.objectContaining({ reps: "12" })],
+    })],
+  }));
+});
+
+test("canceling a template-prefilled planned workout creates nothing", () => {
+  const request = {
+    templateId: "workout-template:cancel",
+    draft: {
+      scheduledDate: "2026-08-22",
+      title: "Cancel me",
+      notes: "",
+      exercises: [{ id: "planned-exercise:one", name: "Curl", notes: "", targetSets: [] }],
+    },
+  };
+  const { createPlannedWorkout } = renderPage({ plannedWorkoutDraftRequest: request }, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(createPlannedWorkout).not.toHaveBeenCalled();
+  expect(screen.queryByRole("form", { name: "Create planned workout" })).not.toBeInTheDocument();
+});
+
 test("shows only planned workouts matching the current device-local date", () => {
   renderPage({
     plannedWorkouts: [

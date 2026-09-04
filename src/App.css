@@ -41,6 +41,148 @@
   100% { opacity: 0; }
 }
 
+.trace-workout-templates {
+  margin-top: 28px;
+  max-width: 760px;
+  text-align: left;
+  width: 100%;
+}
+
+.trace-workout-templates__heading,
+.trace-template-editor__set-heading {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: space-between;
+}
+
+.trace-workout-templates__heading h2,
+.trace-workout-template-card h3 {
+  margin: 0;
+}
+
+.trace-workout-templates__heading p,
+.trace-workout-template-card p {
+  margin: 5px 0 0;
+}
+
+.trace-workout-templates__list {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.trace-workout-template-card {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding: 16px;
+}
+
+.trace-workout-template-card__summary {
+  color: var(--trace-text-muted, #aeb8c8);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trace-workout-template-card__actions,
+.trace-template-editor__actions,
+.trace-template-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.trace-template-dialog-backdrop {
+  align-items: center;
+  background: rgba(4, 8, 15, 0.78);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  position: fixed;
+  z-index: 1200;
+}
+
+.trace-template-dialog {
+  box-sizing: border-box;
+  max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  max-width: 820px;
+  overflow: auto;
+  padding: clamp(16px, 3vw, 26px);
+  width: 100%;
+}
+
+.trace-template-dialog h2,
+.trace-template-editor__exercises > h3 {
+  margin-top: 0;
+}
+
+.trace-template-dialog__intro,
+.trace-workout-template-card__summary {
+  color: var(--trace-text-muted, #aeb8c8);
+}
+
+.trace-template-dialog__notes,
+.trace-template-editor__exercises {
+  display: block;
+  margin-top: 14px;
+}
+
+.trace-template-editor__exercise,
+.trace-template-editor__set {
+  box-sizing: border-box;
+  margin: 12px 0;
+  min-width: 0;
+  padding: 14px;
+}
+
+.trace-template-editor__exercise-fields,
+.trace-template-editor__set-fields {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 10px;
+}
+
+.trace-template-editor__sets {
+  margin-top: 14px;
+}
+
+.trace-template-dialog__error {
+  color: #fca5a5;
+}
+
+.trace-template-dialog__actions {
+  margin-top: 18px;
+}
+
+@media (max-width: 600px) {
+  .trace-workout-template-card__actions > button,
+  .trace-template-dialog__actions > button {
+    flex: 1 1 140px;
+  }
+
+  .trace-template-editor__exercise-fields,
+  .trace-template-editor__set-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trace-workout-template-card__summary {
+    white-space: normal;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trace-template-dialog,
+  .trace-workout-template-card {
+    scroll-behavior: auto;
+  }
+}
+
 .trace-save-confirmation {
   background: var(--trace-toast-bg) !important;
   border: 1px solid var(--trace-toast-border);

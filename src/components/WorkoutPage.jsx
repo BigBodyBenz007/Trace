@@ -3,6 +3,10 @@ import ExerciseSearch from "./ExerciseSearch";
 import SavedExerciseEditor from "./SavedExerciseEditor";
 import ExerciseHistory from "./ExerciseHistory";
 import WorkoutPhotos from "./WorkoutPhotos";
+import WorkoutTemplateSection, {
+  WorkoutTemplateEditorDialog,
+} from "./WorkoutTemplateSection";
+import { WorkoutDraftConflictDialog } from "./TodayPage";
 import { motionScrollBehavior } from "../services/motionPreference";
 import {
   PHOTO_SELECTION_ACCEPT,
@@ -36,6 +40,10 @@ import {
   writeWorkoutDraft,
   WORKOUT_DRAFT_SCHEMA_VERSION,
 } from "../services/workoutDraft";
+import {
+  workoutTemplateDraftForEditing,
+  workoutTemplateDraftFromWorkoutEntry,
+} from "../services/workoutTemplate";
 
 function currentLocalDateTime() {
   const now = new Date();
@@ -362,6 +370,7 @@ function WorkoutPage({
   onReturnToToday = onBack,
   onReturnToCalendar = onBack,
   workoutEntries,
+  workoutTemplates = [],
   onWorkoutDraftChange = () => {},
   trophyEntries = [],
   savedExercises = [],
@@ -374,6 +383,11 @@ function WorkoutPage({
   }),
   updateWorkoutEntry,
   deleteWorkoutEntry,
+  saveWorkoutTemplate = () => ({ status: "error" }),
+  updateWorkoutTemplate = () => ({ status: "error" }),
+  deleteWorkoutTemplate = () => false,
+  startWorkoutTemplate = () => ({ status: "error" }),
+  scheduleWorkoutTemplate = () => false,
   addTrophyCaseEntry = () => false,
   buttonStyle,
   inputStyle,
@@ -419,6 +433,15 @@ function WorkoutPage({
   const [roadmapEditingExerciseId, setRoadmapEditingExerciseId] = useState(
     restoredDraftRef.current?.context?.roadmapEditingExerciseId || null
   );
+  const [templatesExpanded, setTemplatesExpanded] = useState(false);
+  const [templateEditor, setTemplateEditor] = useState(null);
+  const [templateDraft, setTemplateDraft] = useState(null);
+  const [templateError, setTemplateError] = useState("");
+  const [templateConflict, setTemplateConflict] = useState(null);
+  const templateInitialDraftRef = useRef(null);
+  const templateToggleButtonRef = useRef(null);
+  const templateEditorReturnFocusRef = useRef(null);
+  const templateEditorWasOpenRef = useRef(false);
 
   function selectWorkoutPhotos(event) {
     const input = event.currentTarget;
@@ -580,6 +603,18 @@ function WorkoutPage({
     resultsRef.current?.focus({ preventScroll: true });
     resultsRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "nearest" });
   }, [completionReview]);
+
+  useLayoutEffect(() => {
+    if (templateEditor) {
+      templateEditorWasOpenRef.current = true;
+      return;
+    }
+    if (!templateEditorWasOpenRef.current) return;
+    templateEditorWasOpenRef.current = false;
+    const target = templateEditorReturnFocusRef.current;
+    templateEditorReturnFocusRef.current = null;
+    target?.focus({ preventScroll: true });
+  }, [templateEditor]);
 
   useLayoutEffect(() => {
     if (!focusDropId) return;
@@ -1473,6 +1508,101 @@ function WorkoutPage({
     });
   }
 
+  function openTemplateFromWorkout(entry, trigger = null) {
+    const nextDraft = workoutTemplateDraftFromWorkoutEntry(entry);
+    if (!nextDraft) {
+      showToast("This completed workout could not be copied into a template.");
+      return;
+    }
+    templateInitialDraftRef.current = JSON.stringify(nextDraft);
+    templateEditorReturnFocusRef.current = trigger || document.activeElement;
+    setTemplateDraft(nextDraft);
+    setTemplateEditor({ mode: "create", sourceWorkoutId: entry.id });
+    setTemplateError("");
+  }
+
+  function openTemplateEditor(template, trigger = null) {
+    const nextDraft = workoutTemplateDraftForEditing(template);
+    if (!nextDraft) {
+      showToast("This workout template could not be opened.");
+      return;
+    }
+    templateInitialDraftRef.current = JSON.stringify(nextDraft);
+    templateEditorReturnFocusRef.current = trigger || document.activeElement;
+    setTemplateDraft(nextDraft);
+    setTemplateEditor({ mode: "edit", templateId: template.id });
+    setTemplateError("");
+  }
+
+  function closeTemplateEditor() {
+    setTemplateEditor(null);
+    setTemplateDraft(null);
+    setTemplateError("");
+    templateInitialDraftRef.current = null;
+  }
+
+  function cancelTemplateEditor() {
+    const changed = templateDraft
+      && JSON.stringify(templateDraft) !== templateInitialDraftRef.current;
+    if (changed && !window.confirm("Cancel this workout template? Your unsaved changes will be lost.")) {
+      return;
+    }
+    closeTemplateEditor();
+  }
+
+  function submitTemplate(event) {
+    event.preventDefault();
+    const result = templateEditor?.mode === "edit"
+      ? updateWorkoutTemplate(templateEditor.templateId, templateDraft)
+      : saveWorkoutTemplate(templateDraft);
+    if (result?.status !== "saved") {
+      setTemplateError(result?.message || "The workout template could not be saved.");
+      return;
+    }
+    setTemplatesExpanded(true);
+    closeTemplateEditor();
+    showToast(templateEditor.mode === "edit" ? "Workout template updated." : "Workout template saved.");
+  }
+
+  function removeTemplate(template) {
+    if (!window.confirm(`Delete the workout template “${template.name}”? Workouts and planned workouts already created from it will remain.`)) {
+      return;
+    }
+    if (!deleteWorkoutTemplate(template.id)) {
+      showToast("The workout template could not be deleted.");
+      return;
+    }
+    showToast("Workout template deleted.");
+    window.requestAnimationFrame(() => templateToggleButtonRef.current?.focus());
+  }
+
+  function startTemplate(template, conflictAction = null) {
+    const result = startWorkoutTemplate(template.id, conflictAction);
+    if (result?.status === "draft-conflict") {
+      setTemplateConflict({
+        template,
+        existingDraftTitle: result.existingDraftTitle,
+      });
+      return;
+    }
+    if (result?.status === "error") {
+      showToast(result.message || "The workout template could not be started.");
+      return;
+    }
+    setTemplateConflict(null);
+    if (result?.status === "resumed-existing") {
+      pendingFormFocusRef.current = true;
+      formHeadingRef.current?.focus({ preventScroll: true });
+      formRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "start" });
+    }
+  }
+
+  function scheduleTemplate(template) {
+    if (!scheduleWorkoutTemplate(template.id)) {
+      showToast("The workout template could not be opened in Planned Workouts.");
+    }
+  }
+
   function completeRoadmapExercise(exerciseId) {
     updateExercise(exerciseId, (exercise) => ({
       ...exercise,
@@ -2230,6 +2360,18 @@ function WorkoutPage({
       </form>
       )}
 
+      <WorkoutTemplateSection
+        expanded={templatesExpanded}
+        onToggle={() => setTemplatesExpanded((current) => !current)}
+        templates={workoutTemplates}
+        onStart={startTemplate}
+        onSchedule={scheduleTemplate}
+        onEdit={openTemplateEditor}
+        onDelete={removeTemplate}
+        buttonStyle={buttonStyle}
+        toggleButtonRef={templateToggleButtonRef}
+      />
+
       <section className="trace-feature-section trace-feature-history trace-workout-history" style={{ marginTop: "36px", maxWidth: "760px", textAlign: "left", width: "100%" }}>
         <h2>Workout History</h2>
         {sortedEntries.length === 0 ? (
@@ -2299,6 +2441,7 @@ function WorkoutPage({
                   </div>
                 ))}
                 <div className="trace-workout-history-card__actions" style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "16px" }}>
+                  <button className="trace-action trace-action--primary" type="button" onClick={(event) => openTemplateFromWorkout(entry, event.currentTarget)} style={smallButtonStyle}>Save as Template</button>
                   <button className="trace-action trace-action--secondary" type="button" onClick={() => editWorkout(entry)} style={smallButtonStyle}>Edit</button>
                   <button className="trace-action trace-action--danger" type="button" onClick={() => removeWorkout(entry.id)} style={{ ...smallButtonStyle, backgroundColor: "#b91c1c" }}>Delete</button>
                   {isTrophyOriginTarget && (
@@ -2336,6 +2479,29 @@ function WorkoutPage({
         ref={workoutDeleteScrollCompensationRef}
         style={{ height: 0, pointerEvents: "none", width: "100%" }}
       />
+      {templateEditor && templateDraft && (
+        <WorkoutTemplateEditorDialog
+          draft={templateDraft}
+          error={templateError}
+          mode={templateEditor.mode}
+          onChange={(nextDraft) => { setTemplateDraft(nextDraft); setTemplateError(""); }}
+          onCancel={cancelTemplateEditor}
+          onSave={submitTemplate}
+          buttonStyle={buttonStyle}
+          inputStyle={inputStyle}
+        />
+      )}
+      {templateConflict && (
+        <WorkoutDraftConflictDialog
+          existingDraftTitle={templateConflict.existingDraftTitle}
+          onResume={() => startTemplate(templateConflict.template, "resume")}
+          onDiscard={() => startTemplate(templateConflict.template, "discard")}
+          onCancel={() => setTemplateConflict(null)}
+          discardLabel="Discard and start template"
+          description={<>Resume {templateConflict.existingDraftTitle}, discard it and start {templateConflict.template.name}, or cancel.</>}
+          buttonStyle={smallButtonStyle}
+        />
+      )}
     </div>
   );
 }

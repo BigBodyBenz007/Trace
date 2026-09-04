@@ -1,5 +1,6 @@
 import { normalizePlannedWorkouts } from "./plannedWorkout";
 import { normalizeWorkoutDraft } from "./workoutDraft";
+import { normalizeWorkoutTemplates } from "./workoutTemplate";
 import { normalizeJournalDraft } from "./journalEntry";
 import { normalizeWaterCollection } from "./waterTracker";
 import { normalizeDailyActionCollection } from "./dailyAction";
@@ -359,6 +360,7 @@ export function validateTraceStructuredDomains(data) {
   if (data.injectionSiteEntries != null) assert(normalizeInjectionSiteCollection(data.injectionSiteEntries, data.protocols || []), "The backup contains invalid injection site data.");
   if (data.injectionSiteSettings != null) assert(normalizeInjectionSiteSettings(data.injectionSiteSettings), "The backup contains invalid injection site settings.");
   if (data.plannedWorkouts != null) assert(normalizePlannedWorkouts(data.plannedWorkouts), "The backup contains invalid planned workout data.");
+  if (data.workoutTemplates != null) assert(normalizeWorkoutTemplates(data.workoutTemplates), "The backup contains invalid workout template data.");
   if (data.dailyActions != null) assert(normalizeDailyActionCollection(data.dailyActions), "The backup contains invalid daily action data.");
   if (data.workoutDraft != null) assert(normalizeWorkoutDraft(data.workoutDraft), "The backup contains invalid active workout draft data.");
   if (data.workoutEntries != null) recordArray(data.workoutEntries, "workout", validateWorkout);

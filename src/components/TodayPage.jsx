@@ -435,12 +435,14 @@ function SkipReasonDialog({
   );
 }
 
-function WorkoutDraftConflictDialog({
+export function WorkoutDraftConflictDialog({
   existingDraftTitle,
   onResume,
   onDiscard,
   onCancel,
   buttonStyle,
+  discardLabel = "Discard and start plan",
+  description = null,
 }) {
   const dialogRef = useRef(null);
   const resumeButtonRef = useRef(null);
@@ -492,10 +494,10 @@ function WorkoutDraftConflictDialog({
         aria-label="Workout already in progress"
       >
         <h2>Workout already in progress</h2>
-        <p>Resume {existingDraftTitle}, discard it and start this plan, or cancel.</p>
+        <p>{description || <>Resume {existingDraftTitle}, discard it and start this plan, or cancel.</>}</p>
         <div className="trace-skip-reason__actions">
           <button ref={resumeButtonRef} className="trace-action trace-action--primary" type="button" onClick={onResume} style={buttonStyle}>Resume current workout</button>
-          <button className="trace-action trace-action--danger" type="button" onClick={onDiscard} style={buttonStyle}>Discard and start plan</button>
+          <button className="trace-action trace-action--danger" type="button" onClick={onDiscard} style={buttonStyle}>{discardLabel}</button>
           <button className="trace-action trace-action--secondary" type="button" onClick={onCancel} style={buttonStyle}>Cancel</button>
         </div>
       </section>
@@ -508,6 +510,8 @@ function TodayPage({
   onOpenCalendar = null,
   onOpenToday = null,
   plannedWorkouts = [],
+  plannedWorkoutDraftRequest = null,
+  onPlannedWorkoutDraftRequestConsumed = () => {},
   protocols = [],
   protocolOccurrences = [],
   protocolCompoundOutcomes = [],
@@ -731,6 +735,8 @@ function TodayPage({
   const [internalCalendarOverlayOpen, setInternalCalendarOverlayOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 600);
   const initialDraftRef = useRef(null);
+  const plannedRequestConsumedRef = useRef(onPlannedWorkoutDraftRequestConsumed);
+  plannedRequestConsumedRef.current = onPlannedWorkoutDraftRequestConsumed;
   const initialActionDraftRef = useRef(null);
   const startButtonRefs = useRef(new Map());
   const doseCompleteButtonRefs = useRef(new Map());
@@ -756,6 +762,20 @@ function TodayPage({
   const focusedItem = focusedScheduleItem
     ? scheduleItems.find(({ type, id }) => type === focusedScheduleItem.type && id === focusedScheduleItem.id) || null
     : null;
+
+  useEffect(() => {
+    if (!plannedWorkoutDraftRequest?.draft) return;
+    const nextDraft = copyPlanForEditing(plannedWorkoutDraftRequest.draft);
+    initialDraftRef.current = JSON.stringify(nextDraft);
+    setDraft(nextDraft);
+    setEditingId(null);
+    setActiveSearchExerciseId(null);
+    setFormError("");
+    setDraftConflict(null);
+    setPreviewPlanId(null);
+    setFocusedScheduleItem(null);
+    plannedRequestConsumedRef.current(plannedWorkoutDraftRequest.templateId);
+  }, [plannedWorkoutDraftRequest]);
 
   useEffect(() => {
     const updateLayout = () => setIsMobile(window.innerWidth <= 600);
@@ -1960,7 +1980,7 @@ function TodayPage({
           <div className="trace-today-editor__details" data-testid="planned-workout-details" style={{ gridTemplateColumns: isMobile ? "minmax(0, 1fr)" : "repeat(2, minmax(0, 1fr))" }}>
             <label>
               Planned workout title
-              <input value={draft.title} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} maxLength={160} style={fieldStyle} />
+              <input autoFocus value={draft.title} onChange={(event) => setDraft((current) => ({ ...current, title: event.target.value }))} maxLength={160} style={fieldStyle} />
             </label>
             <label>
               Scheduled date

@@ -11,6 +11,7 @@ import { readAppSettings } from "./appSettings";
 import { DEFAULT_HOME_VISIBILITY } from "./homeModules";
 import { createUserFood, lookupUserFoodByBarcode } from "./userFoodCatalog";
 import { createWorkoutDraftFromPlannedWorkout } from "./workoutDraft";
+import { createWorkoutTemplate } from "./workoutTemplate";
 import { emptyWaterCollection } from "./waterTracker";
 import { createDailyAction, emptyDailyActionCollection } from "./dailyAction";
 import {
@@ -300,6 +301,26 @@ function activeWorkoutDraft(overrides = {}) {
   };
 }
 
+function backedUpWorkoutTemplate() {
+  return createWorkoutTemplate({
+    id: "workout-template:armegddon",
+    name: "ARMegddon",
+    notes: "Reusable targets",
+    exercises: [{
+      id: "template-exercise:curl",
+      name: "Cable Curl",
+      notes: "Strict",
+      targetSets: [{
+        id: "template-set:curl-1",
+        setType: "working",
+        reps: 10,
+        load: { mode: "external", amount: 40, unit: "lb" },
+        notes: "",
+      }],
+    }],
+  }, new Date("2026-09-04T12:00:00.000Z"));
+}
+
 function plaintextJournalDraft(overrides = {}) {
   return {
     schemaVersion: 1,
@@ -324,7 +345,7 @@ test("exports empty Trace data with stable version metadata and filename", async
     openDatabase: async () => database,
     now: () => new Date("2026-08-12T10:20:30.000Z"),
   });
-  expect(result).toMatchObject({ format: "trace-backup", schemaVersion: 5, createdAt: "2026-08-12T10:20:30.000Z" });
+  expect(result).toMatchObject({ format: "trace-backup", schemaVersion: TRACE_BACKUP_SCHEMA_VERSION, createdAt: "2026-08-12T10:20:30.000Z" });
   expect(result.data.photos).toEqual([]);
   expect(result.data.structured.workoutDraft).toBeNull();
   expect(result.data.structured.waterEntries).toEqual(emptyWaterCollection());
@@ -892,6 +913,40 @@ test("imports a complete hashless schema-4 backup through the legacy validation 
   expect(validated.backup.integrity).toBeUndefined();
 });
 
+test("imports and restores an integrity-protected schema-5 backup without workout templates", async () => {
+  const current = await createTraceBackup({
+    storage: makeStorage({ plannedWorkouts: JSON.stringify([plannedWorkout()]) }),
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  const structured = cloneJsonForTest(current.data.structured);
+  delete structured.workoutTemplates;
+  const schemaFiveKeys = TRACE_STORAGE_KEYS.filter((key) => key !== "workoutTemplates");
+  const schemaFive = {
+    ...current,
+    schemaVersion: 5,
+    data: { ...current.data, structured },
+    integrity: {
+      ...current.integrity,
+      structured: {
+        digest: await sha256CanonicalJson(structured),
+        domainCount: schemaFiveKeys.length,
+        domains: schemaFiveKeys,
+      },
+    },
+  };
+
+  const validated = await validateTraceBackup(schemaFive);
+  expect(validated.backup.data.structured.workoutTemplates).toBeNull();
+  const storage = makeStorage({ workoutTemplates: JSON.stringify([backedUpWorkoutTemplate()]) });
+  await restoreTraceBackup(schemaFive, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(storage.value("workoutTemplates")).toBeNull();
+  expect(JSON.parse(storage.value("plannedWorkouts"))).toEqual([plannedWorkout()]);
+});
+
 test("schema 4 rejects a backup that omits any classified durable domain", () => {
   const structured = emptyStructured();
   delete structured.journalDraft;
@@ -902,16 +957,16 @@ test("schema 4 rejects a backup that omits any classified durable domain", () =>
 test("validates summaries and rejects corrupt, future, and missing-reference backups", async () => {
   const valid = backup({ data: { structured: emptyStructured({
     memories: [{ id: "memory-1", date: "2026-01-02", images: ["photo-1"] }],
-    nutritionEntries: [{ id: "meal" }], healthMeasurementEntries: [{ id: "health" }], plannedWorkouts: [plannedWorkout()], workoutDraft: activeWorkoutDraft(), workoutEntries: [{ id: "workout" }],
+    nutritionEntries: [{ id: "meal" }], healthMeasurementEntries: [{ id: "health" }], plannedWorkouts: [plannedWorkout()], workoutTemplates: [backedUpWorkoutTemplate()], workoutDraft: activeWorkoutDraft(), workoutEntries: [{ id: "workout" }],
     medicationEntries: [{ id: "dose" }], protocols: [{ id: "protocol" }],
     dailyActions: { schemaVersion: 1, actions: [dailyAction()] },
     protocolOccurrences: { schemaVersion: 1, occurrences: [protocolOccurrence()] },
     injectionSiteEntries: injectionSiteCollection(),
     trophyCaseEntries: [{ id: "trophy" }],
   }), photos: [encodedPhoto()] } });
-  expect(validateTraceBackup(valid).summary).toMatchObject({ memories: 1, photos: 1, nutritionEntries: 1, healthMeasurementEntries: 1, plannedWorkouts: 1, activeWorkoutDraft: true, workouts: 1, medicationEntries: 1, protocols: 1, protocolOccurrences: 1, injectionSiteEntries: 1, dailyActions: 1, trophyCaseEntries: 1 });
+  expect(validateTraceBackup(valid).summary).toMatchObject({ memories: 1, photos: 1, nutritionEntries: 1, healthMeasurementEntries: 1, plannedWorkouts: 1, workoutTemplates: 1, activeWorkoutDraft: true, workouts: 1, medicationEntries: 1, protocols: 1, protocolOccurrences: 1, injectionSiteEntries: 1, dailyActions: 1, trophyCaseEntries: 1 });
   await expect(parseTraceBackupText("not json")).rejects.toThrow("not valid JSON");
-  expect(() => validateTraceBackup({ ...valid, schemaVersion: 6 })).toThrow("newer");
+  expect(() => validateTraceBackup({ ...valid, schemaVersion: TRACE_BACKUP_SCHEMA_VERSION + 1 })).toThrow("newer");
   expect(() => validateTraceBackup({ ...valid, data: { ...valid.data, photos: [] } })).toThrow("missing referenced photo");
 });
 
@@ -972,7 +1027,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
     memories: [{ id: "memory-1", date: "1999-06-12", categories: ["Family"], tags: ["legacy"], images: ["photo-1"] }],
     nutritionEntries: [{ id: "meal-1", sodium: 640 }], healthMeasurementEntries: [{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }], appSettings: { schemaVersion: 5, units: { weight: "kg", height: "cm", circumference: "cm" }, personalDetails: { dateOfBirth: "1990-08-30" } }, workoutEntries: [workoutWithDrops],
     medicationEntries: [{ id: "dose-1" }], medicationCompounds: [{ id: "compound-1" }],
-    protocols: [{ id: "protocol-1" }], plannedWorkouts: [plannedWorkout()], workoutDraft: restoredDraft, trophyCaseEntries: [{ id: "trophy-1" }],
+    protocols: [{ id: "protocol-1" }], plannedWorkouts: [plannedWorkout()], workoutTemplates: [backedUpWorkoutTemplate()], workoutDraft: restoredDraft, trophyCaseEntries: [{ id: "trophy-1" }],
     dailyActions: { schemaVersion: 1, actions: [dailyAction()] },
     protocolOccurrences: { schemaVersion: 1, occurrences: [protocolOccurrence()] },
     injectionSiteEntries: injectionSiteCollection(),
@@ -987,7 +1042,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   });
   const database = makePhotoDatabase([{ id: "old-photo", blob: new Blob(["old"]) }]);
   const summary = await restoreTraceBackup(value, { confirmed: true, storage, openDatabase: async () => database });
-  expect(summary).toMatchObject({ memories: 1, photos: 1, plannedWorkouts: 1, dailyActions: 1, protocolOccurrences: 1, injectionSiteEntries: 1, activeWorkoutDraft: true, workouts: 1 });
+  expect(summary).toMatchObject({ memories: 1, photos: 1, plannedWorkouts: 1, workoutTemplates: 1, dailyActions: 1, protocolOccurrences: 1, injectionSiteEntries: 1, activeWorkoutDraft: true, workouts: 1 });
   expect(JSON.parse(storage.value("memories"))[0]).toMatchObject({ id: "memory-1", date: "1999-06-12", images: ["photo-1"] });
   expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1", sodium: 640 }]);
   expect(JSON.parse(storage.value("nutritionGoals"))).toEqual({ calories: 2000, sodium: 2300 });
@@ -1001,6 +1056,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(JSON.parse(storage.value("injectionSiteEntries"))).toEqual(injectionSiteCollection());
   expect(JSON.parse(storage.value("injectionSiteSettings"))).toEqual({ schemaVersion: 1, bodyStyleId: "masculine-average" });
   expect(JSON.parse(storage.value("plannedWorkouts"))).toEqual([plannedWorkout()]);
+  expect(JSON.parse(storage.value("workoutTemplates"))).toEqual([backedUpWorkoutTemplate()]);
   expect(JSON.parse(storage.value("workoutDraft"))).toEqual(restoredDraft);
   expect(JSON.parse(storage.value("trophyCaseEntries"))).toEqual([{ id: "trophy-1" }]);
   expect(database.records()).toHaveLength(1);
