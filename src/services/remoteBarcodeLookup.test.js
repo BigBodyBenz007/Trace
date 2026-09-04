@@ -195,6 +195,47 @@ test("creating the service performs no startup request or storage read", () => {
   expect(storage.getItem).not.toHaveBeenCalled();
 });
 
+test("the default browser fetch preserves its window binding", async () => {
+  const originalFetch = window.fetch;
+  let fetchContext;
+  const fetchImpl = jest.fn(function browserFetch() {
+    fetchContext = this;
+    return Promise.resolve(gatewayResponse({
+      status: "not-found",
+      identifier: { scheme: "gtin", value: BARCODE },
+      food: null,
+    }));
+  });
+  window.fetch = fetchImpl;
+  try {
+    const service = createRemoteBarcodeLookup({
+      storage: memoryStorage(),
+      localLookup: () => ({ status: "not-found", identifier: null, food: null }),
+      runtime: () => ({ isWeb: true, isOnline: true }),
+    });
+    await expect(service.lookup(BARCODE)).resolves.toMatchObject({ status: "not-found" });
+    expect(fetchImpl).toHaveBeenCalledWith(REMOTE_BARCODE_ENDPOINT, expect.any(Object));
+    expect(fetchContext).toBe(window);
+  } finally {
+    window.fetch = originalFetch;
+  }
+});
+
+test("the default browser fetch fails safely when fetch is missing", async () => {
+  const originalFetch = window.fetch;
+  window.fetch = undefined;
+  try {
+    const service = createRemoteBarcodeLookup({
+      storage: memoryStorage(),
+      localLookup: () => ({ status: "not-found", identifier: null, food: null }),
+      runtime: () => ({ isWeb: true, isOnline: true }),
+    });
+    await expect(service.lookup(BARCODE)).resolves.toMatchObject({ status: "unavailable" });
+  } finally {
+    window.fetch = originalFetch;
+  }
+});
+
 test("endpoint injection remains constrained to a same-origin path", async () => {
   const fetchImpl = jest.fn().mockResolvedValue(gatewayResponse({
     status: "not-found",

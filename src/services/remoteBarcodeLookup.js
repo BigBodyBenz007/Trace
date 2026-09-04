@@ -20,6 +20,13 @@ function defaultRuntime() {
   };
 }
 
+function defaultBrowserFetch(...args) {
+  if (typeof window === "undefined" || typeof window.fetch !== "function") {
+    return Promise.reject(new TypeError("Browser fetch is unavailable."));
+  }
+  return window.fetch(...args);
+}
+
 function safeResult(status, identifier = null, extra = {}) {
   return immutableCopy({ status, identifier, food: null, ...extra });
 }
@@ -37,7 +44,7 @@ async function readBoundedResponse(response, maxBytes) {
 }
 
 export function createRemoteBarcodeLookup({
-  fetchImpl = (...args) => globalThis.fetch(...args),
+  fetchImpl = defaultBrowserFetch,
   clock = Date.now,
   storage = defaultStorage(),
   endpoint = REMOTE_BARCODE_ENDPOINT,

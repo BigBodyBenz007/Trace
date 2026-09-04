@@ -3,7 +3,14 @@ import FoodSearch from "./FoodSearch";
 import GroceryFoodForm from "./GroceryFoodForm";
 import ConfirmationMessage from "./ConfirmationMessage";
 import WaterTrackerSection from "./WaterTrackerSection";
+import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import { motionScrollBehavior } from "../services/motionPreference";
+import { createRemoteBarcodeLookup } from "../services/remoteBarcodeLookup";
+import {
+  TRACE_FEATURES,
+  traceFeatureAccess,
+} from "../services/featureAccess";
+import { webAppLifecycleAdapter } from "../services/appLifecycleAdapter";
 import {
   WATER_UNITS,
   calculateWaterSummary,
@@ -83,6 +90,14 @@ function getEntrySourceDetails(foodReference) {
   if (foodReference?.sourceType === "packaged-food") {
     return [
       "Packaged food",
+      foodReference.brand,
+      foodReference.packageSize,
+    ].filter(Boolean);
+  }
+  if (foodReference?.sourceType === "remote-barcode") {
+    return [
+      "Scanned product",
+      foodReference.providerAttribution || foodReference.label,
       foodReference.brand,
       foodReference.packageSize,
     ].filter(Boolean);
@@ -281,6 +296,11 @@ function NutritionPage({
   buttonStyle,
   inputStyle,
   containerStyle,
+  barcodeLookupService = null,
+  barcodeFeatureAccess = traceFeatureAccess,
+  barcodeCamera,
+  lifecycleAdapter = webAppLifecycleAdapter,
+  reducedMotion = false,
 }) {
   const initialDateTime = getCurrentLocalDateTime();
   const [name, setName] = useState("");
@@ -315,7 +335,10 @@ function NutritionPage({
   const [confirmationMessage, setConfirmationMessage] = useState("");
   const [goalsExpanded, setGoalsExpanded] = useState(false);
   const [visibleEntryCount, setVisibleEntryCount] = useState(FOOD_HISTORY_BATCH_SIZE);
+  const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(false);
   const confirmationTimerRef = useRef(null);
+  const barcodeLookupRef = useRef(barcodeLookupService);
+  const barcodeScanButtonRef = useRef(null);
   const nutritionPageTopRef = useRef(null);
   const todaySectionRef = useRef(null);
   const entryFormRef = useRef(null);
@@ -335,6 +358,7 @@ function NutritionPage({
   const [waterGoalValue, setWaterGoalValue] = useState(
     waterGoalInputValue(nutritionGoals.waterGoalMl, waterUnit)
   );
+  const barcodeAccess = barcodeFeatureAccess.getAccess(TRACE_FEATURES.BARCODE_SCANNER);
 
   useEffect(() => () => clearTimeout(confirmationTimerRef.current), []);
 
@@ -685,6 +709,26 @@ function NutritionPage({
                   .map((source) => ({ ...source })),
               },
             }
+        : food.sourceType === "remote-barcode"
+          ? {
+              sourceType: "remote-barcode",
+              dataType: "branded",
+              brand: food.brand,
+              packageSize: food.packaged.packageSize,
+              servingsPerContainer: food.packaged.servingsPerContainer,
+              provider: { ...food.remote.provider },
+              providerAttribution: food.remote.provenance.attribution,
+              sourceUrl: food.remote.provenance.sourceUrl,
+              revisionDate: food.remote.provenance.revisionDate,
+              retrievedAt: food.remote.provenance.retrievedAt,
+              dataBasis: food.remote.dataBasis,
+              unknownFields: [...food.remote.unknownFields],
+              providerNutritionBasis: {
+                dataBasis: food.remote.dataBasis,
+                serving: { ...food.remote.serving },
+                nutrients: { ...food.remote.nutrients },
+              },
+            }
         : food.sourceType === "grocery-custom" || food.provenance.source === "user-added"
           ? {
               sourceType: "grocery-custom",
@@ -811,6 +855,17 @@ function NutritionPage({
     window.requestAnimationFrame(() => {
       nutritionPageTopRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
     });
+  }
+
+  function openBarcodeScanner() {
+    if (!barcodeAccess.available) return;
+    if (!barcodeLookupRef.current) barcodeLookupRef.current = createRemoteBarcodeLookup();
+    setBarcodeScannerOpen(true);
+  }
+
+  function useBarcodeFood(food) {
+    selectFood(food);
+    return true;
   }
 
   function saveGoals(event) {
@@ -949,11 +1004,26 @@ function NutritionPage({
       </section>
 
       <FoodSearch
+        barcodeAccess={barcodeAccess}
         onSelectFood={selectFood}
+        onScanBarcode={openBarcodeScanner}
+        scanButtonRef={barcodeScanButtonRef}
         inputStyle={inputStyle}
         userFoods={userFoods}
         resetKey={foodSearchResetKey}
       />
+
+      {barcodeScannerOpen && (
+        <BarcodeScannerDialog
+          access={barcodeAccess}
+          barcodeLookup={barcodeLookupRef.current}
+          camera={barcodeCamera}
+          lifecycleAdapter={lifecycleAdapter}
+          onClose={() => setBarcodeScannerOpen(false)}
+          onUseFood={useBarcodeFood}
+          reducedMotion={reducedMotion}
+        />
+      )}
 
       <GroceryFoodForm
         saveUserFood={saveUserFood}
@@ -1036,6 +1106,15 @@ function NutritionPage({
             {foodReference?.sourceType === "packaged-food" && (
               <p style={{ color: "#9ca3af", marginBottom: 0, marginTop: "4px" }}>
                 Packaged food: {foodReference.brand} · {foodReference.packageSize}
+              </p>
+            )}
+            {foodReference?.sourceType === "remote-barcode" && (
+              <p style={{ color: "#9ca3af", marginBottom: 0, marginTop: "4px" }}>
+                Scanned product: {foodReference.brand || "Unknown brand"}
+                {foodReference.providerAttribution ? ` · ${foodReference.providerAttribution}` : ""}
+                {foodReference.sourceUrl && (
+                  <> · <a href={foodReference.sourceUrl} rel="noreferrer noopener" target="_blank">View source</a></>
+                )}
               </p>
             )}
           </div>

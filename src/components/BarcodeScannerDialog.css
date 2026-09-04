@@ -1,0 +1,243 @@
+.trace-barcode-dialog__backdrop {
+  align-items: center;
+  background: rgba(2, 8, 15, 0.86);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 12px;
+  position: fixed;
+  z-index: 10000;
+}
+
+.trace-barcode-dialog,
+.trace-barcode-dialog * {
+  box-sizing: border-box;
+  min-inline-size: 0;
+}
+
+.trace-barcode-dialog {
+  background: #111c28;
+  border: 1px solid rgba(117, 183, 170, 0.42);
+  border-radius: 18px;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+  color: #f4f7f9;
+  max-height: min(92vh, 860px);
+  max-block-size: min(92dvh, 860px);
+  max-inline-size: 680px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: clamp(16px, 4vw, 26px);
+  width: 100%;
+}
+
+.trace-barcode-dialog__header {
+  align-items: start;
+  display: flex;
+  gap: 16px;
+  justify-content: space-between;
+}
+
+.trace-barcode-dialog__header h2 {
+  margin: 6px 0 0;
+}
+
+.trace-barcode-dialog__premium {
+  background: rgba(181, 137, 255, 0.18);
+  border: 1px solid rgba(203, 174, 255, 0.5);
+  border-radius: 999px;
+  color: #decaff;
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  padding: 4px 9px;
+  text-transform: uppercase;
+}
+
+.trace-barcode-dialog button,
+.trace-barcode-dialog input,
+.trace-barcode-dialog select {
+  font: inherit;
+  max-width: 100%;
+}
+
+.trace-barcode-dialog button {
+  background: #167c6c;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 9px;
+  color: white;
+  cursor: pointer;
+  min-height: 44px;
+  padding: 9px 14px;
+}
+
+.trace-barcode-dialog button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.trace-barcode-dialog__close {
+  background: transparent !important;
+  flex: 0 0 44px;
+  font-size: 1.65rem !important;
+  line-height: 1;
+  padding: 0 !important;
+}
+
+.trace-barcode-dialog__camera {
+  background: rgba(4, 13, 22, 0.74);
+  border: 1px solid rgba(118, 144, 160, 0.35);
+  border-radius: 14px;
+  display: grid;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 12px;
+}
+
+.trace-barcode-dialog__camera video {
+  aspect-ratio: 4 / 3;
+  background: #02060a;
+  border-radius: 10px;
+  display: block;
+  object-fit: cover;
+  width: 100%;
+}
+
+.trace-barcode-dialog__camera video[hidden] {
+  display: none;
+}
+
+.trace-barcode-dialog__camera-actions,
+.trace-barcode-dialog__review-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.trace-barcode-dialog__camera label,
+.trace-barcode-dialog__manual label {
+  display: grid;
+  gap: 7px;
+}
+
+.trace-barcode-dialog input,
+.trace-barcode-dialog select {
+  background: #0b1621;
+  border: 1px solid #536578;
+  border-radius: 9px;
+  color: white;
+  min-height: 44px;
+  padding: 10px 12px;
+  width: 100%;
+}
+
+.trace-barcode-dialog__manual {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 18px;
+}
+
+.trace-barcode-dialog__manual button {
+  align-self: end;
+}
+
+.trace-barcode-dialog__status {
+  color: #b9c7d3;
+  min-height: 1.5em;
+  padding-top: 14px;
+}
+
+.trace-barcode-dialog__error {
+  color: #fca5a5;
+  line-height: 1.45;
+}
+
+.trace-barcode-dialog__product {
+  background: rgba(24, 37, 51, 0.95);
+  border: 1px solid rgba(117, 183, 170, 0.35);
+  border-radius: 14px;
+  margin-top: 14px;
+  overflow-wrap: anywhere;
+  padding: 16px;
+}
+
+.trace-barcode-dialog__eyebrow {
+  color: #75b7aa;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.trace-barcode-dialog__product h3 {
+  margin: 7px 0 0;
+}
+
+.trace-barcode-dialog__nutrients {
+  display: grid;
+  gap: 7px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 14px 0;
+}
+
+.trace-barcode-dialog__nutrients div {
+  background: rgba(5, 14, 23, 0.68);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+.trace-barcode-dialog__nutrients dt {
+  color: #9fafbd;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+}
+
+.trace-barcode-dialog__nutrients dd {
+  font-variant-numeric: tabular-nums;
+  margin: 3px 0 0;
+}
+
+.trace-barcode-dialog__unknowns,
+.trace-barcode-dialog__source {
+  color: #b9c7d3;
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.trace-barcode-dialog__source a {
+  color: #8dd8ca;
+}
+
+.trace-barcode-dialog--reduced-motion,
+.trace-barcode-dialog--reduced-motion * {
+  animation: none !important;
+  scroll-behavior: auto !important;
+  transition: none !important;
+}
+
+@media (max-width: 430px) {
+  .trace-barcode-dialog__backdrop {
+    align-items: stretch;
+    padding: 8px;
+  }
+
+  .trace-barcode-dialog {
+    border-radius: 14px;
+    max-height: calc(100vh - 16px);
+    max-block-size: calc(100dvh - 16px);
+    padding: 15px;
+  }
+
+  .trace-barcode-dialog__manual {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trace-barcode-dialog__manual button,
+  .trace-barcode-dialog__camera-actions button,
+  .trace-barcode-dialog__review-actions button {
+    flex: 1 1 150px;
+    width: 100%;
+  }
+}

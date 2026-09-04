@@ -192,3 +192,36 @@ test("shows branded-drink source, package, caffeine, and unknown nutrient detail
     beverage: { packageSize: "16 fl oz can", caffeineMg: 150 },
   }));
 });
+
+test("shows the mobile-safe Premium Preview scanner action without changing search", () => {
+  const onScanBarcode = jest.fn();
+  renderFoodSearch({
+    barcodeAccess: {
+      available: true,
+      label: "Premium Preview",
+      message: "Available during beta.",
+    },
+    onScanBarcode,
+  });
+
+  const action = screen.getByRole("button", { name: "Scan Barcode" });
+  expect(action.closest(".trace-food-search__scanner-action")).toBeInTheDocument();
+  expect(screen.getByText("Premium Preview")).toBeInTheDocument();
+  fireEvent.click(action);
+  expect(onScanBarcode).toHaveBeenCalledTimes(1);
+
+  searchFor("banana");
+  expect(screen.getByRole("button", { name: /^Banana, raw/i })).toBeInTheDocument();
+});
+
+test("honors an unavailable feature-access decision", () => {
+  renderFoodSearch({
+    barcodeAccess: {
+      available: false,
+      label: "Premium",
+      message: "Unavailable.",
+    },
+    onScanBarcode: jest.fn(),
+  });
+  expect(screen.getByRole("button", { name: "Scan Barcode" })).toBeDisabled();
+});

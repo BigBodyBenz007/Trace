@@ -3036,6 +3036,8 @@ function App({
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}
+          lifecycleAdapter={lifecycleAdapter}
+          reducedMotion={reducedMotion}
         />
       ) : page === "health" ? (
         <HealthPage

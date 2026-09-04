@@ -17,6 +17,48 @@
   margin-top: 16px;
 }
 
+.trace-food-search__scanner-action {
+  align-items: center;
+  background: rgba(13, 23, 34, 0.6);
+  border: 1px solid rgba(181, 137, 255, 0.3);
+  border-radius: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  margin-top: 14px;
+  max-width: 100%;
+  padding: 11px;
+}
+
+.trace-food-search__scanner-action button {
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.trace-food-search__scanner-action > div {
+  align-items: center;
+  color: #b9c7d3;
+  display: flex;
+  flex: 1 1 260px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  gap: 7px;
+  line-height: 1.4;
+}
+
+.trace-food-search__premium-badge {
+  background: rgba(181, 137, 255, 0.18);
+  border: 1px solid rgba(203, 174, 255, 0.46);
+  border-radius: 999px;
+  color: #decaff;
+  flex: 0 0 auto;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.055em;
+  padding: 3px 7px;
+  text-transform: uppercase;
+}
+
 .trace-food-search .trace-food-result {
   align-items: start;
   block-size: auto;
@@ -153,5 +195,10 @@
 
   .trace-food-result__nutrients {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .trace-food-search__scanner-action,
+  .trace-food-search__scanner-action button {
+    width: 100%;
   }
 }

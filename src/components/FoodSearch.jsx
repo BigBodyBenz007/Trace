@@ -60,7 +60,15 @@ function foodSourceLabels(food) {
   return ["Trace starter", CONFIDENCE_LABELS[food.provenance.confidence] || food.provenance.confidence];
 }
 
-function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
+function FoodSearch({
+  onSelectFood,
+  inputStyle,
+  userFoods = [],
+  resetKey,
+  barcodeAccess,
+  onScanBarcode,
+  scanButtonRef,
+}) {
   const [query, setQuery] = useState("");
   const results = useMemo(() => searchFoodCatalog(query, userFoods), [query, userFoods]);
   const hasMeaningfulQuery = /[a-z0-9]/i.test(query);
@@ -74,6 +82,24 @@ function FoodSearch({ onSelectFood, inputStyle, userFoods = [], resetKey }) {
         Food search
         <input type="search" placeholder="Search foods by name, brand, or category..." value={query} onChange={(event) => setQuery(event.target.value)} style={{ ...inputStyle, boxSizing: "border-box", fontSize: "18px", marginTop: "8px", maxWidth: "100%", padding: "12px", width: "100%" }} />
       </label>
+      {onScanBarcode && barcodeAccess && (
+        <div className="trace-food-search__scanner-action">
+          <button
+            aria-describedby="trace-barcode-preview-description"
+            className="trace-action trace-action--secondary"
+            disabled={!barcodeAccess.available}
+            onClick={onScanBarcode}
+            ref={scanButtonRef}
+            type="button"
+          >
+            Scan Barcode
+          </button>
+          <div id="trace-barcode-preview-description">
+            <span className="trace-food-search__premium-badge">{barcodeAccess.label}</span>
+            <span>{barcodeAccess.message}</span>
+          </div>
+        </div>
+      )}
       {results.length > 0 && (
         <div aria-label="Food search results" className="trace-food-search__results">
           {results.map((food) => (
