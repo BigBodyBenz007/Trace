@@ -57,7 +57,10 @@ import {
   unlockJournalVaultEnvelope,
   validateJournalVaultEnvelope,
 } from "./journalVaultCrypto";
-import { validateTraceStructuredDomains } from "./traceBackupValidation";
+import {
+  normalizeNutritionEntryPortions,
+  validateTraceStructuredDomains,
+} from "./traceBackupValidation";
 import {
   sha256Bytes,
   sha256CanonicalJson,
@@ -526,10 +529,18 @@ async function verifyBackupIntegrity(value, cryptoProvider) {
 }
 
 function validateAndNormalizeBackup(value) {
-  validateStructuredData(value.data?.structured, value.schemaVersion);
   const normalizedBackup = cloneJson(value);
+  if (Array.isArray(normalizedBackup.data?.structured?.nutritionEntries)) {
+    normalizedBackup.data.structured.nutritionEntries = normalizeNutritionEntryPortions(
+      normalizedBackup.data.structured.nutritionEntries
+    );
+  }
+  validateStructuredData(normalizedBackup.data?.structured, value.schemaVersion);
   TRACE_STORAGE_KEYS.forEach((key) => {
-    if (normalizedBackup.data.structured[key] === undefined) {
+    if (
+      normalizedBackup.data.structured[key] === undefined &&
+      (value.schemaVersion < 5 || storageKeysForSchema(value.schemaVersion).includes(key))
+    ) {
       normalizedBackup.data.structured[key] = null;
     }
   });
@@ -598,9 +609,15 @@ export function validateTraceBackup(value, { cryptoProvider } = {}) {
   }
   if (![1, 2, 3, 4, 5, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
   if (!value.createdAt || Number.isNaN(Date.parse(value.createdAt))) throw new Error("The Trace backup timestamp is invalid.");
-  return value.schemaVersion >= 5
-    ? verifyBackupIntegrity(value, cryptoProvider).then(() => validateAndNormalizeBackup(value))
-    : validateAndNormalizeBackup(value);
+  if (value.schemaVersion < 5) return validateAndNormalizeBackup(value);
+  return verifyBackupIntegrity(value, cryptoProvider).then(async () => {
+    const validated = validateAndNormalizeBackup(value);
+    validated.backup.integrity.structured.digest = await sha256CanonicalJson(
+      validated.backup.data.structured,
+      cryptoProvider
+    );
+    return validated;
+  });
 }
 
 export async function createTraceBackup({
@@ -615,6 +632,9 @@ export async function createTraceBackup({
   const photos = await getAllPhotos(database);
   assertNoPendingBackupTransactions(storage);
   const structured = readStructuredData(storage);
+  if (Array.isArray(structured.nutritionEntries)) {
+    structured.nutritionEntries = normalizeNutritionEntryPortions(structured.nutritionEntries);
+  }
   assertNoPendingBackupTransactions(storage);
   const encodedPhotoResults = await Promise.all(photos.map((photo) => encodePhoto(photo, cryptoProvider)));
   assertNoPendingBackupTransactions(storage);
@@ -695,7 +715,7 @@ export async function restoreTraceBackup(value, {
     backup.data.structured.journalEntries = null;
     backup.data.structured.journalDraft = null;
   }
-  validateStructuredData(backup.data.structured);
+  validateStructuredData(backup.data.structured, backup.schemaVersion);
   const summary = summarizeTraceBackup(backup);
   const database = await openDatabase();
   const previousStructured = Object.fromEntries(TRACE_STORAGE_KEYS.map((key) => [key, storage.getItem(key)]));

@@ -698,6 +698,122 @@ test("backs up and restores custom grocery foods and sugar-aware meal snapshots 
   expect(JSON.parse(restored.value("nutritionEntries"))).toEqual([meal]);
 });
 
+test("backs up and restores the historical zero-portion shape without mutating or losing any domain", async () => {
+  const meal = {
+    id: "meal-legacy-zero",
+    name: "Post-workout shake",
+    calories: 0,
+    protein: 0,
+    carbohydrates: 0,
+    fat: 0,
+    fiber: null,
+    sodium: null,
+    loggedAt: "2026-08-09T13:15:00.000Z",
+    notes: "Retain the complete entry",
+    portion: {
+      amount: 0,
+      unit: "serving",
+      basis: { amount: 1, unit: "scoop", description: "1 scoop" },
+    },
+    nutritionBasis: {
+      calories: 120,
+      protein: 24,
+      carbohydrates: 3,
+      fat: 1,
+    },
+    foodReference: {
+      source: "trace-starter",
+      sourceId: "legacy-protein",
+      confidence: "verified",
+      modified: true,
+    },
+    modificationHistory: [{ at: "2026-08-09T13:16:00.000Z", reason: "quantity" }],
+  };
+  const workout = { id: "workout-preserved", title: "Completed workout" };
+  const template = backedUpWorkoutTemplate();
+  const originalNutritionJson = JSON.stringify([meal]);
+  const source = makeStorage({
+    nutritionEntries: originalNutritionJson,
+    workoutEntries: JSON.stringify([workout]),
+    workoutTemplates: JSON.stringify([template]),
+    memories: JSON.stringify([{ id: "memory-preserved", title: "Unrelated" }]),
+  });
+
+  const created = await createTraceBackup({
+    storage: source,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+
+  expect(created.schemaVersion).toBe(6);
+  expect(created.data.structured.nutritionEntries).toEqual([meal]);
+  expect(created.data.structured.workoutEntries).toEqual([workout]);
+  expect(created.data.structured.workoutTemplates).toEqual([template]);
+  expect(created.data.structured.memories).toEqual([{ id: "memory-preserved", title: "Unrelated" }]);
+  await expect(validateTraceBackup(created)).resolves.toMatchObject({
+    summary: { nutritionEntries: 1, workouts: 1, workoutTemplates: 1, memories: 1 },
+  });
+  expect(source.value("nutritionEntries")).toBe(originalNutritionJson);
+  expect(source.setItem).not.toHaveBeenCalled();
+  expect(source.removeItem).not.toHaveBeenCalled();
+
+  const restored = makeStorage();
+  await restoreTraceBackup(created, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+
+  expect(JSON.parse(restored.value("nutritionEntries"))).toEqual([meal]);
+  expect(JSON.parse(restored.value("nutritionEntries"))).toHaveLength(1);
+  expect(JSON.parse(restored.value("workoutEntries"))).toEqual([workout]);
+  expect(JSON.parse(restored.value("workoutTemplates"))).toEqual([template]);
+  expect(JSON.parse(restored.value("memories"))).toEqual([{ id: "memory-preserved", title: "Unrelated" }]);
+});
+
+test("normalizes a safe numeric-string portion only in the backup snapshot", async () => {
+  const storedMeal = {
+    id: "meal-numeric-string",
+    name: "Half serving",
+    loggedAt: "2026-08-09T13:15:00.000Z",
+    portion: { amount: "0.5", unit: "serving" },
+  };
+  const originalJson = JSON.stringify([storedMeal]);
+  const source = makeStorage({ nutritionEntries: originalJson });
+
+  const created = await createTraceBackup({
+    storage: source,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+
+  expect(created.data.structured.nutritionEntries[0]).toEqual({
+    ...storedMeal,
+    portion: { ...storedMeal.portion, amount: 0.5 },
+  });
+  expect(source.value("nutritionEntries")).toBe(originalJson);
+  expect(source.setItem).not.toHaveBeenCalled();
+  await expect(validateTraceBackup(created)).resolves.toMatchObject({
+    backup: { data: { structured: { nutritionEntries: [{ portion: { amount: 0.5 } }] } } },
+  });
+});
+
+test("backup creation identifies an unrepairable Nutrition portion and leaves storage untouched", async () => {
+  const stored = JSON.stringify([{
+    id: "meal-corrupt-portion",
+    name: "Mystery soup",
+    loggedAt: "2026-08-10T18:30:00.000Z",
+    notes: "do not expose this note",
+    portion: { amount: "about one bowl" },
+  }]);
+  const source = makeStorage({ nutritionEntries: stored });
+
+  await expect(createTraceBackup({
+    storage: source,
+    openDatabase: async () => makePhotoDatabase(),
+  })).rejects.toThrow(/Mystery soup.*date 2026-08-10.*ID meal-corrupt-portion/);
+  expect(source.value("nutritionEntries")).toBe(stored);
+  expect(source.setItem).not.toHaveBeenCalled();
+});
+
 test("round-trips barcode custom-food identity and its original provider snapshot", async () => {
   const providerSourceSnapshot = incompleteProviderFood();
   const food = createUserFood(
@@ -915,11 +1031,19 @@ test("imports a complete hashless schema-4 backup through the legacy validation 
 
 test("imports and restores an integrity-protected schema-5 backup without workout templates", async () => {
   const current = await createTraceBackup({
-    storage: makeStorage({ plannedWorkouts: JSON.stringify([plannedWorkout()]) }),
+    storage: makeStorage({
+      plannedWorkouts: JSON.stringify([plannedWorkout()]),
+      nutritionEntries: JSON.stringify([{
+        id: "schema-5-meal",
+        name: "Legacy half serving",
+        portion: { amount: 0.5, unit: "serving" },
+      }]),
+    }),
     openDatabase: async () => makePhotoDatabase(),
   });
   const structured = cloneJsonForTest(current.data.structured);
   delete structured.workoutTemplates;
+  structured.nutritionEntries[0].portion.amount = "0.5";
   const schemaFiveKeys = TRACE_STORAGE_KEYS.filter((key) => key !== "workoutTemplates");
   const schemaFive = {
     ...current,
@@ -936,15 +1060,18 @@ test("imports and restores an integrity-protected schema-5 backup without workou
   };
 
   const validated = await validateTraceBackup(schemaFive);
-  expect(validated.backup.data.structured.workoutTemplates).toBeNull();
+  expect(validated.backup.data.structured).not.toHaveProperty("workoutTemplates");
+  expect(validated.backup.data.structured.nutritionEntries[0].portion.amount).toBe(0.5);
+  await expect(validateTraceBackup(validated.backup)).resolves.toBeDefined();
   const storage = makeStorage({ workoutTemplates: JSON.stringify([backedUpWorkoutTemplate()]) });
-  await restoreTraceBackup(schemaFive, {
+  await restoreTraceBackup(validated.backup, {
     confirmed: true,
     storage,
     openDatabase: async () => makePhotoDatabase(),
   });
   expect(storage.value("workoutTemplates")).toBeNull();
   expect(JSON.parse(storage.value("plannedWorkouts"))).toEqual([plannedWorkout()]);
+  expect(JSON.parse(storage.value("nutritionEntries"))[0].portion.amount).toBe(0.5);
 });
 
 test("schema 4 rejects a backup that omits any classified durable domain", () => {

@@ -1,4 +1,7 @@
-import { validateTraceStructuredDomains } from "./traceBackupValidation";
+import {
+  normalizeNutritionEntryPortions,
+  validateTraceStructuredDomains,
+} from "./traceBackupValidation";
 
 function providerFood(barcode = "012000001291") {
   return {
@@ -99,6 +102,75 @@ test("accepts legacy, partial, and explicit-zero sugar data in Nutrition backups
       },
     ],
   })).not.toThrow();
+});
+
+test("preserves historical and unknown portion shapes while accepting explicit zero and fractions", () => {
+  const entries = [
+    { id: "entry:pre-portion" },
+    { id: "entry:null-portion", portion: null },
+    { id: "entry:missing-amount", portion: { unit: "serving" } },
+    { id: "entry:null-amount", portion: { amount: null } },
+    { id: "entry:blank-amount", portion: { amount: "" } },
+    { id: "entry:space-amount", portion: { amount: "   " } },
+    { id: "entry:zero", portion: { amount: 0 } },
+    { id: "entry:fraction", portion: { amount: 0.5 } },
+    { id: "entry:whole", portion: { amount: 2 } },
+  ];
+
+  expect(normalizeNutritionEntryPortions(entries)).toBe(entries);
+  expect(() => validateTraceStructuredDomains({ nutritionEntries: entries })).not.toThrow();
+});
+
+test("canonicalizes only unambiguous nonnegative numeric-string portion amounts", () => {
+  const entries = [
+    { id: "entry:string-zero", portion: { amount: "0", unit: "serving" } },
+    { id: "entry:string-fraction", portion: { amount: "0.25", unit: "serving" } },
+    { id: "entry:string-whole", portion: { amount: "2", unit: "serving" } },
+    { id: "entry:string-exponent", portion: { amount: "1e2", unit: "serving" } },
+  ];
+
+  const normalized = normalizeNutritionEntryPortions(entries);
+
+  expect(normalized.map((entry) => entry.portion.amount)).toEqual([0, 0.25, 2, 100]);
+  expect(entries.map((entry) => entry.portion.amount)).toEqual(["0", "0.25", "2", "1e2"]);
+  expect(() => validateTraceStructuredDomains({ nutritionEntries: normalized })).not.toThrow();
+});
+
+test.each([
+  ["negative number", -1],
+  ["negative numeric string", "-1"],
+  ["nonfinite number", Infinity],
+  ["nonfinite numeric string", "1e999"],
+  ["padded numeric string", " 1 "],
+  ["leading-zero numeric string", "01"],
+  ["fraction expression", "1/2"],
+  ["boolean", true],
+])("rejects an unrecognized %s portion amount", (label, amount) => {
+  expect(() => normalizeNutritionEntryPortions([{
+    id: `entry:${label}`,
+    portion: { amount },
+  }])).toThrow("unrecognized portion for a Nutrition entry");
+});
+
+test("identifies an unrepairable Nutrition entry without exposing its private notes", () => {
+  const record = {
+    id: "meal-stable-17",
+    name: "Morning oats",
+    loggedAt: "2026-08-09T13:15:00.000Z",
+    notes: "private note must not appear",
+    portion: { amount: { approximate: 1 } },
+  };
+
+  expect(() => normalizeNutritionEntryPortions([record])).toThrow(
+    /Morning oats.*date 2026-08-09.*ID meal-stable-17/
+  );
+  try {
+    normalizeNutritionEntryPortions([record]);
+  } catch (error) {
+    expect(error.message).toContain("edit and save this entry");
+    expect(error.message).toContain("delete only this entry");
+    expect(error.message).not.toContain(record.notes);
+  }
 });
 
 test.each([

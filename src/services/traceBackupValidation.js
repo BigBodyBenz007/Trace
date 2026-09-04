@@ -22,6 +22,7 @@ import { normalizeRemoteFood } from "./remoteFoodModel";
 
 const NUTRIENT_KEYS = ["calories", "protein", "carbohydrates", "fat", "fiber", "sodium", "totalSugar", "addedSugar"];
 const DATE_FIELDS = ["createdAt", "updatedAt", "occurredAt", "loggedAt", "startedAt", "finishedAt", "endedAt", "achievedAt", "addedToTrophyCaseAt"];
+const NON_NEGATIVE_JSON_NUMBER = /^(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
 
 function object(value) {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -37,6 +38,62 @@ function validTimestamp(value) {
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
+}
+
+function safeEntryDetail(value) {
+  if (typeof value !== "string") return "";
+  return [...value.trim()].map((character) => {
+    const code = character.charCodeAt(0);
+    return code <= 31 || code === 127 ? " " : character;
+  }).join("").slice(0, 80);
+}
+
+function nutritionPortionError(record) {
+  const details = [];
+  const name = safeEntryDetail(record?.name);
+  const id = safeEntryDetail(record?.id);
+  const loggedAt = typeof record?.loggedAt === "string" && !Number.isNaN(Date.parse(record.loggedAt))
+    ? record.loggedAt.slice(0, 10)
+    : "";
+  if (name) details.push(JSON.stringify(name));
+  if (loggedAt) details.push(`date ${loggedAt}`);
+  if (id) details.push(`ID ${id}`);
+  const identity = details.length ? ` (${details.join(", ")})` : "";
+  return new Error(
+    `The backup contains an unrecognized portion for a Nutrition entry${identity}. ` +
+    "Open Nutrition, edit and save this entry, then try the backup again. If it cannot be corrected, delete only this entry."
+  );
+}
+
+function normalizedPortionAmount(record) {
+  const portion = record?.portion;
+  if (portion === undefined || portion === null) return { changed: false };
+  if (!object(portion)) throw nutritionPortionError(record);
+  const amount = portion.amount;
+  if (amount === undefined || amount === null) return { changed: false };
+  if (typeof amount === "string" && amount.trim() === "") return { changed: false };
+  if (typeof amount === "number") {
+    if (Number.isFinite(amount) && amount >= 0) return { changed: false };
+    throw nutritionPortionError(record);
+  }
+  if (typeof amount === "string" && NON_NEGATIVE_JSON_NUMBER.test(amount)) {
+    const number = Number(amount);
+    if (Number.isFinite(number)) return { changed: true, amount: number };
+  }
+  throw nutritionPortionError(record);
+}
+
+export function normalizeNutritionEntryPortions(entries) {
+  if (!Array.isArray(entries)) return entries;
+  let changed = false;
+  const normalized = entries.map((record) => {
+    if (!object(record)) return record;
+    const result = normalizedPortionAmount(record);
+    if (!result.changed) return record;
+    changed = true;
+    return { ...record, portion: { ...record.portion, amount: result.amount } };
+  });
+  return changed ? normalized : entries;
 }
 
 function optionalText(record, fields, domain) {
@@ -145,7 +202,10 @@ function validateNutritionShape(record, domain) {
   validateSugarValues(record, domain);
   optionalText(record, ["name", "notes"], domain);
   if (record.loggedAt !== undefined) assert(validTimestamp(record.loggedAt), `The backup contains an invalid ${domain} timestamp.`);
-  ["foodReference", "portion", "nutritionBasis", "nutritionCompleteness"].forEach((field) => optionalObject(record[field], `${domain} ${field}`));
+  ["foodReference", "nutritionBasis", "nutritionCompleteness"].forEach((field) => optionalObject(record[field], `${domain} ${field}`));
+  if (record.portion !== undefined && record.portion !== null && !object(record.portion)) {
+    throw nutritionPortionError(record);
+  }
   optionalProductIdentifiers(record.foodReference?.identifiers, `${domain} food reference`);
   if (record.foodReference?.providerSourceSnapshot !== undefined) {
     validateProviderSourceSnapshot(
@@ -158,9 +218,7 @@ function validateNutritionShape(record, domain) {
     validateNumbers(record.nutritionBasis, NUTRIENT_KEYS, `${domain} nutrition basis`);
     validateSugarValues(record.nutritionBasis, `${domain} nutrition basis`);
   }
-  if (record.portion?.amount !== undefined) {
-    assert(Number.isFinite(record.portion.amount) && record.portion.amount > 0, `The backup contains an invalid ${domain} portion.`);
-  }
+  normalizedPortionAmount(record);
 }
 
 function validatePhotoReferences(values, domain) {
