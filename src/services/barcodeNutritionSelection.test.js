@@ -1,4 +1,19 @@
-import { createBarcodeNutritionCandidate } from "./barcodeNutritionSelection";
+import {
+  applyRemoteNutrientPrecision,
+  createBarcodeNutritionCandidate,
+} from "./barcodeNutritionSelection";
+import { lookupCatalogFoodByBarcode } from "./barcodeFoodLookup";
+
+const FLOATING_NUTRIENTS = Object.freeze({
+  calories: 112.6666666666671,
+  protein: 20.00000000000002,
+  carbohydrates: 5.999999999999993,
+  fat: 3.000000000000003,
+  fiber: null,
+  sodium: 44.99999999999999,
+  totalSugar: 3.000000000000003,
+  addedSugar: 0,
+});
 
 function remoteFood(overrides = {}) {
   const food = {
@@ -115,4 +130,63 @@ test("preserves the stale marker on an expired offline cache result", () => {
     food: remoteFood(),
   });
   expect(candidate.stale).toBe(true);
+});
+
+test("removes false precision from remote 100g adaptation without rounding provider data", () => {
+  const food = remoteFood({
+    brand: "Oikos",
+    name: "Oikos Pro Mixed Berry",
+    serving: { description: "100 g", amount: 100, unit: "g", grams: 100 },
+    nutrients: FLOATING_NUTRIENTS,
+    unknownFields: ["nutrients.fiber", "provenance.revisionDate"],
+  });
+  const candidate = createBarcodeNutritionCandidate({ status: "found", food });
+
+  expect(candidate.display.nutrients).toEqual({
+    calories: 113,
+    protein: 20,
+    carbohydrates: 6,
+    fat: 3,
+    fiber: null,
+    sodium: 45,
+    totalSugar: 3,
+    addedSugar: 0,
+  });
+  expect(candidate.selection.nutrients).toEqual(candidate.display.nutrients);
+  expect(candidate.selection.remote.nutrients).toEqual(FLOATING_NUTRIENTS);
+  expect(candidate.selection.remote.dataBasis).toBe("100g");
+});
+
+test("remote precision preserves zero and null, avoids negative zero, and rejects invalid results", () => {
+  const precise = applyRemoteNutrientPrecision({
+    calories: -0,
+    protein: null,
+    carbohydrates: 1.234,
+    fat: Number.POSITIVE_INFINITY,
+    fiber: -1,
+    sodium: 1.5,
+    totalSugar: 2.345,
+    addedSugar: 0,
+  });
+
+  expect(precise).toEqual({
+    calories: 0,
+    protein: null,
+    carbohydrates: 1.23,
+    fat: null,
+    fiber: null,
+    sodium: 2,
+    totalSugar: 2.35,
+    addedSugar: 0,
+  });
+  expect(Object.is(precise.calories, -0)).toBe(false);
+});
+
+test("does not apply remote precision rounding to a verified local catalog result", () => {
+  const localResult = lookupCatalogFoodByBarcode("036632019530");
+  const candidate = createBarcodeNutritionCandidate(localResult);
+
+  expect(localResult.status).toBe("found");
+  expect(candidate.selection.nutrients).toEqual(localResult.food.nutrients);
+  expect(candidate.display.nutrients).toEqual(localResult.food.nutrients);
 });

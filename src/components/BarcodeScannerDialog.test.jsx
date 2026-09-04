@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { StrictMode } from "react";
 import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import { APP_LIFECYCLE_PHASE } from "../services/appLifecycleAdapter";
@@ -32,6 +32,42 @@ function localFood() {
       sourceId: "test-cereal",
       confidence: "verified-label",
       label: "Trace verified catalog",
+    },
+  };
+}
+
+function floatingRemoteFood() {
+  return {
+    sourceType: "remote-barcode",
+    dataType: "branded",
+    identifiers: [{ scheme: "gtin", value: "00012345600012" }],
+    provider: { id: "usda-fdc", recordId: "456", attribution: "USDA FoodData Central" },
+    brand: "Oikos",
+    name: "Oikos Pro Mixed Berry",
+    packageQuantity: "5.3 oz cup",
+    serving: { description: "100 g", amount: 100, unit: "g", grams: 100 },
+    servingsPerContainer: 1,
+    nutrients: {
+      calories: 112.6666666666671,
+      protein: 20.00000000000002,
+      carbohydrates: 5.999999999999993,
+      fat: 3.000000000000003,
+      fiber: null,
+      sodium: 44.99999999999999,
+      totalSugar: 3.000000000000003,
+      addedSugar: 0,
+    },
+    dataBasis: "100g",
+    completeness: "partial",
+    unknownFields: ["nutrients.fiber", "provenance.revisionDate"],
+    logReady: true,
+    provenance: {
+      sourceUrl: "https://fdc.nal.usda.gov/fdc-app.html#/food-details/456/nutrients",
+      provider: "usda-fdc",
+      providerRecordId: "456",
+      attribution: "USDA FoodData Central",
+      revisionDate: null,
+      retrievedAt: "2026-09-03T12:00:00.000Z",
     },
   };
 }
@@ -144,6 +180,49 @@ test("shows review nutrients and only populates after explicit confirmation", as
   expect(onUseFood).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole("button", { name: "Use This Food" }));
   expect(onUseFood).toHaveBeenCalledWith(expect.objectContaining({ name: "Test Cereal" }));
+});
+
+test("shows and hands off clean remote nutrient precision without altering the provider basis", async () => {
+  const onUseFood = jest.fn();
+  setup({
+    barcodeLookup: {
+      lookup: jest.fn().mockResolvedValue({ status: "found", food: floatingRemoteFood() }),
+    },
+    onUseFood,
+  });
+  const input = screen.getByLabelText("Enter barcode manually");
+  fireEvent.change(input, { target: { value: "00012345600012" } });
+  fireEvent.click(screen.getByRole("button", { name: "Look Up Barcode" }));
+
+  const review = await screen.findByRole("article", { name: "Barcode product review" });
+  const reviewContent = within(review);
+  expect(reviewContent.getByText("113")).toBeInTheDocument();
+  expect(reviewContent.getByText("20 g")).toBeInTheDocument();
+  expect(reviewContent.getByText("6 g")).toBeInTheDocument();
+  expect(reviewContent.getAllByText("3 g")).toHaveLength(2);
+  expect(reviewContent.getByText("45 mg")).toBeInTheDocument();
+  [
+    "112.6666666666671",
+    "20.00000000000002",
+    "5.999999999999993",
+    "3.000000000000003",
+    "44.99999999999999",
+  ].forEach((tail) => expect(review).not.toHaveTextContent(tail));
+
+  fireEvent.click(screen.getByRole("button", { name: "Use This Food" }));
+  const selection = onUseFood.mock.calls[0][0];
+  expect(selection.nutrients).toMatchObject({
+    calories: 113,
+    protein: 20,
+    carbohydrates: 6,
+    fat: 3,
+    sodium: 45,
+    totalSugar: 3,
+    addedSugar: 0,
+  });
+  expect(selection.nutrients.fiber).toBeNull();
+  expect(selection.remote.nutrients.calories).toBe(112.6666666666671);
+  expect(selection.remote.nutrients.protein).toBe(20.00000000000002);
 });
 
 test("keeps incomplete products reviewable but disables use", async () => {

@@ -6,6 +6,7 @@ import WaterTrackerSection from "./WaterTrackerSection";
 import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import { motionScrollBehavior } from "../services/motionPreference";
 import { createRemoteBarcodeLookup } from "../services/remoteBarcodeLookup";
+import { applyRemoteNutrientPrecision } from "../services/barcodeNutritionSelection";
 import {
   TRACE_FEATURES,
   traceFeatureAccess,
@@ -818,16 +819,20 @@ function NutritionPage({
 
   function changeServingQuantity(value) {
     const scaledNutrition = scaleNutrition(nutritionBasis, value);
+    const formNutrition = foodReference?.sourceType === "remote-barcode"
+      && foodReference.dataBasis === "100g"
+      ? applyRemoteNutrientPrecision(scaledNutrition)
+      : scaledNutrition;
 
     setServingQuantity(value);
-    setCalories(scaledNutrition.calories === null ? "" : String(scaledNutrition.calories));
-    setProtein(scaledNutrition.protein === null ? "" : String(scaledNutrition.protein));
-    setCarbohydrates(scaledNutrition.carbohydrates === null ? "" : String(scaledNutrition.carbohydrates));
-    setFat(scaledNutrition.fat === null ? "" : String(scaledNutrition.fat));
-    setFiber(scaledNutrition.fiber === null || scaledNutrition.fiber === undefined ? "" : String(scaledNutrition.fiber));
-    setSodium(scaledNutrition.sodium === null ? "" : String(scaledNutrition.sodium));
-    setTotalSugar(scaledNutrition.totalSugar === null || scaledNutrition.totalSugar === undefined ? "" : String(scaledNutrition.totalSugar));
-    setAddedSugar(scaledNutrition.addedSugar === null || scaledNutrition.addedSugar === undefined ? "" : String(scaledNutrition.addedSugar));
+    setCalories(formNutrition.calories === null ? "" : String(formNutrition.calories));
+    setProtein(formNutrition.protein === null ? "" : String(formNutrition.protein));
+    setCarbohydrates(formNutrition.carbohydrates === null ? "" : String(formNutrition.carbohydrates));
+    setFat(formNutrition.fat === null ? "" : String(formNutrition.fat));
+    setFiber(formNutrition.fiber === null || formNutrition.fiber === undefined ? "" : String(formNutrition.fiber));
+    setSodium(formNutrition.sodium === null ? "" : String(formNutrition.sodium));
+    setTotalSugar(formNutrition.totalSugar === null || formNutrition.totalSugar === undefined ? "" : String(formNutrition.totalSugar));
+    setAddedSugar(formNutrition.addedSugar === null || formNutrition.addedSugar === undefined ? "" : String(formNutrition.addedSugar));
     setNutritionValidationError("");
     setIsDraftDirty(true);
   }

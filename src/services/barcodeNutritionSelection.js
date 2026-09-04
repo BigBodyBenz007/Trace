@@ -2,6 +2,7 @@ import { NUTRITION_ENTRY_NUTRIENT_KEYS } from "./nutritionCalculation";
 import { immutableCopy, normalizeRemoteFood } from "./remoteFoodModel";
 
 const REQUIRED_NUTRIENTS = ["calories", "protein", "carbohydrates", "fat"];
+const WHOLE_NUMBER_NUTRIENTS = new Set(["calories", "sodium"]);
 
 function safeSourceUrl(value) {
   try {
@@ -12,11 +13,30 @@ function safeSourceUrl(value) {
   }
 }
 
-function scaledNutrients(nutrients, multiplier) {
+function preciseNutrientValue(key, value) {
+  if (value === null || value === undefined) return null;
+  if (!Number.isFinite(value) || value < 0) return null;
+  if (value === 0) return 0;
+  const decimalPlaces = WHOLE_NUMBER_NUTRIENTS.has(key) ? 0 : 2;
+  const factor = 10 ** decimalPlaces;
+  const rounded = Math.round((value + Number.EPSILON) * factor) / factor;
+  return Object.is(rounded, -0) ? 0 : rounded;
+}
+
+export function applyRemoteNutrientPrecision(nutrients) {
   return Object.fromEntries(NUTRITION_ENTRY_NUTRIENT_KEYS.map((key) => [
     key,
-    nutrients[key] === null ? null : nutrients[key] * multiplier,
+    preciseNutrientValue(key, nutrients?.[key]),
   ]));
+}
+
+function scaledNutrients(nutrients, multiplier) {
+  return applyRemoteNutrientPrecision(Object.fromEntries(
+    NUTRITION_ENTRY_NUTRIENT_KEYS.map((key) => [
+      key,
+      nutrients[key] === null ? null : nutrients[key] * multiplier,
+    ])
+  ));
 }
 
 function remoteServing(food) {
@@ -34,7 +54,7 @@ function remoteServing(food) {
     }
     return {
       serving: { amount: 100, unit: "g", description: "100 g", grams: 100 },
-      nutrients: { ...food.nutrients },
+      nutrients: scaledNutrients(food.nutrients, 1),
     };
   }
 
@@ -62,6 +82,12 @@ function remoteCandidate(result) {
     unknownFields: food.unknownFields,
     provenance: food.provenance,
   });
+  const adaptedUnknownFields = [...new Set([
+    ...food.unknownFields,
+    ...NUTRITION_ENTRY_NUTRIENT_KEYS
+      .filter((key) => adapted.nutrients[key] === null)
+      .map((key) => `nutrients.${key}`),
+  ])];
   const canUse = result.status === "found"
     && food.logReady
     && REQUIRED_NUTRIENTS.every((key) => adapted.nutrients[key] !== null);
@@ -106,7 +132,7 @@ function remoteCandidate(result) {
       providerNutritionBasis: food.dataBasis,
       attribution: food.provenance.attribution,
       sourceUrl: food.provenance.sourceUrl,
-      unknownFields: food.unknownFields,
+      unknownFields: adaptedUnknownFields,
     },
   });
 }
