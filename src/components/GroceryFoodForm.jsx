@@ -8,6 +8,7 @@ import {
   getServingDefinitionError,
 } from "../services/servingDefinition";
 import { getSugarValidationError } from "../services/nutritionCalculation";
+import { canonicalGtinKey } from "../services/productIdentifiers";
 
 const EMPTY_FORM = {
   name: "",
@@ -15,7 +16,11 @@ const EMPTY_FORM = {
   category: "other",
   servingAmount: "1",
   servingUnit: "serving",
+  servingDescription: "",
   customServingDescription: "",
+  servingGrams: "",
+  packageQuantity: "",
+  servingsPerContainer: "",
   calories: "",
   protein: "",
   carbohydrates: "",
@@ -38,9 +43,64 @@ const NUTRIENT_FIELDS = [
   ["addedSugar", "Added Sugar (g), optional"],
 ];
 
-function GroceryFoodForm({ saveUserFood, buttonStyle, inputStyle }) {
-  const [expanded, setExpanded] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
+const REQUIRED_NUTRIENTS = new Set(["calories", "protein", "carbohydrates", "fat"]);
+
+function formForFood(food) {
+  if (!food) return EMPTY_FORM;
+  return {
+    ...EMPTY_FORM,
+    name: food.name || "",
+    brand: food.brand || "",
+    category: food.category || "other",
+    servingAmount: String(food.serving?.amount ?? 1),
+    servingUnit: food.serving?.unit || "serving",
+    servingDescription: food.serving?.description || "",
+    customServingDescription: food.serving?.unit === "custom"
+      ? food.serving.description || ""
+      : "",
+    servingGrams: food.serving?.grams == null ? "" : String(food.serving.grams),
+    packageQuantity: food.packageQuantity || food.packaged?.packageSize || "",
+    servingsPerContainer: food.servingsPerContainer == null
+      ? food.packaged?.servingsPerContainer == null
+        ? ""
+        : String(food.packaged.servingsPerContainer)
+      : String(food.servingsPerContainer),
+    ...Object.fromEntries(NUTRIENT_FIELDS.map(([key]) => [
+      key,
+      food.nutrients?.[key] == null ? "" : String(food.nutrients[key]),
+    ])),
+    notes: food.notes || "",
+  };
+}
+
+function nutrientInputError(form, requireCore) {
+  for (const [key, label] of NUTRIENT_FIELDS) {
+    if (requireCore && REQUIRED_NUTRIENTS.has(key) && form[key] === "") {
+      return `Enter ${label.replace(/ \(.+\)/, "").toLowerCase()}.`;
+    }
+    if (form[key] === "") continue;
+    const value = Number(form[key]);
+    if (!Number.isFinite(value) || value < 0) {
+      return `${label.replace(", optional", "")} must be zero or greater.`;
+    }
+  }
+  return "";
+}
+
+function GroceryFoodForm({
+  saveUserFood,
+  updateUserFood,
+  buttonStyle,
+  inputStyle,
+  initialFood = null,
+  identifier = null,
+  providerSourceSnapshot = null,
+  recovery = false,
+  onSaved = () => {},
+  onCancel = () => {},
+}) {
+  const [expanded, setExpanded] = useState(recovery);
+  const [form, setForm] = useState(() => formForFood(initialFood));
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
 
@@ -66,8 +126,10 @@ function GroceryFoodForm({ saveUserFood, buttonStyle, inputStyle }) {
       amount: form.servingAmount,
       unit: form.servingUnit,
       customDescription: form.customServingDescription,
+      grams: form.servingGrams,
     });
     const sugarError = getSugarValidationError(form);
+    const nutritionError = nutrientInputError(form, recovery);
 
     if (!form.name.trim()) {
       setError("Enter a food name.");
@@ -82,31 +144,69 @@ function GroceryFoodForm({ saveUserFood, buttonStyle, inputStyle }) {
       return;
     }
 
-    const result = saveUserFood({
+    if (nutritionError) {
+      setError(nutritionError);
+      return;
+    }
+
+    if (
+      form.servingsPerContainer !== ""
+      && (!Number.isFinite(Number(form.servingsPerContainer)) || Number(form.servingsPerContainer) <= 0)
+    ) {
+      setError("Servings per container must be greater than zero when provided.");
+      return;
+    }
+
+    const serving = createServingDefinition({
+      amount: form.servingAmount,
+      unit: form.servingUnit,
+      customDescription: form.customServingDescription,
+      grams: form.servingGrams,
+    });
+    if (form.servingDescription.trim()) {
+      serving.description = form.servingDescription.trim().replace(/\s+/g, " ");
+    }
+    const payload = {
       name: form.name,
       brand: form.brand,
       category: form.category,
-      serving: createServingDefinition({
-        amount: form.servingAmount,
-        unit: form.servingUnit,
-        customDescription: form.customServingDescription,
-      }),
+      serving,
       nutrients: Object.fromEntries(
         NUTRIENT_FIELDS.map(([nutrient]) => [nutrient, form[nutrient]])
       ),
       notes: form.notes,
-    });
+      identifiers: identifier ? [identifier] : initialFood?.identifiers,
+      packageQuantity: form.packageQuantity,
+      servingsPerContainer: form.servingsPerContainer,
+      providerSourceSnapshot,
+    };
+    const result = initialFood?.id && updateUserFood
+      ? updateUserFood(initialFood.id, payload)
+      : saveUserFood(payload);
 
-    if (result?.status === "added") {
+    if (["added", "updated"].includes(result?.status)) {
       const savedName = result.food?.name || form.name.trim();
+      onSaved(result.food);
+      if (recovery) return;
       setForm(EMPTY_FORM);
       setError("");
       setStatus(`${savedName} saved. Search for it above to log a meal.`);
       return;
     }
     if (result?.status === "duplicate") {
+      const existingBarcode = result.food?.identifiers?.[0]?.value;
+      if (
+        recovery
+        && canonicalGtinKey(existingBarcode)
+        && canonicalGtinKey(existingBarcode) === canonicalGtinKey(identifier?.value)
+      ) {
+        onSaved(result.food);
+        return;
+      }
       setError(
-        `A grocery food named ${result.food?.name || form.name.trim()} is already saved. The existing food was kept.`
+        recovery
+          ? `A custom food with this barcode or the name ${result.food?.name || form.name.trim()} is already saved. The existing food was kept.`
+          : `A grocery food named ${result.food?.name || form.name.trim()} is already saved. The existing food was kept.`
       );
       return;
     }
@@ -126,7 +226,7 @@ function GroceryFoodForm({ saveUserFood, buttonStyle, inputStyle }) {
         width: "100%",
       }}
     >
-      <button
+      {!recovery && <button
         aria-controls="grocery-food-form"
         aria-expanded={expanded}
         className="trace-action trace-action--secondary"
@@ -138,24 +238,35 @@ function GroceryFoodForm({ saveUserFood, buttonStyle, inputStyle }) {
         style={{ ...buttonStyle, width: "100%" }}
       >
         {expanded ? "Close grocery food creator" : "Create grocery food"}
-      </button>
+      </button>}
 
       {status && <p role="status" style={{ color: "#bbf7d0", marginBottom: 0 }}>{status}</p>}
 
       {expanded && (
-        <form id="grocery-food-form" onSubmit={saveGroceryFood} style={{ marginTop: "16px" }}>
+        <form id={recovery ? "barcode-food-recovery-form" : "grocery-food-form"} onSubmit={saveGroceryFood} style={{ marginTop: recovery ? 0 : "16px" }}>
           <p style={{ color: "#d1d5db", marginTop: 0 }}>
-            Save a store-bought or home-cooking ingredient. Blank nutrition values stay unknown.
+            {recovery
+              ? "Save this barcode as a custom food. Known provider values are prefilled; blank values stay unknown."
+              : "Save a store-bought or home-cooking ingredient. Blank nutrition values stay unknown."}
           </p>
+          {identifier && <p><strong>Barcode:</strong> {identifier.value}</p>}
 
           <div style={{ display: "grid", gap: "12px", gridTemplateColumns: "repeat(auto-fit, minmax(min(180px, 100%), 1fr))" }}>
             <label>
               Food name
-              <input required value={form.name} onChange={(event) => updateField("name", event.target.value)} placeholder="Raw chicken breast strips" style={fieldStyle} />
+              <input required value={form.name} onChange={(event) => updateField("name", event.target.value)} placeholder={recovery ? "" : "Raw chicken breast strips"} style={fieldStyle} />
             </label>
             <label>
               Brand (optional)
               <input value={form.brand} onChange={(event) => updateField("brand", event.target.value)} style={fieldStyle} />
+            </label>
+            <label>
+              Package quantity (optional)
+              <input value={form.packageQuantity} onChange={(event) => updateField("packageQuantity", event.target.value)} placeholder={recovery ? "" : "32 oz"} style={fieldStyle} />
+            </label>
+            <label>
+              Servings per container (optional)
+              <input min="0" step="any" type="number" value={form.servingsPerContainer} onChange={(event) => updateField("servingsPerContainer", event.target.value)} style={fieldStyle} />
             </label>
             <label>
               Food category / type
@@ -185,13 +296,21 @@ function GroceryFoodForm({ saveUserFood, buttonStyle, inputStyle }) {
               {form.servingUnit === "custom" && (
                 <label>
                   Custom serving description
-                  <input value={form.customServingDescription} onChange={(event) => updateField("customServingDescription", event.target.value)} placeholder="1 prepared portion" style={fieldStyle} />
+                  <input value={form.customServingDescription} onChange={(event) => updateField("customServingDescription", event.target.value)} placeholder={recovery ? "" : "1 prepared portion"} style={fieldStyle} />
                 </label>
               )}
+              <label>
+                Serving description (optional)
+                <input value={form.servingDescription} onChange={(event) => updateField("servingDescription", event.target.value)} placeholder={recovery ? "" : "1 cup (30 g)"} style={fieldStyle} />
+              </label>
+              <label>
+                Serving grams (optional)
+                <input min="0" step="any" type="number" value={form.servingGrams} onChange={(event) => updateField("servingGrams", event.target.value)} style={fieldStyle} />
+              </label>
               {NUTRIENT_FIELDS.map(([nutrient, label]) => (
                 <label key={nutrient}>
                   {label}
-                  <input min="0" step="any" type="number" value={form[nutrient]} onChange={(event) => updateField(nutrient, event.target.value)} style={fieldStyle} />
+                  <input required={recovery && REQUIRED_NUTRIENTS.has(nutrient)} min="0" step="any" type="number" value={form[nutrient]} onChange={(event) => updateField(nutrient, event.target.value)} style={fieldStyle} />
                 </label>
               ))}
             </div>
@@ -203,7 +322,14 @@ function GroceryFoodForm({ saveUserFood, buttonStyle, inputStyle }) {
           </label>
 
           {error && <p role="alert" style={{ color: "#fca5a5" }}>{error}</p>}
-          <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>Save grocery food</button>
+          <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
+            {recovery ? (initialFood?.id ? "Update Barcode Food" : "Save Barcode Food") : "Save grocery food"}
+          </button>
+          {recovery && (
+            <button className="trace-action trace-action--secondary" onClick={onCancel} type="button" style={{ ...buttonStyle, marginLeft: "8px" }}>
+              Cancel
+            </button>
+          )}
         </form>
       )}
     </section>

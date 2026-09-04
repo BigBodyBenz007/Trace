@@ -9,7 +9,7 @@ import {
 } from "./traceBackup";
 import { readAppSettings } from "./appSettings";
 import { DEFAULT_HOME_VISIBILITY } from "./homeModules";
-import { createUserFood } from "./userFoodCatalog";
+import { createUserFood, lookupUserFoodByBarcode } from "./userFoodCatalog";
 import { createWorkoutDraftFromPlannedWorkout } from "./workoutDraft";
 import { emptyWaterCollection } from "./waterTracker";
 import { createDailyAction, emptyDailyActionCollection } from "./dailyAction";
@@ -121,6 +121,49 @@ function emptyStructured(overrides = {}) {
 
 function cloneJsonForTest(value) {
   return JSON.parse(JSON.stringify(value));
+}
+
+function incompleteProviderFood() {
+  return {
+    sourceType: "remote-barcode",
+    dataType: "branded",
+    identifiers: [{ scheme: "gtin", value: "012000001291" }],
+    provider: { id: "usda-fdc", recordId: "123", attribution: "USDA FoodData Central" },
+    brand: "Provider Brand",
+    name: "Provider Food",
+    packageQuantity: null,
+    serving: { description: "30 g", amount: 30, unit: "g", grams: 30 },
+    servingsPerContainer: null,
+    nutrients: {
+      calories: null,
+      protein: 4.000000000000001,
+      carbohydrates: 8,
+      fat: 2,
+      fiber: null,
+      sodium: 25,
+      totalSugar: 3,
+      addedSugar: null,
+    },
+    dataBasis: "serving",
+    completeness: "insufficient",
+    unknownFields: [
+      "packageQuantity",
+      "servingsPerContainer",
+      "nutrients.calories",
+      "nutrients.fiber",
+      "nutrients.addedSugar",
+      "provenance.revisionDate",
+    ],
+    logReady: false,
+    provenance: {
+      sourceUrl: "https://fdc.nal.usda.gov/food-details/123/nutrients",
+      provider: "USDA FoodData Central",
+      providerRecordId: "123",
+      attribution: "USDA FoodData Central (public domain / CC0)",
+      revisionDate: null,
+      retrievedAt: "2026-09-03T12:00:00.000Z",
+    },
+  };
 }
 
 function dailyAction() {
@@ -632,6 +675,50 @@ test("backs up and restores custom grocery foods and sugar-aware meal snapshots 
 
   expect(JSON.parse(restored.value("userFoods"))).toEqual([groceryFood]);
   expect(JSON.parse(restored.value("nutritionEntries"))).toEqual([meal]);
+});
+
+test("round-trips barcode custom-food identity and its original provider snapshot", async () => {
+  const providerSourceSnapshot = incompleteProviderFood();
+  const food = createUserFood(
+    "Completed barcode food",
+    {
+      calories: 113,
+      protein: 20,
+      carbohydrates: 6,
+      fat: 3,
+      fiber: null,
+      sodium: 45,
+      totalSugar: 3,
+      addedSugar: 0,
+    },
+    { amount: 1, unit: "serving", description: "1 serving", grams: 150 },
+    {
+      identifiers: [{ scheme: "gtin", value: "012000001291" }],
+      packageQuantity: "5.3 oz cup",
+      servingsPerContainer: 1,
+      providerSourceSnapshot,
+    }
+  );
+  const source = makeStorage({ userFoods: JSON.stringify([food]) });
+  const created = await createTraceBackup({
+    storage: source,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  const restored = makeStorage();
+  await restoreTraceBackup(created, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+
+  const restoredFoods = JSON.parse(restored.value("userFoods"));
+  expect(restoredFoods).toEqual([food]);
+  expect(lookupUserFoodByBarcode(restoredFoods, "00012000001291"))
+    .toMatchObject({ status: "found", food: { name: "Completed barcode food" } });
+  expect(created.data.structured.userFoods[0].providerSourceSnapshot)
+    .toEqual(providerSourceSnapshot);
+  expect(created.data.structured.userFoods[0].providerSourceSnapshot.nutrients.protein)
+    .toBe(4.000000000000001);
 });
 
 test("backs up and restores valid water entries while filtering malformed records", async () => {

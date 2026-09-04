@@ -16,7 +16,8 @@ import {
 import { validateJournalVaultEnvelope } from "./journalVaultCrypto";
 import { JOURNAL_VAULT_STORAGE_KEY } from "./journalVault";
 import { isValidLocalDate } from "./protocol";
-import { normalizeProductIdentifiers } from "./productIdentifiers";
+import { canonicalGtinKey, normalizeProductIdentifiers } from "./productIdentifiers";
+import { normalizeRemoteFood } from "./remoteFoodModel";
 
 const NUTRIENT_KEYS = ["calories", "protein", "carbohydrates", "fat", "fiber", "sodium", "totalSugar", "addedSugar"];
 const DATE_FIELDS = ["createdAt", "updatedAt", "occurredAt", "loggedAt", "startedAt", "finishedAt", "endedAt", "achievedAt", "addedToTrophyCaseAt"];
@@ -94,11 +95,31 @@ function optionalProductIdentifiers(value, domain) {
   );
 }
 
-function validateNumbers(record, fields, domain, { nullable = true, positive = false } = {}) {
+function validateProviderSourceSnapshot(snapshot, identifiersValue, domain) {
+  const providerFood = normalizeRemoteFood(snapshot);
+  const identifiers = normalizeProductIdentifiers(identifiersValue);
+  assert(providerFood, `The backup contains invalid ${domain} provider source data.`);
+  assert(
+    identifiers?.length === 1
+    && canonicalGtinKey(identifiers[0].value)
+      === canonicalGtinKey(providerFood.identifiers[0].value),
+    `The backup contains a mismatched ${domain} barcode and provider source.`
+  );
+}
+
+function validateNumbers(record, fields, domain, {
+  nullable = true,
+  positive = false,
+  nonNegative = false,
+} = {}) {
   fields.forEach((field) => {
     const value = record[field];
     if (value === undefined || (nullable && value === null)) return;
-    assert(typeof value === "number" && Number.isFinite(value) && (!positive || value > 0),
+    assert(
+      typeof value === "number"
+      && Number.isFinite(value)
+      && (!positive || value > 0)
+      && (!nonNegative || value >= 0),
       `The backup contains invalid ${domain} ${field} data.`);
   });
 }
@@ -125,6 +146,13 @@ function validateNutritionShape(record, domain) {
   if (record.loggedAt !== undefined) assert(validTimestamp(record.loggedAt), `The backup contains an invalid ${domain} timestamp.`);
   ["foodReference", "portion", "nutritionBasis", "nutritionCompleteness"].forEach((field) => optionalObject(record[field], `${domain} ${field}`));
   optionalProductIdentifiers(record.foodReference?.identifiers, `${domain} food reference`);
+  if (record.foodReference?.providerSourceSnapshot !== undefined) {
+    validateProviderSourceSnapshot(
+      record.foodReference.providerSourceSnapshot,
+      record.foodReference.identifiers,
+      `${domain} food reference`
+    );
+  }
   if (record.nutritionBasis) {
     validateNumbers(record.nutritionBasis, NUTRIENT_KEYS, `${domain} nutrition basis`);
     validateSugarValues(record.nutritionBasis, `${domain} nutrition basis`);
@@ -154,14 +182,41 @@ function validateMemory(record) {
 }
 
 function validateUserFood(record) {
-  optionalText(record, ["name", "brand", "notes", "sourceType", "dataType", "category", "categoryLabel"], "user food");
+  optionalText(record, ["name", "brand", "notes", "sourceType", "dataType", "dataBasis", "category", "categoryLabel"], "user food");
+  if (record.dataBasis !== undefined) {
+    assert(record.dataBasis === "serving", "The backup contains invalid user food dataBasis data.");
+  }
   optionalObject(record.serving, "user food serving");
   optionalObject(record.nutrients, "user food nutrients");
   optionalObject(record.provenance, "user food provenance");
   optionalProductIdentifiers(record.identifiers, "user food");
+  optionalObject(record.packaged, "user food package");
+  if (record.serving) {
+    validateNumbers(record.serving, ["amount", "grams"], "user food serving", {
+      positive: true,
+    });
+  }
+  if (record.packaged) {
+    optionalText(record.packaged, ["packageSize"], "user food package");
+    validateNumbers(
+      record.packaged,
+      ["servingsPerContainer"],
+      "user food package",
+      { positive: true }
+    );
+  }
   if (record.nutrients) {
-    validateNumbers(record.nutrients, NUTRIENT_KEYS, "user food nutrients");
+    validateNumbers(record.nutrients, NUTRIENT_KEYS, "user food nutrients", {
+      nonNegative: true,
+    });
     validateSugarValues(record.nutrients, "user food nutrients");
+  }
+  if (record.providerSourceSnapshot !== undefined) {
+    validateProviderSourceSnapshot(
+      record.providerSourceSnapshot,
+      record.identifiers,
+      "user food"
+    );
   }
 }
 
@@ -275,7 +330,18 @@ export function validateTraceStructuredDomains(data) {
     assert(object(data.nutritionGoals), "The backup contains invalid nutrition goal data.");
     validateNumbers(data.nutritionGoals, ["calories", "protein", "carbohydrates", "fat", "sodium", "waterGoalMl"], "nutrition goal", { positive: false });
   }
-  if (data.userFoods != null) recordArray(data.userFoods, "user food", validateUserFood);
+  if (data.userFoods != null) {
+    recordArray(data.userFoods, "user food", validateUserFood);
+    const barcodeKeys = data.userFoods.flatMap((food) =>
+      (normalizeProductIdentifiers(food.identifiers) || [])
+        .map((identifier) => canonicalGtinKey(identifier.value))
+        .filter(Boolean)
+    );
+    assert(
+      new Set(barcodeKeys).size === barcodeKeys.length,
+      "The backup contains duplicate user food barcodes."
+    );
+  }
   if (data.nutritionEntries != null) recordArray(data.nutritionEntries, "nutrition entry", (record) => validateNutritionShape(record, "nutrition entry"));
   if (data.waterEntries != null) {
     const normalized = normalizeWaterCollection(data.waterEntries);

@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import NutritionPage from "./NutritionPage";
+import { createUserFood } from "../services/userFoodCatalog";
 
 const originalScrollTo = window.scrollTo;
 
@@ -228,4 +229,107 @@ test("keeps remote handoff, fractional scaling, double scaling, and saved values
     .toBe(112.6666666666671);
   expect(saved.foodReference.providerNutritionBasis.nutrients.sodium)
     .toBe(44.99999999999999);
+});
+
+test("a recovered custom barcode food hands off cleanly without auto-logging", async () => {
+  const saveUserFood = jest.fn((payload) => ({
+    status: "added",
+    food: createUserFood(payload.name, payload.nutrients, payload.serving, payload),
+  }));
+  const barcodeLookupService = {
+    lookup: jest.fn().mockResolvedValue({ status: "not-found", food: null }),
+  };
+  const { saveNutritionEntry } = setup({ saveUserFood, barcodeLookupService });
+  fireEvent.click(screen.getByRole("button", { name: "Scan Barcode" }));
+  const barcode = screen.getByLabelText("Enter barcode manually");
+  fireEvent.change(barcode, { target: { value: "00012345600012" } });
+  fireEvent.submit(barcode.closest("form"));
+  fireEvent.click(await screen.findByRole("button", { name: "Create This Food" }));
+  const recoveryForm = within(screen.getByRole("button", { name: "Save Barcode Food" }).closest("form"));
+  fireEvent.change(recoveryForm.getByLabelText("Food name"), { target: { value: "Recovered food" } });
+  fireEvent.change(recoveryForm.getByLabelText("Calories"), { target: { value: "112.6666666666671" } });
+  fireEvent.change(recoveryForm.getByLabelText("Protein (g)"), { target: { value: "20.00000000000002" } });
+  fireEvent.change(recoveryForm.getByLabelText("Carbohydrates (g)"), { target: { value: "5.999999999999993" } });
+  fireEvent.change(recoveryForm.getByLabelText("Fat (g)"), { target: { value: "3.000000000000003" } });
+  fireEvent.change(recoveryForm.getByLabelText("Sodium (mg), optional"), { target: { value: "44.99999999999999" } });
+  fireEvent.change(recoveryForm.getByLabelText("Added Sugar (g), optional"), { target: { value: "0" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Barcode Food" }));
+  expect(saveNutritionEntry).not.toHaveBeenCalled();
+  fireEvent.click(await screen.findByRole("button", { name: "Use This Food" }));
+
+  expect(entryNutrient("Calories")).toHaveValue(113);
+  expect(entryNutrient("Protein (g)")).toHaveValue(20);
+  expect(entryNutrient("Carbohydrates (g)")).toHaveValue(6);
+  expect(entryNutrient("Fat (g)")).toHaveValue(3);
+  expect(entryNutrient("Sodium (mg)")).toHaveValue(45);
+  expect(entryNutrient("Added Sugar (g)")).toHaveValue(0);
+  fireEvent.change(screen.getByLabelText("Number of servings"), { target: { value: "0.5" } });
+  expect(entryNutrient("Calories")).toHaveValue(57);
+  fireEvent.change(screen.getByLabelText("Number of servings"), { target: { value: "2" } });
+  expect(entryNutrient("Calories")).toHaveValue(226);
+  expect(entryNutrient("Protein (g)")).toHaveValue(40);
+
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+  await waitFor(() => expect(saveNutritionEntry).toHaveBeenCalledTimes(1));
+  expect(saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    calories: 226,
+    protein: 40,
+    foodReference: {
+      source: "user-added",
+      sourceType: "grocery-custom",
+      modified: false,
+      identifiers: [{ scheme: "gtin", value: "00012345600012" }],
+    },
+  });
+});
+
+test("completed remote recovery keeps the raw provider snapshot through Nutrition handoff", async () => {
+  const providerFood = {
+    ...floatingRemoteFood(),
+    nutrients: { ...floatingRemoteFood().nutrients, calories: null },
+    completeness: "insufficient",
+    unknownFields: ["nutrients.calories", "nutrients.fiber", "provenance.revisionDate"],
+    logReady: false,
+  };
+  const saveUserFood = jest.fn((payload) => ({
+    status: "added",
+    food: createUserFood(payload.name, payload.nutrients, payload.serving, payload),
+  }));
+  const barcodeLookupService = {
+    lookup: jest.fn().mockResolvedValue({ status: "incomplete", food: providerFood }),
+  };
+  const { saveNutritionEntry } = setup({ saveUserFood, barcodeLookupService });
+  fireEvent.click(screen.getByRole("button", { name: "Scan Barcode" }));
+  const barcode = screen.getByLabelText("Enter barcode manually");
+  fireEvent.change(barcode, { target: { value: "00012345600012" } });
+  fireEvent.submit(barcode.closest("form"));
+  fireEvent.click(await screen.findByRole("button", { name: "Complete This Food" }));
+  const recoveryForm = within(screen.getByRole("button", { name: "Save Barcode Food" }).closest("form"));
+  fireEvent.change(recoveryForm.getByLabelText("Calories"), { target: { value: "113" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Barcode Food" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Use This Food" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  await waitFor(() => expect(saveNutritionEntry).toHaveBeenCalledTimes(1));
+  const reference = saveNutritionEntry.mock.calls[0][0].foodReference;
+  expect(reference).toMatchObject({
+    source: "user-added",
+    dataType: "user-completed",
+    providerAttribution: "USDA FoodData Central",
+    modified: false,
+  });
+  expect(reference.providerSourceSnapshot.nutrients.protein).toBe(20.00000000000002);
+  expect(reference.providerSourceSnapshot.nutrients.calories).toBeNull();
+});
+
+test("ordinary grocery creation keeps its helpful example placeholders", () => {
+  setup();
+  fireEvent.click(screen.getByRole("button", { name: "Create grocery food" }));
+  const ordinary = within(screen.getByRole("button", { name: "Save grocery food" }).closest("form"));
+  expect(ordinary.getByLabelText("Food name"))
+    .toHaveAttribute("placeholder", "Raw chicken breast strips");
+  expect(ordinary.getByLabelText("Package quantity (optional)"))
+    .toHaveAttribute("placeholder", "32 oz");
+  expect(ordinary.getByLabelText("Serving description (optional)"))
+    .toHaveAttribute("placeholder", "1 cup (30 g)");
 });

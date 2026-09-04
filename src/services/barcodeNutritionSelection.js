@@ -134,6 +134,22 @@ function remoteCandidate(result) {
       sourceUrl: food.provenance.sourceUrl,
       unknownFields: adaptedUnknownFields,
     },
+    ...(canUse
+      ? {}
+      : {
+          recovery: {
+            barcode: food.identifiers[0],
+            food: {
+              brand: food.brand,
+              name: food.name,
+              packageQuantity: food.packageQuantity,
+              serving: adapted.serving,
+              servingsPerContainer: food.servingsPerContainer,
+              nutrients: adapted.nutrients,
+            },
+            providerSourceSnapshot: food,
+          },
+        }),
   });
 }
 
@@ -166,6 +182,16 @@ function localCandidate(result) {
         .filter((key) => nutrients[key] === null)
         .map((key) => `nutrients.${key}`),
     },
+    ...(food.sourceType === "grocery-custom" && food.identifiers?.length
+      ? {
+          customFood: food,
+          recovery: {
+            barcode: food.identifiers[0],
+            food,
+            providerSourceSnapshot: food.providerSourceSnapshot || null,
+          },
+        }
+      : {}),
   });
 }
 

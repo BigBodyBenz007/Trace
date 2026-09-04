@@ -76,7 +76,8 @@ test("invalid input performs no local, storage, or network activity", async () =
   const storage = memoryStorage();
   const fetchImpl = jest.fn();
   const localLookup = jest.fn();
-  const service = createRemoteBarcodeLookup({ storage, fetchImpl, localLookup });
+  const userLookup = jest.fn();
+  const service = createRemoteBarcodeLookup({ storage, fetchImpl, localLookup, userLookup });
 
   await expect(service.lookup("invalid")).resolves.toEqual({
     status: "invalid",
@@ -84,6 +85,7 @@ test("invalid input performs no local, storage, or network activity", async () =
     food: null,
   });
   expect(localLookup).not.toHaveBeenCalled();
+  expect(userLookup).not.toHaveBeenCalled();
   expect(storage.getItem).not.toHaveBeenCalled();
   expect(storage.setItem).not.toHaveBeenCalled();
   expect(fetchImpl).not.toHaveBeenCalled();
@@ -108,6 +110,70 @@ test("a verified local hit returns without cache or remote access", async () => 
   expect(storage.getItem).not.toHaveBeenCalled();
   expect(fetchImpl).not.toHaveBeenCalled();
   expect(Object.isFrozen(result.food)).toBe(true);
+});
+
+test("verified Trace catalog precedence remains above a matching custom barcode food", async () => {
+  const customLookup = jest.fn(() => ({
+    status: "found",
+    identifier: { scheme: "gtin", value: "012000001291" },
+    food: { id: "user-added:barcode", name: "Custom" },
+  }));
+  const service = createRemoteBarcodeLookup({
+    storage: memoryStorage(),
+    fetchImpl: jest.fn(),
+    localLookup: () => ({
+      status: "found",
+      identifier: { scheme: "gtin", value: "012000001291" },
+      food: { id: "verified", name: "Verified" },
+    }),
+    userLookup: customLookup,
+  });
+  await expect(service.lookup("012000001291"))
+    .resolves.toMatchObject({ source: "local", food: { id: "verified" } });
+  expect(customLookup).not.toHaveBeenCalled();
+});
+
+test("a custom barcode food wins over cache and gateway access", async () => {
+  const storage = memoryStorage();
+  createRemoteBarcodeCache({ storage, clock: () => 1000 })
+    .set("012000001291", remoteResult("012000001291"));
+  const fetchImpl = jest.fn();
+  const customFood = { id: "user-added:barcode", name: "Custom" };
+  const service = createRemoteBarcodeLookup({
+    storage,
+    clock: () => 1000,
+    fetchImpl,
+    localLookup: () => ({ status: "not-found", identifier: null, food: null }),
+    userLookup: () => ({
+      status: "found",
+      identifier: { scheme: "gtin", value: "012000001291" },
+      food: customFood,
+    }),
+  });
+  await expect(service.lookup("00012000001291"))
+    .resolves.toMatchObject({ source: "user", food: customFood });
+  expect(fetchImpl).not.toHaveBeenCalled();
+});
+
+test("deleting a custom match restores the existing remote fallback path", async () => {
+  let customFood = { id: "user-added:barcode", name: "Custom" };
+  const storage = memoryStorage();
+  createRemoteBarcodeCache({ storage, clock: () => 1000 })
+    .set("012000001291", remoteResult("012000001291"));
+  const service = createRemoteBarcodeLookup({
+    storage,
+    clock: () => 1000,
+    fetchImpl: jest.fn(),
+    localLookup: () => ({ status: "not-found", identifier: null, food: null }),
+    userLookup: () => customFood
+      ? { status: "found", identifier: { scheme: "gtin", value: "012000001291" }, food: customFood }
+      : { status: "not-found", identifier: { scheme: "gtin", value: "012000001291" }, food: null },
+  });
+  await expect(service.lookup("012000001291"))
+    .resolves.toMatchObject({ source: "user" });
+  customFood = null;
+  await expect(service.lookup("012000001291"))
+    .resolves.toMatchObject({ cache: { hit: true }, food: { name: "Test Product" } });
 });
 
 test("a fresh canonical cache hit avoids the gateway", async () => {

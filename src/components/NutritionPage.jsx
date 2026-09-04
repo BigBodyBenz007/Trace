@@ -7,6 +7,7 @@ import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import { motionScrollBehavior } from "../services/motionPreference";
 import { createRemoteBarcodeLookup } from "../services/remoteBarcodeLookup";
 import { applyRemoteNutrientPrecision } from "../services/barcodeNutritionSelection";
+import { lookupUserFoodByBarcode } from "../services/userFoodCatalog";
 import {
   TRACE_FEATURES,
   traceFeatureAccess,
@@ -75,10 +76,11 @@ function getEntrySourceDetails(foodReference) {
     foodReference?.source === "user-added"
   ) {
     return [
-      "User-entered",
+      foodReference.providerAttribution || "User-entered",
       "Grocery",
       foodReference.categoryLabel || foodReference.category,
       foodReference.brand,
+      foodReference.packageSize,
     ].filter(Boolean);
   }
   if (foodReference?.sourceType === "beverage") {
@@ -285,6 +287,8 @@ function NutritionPage({
     food: null,
     matchesDefinition: false,
   }),
+  updateUserFood = () => ({ status: "error", food: null }),
+  deleteUserFood = () => false,
   updateNutritionEntry,
   deleteNutritionEntry,
   saveNutritionGoals,
@@ -339,6 +343,8 @@ function NutritionPage({
   const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(false);
   const confirmationTimerRef = useRef(null);
   const barcodeLookupRef = useRef(barcodeLookupService);
+  const userFoodsRef = useRef(userFoods);
+  userFoodsRef.current = userFoods;
   const barcodeScanButtonRef = useRef(null);
   const nutritionPageTopRef = useRef(null);
   const todaySectionRef = useRef(null);
@@ -733,9 +739,26 @@ function NutritionPage({
         : food.sourceType === "grocery-custom" || food.provenance.source === "user-added"
           ? {
               sourceType: "grocery-custom",
+              dataType: food.dataType || "user-entered",
+              ...(food.identifiers?.length
+                ? { dataBasis: food.dataBasis || "serving" }
+                : {}),
               category: food.category || "other",
               categoryLabel: food.categoryLabel,
               ...(food.brand ? { brand: food.brand } : {}),
+              ...(food.packaged?.packageSize
+                ? { packageSize: food.packaged.packageSize }
+                : {}),
+              ...(food.packaged?.servingsPerContainer
+                ? { servingsPerContainer: food.packaged.servingsPerContainer }
+                : {}),
+              ...(food.providerSourceSnapshot
+                ? {
+                    providerAttribution: food.provenance.providerAttribution,
+                    sourceUrl: food.provenance.sourceUrl,
+                    providerSourceSnapshot: food.providerSourceSnapshot,
+                  }
+                : {}),
             }
           : {}),
       modified: false,
@@ -819,8 +842,13 @@ function NutritionPage({
 
   function changeServingQuantity(value) {
     const scaledNutrition = scaleNutrition(nutritionBasis, value);
-    const formNutrition = foodReference?.sourceType === "remote-barcode"
+    const formNutrition = (
+      foodReference?.sourceType === "remote-barcode"
       && foodReference.dataBasis === "100g"
+    ) || (
+      foodReference?.sourceType === "grocery-custom"
+      && foodReference.identifiers?.length
+    )
       ? applyRemoteNutrientPrecision(scaledNutrition)
       : scaledNutrition;
 
@@ -864,7 +892,11 @@ function NutritionPage({
 
   function openBarcodeScanner() {
     if (!barcodeAccess.available) return;
-    if (!barcodeLookupRef.current) barcodeLookupRef.current = createRemoteBarcodeLookup();
+    if (!barcodeLookupRef.current) {
+      barcodeLookupRef.current = createRemoteBarcodeLookup({
+        userLookup: (barcode) => lookupUserFoodByBarcode(userFoodsRef.current, barcode),
+      });
+    }
     setBarcodeScannerOpen(true);
   }
 
@@ -1026,12 +1058,16 @@ function NutritionPage({
           lifecycleAdapter={lifecycleAdapter}
           onClose={() => setBarcodeScannerOpen(false)}
           onUseFood={useBarcodeFood}
+          saveUserFood={saveUserFood}
+          updateUserFood={updateUserFood}
+          deleteUserFood={deleteUserFood}
           reducedMotion={reducedMotion}
         />
       )}
 
       <GroceryFoodForm
         saveUserFood={saveUserFood}
+        updateUserFood={updateUserFood}
         buttonStyle={buttonStyle}
         inputStyle={inputStyle}
       />

@@ -12,6 +12,7 @@ import {
   webAppLifecycleAdapter,
 } from "../services/appLifecycleAdapter";
 import { acquireDocumentScrollLock } from "../services/documentScrollLock";
+import GroceryFoodForm from "./GroceryFoodForm";
 import "./BarcodeScannerDialog.css";
 
 const FOCUSABLE = [
@@ -34,12 +35,12 @@ const NUTRIENT_ROWS = [
 ];
 
 const LOOKUP_MESSAGES = Object.freeze({
-  "not-found": "No matching product was found. Try scanning again, enter the barcode manually, or use normal food search.",
+  "not-found": "No matching product was found. You can save it as a custom food, scan again, or use normal food search.",
   invalid: "That barcode is not a valid supported GTIN. Check the digits and try again.",
   offline: "Trace is offline and has no usable cached result for this barcode.",
   "rate-limited": "Barcode providers are temporarily busy. Please try again later.",
-  unavailable: "Remote barcode lookup is temporarily unavailable. Verified Trace catalog barcodes still work.",
-  unconfigured: "Remote barcode lookup is not configured here. Verified Trace catalog barcodes still work.",
+  unavailable: "Remote barcode lookup is temporarily unavailable, so Trace cannot tell whether this product exists. You can enter it manually; verified Trace catalog barcodes still work.",
+  unconfigured: "Remote barcode lookup is not configured here, so Trace cannot check providers. You can enter the food manually; verified Trace catalog barcodes still work.",
 });
 
 const AUTOMATIC_FALLBACK_ERROR_CODES = new Set([
@@ -73,6 +74,9 @@ export default function BarcodeScannerDialog({
   lifecycleAdapter = webAppLifecycleAdapter,
   onClose,
   onUseFood,
+  saveUserFood = () => ({ status: "error", food: null }),
+  updateUserFood = () => ({ status: "error", food: null }),
+  deleteUserFood = () => false,
   orientation = availableScreenOrientation(),
   reducedMotion = false,
 }) {
@@ -85,6 +89,9 @@ export default function BarcodeScannerDialog({
   const [message, setMessage] = useState(access.message);
   const [errorMessage, setErrorMessage] = useState("");
   const [lookingUp, setLookingUp] = useState(false);
+  const [recovery, setRecovery] = useState(null);
+  const [lookupIdentifier, setLookupIdentifier] = useState(null);
+  const [deletePending, setDeletePending] = useState(false);
   const dialogRef = useRef(null);
   const contentRef = useRef(null);
   const videoRef = useRef(null);
@@ -115,6 +122,12 @@ export default function BarcodeScannerDialog({
   const submitBarcode = useCallback(async (rawValue) => {
     const barcode = normalizeGtin(rawValue);
     if (!barcode) {
+      acceptedBarcodeRef.current = false;
+      pendingLookupRef.current = false;
+      setCandidate(null);
+      setRecovery(null);
+      setLookupIdentifier(null);
+      setDeletePending(false);
       setErrorMessage(LOOKUP_MESSAGES.invalid);
       setMessage("");
       return;
@@ -126,6 +139,9 @@ export default function BarcodeScannerDialog({
     releaseCamera();
     setCameraState("idle");
     setCandidate(null);
+    setRecovery(null);
+    setLookupIdentifier({ scheme: "gtin", value: barcode });
+    setDeletePending(false);
     setErrorMessage("");
     setMessage("Looking up barcode…");
     setLookingUp(true);
@@ -167,6 +183,9 @@ export default function BarcodeScannerDialog({
     cameraStartPendingRef.current = true;
     acceptedBarcodeRef.current = false;
     setCandidate(null);
+    setRecovery(null);
+    setLookupIdentifier(null);
+    setDeletePending(false);
     setErrorMessage("");
     setCameraState("starting");
     const controller = new AbortController();
@@ -240,9 +259,68 @@ export default function BarcodeScannerDialog({
     pendingLookupRef.current = false;
     setLookingUp(false);
     setCandidate(null);
+    setRecovery(null);
+    setLookupIdentifier(null);
+    setDeletePending(false);
     setErrorMessage("");
     setMessage("Ready for another barcode. Start a camera or enter the digits manually.");
     setCameraState("idle");
+  }
+
+  function beginRecovery() {
+    if (!lookupIdentifier) return;
+    releaseCamera();
+    setCameraState("idle");
+    setRecovery({
+      ...(candidate?.recovery || {
+        barcode: lookupIdentifier,
+        food: null,
+        providerSourceSnapshot: null,
+      }),
+      returnError: errorMessage,
+    });
+    setErrorMessage("");
+    setMessage(candidate
+      ? "Complete the missing product details, then save it for future scans."
+      : "Enter the product details, then save it for future scans.");
+  }
+
+  function cancelRecovery() {
+    if (!candidate && recovery?.returnError) setErrorMessage(recovery.returnError);
+    setRecovery(null);
+    setMessage(candidate
+      ? "Product found, but required nutrition is missing. Review the available information."
+      : "");
+  }
+
+  function finishRecovery(food) {
+    const nextCandidate = createBarcodeNutritionCandidate({
+      status: "found",
+      identifier: food.identifiers[0],
+      food,
+    });
+    setRecovery(null);
+    setCandidate(nextCandidate);
+    setDeletePending(false);
+    setErrorMessage("");
+    setMessage("Custom barcode food saved. Future scans will find it before remote providers.");
+  }
+
+  function removeCustomFood() {
+    if (!candidate?.customFood) return;
+    if (!deletePending) {
+      setDeletePending(true);
+      return;
+    }
+    if (!deleteUserFood(candidate.customFood.id)) {
+      setErrorMessage("Trace could not delete this custom barcode food.");
+      return;
+    }
+    acceptedBarcodeRef.current = false;
+    setDeletePending(false);
+    setCandidate(null);
+    setMessage("Custom barcode food deleted. Looking up this barcode again will use the normal provider fallback.");
+    setErrorMessage("");
   }
 
   function useFood() {
@@ -505,7 +583,30 @@ export default function BarcodeScannerDialog({
         </div>
         {errorMessage && <p className="trace-barcode-dialog__error" role="alert">{errorMessage}</p>}
 
-        {candidate && (
+        {!candidate && !recovery && lookupIdentifier && !lookingUp && errorMessage
+          && errorMessage !== LOOKUP_MESSAGES.invalid && (
+          <button onClick={beginRecovery} type="button">
+            {errorMessage === LOOKUP_MESSAGES["not-found"]
+              ? "Create This Food"
+              : "Create This Food Manually"}
+          </button>
+        )}
+
+        {recovery && (
+          <GroceryFoodForm
+            key={`${recovery.barcode.value}:${recovery.food?.id || "new"}`}
+            identifier={recovery.barcode}
+            initialFood={recovery.food}
+            onCancel={cancelRecovery}
+            onSaved={finishRecovery}
+            providerSourceSnapshot={recovery.providerSourceSnapshot}
+            recovery
+            saveUserFood={saveUserFood}
+            updateUserFood={updateUserFood}
+          />
+        )}
+
+        {candidate && !recovery && (
           <article className="trace-barcode-dialog__product" aria-label="Barcode product review">
             <p className="trace-barcode-dialog__eyebrow">
               {candidate.canUse ? "Ready to review" : "Review required"}
@@ -547,6 +648,17 @@ export default function BarcodeScannerDialog({
             )}
             <div className="trace-barcode-dialog__review-actions">
               <button disabled={!candidate.canUse} onClick={useFood} type="button">Use This Food</button>
+              {!candidate.canUse && candidate.recovery && (
+                <button onClick={beginRecovery} type="button">Complete This Food</button>
+              )}
+              {candidate.customFood && (
+                <>
+                  <button onClick={beginRecovery} type="button">Edit Custom Food</button>
+                  <button onClick={removeCustomFood} type="button">
+                    {deletePending ? "Confirm Delete Custom Food" : "Delete Custom Food"}
+                  </button>
+                </>
+              )}
               <button onClick={resetForAnotherScan} type="button">Scan Again</button>
             </div>
           </article>

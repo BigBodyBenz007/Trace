@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { StrictMode } from "react";
 import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import { APP_LIFECYCLE_PHASE } from "../services/appLifecycleAdapter";
+import { createUserFood } from "../services/userFoodCatalog";
 
 const access = {
   available: true,
@@ -92,6 +93,21 @@ function floatingRemoteFood() {
       retrievedAt: "2026-09-03T12:00:00.000Z",
     },
   };
+}
+
+function incompleteRemoteFood() {
+  return {
+    ...floatingRemoteFood(),
+    nutrients: { ...floatingRemoteFood().nutrients, calories: null },
+    completeness: "insufficient",
+    unknownFields: ["nutrients.calories", "nutrients.fiber", "provenance.revisionDate"],
+    logReady: false,
+  };
+}
+
+function savingCustomFood(payload) {
+  const food = createUserFood(payload.name, payload.nutrients, payload.serving, payload);
+  return { status: "added", food };
 }
 
 function setup(overrides = {}, { strict = false } = {}) {
@@ -300,6 +316,169 @@ test("keeps incomplete products reviewable but disables use", async () => {
   expect((await screen.findAllByText(/required nutrition is missing/i)).length).toBeGreaterThan(0);
   expect(screen.getByRole("button", { name: "Use This Food" })).toBeDisabled();
 });
+
+test("not-found recovery creates a reusable barcode food without logging it automatically", async () => {
+  const saveUserFood = jest.fn(savingCustomFood);
+  const onUseFood = jest.fn();
+  setup({
+    barcodeLookup: {
+      lookup: jest.fn().mockResolvedValue({
+        status: "not-found",
+        identifier: { scheme: "gtin", value: "00012345600012" },
+        food: null,
+      }),
+    },
+    saveUserFood,
+    onUseFood,
+  });
+  const barcode = screen.getByLabelText("Enter barcode manually");
+  fireEvent.change(barcode, { target: { value: "00012345600012" } });
+  fireEvent.submit(barcode.closest("form"));
+  fireEvent.click(await screen.findByRole("button", { name: "Create This Food" }));
+
+  const recoveryForm = screen.getByRole("button", { name: "Save Barcode Food" }).closest("form");
+  const recovery = within(recoveryForm);
+  expect(recovery.getByText(/Barcode:/).parentElement).toHaveTextContent("00012345600012");
+  expect(recovery.getByLabelText("Food name")).toHaveValue("");
+  expect(recovery.getByLabelText("Food name")).toHaveAttribute("placeholder", "");
+  expect(recovery.getByLabelText("Package quantity (optional)")).toHaveValue("");
+  expect(recovery.getByLabelText("Package quantity (optional)"))
+    .toHaveAttribute("placeholder", "");
+  [...recoveryForm.querySelectorAll("input, textarea")].forEach((control) => {
+    expect(control.placeholder).toBe("");
+  });
+
+  fireEvent.change(recovery.getByLabelText("Food name"), { target: { value: "My scanned food" } });
+  fireEvent.change(recovery.getByLabelText("Calories"), { target: { value: "100" } });
+  fireEvent.change(recovery.getByLabelText("Protein (g)"), { target: { value: "5" } });
+  fireEvent.change(recovery.getByLabelText("Carbohydrates (g)"), { target: { value: "10" } });
+  fireEvent.change(recovery.getByLabelText("Fat (g)"), { target: { value: "4" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Barcode Food" }));
+
+  expect(saveUserFood).toHaveBeenCalledWith(expect.objectContaining({
+    identifiers: [{ scheme: "gtin", value: "00012345600012" }],
+    name: "My scanned food",
+    providerSourceSnapshot: null,
+  }));
+  expect(onUseFood).not.toHaveBeenCalled();
+  expect(await screen.findByText(/Future scans will find it before remote providers/i)).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Use This Food" })).toBeEnabled();
+});
+
+test("canceling barcode recovery creates nothing and keeps the recovery action available", async () => {
+  const saveUserFood = jest.fn();
+  setup({
+    barcodeLookup: { lookup: jest.fn().mockResolvedValue({ status: "not-found", food: null }) },
+    saveUserFood,
+  });
+  const barcode = screen.getByLabelText("Enter barcode manually");
+  fireEvent.change(barcode, { target: { value: "00012345600012" } });
+  fireEvent.submit(barcode.closest("form"));
+  fireEvent.click(await screen.findByRole("button", { name: "Create This Food" }));
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(saveUserFood).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Create This Food" })).toBeInTheDocument();
+});
+
+test("incomplete remote recovery prefills known values and preserves the full provider source", async () => {
+  const saveUserFood = jest.fn(savingCustomFood);
+  const providerFood = incompleteRemoteFood();
+  setup({
+    barcodeLookup: {
+      lookup: jest.fn().mockResolvedValue({ status: "incomplete", food: providerFood }),
+    },
+    saveUserFood,
+  });
+  const barcode = screen.getByLabelText("Enter barcode manually");
+  fireEvent.change(barcode, { target: { value: "00012345600012" } });
+  fireEvent.submit(barcode.closest("form"));
+  fireEvent.click(await screen.findByRole("button", { name: "Complete This Food" }));
+
+  expect(screen.getByLabelText("Food name")).toHaveValue("Oikos Pro Mixed Berry");
+  expect(screen.getByLabelText("Food name")).toHaveAttribute("placeholder", "");
+  expect(screen.getByLabelText("Package quantity (optional)")).toHaveValue("5.3 oz cup");
+  expect(screen.getByLabelText("Package quantity (optional)"))
+    .toHaveAttribute("placeholder", "");
+  expect(screen.getByLabelText("Protein (g)")).toHaveValue(20);
+  expect(screen.getByLabelText("Calories")).toHaveValue(null);
+  expect(screen.getByLabelText("Fiber (g), optional")).toHaveValue(null);
+  fireEvent.change(screen.getByLabelText("Calories"), { target: { value: "113" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Barcode Food" }));
+
+  expect(saveUserFood.mock.calls[0][0].providerSourceSnapshot).toEqual(providerFood);
+  const saved = saveUserFood.mock.results[0].value.food;
+  expect(saved.providerSourceSnapshot.nutrients.protein).toBe(20.00000000000002);
+  expect(saved.nutrients.protein).toBe(20);
+  expect(Object.isFrozen(saved.providerSourceSnapshot)).toBe(true);
+  expect(screen.getByText(/Source: User-completed from USDA FoodData Central/i))
+    .toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "View source" }))
+    .toHaveAttribute("href", providerFood.provenance.sourceUrl);
+});
+
+test("invalid barcodes cannot enter recovery while provider failures offer manual creation", async () => {
+  const { rerender, props } = setup();
+  const barcode = screen.getByLabelText("Enter barcode manually");
+  fireEvent.change(barcode, { target: { value: "bad" } });
+  fireEvent.submit(barcode.closest("form"));
+  expect(screen.queryByRole("button", { name: /Create This Food/i })).not.toBeInTheDocument();
+
+  props.barcodeLookup.lookup.mockResolvedValueOnce({ status: "unavailable", food: null });
+  fireEvent.change(barcode, { target: { value: "00012345600012" } });
+  fireEvent.submit(barcode.closest("form"));
+  fireEvent.click(await screen.findByRole("button", { name: "Create This Food Manually" }));
+  const recovery = within(screen.getByRole("button", { name: "Save Barcode Food" }).closest("form"));
+  expect(recovery.getByLabelText("Food name")).toHaveValue("");
+  expect(recovery.getByLabelText("Food name")).toHaveAttribute("placeholder", "");
+  expect(recovery.getByLabelText("Package quantity (optional)")).toHaveValue("");
+  expect(recovery.getByLabelText("Package quantity (optional)"))
+    .toHaveAttribute("placeholder", "");
+  expect(recovery.getByText(/Barcode:/).parentElement).toHaveTextContent("00012345600012");
+  expect(rerender).toBeDefined();
+});
+
+test("custom barcode review supports edit and confirmed delete", async () => {
+  const customFood = createUserFood("Saved scan", nutrientsForCustom(), undefined, {
+    identifiers: [{ scheme: "gtin", value: "00012345600012" }],
+  });
+  const updateUserFood = jest.fn((id, payload) => ({
+    status: "updated",
+    food: { ...createUserFood(payload.name, payload.nutrients, payload.serving, payload), id },
+  }));
+  const deleteUserFood = jest.fn(() => true);
+  setup({
+    barcodeLookup: { lookup: jest.fn().mockResolvedValue({ status: "found", food: customFood }) },
+    updateUserFood,
+    deleteUserFood,
+  });
+  const barcode = screen.getByLabelText("Enter barcode manually");
+  fireEvent.change(barcode, { target: { value: "00012345600012" } });
+  fireEvent.submit(barcode.closest("form"));
+  fireEvent.click(await screen.findByRole("button", { name: "Edit Custom Food" }));
+  expect(screen.getByLabelText("Food name")).toHaveValue("Saved scan");
+  expect(screen.getByLabelText("Food name")).toHaveAttribute("placeholder", "");
+  fireEvent.change(screen.getByLabelText("Food name"), { target: { value: "Updated scan" } });
+  fireEvent.click(screen.getByRole("button", { name: "Update Barcode Food" }));
+  expect(updateUserFood).toHaveBeenCalledWith(customFood.id, expect.objectContaining({ name: "Updated scan" }));
+
+  fireEvent.click(await screen.findByRole("button", { name: "Delete Custom Food" }));
+  expect(deleteUserFood).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Delete Custom Food" }));
+  expect(deleteUserFood).toHaveBeenCalledWith(customFood.id);
+});
+
+function nutrientsForCustom() {
+  return {
+    calories: 100,
+    protein: 5,
+    carbohydrates: 10,
+    fat: 4,
+    fiber: null,
+    sodium: 0,
+    totalSugar: 2,
+    addedSugar: null,
+  };
+}
 
 test("stops camera on close, background, Escape, and unmount and restores focus", async () => {
   const opener = document.createElement("button");

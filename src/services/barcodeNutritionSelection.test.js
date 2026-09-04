@@ -121,6 +121,17 @@ test("does not offer an incomplete remote product for use", () => {
   expect(candidate.canUse).toBe(false);
   expect(candidate.selection).toBeNull();
   expect(candidate.display.nutrients.calories).toBeNull();
+  expect(candidate.recovery).toMatchObject({
+    barcode: { scheme: "gtin", value: "00012345600012" },
+    food: {
+      name: "Example Yogurt",
+      serving: { description: "1 cup (30 g)", grams: 30 },
+      nutrients: { calories: null, protein: 3, carbohydrates: 6, fat: 0 },
+    },
+  });
+  expect(candidate.recovery.providerSourceSnapshot.nutrients.protein).toBe(10);
+  expect(candidate.recovery.providerSourceSnapshot.dataBasis).toBe("100g");
+  expect(Object.isFrozen(candidate.recovery.providerSourceSnapshot)).toBe(true);
 });
 
 test("preserves the stale marker on an expired offline cache result", () => {

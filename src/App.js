@@ -33,7 +33,9 @@ import {
 import {
   addUserFood,
   createUserFood,
+  deleteUserFood as deleteUserFoodFromCatalog,
   readUserFoods,
+  updateUserFood as updateUserFoodInCatalog,
   writeUserFoods,
 } from "./services/userFoodCatalog";
 import {
@@ -1256,13 +1258,30 @@ function App({
     }
   }
 
-  function saveUserFood({ name, nutrients, serving, brand, category, notes, identifiers }) {
+  function saveUserFood({
+    name,
+    nutrients,
+    serving,
+    brand,
+    category,
+    notes,
+    identifiers,
+    packageQuantity,
+    servingsPerContainer,
+    providerSourceSnapshot,
+  }) {
     const userFood = createUserFood(name, nutrients, serving, {
       brand,
       category,
       notes,
       identifiers,
+      packageQuantity,
+      servingsPerContainer,
+      providerSourceSnapshot,
     });
+    if (!userFood) {
+      return { status: "error", food: null, matchesDefinition: false };
+    }
     const result = addUserFood(userFoods, userFood);
 
     if (!result.added) {
@@ -1512,6 +1531,46 @@ function App({
       return true;
     } catch (error) {
       setStorageError(storageMessage("delete this protocol"));
+      return false;
+    }
+  }
+
+  function updateUserFood(id, definition) {
+    const userFood = createUserFood(
+      definition.name,
+      definition.nutrients,
+      definition.serving,
+      definition
+    );
+    const result = updateUserFoodInCatalog(userFoods, id, userFood);
+    if (!result.updated) {
+      return {
+        status: result.existingFood ? "duplicate" : "error",
+        food: result.existingFood,
+        matchesDefinition: false,
+      };
+    }
+    try {
+      writeUserFoods(localStorage, result.foods);
+      setUserFoods(result.foods);
+      setStorageError("");
+      return { status: "updated", food: result.food, matchesDefinition: true };
+    } catch (error) {
+      setStorageError(storageMessage("update this reusable food"));
+      return { status: "error", food: null, matchesDefinition: false };
+    }
+  }
+
+  function deleteUserFood(id) {
+    const result = deleteUserFoodFromCatalog(userFoods, id);
+    if (!result.deleted) return false;
+    try {
+      writeUserFoods(localStorage, result.foods);
+      setUserFoods(result.foods);
+      setStorageError("");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("delete this reusable food"));
       return false;
     }
   }
@@ -2964,6 +3023,8 @@ function App({
           nutritionGoals={nutritionGoals}
           saveNutritionEntry={saveNutritionEntry}
           saveUserFood={saveUserFood}
+          updateUserFood={updateUserFood}
+          deleteUserFood={deleteUserFood}
           updateNutritionEntry={updateNutritionEntry}
           deleteNutritionEntry={deleteNutritionEntry}
           saveNutritionGoals={saveNutritionGoals}

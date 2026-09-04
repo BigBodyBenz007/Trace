@@ -50,6 +50,7 @@ export function createRemoteBarcodeLookup({
   endpoint = REMOTE_BARCODE_ENDPOINT,
   runtime = defaultRuntime,
   localLookup = lookupCatalogFoodByBarcode,
+  userLookup = () => ({ status: "not-found", identifier: null, food: null }),
   requestTimeoutMs = REMOTE_BARCODE_REQUEST_TIMEOUT_MS,
   responseMaxBytes = REMOTE_BARCODE_RESPONSE_MAX_BYTES,
 } = {}) {
@@ -95,6 +96,11 @@ export function createRemoteBarcodeLookup({
     const local = localLookup(barcode);
     if (local.status === "found") {
       return immutableCopy({ ...local, source: "local" });
+    }
+
+    const custom = userLookup(barcode);
+    if (custom.status === "found") {
+      return immutableCopy({ ...custom, source: "user" });
     }
 
     const cached = cache.get(barcode);
