@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   APP_THEMES,
   normalizeAppThemeId,
@@ -26,6 +26,10 @@ export default function SettingsPage({
   updateSettings,
   onBack,
   onOpenBackup,
+  onOpenPrivacy = () => {},
+  onOpenTerms = () => {},
+  legalNavigationReturn = null,
+  onLegalNavigationRestored = () => {},
   journalPrivacy = { enabled: false, unlocked: false, malformed: false },
   onEnableJournalPrivacy = async () => {},
   onChangeJournalPassphrase = async () => {},
@@ -37,7 +41,28 @@ export default function SettingsPage({
 }) {
   const [status, setStatus] = useState("");
   const statusTimerRef = useRef(null);
+  const privacyLinkRef = useRef(null);
+  const termsLinkRef = useRef(null);
+  const onLegalNavigationRestoredRef = useRef(onLegalNavigationRestored);
+  onLegalNavigationRestoredRef.current = onLegalNavigationRestored;
   useEffect(() => () => clearTimeout(statusTimerRef.current), []);
+
+  useLayoutEffect(() => {
+    if (!legalNavigationReturn) return undefined;
+    const frameId = window.requestAnimationFrame(() => {
+      window.scrollTo({
+        top: Math.max(0, Number(legalNavigationReturn.scrollY) || 0),
+        left: 0,
+        behavior: "auto",
+      });
+      const target = legalNavigationReturn.target === "terms"
+        ? termsLinkRef.current
+        : privacyLinkRef.current;
+      target?.focus();
+      onLegalNavigationRestoredRef.current();
+    });
+    return () => window.cancelAnimationFrame(frameId);
+  }, [legalNavigationReturn]);
 
   function saveSettings(nextSettings) {
     const saved = updateSettings(nextSettings);
@@ -86,6 +111,33 @@ export default function SettingsPage({
       <h2 id="backup-settings-heading">Backup &amp; Restore</h2>
       <p>Save a private copy of your Trace data or restore a previously created backup.</p>
       <button className="trace-action trace-action--primary" type="button" onClick={onOpenBackup} style={buttonStyle}>Backup &amp; Restore</button>
+    </section>
+    <section className="trace-feature-section trace-settings-legal" aria-labelledby="legal-settings-heading">
+      <h2 id="legal-settings-heading">Legal &amp; Privacy</h2>
+      <p>Read how Trace handles your information and the terms that apply to the app.</p>
+      <nav aria-label="Legal and privacy">
+        <a
+          href="/privacy"
+          onClick={(event) => {
+            event.preventDefault();
+            onOpenPrivacy();
+          }}
+          ref={privacyLinkRef}
+        >
+          Privacy Policy
+        </a>
+        <a
+          href="/terms"
+          onClick={(event) => {
+            event.preventDefault();
+            onOpenTerms();
+          }}
+          ref={termsLinkRef}
+        >
+          Terms of Service
+        </a>
+        <a href="mailto:traceappsupporthelp@gmail.com">Contact Trace Support</a>
+      </nav>
     </section>
     <JournalPrivacySettings
       enabled={journalPrivacy.enabled}

@@ -5360,7 +5360,8 @@ code {
 .trace-feature-page--settings .life-current-theme-settings,
 .trace-settings-units,
 .trace-settings-backup,
-.trace-settings-home {
+.trace-settings-home,
+.trace-settings-legal {
   max-width: 680px;
   min-width: 0;
   width: 100%;
@@ -5368,6 +5369,138 @@ code {
 
 .trace-settings-home {
   margin-top: var(--trace-space-5);
+}
+
+.trace-settings-legal {
+  margin-top: var(--trace-space-5);
+}
+
+.trace-settings-legal > p {
+  color: var(--trace-text-muted);
+}
+
+.trace-settings-legal nav {
+  display: grid;
+  gap: var(--trace-space-2);
+}
+
+.trace-settings-legal a {
+  align-items: center;
+  background: var(--trace-option-background);
+  border: 1px solid var(--trace-option-border);
+  border-radius: var(--trace-button-radius);
+  color: var(--trace-text);
+  display: flex;
+  font-weight: var(--trace-weight-medium);
+  min-height: 44px;
+  overflow-wrap: anywhere;
+  padding: 10px 14px;
+  text-decoration-color: var(--trace-brass-strong);
+  text-underline-offset: 0.18em;
+}
+
+.trace-settings-legal a:focus-visible,
+.trace-feature-page--legal a:focus-visible,
+.trace-feature-page--legal h1:focus-visible {
+  outline: 3px solid var(--trace-focus);
+  outline-offset: 3px;
+}
+
+/* Legal documents use the normal feature-page material so text remains
+   readable above every immersive theme without changing theme artwork. */
+.trace-feature-page--legal {
+  overflow-wrap: anywhere;
+}
+
+.trace-legal-navigation {
+  display: flex;
+  margin: 0 auto var(--trace-space-4);
+  max-width: 800px;
+  width: 100%;
+}
+
+.trace-legal-navigation--footer {
+  margin-bottom: 0;
+  margin-top: var(--trace-space-4);
+}
+
+.trace-legal-document {
+  color: var(--trace-text);
+  max-width: 800px;
+  padding: clamp(20px, 4vw, 40px) !important;
+}
+
+.trace-legal-document__identity {
+  margin-bottom: var(--trace-space-8);
+}
+
+.trace-legal-document__identity h1:focus {
+  border-radius: var(--trace-radius-sm);
+}
+
+.trace-legal-dates {
+  display: grid;
+  gap: var(--trace-space-2) var(--trace-space-6);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: var(--trace-space-5) auto 0;
+  max-width: 540px;
+  text-align: left;
+}
+
+.trace-legal-dates div {
+  border-top: 1px solid var(--trace-panel-border);
+  min-width: 0;
+  padding-top: var(--trace-space-2);
+}
+
+.trace-legal-dates dt {
+  color: var(--trace-text-muted);
+  font-size: var(--trace-text-sm);
+  font-weight: var(--trace-weight-bold);
+  text-transform: uppercase;
+}
+
+.trace-legal-dates dd {
+  margin: var(--trace-space-1) 0 0;
+}
+
+.trace-legal-document__body {
+  margin: 0 auto;
+  max-width: 720px;
+  text-align: left;
+}
+
+.trace-legal-document__body section + section {
+  border-top: 1px solid var(--trace-panel-border);
+  margin-top: var(--trace-space-6);
+  padding-top: var(--trace-space-4);
+}
+
+.trace-legal-document__body h2 {
+  font-size: clamp(1.3rem, 3vw, 1.7rem);
+  margin: 0 0 var(--trace-space-3);
+}
+
+.trace-legal-document__body p,
+.trace-legal-document__body li {
+  line-height: 1.7;
+}
+
+.trace-legal-document__body p {
+  margin: 0 0 var(--trace-space-3);
+}
+
+.trace-legal-document__body ul {
+  padding-left: 1.35rem;
+}
+
+.trace-feature-page--legal a {
+  color: var(--trace-brass-strong);
+  text-underline-offset: 0.16em;
+}
+
+.trace-feature-page--legal code {
+  white-space: normal;
 }
 
 .trace-settings-home h3 {
@@ -5685,6 +5818,14 @@ code {
 
   .trace-backup-actions {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trace-legal-dates {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .trace-legal-navigation .trace-action {
+    width: 100%;
   }
 
   .trace-backup-preview .trace-action,

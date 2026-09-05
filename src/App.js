@@ -4,6 +4,8 @@ import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
 import HealthPage from "./components/HealthPage";
 import SettingsPage from "./components/SettingsPage";
+import PrivacyPolicyPage from "./components/PrivacyPolicyPage";
+import TermsOfServicePage from "./components/TermsOfServicePage";
 import MedicationPage from "./components/MedicationPage";
 import ProtocolsPage from "./components/ProtocolsPage";
 import WorkoutPage from "./components/WorkoutPage";
@@ -79,6 +81,7 @@ import {
 } from "./services/workoutCalorieEstimateSnapshot";
 import { useReducedMotion } from "./services/motionPreference";
 import { getAppShellThemeColor, resolveAppShellThemeId } from "./services/appThemes";
+import { legalPageFromPathname, legalRouteForPage } from "./services/legalNavigation";
 import { createPhotoUrlLoader } from "./services/photoUrlLoader";
 import {
   JOURNAL_DRAFT_STORAGE_KEY,
@@ -334,7 +337,9 @@ function App({
   photoSelectionAdapter = webPhotoSelectionAdapter,
   lifecycleAdapter = webAppLifecycleAdapter,
 }) {
-  const [page, setPage] = useState("home");
+  const [page, setPage] = useState(() =>
+    legalPageFromPathname(typeof window === "undefined" ? "/" : window.location.pathname) || "home"
+  );
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -415,6 +420,10 @@ function App({
   const activeObjectUrlsRef = useRef(new Set());
   const photoUrlLoaderRef = useRef(null);
   const skipNextPageTopScrollRef = useRef(false);
+  const legalSettingsReturnRef = useRef(null);
+  const normalDocumentTitleRef = useRef(
+    typeof document === "undefined" ? "Trace" : document.title || "Trace"
+  );
   const memoryEditorFolioRef = useRef(null);
   const completedPlannedWorkoutIdsRef = useRef(new Set());
   const pendingPlannedWorkoutIdsRef = useRef(new Set());
@@ -423,6 +432,70 @@ function App({
   const journalSaveErrorRef = useRef(null);
   const journalPrivacyChannelRef = useRef(null);
   const journalLockRef = useRef(null);
+
+  useEffect(() => {
+    function synchronizePublicRoute(event) {
+      const legalPage = legalPageFromPathname(window.location.pathname);
+      if (legalPage) {
+        setPage(legalPage);
+        return;
+      }
+      if (event.state?.tracePage === "settings") {
+        legalSettingsReturnRef.current = {
+          target: event.state.traceLegalFocus,
+          scrollY: event.state.traceSettingsScrollY,
+        };
+        skipNextPageTopScrollRef.current = true;
+        setPage("settings");
+        return;
+      }
+      setPage("home");
+    }
+
+    window.addEventListener("popstate", synchronizePublicRoute);
+    return () => window.removeEventListener("popstate", synchronizePublicRoute);
+  }, []);
+
+  useEffect(() => {
+    const legalRoute = legalRouteForPage(page);
+    document.title = legalRoute?.documentTitle || normalDocumentTitleRef.current;
+  }, [page]);
+
+  useEffect(() => () => {
+    document.title = normalDocumentTitleRef.current;
+  }, []);
+
+  function openLegalPage(legalPage) {
+    const route = legalRouteForPage(legalPage);
+    if (!route) return;
+    const settingsScrollY = window.scrollY || window.pageYOffset || 0;
+    window.history.replaceState({
+      ...(window.history.state || {}),
+      tracePage: "settings",
+      traceLegalFocus: legalPage,
+      traceSettingsScrollY: settingsScrollY,
+    }, "");
+    window.history.pushState({
+      tracePage: legalPage,
+      traceFromSettings: true,
+    }, "", route.path);
+    setPage(legalPage);
+  }
+
+  function returnToSettingsFromLegal() {
+    if (window.history.state?.traceFromSettings) {
+      window.history.back();
+      return;
+    }
+    legalSettingsReturnRef.current = { target: page, scrollY: 0 };
+    skipNextPageTopScrollRef.current = true;
+    window.history.pushState({
+      tracePage: "settings",
+      traceLegalFocus: page,
+      traceSettingsScrollY: 0,
+    }, "", "/");
+    setPage("settings");
+  }
 
   function ensurePhotoDatabase() {
     if (photoDatabaseRef.current) return Promise.resolve(photoDatabaseRef.current);
@@ -3148,7 +3221,11 @@ function App({
           onExitTrophySource={() => setTrophySourceNavigation(null)}
         />
       )}
-      {page !== "home" && (page === "nutrition" ? (
+      {page !== "home" && (page === "privacy" ? (
+        <PrivacyPolicyPage onBackToSettings={returnToSettingsFromLegal} />
+      ) : page === "terms" ? (
+        <TermsOfServicePage onBackToSettings={returnToSettingsFromLegal} />
+      ) : page === "nutrition" ? (
         <NutritionPage
           onBack={() => setPage("home")}
           nutritionEntries={nutritionEntries}
@@ -3254,6 +3331,12 @@ function App({
           updateSettings={updateAppSettings}
           onBack={() => setPage("home")}
           onOpenBackup={() => setPage("backup")}
+          onOpenPrivacy={() => openLegalPage("privacy")}
+          onOpenTerms={() => openLegalPage("terms")}
+          legalNavigationReturn={legalSettingsReturnRef.current}
+          onLegalNavigationRestored={() => {
+            legalSettingsReturnRef.current = null;
+          }}
           journalPrivacy={journalPrivacy}
           onEnableJournalPrivacy={enableJournalPrivacy}
           onChangeJournalPassphrase={changeJournalPassphrase}

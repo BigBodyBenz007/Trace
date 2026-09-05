@@ -285,6 +285,57 @@ test("offers one responsive Backup & Restore entry and opens it from Settings", 
   }
 });
 
+test("offers accessible Legal & Privacy links and restores the originating link", () => {
+  const onOpenPrivacy = jest.fn();
+  const onOpenTerms = jest.fn();
+  const onLegalNavigationRestored = jest.fn();
+  const originalRequestAnimationFrame = window.requestAnimationFrame;
+  const originalCancelAnimationFrame = window.cancelAnimationFrame;
+  const originalScrollTo = window.scrollTo;
+  window.requestAnimationFrame = (callback) => {
+    callback();
+    return 1;
+  };
+  window.cancelAnimationFrame = jest.fn();
+  window.scrollTo = jest.fn();
+
+  try {
+    render(
+      <SettingsPage
+        settings={DEFAULT_APP_SETTINGS}
+        updateSettings={jest.fn()}
+        onBack={jest.fn()}
+        onOpenPrivacy={onOpenPrivacy}
+        onOpenTerms={onOpenTerms}
+        legalNavigationReturn={{ target: "terms", scrollY: 512 }}
+        onLegalNavigationRestored={onLegalNavigationRestored}
+        buttonStyle={{}}
+        containerStyle={{}}
+      />
+    );
+
+    const section = screen.getByRole("heading", { name: "Legal & Privacy" }).closest("section");
+    const privacy = within(section).getByRole("link", { name: "Privacy Policy" });
+    const terms = within(section).getByRole("link", { name: "Terms of Service" });
+    const support = within(section).getByRole("link", { name: "Contact Trace Support" });
+    expect(privacy).toHaveAttribute("href", "/privacy");
+    expect(terms).toHaveAttribute("href", "/terms");
+    expect(support).toHaveAttribute("href", "mailto:traceappsupporthelp@gmail.com");
+    expect(terms).toHaveFocus();
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 512, left: 0, behavior: "auto" });
+    expect(onLegalNavigationRestored).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(privacy);
+    fireEvent.click(terms);
+    expect(onOpenPrivacy).toHaveBeenCalledTimes(1);
+    expect(onOpenTerms).toHaveBeenCalledTimes(1);
+  } finally {
+    window.requestAnimationFrame = originalRequestAnimationFrame;
+    window.cancelAnimationFrame = originalCancelAnimationFrame;
+    window.scrollTo = originalScrollTo;
+  }
+});
+
 test("offers accessible Home visibility switches and saves reversible choices", () => {
   const updateSettings = jest.fn(() => true);
   const { rerender } = render(
