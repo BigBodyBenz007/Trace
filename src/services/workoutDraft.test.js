@@ -141,11 +141,13 @@ test("normalizes collapsed exercise IDs in the existing draft context", () => {
   draft.context.collapsedExerciseIds = [firstId, firstId, "exercise:stale"];
 
   expect(normalizeWorkoutDraft(draft).context.collapsedExerciseIds).toEqual([firstId]);
+  draft.context.collapsedExerciseIds = [];
+  expect(normalizeWorkoutDraft(draft).context).toHaveProperty("collapsedExerciseIds", []);
   draft.context.collapsedExerciseIds = "not-an-array";
   expect(normalizeWorkoutDraft(draft)).toBeNull();
 });
 
-test("preserves explicit Today and Calendar origins without adding them to legacy drafts", () => {
+test("preserves explicit Today, Calendar, and Workout Templates origins without adding them to legacy drafts", () => {
   const todayDraft = createWorkoutDraftFromPlannedWorkout(
     plannedWorkout(),
     new Date(2026, 7, 22, 9, 5),
@@ -175,6 +177,22 @@ test("preserves explicit Today and Calendar origins without adding them to legac
   expect(normalizeWorkoutDraft({
     ...todayDraft,
     context: { ...todayDraft.context, originPage: "calendar" },
+  })).toBeNull();
+  const templateDraft = normalizeWorkoutDraft({
+    ...todayDraft,
+    context: {
+      ...todayDraft.context,
+      originPage: "workout-templates",
+      originTemplateId: "workout-template:source",
+    },
+  });
+  expect(templateDraft.context).toMatchObject({
+    originPage: "workout-templates",
+    originTemplateId: "workout-template:source",
+  });
+  expect(normalizeWorkoutDraft({
+    ...todayDraft,
+    context: { ...todayDraft.context, originPage: "workout-templates" },
   })).toBeNull();
 });
 

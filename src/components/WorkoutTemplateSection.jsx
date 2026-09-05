@@ -265,6 +265,7 @@ export default function WorkoutTemplateSection({
   onDelete,
   buttonStyle = {},
   toggleButtonRef = null,
+  registerStartButton = () => {},
 }) {
   const compactButton = {
     ...buttonStyle,
@@ -299,7 +300,7 @@ export default function WorkoutTemplateSection({
                   <p className="trace-workout-template-card__summary">{summary}</p>
                 </div>
                 <div className="trace-workout-template-card__actions" aria-label={`${template.name} template actions`}>
-                  <button className="trace-action trace-action--primary" type="button" onClick={() => onStart(template)} style={compactButton}>Start Now</button>
+                  <button ref={(node) => registerStartButton(template.id, node)} className="trace-action trace-action--primary" type="button" onClick={() => onStart(template)} style={compactButton}>Start Now</button>
                   <button className="trace-action trace-action--brass" type="button" onClick={(event) => onSchedule(template, event.currentTarget)} style={compactButton}>Schedule Workout</button>
                   <button className="trace-action trace-action--secondary" type="button" onClick={(event) => onEdit(template, event.currentTarget)} style={compactButton}>Edit Template</button>
                   <button className="trace-action trace-action--danger" type="button" onClick={(event) => onDelete(template, event.currentTarget)} style={compactButton}>Delete Template</button>

@@ -1869,13 +1869,16 @@ function App({
     }
     if (existingDraft && conflictAction !== "discard") return { status: "cancelled" };
 
-    const workoutDraft = createWorkoutDraftFromTemplate(template, new Date());
+    const workoutDraft = createWorkoutDraftFromTemplate(template, new Date(), {
+      originPage: "workout-templates",
+      originTemplateId: template.id,
+    });
     if (!workoutDraft) return { status: "error", message: "The workout template could not be started." };
     try {
       writeWorkoutDraft(localStorage, workoutDraft);
       setActiveWorkoutDraft(workoutDraft);
       setWorkoutEntryTargetId(null);
-      setWorkoutOriginPage(null);
+      setWorkoutOriginPage("workout-templates");
       setWorkoutOriginCalendar(null);
       setWorkoutPageGeneration((current) => current + 1);
       setStorageError("");
@@ -3310,6 +3313,10 @@ function App({
             setWorkoutOriginPage(null);
             setWorkoutOriginCalendar(null);
             setPage("calendar");
+          }}
+          onReturnToWorkoutTemplates={() => {
+            setWorkoutOriginPage(null);
+            setWorkoutOriginCalendar(null);
           }}
           workoutEntries={workoutEntries}
           workoutTemplates={workoutTemplates}

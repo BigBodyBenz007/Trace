@@ -3,6 +3,7 @@ import WorkoutPage from "./WorkoutPage";
 import { createExerciseDefinition } from "../services/exerciseCatalog";
 import { createPlannedWorkout } from "../services/plannedWorkout";
 import {
+  createWorkoutDraftFromTemplate,
   createWorkoutDraftFromPlannedWorkout,
   WORKOUT_DRAFT_STORAGE_KEY,
 } from "../services/workoutDraft";
@@ -484,9 +485,16 @@ test("a Today-origin Roadmap provides standardized Today navigation and returns 
   const onReturnToToday = jest.fn();
   const view = renderPage({ onReturnToToday });
 
+  expect(screen.getByTestId("workout-page")).toHaveAttribute("data-focused-workout", "true");
+  expect(screen.queryByRole("heading", { name: "Workout Templates" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Workout History" })).not.toBeInTheDocument();
   const navigation = screen.getByRole("navigation", { name: "Focused event navigation" });
   expect(within(navigation).getByRole("button", { name: "Back to Timeline" })).toBeInTheDocument();
   expect(screen.getAllByRole("button", { name: "Back to Today's Schedule" })).toHaveLength(2);
+  expect(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
+    .getByRole("button", { name: "Edit" })).toHaveAttribute("aria-expanded", "false");
+  expect(screen.queryByRole("region", { name: "Edit Dumbbell Bench Press sets" }))
+    .not.toBeInTheDocument();
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Today's Schedule" })[0]);
   expect(onReturnToToday).toHaveBeenCalledTimes(1);
   fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
@@ -832,6 +840,89 @@ test("keeps templates compact and provides start, schedule, edit, and confirmed 
   }
 });
 
+test("a template-origin draft uses the focused editor and returns without discarding progress", async () => {
+  const saved = workoutTemplate();
+  const draft = createWorkoutDraftFromTemplate(
+    saved,
+    new Date(2026, 8, 4, 12, 30),
+    { originPage: "workout-templates", originTemplateId: saved.id }
+  );
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  const onReturnToWorkoutTemplates = jest.fn();
+  render(<WorkoutPage {...renderPageProps({
+    workoutEntries: [entry()],
+    workoutTemplates: [saved],
+    onReturnToWorkoutTemplates,
+  })} />);
+
+  expect(screen.getByTestId("workout-page")).toHaveAttribute("data-focused-workout", "true");
+  expect(screen.getByRole("form", { name: "Active workout" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Workout in Progress" })).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Back to Workout Templates" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Workout title")).toHaveValue("ARMegddon");
+  expect(screen.getByRole("button", { name: "Expand Exercise: Incline Press" }))
+    .toBeInTheDocument();
+  expect(screen.getByText("1 set")).toBeInTheDocument();
+  expect(screen.queryByLabelText("Exercise 1 name")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Exercise 1 set 1 reps")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Expand Exercise: Incline Press" }));
+  expect(screen.getByLabelText("Exercise 1 name")).toHaveValue("Incline Press");
+  expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(10);
+  expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(70.5);
+  expect(screen.queryByRole("heading", { name: "Workout Templates" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Workout History" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Show templates" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Expand workout: Chest Day" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Log Workout" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Log Workout" })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Start and track a live workout")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Log a completed or historical workout")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Date")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Time")).not.toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), {
+    target: { value: "Incline Dumbbell Press" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Add set to exercise 1" }));
+  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
+  expect(screen.getByRole("button", { name: "Expand Exercise: Incline Dumbbell Press" }))
+    .toBeInTheDocument();
+  expect(screen.getByLabelText("Exercise 2 name")).toHaveFocus();
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to Workout Templates" }));
+  expect(screen.getByRole("heading", { name: "Workout Templates" })).toBeInTheDocument();
+  expect(screen.queryByLabelText("Workout title")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Resume Active Workout" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Start Now" })).toHaveFocus();
+  expect(onReturnToWorkoutTemplates).not.toHaveBeenCalled();
+  expect((await storedDraft()).form.exercises[0].name).toBe("Incline Dumbbell Press");
+
+  fireEvent.click(screen.getByRole("button", { name: "Resume Active Workout" }));
+  expect(screen.getByLabelText("Workout title")).toHaveValue("ARMegddon");
+  expect(screen.getByRole("heading", { name: "Workout in Progress" })).toHaveFocus();
+  expect(screen.queryByRole("heading", { name: "Workout Templates" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Expand Exercise: Incline Dumbbell Press" }))
+    .toBeInTheDocument();
+
+  const confirmDiscard = jest.spyOn(window, "confirm")
+    .mockReturnValueOnce(false)
+    .mockReturnValueOnce(true);
+  try {
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByLabelText("Workout title")).toHaveValue("ARMegddon");
+    expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).not.toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByLabelText("Workout title")).not.toBeInTheDocument();
+    expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
+    expect(screen.getByRole("heading", { name: "Workout Templates" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start Now" })).toHaveFocus();
+    expect(onReturnToWorkoutTemplates).toHaveBeenCalledTimes(1);
+  } finally {
+    confirmDiscard.mockRestore();
+  }
+});
+
 test("template Start Now reuses active-draft collision choices", () => {
   const saved = workoutTemplate();
   const startWorkoutTemplate = jest.fn((id, action) => (
@@ -844,6 +935,16 @@ test("template Start Now reuses active-draft collision choices", () => {
   fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
   fireEvent.click(screen.getByRole("button", { name: "Start Now" }));
   expect(screen.getByRole("dialog", { name: "Workout already in progress" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(startWorkoutTemplate).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("dialog", { name: "Workout already in progress" })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Start Now" }));
+  fireEvent.click(screen.getByRole("button", { name: "Discard and start template" }));
+  expect(startWorkoutTemplate).toHaveBeenLastCalledWith(saved.id, "discard");
+  expect(screen.queryByRole("dialog", { name: "Workout already in progress" })).not.toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Start Now" }));
   fireEvent.click(screen.getByRole("button", { name: "Resume current workout" }));
   expect(startWorkoutTemplate).toHaveBeenLastCalledWith(saved.id, "resume");
   expect(screen.queryByRole("dialog", { name: "Workout already in progress" })).not.toBeInTheDocument();

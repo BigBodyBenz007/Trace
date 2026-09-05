@@ -3,6 +3,7 @@ import App, { localCalendarDateKey } from "./App";
 import { createCompoundDefinition } from "./services/compoundCatalog";
 import { createExerciseDefinition } from "./services/exerciseCatalog";
 import {
+  createWorkoutDraftFromTemplate,
   createWorkoutDraftFromPlannedWorkout,
   WORKOUT_DRAFT_STORAGE_KEY,
 } from "./services/workoutDraft";
@@ -175,6 +176,32 @@ function reusableWorkoutTemplate(overrides = {}) {
   };
 }
 
+function denseReusableWorkoutTemplate() {
+  const setCounts = [3, 3, 2, 2, 2, 2];
+  const exerciseNames = [
+    "Cable Curl",
+    "Triceps Pressdown",
+    "Hammer Curl",
+    "Overhead Extension",
+    "Preacher Curl",
+    "Close-Grip Press",
+  ];
+  return reusableWorkoutTemplate({
+    exercises: exerciseNames.map((name, exerciseIndex) => ({
+      id: `template-exercise:dense-${exerciseIndex + 1}`,
+      name,
+      notes: `Guidance for ${name}`,
+      targetSets: Array.from({ length: setCounts[exerciseIndex] }, (_, setIndex) => ({
+        id: `template-set:dense-${exerciseIndex + 1}-${setIndex + 1}`,
+        setType: setIndex === 0 ? "warm-up" : "working",
+        reps: 8 + setIndex,
+        load: { mode: "external", amount: 20 + exerciseIndex * 5 + setIndex, unit: "lb" },
+        notes: "Template target",
+      })),
+    })),
+  });
+}
+
 function mockWindowScrollPosition(scrollX, scrollY) {
   const originalScrollX = Object.getOwnPropertyDescriptor(window, "scrollX");
   const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
@@ -337,37 +364,197 @@ test("a persisted workout template starts fresh and schedules an independent nor
   });
   fireEvent.click(screen.getByRole("button", { name: "Save Template" }));
   expect(JSON.parse(localStorage.getItem("plannedWorkouts"))).toEqual(savedPlans);
+  const templateBeforeWorkout = JSON.parse(localStorage.getItem("workoutTemplates"))[0];
   fireEvent.click(screen.getByRole("button", { name: "Start Now" }));
+  expect(screen.getByTestId("workout-page")).toHaveAttribute("data-focused-workout", "true");
+  expect(screen.getByRole("form", { name: "Active workout" })).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Workout in Progress" })).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Back to Workout Templates" })).toBeInTheDocument();
   expect(screen.getByLabelText("Workout title")).toHaveValue("ARMegddon reusable");
+  expect(screen.queryByRole("heading", { name: "Workout Templates" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Planned Workouts" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Workout History" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Log Workout" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Log Workout" })).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Start and track a live workout")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Log a completed or historical workout")).not.toBeInTheDocument();
   const activeDraft = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
   expect(activeDraft).not.toHaveProperty("plannedWorkoutId");
+  expect(activeDraft.context).toMatchObject({
+    originPage: "workout-templates",
+    originTemplateId: savedTemplate.id,
+  });
   expect(activeDraft.form.exercises[0].sets[0]).toMatchObject({
     reps: "10",
     weightAmount: "40",
     isUntouched: true,
   });
+  expect(screen.getByRole("button", { name: "Expand Exercise: Cable Curl" }))
+    .toBeInTheDocument();
+  expect(screen.queryByLabelText("Exercise 1 set 1 reps")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Expand Exercise: Cable Curl" }));
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
     target: { value: "12" },
   });
-  expect(JSON.parse(localStorage.getItem("workoutTemplates"))[0]).toMatchObject({
-    id: savedTemplate.id,
-    name: "ARMegddon reusable",
+  expect(JSON.parse(localStorage.getItem("workoutTemplates"))[0]).toEqual(templateBeforeWorkout);
+  expect(JSON.parse(localStorage.getItem("plannedWorkouts"))).toEqual(savedPlans);
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to Workout Templates" }));
+  expect(screen.getByRole("heading", { name: "Workout Templates" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Start Now" })).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Resume Active Workout" })).toBeInTheDocument();
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).not.toBeNull();
+
+  fireEvent.click(screen.getByRole("button", { name: "Resume Active Workout" }));
+  fireEvent.click(screen.getByRole("button", { name: "Finish Workout" }));
+  fireEvent.change(screen.getByLabelText("Approximate workout duration"), {
+    target: { value: "45" },
+  });
+  fireEvent.change(screen.getByLabelText("Workout intensity"), {
+    target: { value: "moderate" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  const completed = JSON.parse(localStorage.getItem("workoutEntries"));
+  expect(completed).toHaveLength(1);
+  expect(completed[0]).toMatchObject({
+    title: "ARMegddon reusable",
+    activeDurationMinutes: 45,
+    intensity: "moderate",
     exercises: [expect.objectContaining({
-      targetSets: [expect.objectContaining({ reps: 10 })],
+      name: "Cable Curl",
+      sets: [expect.objectContaining({ reps: 12 })],
     })],
   });
+  expect(completed[0].id).not.toBe(savedTemplate.id);
+  expect(JSON.parse(localStorage.getItem("workoutTemplates"))[0]).toEqual(templateBeforeWorkout);
   expect(JSON.parse(localStorage.getItem("plannedWorkouts"))).toEqual(savedPlans);
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBeNull();
+  expect(screen.getByRole("heading", { name: "Workout Templates" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Start Now" })).toHaveFocus();
+  expect(screen.getByRole("button", { name: "Expand workout: ARMegddon reusable" }))
+    .toBeInTheDocument();
+});
+
+test("template Start Now preserves collision cancel and discards into one focused draft", () => {
+  const savedTemplate = reusableWorkoutTemplate();
+  const existingDraft = createWorkoutDraftFromTemplate(
+    savedTemplate,
+    new Date("2026-09-04T12:30:00.000Z")
+  );
+  existingDraft.form.title = "Existing manual workout";
+  const existingJson = JSON.stringify(existingDraft);
+  localStorage.setItem("workoutTemplates", JSON.stringify([savedTemplate]));
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, existingJson);
+  renderAppAtTimeline();
+  openWorkouts();
   fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
-  const confirmDelete = jest.spyOn(window, "confirm").mockReturnValue(true);
-  try {
-    fireEvent.click(screen.getByRole("button", { name: "Delete Template" }));
-  } finally {
-    confirmDelete.mockRestore();
-  }
-  expect(JSON.parse(localStorage.getItem("workoutTemplates"))).toEqual([]);
-  expect(JSON.parse(localStorage.getItem("plannedWorkouts"))).toEqual(savedPlans);
-  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).form.title)
-    .toBe("ARMegddon reusable");
+
+  fireEvent.click(screen.getByRole("button", { name: "Start Now" }));
+  const collision = screen.getByRole("dialog", { name: "Workout already in progress" });
+  expect(collision).toBeInTheDocument();
+  fireEvent.click(within(collision).getByRole("button", { name: "Cancel" }));
+  expect(screen.queryByRole("dialog", { name: "Workout already in progress" }))
+    .not.toBeInTheDocument();
+  expect(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)).toBe(existingJson);
+  expect(JSON.parse(localStorage.getItem("workoutTemplates"))).toEqual([savedTemplate]);
+
+  fireEvent.click(screen.getByRole("button", { name: "Start Now" }));
+  fireEvent.click(screen.getByRole("button", { name: "Discard and start template" }));
+  const replacement = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+  expect(replacement.context).toMatchObject({
+    originPage: "workout-templates",
+    originTemplateId: savedTemplate.id,
+  });
+  expect(replacement.form.title).toBe(savedTemplate.name);
+  expect(replacement.form.exercises[0].id).not.toBe(existingDraft.form.exercises[0].id);
+  expect(screen.getByRole("button", { name: "Back to Workout Templates" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Start Now" })).not.toBeInTheDocument();
+  expect(localStorage.getItem("workoutEntries")).toBeNull();
+  expect(JSON.parse(localStorage.getItem("workoutTemplates"))).toEqual([savedTemplate]);
+});
+
+test("the real template Start Now path renders dense exercises as compact editable summaries", () => {
+  const savedTemplate = denseReusableWorkoutTemplate();
+  const templateBeforeWorkout = JSON.parse(JSON.stringify(savedTemplate));
+  localStorage.setItem("workoutTemplates", JSON.stringify([savedTemplate]));
+  renderAppAtTimeline();
+  openWorkouts();
+  fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+  fireEvent.click(screen.getByRole("button", { name: "Start Now" }));
+
+  expect(screen.getByRole("heading", { name: "Workout in Progress" })).toBeInTheDocument();
+  expect(screen.getByTestId("workout-page")).toHaveAttribute("data-focused-workout", "true");
+  expect(screen.queryByRole("heading", { name: "Workout Templates" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Planned Workouts" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Log Workout" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Workout History" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Log Workout" })).not.toBeInTheDocument();
+  expect(screen.queryAllByLabelText(/Exercise \d+ set \d+ reps/)).toHaveLength(0);
+  expect(screen.queryAllByRole("button", { name: /Collapse Exercise:/ })).toHaveLength(0);
+  const focusedDraft = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+  expect(focusedDraft.context.collapsedExerciseIds).toEqual(
+    focusedDraft.form.exercises.map(({ id }) => id)
+  );
+  expect(focusedDraft.form.exercises.flatMap(({ sets }) => sets)
+    .every(({ isUntouched }) => isUntouched)).toBe(true);
+
+  const expectedSetCounts = [3, 3, 2, 2, 2, 2];
+  savedTemplate.exercises.forEach((exercise, exerciseIndex) => {
+    const card = screen.getByRole("region", { name: `Exercise ${exerciseIndex + 1}` });
+    expect(within(card).getByRole("heading", { name: exercise.name })).toBeInTheDocument();
+    expect(within(card).getByText(`${expectedSetCounts[exerciseIndex]} sets`)).toBeInTheDocument();
+    expect(within(card).getByRole("button", { name: `Expand Exercise: ${exercise.name}` }))
+      .toBeInTheDocument();
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Expand Exercise: Cable Curl" }));
+  expect(screen.getAllByLabelText(/Exercise 1 set \d+ reps/)).toHaveLength(3);
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), {
+    target: { value: "12" },
+  });
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 weight"), {
+    target: { value: "35" },
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Expand Exercise: Triceps Pressdown" }));
+  expect(screen.queryByLabelText("Exercise 1 set 1 reps")).not.toBeInTheDocument();
+  expect(screen.getAllByLabelText(/Exercise 2 set \d+ reps/)).toHaveLength(3);
+  fireEvent.click(screen.getByRole("button", { name: "Collapse Exercise: Triceps Pressdown" }));
+  expect(screen.queryAllByLabelText(/Exercise \d+ set \d+ reps/)).toHaveLength(0);
+
+  fireEvent.click(screen.getByRole("button", { name: "Expand Exercise: Cable Curl" }));
+  expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(12);
+  expect(screen.getByLabelText("Exercise 1 set 1 weight")).toHaveValue(35);
+  fireEvent.click(screen.getByRole("button", { name: "Add set to exercise 1" }));
+  expect(screen.getByLabelText("Exercise 1 set 4 reps")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 1 set 4" }));
+  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
+  expect(screen.getByRole("button", { name: "Expand Exercise: Cable Curl" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Exercise 7 name")).toHaveFocus();
+  fireEvent.click(screen.getByRole("button", { name: "Remove exercise 7" }));
+
+  fireEvent.click(screen.getByRole("button", { name: "Finish Workout" }));
+  fireEvent.change(screen.getByLabelText("Approximate workout duration"), {
+    target: { value: "52" },
+  });
+  fireEvent.change(screen.getByLabelText("Workout intensity"), {
+    target: { value: "moderate" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+  const completed = JSON.parse(localStorage.getItem("workoutEntries"));
+  expect(completed).toHaveLength(1);
+  expect(completed[0].id).not.toBe(savedTemplate.id);
+  expect(completed[0].exercises[0].sets[0]).toMatchObject({
+    reps: 12,
+    load: { mode: "external", amount: 35, unit: "lb" },
+  });
+  expect(JSON.parse(localStorage.getItem("workoutTemplates"))).toEqual([
+    templateBeforeWorkout,
+  ]);
+  expect(screen.getByRole("heading", { name: "Workout Templates" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Start Now" })).toHaveFocus();
 });
 
 test("successful same-tab restore immediately refreshes planned-workout App state", async () => {

@@ -369,6 +369,7 @@ function WorkoutPage({
   navigationOriginCalendar = null,
   onReturnToToday = onBack,
   onReturnToCalendar = onBack,
+  onReturnToWorkoutTemplates = () => {},
   workoutEntries,
   workoutTemplates = [],
   onWorkoutDraftChange = () => {},
@@ -416,7 +417,14 @@ function WorkoutPage({
   const [notes, setNotes] = useState(restoredForm?.notes || "");
   const [exercises, setExercises] = useState(() => restoredForm?.exercises || [emptyExercise()]);
   const [collapsedExerciseIds, setCollapsedExerciseIds] = useState(
-    () => new Set(restoredDraftRef.current?.context?.collapsedExerciseIds || [])
+    () => {
+      const restoredCollapsedIds = restoredDraftRef.current?.context?.collapsedExerciseIds;
+      if (Array.isArray(restoredCollapsedIds)) return new Set(restoredCollapsedIds);
+      if (restoredDraftRef.current?.context?.originPage === "workout-templates") {
+        return new Set(restoredForm?.exercises?.map(({ id }) => id) || []);
+      }
+      return new Set();
+    }
   );
   const [editingEntryId, setEditingEntryId] = useState(null);
   const [isDirty, setIsDirty] = useState(Boolean(restoredForm));
@@ -442,6 +450,8 @@ function WorkoutPage({
   const templateToggleButtonRef = useRef(null);
   const templateEditorReturnFocusRef = useRef(null);
   const templateEditorWasOpenRef = useRef(false);
+  const templateStartButtonRefs = useRef(new Map());
+  const pendingTemplateFocusIdRef = useRef(null);
 
   function selectWorkoutPhotos(event) {
     const input = event.currentTarget;
@@ -477,7 +487,9 @@ function WorkoutPage({
   const formRef = useRef(null);
   const formHeadingRef = useRef(null);
   const resultsRef = useRef(null);
-  const pendingFormFocusRef = useRef(false);
+  const pendingFormFocusRef = useRef(
+    restoredDraftRef.current?.context?.originPage === "workout-templates"
+  );
   const pendingResultsFocusRef = useRef(false);
   const workoutEntryRefs = useRef(new Map());
   const workoutEditOriginRef = useRef(null);
@@ -510,6 +522,14 @@ function WorkoutPage({
         }
       : navigationOriginCalendar
   );
+  const workoutOriginTemplateIdRef = useRef(
+    restoredDraftRef.current?.context?.originPage === "workout-templates"
+      ? restoredDraftRef.current.context.originTemplateId
+      : null
+  );
+  const [templateWorkoutFocused, setTemplateWorkoutFocused] = useState(
+    restoredDraftRef.current?.context?.originPage === "workout-templates"
+  );
   const draftPersistenceEnabledRef = useRef(Boolean(restoredForm));
   const lastPersistedDraftJsonRef = useRef(null);
 
@@ -521,12 +541,33 @@ function WorkoutPage({
         visibleMonth: workoutOriginCalendarRef.current?.visibleMonth,
       };
     }
+    if (workoutOriginPageRef.current === "workout-templates") {
+      return {
+        originPage: "workout-templates",
+        originTemplateId: workoutOriginTemplateIdRef.current,
+      };
+    }
     return workoutOriginPageRef.current === "today" ? { originPage: "today" } : {};
   }
 
-  function returnToWorkoutOrigin() {
+  function focusOriginatingTemplate(templateId) {
+    pendingTemplateFocusIdRef.current = templateId;
+    setTemplatesExpanded(true);
+    setTemplateWorkoutFocused(false);
+  }
+
+  function returnToWorkoutOrigin({ clearTemplateOrigin = false } = {}) {
     if (workoutOriginPageRef.current === "calendar") onReturnToCalendar();
     else if (workoutOriginPageRef.current === "today") onReturnToToday();
+    else if (workoutOriginPageRef.current === "workout-templates") {
+      const templateId = workoutOriginTemplateIdRef.current;
+      focusOriginatingTemplate(templateId);
+      if (clearTemplateOrigin) {
+        workoutOriginPageRef.current = null;
+        workoutOriginTemplateIdRef.current = null;
+        onReturnToWorkoutTemplates();
+      }
+    }
     else if (workoutOriginPageRef.current === "trophy-case" && onReturnToTrophyCase) onReturnToTrophyCase();
     else onBack();
   }
@@ -595,7 +636,7 @@ function WorkoutPage({
     pendingFormFocusRef.current = false;
     formHeadingRef.current?.focus({ preventScroll: true });
     formRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "start" });
-  }, [isLoggingOpen, editingEntryId]);
+  }, [isLoggingOpen, editingEntryId, templateWorkoutFocused]);
 
   useLayoutEffect(() => {
     if (!completionReview || !pendingResultsFocusRef.current) return;
@@ -615,6 +656,19 @@ function WorkoutPage({
     templateEditorReturnFocusRef.current = null;
     target?.focus({ preventScroll: true });
   }, [templateEditor]);
+
+  useLayoutEffect(() => {
+    const templateId = pendingTemplateFocusIdRef.current;
+    if (!templatesExpanded || templateWorkoutFocused || !templateId) return;
+    pendingTemplateFocusIdRef.current = null;
+    const target = templateStartButtonRefs.current.get(templateId)
+      || templateToggleButtonRef.current;
+    target?.focus({ preventScroll: true });
+    const bounds = target?.getBoundingClientRect?.();
+    if (bounds && (bounds.top < 0 || bounds.bottom > window.innerHeight)) {
+      target.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "nearest" });
+    }
+  }, [templatesExpanded, templateWorkoutFocused]);
 
   useLayoutEffect(() => {
     if (!focusDropId) return;
@@ -866,6 +920,11 @@ function WorkoutPage({
   function expandExercise(exerciseId) {
     activeExerciseIdRef.current = exerciseId;
     setCollapsedExerciseIds((current) => {
+      if (workoutOriginPageRef.current === "workout-templates" && editingEntryId === null) {
+        return new Set(exercises
+          .filter(({ id }) => id !== exerciseId)
+          .map(({ id }) => id));
+      }
       const next = new Set(current);
       next.delete(exerciseId);
       return next;
@@ -1278,6 +1337,8 @@ function WorkoutPage({
         && Boolean(plannedWorkoutIdRef.current)
         && Boolean(workoutOriginPageRef.current)
         && plannedRoadmapIsComplete;
+      const returnToTemplates = savedEditingEntryId === null
+        && workoutOriginPageRef.current === "workout-templates";
       resetForm({ clearDraft: savedEditingEntryId === null });
       const messages = [];
       const estimateMessage = saveOutcome && typeof saveOutcome === "object"
@@ -1300,8 +1361,8 @@ function WorkoutPage({
           : "Workout traced",
         returnToSchedule ? workoutOriginPageRef.current : undefined
       );
-      if (returnToSchedule) {
-        returnToWorkoutOrigin();
+      if (returnToSchedule || returnToTemplates) {
+        returnToWorkoutOrigin({ clearTemplateOrigin: returnToTemplates });
         return;
       }
       if (savedEditingEntryId === null) {
@@ -1430,9 +1491,11 @@ function WorkoutPage({
     const returnToSchedule = editingEntryId === null
       && Boolean(plannedWorkoutIdRef.current)
       && Boolean(workoutOriginPageRef.current);
+    const returnToTemplates = editingEntryId === null
+      && workoutOriginPageRef.current === "workout-templates";
     resetForm({ clearDraft: editingEntryId === null });
-    if (returnToSchedule) {
-      returnToWorkoutOrigin();
+    if (returnToSchedule || returnToTemplates) {
+      returnToWorkoutOrigin({ clearTemplateOrigin: returnToTemplates });
       return;
     }
     window.requestAnimationFrame(() => {
@@ -1592,9 +1655,18 @@ function WorkoutPage({
     setTemplateConflict(null);
     if (result?.status === "resumed-existing") {
       pendingFormFocusRef.current = true;
-      formHeadingRef.current?.focus({ preventScroll: true });
-      formRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "start" });
+      if (workoutOriginPageRef.current === "workout-templates") {
+        setTemplateWorkoutFocused(true);
+      } else {
+        formHeadingRef.current?.focus({ preventScroll: true });
+        formRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "start" });
+      }
     }
+  }
+
+  function resumeTemplateWorkout() {
+    pendingFormFocusRef.current = true;
+    setTemplateWorkoutFocused(true);
   }
 
   function scheduleTemplate(template) {
@@ -1634,13 +1706,30 @@ function WorkoutPage({
     ? "Back to Calendar"
     : workoutOriginPageRef.current === "trophy-case"
       ? "Back to Trophy Case"
-      : "Back to Today's Schedule";
+      : workoutOriginPageRef.current === "workout-templates"
+        ? "Back to Workout Templates"
+        : "Back to Today's Schedule";
+  const isTemplateWorkoutOrigin = workoutOriginPageRef.current === "workout-templates";
+  const isTemplateWorkoutFocused = isTemplateWorkoutOrigin
+    && editingEntryId === null
+    && isLoggingOpen
+    && templateWorkoutFocused;
+  const isTemplateWorkoutBrowsing = isTemplateWorkoutOrigin
+    && editingEntryId === null
+    && isLoggingOpen
+    && !templateWorkoutFocused;
+  const isFocusedActiveWorkout = isPlannedRoadmap || isTemplateWorkoutFocused;
+  const showActiveWorkoutEditor = isLoggingOpen && !isTemplateWorkoutBrowsing;
   const volume = isPlannedRoadmap ? roadmapVolume(exercises) : null;
   const plannedRoadmapIsCompleteNow = isPlannedRoadmap && exercises.every(
     ({ roadmapStatus }) => roadmapStatus === "completed" || roadmapStatus === "skipped"
   );
-  const leaveWorkout = returnsToOrigin ? returnToWorkoutOrigin : onBack;
-  const leaveWorkoutLabel = returnsToOrigin ? originReturnLabel : "Back to Timeline";
+  const leaveWorkout = returnsToOrigin && !isTemplateWorkoutBrowsing
+    ? returnToWorkoutOrigin
+    : onBack;
+  const leaveWorkoutLabel = returnsToOrigin && !isTemplateWorkoutBrowsing
+    ? originReturnLabel
+    : "Back to Timeline";
   const validationIssues = validationAttempted ? getWorkoutEntryIssues(draft()) : [];
   const displayedFormError = validationIssues[0]?.message || formError;
 
@@ -1654,7 +1743,7 @@ function WorkoutPage({
   }
 
   return (
-    <div className="trace-feature-page trace-feature-page--workouts" ref={pageTopRef} data-testid="workout-page" style={containerStyle}>
+    <div className="trace-feature-page trace-feature-page--workouts" ref={pageTopRef} data-testid="workout-page" data-focused-workout={isFocusedActiveWorkout ? "true" : undefined} style={containerStyle}>
       <style>{`
         .workout-set-load-row > label,
         .workout-set-input-grid > label,
@@ -1711,25 +1800,25 @@ function WorkoutPage({
       </header>
       <nav className="trace-focused-navigation" aria-label="Focused event navigation">
         <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...backButtonStyle, marginTop: 0 }}>Back to Timeline</button>
-        {returnsToOrigin && <button className="trace-action trace-action--secondary" type="button" onClick={returnToWorkoutOrigin} style={{ ...backButtonStyle, marginTop: 0 }}>{originReturnLabel}</button>}
+        {returnsToOrigin && !isTemplateWorkoutBrowsing && <button className="trace-action trace-action--secondary" type="button" onClick={() => returnToWorkoutOrigin()} style={{ ...backButtonStyle, marginTop: 0 }}>{originReturnLabel}</button>}
       </nav>
 
-      {!isLoggingOpen && (
+      {!showActiveWorkoutEditor && (
         <div style={{ maxWidth: "760px", textAlign: "left", width: "100%" }}>
           <button
             className="trace-action trace-action--primary"
             type="button"
             aria-controls="workout-entry"
             aria-expanded="false"
-            onClick={openWorkoutLogger}
+            onClick={isTemplateWorkoutBrowsing ? resumeTemplateWorkout : openWorkoutLogger}
             style={buttonStyle}
           >
-            Log Workout
+            {isTemplateWorkoutBrowsing ? "Resume Active Workout" : "Log Workout"}
           </button>
         </div>
       )}
 
-      {isLoggingOpen && isPlannedRoadmap && (
+      {showActiveWorkoutEditor && isPlannedRoadmap && (
         <form
           id="workout-entry"
           className="trace-feature-surface trace-feature-form trace-workout-roadmap"
@@ -1846,16 +1935,18 @@ function WorkoutPage({
         </form>
       )}
 
-      {isLoggingOpen && !isPlannedRoadmap && (
+      {showActiveWorkoutEditor && !isPlannedRoadmap && (
       <form
         id="workout-entry"
-        className="trace-feature-surface trace-feature-form trace-workout-form"
+        className={`trace-feature-surface trace-feature-form trace-workout-form${isTemplateWorkoutFocused ? " trace-workout-form--focused" : ""}`}
+        aria-label={isTemplateWorkoutFocused ? "Active workout" : undefined}
         ref={formRef}
         onSubmit={saveWorkout}
         style={{ maxWidth: "760px", textAlign: "left", width: "100%" }}
       >
-        <h2 ref={formHeadingRef} tabIndex="-1">{editingEntryId === null ? "Log Workout" : "Edit Workout"}</h2>
-        {editingEntryId === null && (
+        {isTemplateWorkoutFocused && <span className="trace-badge">Active workout</span>}
+        <h2 ref={formHeadingRef} tabIndex="-1">{isTemplateWorkoutFocused ? "Workout in Progress" : editingEntryId === null ? "Log Workout" : "Edit Workout"}</h2>
+        {editingEntryId === null && !isTemplateWorkoutFocused && (
           <fieldset>
             <legend>Workout timing</legend>
             <label style={{ display: "block" }}>
@@ -1888,7 +1979,7 @@ function WorkoutPage({
             style={formInputStyle}
           />
         </label>
-        <div
+        {!isTemplateWorkoutFocused && <div
           style={{
             display: "grid",
             gap: "12px",
@@ -1916,7 +2007,7 @@ function WorkoutPage({
               style={formInputStyle}
             />
           </label>
-        </div>
+        </div>}
         <label style={{ display: "block", marginTop: "16px" }}>
           Workout notes (optional)
           <textarea
@@ -2360,7 +2451,7 @@ function WorkoutPage({
       </form>
       )}
 
-      <WorkoutTemplateSection
+      {!isFocusedActiveWorkout && <WorkoutTemplateSection
         expanded={templatesExpanded}
         onToggle={() => setTemplatesExpanded((current) => !current)}
         templates={workoutTemplates}
@@ -2370,9 +2461,13 @@ function WorkoutPage({
         onDelete={removeTemplate}
         buttonStyle={buttonStyle}
         toggleButtonRef={templateToggleButtonRef}
-      />
+        registerStartButton={(templateId, node) => {
+          if (node) templateStartButtonRefs.current.set(templateId, node);
+          else templateStartButtonRefs.current.delete(templateId);
+        }}
+      />}
 
-      <section className="trace-feature-section trace-feature-history trace-workout-history" style={{ marginTop: "36px", maxWidth: "760px", textAlign: "left", width: "100%" }}>
+      {!isFocusedActiveWorkout && <section className="trace-feature-section trace-feature-history trace-workout-history" style={{ marginTop: "36px", maxWidth: "760px", textAlign: "left", width: "100%" }}>
         <h2>Workout History</h2>
         {sortedEntries.length === 0 ? (
           <p style={{ color: "#bbb" }}>No workouts logged yet.</p>
@@ -2462,18 +2557,18 @@ function WorkoutPage({
             })}
           </div>
         )}
-      </section>
+      </section>}
 
-      <ExerciseHistory
+      {!isFocusedActiveWorkout && <ExerciseHistory
         workoutEntries={workoutEntries}
         trophyEntries={trophyEntries}
         addTrophyCaseEntry={addTrophyCaseEntry}
         buttonStyle={buttonStyle}
         trophySourceTarget={trophySourceTarget}
         onReturnToTrophyCase={onReturnToTrophyCase}
-      />
+      />}
 
-      <button className="trace-action trace-action--secondary" type="button" onClick={leaveWorkout} style={{ ...backButtonStyle, marginTop: "24px" }}>{leaveWorkoutLabel}</button>
+      {!isTemplateWorkoutFocused && <button className="trace-action trace-action--secondary" type="button" onClick={leaveWorkout} style={{ ...backButtonStyle, marginTop: "24px" }}>{leaveWorkoutLabel}</button>}
       <div
         aria-hidden="true"
         ref={workoutDeleteScrollCompensationRef}

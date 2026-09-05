@@ -200,6 +200,7 @@ export function normalizeWorkoutDraft(value) {
   const hasRoadmapEditingExerciseId = context.roadmapEditingExerciseId !== undefined;
   const roadmapEditingExerciseId = context.roadmapEditingExerciseId ?? null;
   if (roadmapEditingExerciseId !== null && !validId(roadmapEditingExerciseId)) return null;
+  const hasCollapsedExerciseIds = context.collapsedExerciseIds !== undefined;
   const collapsedExerciseIds = context.collapsedExerciseIds ?? [];
   const completionReview = context.completionReview ?? false;
   if (
@@ -213,7 +214,13 @@ export function normalizeWorkoutDraft(value) {
   )).filter((id) => exerciseIds.has(id));
   const hasOriginPage = context.originPage !== undefined;
   const originPage = context.originPage ?? null;
-  if (originPage !== null && !["today", "calendar"].includes(originPage)) return null;
+  if (originPage !== null && !["today", "calendar", "workout-templates"].includes(originPage)) return null;
+  const originTemplateId = context.originTemplateId ?? null;
+  if (
+    originPage === "workout-templates"
+      ? !validId(originTemplateId)
+      : originTemplateId !== null
+  ) return null;
   const selectedDate = context.selectedDate ?? null;
   const visibleMonth = context.visibleMonth ?? null;
   if (originPage === "calendar" && (
@@ -242,11 +249,14 @@ export function normalizeWorkoutDraft(value) {
     context: {
       activeSearchExerciseId,
       ...(hasRoadmapEditingExerciseId ? { roadmapEditingExerciseId } : {}),
-      ...(normalizedCollapsedExerciseIds.length > 0
+      ...(hasCollapsedExerciseIds
         ? { collapsedExerciseIds: normalizedCollapsedExerciseIds }
         : {}),
       ...(completionReview ? { completionReview: true } : {}),
       ...(hasOriginPage ? { originPage } : {}),
+      ...(originPage === "workout-templates"
+        ? { originTemplateId: originTemplateId.trim() }
+        : {}),
       ...(originPage === "calendar" ? { selectedDate, visibleMonth } : {}),
     },
   };
@@ -299,6 +309,7 @@ function createWorkoutDraftFromTargets(
   {
     plannedWorkoutId = null,
     originPage = null,
+    originTemplateId = null,
     selectedDate = null,
     visibleMonth = null,
     guidanceOnly = false,
@@ -348,7 +359,10 @@ function createWorkoutDraftFromTargets(
     context: {
       activeSearchExerciseId: null,
       roadmapEditingExerciseId: null,
-      ...(["today", "calendar"].includes(originPage) ? { originPage } : {}),
+      ...(["today", "calendar", "workout-templates"].includes(originPage) ? { originPage } : {}),
+      ...(originPage === "workout-templates" && validId(originTemplateId)
+        ? { originTemplateId: originTemplateId.trim() }
+        : {}),
       ...(originPage === "calendar" ? { selectedDate, visibleMonth } : {}),
     },
   };
@@ -369,14 +383,26 @@ export function createWorkoutDraftFromPlannedWorkout(
   });
 }
 
-export function createWorkoutDraftFromTemplate(template, now = new Date()) {
+export function createWorkoutDraftFromTemplate(
+  template,
+  now = new Date(),
+  { originPage = null, originTemplateId = null } = {}
+) {
   const normalized = normalizeWorkoutTemplate(template);
-  if (!normalized || !Number.isFinite(now.getTime())) return null;
-  return createWorkoutDraftFromTargets({
+  if (
+    !normalized
+    || !Number.isFinite(now.getTime())
+    || (originPage === "workout-templates" && !validId(originTemplateId))
+  ) return null;
+  const draft = createWorkoutDraftFromTargets({
     title: normalized.name,
     notes: normalized.notes,
     exercises: normalized.exercises,
-  }, now, { guidanceOnly: true });
+  }, now, { guidanceOnly: true, originPage, originTemplateId });
+  if (originPage === "workout-templates") {
+    draft.context.collapsedExerciseIds = draft.form.exercises.map(({ id }) => id);
+  }
+  return draft;
 }
 
 export function readWorkoutDraft(storage = localStorage) {

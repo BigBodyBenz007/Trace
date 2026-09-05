@@ -1,4 +1,7 @@
-import { createWorkoutDraftFromTemplate } from "./workoutDraft";
+import {
+  createWorkoutDraftFromTemplate,
+  normalizeWorkoutDraft,
+} from "./workoutDraft";
 import {
   createWorkoutTemplate,
   normalizeWorkoutTemplates,
@@ -97,6 +100,31 @@ test("creates independent active sessions whose targets are guidance, not comple
 
   first.form.exercises[0].sets[0].reps = "99";
   expect(saved.exercises[0].targetSets[0].reps).toBe(12);
+});
+
+test("persists a template-focused origin without changing the reusable template", () => {
+  const saved = template();
+  const before = JSON.parse(JSON.stringify(saved));
+  const draft = createWorkoutDraftFromTemplate(
+    saved,
+    new Date("2026-09-04T13:00:00.000Z"),
+    { originPage: "workout-templates", originTemplateId: saved.id }
+  );
+
+  expect(draft.context).toMatchObject({
+    originPage: "workout-templates",
+    originTemplateId: saved.id,
+    collapsedExerciseIds: draft.form.exercises.map(({ id }) => id),
+  });
+  expect(normalizeWorkoutDraft(draft).context).toMatchObject({
+    originPage: "workout-templates",
+    originTemplateId: saved.id,
+    collapsedExerciseIds: draft.form.exercises.map(({ id }) => id),
+  });
+  expect(createWorkoutDraftFromTemplate(saved, new Date(), {
+    originPage: "workout-templates",
+  })).toBeNull();
+  expect(saved).toEqual(before);
 });
 
 test("scheduling takes an independent snapshot for the existing planned-workout editor", () => {
