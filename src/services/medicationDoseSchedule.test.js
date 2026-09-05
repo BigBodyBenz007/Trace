@@ -10,7 +10,9 @@ import {
   findMedicationDoseDuplicate,
   medicationDoseOccurrenceItem,
   medicationDoseOccurrencesForDate,
+  medicationDoseDateKey,
   medicationDoseDirectSourceId,
+  medicationDoseRestartDraft,
   medicationDoseSchedulePresentation,
   medicationDoseScheduleOccursOnDate,
   nextMedicationDoseOccurrence,
@@ -191,6 +193,97 @@ test("series edits and ending preserve modified occurrences while changing only 
   expect(medicationDoseOccurrencesForDate([ended], [skipped], "2026-09-02")[0].status).toBe("skipped");
   expect(medicationDoseOccurrencesForDate([ended], [skipped], "2026-09-03")).toEqual([]);
   expect(deleteMedicationDoseSchedule(original, "2026-08-31")).toMatchObject({ status: "deleted" });
+});
+
+test("builds a fresh restart draft without changing the ended schedule or its history", () => {
+  const active = schedule({
+    classification: "supplement",
+    dose: { amount: 2.5, unit: "custom", customUnit: "scoops" },
+    route: { code: "other", customLabel: "With water" },
+    notes: "After breakfast",
+    repeat: { type: "weekdays", weekdays: [1, 5] },
+    startDate: "2026-08-01",
+    endDate: "2026-08-31",
+    time: "06:45",
+  });
+  const completed = completeMedicationDoseOccurrence(
+    medicationDoseOccurrenceItem(active, "2026-08-31"),
+    new Date("2026-08-31T13:05:00.000Z")
+  );
+  const ended = endMedicationDoseSchedule(
+    active,
+    "2026-08-31",
+    new Date("2026-08-31T18:00:00.000Z")
+  );
+  const originalSchedule = JSON.stringify(ended);
+  const originalHistory = JSON.stringify([completed]);
+
+  const restartDraft = medicationDoseRestartDraft(ended, "2026-09-04");
+
+  expect(restartDraft).toEqual({
+    name: "Vitamin D",
+    classification: "supplement",
+    dose: { amount: 2.5, unit: "custom", customUnit: "scoops" },
+    route: { code: "other", customLabel: "With water" },
+    notes: "After breakfast",
+    source: { type: "saved-compound", id: "compound:vitamin-d" },
+    compoundReference: {
+      source: "trace-catalog",
+      sourceId: "vitamin-d",
+      category: "vitamin-mineral",
+      modified: false,
+    },
+    repeat: { type: "weekdays", weekdays: [1, 5] },
+    startDate: "2026-09-04",
+    endDate: null,
+    time: "06:45",
+  });
+  expect(restartDraft).not.toHaveProperty("id");
+  expect(restartDraft).not.toHaveProperty("status");
+  expect(restartDraft).not.toHaveProperty("inactiveFrom");
+  expect(JSON.stringify(ended)).toBe(originalSchedule);
+  expect(JSON.stringify([completed])).toBe(originalHistory);
+
+  const restarted = createMedicationDoseSchedule(restartDraft, {
+    id: "schedule:restarted",
+    now: new Date("2026-09-04T05:00:00.000Z"),
+  });
+  expect(restarted).toMatchObject({
+    id: "schedule:restarted",
+    status: "active",
+    inactiveFrom: null,
+    revisions: [expect.objectContaining({
+      id: "schedule:restarted:revision:1",
+      startDate: "2026-09-04",
+      endDate: null,
+      time: "06:45",
+    })],
+  });
+  expect(medicationDoseOccurrencesForDate([restarted], [], "2026-09-03")).toEqual([]);
+  expect(medicationDoseOccurrencesForDate([restarted], [], "2026-09-04")).toHaveLength(1);
+});
+
+test("restarts separate daily-time schedules independently and rejects ineligible sources", () => {
+  const morning = endMedicationDoseSchedule(
+    schedule({ id: "morning", repeat: { type: "daily" }, time: "08:00" }),
+    "2026-08-31"
+  );
+  const evening = endMedicationDoseSchedule(
+    schedule({ id: "evening", repeat: { type: "daily" }, time: "20:00" }),
+    "2026-08-31"
+  );
+
+  expect([morning, evening].map((value) => medicationDoseRestartDraft(value, "2026-09-04")?.time))
+    .toEqual(["08:00", "20:00"]);
+  expect(medicationDoseRestartDraft(
+    morning,
+    medicationDoseDateKey(new Date(2026, 8, 4, 0, 5))
+  )?.startDate).toBe("2026-09-04");
+  expect(medicationDoseRestartDraft(schedule({ repeat: { type: "daily" } }), "2026-09-04"))
+    .toBeNull();
+  expect(medicationDoseRestartDraft(morning, "2026-02-30")).toBeNull();
+  expect(medicationDoseRestartDraft({ ...morning, revisions: [] }, "2026-09-04"))
+    .toBeNull();
 });
 
 test("deleted schedules hide untouched occurrences and next-dose claims while preserving outcomes", () => {

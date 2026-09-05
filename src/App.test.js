@@ -18,7 +18,9 @@ import {
 import {
   createMedicationDoseSchedule,
   deleteMedicationDoseSchedule,
+  endMedicationDoseSchedule,
   medicationDoseOccurrenceItem,
+  shiftMedicationDoseDate,
   skipMedicationDoseOccurrence,
 } from "./services/medicationDoseSchedule";
 import { createProtocolCompoundOutcome } from "./services/protocolCompoundOutcome";
@@ -5015,6 +5017,86 @@ test("ending and deleting a medication schedule update management, Today, storag
   expect(screen.getByText("No scheduled items")).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("medicationEntries"))).toEqual([manualEntry]);
   window.confirm = originalConfirm;
+});
+
+test("restarting an ended medication schedule persists a separate active series without changing history", () => {
+  const today = localCalendarDateKey();
+  const yesterday = shiftMedicationDoseDate(today, -1);
+  const active = createMedicationDoseSchedule({
+    name: "Restarted medicine",
+    classification: "medication",
+    dose: { amount: 5, unit: "mg" },
+    route: { code: "oral" },
+    notes: "Keep historical instructions",
+    source: { type: "direct-entry", id: "medication-dose-source:restart-app" },
+    repeat: { type: "daily" },
+    startDate: yesterday,
+    endDate: null,
+    time: "07:10",
+  }, { id: "schedule:restart-original", now: new Date() });
+  const skipped = skipMedicationDoseOccurrence(
+    medicationDoseOccurrenceItem(active, yesterday),
+    "Travel",
+    "",
+    new Date()
+  );
+  const ended = endMedicationDoseSchedule(active, yesterday, new Date());
+  const historicalEntry = {
+    id: "entry:restart-history",
+    schemaVersion: 1,
+    name: "Restarted medicine",
+    dose: { amount: 5, unit: "mg" },
+    route: { code: "oral" },
+    occurredAt: new Date().toISOString(),
+    notes: "Historical dose",
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  const originalScheduleJson = JSON.stringify(ended);
+  const originalOccurrenceJson = JSON.stringify({ schemaVersion: 1, occurrences: [skipped] });
+  const originalEntriesJson = JSON.stringify([historicalEntry]);
+  localStorage.setItem("medicationDoseSchedules", JSON.stringify({ schemaVersion: 1, schedules: [ended] }));
+  localStorage.setItem("medicationDoseOccurrences", originalOccurrenceJson);
+  localStorage.setItem("medicationEntries", originalEntriesJson);
+
+  const view = render(<App />);
+  openMedications();
+  fireEvent.click(screen.getByRole("button", { name: "Ended schedules (1)" }));
+  fireEvent.click(screen.getByRole("button", { name: "Restart dose schedule for Restarted medicine" }));
+  const scheduler = screen.getByRole("form", { name: "Restart dose schedule for Restarted medicine" });
+  expect(within(scheduler).getByLabelText("Start date")).toHaveValue(today);
+  fireEvent.click(within(scheduler).getByRole("button", { name: "Restart Schedule" }));
+
+  const stored = JSON.parse(localStorage.getItem("medicationDoseSchedules"));
+  expect(stored.schedules).toHaveLength(2);
+  expect(JSON.stringify(stored.schedules[0])).toBe(originalScheduleJson);
+  expect(stored.schedules[1]).toMatchObject({
+    status: "active",
+    inactiveFrom: null,
+    revisions: [expect.objectContaining({
+      startDate: today,
+      endDate: null,
+      time: "07:10",
+      notes: "Keep historical instructions",
+    })],
+  });
+  expect(stored.schedules[1].id).not.toBe(ended.id);
+  expect(localStorage.getItem("medicationDoseOccurrences")).toBe(originalOccurrenceJson);
+  expect(localStorage.getItem("medicationEntries")).toBe(originalEntriesJson);
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Today's Schedule" }));
+  expect(screen.getByRole("button", { name: "Complete scheduled dose Restarted medicine" })).toBeInTheDocument();
+  expect(screen.getByText("1 scheduled item")).toBeInTheDocument();
+
+  view.unmount();
+  render(<App />);
+  openMedications();
+  expect(screen.getByRole("heading", { name: "Restarted medicine", level: 3 })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Ended schedules (1)" })).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("medicationDoseSchedules")).schedules).toHaveLength(2);
+  expect(localStorage.getItem("medicationDoseOccurrences")).toBe(originalOccurrenceJson);
+  expect(localStorage.getItem("medicationEntries")).toBe(originalEntriesJson);
 });
 
 test("failed medication schedule deletion leaves management and Today aligned with persisted storage", () => {

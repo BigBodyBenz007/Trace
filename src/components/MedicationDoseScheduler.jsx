@@ -74,6 +74,7 @@ function recordDraft(draft) {
 export default function MedicationDoseScheduler({
   seed,
   editing = false,
+  restarting = false,
   onSave,
   onCancel,
   onSaved,
@@ -82,6 +83,8 @@ export default function MedicationDoseScheduler({
 }) {
   const [draft, setDraft] = useState(() => initialDraft(seed));
   const [error, setError] = useState("");
+  const [saveInProgress, setSaveInProgress] = useState(false);
+  const saveInProgressRef = useRef(false);
   const headingRef = useRef(null);
   const classificationRef = useRef(null);
   const doseAmountRef = useRef(null);
@@ -137,6 +140,7 @@ export default function MedicationDoseScheduler({
 
   function save(event) {
     event.preventDefault();
+    if (saveInProgressRef.current) return;
     const record = recordDraft(draft);
     const validationError = getMedicationDoseScheduleError(record);
     if (validationError) {
@@ -144,20 +148,34 @@ export default function MedicationDoseScheduler({
       focusFirstInvalid(record);
       return;
     }
-    let result = onSave(record, false);
-    if (result?.status === "duplicate") {
-      const duplicate = result.duplicate;
-      const confirmed = window.confirm(
-        `A dose of ${draft.name} is already scheduled for ${duplicate.date} at ${duplicate.time}. Add another dose?`
-      );
-      if (!confirmed) return;
-      result = onSave(record, true);
+    saveInProgressRef.current = true;
+    setSaveInProgress(true);
+    try {
+      let result = onSave(record, false);
+      if (result?.status === "duplicate") {
+        const duplicate = result.duplicate;
+        const confirmed = window.confirm(
+          `A dose of ${draft.name} is already scheduled for ${duplicate.date} at ${duplicate.time}. Add another dose?`
+        );
+        if (!confirmed) {
+          saveInProgressRef.current = false;
+          setSaveInProgress(false);
+          return;
+        }
+        result = onSave(record, true);
+      }
+      if (result?.status !== "saved") {
+        saveInProgressRef.current = false;
+        setSaveInProgress(false);
+        setError(result?.message || "The dose schedule could not be saved.");
+        return;
+      }
+      onSaved(result.schedule);
+    } catch (saveError) {
+      saveInProgressRef.current = false;
+      setSaveInProgress(false);
+      setError(saveError?.message || "The dose schedule could not be saved.");
     }
-    if (result?.status !== "saved") {
-      setError(result?.message || "The dose schedule could not be saved.");
-      return;
-    }
-    onSaved(result.schedule);
   }
 
   function cancel() {
@@ -177,9 +195,9 @@ export default function MedicationDoseScheduler({
   }
 
   return (
-    <form className="trace-feature-surface trace-feature-form trace-medication-dose-scheduler" aria-label={editing ? `Edit dose schedule for ${draft.name}` : `Schedule dose for ${draft.name}`} onSubmit={save}>
+    <form className="trace-feature-surface trace-feature-form trace-medication-dose-scheduler" aria-label={editing ? `Edit dose schedule for ${draft.name}` : restarting ? `Restart dose schedule for ${draft.name}` : `Schedule dose for ${draft.name}`} onSubmit={save}>
       <h2 ref={headingRef} tabIndex="-1" style={{ scrollMarginTop: "24px" }}>
-        {editing ? "Edit Dose Schedule" : "Schedule Dose"}
+        {editing ? "Edit Dose Schedule" : restarting ? "Restart Schedule" : "Schedule Dose"}
       </h2>
       <p className="trace-medication-dose-scheduler__name"><strong>{draft.name}</strong></p>
       <div className="trace-medication-dose-scheduler__grid">
@@ -255,8 +273,8 @@ export default function MedicationDoseScheduler({
       </label>
       {error && <p role="alert" className="trace-medication-dose-scheduler__error">{error}</p>}
       <div className="trace-medication-dose-scheduler__actions">
-        <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>Schedule Dose</button>
-        <button className="trace-action trace-action--secondary" type="button" onClick={cancel} style={buttonStyle}>Cancel</button>
+        <button className="trace-action trace-action--primary" type="submit" disabled={saveInProgress} style={buttonStyle}>{restarting ? "Restart Schedule" : "Schedule Dose"}</button>
+        <button className="trace-action trace-action--secondary" type="button" disabled={saveInProgress} onClick={cancel} style={buttonStyle}>Cancel</button>
       </div>
     </form>
   );

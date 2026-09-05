@@ -26,6 +26,7 @@ import {
   formatMedicationDoseRepeat,
   medicationDoseDateKey,
   medicationDoseDirectSourceId,
+  medicationDoseRestartDraft,
   medicationDoseSchedulePresentation,
   medicationDoseScheduleOccursOnDate,
 } from "../services/medicationDoseSchedule";
@@ -115,7 +116,9 @@ function MedicationPage({
   const [formNavigationRequest, setFormNavigationRequest] = useState(0);
   const [scheduleSeed, setScheduleSeed] = useState(null);
   const [editingScheduleId, setEditingScheduleId] = useState(null);
+  const [restartingScheduleId, setRestartingScheduleId] = useState(null);
   const [scheduledDoseMessage, setScheduledDoseMessage] = useState("");
+  const [scheduleActionError, setScheduleActionError] = useState("");
   const [endedSchedulesExpanded, setEndedSchedulesExpanded] = useState(false);
   const [entrySaveInProgress, setEntrySaveInProgress] = useState(false);
   const pageTopRef = useRef(null);
@@ -495,11 +498,13 @@ function MedicationPage({
     setFormNavigationRequest((request) => request + 1);
   }
 
-  function openDoseScheduler(seed, trigger = null, scheduleId = null) {
+  function openDoseScheduler(seed, trigger = null, scheduleId = null, restartScheduleId = null) {
     scheduleOriginRef.current = trigger || document.activeElement;
     setScheduleSeed(seed);
     setEditingScheduleId(scheduleId);
+    setRestartingScheduleId(restartScheduleId);
     setScheduledDoseMessage("");
+    setScheduleActionError("");
     setEditingCompound(null);
   }
 
@@ -552,9 +557,67 @@ function MedicationPage({
   function restoreScheduleFocus() {
     const target = scheduleOriginRef.current;
     window.requestAnimationFrame(() => {
-      if (target instanceof HTMLElement && target.isConnected) target.focus();
-      else saveAndScheduleRef.current?.focus();
+      const focusTarget = target instanceof HTMLElement && target.isConnected
+        ? target
+        : saveAndScheduleRef.current;
+      focusTarget?.focus();
+      const bounds = focusTarget?.getBoundingClientRect?.();
+      if (bounds && (bounds.top < 0 || bounds.bottom > window.innerHeight)) {
+        focusTarget.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "nearest" });
+      }
     });
+  }
+
+  function restartSourceError(revision) {
+    if (revision.source.type === "medication-entry") {
+      const entry = medicationEntries.find((candidate) => candidate?.id === revision.source.id);
+      if (!entry) return "The linked medication or supplement entry is missing.";
+      const local = getLocalDateTimeFromTimestamp(entry.occurredAt);
+      const error = getMedicationEntryError({
+        name: entry.name,
+        doseAmount: entry.dose?.amount,
+        doseUnit: entry.dose?.unit,
+        customDoseUnit: entry.dose?.customUnit,
+        route: entry.route?.code,
+        customRoute: entry.route?.customLabel,
+        date: local.date,
+        time: local.time,
+      });
+      if (error) return "The linked medication or supplement entry is invalid.";
+    }
+    if (revision.source.type === "saved-compound") {
+      const compound = compounds.find((candidate) => candidate?.id === revision.source.id);
+      const error = compound && getCompoundDefinitionError({
+        name: compound.name,
+        defaultDoseAmount: compound.defaults?.dose?.amount ?? "",
+        doseUnit: compound.defaults?.dose?.unit,
+        customDoseUnit: compound.defaults?.dose?.customUnit,
+        route: compound.defaults?.route?.code,
+        customRoute: compound.defaults?.route?.customLabel,
+      });
+      if (!compound) return "The linked saved compound is missing.";
+      if (error) return "The linked saved compound is invalid.";
+    }
+    return "";
+  }
+
+  function restartDoseSchedule(schedule, trigger) {
+    const revision = currentMedicationDoseRevision(schedule);
+    const sourceError = revision ? restartSourceError(revision) : "The ended schedule is invalid.";
+    const seed = sourceError
+      ? null
+      : medicationDoseRestartDraft(schedule, medicationDoseDateKey());
+    if (!seed) {
+      setScheduleActionError(
+        `${sourceError || "The ended schedule could not be reused."} ` +
+        "The ended schedule and dose history were left unchanged. Use Schedule Dose to create a replacement."
+      );
+      setScheduledDoseMessage("");
+      trigger?.focus();
+      return;
+    }
+    setEndedSchedulesExpanded(true);
+    openDoseScheduler(seed, trigger, null, schedule.id);
   }
 
   function focusScheduleManagement(targetRef) {
@@ -575,6 +638,7 @@ function MedicationPage({
     }
     setScheduleSeed(null);
     setEditingScheduleId(null);
+    setRestartingScheduleId(null);
     restoreScheduleFocus();
   }
 
@@ -586,8 +650,13 @@ function MedicationPage({
     }
     setScheduleSeed(null);
     setEditingScheduleId(null);
+    const restarted = Boolean(restartingScheduleId);
+    setRestartingScheduleId(null);
     setEntryStatusMessage("");
-    setScheduledDoseMessage(`${revision?.name || "Dose"} scheduled.`);
+    setScheduleActionError("");
+    setScheduledDoseMessage(
+      `${revision?.name || "Dose"} ${restarted ? "schedule restarted" : "scheduled"}.`
+    );
     restoreScheduleFocus();
   }
 
@@ -647,6 +716,9 @@ function MedicationPage({
               <button className="trace-action trace-action--secondary" type="button" aria-label={`Edit dose schedule for ${revision.name}`} onClick={(event) => editDoseSchedule(schedule, event.currentTarget)}>Edit Schedule</button>
               {revision.repeat.type !== "once" && <button className="trace-action trace-action--secondary" type="button" aria-label={`End dose schedule for ${revision.name}`} onClick={() => endDoseSchedule(schedule)}>End Schedule</button>}
             </>
+          )}
+          {schedule.status === "ended" && (
+            <button className="trace-action trace-action--secondary" type="button" aria-label={`Restart dose schedule for ${revision.name}`} onClick={(event) => restartDoseSchedule(schedule, event.currentTarget)}>Restart Schedule</button>
           )}
           <button className="trace-action trace-action--danger" type="button" aria-label={`Delete dose schedule for ${revision.name}`} onClick={() => deleteDoseSchedule(schedule)}>Delete Schedule</button>
         </div>
@@ -740,11 +812,18 @@ function MedicationPage({
         </div>
       )}
 
+      {scheduleActionError && (
+        <p className="trace-medication-dose-scheduler__error" role="alert">
+          {scheduleActionError}
+        </p>
+      )}
+
       {scheduleSeed && (
         <MedicationDoseScheduler
-          key={`${editingScheduleId || "new"}:${scheduleSeed.source.id}`}
+          key={`${editingScheduleId || restartingScheduleId || "new"}:${scheduleSeed.source.id}`}
           seed={scheduleSeed}
           editing={Boolean(editingScheduleId)}
+          restarting={Boolean(restartingScheduleId)}
           onSave={(draft, confirmed) => editingScheduleId
             ? updateMedicationDoseSchedule(editingScheduleId, draft, confirmed)
             : saveMedicationDoseSchedule(draft, confirmed)}

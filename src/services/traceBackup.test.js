@@ -30,6 +30,8 @@ import {
   deleteMedicationDoseSchedule,
   emptyMedicationDoseOccurrenceCollection,
   emptyMedicationDoseScheduleCollection,
+  endMedicationDoseSchedule,
+  medicationDoseRestartDraft,
   medicationDoseOccurrenceItem,
   medicationDoseOccurrencesForDate,
   skipMedicationDoseOccurrence,
@@ -1772,6 +1774,49 @@ test("backup round-trips dose schedules and occurrence state with preview counts
 
   const restored = makeStorage();
   await restoreTraceBackup(value, { confirmed: true, storage: restored, openDatabase: async () => makePhotoDatabase() });
+  expect(JSON.parse(restored.value("medicationDoseSchedules"))).toEqual(scheduleCollection);
+  expect(JSON.parse(restored.value("medicationDoseOccurrences"))).toEqual(occurrenceCollection);
+});
+
+test("backup round-trips an ended schedule and its separately restarted active schedule", async () => {
+  const original = backedUpDoseSchedule();
+  const occurrence = skipMedicationDoseOccurrence(
+    medicationDoseOccurrenceItem(original, "2026-08-22"),
+    "Schedule conflict",
+    "",
+    new Date("2026-08-22T13:00:00.000Z")
+  );
+  const ended = endMedicationDoseSchedule(
+    original,
+    "2026-08-22",
+    new Date("2026-08-22T14:00:00.000Z")
+  );
+  const restarted = createMedicationDoseSchedule(
+    medicationDoseRestartDraft(ended, "2026-09-04"),
+    { id: "schedule:backup-restarted", now: new Date("2026-09-04T12:00:00.000Z") }
+  );
+  const scheduleCollection = { schemaVersion: 1, schedules: [ended, restarted] };
+  const occurrenceCollection = { schemaVersion: 1, occurrences: [occurrence] };
+  const storage = makeStorage({
+    medicationDoseSchedules: JSON.stringify(scheduleCollection),
+    medicationDoseOccurrences: JSON.stringify(occurrenceCollection),
+  });
+
+  const backupValue = await createTraceBackup({
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  const validated = await validateTraceBackup(backupValue);
+  expect(validated.summary.medicationDoseSchedules).toBe(2);
+  expect(validated.backup.data.structured.medicationDoseSchedules).toEqual(scheduleCollection);
+  expect(validated.backup.data.structured.medicationDoseOccurrences).toEqual(occurrenceCollection);
+
+  const restored = makeStorage();
+  await restoreTraceBackup(backupValue, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
   expect(JSON.parse(restored.value("medicationDoseSchedules"))).toEqual(scheduleCollection);
   expect(JSON.parse(restored.value("medicationDoseOccurrences"))).toEqual(occurrenceCollection);
 });

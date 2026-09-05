@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import MedicationPage from "./MedicationPage";
+import MedicationDoseScheduler from "./MedicationDoseScheduler";
 import { createCompoundDefinition } from "../services/compoundCatalog";
 import { formatDateOnly } from "../services/dateOnly";
 import {
@@ -1484,6 +1485,207 @@ test("ending moves a schedule into an accessible collapsed section and deletion 
   Element.prototype.getBoundingClientRect = originalBounds;
   window.confirm = originalConfirm;
   shell.remove();
+});
+
+test("restarts an ended weekday schedule through the existing editable scheduler", () => {
+  const sourceEntry = savedEntry({
+    id: "entry-restart",
+    name: "Restart supplement",
+    dose: { amount: 2.5, unit: "custom", customUnit: "scoops" },
+    route: { code: "other", customLabel: "With water" },
+  });
+  const active = createMedicationDoseSchedule({
+    name: sourceEntry.name,
+    classification: "supplement",
+    dose: { ...sourceEntry.dose },
+    route: { ...sourceEntry.route },
+    notes: "After breakfast",
+    source: { type: "medication-entry", id: sourceEntry.id },
+    repeat: { type: "weekdays", weekdays: [1, 5] },
+    startDate: "2026-08-01",
+    endDate: "2026-08-31",
+    time: "06:45",
+  }, { id: "schedule:ended-restart", now: new Date("2026-08-01T12:00:00.000Z") });
+  const ended = endDoseScheduleRecord(active, "2026-08-31", new Date("2026-08-31T12:00:00.000Z"));
+  const original = JSON.stringify(ended);
+  const saveMedicationDoseSchedule = jest.fn((record) => saveDoseResult(record, "schedule:new-restart"));
+  renderMedicationPage({
+    medicationEntries: [sourceEntry],
+    medicationDoseSchedules: [ended],
+    saveMedicationDoseSchedule,
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Ended schedules (1)" }));
+  const trigger = screen.getByRole("button", { name: "Restart dose schedule for Restart supplement" });
+
+  fireEvent.click(trigger);
+
+  const form = screen.getByRole("form", { name: "Restart dose schedule for Restart supplement" });
+  expect(screen.getByRole("heading", { name: "Restart Schedule" })).toHaveFocus();
+  expect(within(form).getByLabelText("Medication or supplement classification")).toHaveValue("supplement");
+  expect(within(form).getByLabelText("Dose amount")).toHaveValue(2.5);
+  expect(within(form).getByLabelText("Dose unit")).toHaveValue("custom");
+  expect(within(form).getByLabelText("Custom dose unit")).toHaveValue("scoops");
+  expect(within(form).getByLabelText("Saved route")).toHaveValue("With water");
+  expect(within(form).getByLabelText("Dose recurrence")).toHaveValue("weekdays");
+  expect(within(form).getByLabelText("Monday")).toBeChecked();
+  expect(within(form).getByLabelText("Friday")).toBeChecked();
+  expect(within(form).getByLabelText("Start date")).toHaveValue(medicationDoseDateKey());
+  expect(within(form).getByLabelText("End date (optional)")).toHaveValue("");
+  expect(within(form).getByLabelText("Scheduled time")).toHaveValue("06:45");
+  expect(within(form).getByLabelText("Schedule notes (optional)")).toHaveValue("After breakfast");
+
+  fireEvent.change(within(form).getByLabelText("Dose amount"), { target: { value: "3" } });
+  fireEvent.change(within(form).getByLabelText("Scheduled time"), { target: { value: "07:15" } });
+  fireEvent.click(within(form).getByRole("button", { name: "Restart Schedule" }));
+
+  expect(saveMedicationDoseSchedule).toHaveBeenCalledWith(expect.objectContaining({
+    name: "Restart supplement",
+    classification: "supplement",
+    dose: { amount: "3", unit: "custom", customUnit: "scoops" },
+    route: { code: "other", customLabel: "With water" },
+    repeat: { type: "weekdays", weekdays: [1, 5] },
+    startDate: medicationDoseDateKey(),
+    endDate: null,
+    time: "07:15",
+    source: { type: "medication-entry", id: sourceEntry.id },
+  }), false);
+  expect(JSON.stringify(ended)).toBe(original);
+  expect(screen.getByRole("status")).toHaveTextContent("Restart supplement schedule restarted.");
+});
+
+test("canceling restart creates nothing, keeps ended schedules expanded, and restores focus", () => {
+  const scroll = installDeferredScrollMocks();
+  const sourceEntry = savedEntry({ id: "entry-cancel-restart", name: "Cancel restart" });
+  const ended = endDoseScheduleRecord(createMedicationDoseSchedule({
+    name: sourceEntry.name,
+    classification: "medication",
+    dose: { ...sourceEntry.dose },
+    route: { ...sourceEntry.route },
+    notes: "",
+    source: { type: "medication-entry", id: sourceEntry.id },
+    repeat: { type: "daily" },
+    startDate: "2026-08-01",
+    endDate: null,
+    time: "08:00",
+  }, { id: "schedule:cancel-restart", now: new Date("2026-08-01T12:00:00.000Z") }), "2026-08-31");
+  const saveMedicationDoseSchedule = jest.fn();
+  renderMedicationPage({
+    medicationEntries: [sourceEntry],
+    medicationDoseSchedules: [ended],
+    saveMedicationDoseSchedule,
+  });
+  const disclosure = screen.getByRole("button", { name: "Ended schedules (1)" });
+  fireEvent.click(disclosure);
+  const trigger = screen.getByRole("button", { name: "Restart dose schedule for Cancel restart" });
+  fireEvent.click(trigger);
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  scroll.flush();
+
+  expect(saveMedicationDoseSchedule).not.toHaveBeenCalled();
+  expect(disclosure).toHaveAttribute("aria-expanded", "true");
+  expect(trigger).toHaveFocus();
+  expect(screen.queryByRole("form", { name: /Restart dose schedule/ })).not.toBeInTheDocument();
+  scroll.restore();
+});
+
+test.each([
+  ["missing", []],
+  ["invalid", [savedEntry({ id: "entry-broken-restart", dose: { amount: 0, unit: "mg" } })]],
+])("fails safely when a restart's linked medication entry is %s", (label, medicationEntries) => {
+  const ended = endDoseScheduleRecord(createMedicationDoseSchedule({
+    name: "Broken restart",
+    classification: "medication",
+    dose: { amount: 1, unit: "mg" },
+    route: { code: "oral" },
+    notes: "Keep history",
+    source: { type: "medication-entry", id: "entry-broken-restart" },
+    repeat: { type: "daily" },
+    startDate: "2026-08-01",
+    endDate: null,
+    time: "08:00",
+  }, { id: `schedule:${label}-restart`, now: new Date("2026-08-01T12:00:00.000Z") }), "2026-08-31");
+  const saveMedicationDoseSchedule = jest.fn();
+  renderMedicationPage({ medicationEntries, medicationDoseSchedules: [ended], saveMedicationDoseSchedule });
+  fireEvent.click(screen.getByRole("button", { name: "Ended schedules (1)" }));
+  fireEvent.click(screen.getByRole("button", { name: "Restart dose schedule for Broken restart" }));
+
+  expect(screen.getByRole("alert")).toHaveTextContent(`linked medication or supplement entry is ${label}`);
+  expect(screen.getByRole("alert")).toHaveTextContent("ended schedule and dose history were left unchanged");
+  expect(screen.queryByRole("form", { name: /Restart dose schedule/ })).not.toBeInTheDocument();
+  expect(saveMedicationDoseSchedule).not.toHaveBeenCalled();
+});
+
+test("the scheduler accepts only one successful restart submission", () => {
+  const seed = {
+    name: "Single restart",
+    classification: "supplement",
+    dose: { amount: 1, unit: "capsule" },
+    route: { code: "oral" },
+    notes: "",
+    source: { type: "direct-entry", id: "medication-dose-source:single-restart" },
+    repeat: { type: "daily" },
+    startDate: medicationDoseDateKey(),
+    endDate: null,
+    time: "08:00",
+  };
+  let form;
+  const onSave = jest.fn((record) => {
+    fireEvent.submit(form);
+    return saveDoseResult(record, "schedule:single-restart");
+  });
+  const onSaved = jest.fn();
+  render(
+    <MedicationDoseScheduler
+      seed={seed}
+      restarting
+      onSave={onSave}
+      onCancel={jest.fn()}
+      onSaved={onSaved}
+    />
+  );
+  form = screen.getByRole("form", { name: "Restart dose schedule for Single restart" });
+
+  fireEvent.submit(form);
+
+  expect(onSave).toHaveBeenCalledTimes(1);
+  expect(onSaved).toHaveBeenCalledTimes(1);
+  expect(within(form).getByRole("button", { name: "Restart Schedule" })).toBeDisabled();
+});
+
+test("an equivalent active schedule requires the established duplicate confirmation before restart", () => {
+  const originalConfirm = window.confirm;
+  window.confirm = jest.fn(() => false);
+  const ended = endDoseScheduleRecord(createMedicationDoseSchedule({
+    name: "Duplicate restart",
+    classification: "medication",
+    dose: { amount: 1, unit: "mg" },
+    route: { code: "oral" },
+    notes: "",
+    source: { type: "direct-entry", id: "medication-dose-source:duplicate-restart" },
+    repeat: { type: "daily" },
+    startDate: "2026-08-01",
+    endDate: null,
+    time: "08:00",
+  }, { id: "schedule:duplicate-ended", now: new Date("2026-08-01T12:00:00.000Z") }), "2026-08-31");
+  const saveMedicationDoseSchedule = jest.fn((record, confirmed) => confirmed
+    ? saveDoseResult(record, "schedule:duplicate-confirmed")
+    : { status: "duplicate", duplicate: { date: record.startDate, time: record.time } });
+  renderMedicationPage({ medicationDoseSchedules: [ended], saveMedicationDoseSchedule });
+  fireEvent.click(screen.getByRole("button", { name: "Ended schedules (1)" }));
+  fireEvent.click(screen.getByRole("button", { name: "Restart dose schedule for Duplicate restart" }));
+  const form = screen.getByRole("form", { name: "Restart dose schedule for Duplicate restart" });
+
+  fireEvent.click(within(form).getByRole("button", { name: "Restart Schedule" }));
+
+  expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("already scheduled"));
+  expect(saveMedicationDoseSchedule).toHaveBeenCalledTimes(1);
+  expect(form).toBeInTheDocument();
+
+  window.confirm.mockReturnValue(true);
+  fireEvent.click(within(form).getByRole("button", { name: "Restart Schedule" }));
+  expect(saveMedicationDoseSchedule.mock.calls.map((call) => call[1])).toEqual([false, false, true]);
+  expect(screen.getByRole("status")).toHaveTextContent("Duplicate restart schedule restarted.");
+  window.confirm = originalConfirm;
 });
 
 test("scheduler reports save failures, uses reduced-motion scrolling, and remains contained at 390px and 320px", () => {

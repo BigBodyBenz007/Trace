@@ -399,6 +399,35 @@ export function currentMedicationDoseRevision(schedule) {
   return normalized?.revisions[normalized.revisions.length - 1] || null;
 }
 
+export function medicationDoseRestartDraft(existing, startDate = medicationDoseDateKey()) {
+  const schedule = normalizeMedicationDoseSchedule(existing);
+  if (
+    !schedule
+    || schedule.status !== "ended"
+    || !isValidMedicationDoseDate(startDate)
+  ) return null;
+  const revision = currentMedicationDoseRevision(schedule);
+  if (!revision) return null;
+  return {
+    name: revision.name,
+    classification: revision.classification,
+    dose: { ...revision.dose },
+    route: { ...revision.route },
+    notes: revision.notes,
+    source: { ...revision.source },
+    ...(revision.compoundReference
+      ? { compoundReference: { ...revision.compoundReference } }
+      : {}),
+    repeat: {
+      ...revision.repeat,
+      ...(revision.repeat.weekdays ? { weekdays: [...revision.repeat.weekdays] } : {}),
+    },
+    startDate,
+    endDate: null,
+    time: revision.time,
+  };
+}
+
 export function medicationDoseRevisionForDate(schedule, dateKey) {
   const normalized = normalizeMedicationDoseSchedule(schedule);
   if (!normalized || !isValidMedicationDoseDate(dateKey)) return null;
