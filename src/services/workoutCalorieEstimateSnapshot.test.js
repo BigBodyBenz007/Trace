@@ -52,11 +52,12 @@ test("creates a stable versioned snapshot from historical weight and age at work
     age: 35,
     ageBasis: "adult",
     activeDurationMinutes: 60,
+    durationSource: "entered",
     selectedIntensity: "moderate",
     lowerKcal: 300,
     upperKcal: 440,
   });
-  expect(snapshot.inputFingerprint).toMatch(/^workout-calorie-input-v1:/);
+  expect(snapshot.inputFingerprint).toMatch(/^workout-calorie-input-v2:/);
   expect(JSON.stringify(snapshot)).not.toMatch(/midpoint|exactKcal|caloriesPer|afterburn/i);
 });
 
@@ -109,6 +110,75 @@ test("calculable save wording uses only the approved broad range", () => {
   );
 });
 
+test("entered duration wins over a much shorter recorded duration", () => {
+  const entered = createWorkoutCalorieEstimateSnapshot({
+    workout: workout({
+      activeDurationMinutes: 60,
+      startedAt: "2026-08-20T18:00:00.000Z",
+      finishedAt: "2026-08-20T18:01:12.000Z",
+    }),
+    healthMeasurementEntries: healthEntries,
+    dateOfBirth: "1990-01-01",
+  });
+  const recorded = createWorkoutCalorieEstimateSnapshot({
+    workout: workout({
+      activeDurationMinutes: undefined,
+      startedAt: "2026-08-20T18:00:00.000Z",
+      finishedAt: "2026-08-20T18:01:12.000Z",
+    }),
+    healthMeasurementEntries: healthEntries,
+    dateOfBirth: "1990-01-01",
+  });
+
+  expect(entered).toMatchObject({
+    status: "calculated",
+    activeDurationMinutes: 60,
+    durationSource: "entered",
+  });
+  expect(recorded).toMatchObject({
+    status: "calculated",
+    activeDurationMinutes: 1,
+    durationSource: "recorded",
+  });
+  expect(entered.lowerKcal).toBeGreaterThan(recorded.lowerKcal);
+  expect(entered.upperKcal).toBeGreaterThan(recorded.upperKcal);
+});
+
+test.each([undefined, "", null, 0, -5, Number.NaN, Number.NEGATIVE_INFINITY, "60"])(
+  "invalid entered duration %p cannot override recorded elapsed time",
+  (activeDurationMinutes) => {
+    const snapshot = createWorkoutCalorieEstimateSnapshot({
+      workout: workout({
+        activeDurationMinutes,
+        startedAt: "2026-08-20T18:00:00.000Z",
+        finishedAt: "2026-08-20T18:01:12.000Z",
+      }),
+      healthMeasurementEntries: healthEntries,
+    });
+    expect(snapshot).toMatchObject({
+      status: "calculated",
+      activeDurationMinutes: 1,
+      durationSource: "recorded",
+    });
+  }
+);
+
+test("a valid fractional entered duration is retained as the estimate basis", () => {
+  const snapshot = createWorkoutCalorieEstimateSnapshot({
+    workout: workout({
+      activeDurationMinutes: 12.5,
+      startedAt: "2026-08-20T18:00:00.000Z",
+      finishedAt: "2026-08-20T18:01:12.000Z",
+    }),
+    healthMeasurementEntries: healthEntries,
+  });
+  expect(snapshot).toMatchObject({
+    status: "calculated",
+    activeDurationMinutes: 12.5,
+    durationSource: "entered",
+  });
+});
+
 test("fingerprint ignores title, notes, photos, and timestamps but changes for estimator inputs", () => {
   const original = workout({ title: "Original", notes: "Old", photos: [{ id: "photo" }] });
   const fingerprint = workoutCalorieEstimateInputFingerprint(original);
@@ -123,15 +193,33 @@ test("fingerprint ignores title, notes, photos, and timestamps but changes for e
     ...original,
     exercises: [{ ...original.exercises[0], sets: [{ ...original.exercises[0].sets[0], reps: 11 }] }],
   })).not.toBe(fingerprint);
+  const recordedOnly = { ...original, activeDurationMinutes: undefined };
+  expect(workoutCalorieEstimateInputFingerprint({
+    ...recordedOnly,
+    startedAt: "2026-08-20T18:00:00.000Z",
+    finishedAt: "2026-08-20T18:30:00.000Z",
+  })).not.toBe(workoutCalorieEstimateInputFingerprint({
+    ...recordedOnly,
+    startedAt: "2026-08-20T18:00:00.000Z",
+    finishedAt: "2026-08-20T18:45:00.000Z",
+  }));
 });
 
 test("refresh detection preserves unrelated edits and recalculates relevant or legacy edits", () => {
   const original = workout();
   const existing = {
     ...original,
-    calorieEstimate: { inputFingerprint: workoutCalorieEstimateInputFingerprint(original) },
+    calorieEstimate: {
+      estimatorMethodName: "trace-workout-calorie-range",
+      estimatorMethodVersion: 3,
+      inputFingerprint: workoutCalorieEstimateInputFingerprint(original),
+    },
   };
   expect(workoutCalorieEstimateNeedsRefresh(existing, { ...original, title: "New title" })).toBe(false);
   expect(workoutCalorieEstimateNeedsRefresh(existing, { ...original, activeDurationMinutes: 30 })).toBe(true);
   expect(workoutCalorieEstimateNeedsRefresh(original, { ...original, title: "Legacy edit" })).toBe(true);
+  expect(workoutCalorieEstimateNeedsRefresh({
+    ...existing,
+    calorieEstimate: { ...existing.calorieEstimate, estimatorMethodVersion: 2 },
+  }, { ...original, title: "Edit old automatic snapshot" })).toBe(true);
 });

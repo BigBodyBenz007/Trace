@@ -30,8 +30,8 @@ import {
 } from "../services/workoutEntry";
 import { getExerciseDefinitionError } from "../services/exerciseCatalog";
 import {
-  elapsedWorkoutMinutes,
   formatWorkoutDuration,
+  resolveWorkoutCalorieDuration,
 } from "../services/workoutDuration";
 import { workoutCalorieEstimateSaveMessage } from "../services/workoutCalorieEstimateSnapshot";
 import {
@@ -153,7 +153,7 @@ function WorkoutTiming({ entry }) {
   const duration = hasElapsedTiming
     ? formatWorkoutDuration(entry.startedAt, entry.finishedAt)
     : null;
-  const hasActiveDuration = Number.isInteger(entry.activeDurationMinutes)
+  const hasActiveDuration = Number.isFinite(entry.activeDurationMinutes)
     && entry.activeDurationMinutes > 0;
   const hasCaloriesBurned = Number.isInteger(entry.caloriesBurned)
     && entry.caloriesBurned > 0;
@@ -178,7 +178,7 @@ function WorkoutTiming({ entry }) {
       )}
       {hasActiveDuration && <>
         <dt style={{ color: "#9ca3af" }}>Approximate workout duration</dt>
-        <dd style={{ margin: 0 }}>{entry.activeDurationMinutes} min</dd>
+        <dd style={{ margin: 0 }}>{entry.activeDurationMinutes.toLocaleString()} min</dd>
       </>}
       {hasCaloriesBurned && <>
         <dt style={{ color: "#9ca3af" }}>Calories Burned</dt>
@@ -209,7 +209,8 @@ function WorkoutResultFields({
       <legend>Workout results (optional)</legend>
       {liveTiming && (
         <p style={{ color: "#bbb", marginTop: 0 }}>
-          Trace calculated duration from when this workout was started. You can correct it before saving.
+          Trace records elapsed time from start to finish separately. Enter an approximate active
+          duration here when it better reflects the workout.
         </p>
       )}
       <div className="workout-readiness-fields__grid">
@@ -219,9 +220,9 @@ function WorkoutResultFields({
             <input
               aria-label="Approximate workout duration"
               aria-invalid={durationInvalid || undefined}
-              inputMode="numeric"
-              min="1"
-              step="1"
+              inputMode="decimal"
+              min="0"
+              step="any"
               type="number"
               value={activeDurationMinutes}
               onChange={(event) => onActiveDurationChange(event.target.value)}
@@ -325,11 +326,24 @@ function unavailableCalorieEstimateMessage(snapshot) {
   return "A saved estimate is not available for this workout.";
 }
 
-function WorkoutCalorieEstimate({ snapshot }) {
+function WorkoutCalorieEstimate({ snapshot, workout }) {
   const hasRange = snapshot?.status === "calculated"
     && Number.isFinite(snapshot.lowerKcal)
     && Number.isFinite(snapshot.upperKcal)
     && snapshot.lowerKcal <= snapshot.upperKcal;
+  const duration = resolveWorkoutCalorieDuration(workout);
+  const hasDurationBasis = Number.isFinite(snapshot?.activeDurationMinutes)
+    && snapshot.activeDurationMinutes > 0
+    && snapshot.activeDurationMinutes === duration.minutes
+    && snapshot.durationSource === duration.source
+    && ["entered", "recorded"].includes(snapshot.durationSource);
+  const durationBasis = hasDurationBasis
+    ? `Estimated using ${snapshot.durationSource === "entered"
+      ? "your entered workout"
+      : "the recorded"} duration of ${snapshot.activeDurationMinutes.toLocaleString()} ${
+      snapshot.activeDurationMinutes === 1 ? "minute" : "minutes"
+    }.`
+    : "";
 
   return (
     <section className="workout-calorie-estimate" aria-label="Estimated calories burned">
@@ -346,6 +360,7 @@ function WorkoutCalorieEstimate({ snapshot }) {
       <p className="workout-calorie-estimate__disclaimer">
         This is a broad estimate, not an exact measurement.
       </p>
+      {durationBasis && <p>{durationBasis}</p>}
       <details className="workout-calorie-estimate__details">
         <summary>How is this estimated?</summary>
         <p>
@@ -846,12 +861,6 @@ function WorkoutPage({
   }
 
   function reviewWorkoutResults() {
-    if (timingMode === "live" && editingEntryId === null) {
-      const calculatedMinutes = elapsedWorkoutMinutes(startedAtRef.current, new Date());
-      if (calculatedMinutes !== null) {
-        setActiveDurationMinutes(String(calculatedMinutes));
-      }
-    }
     pendingResultsFocusRef.current = true;
     setCompletionReview(true);
     markChanged();
@@ -1400,7 +1409,7 @@ function WorkoutPage({
     setTime(entryDateTime.time);
     setTimingMode(entry.startedAt ? "live" : "manual");
     setActiveDurationMinutes(
-      Number.isInteger(entry.activeDurationMinutes) && entry.activeDurationMinutes > 0
+      Number.isFinite(entry.activeDurationMinutes) && entry.activeDurationMinutes > 0
         ? String(entry.activeDurationMinutes)
         : ""
     );
@@ -2518,7 +2527,7 @@ function WorkoutPage({
                   {expanded && (
                     <div id={detailId} className="trace-workout-history-card__details">
                       <WorkoutTiming entry={entry} />
-                <WorkoutCalorieEstimate snapshot={entry.calorieEstimate} />
+                <WorkoutCalorieEstimate snapshot={entry.calorieEstimate} workout={entry} />
                 {entry.notes && <p style={{ whiteSpace: "pre-wrap" }}>{entry.notes}</p>}
                 <WorkoutPhotos photos={entry.photos} label={`${entry.title} photos`} />
                 {entry.exercises.map((exercise) => (

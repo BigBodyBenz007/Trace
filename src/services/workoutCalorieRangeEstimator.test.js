@@ -58,6 +58,32 @@ function metRange(result) {
   return result.metadata.effortProfile.combinedMetRange;
 }
 
+function fourteenSetWorkout(overrides = {}) {
+  const setCounts = [3, 3, 2, 2, 2, 2];
+  return workout({
+    activeDurationMinutes: 75,
+    intensity: "high",
+    exercises: setCounts.map((setCount, exerciseIndex) => exercise({
+      id: `exercise-${exerciseIndex + 1}`,
+      exerciseId: `trace:exercise-${exerciseIndex + 1}`,
+      sets: Array.from({ length: setCount }, (_, setIndex) => workingSet({
+        id: `set-${exerciseIndex + 1}-${setIndex + 1}`,
+        reps: 8 + setIndex,
+        ...(setIndex === 0 ? { setType: "warm-up" } : {}),
+      })),
+    })),
+    ...overrides,
+  });
+}
+
+function adultWeightFromPounds(value) {
+  return resolveHistoricalBodyWeight([{
+    id: `weight-${value}`,
+    occurredAt: "2026-08-20T08:00:00.000Z",
+    measurements: { weight: { value, unit: "lb" } },
+  }], "2026-08-30T18:00:00.000Z");
+}
+
 test("exports version 3 of the broad bounded-rep density-mixture method", () => {
   expect(WORKOUT_CALORIE_ESTIMATOR_METHOD).toEqual({
     id: "trace-workout-calorie-range",
@@ -75,6 +101,127 @@ test("exports version 3 of the broad bounded-rep density-mixture method", () => 
     effortFactorMinimum: 0.5,
     effortFactorMaximum: 1.5,
   });
+});
+
+test("diagnoses the complete 75-minute High 220 lb 14-set calculation", () => {
+  const bodyWeight = adultWeightFromPounds(220);
+  const result = estimateWorkoutCalorieRange({
+    workout: fourteenSetWorkout(),
+    bodyWeight,
+    age: 35,
+  });
+  const density = result.metadata.effortProfile.density;
+  const range = metRange(result);
+  const durationWeightScale = 3.5 * bodyWeight.value / 200 * 75;
+  const rawRange = {
+    lower: range.lowerMet * durationWeightScale,
+    upper: range.upperMet * durationWeightScale,
+  };
+
+  expect(bodyWeight).toEqual({
+    value: 220 * 0.45359237,
+    unit: "kg",
+    sourceEntryId: "weight-220",
+  });
+  expect(result.metadata).toMatchObject({
+    method: { id: "trace-workout-calorie-range", version: 3 },
+    calculationInputs: {
+      ageBasis: "adult",
+      intensity: "high",
+      bodyWeight: "provided",
+      activeDuration: "provided",
+    },
+    workoutStructure: {
+      completedExercises: 6,
+      completedSegments: 14,
+      completedWorkingSets: 8,
+      warmUpSets: 6,
+      dropSegments: 0,
+      failureSegments: 0,
+      totalRecordedReps: 122,
+      totalRepWeight: 122,
+    },
+  });
+  expect(density).toMatchObject({
+    baselineMetRange: { lowerMet: 5, upperMet: 6.5 },
+    effortRepWeight: 100.296,
+    rawEffortRepWeightPerMinute: 1.337,
+    boundedEffortRepWeightPerMinute: 1.337,
+    densityShiftMet: 0.434,
+    densityClamped: false,
+    highEffortRepWeight: 0,
+    highEffortShiftMet: 0,
+    uncertainSegments: 0,
+    uncertaintyExpansionMet: 0,
+  });
+  expect(range).toEqual({ lowerMet: 5.434, upperMet: 6.5 });
+  expect(durationWeightScale).toBeCloseTo(130.9747968375);
+  expect(rawRange.lower).toBeCloseTo(711.717046, 3);
+  expect(rawRange.upper).toBeCloseTo(851.336179, 3);
+  expect(result.result).toEqual({ lowerKcal: 710, upperKcal: 860 });
+});
+
+test("duration, intensity, and adult body weight each order the 14-set session monotonically", () => {
+  const durationResults = [1, 30, 60, 75, 120].map((activeDurationMinutes) => (
+    estimateWorkoutCalorieRange({
+      workout: fourteenSetWorkout({ activeDurationMinutes }),
+      bodyWeight: adultWeightFromPounds(220),
+      age: 35,
+    }).result
+  ));
+  const intensityResults = ["light", "moderate", "high"].map((intensity) => (
+    estimateWorkoutCalorieRange({
+      workout: fourteenSetWorkout({ intensity }),
+      bodyWeight: adultWeightFromPounds(220),
+      age: 35,
+    }).result
+  ));
+  const weightResults = [120, 170, 220].map((pounds) => (
+    estimateWorkoutCalorieRange({
+      workout: fourteenSetWorkout(),
+      bodyWeight: adultWeightFromPounds(pounds),
+      age: 35,
+    }).result
+  ));
+
+  [durationResults, intensityResults, weightResults].forEach((results) => {
+    results.slice(1).forEach((current, index) => {
+      expect(current.lowerKcal).toBeGreaterThan(results[index].lowerKcal);
+      expect(current.upperKcal).toBeGreaterThan(results[index].upperKcal);
+      expect(Number.isFinite(current.lowerKcal)).toBe(true);
+      expect(Number.isFinite(current.upperKcal)).toBe(true);
+      expect(current.lowerKcal).toBeGreaterThanOrEqual(0);
+      expect(current.lowerKcal).toBeLessThanOrEqual(current.upperKcal);
+    });
+  });
+});
+
+test("warm-up, drop, and failure modifiers cannot collapse a full-session High estimate", () => {
+  const mixed = fourteenSetWorkout();
+  mixed.exercises[0].sets[1] = {
+    ...mixed.exercises[0].sets[1],
+    toFailure: true,
+    actualRepsAtFailure: 9,
+    drops: [{
+      id: "drop-1",
+      reps: 6,
+      load: { mode: "external", amount: 45, unit: "lb" },
+    }],
+  };
+  const result = estimateWorkoutCalorieRange({
+    workout: mixed,
+    bodyWeight: adultWeightFromPounds(220),
+    age: 35,
+  });
+
+  expect(result.metadata.workoutStructure).toMatchObject({
+    warmUpSets: 6,
+    completedWorkingSets: 8,
+    dropSegments: 1,
+    failureSegments: 1,
+  });
+  expect(result.result.lowerKcal).toBeGreaterThan(500);
+  expect(result.result.upperKcal).toBeGreaterThan(result.result.lowerKcal);
 });
 
 test.each([
@@ -511,13 +658,21 @@ test.each([
 test.each([
   [undefined, "missing-required-inputs", "missing"],
   [0, "invalid-inputs", "invalid"],
-  [30.5, "invalid-inputs", "invalid"],
+  [-30.5, "invalid-inputs", "invalid"],
+  [Number.POSITIVE_INFINITY, "invalid-inputs", "invalid"],
   ["30", "invalid-inputs", "invalid"],
 ])("defensively rejects missing or invalid approximate workout duration", (activeDurationMinutes, status, state) => {
   const result = estimate({ workout: workout({ activeDurationMinutes }) });
   expect(result.status).toBe(status);
   expect(result.result).toBeNull();
   expect(result.metadata.inputCompleteness.required.activeDuration).toBe(state);
+});
+
+test("accepts a positive fractional duration without changing the calorie formula", () => {
+  const fractional = estimate({ workout: workout({ activeDurationMinutes: 30.5 }) });
+  expect(fractional.status).toBe("calculated");
+  expect(fractional.metadata.inputCompleteness.required.activeDuration).toBe("provided");
+  expect(fractional.result.lowerKcal).toBeGreaterThan(0);
 });
 
 test("historical lb and kg resolver results feed the estimator identically", () => {

@@ -15,7 +15,7 @@
  * selected intensity band remains the session baseline; warm-ups contribute a
  * smaller density factor, while published high-effort bands add a separately
  * clamped signal. Missing reps use the neutral minimum weight and widen the
- * range. Body weight and the full approximate workout duration are applied
+ * range. Body weight and the selected workout duration are applied
  * exactly once after the session-average MET range is established.
  *
  * This transparent mixture is a Trace estimation policy operating within the
@@ -91,7 +91,7 @@ function validNormalizedWeight(value) {
 
 function validActiveDuration(value) {
   return typeof value === "number"
-    && Number.isSafeInteger(value)
+    && Number.isFinite(value)
     && value > 0;
 }
 

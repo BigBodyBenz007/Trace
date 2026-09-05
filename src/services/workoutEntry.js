@@ -4,6 +4,7 @@ import {
   WORKOUT_WEIGHT_UNITS,
 } from "../constants/workoutOptions";
 import { resolveBuiltInExerciseName } from "./exerciseIdentity";
+import { isValidWorkoutDurationMinutes } from "./workoutDuration";
 
 const LOAD_MODES = new Set(WORKOUT_LOAD_MODES.map(({ value }) => value));
 const WEIGHT_UNITS = new Set(WORKOUT_WEIGHT_UNITS.map(({ value }) => value));
@@ -68,10 +69,10 @@ export function getWorkoutEntryIssues(draft) {
   const activeDuration = String(draft?.activeDurationMinutes ?? "").trim();
   if (activeDuration) {
     const minutes = Number(activeDuration);
-    if (!Number.isInteger(minutes) || minutes <= 0) {
+    if (!isValidWorkoutDurationMinutes(minutes)) {
       issues.push({
         field: "activeDurationMinutes",
-        message: "Enter approximate workout duration as a whole number of minutes greater than zero.",
+        message: "Enter approximate workout duration as a number of minutes greater than zero.",
       });
     }
   }

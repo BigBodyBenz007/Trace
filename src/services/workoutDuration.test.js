@@ -1,6 +1,8 @@
 import {
   elapsedWorkoutMinutes,
   formatWorkoutDuration,
+  isValidWorkoutDurationMinutes,
+  resolveWorkoutCalorieDuration,
   workoutDurationMilliseconds,
 } from "./workoutDuration";
 
@@ -32,4 +34,34 @@ test("calculates rounded elapsed minutes without allowing a zero-minute workout"
     new Date("2026-09-01T15:00:10.000Z")
   )).toBe(1);
   expect(elapsedWorkoutMinutes("invalid", new Date())).toBeNull();
+});
+
+test("calorie duration prefers a valid entered duration over recorded elapsed time", () => {
+  expect(resolveWorkoutCalorieDuration({
+    activeDurationMinutes: 60,
+    startedAt: "2026-09-04T22:39:55.000Z",
+    finishedAt: "2026-09-04T22:41:07.000Z",
+  })).toEqual({ minutes: 60, source: "entered" });
+  expect(resolveWorkoutCalorieDuration({
+    activeDurationMinutes: 42.5,
+    startedAt: "2026-09-04T22:39:55.000Z",
+    finishedAt: "2026-09-04T22:41:07.000Z",
+  })).toEqual({ minutes: 42.5, source: "entered" });
+});
+
+test.each([undefined, "", null, 0, -5, Number.NaN, Number.POSITIVE_INFINITY, "60"])(
+  "calorie duration falls back from invalid entered value %p to recorded elapsed time",
+  (activeDurationMinutes) => {
+    expect(resolveWorkoutCalorieDuration({
+      activeDurationMinutes,
+      startedAt: "2026-09-04T22:39:55.000Z",
+      finishedAt: "2026-09-04T22:41:07.000Z",
+    })).toEqual({ minutes: 1, source: "recorded" });
+  }
+);
+
+test("calorie duration remains unknown when neither source is valid", () => {
+  expect(resolveWorkoutCalorieDuration({ activeDurationMinutes: 0 }))
+    .toEqual({ minutes: null, source: null });
+  expect(isValidWorkoutDurationMinutes(-0)).toBe(false);
 });

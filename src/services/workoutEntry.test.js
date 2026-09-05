@@ -173,6 +173,11 @@ test("stores optional approximate workout duration and workout-wide intensity wh
   expect(legacy).not.toHaveProperty("intensity");
 });
 
+test("stores a valid fractional approximate workout duration", () => {
+  expect(createWorkoutEntry(validDraft({ activeDurationMinutes: "12.5" })))
+    .toMatchObject({ activeDurationMinutes: 12.5 });
+});
+
 test("stores optional measured calories burned and validates it as a positive whole number", () => {
   expect(createWorkoutEntry(validDraft({ caloriesBurned: "418" })))
     .toMatchObject({ caloriesBurned: 418 });
@@ -200,8 +205,9 @@ test("manual historical workouts keep entered results without fabricated timing"
 });
 
 test.each([
-  [{ activeDurationMinutes: "0" }, /whole number of minutes greater than zero/],
-  [{ activeDurationMinutes: "12.5" }, /whole number of minutes greater than zero/],
+  [{ activeDurationMinutes: "0" }, /number of minutes greater than zero/],
+  [{ activeDurationMinutes: "-12.5" }, /number of minutes greater than zero/],
+  [{ activeDurationMinutes: "not-a-duration" }, /number of minutes greater than zero/],
   [{ intensity: "extreme" }, /valid workout intensity/],
 ])("validates optional workout readiness fields", (overrides, expected) => {
   expect(getWorkoutEntryError(validDraft(overrides))).toMatch(expected);

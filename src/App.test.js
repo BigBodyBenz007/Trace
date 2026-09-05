@@ -26,6 +26,7 @@ import {
 } from "./services/medicationDoseSchedule";
 import { createProtocolCompoundOutcome } from "./services/protocolCompoundOutcome";
 import { completeProtocolOccurrence as createCompletedProtocolOccurrence } from "./services/protocolOccurrence";
+import { estimateWorkoutCalorieRange } from "./services/workoutCalorieRangeEstimator";
 
 jest.mock("./storage/photoStorage", () => ({
   clearCompletedMigrationBackup: jest.fn(),
@@ -555,6 +556,99 @@ test("the real template Start Now path renders dense exercises as compact editab
   ]);
   expect(screen.getByRole("heading", { name: "Workout Templates" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Start Now" })).toHaveFocus();
+});
+
+test("template Start Now estimates a 75-minute High 14-set session from pounds", () => {
+  jest.useFakeTimers().setSystemTime(new Date("2026-08-20T22:39:55.000Z"));
+  try {
+    seedWorkoutEstimateInputs();
+    localStorage.setItem("healthMeasurementEntries", JSON.stringify([{
+      id: "weight-current-lb",
+      occurredAt: new Date(2026, 7, 15, 8, 0).toISOString(),
+      measurements: { weight: { value: 220, unit: "lb" } },
+    }]));
+    const savedTemplate = denseReusableWorkoutTemplate();
+    const templateBeforeWorkout = JSON.parse(JSON.stringify(savedTemplate));
+    localStorage.setItem("workoutTemplates", JSON.stringify([savedTemplate]));
+    renderAppAtTimeline();
+
+    openWorkouts();
+    fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start Now" }));
+    jest.setSystemTime(new Date("2026-08-20T22:41:07.000Z"));
+    fireEvent.click(screen.getByRole("button", { name: "Finish Workout" }));
+    expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(null);
+    fireEvent.change(screen.getByLabelText("Approximate workout duration"), {
+      target: { value: "75" },
+    });
+    fireEvent.change(screen.getByLabelText("Workout intensity"), {
+      target: { value: "high" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+    const completed = JSON.parse(localStorage.getItem("workoutEntries"));
+    expect(completed).toHaveLength(1);
+    expect(completed[0]).toMatchObject({
+      activeDurationMinutes: 75,
+      startedAt: "2026-08-20T22:39:55.000Z",
+      finishedAt: "2026-08-20T22:41:07.000Z",
+      calorieEstimate: {
+        status: "calculated",
+        activeDurationMinutes: 75,
+        durationSource: "entered",
+        selectedIntensity: "high",
+        bodyWeightKg: 220 * 0.45359237,
+        sourceHealthWeightEntryId: "weight-current-lb",
+        estimatorMethodVersion: 3,
+      },
+    });
+    expect(completed[0].exercises).toHaveLength(6);
+    expect(completed[0].exercises.flatMap(({ sets }) => sets)).toHaveLength(14);
+    const expectedRange = estimateWorkoutCalorieRange({
+      workout: completed[0],
+      bodyWeight: { value: 220 * 0.45359237, unit: "kg" },
+      age: 35,
+    }).result;
+    expect(expectedRange).toEqual({ lowerKcal: 710, upperKcal: 860 });
+    expect(completed[0].calorieEstimate).toMatchObject({
+      lowerKcal: expectedRange.lowerKcal,
+      upperKcal: expectedRange.upperKcal,
+    });
+    expect(JSON.parse(localStorage.getItem("workoutTemplates"))).toEqual([
+      templateBeforeWorkout,
+    ]);
+
+    expandCompletedWorkout("ARMegddon");
+    const card = screen.getByRole("button", {
+      name: "Collapse workout: ARMegddon",
+    }).closest("article");
+    expect(card).toHaveTextContent("Duration1 min");
+    expect(card).toHaveTextContent("Approximate workout duration75 min");
+    expect(card).toHaveTextContent("About 710\u2013860 kcal");
+    expect(within(card).getByRole("region", { name: "Estimated calories burned" }))
+      .toHaveTextContent("Estimated using your entered workout duration of 75 minutes.");
+
+    jest.setSystemTime(new Date("2026-08-20T22:42:00.000Z"));
+    fireEvent.click(screen.getByRole("button", { name: "Start Now" }));
+    jest.setSystemTime(new Date("2026-08-20T22:43:12.000Z"));
+    fireEvent.click(screen.getByRole("button", { name: "Finish Workout" }));
+    expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(null);
+    fireEvent.change(screen.getByLabelText("Workout intensity"), {
+      target: { value: "high" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+    const withRecordedFallback = JSON.parse(localStorage.getItem("workoutEntries"));
+    expect(withRecordedFallback).toHaveLength(2);
+    expect(withRecordedFallback[1]).not.toHaveProperty("activeDurationMinutes");
+    expect(withRecordedFallback[1].calorieEstimate).toMatchObject({
+      status: "calculated",
+      activeDurationMinutes: 1,
+      durationSource: "recorded",
+    });
+  } finally {
+    jest.useRealTimers();
+  }
 });
 
 test("successful same-tab restore immediately refreshes planned-workout App state", async () => {
@@ -1970,6 +2064,7 @@ test("executes a plan through WorkoutPage and reflects completion and deletion i
 });
 
 test("saves a partial planned workout as resumable progress and completes it exactly once", async () => {
+  seedWorkoutEstimateInputs();
   const plan = {
     ...plannedWorkout("planned-workout:partial", "Partial Push"),
     scheduledDate: localCalendarDateKey(),
@@ -2063,13 +2158,27 @@ test("saves a partial planned workout as resumable progress and completes it exa
   expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(9);
 
   fireEvent.click(within(restoredSecond).getByRole("button", { name: "Completed" }));
-  submitWorkout();
+  reviewWorkout();
+  expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(null);
+  fireEvent.change(screen.getByLabelText("Approximate workout duration"), {
+    target: { value: "60" },
+  });
+  fireEvent.change(screen.getByLabelText("Workout intensity"), {
+    target: { value: "moderate" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
 
   await waitFor(() => {
     expect(JSON.parse(localStorage.getItem("workoutEntries"))).toHaveLength(1);
   });
   expect(JSON.parse(localStorage.getItem("workoutEntries"))[0]).toMatchObject({
     plannedWorkoutId: plan.id,
+    activeDurationMinutes: 60,
+    calorieEstimate: {
+      status: "calculated",
+      activeDurationMinutes: 60,
+      durationSource: "entered",
+    },
     exercises: [
       expect.objectContaining({ roadmapStatus: "completed" }),
       expect.objectContaining({ roadmapStatus: "completed" }),
@@ -4367,6 +4476,7 @@ test("workout completion snapshots the historical estimate, confirms it, and rel
     age: 35,
     ageBasis: "adult",
     activeDurationMinutes: 60,
+    durationSource: "entered",
     selectedIntensity: "moderate",
     lowerKcal: 300,
     upperKcal: 430,
@@ -4386,9 +4496,9 @@ test("workout completion snapshots the historical estimate, confirms it, and rel
   );
 });
 
-test("workout edits preserve unrelated snapshots, refresh relevant dates, and remove stale ranges", () => {
+test("workout edits rebuild automatic snapshots and remove stale ranges", () => {
   seedWorkoutEstimateInputs();
-  render(<App />);
+  const firstRender = render(<App />);
   openWorkouts();
   fillBodyweightWorkout("Editable Estimate");
   fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-08-10" } });
@@ -4398,7 +4508,20 @@ test("workout edits preserve unrelated snapshots, refresh relevant dates, and re
   fireEvent.change(screen.getByLabelText("Workout intensity"), { target: { value: "moderate" } });
   submitWorkout();
   const initialSnapshot = JSON.parse(localStorage.getItem("workoutEntries"))[0].calorieEstimate;
+  const originalTiming = JSON.parse(localStorage.getItem("workoutEntries"))[0];
   expect(initialSnapshot.sourceHealthWeightEntryId).toBe("weight-old");
+
+  const withStaleAutomaticSnapshot = JSON.parse(localStorage.getItem("workoutEntries"));
+  withStaleAutomaticSnapshot[0].calorieEstimate = {
+    ...initialSnapshot,
+    estimatorMethodVersion: 2,
+    lowerKcal: 20,
+    upperKcal: 50,
+  };
+  localStorage.setItem("workoutEntries", JSON.stringify(withStaleAutomaticSnapshot));
+  firstRender.unmount();
+  render(<App />);
+  openWorkouts();
 
   expandCompletedWorkout("Editable Estimate");
   fireEvent.click(within(screen.getByText("Editable Estimate").closest("article"))
@@ -4406,16 +4529,44 @@ test("workout edits preserve unrelated snapshots, refresh relevant dates, and re
   fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Renamed Estimate" } });
   fireEvent.change(screen.getByLabelText("Workout notes (optional)"), { target: { value: "Notes only" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
-  expect(JSON.parse(localStorage.getItem("workoutEntries"))[0].calorieEstimate).toEqual(initialSnapshot);
+  const regeneratedSnapshot = JSON.parse(localStorage.getItem("workoutEntries"))[0].calorieEstimate;
+  expect(regeneratedSnapshot).toMatchObject({
+    estimatorMethodVersion: 3,
+    activeDurationMinutes: 60,
+    durationSource: "entered",
+    selectedIntensity: "moderate",
+  });
+  expect(regeneratedSnapshot).not.toMatchObject({ lowerKcal: 20, upperKcal: 50 });
 
   fireEvent.click(within(screen.getByText("Renamed Estimate").closest("article"))
     .getByRole("button", { name: "Edit" }));
   fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-08-20" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
   const dateEditedSnapshot = JSON.parse(localStorage.getItem("workoutEntries"))[0].calorieEstimate;
-  expect(dateEditedSnapshot.inputFingerprint).not.toBe(initialSnapshot.inputFingerprint);
+  expect(dateEditedSnapshot.inputFingerprint).not.toBe(regeneratedSnapshot.inputFingerprint);
   expect(dateEditedSnapshot.sourceHealthWeightEntryId).toBe("weight-current");
   expect(dateEditedSnapshot.sourceHealthWeightEntryId).not.toBe("weight-future");
+
+  fireEvent.click(within(screen.getByText("Renamed Estimate").closest("article"))
+    .getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Approximate workout duration"), { target: { value: "75" } });
+  fireEvent.change(screen.getByLabelText("Workout intensity"), { target: { value: "high" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  const durationEdited = JSON.parse(localStorage.getItem("workoutEntries"))[0];
+  expect(durationEdited.calorieEstimate).toMatchObject({
+    status: "calculated",
+    estimatorMethodVersion: 3,
+    activeDurationMinutes: 75,
+    durationSource: "entered",
+    selectedIntensity: "high",
+  });
+  expect(durationEdited.calorieEstimate.inputFingerprint)
+    .not.toBe(dateEditedSnapshot.inputFingerprint);
+  expect(durationEdited.calorieEstimate.lowerKcal).toBeGreaterThan(500);
+  expect(durationEdited.calorieEstimate.upperKcal)
+    .toBeGreaterThan(durationEdited.calorieEstimate.lowerKcal);
+  expect(durationEdited.startedAt).toBe(originalTiming.startedAt);
+  expect(durationEdited.finishedAt).toBe(originalTiming.finishedAt);
 
   fireEvent.click(within(screen.getByText("Renamed Estimate").closest("article"))
     .getByRole("button", { name: "Edit" }));
@@ -4423,15 +4574,17 @@ test("workout edits preserve unrelated snapshots, refresh relevant dates, and re
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
   const withoutDuration = JSON.parse(localStorage.getItem("workoutEntries"))[0].calorieEstimate;
   expect(withoutDuration).toMatchObject({
-    status: "missing-required-inputs",
-    code: "missing-required-inputs",
-    requiredInputs: { bodyWeight: "provided", activeDuration: "missing" },
+    status: "calculated",
+    activeDurationMinutes: 1,
+    durationSource: "recorded",
+    requiredInputs: { bodyWeight: "provided", activeDuration: "provided" },
   });
-  expect(withoutDuration).not.toHaveProperty("lowerKcal");
-  expect(withoutDuration).not.toHaveProperty("upperKcal");
   expect(screen.getByTestId("save-confirmation")).toHaveTextContent(
-    "Workout traced. Add workout duration to receive an estimate."
+    "Workout traced. Estimated calories burned: about"
   );
+  const clearedDurationEntry = JSON.parse(localStorage.getItem("workoutEntries"))[0];
+  expect(clearedDurationEntry.startedAt).toBe(originalTiming.startedAt);
+  expect(clearedDurationEntry.finishedAt).toBe(originalTiming.finishedAt);
 });
 
 test("Trophy Case View Workout opens the exact full completed workout and returns to the originating trophy", () => {
@@ -4441,6 +4594,16 @@ test("Trophy Case View Workout opens the exact full completed workout and return
     type: "strength",
     title: "Trophy Push Day",
     occurredAt: "2026-08-18T18:30:00.000Z",
+    startedAt: "2026-08-18T18:30:00.000Z",
+    finishedAt: "2026-08-18T18:31:12.000Z",
+    activeDurationMinutes: 60,
+    calorieEstimate: {
+      status: "calculated",
+      lowerKcal: 300,
+      upperKcal: 440,
+      activeDurationMinutes: 60,
+      durationSource: "entered",
+    },
     notes: "Complete trophy workout notes",
     exercises: [
       {
@@ -4523,6 +4686,8 @@ test("Trophy Case View Workout opens the exact full completed workout and return
   expect(linkedCard).toHaveTextContent("Bench Press");
   expect(linkedCard).toHaveTextContent("225 lb");
   expect(linkedCard).toHaveTextContent("5 reps");
+  expect(within(linkedCard).getByRole("region", { name: "Estimated calories burned" }))
+    .toHaveTextContent("Estimated using your entered workout duration of 60 minutes.");
   expect(linkedCard).toHaveTextContent("Paused trophy set");
   expect(linkedCard).toHaveTextContent("Chest-Supported Row");
   expect(linkedCard).toHaveTextContent("Controlled lowering");

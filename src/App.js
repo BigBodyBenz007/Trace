@@ -76,7 +76,6 @@ import {
 } from "./services/waterTracker";
 import {
   createWorkoutCalorieEstimateSnapshot,
-  workoutCalorieEstimateNeedsRefresh,
 } from "./services/workoutCalorieEstimateSnapshot";
 import { useReducedMotion } from "./services/motionPreference";
 import { getAppShellThemeColor, resolveAppShellThemeId } from "./services/appThemes";
@@ -2531,13 +2530,7 @@ function App({
     return { prepared, newIds: newRecords.map(({ id }) => id), removed };
   }
 
-  function calorieEstimateForWorkout(entry, existingEntry = null) {
-    if (
-      existingEntry?.calorieEstimate
-      && !workoutCalorieEstimateNeedsRefresh(existingEntry, entry)
-    ) {
-      return existingEntry.calorieEstimate;
-    }
+  function calorieEstimateForWorkout(entry) {
     try {
       return createWorkoutCalorieEstimateSnapshot({
         workout: entry,
@@ -2683,7 +2676,7 @@ function App({
 
   function updateWorkoutEntry(id, entry) {
     const existingEntry = workoutEntries.find((item) => item.id === id);
-    const calorieEstimate = calorieEstimateForWorkout(entry, existingEntry);
+    const calorieEstimate = calorieEstimateForWorkout(entry);
     const hasPhotos = (entry.photos || []).length > 0 || (existingEntry?.photos || []).length > 0;
     if (!hasPhotos) {
       const updatedEntries = workoutEntries.map((item) => item.id === id

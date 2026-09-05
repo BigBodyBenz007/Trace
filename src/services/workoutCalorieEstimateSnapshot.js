@@ -6,6 +6,7 @@ import {
   deriveAgeOnDate,
   resolveHistoricalBodyWeight,
 } from "./workoutEstimateInputs";
+import { resolveWorkoutCalorieDuration } from "./workoutDuration";
 
 export const WORKOUT_CALORIE_ESTIMATE_SNAPSHOT_SCHEMA_VERSION = 1;
 
@@ -31,9 +32,11 @@ function relevantSegment(segment, includeSetType = false) {
 }
 
 export function workoutCalorieEstimateRelevantInput(workout) {
+  const duration = resolveWorkoutCalorieDuration(workout);
   return {
     occurredAt: workout?.occurredAt ?? null,
-    activeDurationMinutes: workout?.activeDurationMinutes ?? null,
+    activeDurationMinutes: duration.minutes,
+    durationSource: duration.source,
     intensity: workout?.intensity ?? null,
     exercises: Array.isArray(workout?.exercises)
       ? workout.exercises.map((exercise) => ({
@@ -66,7 +69,7 @@ function fnv1a(value) {
 
 export function workoutCalorieEstimateInputFingerprint(workout) {
   const serialized = JSON.stringify(workoutCalorieEstimateRelevantInput(workout));
-  return `workout-calorie-input-v1:${fnv1a(serialized)}`;
+  return `workout-calorie-input-v2:${fnv1a(serialized)}`;
 }
 
 function ageBasis(age) {
@@ -80,7 +83,7 @@ function validEstimatedAt(now) {
   return Number.isFinite(date.getTime()) ? date.toISOString() : new Date().toISOString();
 }
 
-function snapshotBase({ workout, bodyWeight, age, estimate, now }) {
+function snapshotBase({ workout, duration, bodyWeight, age, estimate, now }) {
   const required = estimate.metadata.inputCompleteness.required;
   return {
     schemaVersion: WORKOUT_CALORIE_ESTIMATE_SNAPSHOT_SCHEMA_VERSION,
@@ -94,11 +97,8 @@ function snapshotBase({ workout, bodyWeight, age, estimate, now }) {
     sourceHealthWeightEntryId: bodyWeight?.sourceEntryId ?? null,
     age,
     ageBasis: ageBasis(age),
-    activeDurationMinutes:
-      Number.isSafeInteger(workout?.activeDurationMinutes)
-      && workout.activeDurationMinutes > 0
-        ? workout.activeDurationMinutes
-        : null,
+    activeDurationMinutes: duration.minutes,
+    durationSource: duration.source,
     selectedIntensity: workout?.intensity || null,
     confidence: {
       level: estimate.metadata.confidence.level,
@@ -128,8 +128,17 @@ export function createWorkoutCalorieEstimateSnapshot({
     workout?.occurredAt
   );
   const age = deriveAgeOnDate(dateOfBirth, workout?.occurredAt);
-  const estimate = estimateWorkoutCalorieRange({ workout, bodyWeight, age });
-  const base = snapshotBase({ workout, bodyWeight, age, estimate, now });
+  const duration = resolveWorkoutCalorieDuration(workout);
+  const estimationWorkout = {
+    ...workout,
+    activeDurationMinutes: duration.minutes,
+  };
+  const estimate = estimateWorkoutCalorieRange({
+    workout: estimationWorkout,
+    bodyWeight,
+    age,
+  });
+  const base = snapshotBase({ workout, duration, bodyWeight, age, estimate, now });
 
   return estimate.status === "calculated"
     ? {
@@ -141,8 +150,11 @@ export function createWorkoutCalorieEstimateSnapshot({
 }
 
 export function workoutCalorieEstimateNeedsRefresh(existingWorkout, nextWorkout) {
-  const fingerprint = existingWorkout?.calorieEstimate?.inputFingerprint;
-  return !fingerprint || fingerprint !== workoutCalorieEstimateInputFingerprint(nextWorkout);
+  const snapshot = existingWorkout?.calorieEstimate;
+  return !snapshot?.inputFingerprint
+    || snapshot.estimatorMethodName !== WORKOUT_CALORIE_ESTIMATOR_METHOD.id
+    || snapshot.estimatorMethodVersion !== WORKOUT_CALORIE_ESTIMATOR_METHOD.version
+    || snapshot.inputFingerprint !== workoutCalorieEstimateInputFingerprint(nextWorkout);
 }
 
 export function workoutCalorieEstimateSaveMessage(snapshot) {

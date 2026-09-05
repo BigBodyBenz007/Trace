@@ -98,7 +98,7 @@ test("defaults to a history-oriented page and opens Log Workout with accessible 
   expect(new Date(persisted.startedAt).getTime()).not.toBeNaN();
 });
 
-test("live timing persists across a remount, calculates elapsed minutes, and remains correctable", async () => {
+test("live timing persists across a remount and keeps entered duration separate from elapsed time", async () => {
   jest.useFakeTimers().setSystemTime(new Date("2026-09-01T15:00:00.000Z"));
   try {
     const first = render(<WorkoutPage {...renderPageProps()} />);
@@ -113,7 +113,9 @@ test("live timing persists across a remount, calculates elapsed minutes, and rem
     render(<WorkoutPage {...props} />);
     expect(screen.getByLabelText("Workout title")).toHaveValue("Chest Day");
     fireEvent.click(screen.getByRole("button", { name: "Finish Workout" }));
-    expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(42);
+    expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(null);
+    expect(screen.getByText(/records elapsed time from start to finish separately/i))
+      .toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Approximate workout duration"), {
       target: { value: "40" },
     });
@@ -134,6 +136,24 @@ test("live timing persists across a remount, calculates elapsed minutes, and rem
   }
 });
 
+test("a live workout can omit approximate duration while preserving recorded timestamps", () => {
+  jest.useFakeTimers().setSystemTime(new Date("2026-09-01T15:00:00.000Z"));
+  try {
+    const props = renderPage();
+    fillFirstSet();
+    jest.setSystemTime(new Date("2026-09-01T15:01:12.000Z"));
+    submitWorkout();
+
+    expect(props.saveWorkoutEntry).toHaveBeenCalledWith(expect.objectContaining({
+      startedAt: "2026-09-01T15:00:00.000Z",
+      finishedAt: "2026-09-01T15:01:12.000Z",
+    }));
+    expect(props.saveWorkoutEntry.mock.calls[0][0]).not.toHaveProperty("activeDurationMinutes");
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
 test("historical logging accepts manual results without fabricated elapsed timing", () => {
   const props = renderPage();
   fireEvent.click(screen.getByLabelText("Log a completed or historical workout"));
@@ -141,7 +161,7 @@ test("historical logging accepts manual results without fabricated elapsed timin
   fireEvent.click(screen.getByRole("button", { name: "Review Workout" }));
   expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(null);
   fireEvent.change(screen.getByLabelText("Approximate workout duration"), {
-    target: { value: "55" },
+    target: { value: "55.5" },
   });
   fireEvent.change(screen.getByLabelText("Calories Burned"), {
     target: { value: "420" },
@@ -149,7 +169,7 @@ test("historical logging accepts manual results without fabricated elapsed timin
   fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
 
   const saved = props.saveWorkoutEntry.mock.calls[0][0];
-  expect(saved).toMatchObject({ activeDurationMinutes: 55, caloriesBurned: 420 });
+  expect(saved).toMatchObject({ activeDurationMinutes: 55.5, caloriesBurned: 420 });
   expect(saved).not.toHaveProperty("startedAt");
   expect(saved).not.toHaveProperty("finishedAt");
 });
@@ -622,21 +642,21 @@ afterEach(() => {
 
 test("existing saved duration values load unchanged while legacy workouts remain unspecified", () => {
   const props = renderPageProps({
-    workoutEntries: [entry({ activeDurationMinutes: 55, intensity: "light" })],
+    workoutEntries: [entry({ activeDurationMinutes: 55.5, intensity: "light" })],
   });
   const firstView = render(<WorkoutPage {...props} />);
   const card = expandWorkout();
   expect(within(card).getByText("Approximate workout duration")).toBeInTheDocument();
-  expect(within(card).getByText("55 min")).toBeInTheDocument();
+  expect(within(card).getByText("55.5 min")).toBeInTheDocument();
   expect(within(card).getByText("Light")).toBeInTheDocument();
   fireEvent.click(within(card).getByRole("button", { name: "Edit" }));
-  expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(55);
+  expect(screen.getByLabelText("Approximate workout duration")).toHaveValue(55.5);
   expect(screen.getByLabelText("Workout intensity")).toHaveValue("light");
   fireEvent.change(screen.getByLabelText("Workout title"), { target: { value: "Updated title only" } });
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
   expect(props.updateWorkoutEntry).toHaveBeenCalledWith(
     "workout-1",
-    expect.objectContaining({ activeDurationMinutes: 55, intensity: "light" })
+    expect.objectContaining({ activeDurationMinutes: 55.5, intensity: "light" })
   );
 
   firstView.unmount();
@@ -697,6 +717,7 @@ function calorieEstimate(overrides = {}) {
     age: 35,
     ageBasis: "adult",
     activeDurationMinutes: 60,
+    durationSource: "entered",
     selectedIntensity: "moderate",
     confidence: { level: "moderate", uncertaintyReasons: [] },
     requiredInputs: { bodyWeight: "provided", activeDuration: "provided" },
@@ -1002,11 +1023,19 @@ test.each([
 });
 
 test("expanded history displays only the saved range and a native keyboard disclosure", () => {
-  renderPage({ workoutEntries: [entry({ calorieEstimate: calorieEstimate() })] });
+  renderPage({
+    workoutEntries: [entry({
+      activeDurationMinutes: 60,
+      calorieEstimate: calorieEstimate(),
+    })],
+  });
   expect(screen.queryByRole("region", { name: "Estimated calories burned" })).not.toBeInTheDocument();
   const card = expandWorkout();
   const estimate = within(card).getByRole("region", { name: "Estimated calories burned" });
   expect(estimate).toHaveTextContent("About 300\u2013440 kcal");
+  expect(estimate).toHaveTextContent(
+    "Estimated using your entered workout duration of 60 minutes."
+  );
   expect(estimate).toHaveTextContent("This is a broad estimate, not an exact measurement.");
   const disclosure = within(estimate).getByText("How is this estimated?");
   expect(disclosure.tagName).toBe("SUMMARY");
@@ -1017,6 +1046,24 @@ test("expanded history displays only the saved range and a native keyboard discl
   );
   expect(estimate).toHaveTextContent("More complete information can narrow the range.");
   expect(estimate).not.toHaveTextContent(/\bMET\b|fingerprint|health-1|formula/i);
+});
+
+test("history identifies recorded elapsed time when it is the estimate fallback", () => {
+  renderPage({
+    workoutEntries: [entry({
+      startedAt: "2026-08-09T18:00:00.000Z",
+      finishedAt: "2026-08-09T18:01:12.000Z",
+      calorieEstimate: calorieEstimate({
+        activeDurationMinutes: 1,
+        durationSource: "recorded",
+        lowerKcal: 10,
+        upperKcal: 40,
+      }),
+    })],
+  });
+  const card = expandWorkout();
+  expect(within(card).getByRole("region", { name: "Estimated calories burned" }))
+    .toHaveTextContent("Estimated using the recorded duration of 1 minute.");
 });
 
 test("legacy and non-calculable history entries render safely only after expansion", () => {

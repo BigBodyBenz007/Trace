@@ -37,3 +37,31 @@ export function elapsedWorkoutMinutes(startedAt, finishedAt = new Date()) {
   }
   return Math.max(1, Math.round((finish - start) / 60000));
 }
+
+export function isValidWorkoutDurationMinutes(value) {
+  return typeof value === "number"
+    && Number.isFinite(value)
+    && value > 0;
+}
+
+export function resolveWorkoutCalorieDuration(workout) {
+  if (isValidWorkoutDurationMinutes(workout?.activeDurationMinutes)) {
+    return {
+      minutes: workout.activeDurationMinutes,
+      source: "entered",
+    };
+  }
+
+  const recordedMinutes = elapsedWorkoutMinutes(
+    workout?.startedAt,
+    workout?.finishedAt
+  );
+  if (isValidWorkoutDurationMinutes(recordedMinutes)) {
+    return {
+      minutes: recordedMinutes,
+      source: "recorded",
+    };
+  }
+
+  return { minutes: null, source: null };
+}

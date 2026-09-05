@@ -772,6 +772,60 @@ test("backs up and restores the historical zero-portion shape without mutating o
   expect(JSON.parse(restored.value("memories"))).toEqual([{ id: "memory-preserved", title: "Unrelated" }]);
 });
 
+test("backup and restore preserve current and legacy automatic calorie snapshots verbatim", async () => {
+  const snapshot = {
+    schemaVersion: 1,
+    estimateKind: "broad-estimate",
+    status: "calculated",
+    code: null,
+    estimatorMethodName: "trace-workout-calorie-range",
+    estimatedAt: "2026-09-05T12:00:00.000Z",
+    bodyWeightKg: 220 * 0.45359237,
+    sourceHealthWeightEntryId: "weight-lb",
+    age: 35,
+    ageBasis: "adult",
+    activeDurationMinutes: 75,
+    durationSource: "entered",
+    selectedIntensity: "high",
+    lowerKcal: 710,
+    upperKcal: 860,
+  };
+  const workouts = [
+    {
+      id: "workout-current-estimate",
+      calorieEstimate: {
+        ...snapshot,
+        estimatorMethodVersion: 3,
+        inputFingerprint: "workout-calorie-input-v2:current",
+      },
+    },
+    {
+      id: "workout-legacy-estimate",
+      calorieEstimate: {
+        ...snapshot,
+        estimatorMethodVersion: 2,
+        inputFingerprint: "workout-calorie-input-v1:legacy",
+        lowerKcal: 20,
+        upperKcal: 50,
+      },
+    },
+  ];
+  const source = makeStorage({ workoutEntries: JSON.stringify(workouts) });
+  const created = await createTraceBackup({
+    storage: source,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  const restored = makeStorage();
+
+  expect(created.data.structured.workoutEntries).toEqual(workouts);
+  await restoreTraceBackup(created, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(JSON.parse(restored.value("workoutEntries"))).toEqual(workouts);
+});
+
 test("normalizes a safe numeric-string portion only in the backup snapshot", async () => {
   const storedMeal = {
     id: "meal-numeric-string",
@@ -1143,11 +1197,12 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
     age: 36,
     ageBasis: "adult",
     activeDurationMinutes: 51,
+    durationSource: "entered",
     selectedIntensity: "high",
     confidence: { level: "moderate", uncertaintyReasons: [] },
     requiredInputs: { bodyWeight: "provided", activeDuration: "provided" },
     optionalInputs: { age: "provided", intensity: "provided" },
-    inputFingerprint: "workout-calorie-input-v1:backup",
+    inputFingerprint: "workout-calorie-input-v2:backup",
     inputSummary: { completedSegments: 3 },
     lowerKcal: 340,
     upperKcal: 470,
