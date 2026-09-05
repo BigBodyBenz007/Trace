@@ -1,4 +1,6 @@
+/* eslint-disable strict */
 "use strict";
+/* global globalThis */
 
 const USDA_SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search";
 const OPEN_FOOD_FACTS_URL = "https://world.openfoodfacts.org/api/v2/product";
@@ -22,6 +24,39 @@ const REQUIRED_NUTRIENTS = Object.freeze([
   "carbohydrates",
   "fat",
 ]);
+const SAFE_NUTRITION_BASIS_KINDS = new Set([
+  "provider-serving",
+  "derived-serving",
+  "provider-package",
+]);
+const MASS_UNITS = Object.freeze({
+  g: ["g", "gram", "grams"],
+  mg: ["mg", "milligram", "milligrams"],
+  kg: ["kg", "kilogram", "kilograms"],
+  oz: ["oz", "ounce", "ounces"],
+  lb: ["lb", "lbs", "pound", "pounds"],
+});
+const VOLUME_UNITS = Object.freeze({
+  ml: ["ml", "milliliter", "milliliters", "millilitre", "millilitres"],
+  l: ["l", "liter", "liters", "litre", "litres"],
+  "fl oz": ["fl oz", "fluid ounce", "fluid ounces"],
+  cup: ["cup", "cups"],
+  tbsp: ["tbsp", "tablespoon", "tablespoons"],
+  tsp: ["tsp", "teaspoon", "teaspoons"],
+});
+const UNIT_TO_BASE = Object.freeze({
+  g: 1,
+  mg: 0.001,
+  kg: 1000,
+  oz: 28.349523125,
+  lb: 453.59237,
+  ml: 1,
+  l: 1000,
+  "fl oz": 29.5735295625,
+  cup: 236.5882365,
+  tbsp: 14.78676478125,
+  tsp: 4.92892159375,
+});
 
 function normalizeGtin(value) {
   if (typeof value !== "string") return null;
@@ -111,7 +146,32 @@ function revisionTimestamp(record) {
 }
 
 function normalizeUnit(value) {
-  return String(value || "").trim().toLowerCase().replace(/\./g, "");
+  return String(value || "").trim().toLowerCase().replace(/\./g, "").replace(/\s+/g, " ");
+}
+
+function canonicalMeasureUnit(value) {
+  const unit = normalizeUnit(value);
+  for (const [canonical, aliases] of Object.entries({ ...MASS_UNITS, ...VOLUME_UNITS })) {
+    if (aliases.includes(unit)) return canonical;
+  }
+  return unit || null;
+}
+
+function measure(value, unit) {
+  const amount = positiveOrNull(value);
+  const canonicalUnit = canonicalMeasureUnit(unit);
+  if (amount === null || !canonicalUnit) return null;
+  const dimension = Object.prototype.hasOwnProperty.call(MASS_UNITS, canonicalUnit)
+    ? "mass"
+    : Object.prototype.hasOwnProperty.call(VOLUME_UNITS, canonicalUnit)
+      ? "volume"
+      : null;
+  return {
+    amount,
+    unit: canonicalUnit,
+    dimension,
+    baseAmount: dimension ? amount * UNIT_TO_BASE[canonicalUnit] : null,
+  };
 }
 
 function convertWeight(value, unit, target) {
@@ -159,8 +219,30 @@ function usdaNutrients(food) {
   const nutrients = {};
   for (const [key, [matcher, unit]] of Object.entries(definitions)) {
     const parsed = usdaNutrient(food, matcher, unit);
-    if (!parsed.valid) return null;
-    nutrients[key] = parsed.value;
+    nutrients[key] = parsed.valid ? parsed.value : null;
+  }
+  return nutrients;
+}
+
+function usdaLabelNutrients(food) {
+  const label = food?.labelNutrients;
+  if (!label || typeof label !== "object" || Array.isArray(label)) return null;
+  const definitions = {
+    calories: ["calories"],
+    protein: ["protein"],
+    carbohydrates: ["carbohydrates"],
+    fat: ["fat"],
+    fiber: ["fiber"],
+    sodium: ["sodium"],
+    totalSugar: ["sugars", "totalSugar"],
+    addedSugar: ["addedSugar", "addedSugars"],
+  };
+  const nutrients = {};
+  for (const [key, providerKeys] of Object.entries(definitions)) {
+    const providerKey = providerKeys.find((candidate) =>
+      Object.prototype.hasOwnProperty.call(label, candidate));
+    const parsed = parsePublishedNumber(providerKey ? label[providerKey]?.value : null);
+    nutrients[key] = parsed.valid ? parsed.value : null;
   }
   return nutrients;
 }
@@ -176,11 +258,37 @@ function offNutrient(product, nutrient, suffix, targetUnit) {
   }
   if (targetUnit === "kcal") return parsePublishedNumber(nutriments[key]);
   const publishedUnit = firstPublished(nutriments, [
-    `${nutrient}_unit`,
     `${nutrient}_${suffix}_unit`,
+    `${nutrient}_unit`,
   ]);
   const defaultUnit = nutrient === "sodium" ? "g" : "g";
   return convertWeight(nutriments[key], publishedUnit || defaultUnit, targetUnit);
+}
+
+function offCalories(product, suffix) {
+  const nutriments = product?.nutriments;
+  if (!nutriments || typeof nutriments !== "object" || Array.isArray(nutriments)) {
+    return { valid: true, value: null };
+  }
+  const kcalKey = `energy-kcal_${suffix}`;
+  if (Object.prototype.hasOwnProperty.call(nutriments, kcalKey)) {
+    return parsePublishedNumber(nutriments[kcalKey]);
+  }
+  const energyKey = `energy_${suffix}`;
+  if (!Object.prototype.hasOwnProperty.call(nutriments, energyKey)) {
+    return { valid: true, value: null };
+  }
+  const unit = normalizeUnit(firstPublished(nutriments, [
+    `energy_${suffix}_unit`,
+    "energy_unit",
+  ]));
+  if (["kj", "kilojoule", "kilojoules"].includes(unit)) {
+    return parsePublishedNumber(nutriments[energyKey], 1 / 4.184);
+  }
+  if (["kcal", "kilocalorie", "kilocalories"].includes(unit)) {
+    return parsePublishedNumber(nutriments[energyKey]);
+  }
+  return { valid: false, value: null };
 }
 
 function offNutrients(product, suffix) {
@@ -196,15 +304,162 @@ function offNutrients(product, suffix) {
   };
   const nutrients = {};
   for (const [key, [providerKey, unit]] of Object.entries(definitions)) {
-    const parsed = offNutrient(product, providerKey, suffix, unit);
-    if (!parsed.valid) return null;
-    nutrients[key] = parsed.value;
+    const parsed = key === "calories"
+      ? offCalories(product, suffix)
+      : offNutrient(product, providerKey, suffix, unit);
+    nutrients[key] = parsed.valid ? parsed.value : null;
   }
   return nutrients;
 }
 
-function nutrientCount(nutrients) {
-  return REQUIRED_NUTRIENTS.filter((key) => nutrients?.[key] !== null).length;
+function allNutrientCount(nutrients) {
+  return NUTRIENT_KEYS.filter((key) =>
+    nutrients?.[key] !== null && nutrients?.[key] !== undefined).length;
+}
+
+function nullNutrients() {
+  return Object.fromEntries(NUTRIENT_KEYS.map((key) => [key, null]));
+}
+
+function scaledNutrients(nutrients, multiplier) {
+  return Object.fromEntries(NUTRIENT_KEYS.map((key) => [
+    key,
+    nutrients?.[key] === null || nutrients?.[key] === undefined
+      ? null
+      : nutrients[key] * multiplier,
+  ]));
+}
+
+function servingMetadata({ description, amount, unit }) {
+  const parsedMeasure = measure(amount, unit);
+  return {
+    description: textOrNull(description),
+    amount: parsedMeasure?.amount ?? positiveOrNull(amount),
+    unit: parsedMeasure?.unit ?? textOrNull(unit)?.toLowerCase() ?? null,
+    grams: parsedMeasure?.dimension === "mass" ? parsedMeasure.baseAmount : null,
+  };
+}
+
+function credibleServing(serving) {
+  return Boolean(
+    serving?.description
+    && positiveOrNull(serving.amount) !== null
+    && textOrNull(serving.unit)
+  );
+}
+
+function basisRecord({ kind, source, sourceBasis, sourceQuantity, serving, nutrients,
+  conversionFactor = null }) {
+  const servingMeasure = measure(serving.amount, serving.unit);
+  const servingAmount = positiveOrNull(serving.amount);
+  const servingUnit = textOrNull(serving.unit);
+  return {
+    kind,
+    source,
+    sourceBasis,
+    sourceQuantity,
+    servingQuantity: servingAmount !== null && servingUnit
+      ? {
+          amount: servingAmount,
+          unit: servingUnit,
+          dimension: servingMeasure?.dimension || null,
+        }
+      : null,
+    conversionFactor,
+    sourceNutrients: { ...nutrients },
+  };
+}
+
+function selectServingNutrition({ serving, direct = [], references = [], packageServing = null }) {
+  if (credibleServing(serving)) {
+    const directCandidate = direct.find((candidate) => allNutrientCount(candidate.nutrients) > 0);
+    if (directCandidate) {
+      return {
+        dataBasis: "serving",
+        serving,
+        nutrients: directCandidate.nutrients,
+        nutritionBasis: basisRecord({
+          kind: "provider-serving",
+          source: directCandidate.source,
+          sourceBasis: "serving",
+          sourceQuantity: { amount: 1, unit: "serving", dimension: null },
+          serving,
+          nutrients: directCandidate.nutrients,
+        }),
+      };
+    }
+  }
+
+  const servingMeasure = measure(serving?.amount, serving?.unit);
+  if (credibleServing(serving) && servingMeasure?.dimension) {
+    for (const candidate of references) {
+      if (!candidate.nutrients || allNutrientCount(candidate.nutrients) === 0) continue;
+      if (candidate.dimension !== servingMeasure.dimension) continue;
+      const conversionFactor = servingMeasure.baseAmount / candidate.baseAmount;
+      if (!Number.isFinite(conversionFactor) || conversionFactor <= 0) continue;
+      return {
+        dataBasis: "serving",
+        serving,
+        nutrients: scaledNutrients(candidate.nutrients, conversionFactor),
+        nutritionBasis: basisRecord({
+          kind: "derived-serving",
+          source: candidate.source,
+          sourceBasis: candidate.sourceBasis,
+          sourceQuantity: {
+            amount: candidate.baseAmount,
+            unit: candidate.dimension === "mass" ? "g" : "ml",
+            dimension: candidate.dimension,
+          },
+          serving,
+          nutrients: candidate.nutrients,
+          conversionFactor,
+        }),
+      };
+    }
+  }
+
+  if (
+    packageServing?.explicitOneServing
+    && credibleServing(packageServing.serving)
+    && allNutrientCount(packageServing.nutrients) > 0
+  ) {
+    return {
+      dataBasis: "serving",
+      serving: packageServing.serving,
+      nutrients: packageServing.nutrients,
+      nutritionBasis: basisRecord({
+        kind: "provider-package",
+        source: packageServing.source,
+        sourceBasis: "package",
+        sourceQuantity: { amount: 1, unit: "package", dimension: null },
+        serving: packageServing.serving,
+        nutrients: packageServing.nutrients,
+      }),
+    };
+  }
+
+  const fallback = [...references, ...direct]
+    .filter((candidate) => candidate.nutrients && allNutrientCount(candidate.nutrients) > 0)
+    .sort((left, right) => allNutrientCount(right.nutrients) - allNutrientCount(left.nutrients))[0];
+  return {
+    dataBasis: fallback?.sourceBasis || "serving",
+    serving,
+    nutrients: fallback?.nutrients || nullNutrients(),
+    nutritionBasis: basisRecord({
+      kind: "reference-only",
+      source: fallback?.source || "unavailable",
+      sourceBasis: fallback?.sourceBasis || "serving",
+      sourceQuantity: fallback?.baseAmount
+        ? {
+            amount: fallback.baseAmount,
+            unit: fallback.dimension === "mass" ? "g" : "ml",
+            dimension: fallback.dimension,
+          }
+        : null,
+      serving,
+      nutrients: fallback?.nutrients || nullNutrients(),
+    }),
+  };
 }
 
 function buildCompleteness(food) {
@@ -221,11 +476,13 @@ function buildCompleteness(food) {
     if (food.nutrients[key] === null) unknownFields.push(`nutrients.${key}`);
   });
   if (food.provenance.revisionDate === null) unknownFields.push("provenance.revisionDate");
+  const hasSafeServingBasis = SAFE_NUTRITION_BASIS_KINDS.has(food.nutritionBasis?.kind);
+  if (!hasSafeServingBasis) unknownFields.push("nutritionBasis.labeledServing");
 
   const sugarValid = food.nutrients.totalSugar === null
     || food.nutrients.addedSugar === null
     || food.nutrients.addedSugar <= food.nutrients.totalSugar;
-  const logReady = Boolean(food.name && food.dataBasis)
+  const logReady = Boolean(food.name && food.dataBasis && hasSafeServingBasis)
     && REQUIRED_NUTRIENTS.every((key) => food.nutrients[key] !== null)
     && sugarValid;
   return {
@@ -243,29 +500,54 @@ function finalizeFood(food) {
     const value = food.nutrients?.[key];
     return value === null || (typeof value === "number" && Number.isFinite(value) && value >= 0);
   })) return null;
+  const nutrients = { ...food.nutrients };
   if (
-    food.nutrients.totalSugar !== null
-    && food.nutrients.addedSugar !== null
-    && food.nutrients.addedSugar > food.nutrients.totalSugar
-  ) return null;
-  return deepFreeze({ ...food, ...buildCompleteness(food) });
+    nutrients.totalSugar !== null
+    && nutrients.addedSugar !== null
+    && nutrients.addedSugar > nutrients.totalSugar
+  ) nutrients.addedSugar = null;
+  const sourceNutrients = { ...food.nutritionBasis.sourceNutrients };
+  if (
+    sourceNutrients.totalSugar !== null
+    && sourceNutrients.addedSugar !== null
+    && sourceNutrients.addedSugar > sourceNutrients.totalSugar
+  ) sourceNutrients.addedSugar = null;
+  const normalized = {
+    ...food,
+    nutrients,
+    nutritionBasis: { ...food.nutritionBasis, sourceNutrients },
+  };
+  return deepFreeze({ ...normalized, ...buildCompleteness(normalized) });
 }
 
 function normalizeUsdaFood(food, barcode, retrievedAt) {
-  const nutrients = usdaNutrients(food);
+  const per100gNutrients = usdaNutrients(food);
+  const labelNutrients = usdaLabelNutrients(food);
   const recordId = food?.fdcId === null || food?.fdcId === undefined
     ? null
     : String(food.fdcId);
-  if (!nutrients || !recordId) return null;
+  if (!recordId) return null;
 
   const servingAmount = positiveOrNull(food.servingSize);
-  const servingUnit = textOrNull(food.servingSizeUnit)?.toLowerCase() || null;
-  const servingGrams = servingAmount !== null
-    && ["g", "gram", "grams"].includes(normalizeUnit(servingUnit))
-    ? servingAmount
-    : null;
+  const servingUnit = canonicalMeasureUnit(food.servingSizeUnit);
   const servingDescription = textOrNull(food.householdServingFullText)
     || (servingAmount !== null && servingUnit ? `${servingAmount} ${servingUnit}` : null);
+
+  const selected = selectServingNutrition({
+    serving: servingMetadata({
+      description: servingDescription,
+      amount: servingAmount,
+      unit: servingUnit,
+    }),
+    direct: [{ source: "labelNutrients", sourceBasis: "serving", nutrients: labelNutrients }],
+    references: [{
+      source: "foodNutrients",
+      sourceBasis: "100g",
+      dimension: "mass",
+      baseAmount: 100,
+      nutrients: per100gNutrients,
+    }],
+  });
 
   return finalizeFood({
     sourceType: "remote-barcode",
@@ -279,15 +561,11 @@ function normalizeUsdaFood(food, barcode, retrievedAt) {
     brand: textOrNull(food.brandOwner || food.brandName),
     name: textOrNull(food.description),
     packageQuantity: textOrNull(food.packageWeight),
-    serving: {
-      description: servingDescription,
-      amount: servingAmount,
-      unit: servingUnit,
-      grams: servingGrams,
-    },
+    serving: selected.serving,
     servingsPerContainer: positiveOrNull(food.servingsPerContainer),
-    nutrients,
-    dataBasis: "100g",
+    nutrients: selected.nutrients,
+    dataBasis: selected.dataBasis,
+    nutritionBasis: selected.nutritionBasis,
     provenance: {
       sourceUrl: `https://fdc.nal.usda.gov/food-details/${encodeURIComponent(recordId)}/nutrients`,
       provider: "USDA FoodData Central",
@@ -297,22 +575,6 @@ function normalizeUsdaFood(food, barcode, retrievedAt) {
       retrievedAt,
     },
   });
-}
-
-function offBasis(product) {
-  const declared = String(product?.nutrition_data_per || "").toLowerCase();
-  const serving = offNutrients(product, "serving");
-  const per100g = offNutrients(product, "100g");
-  if (declared === "serving" && serving && nutrientCount(serving)) {
-    return { dataBasis: "serving", nutrients: serving };
-  }
-  if (per100g && nutrientCount(per100g)) {
-    return { dataBasis: "100g", nutrients: per100g };
-  }
-  if (serving && nutrientCount(serving)) {
-    return { dataBasis: "serving", nutrients: serving };
-  }
-  return { dataBasis: declared === "serving" ? "serving" : "100g", nutrients: per100g || serving };
 }
 
 function safeOffSourceUrl(value, barcode) {
@@ -329,15 +591,9 @@ function safeOffSourceUrl(value, barcode) {
 
 function normalizeOpenFoodFactsProduct(product, barcode, retrievedAt) {
   if (canonicalGtin(product?.code) !== canonicalGtin(barcode)) return null;
-  const basis = offBasis(product);
-  if (!basis.nutrients) return null;
-
+  const declared = String(product?.nutrition_data_per || "").trim().toLowerCase();
   const servingAmount = positiveOrNull(product.serving_quantity);
-  const servingUnit = textOrNull(product.serving_quantity_unit)?.toLowerCase() || null;
-  const servingGrams = servingAmount !== null
-    && ["g", "gram", "grams"].includes(normalizeUnit(servingUnit))
-    ? servingAmount
-    : null;
+  const servingUnit = canonicalMeasureUnit(product.serving_quantity_unit);
   const servingDescription = textOrNull(product.serving_size);
   const productQuantity = positiveOrNull(product.product_quantity);
   const productQuantityUnit = textOrNull(product.product_quantity_unit);
@@ -345,6 +601,60 @@ function normalizeOpenFoodFactsProduct(product, barcode, retrievedAt) {
     || (productQuantity !== null && productQuantityUnit
       ? `${productQuantity} ${productQuantityUnit}`
       : null);
+  const serving = servingMetadata({
+    description: servingDescription,
+    amount: servingAmount,
+    unit: servingUnit,
+  });
+  const perServing = offNutrients(product, "serving");
+  const displayed = offNutrients(product, "value");
+  const per100g = offNutrients(product, "100g");
+  const per100ml = offNutrients(product, "100ml");
+  const productMeasure = measure(productQuantity, productQuantityUnit);
+  const packageServing = ["package", "unit"].includes(declared)
+    && positiveOrNull(product.servings_per_container) === 1
+    && productMeasure
+    ? {
+        explicitOneServing: true,
+        serving: servingMetadata({
+          description: `1 package (${packageQuantity})`,
+          amount: 1,
+          unit: "package",
+        }),
+        source: "nutriments._value",
+        nutrients: displayed,
+      }
+    : null;
+  const selected = selectServingNutrition({
+    serving,
+    direct: [
+      { source: "nutriments._serving", sourceBasis: "serving", nutrients: perServing },
+      ...(declared === "serving"
+        ? [{ source: "nutriments._value", sourceBasis: "serving", nutrients: displayed }]
+        : []),
+    ],
+    references: [
+      {
+        source: declared === "100g" && allNutrientCount(per100g) === 0
+          ? "nutriments._value"
+          : "nutriments._100g",
+        sourceBasis: "100g",
+        dimension: "mass",
+        baseAmount: 100,
+        nutrients: declared === "100g" && allNutrientCount(per100g) === 0 ? displayed : per100g,
+      },
+      {
+        source: declared === "100ml" && allNutrientCount(per100ml) === 0
+          ? "nutriments._value"
+          : "nutriments._100ml",
+        sourceBasis: "100ml",
+        dimension: "volume",
+        baseAmount: 100,
+        nutrients: declared === "100ml" && allNutrientCount(per100ml) === 0 ? displayed : per100ml,
+      },
+    ],
+    packageServing,
+  });
   const revisionDate = isoDate(product.last_modified_datetime) || unixDate(product.last_modified_t);
   return finalizeFood({
     sourceType: "remote-barcode",
@@ -358,15 +668,11 @@ function normalizeOpenFoodFactsProduct(product, barcode, retrievedAt) {
     brand: textOrNull(product.brands),
     name: textOrNull(product.product_name || product.product_name_en),
     packageQuantity,
-    serving: {
-      description: servingDescription,
-      amount: servingAmount,
-      unit: servingUnit,
-      grams: servingGrams,
-    },
+    serving: selected.serving,
     servingsPerContainer: positiveOrNull(product.servings_per_container),
-    nutrients: basis.nutrients,
-    dataBasis: basis.dataBasis,
+    nutrients: selected.nutrients,
+    dataBasis: selected.dataBasis,
+    nutritionBasis: selected.nutritionBasis,
     provenance: {
       sourceUrl: safeOffSourceUrl(product.url, barcode),
       provider: "Open Food Facts",

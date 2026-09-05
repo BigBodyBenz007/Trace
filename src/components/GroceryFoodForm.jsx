@@ -44,18 +44,23 @@ const NUTRIENT_FIELDS = [
 ];
 
 const REQUIRED_NUTRIENTS = new Set(["calories", "protein", "carbohydrates", "fat"]);
+const SERVING_UNITS = new Set(SERVING_UNIT_OPTIONS.map(({ value }) => value));
 
 function formForFood(food) {
   if (!food) return EMPTY_FORM;
+  const providerServingUnit = food.serving?.unit || "serving";
+  const servingUnit = SERVING_UNITS.has(providerServingUnit)
+    ? providerServingUnit
+    : "custom";
   return {
     ...EMPTY_FORM,
     name: food.name || "",
     brand: food.brand || "",
     category: food.category || "other",
     servingAmount: String(food.serving?.amount ?? 1),
-    servingUnit: food.serving?.unit || "serving",
+    servingUnit,
     servingDescription: food.serving?.description || "",
-    customServingDescription: food.serving?.unit === "custom"
+    customServingDescription: servingUnit === "custom"
       ? food.serving.description || ""
       : "",
     servingGrams: food.serving?.grams == null ? "" : String(food.serving.grams),

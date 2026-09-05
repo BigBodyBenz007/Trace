@@ -28,7 +28,25 @@ function remoteFood(overrides = {}) {
       totalSugar: 5,
       addedSugar: 0,
     },
-    dataBasis: "100g",
+    dataBasis: "serving",
+    nutritionBasis: {
+      kind: "derived-serving",
+      source: "foodNutrients",
+      sourceBasis: "100g",
+      sourceQuantity: { amount: 100, unit: "g", dimension: "mass" },
+      servingQuantity: { amount: 30, unit: "g", dimension: "mass" },
+      conversionFactor: 0.3,
+      sourceNutrients: {
+        calories: 333.3333333333333,
+        protein: 13.333333333333334,
+        carbohydrates: 40,
+        fat: 10,
+        sodium: 0,
+        fiber: 6.666666666666667,
+        totalSugar: 16.666666666666668,
+        addedSugar: 0,
+      },
+    },
     completeness: "complete",
     unknownFields: [],
     logReady: true,
@@ -73,6 +91,10 @@ test("preserves unknown null and explicit zero nutrient values", () => {
     completeness: "partial",
     unknownFields: ["nutrients.addedSugar"],
     nutrients: { ...remoteFood().nutrients, sodium: 0, addedSugar: null },
+    nutritionBasis: {
+      ...remoteFood().nutritionBasis,
+      sourceNutrients: { ...remoteFood().nutritionBasis.sourceNutrients, addedSugar: null },
+    },
   }));
   expect(normalized.nutrients.sodium).toBe(0);
   expect(normalized.nutrients.addedSugar).toBeNull();
@@ -102,4 +124,20 @@ test("requires result status, identifier, food readiness, and barcode to agree",
   expect(normalizeRemoteLookupResult({ ...remoteResult(), status: "incomplete" })).toBeNull();
   expect(normalizeRemoteLookupResult({ status: "made-up", identifier: null, food: null }))
     .toBeNull();
+});
+
+test("validates explicit serving-basis provenance while accepting legacy backup snapshots", () => {
+  expect(normalizeRemoteFood(remoteFood()).nutritionBasis).toMatchObject({
+    kind: "derived-serving",
+    sourceBasis: "100g",
+    conversionFactor: 0.3,
+  });
+  const malformed = remoteFood({
+    nutritionBasis: { ...remoteFood().nutritionBasis, conversionFactor: null },
+  });
+  expect(normalizeRemoteFood(malformed)).toBeNull();
+
+  const legacy = remoteFood();
+  delete legacy.nutritionBasis;
+  expect(normalizeRemoteFood(legacy)).not.toBeNull();
 });

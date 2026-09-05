@@ -2,7 +2,9 @@ import { canonicalGtinKey, normalizeGtin } from "./productIdentifiers";
 import { immutableCopy, normalizeRemoteLookupResult } from "./remoteFoodModel";
 
 export const REMOTE_BARCODE_CACHE_STORAGE_KEY = "remoteBarcodeFoodResponses";
-export const REMOTE_BARCODE_CACHE_VERSION = 1;
+// Version 2 invalidates records normalized before Trace required an explicit,
+// trustworthy labeled-serving basis. Those records cannot be safely reinterpreted.
+export const REMOTE_BARCODE_CACHE_VERSION = 2;
 export const REMOTE_BARCODE_CACHE_MAX_RECORDS = 500;
 export const REMOTE_BARCODE_CACHE_TTL_MS = 30 * 24 * 60 * 60 * 1000;
 
@@ -46,6 +48,7 @@ function validEntry(entry) {
     || expiresAt - storedAt > REMOTE_BARCODE_CACHE_TTL_MS
     || !result
     || !["found", "incomplete"].includes(result.status)
+    || !result.food?.nutritionBasis
     || canonicalGtinKey(result.identifier?.value) !== key
   ) return null;
   return { ...entry, key, result, storedAt, expiresAt, lastAccessedAt };
@@ -123,6 +126,7 @@ export function createRemoteBarcodeCache({
       !key
       || !normalizedResult
       || !["found", "incomplete"].includes(normalizedResult.status)
+      || !normalizedResult.food?.nutritionBasis
       || canonicalGtinKey(normalizedResult.identifier?.value) !== key
     ) return false;
 

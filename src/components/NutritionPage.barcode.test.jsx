@@ -21,19 +21,37 @@ function remoteFood() {
     brand: "Example Brand",
     name: "Example Yogurt",
     packageQuantity: "4 oz cup",
-    serving: { description: "1 cup (30 g)", amount: 1, unit: "cup", grams: 30 },
+    serving: { description: "1 cup (30 g)", amount: 30, unit: "g", grams: 30 },
     servingsPerContainer: 1,
     nutrients: {
-      calories: 100,
-      protein: 10,
-      carbohydrates: 20,
+      calories: 30,
+      protein: 3,
+      carbohydrates: 6,
       fat: 0,
       fiber: null,
-      sodium: 50,
-      totalSugar: 8,
+      sodium: 15,
+      totalSugar: 2.4,
       addedSugar: null,
     },
-    dataBasis: "100g",
+    dataBasis: "serving",
+    nutritionBasis: {
+      kind: "derived-serving",
+      source: "foodNutrients",
+      sourceBasis: "100g",
+      sourceQuantity: { amount: 100, unit: "g", dimension: "mass" },
+      servingQuantity: { amount: 30, unit: "g", dimension: "mass" },
+      conversionFactor: 0.3,
+      sourceNutrients: {
+        calories: 100,
+        protein: 10,
+        carbohydrates: 20,
+        fat: 0,
+        fiber: null,
+        sodium: 50,
+        totalSugar: 8,
+        addedSugar: null,
+      },
+    },
     completeness: "partial",
     unknownFields: ["nutrients.fiber", "nutrients.addedSugar", "provenance.revisionDate"],
     logReady: true,
@@ -63,6 +81,24 @@ function floatingRemoteFood() {
       sodium: 44.99999999999999,
       totalSugar: 3.000000000000003,
       addedSugar: 0,
+    },
+    nutritionBasis: {
+      kind: "provider-serving",
+      source: "labelNutrients",
+      sourceBasis: "serving",
+      sourceQuantity: { amount: 1, unit: "serving", dimension: null },
+      servingQuantity: { amount: 100, unit: "g", dimension: "mass" },
+      conversionFactor: null,
+      sourceNutrients: {
+        calories: 112.6666666666671,
+        protein: 20.00000000000002,
+        carbohydrates: 5.999999999999993,
+        fat: 3.000000000000003,
+        fiber: null,
+        sodium: 44.99999999999999,
+        totalSugar: 3.000000000000003,
+        addedSugar: 0,
+      },
     },
     unknownFields: ["nutrients.fiber", "provenance.revisionDate"],
   };
@@ -140,7 +176,7 @@ test("Nutrition consumes an unavailable feature-access decision", () => {
   expect(screen.getByRole("button", { name: "Scan Barcode" })).toBeDisabled();
 });
 
-test("quantity scales adapted nutrition without marking provenance modified", async () => {
+test("quantity scales labeled-serving nutrition without marking provenance modified", async () => {
   const { saveNutritionEntry } = setup();
   await scanAndUse();
   const form = entryForm();
@@ -154,11 +190,19 @@ test("quantity scales adapted nutrition without marking provenance modified", as
     sourceType: "remote-barcode",
     modified: false,
     provider: { id: "usda-fdc", recordId: "123" },
-    dataBasis: "100g",
+    dataBasis: "serving",
   });
-  expect(saved.foodReference.providerNutritionBasis.nutrients.calories).toBe(100);
+  expect(saved.foodReference.providerNutritionBasis.nutrients.calories).toBe(30);
+  expect(saved.foodReference.providerNutritionBasis.selection.sourceNutrients.calories).toBe(100);
+  expect(saved.foodReference.providerAttribution).toBe("USDA FoodData Central");
   expect(saved.nutritionBasis.calories).toBe(30);
   expect(saved.portion.amount).toBe(2);
+  expect(saved.portion.basis).toEqual({
+    amount: 30,
+    unit: "g",
+    description: "1 cup (30 g)",
+    grams: 30,
+  });
   expect(saved.calories).toBe(60);
 });
 
@@ -170,7 +214,52 @@ test("editing a scanned nutrient marks the saved reference modified", async () =
 
   await waitFor(() => expect(saveNutritionEntry).toHaveBeenCalledTimes(1));
   expect(saveNutritionEntry.mock.calls[0][0].foodReference.modified).toBe(true);
-  expect(saveNutritionEntry.mock.calls[0][0].foodReference.providerNutritionBasis.nutrients.calories).toBe(100);
+  expect(saveNutritionEntry.mock.calls[0][0].foodReference.providerNutritionBasis.selection.sourceNutrients.calories).toBe(100);
+});
+
+test("reopening a saved scan keeps its labeled-serving basis", () => {
+  setup({
+    nutritionEntries: [{
+      id: "entry:scanned",
+      name: "Example Yogurt",
+      calories: 60,
+      protein: 6,
+      carbohydrates: 12,
+      fat: 0,
+      fiber: null,
+      sodium: 30,
+      totalSugar: 4.8,
+      addedSugar: null,
+      loggedAt: "2026-09-03T12:00:00.000Z",
+      notes: "",
+      portion: {
+        amount: 2,
+        unit: "serving",
+        basis: { amount: 30, unit: "g", description: "1 cup (30 g)", grams: 30 },
+      },
+      nutritionBasis: {
+        calories: 30,
+        protein: 3,
+        carbohydrates: 6,
+        fat: 0,
+        fiber: null,
+        sodium: 15,
+        totalSugar: 2.4,
+        addedSugar: null,
+      },
+      foodReference: {
+        sourceType: "remote-barcode",
+        dataBasis: "serving",
+        modified: false,
+      },
+    }],
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(screen.getByLabelText("Number of servings")).toHaveValue(2);
+  expect(screen.getByText(/One serving: 1 cup \(30 g\)/)).toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Number of servings"), { target: { value: "0.5" } });
+  expect(entryNutrient("Calories")).toHaveValue(15);
+  expect(entryNutrient("Protein (g)")).toHaveValue(1.5);
 });
 
 test("keeps remote handoff, fractional scaling, double scaling, and saved values clean", async () => {
@@ -284,9 +373,17 @@ test("a recovered custom barcode food hands off cleanly without auto-logging", a
 });
 
 test("completed remote recovery keeps the raw provider snapshot through Nutrition handoff", async () => {
+  const completeProviderFood = floatingRemoteFood();
   const providerFood = {
-    ...floatingRemoteFood(),
-    nutrients: { ...floatingRemoteFood().nutrients, calories: null },
+    ...completeProviderFood,
+    nutrients: { ...completeProviderFood.nutrients, calories: null },
+    nutritionBasis: {
+      ...completeProviderFood.nutritionBasis,
+      sourceNutrients: {
+        ...completeProviderFood.nutritionBasis.sourceNutrients,
+        calories: null,
+      },
+    },
     completeness: "insufficient",
     unknownFields: ["nutrients.calories", "nutrients.fiber", "provenance.revisionDate"],
     logReady: false,

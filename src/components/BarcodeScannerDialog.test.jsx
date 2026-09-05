@@ -80,7 +80,25 @@ function floatingRemoteFood() {
       totalSugar: 3.000000000000003,
       addedSugar: 0,
     },
-    dataBasis: "100g",
+    dataBasis: "serving",
+    nutritionBasis: {
+      kind: "provider-serving",
+      source: "labelNutrients",
+      sourceBasis: "serving",
+      sourceQuantity: { amount: 1, unit: "serving", dimension: null },
+      servingQuantity: { amount: 100, unit: "g", dimension: "mass" },
+      conversionFactor: null,
+      sourceNutrients: {
+        calories: 112.6666666666671,
+        protein: 20.00000000000002,
+        carbohydrates: 5.999999999999993,
+        fat: 3.000000000000003,
+        fiber: null,
+        sodium: 44.99999999999999,
+        totalSugar: 3.000000000000003,
+        addedSugar: 0,
+      },
+    },
     completeness: "partial",
     unknownFields: ["nutrients.fiber", "provenance.revisionDate"],
     logReady: true,
@@ -96,11 +114,43 @@ function floatingRemoteFood() {
 }
 
 function incompleteRemoteFood() {
+  const complete = floatingRemoteFood();
   return {
-    ...floatingRemoteFood(),
-    nutrients: { ...floatingRemoteFood().nutrients, calories: null },
+    ...complete,
+    nutrients: { ...complete.nutrients, calories: null },
+    nutritionBasis: {
+      ...complete.nutritionBasis,
+      sourceNutrients: { ...complete.nutritionBasis.sourceNutrients, calories: null },
+    },
     completeness: "insufficient",
     unknownFields: ["nutrients.calories", "nutrients.fiber", "provenance.revisionDate"],
+    logReady: false,
+  };
+}
+
+function unsafeReferenceRemoteFood() {
+  const source = floatingRemoteFood().nutrients;
+  return {
+    ...floatingRemoteFood(),
+    serving: { description: "1 bottle (355 mL)", amount: 355, unit: "ml", grams: null },
+    nutrients: source,
+    dataBasis: "100g",
+    nutritionBasis: {
+      kind: "reference-only",
+      source: "foodNutrients",
+      sourceBasis: "100g",
+      sourceQuantity: { amount: 100, unit: "g", dimension: "mass" },
+      servingQuantity: { amount: 355, unit: "ml", dimension: "volume" },
+      conversionFactor: null,
+      sourceNutrients: source,
+    },
+    completeness: "insufficient",
+    unknownFields: [
+      "serving.grams",
+      "nutrients.fiber",
+      "provenance.revisionDate",
+      "nutritionBasis.labeledServing",
+    ],
     logReady: false,
   };
 }
@@ -274,6 +324,9 @@ test("shows and hands off clean remote nutrient precision without altering the p
 
   const review = await screen.findByRole("article", { name: "Barcode product review" });
   const reviewContent = within(review);
+  expect(reviewContent.getByText("Nutrition shown for 100 g.")).toBeInTheDocument();
+  expect(reviewContent.getByText("Servings per container: 1")).toBeInTheDocument();
+  expect(review).not.toHaveTextContent(/adapted from|per-100g values/i);
   expect(reviewContent.getByText("113")).toBeInTheDocument();
   expect(reviewContent.getByText("20 g")).toBeInTheDocument();
   expect(reviewContent.getByText("6 g")).toBeInTheDocument();
@@ -315,6 +368,32 @@ test("keeps incomplete products reviewable but disables use", async () => {
 
   expect((await screen.findAllByText(/required nutrition is missing/i)).length).toBeGreaterThan(0);
   expect(screen.getByRole("button", { name: "Use This Food" })).toBeDisabled();
+});
+
+test("unsafe reference-only nutrition stays incomplete and recovery leaves label values blank", async () => {
+  setup({
+    barcodeLookup: {
+      lookup: jest.fn().mockResolvedValue({
+        status: "incomplete",
+        food: unsafeReferenceRemoteFood(),
+      }),
+    },
+  });
+  const input = screen.getByLabelText("Enter barcode manually");
+  fireEvent.change(input, { target: { value: "00012345600012" } });
+  fireEvent.submit(input.closest("form"));
+
+  const review = await screen.findByRole("article", { name: "Barcode product review" });
+  expect(review).toHaveTextContent(/did not supply enough compatible serving data/i);
+  expect(within(review).getByRole("button", { name: "Use This Food" })).toBeDisabled();
+  fireEvent.click(within(review).getByRole("button", { name: "Complete This Food" }));
+  expect(screen.getByLabelText("Calories")).toHaveValue(null);
+  expect(screen.getByLabelText("Protein (g)")).toHaveValue(null);
+  expect(screen.getByLabelText("Serving unit")).toHaveValue("custom");
+  expect(screen.getByLabelText("Custom serving description"))
+    .toHaveValue("1 bottle (355 mL)");
+  expect(screen.getByLabelText("Serving description (optional)"))
+    .toHaveValue("1 bottle (355 mL)");
 });
 
 test("not-found recovery creates a reusable barcode food without logging it automatically", async () => {

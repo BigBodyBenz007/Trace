@@ -734,6 +734,9 @@ function NutritionPage({
                 dataBasis: food.remote.dataBasis,
                 serving: { ...food.remote.serving },
                 nutrients: { ...food.remote.nutrients },
+                ...(food.remote.nutritionBasis
+                  ? { selection: food.remote.nutritionBasis }
+                  : {}),
               },
             }
         : food.sourceType === "grocery-custom" || food.provenance.source === "user-added"
@@ -842,10 +845,7 @@ function NutritionPage({
 
   function changeServingQuantity(value) {
     const scaledNutrition = scaleNutrition(nutritionBasis, value);
-    const formNutrition = (
-      foodReference?.sourceType === "remote-barcode"
-      && foodReference.dataBasis === "100g"
-    ) || (
+    const formNutrition = foodReference?.sourceType === "remote-barcode" || (
       foodReference?.sourceType === "grocery-custom"
       && foodReference.identifiers?.length
     )

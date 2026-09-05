@@ -25,6 +25,24 @@ function providerFood(barcode = "012000001291") {
       addedSugar: null,
     },
     dataBasis: "serving",
+    nutritionBasis: {
+      kind: "provider-serving",
+      source: "labelNutrients",
+      sourceBasis: "serving",
+      sourceQuantity: { amount: 1, unit: "serving", dimension: null },
+      servingQuantity: { amount: 30, unit: "g", dimension: "mass" },
+      conversionFactor: null,
+      sourceNutrients: {
+        calories: null,
+        protein: 4,
+        carbohydrates: 8,
+        fat: 2,
+        fiber: null,
+        sodium: 25,
+        totalSugar: 3,
+        addedSugar: null,
+      },
+    },
     completeness: "insufficient",
     unknownFields: [
       "packageQuantity",
@@ -193,6 +211,33 @@ test("accepts a barcode-linked custom food with a matching immutable provider sn
       providerSourceSnapshot: providerFood(),
     }],
   })).not.toThrow();
+});
+
+test("accepts both current serving-basis provenance and legacy provider snapshots", () => {
+  const current = providerFood();
+  const legacy = providerFood();
+  delete legacy.nutritionBasis;
+  for (const [index, snapshot] of [current, legacy].entries()) {
+    expect(() => validateTraceStructuredDomains({
+      userFoods: [{
+        id: `provider-snapshot:${index}`,
+        identifiers: [{ scheme: "gtin", value: "012000001291" }],
+        providerSourceSnapshot: snapshot,
+      }],
+    })).not.toThrow();
+  }
+});
+
+test("rejects malformed serving-basis provenance in a provider snapshot", () => {
+  const snapshot = providerFood();
+  snapshot.nutritionBasis.kind = "guessed-serving";
+  expect(() => validateTraceStructuredDomains({
+    userFoods: [{
+      id: "provider-snapshot:invalid-basis",
+      identifiers: [{ scheme: "gtin", value: "012000001291" }],
+      providerSourceSnapshot: snapshot,
+    }],
+  })).toThrow("invalid user food provider source");
 });
 
 test("rejects duplicate barcode identities and mismatched or malformed provider mappings", () => {

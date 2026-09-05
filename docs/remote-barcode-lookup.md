@@ -6,9 +6,10 @@ barcode from the camera or manual input. The orchestrator resolves in this
 order:
 
 1. Trace's committed, verified local barcode catalog.
-2. A fresh normalized response in the local cache.
-3. USDA FoodData Central Branded Foods through Trace's Vercel function.
-4. Open Food Facts through the same function when USDA has no usable exact
+2. A user-created food with the same barcode.
+3. A fresh normalized response in the local cache.
+4. USDA FoodData Central Branded Foods through Trace's Vercel function.
+5. Open Food Facts through the same function when USDA has no usable exact
    match.
 
 No request occurs during module import, application startup, text search, or
@@ -36,30 +37,35 @@ returns normalized data rather than raw provider payloads.
 ## Normalization and completeness
 
 Remote records remain attributable to exactly one provider. USDA and Open Food
-Facts nutrients are never merged. Unknown published values remain `null`, an
-explicit zero remains zero, and negative or nonfinite values invalidate a
-record. Added Sugar cannot exceed Total Sugar when both are known.
+Facts nutrients are never merged. Unknown, malformed, negative, or nonfinite
+published values remain `null`, and an explicit zero remains zero. Inconsistent
+Added Sugar is left unknown rather than replacing or inventing label data.
 
 USDA candidates must be Branded Foods with an exact canonical GTIN match. The
-newest valid exact revision is selected. FoodData Central nutrient values retain
-their per-100g basis. Open Food Facts honors `nutrition_data_per` and uses only
-explicit per-serving or per-100g fields. `energy-kcal` is used for calories;
-kilojoule energy is not substituted. Open Food Facts sodium is converted to
-Trace's milligram field using the published unit.
+newest valid exact revision is selected. USDA `labelNutrients` paired with its
+declared serving wins over `foodNutrients`; otherwise per-100g `foodNutrients`
+can be converted only to a declared compatible mass serving. Open Food Facts
+uses credible `_serving` values first, then `_value` when
+`nutrition_data_per` declares a serving, then compatible `_100g` or `_100ml`
+conversion. Mass-to-volume and volume-to-mass conversion are rejected. An
+explicit whole-package basis is accepted only when the provider also declares
+one serving per container. `energy-kcal` is preferred for calories; published
+kilojoules are converted to kcal. Sodium is converted to milligrams from its
+published unit.
 
-A record is log-ready only when its exact name, basis, calories, protein,
-carbohydrates, and fat are present and valid. Missing optional nutrients or
-metadata produce `partial` completeness while preserving an explicit
-`unknownFields` list. Missing a required field produces an `incomplete` lookup
-result with `insufficient` completeness so future UI must require review.
+A record is log-ready only when its exact name, a trustworthy labeled-serving
+or one-serving package basis, calories, protein, carbohydrates, and fat are
+present and valid. Reference-only per-100g/per-100mL data remains attributable
+provider provenance but produces an `incomplete` result for user completion.
 
 ## Local response cache
 
 `remoteBarcodeFoodResponses` stores only normalized successful or incomplete
-responses. Schema version 1 expires records after 30 days and retains at most
+responses. Schema version 2 expires records after 30 days and retains at most
 500 records using least-recently-used eviction. Keys use the canonical GTIN-14
 identity so equivalent UPC and GTIN forms share a record. Corrupt, expired, and
-schema-incompatible entries are ignored. When the runtime is offline, an
+schema-incompatible entries are ignored. Version 1 is deliberately invalidated
+because it predates explicit serving-basis provenance. When the runtime is offline, an
 otherwise valid expired entry may be returned only with `stale: true`.
 
 The storage manifest classifies this domain as `derived-excluded`. It is a
@@ -101,10 +107,12 @@ validation; UPC-E decoder output is not treated as GTIN-8.
 A successful lookup opens a review view and never saves automatically. The
 view presents the provider attribution and validated source URL. `Use This
 Food` populates the existing editable Nutrition form. Provider per-100g values
-are scaled to a published serving only when a serving gram weight is available;
-otherwise Trace labels and uses a 100 g serving. The original provider basis,
-nutrients, identifier, and provenance remain in the selected food reference.
-Incomplete records display known data and unknown fields but cannot be used.
+are scaled only to a provider-declared compatible mass serving, and per-100mL
+values only to a compatible volume serving. Trace never turns a reference-only
+100 g basis into a ready-to-use serving. The original provider basis, unrounded
+source nutrients, conversion factor, identifier, and provenance remain in the
+selected food reference. Incomplete records preserve identity and source data,
+leave unproven label nutrients blank, and offer `Complete This Food`.
 
 The Open Food Facts ODbL attribution and share-alike obligations still require
 product/legal review before public launch. The visible attribution and source

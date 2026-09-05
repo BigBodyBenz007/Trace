@@ -6,6 +6,7 @@ const {
   normalizeOpenFoodFactsProduct,
   normalizeUsdaFood,
 } = require("../../api/nutrition/_barcodeGateway.cjs");
+const { normalizeRemoteFood } = require("./remoteFoodModel");
 
 const BARCODE = "00000000000000";
 const OTHER_BARCODE = "00012000001291";
@@ -115,7 +116,8 @@ test("selects the newest exact USDA branded revision and rejects fuzzy results",
     status: "found",
     food: {
       name: "Newest",
-      dataBasis: "100g",
+      dataBasis: "serving",
+      nutritionBasis: { kind: "derived-serving", sourceBasis: "100g" },
       provider: { id: "usda-fdc", recordId: "2" },
       provenance: {
         providerRecordId: "2",
@@ -137,6 +139,45 @@ test("selects the newest exact USDA branded revision and rejects fuzzy results",
   });
 });
 
+test("USDA branded label nutrients win over conflicting per-100g nutrients", () => {
+  const food = normalizeUsdaFood(usdaFood({
+    householdServingFullText: "1 can (355 mL)",
+    servingSize: 355,
+    servingSizeUnit: "mL",
+    labelNutrients: {
+      calories: { value: 150 },
+      protein: { value: 2 },
+      carbohydrates: { value: 36 },
+      fat: { value: 0 },
+      fiber: { value: 0 },
+      sodium: { value: 45 },
+      sugars: { value: 34 },
+      addedSugar: { value: 30 },
+    },
+  }), BARCODE, new Date(NOW).toISOString());
+
+  expect(food).toMatchObject({
+    dataBasis: "serving",
+    serving: {
+      description: "1 can (355 mL)",
+      amount: 355,
+      unit: "ml",
+    },
+    nutrients: {
+      calories: 150,
+      protein: 2,
+      carbohydrates: 36,
+      fat: 0,
+      sodium: 45,
+    },
+    nutritionBasis: {
+      kind: "provider-serving",
+      source: "labelNutrients",
+      sourceBasis: "serving",
+    },
+  });
+});
+
 test("uses Open Food Facts only as fallback and converts kcal and sodium without merging providers", async () => {
   const fetchImpl = jest.fn()
     .mockResolvedValueOnce(upstream({ foods: [usdaFood({ gtinUpc: OTHER_BARCODE })] }))
@@ -148,8 +189,9 @@ test("uses Open Food Facts only as fallback and converts kcal and sodium without
     status: "found",
     food: {
       provider: { id: "open-food-facts", recordId: BARCODE },
-      nutrients: { calories: 42, sodium: 120, fiber: 0, addedSugar: 0 },
-      dataBasis: "100g",
+      nutrients: { calories: 12.6, sodium: 36, fiber: 0, addedSugar: 0 },
+      dataBasis: "serving",
+      nutritionBasis: { kind: "derived-serving", sourceBasis: "100g" },
       provenance: {
         attribution: expect.stringContaining("ODbL"),
         sourceUrl: expect.stringContaining("openfoodfacts.org/product"),
@@ -200,18 +242,202 @@ test("returns incomplete instead of log-ready when a core nutrient is unknown", 
   expect(result.food.nutrients.fat).toBeNull();
 });
 
-test("rejects negative nutrients and added sugar above total sugar", () => {
-  expect(normalizeUsdaFood(usdaFood({
+test("keeps malformed nutrients unknown without inventing zero", () => {
+  const usda = normalizeUsdaFood(usdaFood({
     foodNutrients: usdaFood().foodNutrients.map((nutrient) =>
       nutrient.nutrientName === "Protein" ? { ...nutrient, value: -1 } : nutrient),
-  }), BARCODE, new Date(NOW).toISOString())).toBeNull();
-  expect(normalizeOpenFoodFactsProduct(offProduct({
+  }), BARCODE, new Date(NOW).toISOString());
+  expect(usda.nutrients.protein).toBeNull();
+  expect(usda.logReady).toBe(false);
+
+  const off = normalizeOpenFoodFactsProduct(offProduct({
     nutriments: {
       ...offProduct().nutriments,
       sugars_100g: 2,
       "added-sugars_100g": 3,
     },
-  }), BARCODE, new Date(NOW).toISOString())).toBeNull();
+  }), BARCODE, new Date(NOW).toISOString());
+  expect(off.nutrients.addedSugar).toBeNull();
+  expect(off.nutrients.totalSugar).toBe(0.6);
+});
+
+test("USDA derives one declared gram serving from per-100g nutrients", () => {
+  const food = normalizeUsdaFood(usdaFood(), BARCODE, new Date(NOW).toISOString());
+  expect(food).toMatchObject({
+    dataBasis: "serving",
+    serving: { description: "1 cup (30 g)", amount: 30, unit: "g", grams: 30 },
+    nutrients: { calories: 36, protein: 1.2, carbohydrates: 6, sodium: 45 },
+    nutritionBasis: {
+      kind: "derived-serving",
+      source: "foodNutrients",
+      sourceBasis: "100g",
+      conversionFactor: 0.3,
+    },
+  });
+  expect(food.nutrients.fat).toBeCloseTo(0.9, 12);
+});
+
+test("Open Food Facts direct serving nutrients win over conflicting per-100g values", () => {
+  const food = normalizeOpenFoodFactsProduct(offProduct({
+    nutriments: {
+      ...offProduct().nutriments,
+      "energy-kcal_serving": 210,
+      proteins_serving: 9,
+      carbohydrates_serving: 31,
+      fat_serving: 6,
+      sodium_serving: 0.4,
+      sodium_serving_unit: "g",
+    },
+  }), BARCODE, new Date(NOW).toISOString());
+  expect(food).toMatchObject({
+    nutrients: { calories: 210, protein: 9, carbohydrates: 31, fat: 6, sodium: 400 },
+    nutritionBasis: { kind: "provider-serving", source: "nutriments._serving" },
+  });
+});
+
+test("Open Food Facts uses _value fields when nutrition_data_per declares serving", () => {
+  const food = normalizeOpenFoodFactsProduct(offProduct({
+    nutrition_data_per: "serving",
+    nutriments: {
+      "energy-kcal_value": 88,
+      proteins_value: 4,
+      carbohydrates_value: 10,
+      fat_value: 3,
+      fiber_value: 0,
+      sodium_value: 125,
+      sodium_value_unit: "mg",
+      sugars_value: 0,
+      "added-sugars_value": 0,
+    },
+  }), BARCODE, new Date(NOW).toISOString());
+  expect(food).toMatchObject({
+    nutrients: { calories: 88, protein: 4, sodium: 125, totalSugar: 0, addedSugar: 0 },
+    nutritionBasis: { kind: "provider-serving", source: "nutriments._value" },
+  });
+});
+
+test("allows volume-to-volume conversion from an explicit per-100mL basis", () => {
+  const food = normalizeOpenFoodFactsProduct(offProduct({
+    nutrition_data_per: "100ml",
+    serving_size: "1 bottle (250 mL)",
+    serving_quantity: 250,
+    serving_quantity_unit: "mL",
+    nutriments: {
+      "energy-kcal_100ml": 40,
+      proteins_100ml: 1.2,
+      carbohydrates_100ml: 8,
+      fat_100ml: 0,
+      sodium_100ml: 0.02,
+      sodium_unit: "g",
+    },
+  }), BARCODE, new Date(NOW).toISOString());
+  expect(food).toMatchObject({
+    nutrients: { calories: 100, protein: 3, carbohydrates: 20, fat: 0, sodium: 50 },
+    nutritionBasis: { kind: "derived-serving", sourceBasis: "100ml", conversionFactor: 2.5 },
+  });
+});
+
+test("rejects mass-to-volume conversion and missing, zero, or ambiguous serving metadata", () => {
+  for (const overrides of [
+    { serving_quantity: 250, serving_quantity_unit: "mL", serving_size: "1 bottle" },
+    { serving_quantity: 0, serving_quantity_unit: "g", serving_size: "zero" },
+    { serving_quantity: null, serving_quantity_unit: null, serving_size: null },
+    { serving_quantity: "many", serving_quantity_unit: "g", serving_size: "some" },
+    { serving_quantity: 2, serving_quantity_unit: "mystery", serving_size: "2 mystery" },
+  ]) {
+    const food = normalizeOpenFoodFactsProduct(offProduct(overrides), BARCODE, new Date(NOW).toISOString());
+    expect(food.logReady).toBe(false);
+    expect(food.nutritionBasis.kind).toBe("reference-only");
+    expect(food.unknownFields).toContain("nutritionBasis.labeledServing");
+    expect(normalizeRemoteFood(food)).not.toBeNull();
+  }
+});
+
+test("accepts a genuine provider-declared 100 g serving", () => {
+  const food = normalizeUsdaFood(usdaFood({
+    servingSize: 100,
+    servingSizeUnit: "g",
+    householdServingFullText: "1 serving (100 g)",
+  }), BARCODE, new Date(NOW).toISOString());
+  expect(food.logReady).toBe(true);
+  expect(food.serving.description).toBe("1 serving (100 g)");
+  expect(food.nutritionBasis).toMatchObject({ kind: "derived-serving", conversionFactor: 1 });
+});
+
+test("uses whole-package values only when the package is explicitly one serving", () => {
+  const packageNutriments = {
+    "energy-kcal_value": 300,
+    proteins_value: 10,
+    carbohydrates_value: 40,
+    fat_value: 8,
+  };
+  const oneServing = normalizeOpenFoodFactsProduct(offProduct({
+    nutrition_data_per: "package",
+    serving_size: null,
+    serving_quantity: null,
+    serving_quantity_unit: null,
+    product_quantity: 355,
+    product_quantity_unit: "mL",
+    quantity: "355 mL bottle",
+    servings_per_container: 1,
+    nutriments: packageNutriments,
+  }), BARCODE, new Date(NOW).toISOString());
+  expect(oneServing).toMatchObject({
+    logReady: true,
+    serving: { description: "1 package (355 mL bottle)", amount: 1, unit: "package" },
+    nutritionBasis: { kind: "provider-package" },
+  });
+
+  const multiServing = normalizeOpenFoodFactsProduct(offProduct({
+    nutrition_data_per: "package",
+    serving_size: null,
+    serving_quantity: null,
+    serving_quantity_unit: null,
+    product_quantity: 355,
+    product_quantity_unit: "mL",
+    servings_per_container: 2,
+    nutriments: packageNutriments,
+  }), BARCODE, new Date(NOW).toISOString());
+  expect(multiServing.logReady).toBe(false);
+  expect(multiServing.nutritionBasis.kind).toBe("reference-only");
+});
+
+test("preserves explicit zero and null independently for every supported nutrient", () => {
+  const food = normalizeUsdaFood(usdaFood({
+    labelNutrients: {
+      calories: { value: 0 },
+      protein: { value: 0 },
+      carbohydrates: { value: 0 },
+      fat: { value: 0 },
+      fiber: { value: 0 },
+      sodium: { value: 0 },
+      sugars: { value: 0 },
+    },
+  }), BARCODE, new Date(NOW).toISOString());
+  expect(food.nutrients).toEqual({
+    calories: 0,
+    protein: 0,
+    carbohydrates: 0,
+    fat: 0,
+    fiber: 0,
+    sodium: 0,
+    totalSugar: 0,
+    addedSugar: null,
+  });
+});
+
+test("converts Open Food Facts kJ energy to kcal without using an energy-kJ value as kcal", () => {
+  const food = normalizeOpenFoodFactsProduct(offProduct({
+    nutrition_data_per: "serving",
+    nutriments: {
+      energy_serving: 418.4,
+      energy_serving_unit: "kJ",
+      proteins_serving: 2,
+      carbohydrates_serving: 20,
+      fat_serving: 1,
+    },
+  }), BARCODE, new Date(NOW).toISOString());
+  expect(food.nutrients.calories).toBeCloseTo(100, 8);
 });
 
 test.each([

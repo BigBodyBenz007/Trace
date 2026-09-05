@@ -613,10 +613,11 @@ export default function BarcodeScannerDialog({
             </p>
             <h3>{[candidate.display.brand, candidate.display.name].filter(Boolean).join(" · ")}</h3>
             {candidate.display.packageQuantity && <p>Package: {candidate.display.packageQuantity}</p>}
-            <p>
-              Nutrition shown for {candidate.display.servingDescription}
-              {candidate.display.providerNutritionBasis === "100g" ? " (adapted from the provider's per-100g values)" : ""}.
-            </p>
+            {candidate.display.servingsPerContainer !== null
+              && candidate.display.servingsPerContainer !== undefined && (
+              <p>Servings per container: {candidate.display.servingsPerContainer}</p>
+            )}
+            <p>{candidate.display.basisMessage}</p>
             {candidate.stale && (
               <p className="trace-barcode-dialog__unknowns">
                 Offline cached result: this provider record is past Trace's normal cache age. Review it carefully.
@@ -643,7 +644,7 @@ export default function BarcodeScannerDialog({
             </p>
             {!candidate.canUse && (
               <p className="trace-barcode-dialog__error">
-                Required nutrition is missing, so this product cannot populate an entry yet.
+                Exact labeled-serving nutrition is missing or cannot be safely established, so this product cannot populate an entry yet.
               </p>
             )}
             <div className="trace-barcode-dialog__review-actions">

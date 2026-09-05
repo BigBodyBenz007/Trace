@@ -3,6 +3,11 @@ import { immutableCopy, normalizeRemoteFood } from "./remoteFoodModel";
 
 const REQUIRED_NUTRIENTS = ["calories", "protein", "carbohydrates", "fat"];
 const WHOLE_NUMBER_NUTRIENTS = new Set(["calories", "sodium"]);
+const SAFE_REMOTE_BASIS_KINDS = new Set([
+  "provider-serving",
+  "derived-serving",
+  "provider-package",
+]);
 
 function safeSourceUrl(value) {
   try {
@@ -30,54 +35,40 @@ export function applyRemoteNutrientPrecision(nutrients) {
   ]));
 }
 
-function scaledNutrients(nutrients, multiplier) {
-  return applyRemoteNutrientPrecision(Object.fromEntries(
-    NUTRITION_ENTRY_NUTRIENT_KEYS.map((key) => [
-      key,
-      nutrients[key] === null ? null : nutrients[key] * multiplier,
-    ])
-  ));
+function selectedServing(food) {
+  return {
+    amount: food.serving.amount ?? 1,
+    unit: food.serving.unit || "serving",
+    description: food.serving.description || "1 serving",
+    ...(food.serving.grams === null ? {} : { grams: food.serving.grams }),
+  };
 }
 
-function remoteServing(food) {
-  if (food.dataBasis === "100g") {
-    if (food.serving.grams !== null) {
-      return {
-        serving: {
-          amount: food.serving.amount ?? food.serving.grams,
-          unit: food.serving.unit || "g",
-          description: food.serving.description || `${food.serving.grams} g`,
-          grams: food.serving.grams,
-        },
-        nutrients: scaledNutrients(food.nutrients, food.serving.grams / 100),
-      };
-    }
-    return {
-      serving: { amount: 100, unit: "g", description: "100 g", grams: 100 },
-      nutrients: scaledNutrients(food.nutrients, 1),
-    };
+function basisMessage(food, servingDescription, reliable) {
+  if (!reliable) {
+    return "The provider did not supply enough compatible serving data to establish labeled-serving nutrition.";
   }
-
-  return {
-    serving: {
-      amount: food.serving.amount ?? 1,
-      unit: food.serving.unit || "serving",
-      description: food.serving.description || "1 serving",
-      ...(food.serving.grams === null ? {} : { grams: food.serving.grams }),
-    },
-    nutrients: { ...food.nutrients },
-  };
+  if (food.nutritionBasis.kind === "derived-serving") {
+    const reference = food.nutritionBasis.sourceBasis === "100ml" ? "100 mL" : "100 g";
+    return `Nutrition shown for ${servingDescription}. Calculated from the provider's per-${reference} data using its declared serving quantity.`;
+  }
+  return `Nutrition shown for ${servingDescription}.`;
 }
 
 function remoteCandidate(result) {
   const food = normalizeRemoteFood(result.food);
   if (!food) return null;
-  const adapted = remoteServing(food);
+  const reliable = SAFE_REMOTE_BASIS_KINDS.has(food.nutritionBasis?.kind);
+  const serving = selectedServing(food);
+  const nutrients = reliable
+    ? applyRemoteNutrientPrecision(food.nutrients)
+    : Object.fromEntries(NUTRITION_ENTRY_NUTRIENT_KEYS.map((key) => [key, null]));
   const providerSnapshot = immutableCopy({
     provider: food.provider,
     dataBasis: food.dataBasis,
     serving: food.serving,
     nutrients: food.nutrients,
+    ...(food.nutritionBasis ? { nutritionBasis: food.nutritionBasis } : {}),
     completeness: food.completeness,
     unknownFields: food.unknownFields,
     provenance: food.provenance,
@@ -85,12 +76,13 @@ function remoteCandidate(result) {
   const adaptedUnknownFields = [...new Set([
     ...food.unknownFields,
     ...NUTRITION_ENTRY_NUTRIENT_KEYS
-      .filter((key) => adapted.nutrients[key] === null)
+      .filter((key) => nutrients[key] === null)
       .map((key) => `nutrients.${key}`),
   ])];
   const canUse = result.status === "found"
     && food.logReady
-    && REQUIRED_NUTRIENTS.every((key) => adapted.nutrients[key] !== null);
+    && reliable
+    && REQUIRED_NUTRIENTS.every((key) => nutrients[key] !== null);
   const selection = canUse ? immutableCopy({
     id: `remote-barcode:${food.provider.id}:${food.provider.recordId}`,
     sourceType: "remote-barcode",
@@ -98,8 +90,8 @@ function remoteCandidate(result) {
     brand: food.brand,
     name: food.name,
     identifiers: food.identifiers,
-    serving: adapted.serving,
-    nutrients: adapted.nutrients,
+    serving,
+    nutrients,
     packaged: {
       packageSize: food.packageQuantity,
       servingsPerContainer: food.servingsPerContainer,
@@ -119,7 +111,7 @@ function remoteCandidate(result) {
   }) : null;
 
   return immutableCopy({
-    status: result.status,
+    status: canUse ? result.status : "incomplete",
     stale: result.stale === true,
     canUse,
     selection,
@@ -127,8 +119,10 @@ function remoteCandidate(result) {
       brand: food.brand,
       name: food.name,
       packageQuantity: food.packageQuantity,
-      servingDescription: adapted.serving.description,
-      nutrients: adapted.nutrients,
+      servingsPerContainer: food.servingsPerContainer,
+      servingDescription: serving.description,
+      basisMessage: basisMessage(food, serving.description, reliable),
+      nutrients,
       providerNutritionBasis: food.dataBasis,
       attribution: food.provenance.attribution,
       sourceUrl: food.provenance.sourceUrl,
@@ -143,9 +137,9 @@ function remoteCandidate(result) {
               brand: food.brand,
               name: food.name,
               packageQuantity: food.packageQuantity,
-              serving: adapted.serving,
+              serving,
               servingsPerContainer: food.servingsPerContainer,
-              nutrients: adapted.nutrients,
+              nutrients,
             },
             providerSourceSnapshot: food,
           },
@@ -173,7 +167,9 @@ function localCandidate(result) {
       brand: food.brand || food.restaurant?.name || null,
       name: food.name,
       packageQuantity: food.packaged?.packageSize || food.beverage?.packageSize || null,
+      servingsPerContainer: food.packaged?.servingsPerContainer ?? null,
       servingDescription: food.serving.description,
+      basisMessage: `Nutrition shown for ${food.serving.description}.`,
       nutrients,
       providerNutritionBasis: "serving",
       attribution: food.provenance?.label || "Trace verified catalog",

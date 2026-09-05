@@ -30,7 +30,25 @@ function remoteResult(barcode = "00000000000000") {
         totalSugar: 5,
         addedSugar: 0,
       },
-      dataBasis: "100g",
+      dataBasis: "serving",
+      nutritionBasis: {
+        kind: "derived-serving",
+        source: "foodNutrients",
+        sourceBasis: "100g",
+        sourceQuantity: { amount: 100, unit: "g", dimension: "mass" },
+        servingQuantity: { amount: 30, unit: "g", dimension: "mass" },
+        conversionFactor: 0.3,
+        sourceNutrients: {
+          calories: 333.3333333333333,
+          protein: 13.333333333333334,
+          carbohydrates: 40,
+          fat: 10,
+          sodium: 0,
+          fiber: 6.666666666666667,
+          totalSugar: 16.666666666666668,
+          addedSugar: 0,
+        },
+      },
       completeness: "complete",
       unknownFields: [],
       logReady: true,
@@ -56,7 +74,7 @@ function memoryStorage(initial = {}) {
 }
 
 test("uses a versioned 30-day cache capped at 500 records", () => {
-  expect(REMOTE_BARCODE_CACHE_VERSION).toBe(1);
+  expect(REMOTE_BARCODE_CACHE_VERSION).toBe(2);
   expect(REMOTE_BARCODE_CACHE_TTL_MS).toBe(30 * 24 * 60 * 60 * 1000);
   expect(REMOTE_BARCODE_CACHE_MAX_RECORDS).toBe(500);
 });
@@ -113,6 +131,41 @@ test.each([
   const storage = memoryStorage({ [REMOTE_BARCODE_CACHE_STORAGE_KEY]: stored });
   const cache = createRemoteBarcodeCache({ storage, clock: () => 1000 });
   expect(cache.get("00000000000000", { allowExpired: true })).toBeNull();
+});
+
+test("invalidates version-1 cache records that predate serving-basis policy", () => {
+  const stored = JSON.stringify({ version: 1, records: [] });
+  const storage = memoryStorage({ [REMOTE_BARCODE_CACHE_STORAGE_KEY]: stored });
+  const cache = createRemoteBarcodeCache({ storage, clock: () => 1000 });
+  expect(cache.get("00000000000000", { allowExpired: true })).toBeNull();
+});
+
+test("does not cache a normalized response without explicit serving-basis metadata", () => {
+  const storage = memoryStorage();
+  const result = remoteResult();
+  delete result.food.nutritionBasis;
+  const cache = createRemoteBarcodeCache({ storage, clock: () => 1000 });
+  expect(cache.set("00000000000000", result)).toBe(false);
+  expect(storage.setItem).not.toHaveBeenCalled();
+});
+
+test("ignores a version-2 record if its explicit serving-basis metadata is missing", () => {
+  const result = remoteResult();
+  delete result.food.nutritionBasis;
+  const stored = JSON.stringify({
+    version: 2,
+    records: [{
+      key: "gtin:00000000000000",
+      identifier: { scheme: "gtin", value: "00000000000000" },
+      result,
+      storedAt: new Date(1000).toISOString(),
+      expiresAt: new Date(1000 + REMOTE_BARCODE_CACHE_TTL_MS).toISOString(),
+      lastAccessedAt: new Date(1000).toISOString(),
+    }],
+  });
+  const storage = memoryStorage({ [REMOTE_BARCODE_CACHE_STORAGE_KEY]: stored });
+  const cache = createRemoteBarcodeCache({ storage, clock: () => 2000 });
+  expect(cache.get("00000000000000")).toBeNull();
 });
 
 test("does not persist failed lookups or payloads outside the normalized schema", () => {
