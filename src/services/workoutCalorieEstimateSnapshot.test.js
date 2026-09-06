@@ -1,5 +1,7 @@
 import {
   createWorkoutCalorieEstimateSnapshot,
+  isStructurallyValidWorkoutCalorieEstimateSnapshot,
+  refreshEditedWorkoutCalorieEstimateSnapshot,
   workoutCalorieEstimateInputFingerprint,
   workoutCalorieEstimateNeedsRefresh,
   workoutCalorieEstimateSaveMessage,
@@ -69,6 +71,215 @@ test("future Health weight is excluded and lb is normalized when it is the newes
   });
   expect(snapshot.sourceHealthWeightEntryId).toBe("older");
   expect(snapshot.bodyWeightKg).toBeCloseTo(200 * 0.45359237);
+});
+
+test("explicit completed-workout edit uses the latest valid Health weight as of save time", () => {
+  const original = workout();
+  const existingSnapshot = createWorkoutCalorieEstimateSnapshot({
+    workout: original,
+    healthMeasurementEntries: [{
+      id: "incorrect-weight",
+      occurredAt: "2026-08-15T08:00:00.000Z",
+      measurements: { weight: { value: 12, unit: "lb" } },
+    }],
+    dateOfBirth: "1990-08-21",
+    now: new Date("2026-08-20T20:00:00.000Z"),
+  });
+  const refreshed = refreshEditedWorkoutCalorieEstimateSnapshot({
+    existingWorkout: { ...original, calorieEstimate: existingSnapshot },
+    workout: original,
+    healthMeasurementEntries: [{
+      id: "corrected-weight",
+      occurredAt: "2026-08-21T08:00:00.000Z",
+      measurements: { weight: { value: 250, unit: "lb" } },
+    }],
+    dateOfBirth: "1990-08-21",
+    now: new Date("2026-08-21T12:00:00.000Z"),
+  });
+
+  expect(refreshed).toMatchObject({
+    status: "calculated",
+    bodyWeightKg: 250 * 0.45359237,
+    sourceHealthWeightEntryId: "corrected-weight",
+    age: 35,
+    activeDurationMinutes: 60,
+    durationSource: "entered",
+    selectedIntensity: "moderate",
+    estimatorMethodVersion: 3,
+  });
+  expect(refreshed.lowerKcal).toBeGreaterThan(existingSnapshot.upperKcal);
+});
+
+test.each([
+  ["exercise identity", (entry) => ({
+    ...entry,
+    exercises: [{ ...entry.exercises[0], name: "Incline Press" }],
+  })],
+  ["set count", (entry) => ({
+    ...entry,
+    exercises: [{
+      ...entry.exercises[0],
+      sets: [...entry.exercises[0].sets, {
+        id: "set-2",
+        reps: 8,
+        load: { mode: "external", amount: 65, unit: "lb" },
+      }],
+    }],
+  })],
+  ["reps", (entry) => ({
+    ...entry,
+    exercises: [{
+      ...entry.exercises[0],
+      sets: [{ ...entry.exercises[0].sets[0], reps: 12 }],
+    }],
+  })],
+  ["load", (entry) => ({
+    ...entry,
+    exercises: [{
+      ...entry.exercises[0],
+      sets: [{
+        ...entry.exercises[0].sets[0],
+        load: { mode: "external", amount: 80, unit: "lb" },
+      }],
+    }],
+  })],
+  ["drop", (entry) => ({
+    ...entry,
+    exercises: [{
+      ...entry.exercises[0],
+      sets: [{
+        ...entry.exercises[0].sets[0],
+        drops: [{
+          id: "drop-1",
+          reps: 8,
+          load: { mode: "external", amount: 50, unit: "lb" },
+        }],
+      }],
+    }],
+  })],
+  ["failure result", (entry) => ({
+    ...entry,
+    exercises: [{
+      ...entry.exercises[0],
+      sets: [{
+        ...entry.exercises[0].sets[0],
+        toFailure: true,
+        actualRepsAtFailure: 11,
+      }],
+    }],
+  })],
+])("explicit edit refreshes the automatic snapshot after changing %s", (label, change) => {
+  expect(label).toBeTruthy();
+  const original = workout();
+  const existingSnapshot = createWorkoutCalorieEstimateSnapshot({
+    workout: original,
+    healthMeasurementEntries: healthEntries,
+    dateOfBirth: "1990-08-21",
+    now: new Date("2026-08-20T20:00:00.000Z"),
+  });
+  const changed = change(original);
+  const refreshed = refreshEditedWorkoutCalorieEstimateSnapshot({
+    existingWorkout: { ...original, calorieEstimate: existingSnapshot },
+    workout: changed,
+    healthMeasurementEntries: healthEntries,
+    dateOfBirth: "1990-08-21",
+    now: new Date("2026-08-30T12:00:00.000Z"),
+  });
+
+  expect(refreshed).toMatchObject({
+    status: "calculated",
+    estimatedAt: "2026-08-30T12:00:00.000Z",
+    bodyWeightKg: 300,
+    sourceHealthWeightEntryId: "future",
+  });
+  expect(refreshed.inputFingerprint).not.toBe(existingSnapshot.inputFingerprint);
+  expect([refreshed.lowerKcal, refreshed.upperKcal]).not.toEqual([
+    existingSnapshot.lowerKcal,
+    existingSnapshot.upperKcal,
+  ]);
+});
+
+test("explicit edit preserves a structurally valid prior range when current recalculation is impossible", () => {
+  const original = workout();
+  const existingSnapshot = createWorkoutCalorieEstimateSnapshot({
+    workout: original,
+    healthMeasurementEntries: healthEntries,
+    dateOfBirth: "1990-08-21",
+    now: new Date("2026-08-20T20:00:00.000Z"),
+  });
+  const refreshed = refreshEditedWorkoutCalorieEstimateSnapshot({
+    existingWorkout: { ...original, calorieEstimate: existingSnapshot },
+    workout: original,
+    healthMeasurementEntries: [],
+    dateOfBirth: "1990-08-21",
+    now: new Date("2026-08-30T12:00:00.000Z"),
+  });
+
+  expect(isStructurallyValidWorkoutCalorieEstimateSnapshot(existingSnapshot)).toBe(true);
+  expect(refreshed).toBe(existingSnapshot);
+});
+
+test("explicit edit upgrades legacy or missing snapshots when current inputs are valid", () => {
+  const original = workout();
+  const currentInputs = {
+    healthMeasurementEntries: healthEntries,
+    dateOfBirth: "1990-08-21",
+    now: new Date("2026-08-30T12:00:00.000Z"),
+  };
+  const legacy = {
+    status: "calculated",
+    estimatorMethodName: "trace-workout-calorie-range",
+    estimatorMethodVersion: 2,
+    bodyWeightKg: 80,
+    activeDurationMinutes: 60,
+    durationSource: "entered",
+    lowerKcal: 20,
+    upperKcal: 50,
+  };
+
+  [legacy, null].forEach((calorieEstimate) => {
+    const refreshed = refreshEditedWorkoutCalorieEstimateSnapshot({
+      existingWorkout: { ...original, calorieEstimate },
+      workout: original,
+      ...currentInputs,
+    });
+    expect(refreshed).toMatchObject({
+      status: "calculated",
+      estimatorMethodVersion: 3,
+      bodyWeightKg: 300,
+      sourceHealthWeightEntryId: "future",
+      durationSource: "entered",
+    });
+    expect(refreshed.inputFingerprint).toMatch(/^workout-calorie-input-v2:/);
+    expect(refreshed).not.toMatchObject({ lowerKcal: 20, upperKcal: 50 });
+  });
+});
+
+test("an unavailable recalculation replaces an invalid prior snapshot instead of fabricating a range", () => {
+  const original = workout();
+  const invalidPrior = {
+    status: "calculated",
+    lowerKcal: 50,
+    upperKcal: 20,
+    bodyWeightKg: 80,
+    activeDurationMinutes: 60,
+    durationSource: "entered",
+  };
+  const refreshed = refreshEditedWorkoutCalorieEstimateSnapshot({
+    existingWorkout: { ...original, calorieEstimate: invalidPrior },
+    workout: original,
+    healthMeasurementEntries: [],
+    now: new Date("2026-08-30T12:00:00.000Z"),
+  });
+
+  expect(isStructurallyValidWorkoutCalorieEstimateSnapshot(invalidPrior)).toBe(false);
+  expect(refreshed).toMatchObject({
+    status: "missing-required-inputs",
+    bodyWeightKg: null,
+    requiredInputs: { bodyWeight: "missing", activeDuration: "provided" },
+  });
+  expect(refreshed).not.toHaveProperty("lowerKcal");
+  expect(refreshed).not.toHaveProperty("upperKcal");
 });
 
 test("missing optional age or intensity remains calculable with wider uncertainty", () => {

@@ -78,6 +78,8 @@ import {
 } from "./services/waterTracker";
 import {
   createWorkoutCalorieEstimateSnapshot,
+  isStructurallyValidWorkoutCalorieEstimateSnapshot,
+  refreshEditedWorkoutCalorieEstimateSnapshot,
 } from "./services/workoutCalorieEstimateSnapshot";
 import { useReducedMotion } from "./services/motionPreference";
 import { getAppShellThemeColor, resolveAppShellThemeId } from "./services/appThemes";
@@ -253,6 +255,20 @@ function workoutMetadata(entries) {
 
 function storageMessage(action) {
   return `Trace couldn't ${action} because browser storage is unavailable or full. Your existing data has not been intentionally removed.`;
+}
+
+function updatedWorkoutRecord(existingEntry, entry, calorieEstimate, photos) {
+  const updated = {
+    ...existingEntry,
+    ...entry,
+    calorieEstimate,
+    ...(photos ? { photos } : {}),
+    id: existingEntry.id,
+  };
+  ["activeDurationMinutes", "caloriesBurned", "intensity"].forEach((field) => {
+    if (!Object.prototype.hasOwnProperty.call(entry, field)) delete updated[field];
+  });
+  return updated;
 }
 
 function normalizeNutritionGoals(value) {
@@ -2603,15 +2619,26 @@ function App({
     return { prepared, newIds: newRecords.map(({ id }) => id), removed };
   }
 
-  function calorieEstimateForWorkout(entry) {
+  function calorieEstimateForWorkout(entry, existingEntry = null) {
     try {
+      if (existingEntry) {
+        return refreshEditedWorkoutCalorieEstimateSnapshot({
+          existingWorkout: existingEntry,
+          workout: entry,
+          healthMeasurementEntries,
+          dateOfBirth: appSettings.personalDetails?.dateOfBirth || "",
+        });
+      }
       return createWorkoutCalorieEstimateSnapshot({
         workout: entry,
         healthMeasurementEntries,
         dateOfBirth: appSettings.personalDetails?.dateOfBirth || "",
       });
     } catch (error) {
-      return null;
+      return existingEntry
+        && isStructurallyValidWorkoutCalorieEstimateSnapshot(existingEntry.calorieEstimate)
+        ? existingEntry.calorieEstimate
+        : null;
     }
   }
 
@@ -2749,11 +2776,11 @@ function App({
 
   function updateWorkoutEntry(id, entry) {
     const existingEntry = workoutEntries.find((item) => item.id === id);
-    const calorieEstimate = calorieEstimateForWorkout(entry);
+    const calorieEstimate = calorieEstimateForWorkout(entry, existingEntry);
     const hasPhotos = (entry.photos || []).length > 0 || (existingEntry?.photos || []).length > 0;
     if (!hasPhotos) {
       const updatedEntries = workoutEntries.map((item) => item.id === id
-        ? { ...item, ...entry, calorieEstimate, id: item.id }
+        ? updatedWorkoutRecord(item, entry, calorieEstimate)
         : item);
       try {
         localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));
@@ -2767,7 +2794,7 @@ function App({
     }
     return prepareWorkoutPhotos(entry, id, existingEntry).then(async (photoResult) => {
       const updatedEntries = workoutEntries.map((item) => item.id === id
-        ? { ...item, ...entry, calorieEstimate, photos: photoResult.prepared, id: item.id }
+        ? updatedWorkoutRecord(item, entry, calorieEstimate, photoResult.prepared)
         : item);
       try {
         localStorage.setItem("workoutEntries", JSON.stringify(workoutMetadata(updatedEntries)));

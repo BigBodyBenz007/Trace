@@ -29,10 +29,7 @@ import {
   getWorkoutEntryIssues,
 } from "../services/workoutEntry";
 import { getExerciseDefinitionError } from "../services/exerciseCatalog";
-import {
-  formatWorkoutDuration,
-  resolveWorkoutCalorieDuration,
-} from "../services/workoutDuration";
+import { formatWorkoutDuration } from "../services/workoutDuration";
 import { workoutCalorieEstimateSaveMessage } from "../services/workoutCalorieEstimateSnapshot";
 import {
   clearWorkoutDraft,
@@ -326,16 +323,13 @@ function unavailableCalorieEstimateMessage(snapshot) {
   return "A saved estimate is not available for this workout.";
 }
 
-function WorkoutCalorieEstimate({ snapshot, workout }) {
+function WorkoutCalorieEstimate({ snapshot }) {
   const hasRange = snapshot?.status === "calculated"
     && Number.isFinite(snapshot.lowerKcal)
     && Number.isFinite(snapshot.upperKcal)
     && snapshot.lowerKcal <= snapshot.upperKcal;
-  const duration = resolveWorkoutCalorieDuration(workout);
   const hasDurationBasis = Number.isFinite(snapshot?.activeDurationMinutes)
     && snapshot.activeDurationMinutes > 0
-    && snapshot.activeDurationMinutes === duration.minutes
-    && snapshot.durationSource === duration.source
     && ["entered", "recorded"].includes(snapshot.durationSource);
   const durationBasis = hasDurationBasis
     ? `Estimated using ${snapshot.durationSource === "entered"
@@ -2527,7 +2521,7 @@ function WorkoutPage({
                   {expanded && (
                     <div id={detailId} className="trace-workout-history-card__details">
                       <WorkoutTiming entry={entry} />
-                <WorkoutCalorieEstimate snapshot={entry.calorieEstimate} workout={entry} />
+                <WorkoutCalorieEstimate snapshot={entry.calorieEstimate} />
                 {entry.notes && <p style={{ whiteSpace: "pre-wrap" }}>{entry.notes}</p>}
                 <WorkoutPhotos photos={entry.photos} label={`${entry.title} photos`} />
                 {entry.exercises.map((exercise) => (

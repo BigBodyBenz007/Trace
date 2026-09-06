@@ -1066,6 +1066,21 @@ test("history identifies recorded elapsed time when it is the estimate fallback"
     .toHaveTextContent("Estimated using the recorded duration of 1 minute.");
 });
 
+test("history explains a preserved snapshot from its saved duration basis", () => {
+  renderPage({
+    workoutEntries: [entry({
+      activeDurationMinutes: 75,
+      calorieEstimate: calorieEstimate({
+        activeDurationMinutes: 60,
+        durationSource: "entered",
+      }),
+    })],
+  });
+  const card = expandWorkout();
+  expect(within(card).getByRole("region", { name: "Estimated calories burned" }))
+    .toHaveTextContent("Estimated using your entered workout duration of 60 minutes.");
+});
+
 test("legacy and non-calculable history entries render safely only after expansion", () => {
   const missingSnapshot = calorieEstimate({
     status: "missing-required-inputs",

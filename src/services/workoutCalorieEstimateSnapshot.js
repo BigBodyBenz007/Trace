@@ -122,10 +122,11 @@ export function createWorkoutCalorieEstimateSnapshot({
   healthMeasurementEntries = [],
   dateOfBirth = "",
   now = new Date(),
+  bodyWeightDateTime = workout?.occurredAt,
 }) {
   const bodyWeight = resolveHistoricalBodyWeight(
     healthMeasurementEntries,
-    workout?.occurredAt
+    bodyWeightDateTime
   );
   const age = deriveAgeOnDate(dateOfBirth, workout?.occurredAt);
   const duration = resolveWorkoutCalorieDuration(workout);
@@ -147,6 +148,42 @@ export function createWorkoutCalorieEstimateSnapshot({
         upperKcal: estimate.result.upperKcal,
       }
     : base;
+}
+
+export function isStructurallyValidWorkoutCalorieEstimateSnapshot(snapshot) {
+  return snapshot?.status === "calculated"
+    && Number.isFinite(snapshot.lowerKcal)
+    && Number.isFinite(snapshot.upperKcal)
+    && snapshot.lowerKcal >= 0
+    && snapshot.lowerKcal <= snapshot.upperKcal
+    && Number.isFinite(snapshot.bodyWeightKg)
+    && snapshot.bodyWeightKg > 0
+    && Number.isFinite(snapshot.activeDurationMinutes)
+    && snapshot.activeDurationMinutes > 0
+    && ["entered", "recorded"].includes(snapshot.durationSource);
+}
+
+export function refreshEditedWorkoutCalorieEstimateSnapshot({
+  existingWorkout,
+  workout,
+  healthMeasurementEntries = [],
+  dateOfBirth = "",
+  now = new Date(),
+}) {
+  const refreshed = createWorkoutCalorieEstimateSnapshot({
+    workout,
+    healthMeasurementEntries,
+    dateOfBirth,
+    now,
+    bodyWeightDateTime: now,
+  });
+
+  if (refreshed.status === "calculated") return refreshed;
+  return isStructurallyValidWorkoutCalorieEstimateSnapshot(
+    existingWorkout?.calorieEstimate
+  )
+    ? existingWorkout.calorieEstimate
+    : refreshed;
 }
 
 export function workoutCalorieEstimateNeedsRefresh(existingWorkout, nextWorkout) {

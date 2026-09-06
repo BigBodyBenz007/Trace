@@ -4518,6 +4518,14 @@ test("workout edits rebuild automatic snapshots and remove stale ranges", () => 
     lowerKcal: 20,
     upperKcal: 50,
   };
+  const untouchedWorkout = {
+    ...withStaleAutomaticSnapshot[0],
+    id: "untouched-workout",
+    title: "Untouched Workout",
+    calorieEstimate: initialSnapshot,
+  };
+  const untouchedWorkoutJson = JSON.stringify(untouchedWorkout);
+  withStaleAutomaticSnapshot.push(untouchedWorkout);
   localStorage.setItem("workoutEntries", JSON.stringify(withStaleAutomaticSnapshot));
   firstRender.unmount();
   render(<App />);
@@ -4544,8 +4552,7 @@ test("workout edits rebuild automatic snapshots and remove stale ranges", () => 
   fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
   const dateEditedSnapshot = JSON.parse(localStorage.getItem("workoutEntries"))[0].calorieEstimate;
   expect(dateEditedSnapshot.inputFingerprint).not.toBe(regeneratedSnapshot.inputFingerprint);
-  expect(dateEditedSnapshot.sourceHealthWeightEntryId).toBe("weight-current");
-  expect(dateEditedSnapshot.sourceHealthWeightEntryId).not.toBe("weight-future");
+  expect(dateEditedSnapshot.sourceHealthWeightEntryId).toBe("weight-future");
 
   fireEvent.click(within(screen.getByText("Renamed Estimate").closest("article"))
     .getByRole("button", { name: "Edit" }));
@@ -4583,8 +4590,237 @@ test("workout edits rebuild automatic snapshots and remove stale ranges", () => 
     "Workout traced. Estimated calories burned: about"
   );
   const clearedDurationEntry = JSON.parse(localStorage.getItem("workoutEntries"))[0];
+  expect(clearedDurationEntry).not.toHaveProperty("activeDurationMinutes");
   expect(clearedDurationEntry.startedAt).toBe(originalTiming.startedAt);
   expect(clearedDurationEntry.finishedAt).toBe(originalTiming.finishedAt);
+  expect(JSON.stringify(JSON.parse(localStorage.getItem("workoutEntries"))[1]))
+    .toBe(untouchedWorkoutJson);
+});
+
+test("completed-workout edits preserve manual calories until the user clears them", () => {
+  seedWorkoutEstimateInputs();
+  render(<App />);
+  openWorkouts();
+  fillBodyweightWorkout("Manual Calories");
+  fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-08-20" } });
+  fireEvent.change(screen.getByLabelText("Time"), { target: { value: "18:00" } });
+  reviewWorkout();
+  fireEvent.change(screen.getByLabelText("Approximate workout duration"), {
+    target: { value: "60" },
+  });
+  fireEvent.change(screen.getByLabelText("Calories Burned"), {
+    target: { value: "315" },
+  });
+  fireEvent.change(screen.getByLabelText("Workout intensity"), {
+    target: { value: "moderate" },
+  });
+  submitWorkout();
+
+  const original = JSON.parse(localStorage.getItem("workoutEntries"))[0];
+  expandCompletedWorkout("Manual Calories");
+  fireEvent.click(within(screen.getByText("Manual Calories").closest("article"))
+    .getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Workout notes (optional)"), {
+    target: { value: "Manual result retained" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  const preserved = JSON.parse(localStorage.getItem("workoutEntries"))[0];
+  expect(preserved).toMatchObject({
+    id: original.id,
+    caloriesBurned: 315,
+    notes: "Manual result retained",
+  });
+
+  fireEvent.click(within(screen.getByText("Manual Calories").closest("article"))
+    .getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Calories Burned"), { target: { value: "" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  const cleared = JSON.parse(localStorage.getItem("workoutEntries"))[0];
+  expect(cleared).not.toHaveProperty("caloriesBurned");
+  expect(cleared.calorieEstimate).toMatchObject({
+    status: "calculated",
+    durationSource: "entered",
+    activeDurationMinutes: 60,
+  });
+});
+
+test("completed-workout edit preserves a valid automatic snapshot when Health weight is removed", () => {
+  localStorage.setItem("appSettings", JSON.stringify({
+    schemaVersion: 6,
+    personalDetails: { dateOfBirth: "1990-08-21" },
+  }));
+  localStorage.setItem("healthMeasurementEntries", JSON.stringify([{
+    id: "only-weight",
+    schemaVersion: 1,
+    createdAt: "2026-08-15T13:00:00.000Z",
+    occurredAt: new Date(2026, 7, 15, 8, 0).toISOString(),
+    measurements: { weight: { value: 220, unit: "lb" } },
+    notes: "",
+  }]));
+  render(<App />);
+  openWorkouts();
+  fillBodyweightWorkout("Preserved Estimate");
+  fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-08-20" } });
+  fireEvent.change(screen.getByLabelText("Time"), { target: { value: "18:00" } });
+  reviewWorkout();
+  fireEvent.change(screen.getByLabelText("Approximate workout duration"), {
+    target: { value: "60" },
+  });
+  fireEvent.change(screen.getByLabelText("Workout intensity"), {
+    target: { value: "moderate" },
+  });
+  submitWorkout();
+  const beforeEdit = JSON.parse(localStorage.getItem("workoutEntries"))[0];
+
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Health" }));
+  jest.spyOn(window, "confirm").mockReturnValue(true);
+  fireEvent.click(within(screen.getByText("220 lb").closest("article"))
+    .getByRole("button", { name: "Delete" }));
+  expect(JSON.parse(localStorage.getItem("healthMeasurementEntries"))).toEqual([]);
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  openWorkouts();
+  expandCompletedWorkout("Preserved Estimate");
+  fireEvent.click(within(screen.getByText("Preserved Estimate").closest("article"))
+    .getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Workout notes (optional)"), {
+    target: { value: "Saved without current weight" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+  const afterEdit = JSON.parse(localStorage.getItem("workoutEntries"))[0];
+  expect(afterEdit.calorieEstimate).toEqual(beforeEdit.calorieEstimate);
+  expect(afterEdit).toMatchObject({
+    id: beforeEdit.id,
+    notes: "Saved without current weight",
+  });
+});
+
+test("completed-workout edit refreshes an automatic estimate from corrected current Health inputs", () => {
+  jest.useFakeTimers().setSystemTime(new Date("2026-08-20T22:39:55.000Z"));
+  try {
+    localStorage.setItem("appSettings", JSON.stringify({
+      schemaVersion: 6,
+      personalDetails: { dateOfBirth: "1990-08-21" },
+    }));
+    localStorage.setItem("healthMeasurementEntries", JSON.stringify([{
+      id: "weight-correction",
+      schemaVersion: 1,
+      createdAt: "2026-08-15T13:00:00.000Z",
+      occurredAt: new Date(2026, 7, 15, 8, 0).toISOString(),
+      measurements: { weight: { value: 12, unit: "lb" } },
+      notes: "Incorrect weight",
+    }]));
+    const template = denseReusableWorkoutTemplate();
+    const templateBeforeWorkout = JSON.parse(JSON.stringify(template));
+    localStorage.setItem("workoutTemplates", JSON.stringify([template]));
+
+    const firstRender = render(<App />);
+    openWorkouts();
+    fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start Now" }));
+    jest.setSystemTime(new Date("2026-08-20T22:41:07.000Z"));
+    fireEvent.click(screen.getByRole("button", { name: "Finish Workout" }));
+    fireEvent.change(screen.getByLabelText("Approximate workout duration"), {
+      target: { value: "75" },
+    });
+    fireEvent.change(screen.getByLabelText("Workout intensity"), {
+      target: { value: "high" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+
+    const initiallyStored = JSON.parse(localStorage.getItem("workoutEntries"))[0];
+    const originalIdentityAndTiming = {
+      id: initiallyStored.id,
+      startedAt: initiallyStored.startedAt,
+      finishedAt: initiallyStored.finishedAt,
+    };
+    const initialRange = {
+      lowerKcal: initiallyStored.calorieEstimate.lowerKcal,
+      upperKcal: initiallyStored.calorieEstimate.upperKcal,
+    };
+    expect(initiallyStored).toMatchObject({
+      activeDurationMinutes: 75,
+      intensity: "high",
+      calorieEstimate: {
+        status: "calculated",
+        bodyWeightKg: 12 * 0.45359237,
+        sourceHealthWeightEntryId: "weight-correction",
+        durationSource: "entered",
+      },
+    });
+    expect(initiallyStored.exercises).toHaveLength(6);
+    expect(initiallyStored.exercises.flatMap(({ sets }) => sets)).toHaveLength(14);
+
+    jest.setSystemTime(new Date("2026-08-21T18:00:00.000Z"));
+    fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+    fireEvent.click(screen.getByRole("button", { name: "Health" }));
+    fireEvent.click(within(screen.getByText("12 lb").closest("article"))
+      .getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText("Weight"), { target: { value: "250" } });
+    fireEvent.change(screen.getByLabelText("Date"), { target: { value: "2026-08-21" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    expect(JSON.parse(localStorage.getItem("healthMeasurementEntries"))[0]).toMatchObject({
+      id: "weight-correction",
+      measurements: { weight: { value: 250, unit: "lb" } },
+    });
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+    openWorkouts();
+    expandCompletedWorkout("ARMegddon");
+    fireEvent.click(within(screen.getByText("ARMegddon").closest("article"))
+      .getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText("Workout notes (optional)"), {
+      target: { value: "Corrected Health inputs applied" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+
+    const refreshed = JSON.parse(localStorage.getItem("workoutEntries"))[0];
+    const expectedRange = estimateWorkoutCalorieRange({
+      workout: refreshed,
+      bodyWeight: { value: 250 * 0.45359237, unit: "kg" },
+      age: 35,
+    }).result;
+    expect(refreshed).toMatchObject({
+      ...originalIdentityAndTiming,
+      activeDurationMinutes: 75,
+      intensity: "high",
+      calorieEstimate: {
+        schemaVersion: 1,
+        status: "calculated",
+        estimatorMethodName: "trace-workout-calorie-range",
+        estimatorMethodVersion: 3,
+        bodyWeightKg: 250 * 0.45359237,
+        sourceHealthWeightEntryId: "weight-correction",
+        activeDurationMinutes: 75,
+        durationSource: "entered",
+        selectedIntensity: "high",
+        lowerKcal: expectedRange.lowerKcal,
+        upperKcal: expectedRange.upperKcal,
+        inputFingerprint: expect.stringMatching(/^workout-calorie-input-v2:/),
+      },
+    });
+    expect(expectedRange.lowerKcal).toBeGreaterThan(initialRange.upperKcal);
+    expect(JSON.parse(localStorage.getItem("workoutTemplates"))).toEqual([
+      templateBeforeWorkout,
+    ]);
+
+    firstRender.unmount();
+    render(<App />);
+    openWorkouts();
+    expandCompletedWorkout("ARMegddon");
+    const card = screen.getByRole("button", {
+      name: "Collapse workout: ARMegddon",
+    }).closest("article");
+    expect(within(card).getByRole("region", { name: "Estimated calories burned" }))
+      .toHaveTextContent(`About ${expectedRange.lowerKcal}\u2013${expectedRange.upperKcal} kcal`);
+    expect(card).toHaveTextContent("Approximate workout duration75 min");
+    expect(card).toHaveTextContent("Duration1 min");
+    expect(within(card).getByRole("region", { name: "Estimated calories burned" }))
+      .toHaveTextContent("Estimated using your entered workout duration of 75 minutes.");
+  } finally {
+    jest.useRealTimers();
+  }
 });
 
 test("Trophy Case View Workout opens the exact full completed workout and returns to the originating trophy", () => {
