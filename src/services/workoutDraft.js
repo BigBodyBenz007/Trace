@@ -227,6 +227,17 @@ export function normalizeWorkoutDraft(value) {
     !parseDateOnlyLocal(selectedDate)
     || !/^\d{4}-(0[1-9]|1[0-2])$/.test(String(visibleMonth || ""))
   )) return null;
+  const normalizedExercises = originPage === "workout-templates"
+    ? exercises.map((exercise) => ({
+        ...exercise,
+        ...(exercise.roadmapStatus === undefined
+          ? { roadmapStatus: "pending" }
+          : {}),
+        ...(exercise.roadmapSkipReason === undefined
+          ? { roadmapSkipReason: "" }
+          : {}),
+      }))
+    : exercises;
 
   return {
     schemaVersion: WORKOUT_DRAFT_SCHEMA_VERSION,
@@ -244,7 +255,7 @@ export function normalizeWorkoutDraft(value) {
       caloriesBurned,
       intensity,
       notes: value.form.notes,
-      exercises,
+      exercises: normalizedExercises,
     },
     context: {
       activeSearchExerciseId,
@@ -347,7 +358,7 @@ function createWorkoutDraftFromTargets(
           defaultLoadMode,
           defaultWeightUnit,
           notes: exercise.notes || "",
-          ...(plannedWorkoutId
+          ...(plannedWorkoutId || originPage === "workout-templates"
             ? { roadmapStatus: "pending", roadmapSkipReason: "" }
             : {}),
           sets: exercise.targetSets.length > 0

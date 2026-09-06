@@ -416,6 +416,37 @@ test("exports structured data and multiple photos without mutating sources", asy
   expect(memories[0].images).toEqual(["photo-1", "photo-2"]);
 });
 
+test("backs up and restores template-origin exercise progress without a planned-workout backlink", async () => {
+  const workoutDraft = activeWorkoutDraft();
+  delete workoutDraft.plannedWorkoutId;
+  workoutDraft.context = {
+    activeSearchExerciseId: null,
+    roadmapEditingExerciseId: null,
+    collapsedExerciseIds: [],
+    originPage: "workout-templates",
+    originTemplateId: "workout-template:armegddon",
+  };
+  workoutDraft.form.exercises[0].roadmapStatus = "skipped";
+  workoutDraft.form.exercises[0].roadmapSkipReason = "Equipment unavailable";
+  const source = makeStorage({ workoutDraft: JSON.stringify(workoutDraft) });
+  const created = await createTraceBackup({
+    storage: source,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+
+  expect(created.data.structured.workoutDraft).toEqual(workoutDraft);
+  const destination = makeStorage();
+  await restoreTraceBackup(created, {
+    confirmed: true,
+    storage: destination,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  const restored = JSON.parse(destination.value("workoutDraft"));
+  expect(restored).toEqual(workoutDraft);
+  expect(restored).not.toHaveProperty("plannedWorkoutId");
+  expect(restored.context.collapsedExerciseIds).toEqual([]);
+});
+
 test("new exports include the complete versioned integrity manifest", async () => {
   const result = await createTraceBackup({
     storage: makeStorage(),

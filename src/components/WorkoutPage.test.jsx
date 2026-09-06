@@ -388,7 +388,7 @@ test("restores planned prefills and saves one normal entry with its backlink", (
   expect(screen.getByLabelText("Exercise 1 set 1 weight unit")).toHaveValue("kg");
   expect(screen.getByLabelText("Exercise 1 set 1 type")).toHaveValue("warm-up");
   expect(screen.getByLabelText("Exercise 1 set 1 notes")).toHaveValue("Target notes");
-  fireEvent.click(within(exercise).getByRole("button", { name: "Completed" }));
+  fireEvent.click(within(exercise).getByRole("button", { name: "Complete Exercise" }));
   fireEvent.click(screen.getByRole("button", { name: "Finish Workout" }));
   fireEvent.change(screen.getByLabelText("Approximate workout duration"), { target: { value: "38" } });
   fireEvent.change(screen.getByLabelText("Workout intensity"), { target: { value: "high" } });
@@ -415,14 +415,14 @@ test("keeps Roadmap actions compact, edits one exercise, and persists skip detai
   const exercise = screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" });
   const actions = within(exercise).getByLabelText("Dumbbell Bench Press roadmap actions");
   expect(within(actions).getAllByRole("button")).toHaveLength(3);
-  fireEvent.click(within(actions).getByRole("button", { name: "Completed" }));
+  fireEvent.click(within(actions).getByRole("button", { name: "Complete Exercise" }));
   expect(exercise).toHaveAttribute("data-roadmap-status", "completed");
-  fireEvent.click(within(actions).getByRole("button", { name: "Completed" }));
+  fireEvent.click(within(actions).getByRole("button", { name: "Reopen Exercise" }));
 
-  fireEvent.click(within(actions).getByRole("button", { name: "Edit" }));
+  fireEvent.click(within(exercise).getByRole("button", { name: "Edit" }));
   expect(screen.getByRole("region", { name: "Edit Dumbbell Bench Press sets" })).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "9" } });
-  fireEvent.click(within(actions).getByRole("button", { name: "Skipped" }));
+  fireEvent.click(within(exercise).getByRole("button", { name: "Skip Exercise" }));
   const reason = screen.getByRole("region", { name: "Skip reason for Dumbbell Bench Press" });
   fireEvent.change(within(reason).getByLabelText("Optional reason"), { target: { value: "Pain or discomfort" } });
   fireEvent.click(within(reason).getByRole("button", { name: "Save skipped exercise" }));
@@ -448,7 +448,7 @@ test("keeps Roadmap actions compact, edits one exercise, and persists skip detai
   expect(localStorage.getItem("plannedWorkouts")).toBe(savedPlan);
 });
 
-test("Roadmap expands only one exercise editor and remains contained at 390px", () => {
+test("Roadmap advances to the next exercise editor and remains contained at 390px", () => {
   const originalWidth = Object.getOwnPropertyDescriptor(window, "innerWidth");
   Object.defineProperty(window, "innerWidth", { configurable: true, value: 390 });
   const firstPlan = plannedExecution();
@@ -482,6 +482,10 @@ test("Roadmap expands only one exercise editor and remains contained at 390px", 
 
   const first = screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" });
   const second = screen.getByRole("article", { name: "Roadmap exercise Chest Dip With A Deliberately Long Exercise Name" });
+  fireEvent.click(within(first).getByRole("button", { name: "Complete Exercise" }));
+  expect(first).toHaveAttribute("data-roadmap-status", "completed");
+  expect(screen.getByRole("region", { name: "Edit Chest Dip With A Deliberately Long Exercise Name sets" })).toBeInTheDocument();
+
   fireEvent.click(within(first).getByRole("button", { name: "Edit" }));
   expect(screen.getByRole("region", { name: "Edit Dumbbell Bench Press sets" })).toBeInTheDocument();
   expect(screen.queryByRole("region", { name: "Edit Chest Dip With A Deliberately Long Exercise Name sets" })).not.toBeInTheDocument();
@@ -518,7 +522,7 @@ test("a Today-origin Roadmap provides standardized Today navigation and returns 
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Today's Schedule" })[0]);
   expect(onReturnToToday).toHaveBeenCalledTimes(1);
   fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
-    .getByRole("button", { name: "Completed" }));
+    .getByRole("button", { name: "Complete Exercise" }));
   submitWorkout();
 
   expect(view.saveWorkoutEntry).toHaveBeenCalledTimes(1);
@@ -542,7 +546,7 @@ test("a Calendar-origin Roadmap exposes calendar navigation and returns there af
   expect(onReturnToCalendar).toHaveBeenCalledTimes(1);
 
   fireEvent.click(within(screen.getByRole("article", { name: "Roadmap exercise Dumbbell Bench Press" }))
-    .getByRole("button", { name: "Completed" }));
+    .getByRole("button", { name: "Complete Exercise" }));
   submitWorkout();
   expect(view.saveWorkoutEntry).toHaveBeenCalledTimes(1);
   expect(onReturnToCalendar).toHaveBeenCalledTimes(2);
@@ -908,7 +912,8 @@ test("a template-origin draft uses the focused editor and returns without discar
   fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
   expect(screen.getByRole("button", { name: "Expand Exercise: Incline Dumbbell Press" }))
     .toBeInTheDocument();
-  expect(screen.getByLabelText("Exercise 2 name")).toHaveFocus();
+  expect(screen.queryByLabelText("Exercise 2 name")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Expand Exercise: Exercise 2" })).toHaveFocus();
 
   fireEvent.click(screen.getByRole("button", { name: "Back to Workout Templates" }));
   expect(screen.getByRole("heading", { name: "Workout Templates" })).toBeInTheDocument();
@@ -942,6 +947,179 @@ test("a template-origin draft uses the focused editor and returns without discar
   } finally {
     confirmDiscard.mockRestore();
   }
+});
+
+test("template progress validates, persists through template browsing and reload, and reopens with edits intact", async () => {
+  const saved = workoutTemplate();
+  const templateBefore = JSON.parse(JSON.stringify(saved));
+  const draft = createWorkoutDraftFromTemplate(
+    saved,
+    new Date(2026, 8, 4, 12, 30),
+    { originPage: "workout-templates", originTemplateId: saved.id }
+  );
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  const props = renderPageProps({ workoutTemplates: [saved] });
+  const first = render(<WorkoutPage {...props} />);
+  const exercise = screen.getByRole("region", { name: "Exercise 1" });
+
+  expect(exercise).toHaveAttribute("data-roadmap-status", "pending");
+  expect(within(exercise).getByRole("button", { name: "Complete Exercise" })).toBeInTheDocument();
+  expect(within(exercise).getByRole("button", { name: "Skip Exercise" })).toBeInTheDocument();
+  fireEvent.click(within(exercise).getByRole("button", { name: "Skip Exercise" }));
+  expect(within(exercise).getByRole("region", { name: "Skip reason for Incline Press" }))
+    .toBeInTheDocument();
+  expect(screen.queryByLabelText("Exercise 1 set 1 reps")).not.toBeInTheDocument();
+  fireEvent.click(within(exercise).getByRole("button", { name: "Cancel" }));
+  expect(exercise).toHaveAttribute("data-roadmap-status", "pending");
+  expect(screen.queryByRole("region", { name: "Skip reason for Incline Press" }))
+    .not.toBeInTheDocument();
+  expect(within(exercise).getByRole("button", { name: "Expand Exercise: Incline Press" }))
+    .toHaveFocus();
+  fireEvent.click(within(exercise).getByRole("button", { name: "Expand Exercise: Incline Press" }));
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "" } });
+  fireEvent.click(within(exercise).getByRole("button", { name: "Complete Exercise" }));
+  expect(exercise).toHaveAttribute("data-roadmap-status", "pending");
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Enter a whole-number reps count for exercise 1, set 1."
+  );
+  expect(screen.queryByLabelText("Exercise 1 set 1 reps")).not.toBeInTheDocument();
+  expect(within(exercise).getByRole("button", { name: "Expand Exercise: Incline Press" }))
+    .toHaveFocus();
+
+  fireEvent.click(within(exercise).getByRole("button", { name: "Expand Exercise: Incline Press" }));
+  fireEvent.change(screen.getByLabelText("Exercise 1 set 1 reps"), { target: { value: "11" } });
+  fireEvent.click(within(exercise).getByRole("button", { name: "Complete Exercise" }));
+  expect(exercise).toHaveAttribute("data-roadmap-status", "completed");
+  expect(within(exercise).getByRole("status")).toHaveTextContent("Completed");
+  expect(within(exercise).getByRole("button", { name: "Expand Exercise: Incline Press" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to Workout Templates" }));
+  expect((await storedDraft()).form.exercises[0]).toMatchObject({
+    roadmapStatus: "completed",
+    sets: [expect.objectContaining({ reps: "11" })],
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Resume Active Workout" }));
+  fireEvent.click(within(screen.getByRole("region", { name: "Exercise 1" }))
+    .getByRole("button", { name: "Reopen Exercise" }));
+  expect(screen.queryByLabelText("Exercise 1 set 1 reps")).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Expand Exercise: Incline Press" })).toHaveFocus();
+  fireEvent.click(screen.getByRole("button", { name: "Expand Exercise: Incline Press" }));
+  expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(11);
+  expect(screen.getByRole("region", { name: "Exercise 1" }))
+    .toHaveAttribute("data-roadmap-status", "pending");
+
+  first.unmount();
+  render(<WorkoutPage {...props} />);
+  expect(screen.getByLabelText("Exercise 1 set 1 reps")).toHaveValue(11);
+  expect(screen.getByRole("region", { name: "Exercise 1" }))
+    .toHaveAttribute("data-roadmap-status", "pending");
+  expect(localStorage.getItem("plannedWorkouts")).toBeNull();
+  expect(saved).toEqual(templateBefore);
+});
+
+test("template progress focuses and instantly scrolls to the next compact card with reduced motion", () => {
+  const saved = workoutTemplate();
+  saved.exercises = [
+    saved.exercises[0],
+    {
+      ...saved.exercises[0],
+      id: "workout-template-exercise:second",
+      name: "Second Exercise",
+      targetSets: saved.exercises[0].targetSets.map((set) => ({
+        ...set,
+        id: "workout-template-set:second",
+      })),
+    },
+  ];
+  const draft = createWorkoutDraftFromTemplate(
+    saved,
+    new Date(2026, 8, 4, 12, 30),
+    { originPage: "workout-templates", originTemplateId: saved.id }
+  );
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  render(
+    <div className="trace-app-shell" data-motion="reduced">
+      <WorkoutPage {...renderPageProps({ workoutTemplates: [saved] })} />
+    </div>
+  );
+
+  const first = screen.getByRole("region", { name: "Exercise 1" });
+  const second = screen.getByRole("region", { name: "Exercise 2" });
+  jest.spyOn(second, "getBoundingClientRect").mockReturnValue({
+    top: window.innerHeight + 10,
+    bottom: window.innerHeight + 210,
+    left: 0,
+    right: 300,
+    width: 300,
+    height: 200,
+    x: 0,
+    y: window.innerHeight + 10,
+    toJSON: () => {},
+  });
+  Element.prototype.scrollIntoView.mockClear();
+
+  fireEvent.click(within(first).getByRole("button", { name: "Complete Exercise" }));
+
+  expect(screen.queryByLabelText("Exercise 2 name")).not.toBeInTheDocument();
+  expect(within(second).getByRole("button", { name: "Expand Exercise: Second Exercise" }))
+    .toHaveFocus();
+  expect(Element.prototype.scrollIntoView).toHaveBeenLastCalledWith({
+    behavior: "auto",
+    block: "nearest",
+  });
+});
+
+test("template-added exercises keep stable progress through reorder and remove without orphaned context", async () => {
+  const saved = workoutTemplate();
+  const draft = createWorkoutDraftFromTemplate(
+    saved,
+    new Date(2026, 8, 4, 12, 30),
+    { originPage: "workout-templates", originTemplateId: saved.id }
+  );
+  localStorage.setItem(WORKOUT_DRAFT_STORAGE_KEY, JSON.stringify(draft));
+  render(<WorkoutPage {...renderPageProps({ workoutTemplates: [saved] })} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Add Exercise" }));
+  let addedId;
+  await waitFor(() => {
+    const persisted = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+    expect(persisted.form.exercises).toHaveLength(2);
+    addedId = persisted.form.exercises[1].id;
+  });
+  const added = screen.getByRole("region", { name: "Exercise 2" });
+  expect(added).toHaveAttribute("data-roadmap-status", "pending");
+  expect(screen.queryByLabelText("Exercise 2 name")).not.toBeInTheDocument();
+  expect(within(added).getByRole("button", { name: "Expand Exercise: Exercise 2" })).toHaveFocus();
+  fireEvent.click(within(added).getByRole("button", { name: "Expand Exercise: Exercise 2" }));
+  fireEvent.change(screen.getByLabelText("Exercise 2 name"), { target: { value: "Added Row" } });
+  fireEvent.change(screen.getByLabelText("Exercise 2 set 1 reps"), { target: { value: "12" } });
+  fireEvent.change(screen.getByLabelText("Exercise 2 set 1 weight"), { target: { value: "85" } });
+  fireEvent.click(screen.getByRole("button", { name: "Move exercise 2 up" }));
+
+  const moved = screen.getByRole("region", { name: "Exercise 1" });
+  expect(within(moved).getByLabelText("Exercise 1 name")).toHaveValue("Added Row");
+  fireEvent.click(within(moved).getByRole("button", { name: "Skip Exercise" }));
+  fireEvent.click(within(moved).getByRole("button", { name: "Skip without reason" }));
+  expect(moved).toHaveAttribute("data-roadmap-status", "skipped");
+  expect(within(moved).queryByLabelText("Exercise 1 name")).not.toBeInTheDocument();
+
+  fireEvent.click(within(moved).getByRole("button", { name: "Reopen Exercise" }));
+  expect(moved).toHaveAttribute("data-roadmap-status", "pending");
+  expect(within(moved).queryByLabelText("Exercise 1 name")).not.toBeInTheDocument();
+  expect(within(moved).getByRole("button", { name: "Expand Exercise: Added Row" })).toHaveFocus();
+  fireEvent.click(within(moved).getByRole("button", { name: "Expand Exercise: Added Row" }));
+  fireEvent.click(within(moved).getByRole("button", { name: "Remove exercise 1" }));
+  await waitFor(() => {
+    const persisted = JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY));
+    expect(persisted.form.exercises).toHaveLength(1);
+    expect(persisted.form.exercises.some(({ id }) => id === addedId)).toBe(false);
+    expect(persisted.context.collapsedExerciseIds).not.toContain(addedId);
+    expect(persisted.context.roadmapEditingExerciseId).not.toBe(addedId);
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Save Workout" }));
+  expect(screen.getByRole("heading", { name: "Workout Templates" })).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem(WORKOUT_DRAFT_STORAGE_KEY)))
+    .not.toHaveProperty("plannedWorkoutId");
 });
 
 test("template Start Now reuses active-draft collision choices", () => {

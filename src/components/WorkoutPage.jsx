@@ -269,6 +269,62 @@ function WorkoutResultFields({
   );
 }
 
+function WorkoutExerciseProgressControls({
+  exercise,
+  status,
+  isChoosingSkipReason,
+  roadmapSkipReason,
+  roadmapCustomReason,
+  onComplete,
+  onReopen,
+  onToggleSkip,
+  onSkipReasonChange,
+  onCustomReasonChange,
+  onSaveSkip,
+  onCancelSkip,
+  isEditing = false,
+  onToggleEdit = null,
+  formInputStyle,
+  smallButtonStyle,
+}) {
+  const isProcessed = status === "completed" || status === "skipped";
+  return (
+    <>
+      <div className="trace-workout-roadmap__actions" aria-label={`${exercise.name} roadmap actions`}>
+        {isProcessed ? (
+          <button className="trace-action trace-action--secondary" type="button" onClick={onReopen} style={smallButtonStyle}>Reopen Exercise</button>
+        ) : (
+          <>
+            <button className="trace-action trace-action--secondary" type="button" onClick={onComplete} style={smallButtonStyle}>Complete Exercise</button>
+            <button className="trace-action trace-action--secondary" type="button" aria-expanded={isChoosingSkipReason} onClick={onToggleSkip} style={smallButtonStyle}>Skip Exercise</button>
+          </>
+        )}
+        {onToggleEdit && (
+          <button className="trace-action trace-action--secondary" type="button" aria-expanded={isEditing} aria-controls={`roadmap-exercise-editor-${exercise.id}`} onClick={onToggleEdit} style={smallButtonStyle}>Edit</button>
+        )}
+      </div>
+      {isChoosingSkipReason && !isProcessed && (
+        <section className="trace-workout-roadmap__skip" aria-label={`Skip reason for ${exercise.name}`}>
+          <label>
+            Optional reason
+            <select value={roadmapSkipReason} onChange={(event) => onSkipReasonChange(event.target.value)} style={formInputStyle}>
+              <option value="">No reason</option>
+              {EXERCISE_SKIP_REASONS.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
+              <option value="Other">Other / custom reason</option>
+            </select>
+          </label>
+          {roadmapSkipReason === "Other" && <label>Custom reason<input value={roadmapCustomReason} onChange={(event) => onCustomReasonChange(event.target.value)} style={formInputStyle} /></label>}
+          <div className="trace-workout-roadmap__actions">
+            <button className="trace-action trace-action--primary" type="button" onClick={() => onSaveSkip(false)} style={smallButtonStyle}>Save skipped exercise</button>
+            <button className="trace-action trace-action--secondary" type="button" onClick={() => onSaveSkip(true)} style={smallButtonStyle}>Skip without reason</button>
+            <button className="trace-action trace-action--secondary" type="button" onClick={onCancelSkip} style={smallButtonStyle}>Cancel</button>
+          </div>
+        </section>
+      )}
+    </>
+  );
+}
+
 function completedSetDescription(set) {
   const load = set.load.mode === "bodyweight"
     ? "Bodyweight"
@@ -557,6 +613,18 @@ function WorkoutPage({
       };
     }
     return workoutOriginPageRef.current === "today" ? { originPage: "today" } : {};
+  }
+
+  function isActiveExerciseProgressWorkout() {
+    return editingEntryId === null && (
+      Boolean(plannedWorkoutIdRef.current)
+      || workoutOriginPageRef.current === "workout-templates"
+    );
+  }
+
+  function isTemplateExerciseProgressWorkout() {
+    return editingEntryId === null
+      && workoutOriginPageRef.current === "workout-templates";
   }
 
   function focusOriginatingTemplate(templateId) {
@@ -879,21 +947,31 @@ function WorkoutPage({
   }
 
   function addExercise() {
-    const addedExercise = emptyExercise();
+    const isTemplateProgressWorkout = isTemplateExerciseProgressWorkout();
+    const addedExercise = {
+      ...emptyExercise(),
+      ...(isActiveExerciseProgressWorkout()
+        ? { roadmapStatus: "pending", roadmapSkipReason: "" }
+        : {}),
+    };
     const previousExerciseId = exercises.some(({ id }) => id === activeExerciseIdRef.current)
       ? activeExerciseIdRef.current
       : exercises[exercises.length - 1]?.id;
     setCollapsedExerciseIds((collapsed) => {
+      if (isTemplateProgressWorkout) {
+        return new Set([...exercises.map(({ id }) => id), addedExercise.id]);
+      }
       const next = new Set(collapsed);
       if (previousExerciseId) next.add(previousExerciseId);
       next.delete(addedExercise.id);
       return next;
     });
     setExercises((current) => [...current, addedExercise]);
+    if (isTemplateProgressWorkout) setRoadmapEditingExerciseId(null);
     activeExerciseIdRef.current = addedExercise.id;
     pendingExerciseOrientationRef.current = {
       exerciseId: addedExercise.id,
-      focusName: true,
+      focusName: !isTemplateProgressWorkout,
       alwaysScroll: true,
     };
     markChanged();
@@ -901,6 +979,8 @@ function WorkoutPage({
 
   function removeExercise(exerciseId) {
     setExercises((current) => current.filter(({ id }) => id !== exerciseId));
+    setRoadmapEditingExerciseId((current) => current === exerciseId ? null : current);
+    setRoadmapSkipExerciseId((current) => current === exerciseId ? null : current);
     setCollapsedExerciseIds((current) => {
       if (!current.has(exerciseId)) return current;
       const next = new Set(current);
@@ -918,10 +998,12 @@ function WorkoutPage({
       next.add(exerciseId);
       return next;
     });
+    setRoadmapEditingExerciseId((current) => current === exerciseId ? null : current);
   }
 
   function expandExercise(exerciseId) {
     activeExerciseIdRef.current = exerciseId;
+    if (isActiveExerciseProgressWorkout()) setRoadmapEditingExerciseId(exerciseId);
     setCollapsedExerciseIds((current) => {
       if (workoutOriginPageRef.current === "workout-templates" && editingEntryId === null) {
         return new Set(exercises
@@ -1199,16 +1281,18 @@ function WorkoutPage({
   function saveWorkout(event) {
     event.preventDefault();
     const workoutDraft = draft();
-    const isActivePlannedRoadmap = editingEntryId === null
-      && Boolean(plannedWorkoutIdRef.current);
-    const plannedRoadmapIsComplete = isActivePlannedRoadmap
+    const isActiveProgressWorkout = isActiveExerciseProgressWorkout();
+    const exerciseProgressIsComplete = isActiveProgressWorkout
+      && exercises.length > 0
       && exercises.every(({ roadmapStatus }) =>
         roadmapStatus === "completed" || roadmapStatus === "skipped"
       );
-    if (isActivePlannedRoadmap && !plannedRoadmapIsComplete) {
+    if (isActiveProgressWorkout && !exerciseProgressIsComplete) {
       const persistedDraft = {
         schemaVersion: WORKOUT_DRAFT_SCHEMA_VERSION,
-        plannedWorkoutId: plannedWorkoutIdRef.current,
+        ...(plannedWorkoutIdRef.current
+          ? { plannedWorkoutId: plannedWorkoutIdRef.current }
+          : {}),
         startedAt: startedAtRef.current,
         updatedAt: new Date().toISOString(),
         form: {
@@ -1339,7 +1423,7 @@ function WorkoutPage({
       const returnToSchedule = savedEditingEntryId === null
         && Boolean(plannedWorkoutIdRef.current)
         && Boolean(workoutOriginPageRef.current)
-        && plannedRoadmapIsComplete;
+        && exerciseProgressIsComplete;
       const returnToTemplates = savedEditingEntryId === null
         && workoutOriginPageRef.current === "workout-templates";
       resetForm({ clearDraft: savedEditingEntryId === null });
@@ -1678,13 +1762,97 @@ function WorkoutPage({
     }
   }
 
+  function compactTemplateExercises(focusExerciseId = null, { alwaysScroll = false } = {}) {
+    setRoadmapEditingExerciseId(null);
+    setCollapsedExerciseIds(new Set(exercises.map(({ id }) => id)));
+    if (!focusExerciseId) return;
+    pendingExerciseOrientationRef.current = {
+      exerciseId: focusExerciseId,
+      focusName: false,
+      alwaysScroll,
+    };
+    activeExerciseIdRef.current = focusExerciseId;
+  }
+
+  function cancelRoadmapExerciseSkip(exerciseId) {
+    setRoadmapSkipExerciseId(null);
+    setRoadmapSkipReason("");
+    setRoadmapCustomReason("");
+    if (isTemplateExerciseProgressWorkout()) {
+      compactTemplateExercises(exerciseId);
+    }
+  }
+
+  function advanceProgressAfter(exerciseId) {
+    const currentIndex = exercises.findIndex(({ id }) => id === exerciseId);
+    const orderedCandidates = currentIndex < 0
+      ? exercises
+      : [...exercises.slice(currentIndex + 1), ...exercises.slice(0, currentIndex)];
+    const nextExercise = orderedCandidates.find(({ id, roadmapStatus }) =>
+      id !== exerciseId && (roadmapStatus || "pending") === "pending"
+    );
+    if (!isTemplateExerciseProgressWorkout()) {
+      setRoadmapEditingExerciseId(nextExercise?.id || null);
+      return;
+    }
+    compactTemplateExercises(nextExercise?.id || null);
+  }
+
+  function keepTemplateExerciseCompact(exerciseId, options) {
+    if (!isTemplateExerciseProgressWorkout()) return;
+    compactTemplateExercises(exerciseId, options);
+  }
+
+  function closeTemplateEditorForSkip(exerciseId) {
+    if (!isTemplateExerciseProgressWorkout()) return;
+    setRoadmapEditingExerciseId(null);
+    setCollapsedExerciseIds(new Set(exercises.map(({ id }) => id)));
+    activeExerciseIdRef.current = exerciseId;
+  }
+
   function completeRoadmapExercise(exerciseId) {
+    const exerciseIssue = workoutOriginPageRef.current === "workout-templates"
+      ? getWorkoutEntryIssues({
+          ...draft(),
+          exercises: exercises.map((exercise) => exercise.id === exerciseId
+            ? { ...exercise, roadmapStatus: "pending" }
+            : exercise),
+        }).find((issue) => issue.exerciseId === exerciseId)
+      : null;
+    if (exerciseIssue) {
+      setValidationAttempted(true);
+      setFormError(exerciseIssue.message);
+      keepTemplateExerciseCompact(exerciseId, { alwaysScroll: true });
+      return;
+    }
     updateExercise(exerciseId, (exercise) => ({
       ...exercise,
-      roadmapStatus: exercise.roadmapStatus === "completed" ? "pending" : "completed",
+      roadmapStatus: "completed",
+      roadmapSkipReason: "",
+    }));
+    setValidationAttempted(false);
+    setFormError("");
+    setRoadmapSkipExerciseId(null);
+    advanceProgressAfter(exerciseId);
+  }
+
+  function reopenRoadmapExercise(exerciseId) {
+    updateExercise(exerciseId, (exercise) => ({
+      ...exercise,
+      roadmapStatus: "pending",
       roadmapSkipReason: "",
     }));
     setRoadmapSkipExerciseId(null);
+    setRoadmapSkipReason("");
+    setRoadmapCustomReason("");
+    keepTemplateExerciseCompact(exerciseId);
+  }
+
+  function toggleRoadmapExerciseSkip(exerciseId) {
+    setRoadmapSkipExerciseId((current) => current === exerciseId ? null : exerciseId);
+    setRoadmapSkipReason("");
+    setRoadmapCustomReason("");
+    closeTemplateEditorForSkip(exerciseId);
   }
 
   function saveRoadmapExerciseSkip(exerciseId, withoutReason = false) {
@@ -1701,6 +1869,9 @@ function WorkoutPage({
     setRoadmapSkipExerciseId(null);
     setRoadmapSkipReason("");
     setRoadmapCustomReason("");
+    setValidationAttempted(false);
+    setFormError("");
+    advanceProgressAfter(exerciseId);
   }
 
   const isPlannedRoadmap = editingEntryId === null && Boolean(plannedWorkoutIdRef.current);
@@ -1721,10 +1892,13 @@ function WorkoutPage({
     && editingEntryId === null
     && isLoggingOpen
     && !templateWorkoutFocused;
+  const isExerciseProgressWorkout = isPlannedRoadmap || isTemplateWorkoutFocused;
   const isFocusedActiveWorkout = isPlannedRoadmap || isTemplateWorkoutFocused;
   const showActiveWorkoutEditor = isLoggingOpen && !isTemplateWorkoutBrowsing;
   const volume = isPlannedRoadmap ? roadmapVolume(exercises) : null;
-  const plannedRoadmapIsCompleteNow = isPlannedRoadmap && exercises.every(
+  const exerciseProgressIsCompleteNow = isExerciseProgressWorkout
+    && exercises.length > 0
+    && exercises.every(
     ({ roadmapStatus }) => roadmapStatus === "completed" || roadmapStatus === "skipped"
   );
   const leaveWorkout = returnsToOrigin && !isTemplateWorkoutBrowsing
@@ -1856,7 +2030,7 @@ function WorkoutPage({
                       <h3>{exercise.name}</h3>
                       <p>{plannedSets.length} {plannedSets.length === 1 ? "planned set" : "planned sets"}</p>
                     </div>
-                    {status !== "pending" && <span className="trace-badge">{status === "completed" ? "Completed" : "Skipped"}</span>}
+                    {status !== "pending" && <span className="trace-badge" role="status" aria-live="polite">{status === "completed" ? "Completed" : "Skipped"}</span>}
                   </div>
                   {plannedSets.length > 0 ? (
                     <ul className="trace-workout-roadmap__set-summary" aria-label={`${exercise.name} planned set summary`}>
@@ -1864,29 +2038,24 @@ function WorkoutPage({
                     </ul>
                   ) : <p className="trace-workout-roadmap__empty">No planned sets.</p>}
                   {status === "skipped" && exercise.roadmapSkipReason && <p className="trace-workout-roadmap__reason">Reason: {exercise.roadmapSkipReason}</p>}
-                  <div className="trace-workout-roadmap__actions" aria-label={`${exercise.name} roadmap actions`}>
-                    <button className="trace-action trace-action--secondary" type="button" aria-pressed={status === "completed"} onClick={() => completeRoadmapExercise(exercise.id)} style={smallButtonStyle}>Completed</button>
-                    <button className="trace-action trace-action--secondary" type="button" aria-expanded={isChoosingSkipReason} onClick={() => { setRoadmapSkipExerciseId((current) => current === exercise.id ? null : exercise.id); setRoadmapSkipReason(""); setRoadmapCustomReason(""); }} style={smallButtonStyle}>Skipped</button>
-                    <button className="trace-action trace-action--secondary" type="button" aria-expanded={isEditing} aria-controls={`roadmap-exercise-editor-${exercise.id}`} onClick={() => setRoadmapEditingExerciseId((current) => current === exercise.id ? null : exercise.id)} style={smallButtonStyle}>Edit</button>
-                  </div>
-                  {isChoosingSkipReason && (
-                    <section className="trace-workout-roadmap__skip" aria-label={`Skip reason for ${exercise.name}`}>
-                      <label>
-                        Optional reason
-                        <select value={roadmapSkipReason} onChange={(event) => setRoadmapSkipReason(event.target.value)} style={formInputStyle}>
-                          <option value="">No reason</option>
-                          {EXERCISE_SKIP_REASONS.map((reason) => <option key={reason} value={reason}>{reason}</option>)}
-                          <option value="Other">Other / custom reason</option>
-                        </select>
-                      </label>
-                      {roadmapSkipReason === "Other" && <label>Custom reason<input value={roadmapCustomReason} onChange={(event) => setRoadmapCustomReason(event.target.value)} style={formInputStyle} /></label>}
-                      <div className="trace-workout-roadmap__actions">
-                        <button className="trace-action trace-action--primary" type="button" onClick={() => saveRoadmapExerciseSkip(exercise.id)} style={smallButtonStyle}>Save skipped exercise</button>
-                        <button className="trace-action trace-action--secondary" type="button" onClick={() => saveRoadmapExerciseSkip(exercise.id, true)} style={smallButtonStyle}>Skip without reason</button>
-                        <button className="trace-action trace-action--secondary" type="button" onClick={() => setRoadmapSkipExerciseId(null)} style={smallButtonStyle}>Cancel</button>
-                      </div>
-                    </section>
-                  )}
+                  <WorkoutExerciseProgressControls
+                    exercise={exercise}
+                    status={status}
+                    isChoosingSkipReason={isChoosingSkipReason}
+                    roadmapSkipReason={roadmapSkipReason}
+                    roadmapCustomReason={roadmapCustomReason}
+                    onComplete={() => completeRoadmapExercise(exercise.id)}
+                    onReopen={() => reopenRoadmapExercise(exercise.id)}
+                    onToggleSkip={() => toggleRoadmapExerciseSkip(exercise.id)}
+                    onSkipReasonChange={setRoadmapSkipReason}
+                    onCustomReasonChange={setRoadmapCustomReason}
+                    onSaveSkip={(withoutReason) => saveRoadmapExerciseSkip(exercise.id, withoutReason)}
+                    onCancelSkip={cancelRoadmapExerciseSkip.bind(null, exercise.id)}
+                    isEditing={isEditing}
+                    onToggleEdit={() => setRoadmapEditingExerciseId((current) => current === exercise.id ? null : exercise.id)}
+                    formInputStyle={formInputStyle}
+                    smallButtonStyle={smallButtonStyle}
+                  />
                   {isEditing && (
                     <section id={`roadmap-exercise-editor-${exercise.id}`} className="trace-workout-roadmap__editor" aria-label={`Edit ${exercise.name} sets`}>
                       {exercise.sets.map((set, setIndex) => (
@@ -1928,7 +2097,7 @@ function WorkoutPage({
           {formError && <p role="alert" style={{ color: "#fca5a5" }}>{formError}</p>}
           <div className="trace-workout-roadmap__finish-actions">
             <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
-              {plannedRoadmapIsCompleteNow && !completionReview ? "Finish Workout" : "Save Workout"}
+              {exerciseProgressIsCompleteNow && !completionReview ? "Finish Workout" : "Save Workout"}
             </button>
             {completionReview && (
               <button className="trace-action trace-action--secondary" type="button" onClick={() => setCompletionReview(false)} style={buttonStyle}>Continue Workout</button>
@@ -2027,6 +2196,10 @@ function WorkoutPage({
           const detailId = `workout-exercise-details-${exercise.id}`;
           const missingInformationId = `workout-exercise-missing-${exercise.id}`;
           const displayName = exercise.name.trim() || `Exercise ${exerciseIndex + 1}`;
+          const status = isTemplateWorkoutFocused
+            ? (exercise.roadmapStatus || "pending")
+            : null;
+          const isChoosingSkipReason = roadmapSkipExerciseId === exercise.id;
           const exerciseHasMissingInformation = validationIssues.some(
             ({ exerciseId }) => exerciseId === exercise.id
           );
@@ -2040,6 +2213,7 @@ function WorkoutPage({
               else exerciseCardRefs.current.delete(exercise.id);
             }}
             aria-label={`Exercise ${exerciseIndex + 1}`}
+            data-roadmap-status={status || undefined}
             data-missing-information={exerciseHasMissingInformation || undefined}
             onFocusCapture={() => { activeExerciseIdRef.current = exercise.id; }}
             style={{
@@ -2049,6 +2223,11 @@ function WorkoutPage({
               padding: "18px",
             }}
           >
+            {status !== null && status !== "pending" && (
+              <span className="trace-badge" role="status" aria-live="polite">
+                {status === "completed" ? "Completed" : "Skipped"}
+              </span>
+            )}
             {collapsed ? (
               <div className="trace-workout-exercise__collapsed-summary">
                 <div className="trace-workout-exercise__collapsed-copy">
@@ -2387,6 +2566,32 @@ function WorkoutPage({
             </div>
             </div>
             )}
+            {isTemplateWorkoutFocused && collapsed && exercise.sets.length > 0 && (
+              <ul className="trace-workout-roadmap__set-summary" aria-label={`${displayName} set summary`}>
+                {exercise.sets.map((set) => <li key={set.id}>{roadmapSetSummary(set)}</li>)}
+              </ul>
+            )}
+            {isTemplateWorkoutFocused && status === "skipped" && exercise.roadmapSkipReason && (
+              <p className="trace-workout-roadmap__reason">Reason: {exercise.roadmapSkipReason}</p>
+            )}
+            {isTemplateWorkoutFocused && (
+              <WorkoutExerciseProgressControls
+                exercise={exercise}
+                status={status}
+                isChoosingSkipReason={isChoosingSkipReason}
+                roadmapSkipReason={roadmapSkipReason}
+                roadmapCustomReason={roadmapCustomReason}
+                onComplete={() => completeRoadmapExercise(exercise.id)}
+                onReopen={() => reopenRoadmapExercise(exercise.id)}
+                onToggleSkip={() => toggleRoadmapExerciseSkip(exercise.id)}
+                onSkipReasonChange={setRoadmapSkipReason}
+                onCustomReasonChange={setRoadmapCustomReason}
+                onSaveSkip={(withoutReason) => saveRoadmapExerciseSkip(exercise.id, withoutReason)}
+                onCancelSkip={cancelRoadmapExerciseSkip.bind(null, exercise.id)}
+                formInputStyle={formInputStyle}
+                smallButtonStyle={smallButtonStyle}
+              />
+            )}
           </section>
           );
         })}
@@ -2440,6 +2645,8 @@ function WorkoutPage({
           <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
             {editingEntryId !== null
               ? "Save Changes"
+              : isTemplateWorkoutFocused && !exerciseProgressIsCompleteNow
+                ? "Save Workout"
               : completionReview
                 ? "Save Workout"
                 : timingMode === "live"

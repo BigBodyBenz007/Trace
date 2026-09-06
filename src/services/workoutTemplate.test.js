@@ -116,11 +116,29 @@ test("persists a template-focused origin without changing the reusable template"
     originTemplateId: saved.id,
     collapsedExerciseIds: draft.form.exercises.map(({ id }) => id),
   });
+  expect(draft).not.toHaveProperty("plannedWorkoutId");
+  expect(draft.form.exercises).toEqual(expect.arrayContaining([
+    expect.objectContaining({ roadmapStatus: "pending", roadmapSkipReason: "" }),
+  ]));
   expect(normalizeWorkoutDraft(draft).context).toMatchObject({
     originPage: "workout-templates",
     originTemplateId: saved.id,
     collapsedExerciseIds: draft.form.exercises.map(({ id }) => id),
   });
+  const explicitEmptyProgress = JSON.parse(JSON.stringify(draft));
+  explicitEmptyProgress.context.collapsedExerciseIds = [];
+  expect(normalizeWorkoutDraft(explicitEmptyProgress).context.collapsedExerciseIds).toEqual([]);
+
+  const legacyTemplateDraft = JSON.parse(JSON.stringify(draft));
+  legacyTemplateDraft.form.exercises.forEach((exercise) => {
+    delete exercise.roadmapStatus;
+    delete exercise.roadmapSkipReason;
+  });
+  expect(normalizeWorkoutDraft(legacyTemplateDraft).form.exercises).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ roadmapStatus: "pending", roadmapSkipReason: "" }),
+    ])
+  );
   expect(createWorkoutDraftFromTemplate(saved, new Date(), {
     originPage: "workout-templates",
   })).toBeNull();
