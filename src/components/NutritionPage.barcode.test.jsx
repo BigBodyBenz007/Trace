@@ -1,6 +1,12 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import NutritionPage from "./NutritionPage";
 import { createUserFood } from "../services/userFoodCatalog";
+import { decodeBarcodePhoto } from "../services/barcodePhoto";
+
+jest.mock("../services/barcodePhoto", () => ({
+  ...jest.requireActual("../services/barcodePhoto"),
+  decodeBarcodePhoto: jest.fn(),
+}));
 
 const originalScrollTo = window.scrollTo;
 
@@ -159,6 +165,38 @@ test("scanner confirmation populates the editable form without auto-saving", asy
   expect(form.getByLabelText("Fat (g)")).toHaveValue(0);
   expect(form.getByLabelText("Fiber (g)")).toHaveValue(null);
   expect(screen.getByText(/One serving: 1 cup \(30 g\)/i)).toBeInTheDocument();
+});
+
+test.each(["live", "photo"])("%s decoding uses the same serving review, editable form, and saved provenance", async (source) => {
+  let detect;
+  const barcodeCamera = { start: jest.fn(async ({ onDetected }) => {
+    detect = onDetected;
+    return { devices: [], stop: jest.fn() };
+  }) };
+  decodeBarcodePhoto.mockResolvedValue({ status: "found", value: "00012345600012" });
+  const { lookup, saveNutritionEntry } = setup({ barcodeCamera });
+  fireEvent.click(screen.getByRole("button", { name: "Scan Barcode" }));
+  await screen.findByText(/Camera active/);
+  if (source === "live") await act(async () => detect("00012345600012"));
+  else fireEvent.change(screen.getByLabelText("Barcode photo"), {
+    target: { files: [new File(["photo"], "barcode.jpg", { type: "image/jpeg" })] },
+  });
+  const review = await screen.findByRole("article", { name: "Barcode product review" });
+  expect(review).toHaveTextContent("1 cup (30 g)");
+  expect(lookup).toHaveBeenCalledTimes(1);
+  expect(lookup).toHaveBeenCalledWith("00012345600012");
+  expect(saveNutritionEntry).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Use This Food" }));
+  const form = entryForm();
+  expect(form.getByLabelText("Calories")).toHaveValue(30);
+  expect(form.getByLabelText("Fiber (g)")).toHaveValue(null);
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "2" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+  await waitFor(() => expect(saveNutritionEntry).toHaveBeenCalledTimes(1));
+  const saved = saveNutritionEntry.mock.calls[0][0];
+  expect(saved.calories).toBe(60);
+  expect(saved.foodReference).toMatchObject({ sourceType: "remote-barcode", modified: false, dataBasis: "serving" });
+  expect(saved.foodReference.providerNutritionBasis.selection.sourceNutrients.calories).toBe(100);
 });
 
 test("Nutrition consumes an unavailable feature-access decision", () => {

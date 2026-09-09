@@ -8,13 +8,15 @@ test("Privacy Policy exposes the audited local, camera, barcode, backup, retenti
   const main = screen.getByRole("main");
   expect(main).toHaveClass("trace-feature-page--legal");
   expect(within(main).getByRole("heading", { level: 1, name: "Trace Privacy Policy" })).toBeInTheDocument();
-  expect(within(main).getAllByText("September 5, 2026", { selector: "dd" })).toHaveLength(2);
+  expect(within(main).getByText("September 5, 2026", { selector: "dd" })).toBeInTheDocument();
+  expect(within(main).getByText("September 8, 2026", { selector: "dd" })).toBeInTheDocument();
   expect(within(main).getAllByText(/Benjamin J\. Martin/).length).toBeGreaterThan(0);
   expect(within(main).getByText(/no user accounts or cloud synchronization/i)).toBeInTheDocument();
   expect(within(main).getByText(/browser local storage/i)).toBeInTheDocument();
   expect(within(main).getByText(/IndexedDB database/i)).toBeInTheDocument();
   expect(within(main).getByText(/Journal Lock is optional and applies only/i)).toBeInTheDocument();
-  expect(within(main).getByText(/does not save or upload those camera images or video frames/i)).toBeInTheDocument();
+  expect(within(main).getByText(/does not save or upload those barcode photos, camera images, or video frames/i)).toBeInTheDocument();
+  expect(within(main).getByText(/photos chosen with Scan from Photo are processed on the device/i)).toBeInTheDocument();
   expect(within(main).getByText(/UPC, EAN, or GTIN barcode/i)).toBeInTheDocument();
   expect(within(main).getByText(/USDA FoodData Central first/i)).toBeInTheDocument();
   expect(within(main).getByText(/Open Food Facts when necessary/i)).toBeInTheDocument();

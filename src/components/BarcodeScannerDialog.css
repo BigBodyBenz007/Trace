@@ -133,7 +133,7 @@
   background: #02060a;
   border-radius: 10px;
   display: block;
-  object-fit: cover;
+  object-fit: contain;
   object-position: center;
   width: 100%;
 }

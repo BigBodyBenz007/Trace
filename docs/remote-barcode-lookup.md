@@ -2,7 +2,7 @@
 
 Trace's remote barcode foundation is separate from saved food history. The
 Nutrition scanner calls the browser orchestrator only after a user submits a
-barcode from the camera or manual input. The orchestrator resolves in this
+barcode from the camera, a locally decoded photo, or manual input. The orchestrator resolves in this
 order:
 
 1. Trace's committed, verified local barcode catalog.
@@ -89,8 +89,8 @@ an entitlement, account, subscription, or purchase. A future entitlement
 provider can replace this decision without changing the scanner or lookup
 contracts.
 
-Opening the scanner does not request camera permission. Camera access starts
-only after `Start Camera`, initially preferring the rear camera, and the user
+Choosing `Scan Barcode` opens the scanner and starts camera access automatically,
+initially preferring the rear camera (with an availability fallback to front). The user
 can switch to the front camera or another enumerated video input. Every acquired
 media track is stopped when the scanner closes, accepts a barcode, switches
 cameras, unmounts, or receives a background/suspending lifecycle event. Trace
@@ -98,11 +98,54 @@ does not save, cache, upload, or persist photos or video frames. Manual barcode
 entry remains available when camera access is unsupported, insecure, denied,
 busy, or unavailable.
 
-The camera decoder is dynamically loaded from `@zxing/browser` 0.2.1 only when
-camera use is requested. Native `BarcodeDetector` is not the sole path because
+The decoder is dynamically loaded from `@zxing/browser` 0.2.1 and its existing
+core, `@zxing/library` 0.23.0, when camera or photo decoding is requested.
+Native `BarcodeDetector` is not the sole path because
 it is not dependably available in iPhone Safari/PWA. Decoder output and manual
 input both pass through Trace's shared GTIN normalization and check-digit
 validation; UPC-E decoder output is not treated as GTIN-8.
+
+`Scan from Photo` opens the image picker; `Take Photo` uses a separate input
+with a rear-camera capture hint. The browser/OS controls the available picker
+and capture choices. Both stop live scanning and decode with the same local
+ZXing reader before entering the existing `submitBarcode` lookup/review flow.
+Selected files are never passed to the lookup service or saved to storage.
+Local object URLs are revoked, temporary canvases are cleared, and closing,
+canceling, or backgrounding discards pending decoding. File inputs reset after
+selection so the same photo can be tried again.
+
+Expected ZXing decode misses use the stable `getKind()` identifier instead of
+constructor names, which are minified in production builds. Ordinary misses
+therefore do not produce false camera errors or terminate photo retries.
+The reader receives supported formats at construction and uses `TRY_HARDER`
+for denser scan rows. Camera requests retain 1920×1080 ideal resolution even
+with explicit device selection; continuous focus is requested only when the
+track advertises support. Live frames cycle through bounded rotation/contrast
+passes without replacing the existing stream scanner or its cleanup controls.
+The preview contains the full camera frame instead of cropping it.
+
+Photo passes preserve browser-decoded EXIF orientation, composite on white,
+try three bounded scales and six angles, and retry with grayscale contrast.
+ZXing also reads scan rows in reverse, covering upside-down barcodes. Its
+0.2.1 canvas luminance adapter rotates the pixel buffer without updating its
+dimensions; Trace disables that implicit rotation and rotates real canvases
+instead. No image exceeds 2600 pixels on its long side during decoding;
+inputs over 25 MB or 64 megapixels are rejected. Browser-unsupported formats
+(including HEIC on some devices), corrupt images, invalid GTINs, and images
+without a detected barcode produce distinct feedback. Missing barcode detail
+from severe blur or glare cannot be reconstructed.
+
+For repeatable browser checks, build the app, install Playwright under
+`.tmp-browser`, then run `node scripts/verify-barcode-scanning.cjs`. The script
+tests Chromium and WebKit at 390×844 and 1440×1000 using generated local
+fixtures and a simulated camera stream. It verifies EXIF/rotation, mild blur,
+glare, small/low-contrast barcodes, photo failures and retry, camera switching,
+permission fallback, barcode-only requests, and the production Nutrition flow.
+Windows Playwright WebKit does not expose `canvas.captureStream`, so simulated
+live-camera checks run in Chromium; WebKit checks camera-unavailable handling
+and the complete photo fallback instead. Screenshots/results go to
+`artifacts/barcode-photo-20260908/`. These checks do
+not substitute for physical iPhone/Android camera and native-picker testing.
 
 A successful lookup opens a review view and never saves automatically. The
 view presents the provider attribution and validated source URL. `Use This

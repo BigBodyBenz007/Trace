@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import { APP_LIFECYCLE_PHASE } from "../services/appLifecycleAdapter";
 import { createUserFood } from "../services/userFoodCatalog";
+import { PHOTO_MESSAGES } from "../services/barcodePhoto";
 
 const access = {
   available: true,
@@ -825,4 +826,105 @@ test("React Strict Mode effect replay and rerender do not duplicate automatic st
   );
   await waitFor(() => expect(screen.getByText(/camera active/i)).toBeInTheDocument());
   expect(view.props.camera.start).toHaveBeenCalledTimes(1);
+});
+
+function selectPhoto(file = new File(["photo"], "barcode.jpg", { type: "image/jpeg" })) {
+  fireEvent.change(screen.getByLabelText("Barcode photo"), { target: { files: [file] } });
+  return file;
+}
+
+test("photo results reuse lookup, validation, review, and explicit food selection", async () => {
+  const decodePhoto = jest.fn().mockResolvedValue({ status: "found", value: "0001-2345 600012" });
+  const view = setup({ decodePhoto });
+  await screen.findByText(/camera active/i);
+  fireEvent.click(screen.getByRole("button", { name: "Scan from Photo" }));
+  expect(view.session.stop).toHaveBeenCalled();
+  const file = selectPhoto();
+  await screen.findByRole("article", { name: "Barcode product review" });
+  expect(decodePhoto).toHaveBeenCalledWith(file, { signal: expect.any(AbortSignal) });
+  expect(view.props.barcodeLookup.lookup).toHaveBeenCalledWith("00012345600012");
+  expect(view.props.onUseFood).not.toHaveBeenCalled();
+  // An obsolete live callback cannot replace the photo review or trigger lookup.
+  await act(async () => view.detected("5901234123457"));
+  expect(view.props.barcodeLookup.lookup).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole("button", { name: "Use This Food" }));
+  expect(view.props.onUseFood).toHaveBeenCalledWith(expect.objectContaining({ name: "Test Cereal" }));
+});
+
+test("offers separate library selection and rear-camera photo capture through the same decoder", async () => {
+  const decodePhoto = jest.fn().mockResolvedValue({ status: "found", value: "00012345600012" });
+  setup({ decodePhoto });
+  expect(screen.getByLabelText("Barcode photo")).not.toHaveAttribute("capture");
+  const capture = screen.getByLabelText("Take barcode photo");
+  expect(capture).toHaveAttribute("accept", "image/*");
+  expect(capture).toHaveAttribute("capture", "environment");
+  fireEvent.click(screen.getByRole("button", { name: "Take Photo" }));
+  fireEvent.change(capture, { target: { files: [new File(["camera photo"], "capture.jpg", { type: "image/jpeg" })] } });
+  await screen.findByRole("article", { name: "Barcode product review" });
+  expect(decodePhoto).toHaveBeenCalledTimes(1);
+  expect(capture).toHaveValue("");
+});
+
+test.each(Object.keys(PHOTO_MESSAGES))("photo %s feedback permits selecting the same file again", async (status) => {
+  const decodePhoto = jest.fn().mockResolvedValueOnce({ status }).mockResolvedValueOnce({ status: "found", value: "00012345600012" });
+  const view = setup({ decodePhoto });
+  const file = selectPhoto();
+  expect(await screen.findByRole("alert")).toHaveTextContent(PHOTO_MESSAGES[status]);
+  expect(view.props.barcodeLookup.lookup).not.toHaveBeenCalled();
+  expect(screen.getByLabelText("Barcode photo")).toHaveValue("");
+  selectPhoto(file);
+  await screen.findByRole("article", { name: "Barcode product review" });
+  expect(decodePhoto).toHaveBeenCalledTimes(2);
+  expect(view.props.barcodeLookup.lookup).toHaveBeenCalledTimes(1);
+});
+
+test("invalid photo digits use existing GTIN validation and never reach lookup", async () => {
+  const view = setup({ decodePhoto: async () => ({ status: "invalid", value: "1234" }) });
+  selectPhoto();
+  expect(await screen.findByRole("alert")).toHaveTextContent(/not a valid supported GTIN/i);
+  expect(view.props.barcodeLookup.lookup).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Scan from Photo" })).toBeEnabled();
+});
+
+test.each(["cancel", "close", "unmount", "background"])("%s aborts photo decoding and ignores late success", async (action) => {
+  let resolve;
+  const decodePhoto = jest.fn(() => new Promise((done) => { resolve = done; }));
+  const view = setup({ decodePhoto });
+  selectPhoto();
+  expect(screen.getByRole("status")).toHaveTextContent(/Reading photo on this device/);
+  expect(screen.getByRole("button", { name: "Start Camera" })).toBeDisabled();
+  if (action === "cancel") fireEvent.click(screen.getByRole("button", { name: "Cancel Photo Scan" }));
+  if (action === "close") fireEvent.click(screen.getByRole("button", { name: "Close barcode scanner" }));
+  if (action === "unmount") view.unmount();
+  if (action === "background") act(() => view.lifecycleSubscriber({ phase: APP_LIFECYCLE_PHASE.BACKGROUND }));
+  expect(decodePhoto.mock.calls[0][1].signal.aborted).toBe(true);
+  await act(async () => resolve({ status: "found", value: "00012345600012" }));
+  expect(view.props.barcodeLookup.lookup).not.toHaveBeenCalled();
+});
+
+test("photo fallback works after denied camera permission and picker cancellation is harmless", async () => {
+  const camera = { start: jest.fn().mockRejectedValue(Object.assign(new Error(), { name: "NotAllowedError" })) };
+  const decodePhoto = jest.fn().mockResolvedValue({ status: "found", value: "00012345600012" });
+  setup({ camera, decodePhoto });
+  await screen.findByRole("alert");
+  fireEvent.click(screen.getByRole("button", { name: "Scan from Photo" }));
+  fireEvent.change(screen.getByLabelText("Barcode photo"), { target: { files: [] } });
+  expect(decodePhoto).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Start Camera" })).toBeEnabled();
+  selectPhoto();
+  await screen.findByRole("article", { name: "Barcode product review" });
+  expect(camera.start).toHaveBeenCalledTimes(1);
+});
+
+test("choosing a photo during startup aborts the request and stops a late camera session", async () => {
+  let resolve;
+  const camera = { start: jest.fn(() => new Promise((done) => { resolve = done; })) };
+  setup({ camera });
+  await waitFor(() => expect(camera.start).toHaveBeenCalledTimes(1));
+  fireEvent.click(screen.getByRole("button", { name: "Scan from Photo" }));
+  expect(camera.start.mock.calls[0][0].signal.aborted).toBe(true);
+  const stop = jest.fn();
+  await act(async () => resolve({ stop }));
+  expect(stop).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("button", { name: "Start Camera" })).toBeEnabled();
 });

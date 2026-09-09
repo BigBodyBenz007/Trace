@@ -1,4 +1,5 @@
 import { normalizeGtin } from "./productIdentifiers";
+import { barcodeFormats, createBarcodeReader, isExpectedDecodeMiss, loadBarcodeDecoder } from "./barcodeDecoder";
 
 export const CAMERA_FACING_MODES = Object.freeze({
   REAR: "environment",
@@ -21,10 +22,6 @@ function globalMediaDevices() {
 
 function globalSecureContext() {
   return typeof window === "undefined" || window.isSecureContext !== false;
-}
-
-async function loadZxingDecoder() {
-  return import("@zxing/browser");
 }
 
 function cameraFailure(code, message, cause) {
@@ -86,11 +83,6 @@ function stopTracks(stream) {
   }
 }
 
-function isExpectedDecodeMiss(error) {
-  return ["NotFoundException", "ChecksumException", "FormatException"]
-    .includes(error?.name);
-}
-
 function cameraDevices(mediaDevices) {
   if (typeof mediaDevices?.enumerateDevices !== "function") return Promise.resolve([]);
   return mediaDevices.enumerateDevices()
@@ -106,7 +98,7 @@ function cameraDevices(mediaDevices) {
 export function createBrowserBarcodeCamera({
   mediaDevices = globalMediaDevices(),
   secureContext = globalSecureContext(),
-  loadDecoder = loadZxingDecoder,
+  loadDecoder = loadBarcodeDecoder,
 } = {}) {
   async function start({
     videoElement,
@@ -139,6 +131,7 @@ export function createBrowserBarcodeCamera({
     let tracksStopped = false;
     const stop = () => {
       stopped = true;
+      signal?.removeEventListener?.("abort", stop);
       if (controls && !controlsStopped) {
         controlsStopped = true;
         try {
@@ -156,15 +149,14 @@ export function createBrowserBarcodeCamera({
     signal?.addEventListener?.("abort", stop, { once: true });
 
     try {
+      if (signal?.aborted) throw cameraFailure(CAMERA_ERROR_CODES.UNAVAILABLE, "Camera start was canceled.");
       stream = await mediaDevices.getUserMedia({
         audio: false,
-        video: deviceId
-          ? { deviceId: { exact: deviceId } }
-          : {
-              facingMode: { ideal: facingMode },
-              height: { ideal: 720 },
-              width: { ideal: 1280 },
-            },
+        video: {
+          ...(deviceId ? { deviceId: { exact: deviceId } } : { facingMode: { ideal: facingMode } }),
+          height: { ideal: 1080 },
+          width: { ideal: 1920 },
+        },
       });
       if (stopped || signal?.aborted) {
         stop();
@@ -172,29 +164,34 @@ export function createBrowserBarcodeCamera({
       }
 
       const decoder = await loadDecoder();
+      if (stopped || signal?.aborted) throw cameraFailure(CAMERA_ERROR_CODES.UNAVAILABLE, "Camera start was canceled.");
       const Reader = decoder?.BrowserMultiFormatOneDReader;
       const BarcodeFormat = decoder?.BarcodeFormat;
       if (typeof Reader !== "function" || !BarcodeFormat) {
         throw cameraFailure(CAMERA_ERROR_CODES.DECODE, "Barcode decoding is unavailable. Enter the barcode manually instead.");
       }
-      const reader = new Reader(undefined, {
-        delayBetweenScanAttempts: 180,
-        delayBetweenScanSuccess: 500,
-      });
-      reader.possibleFormats = [
-        BarcodeFormat.EAN_8,
-        BarcodeFormat.EAN_13,
-        BarcodeFormat.UPC_A,
-        BarcodeFormat.ITF,
-      ];
+      const track = stream.getVideoTracks?.()[0];
+      try {
+        if (track?.getCapabilities?.().focusMode?.includes("continuous")) {
+          await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] });
+        }
+      } catch (error) {
+        // Optional focus controls vary by browser; keep scanning if rejected.
+      }
+      if (stopped || signal?.aborted) throw cameraFailure(CAMERA_ERROR_CODES.UNAVAILABLE, "Camera start was canceled.");
+      const reader = createBarcodeReader(decoder, { live: true });
       controls = await reader.decodeFromStream(stream, videoElement, (result, error) => {
         if (stopped) return;
         if (result) {
           const format = result.getBarcodeFormat?.();
-          if (format === BarcodeFormat.UPC_E) return;
+          if (!barcodeFormats(decoder).includes(format)) return;
           const value = result.getText?.();
           const normalized = normalizeGtin(value);
           if (normalized) onDetected?.(normalized);
+          else onDecodeError?.(cameraFailure(
+            CAMERA_ERROR_CODES.DECODE,
+            "That barcode is not a valid supported GTIN. Check the digits and try again."
+          ));
           return;
         }
         if (error && !isExpectedDecodeMiss(error)) {

@@ -46,7 +46,7 @@ const privacySections = [
     title: "5. Photos and camera access",
     content: <>
       <p>Photos are added only when you use a photo picker and select them. Trace stores the selected photo bytes locally in IndexedDB, links them to the relevant memory or workout, removes associated photo records when the related photo or record is deleted where the app provides that control, and includes stored photos in a Trace backup.</p>
-      <p>The barcode scanner requests camera permission only when camera scanning starts. Live frames are processed on the device to read a barcode. Trace does not save or upload those camera images or video frames, and it stops acquired camera tracks when scanning ends, the scanner closes, or the app is backgrounded. You may instead type the barcode manually.</p>
+      <p>The barcode scanner requests camera permission only when camera scanning starts. Live frames and photos chosen with Scan from Photo are processed on the device to read a barcode. Trace does not save or upload those barcode photos, camera images, or video frames, and it stops acquired camera tracks when scanning ends, the scanner closes, or the app is backgrounded. You may instead type the barcode manually.</p>
     </>,
   },
   {
@@ -141,6 +141,7 @@ const termsSections = [
 const DOCUMENTS = {
   privacy: {
     title: "Trace Privacy Policy",
+    updated: "September 8, 2026",
     kicker: "Legal & Privacy",
     lede: "How Trace handles information in the app as it exists today.",
     sections: privacySections,
@@ -175,7 +176,7 @@ export default function LegalDocumentPage({ documentId, onBackToSettings }) {
           <p className="trace-feature-page__lede">{document.lede}</p>
           <dl className="trace-legal-dates">
             <div><dt>Effective date</dt><dd>{TRACE_LEGAL_DATE}</dd></div>
-            <div><dt>Last updated</dt><dd>{TRACE_LEGAL_DATE}</dd></div>
+            <div><dt>Last updated</dt><dd>{document.updated || TRACE_LEGAL_DATE}</dd></div>
           </dl>
         </header>
         <div className="trace-legal-document__body">

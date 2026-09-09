@@ -7,6 +7,7 @@ import {
 } from "../services/barcodeCamera";
 import { createBarcodeNutritionCandidate } from "../services/barcodeNutritionSelection";
 import { normalizeGtin } from "../services/productIdentifiers";
+import { decodeBarcodePhoto, PHOTO_MESSAGES } from "../services/barcodePhoto";
 import {
   APP_LIFECYCLE_PHASE,
   webAppLifecycleAdapter,
@@ -17,7 +18,7 @@ import "./BarcodeScannerDialog.css";
 
 const FOCUSABLE = [
   "button:not([disabled])",
-  "input:not([disabled])",
+  "input:not([disabled]):not([hidden])",
   "select:not([disabled])",
   "a[href]",
   "[tabindex]:not([tabindex='-1'])",
@@ -71,6 +72,7 @@ export default function BarcodeScannerDialog({
   access,
   barcodeLookup,
   camera = browserBarcodeCamera,
+  decodePhoto = decodeBarcodePhoto,
   lifecycleAdapter = webAppLifecycleAdapter,
   onClose,
   onUseFood,
@@ -89,12 +91,16 @@ export default function BarcodeScannerDialog({
   const [message, setMessage] = useState(access.message);
   const [errorMessage, setErrorMessage] = useState("");
   const [lookingUp, setLookingUp] = useState(false);
+  const [decodingPhoto, setDecodingPhoto] = useState(false);
   const [recovery, setRecovery] = useState(null);
   const [lookupIdentifier, setLookupIdentifier] = useState(null);
   const [deletePending, setDeletePending] = useState(false);
   const dialogRef = useRef(null);
   const contentRef = useRef(null);
   const videoRef = useRef(null);
+  const photoInputRef = useRef(null);
+  const captureInputRef = useRef(null);
+  const photoAbortRef = useRef(null);
   const sessionRef = useRef(null);
   const startAbortRef = useRef(null);
   const cameraStartPendingRef = useRef(false);
@@ -115,11 +121,15 @@ export default function BarcodeScannerDialog({
   }, []);
 
   const close = useCallback(() => {
+    mountedRef.current = false;
+    photoAbortRef.current?.abort();
     releaseCamera();
     onClose();
   }, [onClose, releaseCamera]);
 
   const submitBarcode = useCallback(async (rawValue) => {
+    if (!mountedRef.current || acceptedBarcodeRef.current || pendingLookupRef.current) return;
+    automaticStartAttemptedRef.current = true;
     const barcode = normalizeGtin(rawValue);
     if (!barcode) {
       acceptedBarcodeRef.current = false;
@@ -132,8 +142,6 @@ export default function BarcodeScannerDialog({
       setMessage("");
       return;
     }
-    if (acceptedBarcodeRef.current || pendingLookupRef.current) return;
-
     acceptedBarcodeRef.current = true;
     pendingLookupRef.current = true;
     releaseCamera();
@@ -143,7 +151,7 @@ export default function BarcodeScannerDialog({
     setLookupIdentifier({ scheme: "gtin", value: barcode });
     setDeletePending(false);
     setErrorMessage("");
-    setMessage("Looking up barcode…");
+    setMessage("Barcode found. Looking up product…");
     setLookingUp(true);
 
     let result;
@@ -177,7 +185,7 @@ export default function BarcodeScannerDialog({
     deviceId = null,
     allowAutomaticFallback = false,
   } = {}) => {
-    if (cameraStartPendingRef.current || cameraState === "starting" || lookingUp) return;
+    if (cameraStartPendingRef.current || cameraState === "starting" || lookingUp || photoAbortRef.current) return;
     if (!allowAutomaticFallback) automaticStartAttemptedRef.current = true;
     releaseCamera();
     cameraStartPendingRef.current = true;
@@ -214,15 +222,18 @@ export default function BarcodeScannerDialog({
             facingMode: attempt.facingMode,
             deviceId: attempt.deviceId,
             signal: controller.signal,
-            onDetected: (value) => submitBarcodeRef.current?.(value),
+            onDetected: (value) => {
+              if (!controller.signal.aborted && mountedRef.current) submitBarcodeRef.current?.(value);
+            },
             onDecodeError: (error) => {
-              if (!mountedRef.current) return;
+              if (!mountedRef.current || controller.signal.aborted) return;
               setErrorMessage(cameraErrorFor(error, attempt.facingMode).message);
             },
           });
           successfulAttempt = attempt;
           break;
         } catch (error) {
+          if (controller.signal.aborted) return;
           const cameraError = cameraErrorFor(error, attempt.facingMode);
           const canFallback = index === 0
             && attempts.length > 1
@@ -236,12 +247,11 @@ export default function BarcodeScannerDialog({
         return;
       }
       sessionRef.current = session;
-      startAbortRef.current = null;
       cameraStartPendingRef.current = false;
       setDevices(session.devices || []);
       setSelectedDeviceId(successfulAttempt.deviceId || "");
       setCameraState("active");
-      setMessage("Camera active. Hold a supported product barcode inside the frame.");
+      setMessage("Camera active. Fill the frame with the whole barcode, hold steady, and tilt the package to reduce glare. Try Scan from Photo if it is hard to read.");
     } catch (error) {
       if (!mountedRef.current || controller.signal.aborted) return;
       startAbortRef.current = null;
@@ -254,6 +264,9 @@ export default function BarcodeScannerDialog({
   startCameraRef.current = startCamera;
 
   function resetForAnotherScan() {
+    photoAbortRef.current?.abort();
+    photoAbortRef.current = null;
+    setDecodingPhoto(false);
     releaseCamera();
     acceptedBarcodeRef.current = false;
     pendingLookupRef.current = false;
@@ -263,8 +276,48 @@ export default function BarcodeScannerDialog({
     setLookupIdentifier(null);
     setDeletePending(false);
     setErrorMessage("");
-    setMessage("Ready for another barcode. Start a camera or enter the digits manually.");
+    setMessage("Ready for another barcode. Start a camera, scan a photo, or enter the digits manually.");
     setCameraState("idle");
+  }
+
+  function choosePhoto(capture = false) {
+    automaticStartAttemptedRef.current = true;
+    releaseCamera();
+    setCameraState("idle");
+    setErrorMessage("");
+    setMessage("Choose or take a photo of one barcode. You can restart the camera if you cancel.");
+    (capture ? captureInputRef : photoInputRef).current?.click();
+  }
+
+  async function scanPhoto(event) {
+    const file = event.target.files?.[0];
+    event.target.value = ""; // Permit the exact same file after failure or cancellation.
+    if (!file || pendingLookupRef.current) return;
+    automaticStartAttemptedRef.current = true;
+    resetForAnotherScan();
+    const controller = new AbortController();
+    photoAbortRef.current = controller;
+    setDecodingPhoto(true);
+    setMessage("Reading photo on this device…");
+    try {
+      const result = await decodePhoto(file, { signal: controller.signal });
+      if (!mountedRef.current || controller.signal.aborted) return;
+      if (result.status === "found" || result.status === "invalid") {
+        await submitBarcodeRef.current?.(result.value);
+      } else {
+        setMessage("");
+        setErrorMessage(PHOTO_MESSAGES[result.status] || PHOTO_MESSAGES.unavailable);
+      }
+    } catch (error) {
+      if (!mountedRef.current || controller.signal.aborted) return;
+      setMessage("");
+      setErrorMessage(PHOTO_MESSAGES.unavailable);
+    } finally {
+      if (mountedRef.current && photoAbortRef.current === controller) {
+        photoAbortRef.current = null;
+        setDecodingPhoto(false);
+      }
+    }
   }
 
   function beginRecovery() {
@@ -368,6 +421,12 @@ export default function BarcodeScannerDialog({
   useEffect(() => {
     const unsubscribe = lifecycleAdapter.subscribe((event) => {
       if (![APP_LIFECYCLE_PHASE.BACKGROUND, APP_LIFECYCLE_PHASE.SUSPENDING].includes(event.phase)) return;
+      if (photoAbortRef.current && !pendingLookupRef.current) {
+        photoAbortRef.current.abort();
+        photoAbortRef.current = null;
+        setDecodingPhoto(false);
+        setMessage("Photo scan canceled while Trace was in the background. Choose the photo again when ready.");
+      }
       if (!sessionRef.current && !startAbortRef.current) return;
       releaseCamera();
       if (!mountedRef.current) return;
@@ -382,6 +441,7 @@ export default function BarcodeScannerDialog({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      photoAbortRef.current?.abort();
       releaseCamera();
     };
   }, [releaseCamera]);
@@ -492,7 +552,7 @@ export default function BarcodeScannerDialog({
           ref={contentRef}
         >
           <p id="trace-barcode-description">
-            Camera access starts automatically after you choose Scan Barcode. Trace does not save or upload camera images.
+            Camera access starts automatically after you choose Scan Barcode. Trace does not save or upload camera images or selected barcode photos.
           </p>
 
           <div className="trace-barcode-dialog__camera" data-camera-facing={facingMode}>
@@ -508,7 +568,7 @@ export default function BarcodeScannerDialog({
             </div>
             <div className="trace-barcode-dialog__camera-actions">
             {cameraState === "idle" ? (
-              <button disabled={lookingUp} onClick={() => startCamera({ nextFacingMode: facingMode })} type="button">
+              <button disabled={lookingUp || decodingPhoto} onClick={() => startCamera({ nextFacingMode: facingMode })} type="button">
                 Start Camera
               </button>
             ) : (
@@ -525,13 +585,42 @@ export default function BarcodeScannerDialog({
               </button>
             )}
             <button
-              disabled={cameraState === "starting" || lookingUp}
+              disabled={cameraState === "starting" || lookingUp || decodingPhoto}
               onClick={() => startCamera({ nextFacingMode: alternateFacing })}
               type="button"
             >
               {alternateLabel}
             </button>
+            <button disabled={lookingUp || decodingPhoto} onClick={() => choosePhoto()} type="button">
+              Scan from Photo
+            </button>
+            <button disabled={lookingUp || decodingPhoto} onClick={() => choosePhoto(true)} type="button">
+              Take Photo
+            </button>
+            {decodingPhoto && !lookingUp && (
+              <button onClick={() => {
+                resetForAnotherScan();
+                setMessage("Photo scan canceled. Choose a photo or start the camera when ready.");
+              }} type="button">Cancel Photo Scan</button>
+            )}
             </div>
+            <input
+              accept="image/*"
+              aria-label="Barcode photo"
+              hidden
+              onChange={scanPhoto}
+              ref={photoInputRef}
+              type="file"
+            />
+            <input
+              accept="image/*"
+              aria-label="Take barcode photo"
+              capture="environment"
+              hidden
+              onChange={scanPhoto}
+              ref={captureInputRef}
+              type="file"
+            />
             {devices.length > 1 && cameraState === "active" && (
               <label>
                 Camera device
@@ -562,7 +651,7 @@ export default function BarcodeScannerDialog({
             Enter barcode manually
             <input
               autoComplete="off"
-              disabled={lookingUp}
+              disabled={lookingUp || decodingPhoto}
               inputMode="numeric"
               onChange={(event) => {
                 setManualBarcode(event.target.value);
@@ -573,13 +662,13 @@ export default function BarcodeScannerDialog({
               value={manualBarcode}
             />
           </label>
-          <button disabled={lookingUp || !manualBarcode.trim()} type="submit">
+          <button disabled={lookingUp || decodingPhoto || !manualBarcode.trim()} type="submit">
             Look Up Barcode
           </button>
         </form>
 
         <div aria-atomic="true" aria-live="polite" className="trace-barcode-dialog__status" role="status">
-          {lookingUp ? "Looking up barcode…" : message}
+          {lookingUp ? "Barcode found. Looking up barcode…" : message}
         </div>
         {errorMessage && <p className="trace-barcode-dialog__error" role="alert">{errorMessage}</p>}
 
