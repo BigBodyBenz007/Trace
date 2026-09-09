@@ -1,6 +1,8 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
-  createTraceBackup,
+  createTraceBackupArchive,
+  estimateTraceBackupSize,
+  formatTraceBackupSize,
   parseTraceBackupText,
   restoreTraceBackup,
   traceBackupFilename,
@@ -30,18 +32,48 @@ export default function BackupPage({
   const [restoreComplete, setRestoreComplete] = useState(false);
   const [backupCredentialType, setBackupCredentialType] = useState("passphrase");
   const [backupCredentialValue, setBackupCredentialValue] = useState("");
+  const [backupEstimate, setBackupEstimate] = useState(null);
+  const [backupEstimateError, setBackupEstimateError] = useState("");
   const fileInputRef = useRef(null);
   const summary = preview?.summary;
   const backupUsesLegacyRecovery = summary?.journalRecoveryFormat === JOURNAL_RECOVERY_FORMAT_LEGACY;
   const backupRecoveryLabel = backupUsesLegacyRecovery ? "legacy recovery key" : "recovery phrase";
 
+  useEffect(() => {
+    let active = true;
+    estimateTraceBackupSize()
+      .then((estimate) => {
+        if (!active) return;
+        setBackupEstimate(estimate);
+        setBackupEstimateError("");
+      })
+      .catch(() => {
+        if (!active) return;
+        setBackupEstimate(null);
+        setBackupEstimateError("Backup size is temporarily unavailable. Trace will check again before export.");
+      });
+    return () => { active = false; };
+  }, []);
+
   async function exportBackup() {
     setError("");
     setStatus("Preparing backup…");
     try {
-      const backup = await createTraceBackup();
+      const estimate = await estimateTraceBackupSize();
+      setBackupEstimate(estimate);
+      setBackupEstimateError("");
+      if (
+        estimate.isLarge &&
+        !window.confirm(
+          `This backup is estimated at ${formatTraceBackupSize(estimate.estimatedBytes)}. Large backups need substantial working memory. Close other apps first. Continue?`
+        )
+      ) {
+        setStatus("Backup canceled. Your saved data was not changed.");
+        return;
+      }
+      const backup = await createTraceBackupArchive();
       const delivery = await backupFileAdapter.prepareExport({
-        contents: JSON.stringify(backup),
+        contents: backup.contents,
         filename: traceBackupFilename(new Date(backup.createdAt)),
         mimeType: TRACE_BACKUP_MIME_TYPE,
       });
@@ -170,6 +202,18 @@ export default function BackupPage({
         </button>
         {shareBackupFile && <button className="trace-action trace-action--primary trace-backup-actions__save" type="button" style={buttonStyle} onClick={saveBackupToFiles}>Save Backup to Files</button>}
         <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={selectBackup} hidden />
+      </section>
+      <section className="trace-feature-surface trace-backup-estimate" aria-label="Backup size estimate">
+        <h2>Estimated backup size</h2>
+        {backupEstimate ? (
+          <>
+            <p><strong>{formatTraceBackupSize(backupEstimate.estimatedBytes)}</strong> for {backupEstimate.photoCount} stored photo{backupEstimate.photoCount === 1 ? "" : "s"} and all structured Trace data.</p>
+            <p>This is checked again before export. The final file can vary slightly.</p>
+            {backupEstimate.isLarge && <p className="trace-backup-estimate__warning">Large archive: close other apps or tabs before exporting.</p>}
+          </>
+        ) : (
+          <p>{backupEstimateError || "Calculating from stored photos and structured data…"}</p>
+        )}
       </section>
       {status && <p className="trace-status" role="status">{status}</p>}
       {error && <p className="trace-status trace-status--error" role="alert" style={{ color: "#fca5a5" }}>{error}</p>}

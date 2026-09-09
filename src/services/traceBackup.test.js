@@ -1,5 +1,7 @@
 import {
   createTraceBackup,
+  createTraceBackupArchive,
+  estimateTraceBackupSize,
   parseTraceBackupText,
   restoreTraceBackup,
   TRACE_BACKUP_SCHEMA_VERSION,
@@ -121,6 +123,57 @@ function emptyStructured(overrides = {}) {
       : ["nutritionGoals", "appSettings", "workoutDraft", "journalDraft", "journalVault"].includes(key) ? null : [],
   ]).concat(Object.entries(overrides)));
 }
+
+test("backup estimate includes structured bytes as well as stored photo bytes", async () => {
+  const photo = { id: "estimate-photo", memoryId: "memory-1", blob: new Blob(["photo bytes"], { type: "image/jpeg" }) };
+  const compact = makeStorage({ memories: JSON.stringify([]) });
+  const detailed = makeStorage({ memories: JSON.stringify([{ id: "memory-1", title: "A detailed memory ".repeat(200), images: ["estimate-photo"] }]) });
+  const openDatabase = async () => makePhotoDatabase([photo]);
+
+  const compactEstimate = await estimateTraceBackupSize({ storage: compact, openDatabase });
+  const detailedEstimate = await estimateTraceBackupSize({ storage: detailed, openDatabase });
+
+  expect(compactEstimate.photoBytes).toBe(photo.blob.size);
+  expect(compactEstimate.photoCount).toBe(1);
+  expect(detailedEstimate.structuredBytes).toBeGreaterThan(compactEstimate.structuredBytes);
+  expect(detailedEstimate.estimatedBytes).toBeGreaterThan(compactEstimate.estimatedBytes);
+});
+
+test("chunked archive remains a complete validated SHA-256 Trace backup", async () => {
+  const database = makePhotoDatabase([
+    { id: "archive-photo", memoryId: "memory-1", blob: new Blob(["durable photo"], { type: "image/png" }) },
+  ]);
+  const storage = makeStorage({
+    memories: JSON.stringify([{ id: "memory-1", title: "Archive", images: ["archive-photo"], categories: [] }]),
+  });
+
+  const archive = await createTraceBackupArchive({
+    storage,
+    openDatabase: async () => database,
+    now: () => new Date("2026-09-08T12:00:00.000Z"),
+  });
+  const parsed = JSON.parse(await readBlobText(archive.contents));
+  const validated = await validateTraceBackup(parsed);
+
+  expect(archive.contents.type).toBe("application/json");
+  expect(archive.actualBytes).toBe(archive.contents.size);
+  expect(validated.summary).toMatchObject({ memories: 1, photos: 1 });
+  expect(validated.backup.integrity.photos.entries).toHaveLength(1);
+  expect(validated.backup.integrity.photos.entries[0].digest).toMatch(/^[0-9a-f]{64}$/);
+});
+
+test("measurably insufficient heap fails before creating or presenting an archive Blob", async () => {
+  const BlobConstructor = jest.fn();
+  await expect(createTraceBackupArchive({
+    storage: makeStorage(),
+    openDatabase: async () => makePhotoDatabase([
+      { id: "large", memoryId: "memory", blob: new Blob(["photo"], { type: "image/jpeg" }) },
+    ]),
+    performanceObject: { memory: { jsHeapSizeLimit: 1000, usedJSHeapSize: 999 } },
+    BlobConstructor,
+  })).rejects.toThrow(/enough working memory/i);
+  expect(BlobConstructor).not.toHaveBeenCalled();
+});
 
 function cloneJsonForTest(value) {
   return JSON.parse(JSON.stringify(value));

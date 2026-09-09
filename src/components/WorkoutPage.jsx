@@ -14,6 +14,11 @@ import {
   webPhotoSelectionAdapter,
 } from "../services/photoSelectionAdapter";
 import {
+  ingestPhotoFiles,
+  PHOTO_INGESTION_POLICY,
+  photoSelectionSuccessMessage,
+} from "../services/photoIngestion";
+import {
   APP_LIFECYCLE_PHASE,
   webAppLifecycleAdapter,
 } from "../services/appLifecycleAdapter";
@@ -495,6 +500,10 @@ function WorkoutPage({
   const [isDirty, setIsDirty] = useState(Boolean(restoredForm));
   const [formError, setFormError] = useState("");
   const [photos, setPhotos] = useState([]);
+  const [photoStatus, setPhotoStatus] = useState("");
+  const [photoError, setPhotoError] = useState("");
+  const [photosProcessing, setPhotosProcessing] = useState(false);
+  const photoSelectionInFlightRef = useRef(false);
   const [activeSearchExerciseId, setActiveSearchExerciseId] = useState(
     restoredDraftRef.current?.context?.activeSearchExerciseId || null
   );
@@ -518,24 +527,51 @@ function WorkoutPage({
   const templateStartButtonRefs = useRef(new Map());
   const pendingTemplateFocusIdRef = useRef(null);
 
-  function selectWorkoutPhotos(event) {
+  async function selectWorkoutPhotos(event) {
+    if (photoSelectionInFlightRef.current) return;
     const input = event.currentTarget;
     const selection = photoSelectionAdapter.acquireImages({
       input,
       accept: input.accept,
       multiple: input.multiple,
+      limit: Math.max(0, PHOTO_INGESTION_POLICY.maxPhotosPerEntry - photos.length),
     });
     input.value = "";
 
-    if (selection.status !== PHOTO_SELECTION_RESULT_STATUS.SUCCESS) return;
+    if (selection.status === PHOTO_SELECTION_RESULT_STATUS.CANCELED) return;
+    if (selection.status !== PHOTO_SELECTION_RESULT_STATUS.SUCCESS) {
+      setPhotoStatus("");
+      setPhotoError(selection.error?.message || "Trace could not read those photos. Choose them again.");
+      return;
+    }
 
-    const additions = selection.files.map((blob) => ({
-      blob,
-      isDraft: true,
-      url: URL.createObjectURL(blob),
-    }));
-    setPhotos((current) => [...current, ...additions]);
-    markChanged();
+    photoSelectionInFlightRef.current = true;
+    setPhotosProcessing(true);
+    setPhotoError("");
+    setPhotoStatus("Preparing photos…");
+    try {
+      const result = await ingestPhotoFiles(selection.files, {
+        existingCount: photos.length,
+        existingDraftBytes: photos.reduce(
+          (total, photo) => total + (photo?.isDraft ? Number(photo.blob?.size) || 0 : 0),
+          0
+        ),
+      });
+      const additions = result.photos.map((photo) => ({
+        ...photo,
+        isDraft: true,
+        url: URL.createObjectURL(photo.blob),
+      }));
+      setPhotos((current) => [...current, ...additions]);
+      setPhotoStatus(photoSelectionSuccessMessage(result));
+      markChanged();
+    } catch (error) {
+      setPhotoStatus("");
+      setPhotoError(error.message || "Trace could not safely prepare those photos. Choose them again.");
+    } finally {
+      photoSelectionInFlightRef.current = false;
+      setPhotosProcessing(false);
+    }
   }
   const [roadmapSkipExerciseId, setRoadmapSkipExerciseId] = useState(null);
   const [roadmapSkipReason, setRoadmapSkipReason] = useState("");
@@ -1280,6 +1316,10 @@ function WorkoutPage({
 
   function saveWorkout(event) {
     event.preventDefault();
+    if (photosProcessing) {
+      setFormError("Wait for the selected photos to finish preparing before saving.");
+      return;
+    }
     const workoutDraft = draft();
     const isActiveProgressWorkout = isActiveExerciseProgressWorkout();
     const exerciseProgressIsComplete = isActiveProgressWorkout
@@ -2600,15 +2640,18 @@ function WorkoutPage({
         <section aria-label="Workout photo attachments" style={{ marginTop: "22px" }}>
           <h3>Photos (optional)</h3>
           <label className="trace-action trace-action--secondary" style={{ ...smallButtonStyle, cursor: "pointer", display: "inline-block" }}>
-            {photos.length ? "Add More Photos" : "Choose Photos"}
+            {photosProcessing ? "Preparing Photos…" : photos.length ? "Add More Photos" : "Choose Photos"}
             <input
               type="file"
               accept={PHOTO_SELECTION_ACCEPT}
               multiple
+              disabled={photosProcessing}
               style={{ display: "none" }}
               onChange={selectWorkoutPhotos}
             />
           </label>
+          {photoStatus && <p className="trace-photo-feedback" role="status">{photoStatus}</p>}
+          {photoError && <p className="trace-photo-feedback trace-photo-feedback--error" role="alert">{photoError}</p>}
           {photos.length > 0 && (
             <div style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", marginTop: "12px" }}>
               {photos.map((photo, index) => (
@@ -2642,8 +2685,10 @@ function WorkoutPage({
         )}
         {displayedFormError && <p role="alert" style={{ color: "#fca5a5" }}>{displayedFormError}</p>}
         <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
-          <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>
-            {editingEntryId !== null
+          <button className="trace-action trace-action--primary" type="submit" disabled={photosProcessing} style={buttonStyle}>
+            {photosProcessing
+              ? "Preparing Photos…"
+              : editingEntryId !== null
               ? "Save Changes"
               : isTemplateWorkoutFocused && !exerciseProgressIsCompleteNow
                 ? "Save Workout"
@@ -2656,7 +2701,7 @@ function WorkoutPage({
           {completionReview && editingEntryId === null && (
             <button className="trace-action trace-action--secondary" type="button" onClick={() => setCompletionReview(false)} style={buttonStyle}>Continue Workout</button>
           )}
-          <button className="trace-action trace-action--secondary" type="button" onClick={cancelWorkout} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel</button>
+          <button className="trace-action trace-action--secondary" type="button" disabled={photosProcessing} onClick={cancelWorkout} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel</button>
         </div>
       </form>
       )}

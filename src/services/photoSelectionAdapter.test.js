@@ -48,7 +48,7 @@ test("multiple-photo selection preserves exact File objects and original order",
   selection.files.forEach((file, index) => expect(file).toBe(files[index]));
 });
 
-test("a supplied selection limit is represented without taking validation from the caller", () => {
+test("a supplied selection limit rejects the complete batch instead of truncating it", () => {
   const adapter = webAdapter();
   const files = [
     new File(["one"], "one.jpg"),
@@ -63,12 +63,28 @@ test("a supplied selection limit is represented without taking validation from t
     limit: 2,
   });
 
-  expect(selection.files).toEqual(files);
+  expect(selection).toMatchObject({
+    status: PHOTO_SELECTION_RESULT_STATUS.FAILURE,
+    files: [],
+    error: expect.any(Error),
+  });
   expect(selection.request).toEqual({
     accept: "image/jpeg,image/png",
     multiple: true,
     limit: 2,
   });
+});
+
+test("a zero remaining limit is enforced with actionable feedback", () => {
+  const selection = webAdapter().acquireImages({
+    input: { files: [new File(["one"], "one.jpg")] },
+    multiple: true,
+    limit: 0,
+  });
+
+  expect(selection.status).toBe(PHOTO_SELECTION_RESULT_STATUS.FAILURE);
+  expect(selection.request.limit).toBe(0);
+  expect(selection.error.message).toMatch(/maximum number of photos/i);
 });
 
 test.each([

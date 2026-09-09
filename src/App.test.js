@@ -12,6 +12,8 @@ import { APP_LIFECYCLE_PHASE } from "./services/appLifecycleAdapter";
 import { deletePhotos, getPhoto, openPhotoDatabase, putPhotos } from "./storage/photoStorage";
 import {
   createTraceBackup,
+  createTraceBackupArchive,
+  estimateTraceBackupSize,
   parseTraceBackupText,
   restoreTraceBackup,
   traceBackupFilename,
@@ -44,6 +46,15 @@ jest.mock("./storage/photoStorage", () => ({
 
 jest.mock("./services/traceBackup", () => ({
   createTraceBackup: jest.fn(),
+  createTraceBackupArchive: jest.fn(),
+  estimateTraceBackupSize: jest.fn(() => Promise.resolve({
+    estimatedBytes: 4096,
+    structuredBytes: 2048,
+    photoBytes: 0,
+    photoCount: 0,
+    isLarge: false,
+  })),
+  formatTraceBackupSize: jest.fn((bytes) => `${bytes} bytes`),
   parseTraceBackupText: jest.fn(),
   restoreTraceBackup: jest.fn(),
   traceBackupFilename: jest.fn(() => "trace-backup-settings.json"),
@@ -56,10 +67,27 @@ let originalScrollIntoView;
 let originalCreateObjectURL;
 let originalRevokeObjectURL;
 let originalMatchMedia;
+let originalCreateImageBitmap;
 
 beforeEach(() => {
   jest.clearAllMocks();
   createTraceBackup.mockReset();
+  createTraceBackupArchive.mockReset();
+  estimateTraceBackupSize.mockReset();
+  estimateTraceBackupSize.mockResolvedValue({
+    estimatedBytes: 4096,
+    structuredBytes: 2048,
+    photoBytes: 0,
+    photoCount: 0,
+    isLarge: false,
+  });
+  createTraceBackupArchive.mockImplementation(async () => {
+    const backup = await createTraceBackup();
+    return {
+      createdAt: backup.createdAt,
+      contents: new Blob([JSON.stringify(backup)], { type: "application/json" }),
+    };
+  });
   parseTraceBackupText.mockReset();
   restoreTraceBackup.mockReset();
   traceBackupFilename.mockReset();
@@ -72,6 +100,7 @@ beforeEach(() => {
   originalCreateObjectURL = URL.createObjectURL;
   originalRevokeObjectURL = URL.revokeObjectURL;
   originalMatchMedia = window.matchMedia;
+  originalCreateImageBitmap = global.createImageBitmap;
   window.requestAnimationFrame = (callback) => {
     callback();
     return 1;
@@ -81,6 +110,7 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = jest.fn();
   URL.createObjectURL = jest.fn((blob) => `blob:${blob.size}:${blob.type}`);
   URL.revokeObjectURL = jest.fn();
+  global.createImageBitmap = jest.fn(async () => ({ width: 1200, height: 900, close: jest.fn() }));
 });
 
 afterEach(() => {
@@ -91,6 +121,7 @@ afterEach(() => {
   URL.createObjectURL = originalCreateObjectURL;
   URL.revokeObjectURL = originalRevokeObjectURL;
   window.matchMedia = originalMatchMedia;
+  global.createImageBitmap = originalCreateImageBitmap;
 });
 
 function renderAppAtTimeline() {
@@ -4435,7 +4466,7 @@ test("completed workout drops persist recursively and reload in Workout History"
   expect(JSON.parse(localStorage.getItem("workoutEntries"))[0].exercises[0].sets[0].drops[0].id).toBe(dropId);
 });
 
-test("App supplies its photo-selection adapter to both Memory and Workout entry points", () => {
+test("App supplies its photo-selection adapter to both Memory and Workout entry points", async () => {
   const selectedFiles = [];
   const photoSelectionAdapter = {
     acquireImages: jest.fn(({ input }) => {
@@ -4452,6 +4483,7 @@ test("App supplies its photo-selection adapter to both Memory and Workout entry 
   fireEvent.change(screen.getByLabelText("Choose Photos"), {
     target: { files: [memoryPhoto] },
   });
+  await screen.findByText(/Original file was preserved/);
   memoryApp.unmount();
 
   render(<App photoSelectionAdapter={photoSelectionAdapter} />);
@@ -4460,6 +4492,7 @@ test("App supplies its photo-selection adapter to both Memory and Workout entry 
   fireEvent.change(screen.getByLabelText("Choose Photos"), {
     target: { files: [workoutPhoto] },
   });
+  await screen.findByText(/Original file was preserved/);
 
   expect(photoSelectionAdapter.acquireImages).toHaveBeenCalledTimes(2);
   expect(selectedFiles).toEqual([memoryPhoto, workoutPhoto]);
@@ -4507,6 +4540,7 @@ test("a failed Memory metadata write rolls back newly stored selected photos", a
     });
     const photo = new File(["memory image"], "memory.jpg", { type: "image/jpeg" });
     fireEvent.change(screen.getByLabelText("Choose Photos"), { target: { files: [photo] } });
+    await screen.findByText(/Original file was preserved/);
     fireEvent.click(screen.getByRole("button", { name: "Save Memory" }));
 
     await waitFor(() => expect(deletePhotos).toHaveBeenCalled());
@@ -4522,6 +4556,47 @@ test("a failed Memory metadata write rolls back newly stored selected photos", a
   }
 });
 
+test("an obviously insufficient photo quota leaves existing Memory data and the draft untouched", async () => {
+  const existing = [{
+    id: "existing-memory",
+    title: "Existing Memory",
+    description: "Already safe",
+    date: "2026-09-01",
+    images: [],
+    categories: [],
+    favorite: false,
+  }];
+  localStorage.setItem("memories", JSON.stringify(existing));
+  const storageDescriptor = Object.getOwnPropertyDescriptor(navigator, "storage");
+  Object.defineProperty(navigator, "storage", {
+    configurable: true,
+    value: {
+      estimate: jest.fn(async () => ({ usage: 1020, quota: 1024 })),
+      persist: jest.fn(async () => true),
+    },
+  });
+  openPhotoDatabase.mockResolvedValue({ name: "quota-db" });
+  putPhotos.mockResolvedValue(undefined);
+
+  try {
+    render(<App />);
+    fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+    fireEvent.change(screen.getByPlaceholderText("Memory title..."), { target: { value: "Unsaved New Memory" } });
+    const photo = new File(["new photo"], "new.jpg", { type: "image/jpeg" });
+    fireEvent.change(screen.getByLabelText("Choose Photos"), { target: { files: [photo] } });
+    await screen.findByText(/Original file was preserved/);
+    fireEvent.click(screen.getByRole("button", { name: "Save Memory" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(/does not report enough browser storage/i);
+    expect(JSON.parse(localStorage.getItem("memories"))).toEqual(existing);
+    expect(putPhotos).not.toHaveBeenCalled();
+    expect(screen.getByPlaceholderText("Memory title...")).toHaveValue("Unsaved New Memory");
+  } finally {
+    if (storageDescriptor) Object.defineProperty(navigator, "storage", storageDescriptor);
+    else delete navigator.storage;
+  }
+});
+
 test("a failed Workout metadata write rolls back newly stored selected photos", async () => {
   const database = { name: "workout-photo-rollback" };
   openPhotoDatabase.mockResolvedValue(database);
@@ -4532,6 +4607,7 @@ test("a failed Workout metadata write rolls back newly stored selected photos", 
   fillBodyweightWorkout("Retained Workout draft");
   const photo = new File(["workout image"], "workout.jpg", { type: "image/jpeg" });
   fireEvent.change(screen.getByLabelText("Choose Photos"), { target: { files: [photo] } });
+  await screen.findByText(/Original file was preserved/);
   const originalSetItem = Storage.prototype.setItem;
   const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (key, value) {
     if (key === "workoutEntries") throw new Error("quota full");
@@ -4567,6 +4643,7 @@ test("workout photo blobs stay in IndexedDB references and are cleaned up with o
   fillBodyweightWorkout("Photo Workout");
   const photo = new File(["workout image"], "workout.jpg", { type: "image/jpeg" });
   fireEvent.change(screen.getByLabelText("Choose Photos"), { target: { files: [photo] } });
+  await screen.findByText(/Original file was preserved/);
   submitWorkout();
 
   await waitFor(() => expect(JSON.parse(localStorage.getItem("workoutEntries"))).toHaveLength(1));

@@ -113,13 +113,17 @@ import {
   JOURNAL_VAULT_STORAGE_KEY,
   JOURNAL_VAULT_TRANSACTION_KEY,
 } from "./services/journalVault";
-import { createTraceBackup, traceBackupFilename } from "./services/traceBackup";
+import { createTraceBackupArchive, traceBackupFilename } from "./services/traceBackup";
 import {
   BACKUP_FILE_RESULT_STATUS,
   TRACE_BACKUP_MIME_TYPE,
   webBackupFileAdapter,
 } from "./services/backupFileAdapter";
 import { webPhotoSelectionAdapter } from "./services/photoSelectionAdapter";
+import {
+  photoStorageFailureMessage,
+  preparePhotoStorage,
+} from "./services/photoStorageSafety";
 import {
   APP_LIFECYCLE_PHASE,
   webAppLifecycleAdapter,
@@ -1034,6 +1038,9 @@ function App({
     });
 
     if (photosToStore.length > 0) {
+      await preparePhotoStorage(
+        photosToStore.reduce((total, photo) => total + photo.blob.size, 0)
+      );
       await putPhotos(await ensurePhotoDatabase(), photosToStore);
     }
     return {
@@ -1148,7 +1155,7 @@ function App({
       setPage("home");
       return true;
     } catch (error) {
-      setStorageError(storageMessage("save this memory"));
+      setStorageError(photoStorageFailureMessage(error, storageMessage("save this memory")));
       return false;
     }
   }
@@ -2613,6 +2620,11 @@ function App({
       activeObjectUrlsRef.current.add(url);
       prepared.push({ id, url });
     }
+    if (newRecords.length > 0) {
+      await preparePhotoStorage(
+        newRecords.reduce((total, record) => total + record.blob.size, 0)
+      );
+    }
     await putPhotos(database, newRecords);
     const retained = new Set(prepared.map(({ id }) => id));
     const removed = existingPhotos.filter(({ id }) => id && !retained.has(id));
@@ -2706,8 +2718,8 @@ function App({
     }
     return prepareWorkoutPhotos(entry, id)
       .then(persist)
-      .catch(() => {
-        setStorageError(storageMessage("save these workout photos"));
+      .catch((error) => {
+        setStorageError(photoStorageFailureMessage(error, storageMessage("save these workout photos")));
         finishPlannedWorkoutSave(false);
         return false;
       });
@@ -2809,8 +2821,8 @@ function App({
         setStorageError(storageMessage("update this workout"));
         return false;
       }
-    }).catch(() => {
-      setStorageError(storageMessage("update these workout photos"));
+    }).catch((error) => {
+      setStorageError(photoStorageFailureMessage(error, storageMessage("update these workout photos")));
       return false;
     });
   }
@@ -2998,9 +3010,9 @@ function App({
   }
 
   async function downloadTraceBackupForJournalReset() {
-    const backup = await createTraceBackup();
+    const backup = await createTraceBackupArchive();
     const delivery = await backupFileAdapter.downloadExport({
-      contents: JSON.stringify(backup),
+      contents: backup.contents,
       filename: traceBackupFilename(new Date(backup.createdAt)),
       mimeType: TRACE_BACKUP_MIME_TYPE,
     });

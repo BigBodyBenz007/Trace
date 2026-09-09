@@ -2,6 +2,9 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import BackupPage from "./BackupPage";
 import {
   createTraceBackup,
+  createTraceBackupArchive,
+  estimateTraceBackupSize,
+  formatTraceBackupSize,
   parseTraceBackupText,
   restoreTraceBackup,
   traceBackupFilename,
@@ -10,6 +13,9 @@ import { BACKUP_FILE_METHOD, BACKUP_FILE_RESULT_STATUS } from "../services/backu
 
 jest.mock("../services/traceBackup", () => ({
   createTraceBackup: jest.fn(),
+  createTraceBackupArchive: jest.fn(),
+  estimateTraceBackupSize: jest.fn(),
+  formatTraceBackupSize: jest.fn((bytes) => `${bytes} bytes`),
   parseTraceBackupText: jest.fn(),
   restoreTraceBackup: jest.fn(),
   traceBackupFilename: jest.fn(() => "trace-backup-test.json"),
@@ -28,10 +34,31 @@ const summary = {
   savedExercises: 9, savedCompounds: 10, userFoods: 11, journalEntries: 12, journalDraft: true,
 };
 const parsed = { backup: { createdAt: "2026-08-12T00:00:00.000Z" }, summary };
+const defaultEstimate = {
+  estimatedBytes: 4096,
+  structuredBytes: 2048,
+  photoBytes: 0,
+  photoCount: 0,
+  isLarge: false,
+};
 
 beforeEach(() => {
   jest.clearAllMocks();
   traceBackupFilename.mockReturnValue("trace-backup-test.json");
+  formatTraceBackupSize.mockImplementation((bytes) => `${bytes} bytes`);
+  estimateTraceBackupSize.mockImplementation(() => ({
+    then(onFulfilled) {
+      onFulfilled(defaultEstimate);
+      return { catch() {} };
+    },
+  }));
+  createTraceBackupArchive.mockImplementation(async () => {
+    const backup = await createTraceBackup();
+    return {
+      createdAt: backup.createdAt,
+      contents: new Blob([JSON.stringify(backup)], { type: "application/json" }),
+    };
+  });
   window.confirm = jest.fn(() => true);
 });
 
@@ -71,6 +98,20 @@ test("separates navigation from the paired archive actions without changing hand
   expect(onBack).toHaveBeenCalledTimes(1);
   expect(inputClick).toHaveBeenCalledTimes(1);
   inputClick.mockRestore();
+});
+
+test("shows an estimate that explicitly includes photos and structured Trace data", () => {
+  estimateTraceBackupSize.mockImplementation(() => ({
+    then(onFulfilled) {
+      onFulfilled({ ...defaultEstimate, estimatedBytes: 7340032, photoCount: 3 });
+      return { catch() {} };
+    },
+  }));
+  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+
+  const estimate = screen.getByRole("region", { name: "Backup size estimate" });
+  expect(estimate).toHaveTextContent("7340032 bytes");
+  expect(estimate).toHaveTextContent("3 stored photos and all structured Trace data");
 });
 
 function readFileText(file) {
@@ -248,7 +289,7 @@ test("iPhone export falls back to download when file sharing rejects the backup 
   restoreNavigator();
 });
 
-test("an injected adapter receives the unchanged serialized export contract", async () => {
+test("an injected adapter receives the complete archive Blob without another full JSON copy", async () => {
   const backup = { createdAt: "2026-08-12T00:00:00.000Z", data: { structured: { memories: [] }, photos: [] } };
   createTraceBackup.mockResolvedValue(backup);
   const backupFileAdapter = {
@@ -265,10 +306,12 @@ test("an injected adapter receives the unchanged serialized export contract", as
 
   expect(await screen.findByText("Trace backup downloaded. Your current data was not changed.")).toBeInTheDocument();
   expect(backupFileAdapter.prepareExport).toHaveBeenCalledWith({
-    contents: JSON.stringify(backup),
+    contents: expect.any(Blob),
     filename: "trace-backup-test.json",
     mimeType: "application/json",
   });
+  const [{ contents }] = backupFileAdapter.prepareExport.mock.calls[0];
+  expect(JSON.parse(await readFileText(contents))).toEqual(backup);
 });
 
 test("adapter read failure never begins backup validation or restore", async () => {

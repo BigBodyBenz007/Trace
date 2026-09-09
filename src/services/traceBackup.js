@@ -73,6 +73,8 @@ import {
 export const TRACE_BACKUP_FORMAT = "trace-backup";
 export const TRACE_BACKUP_SCHEMA_VERSION = 6;
 export const TRACE_STORAGE_KEYS = TRACE_BACKUP_STORAGE_KEYS;
+export const TRACE_BACKUP_LARGE_WARNING_BYTES = 128 * 1024 * 1024;
+const TRACE_BACKUP_MEMORY_RESERVE_BYTES = 16 * 1024 * 1024;
 const TRACE_STORAGE_KEYS_V5 = TRACE_STORAGE_KEYS.filter((key) => key !== "workoutTemplates");
 
 const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
@@ -173,6 +175,97 @@ async function encodePhoto(record, cryptoProvider) {
       digest: await sha256Bytes(bytes, cryptoProvider),
     },
   };
+}
+
+function utf8ByteLength(value) {
+  if (typeof TextEncoder === "function") return new TextEncoder().encode(value).byteLength;
+  if (typeof Blob === "function") return new Blob([value]).size;
+  return unescape(encodeURIComponent(value)).length;
+}
+
+function encodedBase64Length(byteLength) {
+  return 4 * Math.ceil(byteLength / 3);
+}
+
+function estimateBackupFromSource(structured, photos) {
+  const structuredBytes = utf8ByteLength(JSON.stringify(structured));
+  let photoBytes = 0;
+  let encodedPhotoBytes = 0;
+  let largestPhotoBytes = 0;
+  photos.forEach((record) => {
+    if (!record?.id || !(record.blob instanceof Blob)) {
+      throw new Error("A stored Trace photo is malformed.");
+    }
+    const { blob, ...metadata } = record;
+    photoBytes += blob.size;
+    largestPhotoBytes = Math.max(largestPhotoBytes, blob.size);
+    const shell = JSON.stringify({
+      ...cloneJson(metadata),
+      blob: { type: blob.type || "application/octet-stream", size: blob.size, base64: "" },
+    });
+    encodedPhotoBytes += utf8ByteLength(shell) + encodedBase64Length(blob.size);
+  });
+  const manifestAndEnvelopeBytes = 2048 + photos.length * 180;
+  const estimatedBytes = structuredBytes + encodedPhotoBytes + manifestAndEnvelopeBytes;
+  return {
+    estimatedBytes,
+    structuredBytes,
+    photoBytes,
+    encodedPhotoBytes,
+    largestPhotoBytes,
+    photoCount: photos.length,
+    isLarge: estimatedBytes >= TRACE_BACKUP_LARGE_WARNING_BYTES,
+  };
+}
+
+function defaultPerformance() {
+  return typeof performance === "undefined" ? undefined : performance;
+}
+
+function assertBackupMemorySafety(estimate, performanceObject = defaultPerformance()) {
+  const memory = performanceObject?.memory;
+  const limit = Number(memory?.jsHeapSizeLimit);
+  const used = Number(memory?.usedJSHeapSize);
+  if (!Number.isFinite(limit) || !Number.isFinite(used) || limit <= used) return;
+  const available = limit - used;
+  const required = estimate.estimatedBytes +
+    estimate.largestPhotoBytes * 3 +
+    estimate.structuredBytes * 2 +
+    TRACE_BACKUP_MEMORY_RESERVE_BYTES;
+  if (available < required) {
+    throw new Error(
+      "This browser does not report enough working memory to safely assemble the backup. Close other tabs or apps, restart Trace, and try again. No backup file was created and saved data was not changed."
+    );
+  }
+}
+
+async function readBackupSource(storage, openDatabase) {
+  recoverPendingBackupTransactions(storage);
+  const database = await openDatabase();
+  const photos = await getAllPhotos(database);
+  assertNoPendingBackupTransactions(storage);
+  const structured = readStructuredData(storage);
+  if (Array.isArray(structured.nutritionEntries)) {
+    structured.nutritionEntries = normalizeNutritionEntryPortions(structured.nutritionEntries);
+  }
+  assertNoPendingBackupTransactions(storage);
+  return { structured, photos };
+}
+
+export function formatTraceBackupSize(bytes) {
+  const value = Math.max(0, Number(bytes) || 0);
+  if (value < 1024) return `${value} bytes`;
+  if (value < 1024 * 1024) return `${Math.ceil(value / 1024)} KiB`;
+  const mib = value / (1024 * 1024);
+  return `${mib >= 10 ? Math.ceil(mib) : mib.toFixed(1)} MiB`;
+}
+
+export async function estimateTraceBackupSize({
+  storage = localStorage,
+  openDatabase = openPhotoDatabase,
+} = {}) {
+  const { structured, photos } = await readBackupSource(storage, openDatabase);
+  return estimateBackupFromSource(structured, photos);
 }
 
 function storageKeysForSchema(schemaVersion) {
@@ -627,16 +720,11 @@ export async function createTraceBackup({
   appVersion = packageMetadata.version,
   cryptoProvider,
 } = {}) {
-  recoverPendingBackupTransactions(storage);
-  const database = await openDatabase();
-  const photos = await getAllPhotos(database);
-  assertNoPendingBackupTransactions(storage);
-  const structured = readStructuredData(storage);
-  if (Array.isArray(structured.nutritionEntries)) {
-    structured.nutritionEntries = normalizeNutritionEntryPortions(structured.nutritionEntries);
+  const { structured, photos } = await readBackupSource(storage, openDatabase);
+  const encodedPhotoResults = [];
+  for (const photo of photos) {
+    encodedPhotoResults.push(await encodePhoto(photo, cryptoProvider));
   }
-  assertNoPendingBackupTransactions(storage);
-  const encodedPhotoResults = await Promise.all(photos.map((photo) => encodePhoto(photo, cryptoProvider)));
   assertNoPendingBackupTransactions(storage);
   const encodedPhotos = encodedPhotoResults.map(({ photo }) => photo);
   const structuredDigest = await sha256CanonicalJson(structured, cryptoProvider);
@@ -668,6 +756,64 @@ export async function createTraceBackup({
   const validated = await validateTraceBackup(backup, { cryptoProvider });
   assertNoPendingBackupTransactions(storage);
   return validated.backup;
+}
+
+export async function createTraceBackupArchive({
+  storage = localStorage,
+  openDatabase = openPhotoDatabase,
+  now = () => new Date(),
+  appVersion = packageMetadata.version,
+  cryptoProvider,
+  performanceObject = defaultPerformance(),
+  BlobConstructor = typeof Blob === "undefined" ? null : Blob,
+} = {}) {
+  const { structured, photos } = await readBackupSource(storage, openDatabase);
+  const estimate = estimateBackupFromSource(structured, photos);
+  assertBackupMemorySafety(estimate, performanceObject);
+  if (typeof BlobConstructor !== "function") {
+    throw new Error("This browser cannot assemble a Trace backup file.");
+  }
+
+  const createdAt = now().toISOString();
+  const header = {
+    format: TRACE_BACKUP_FORMAT,
+    schemaVersion: TRACE_BACKUP_SCHEMA_VERSION,
+    createdAt,
+    app: { name: "Trace", version: appVersion },
+  };
+  const structuredDigest = await sha256CanonicalJson(structured, cryptoProvider);
+  const parts = [
+    `${JSON.stringify(header).slice(0, -1)},"data":{"structured":${JSON.stringify(structured)},"photos":[`,
+  ];
+  const photoIntegrity = [];
+  for (let index = 0; index < photos.length; index += 1) {
+    const encoded = await encodePhoto(photos[index], cryptoProvider);
+    if (index > 0) parts.push(",");
+    parts.push(JSON.stringify(encoded.photo));
+    photoIntegrity.push(encoded.integrity);
+    assertNoPendingBackupTransactions(storage);
+  }
+  const integrity = {
+    format: TRACE_BACKUP_INTEGRITY_FORMAT,
+    version: TRACE_BACKUP_INTEGRITY_VERSION,
+    algorithm: TRACE_BACKUP_HASH_ALGORITHM,
+    structured: {
+      digest: structuredDigest,
+      domainCount: TRACE_STORAGE_KEYS.length,
+      domains: [...TRACE_STORAGE_KEYS],
+    },
+    photos: { count: photoIntegrity.length, entries: photoIntegrity },
+  };
+  validateIntegrityManifestShape(integrity, TRACE_STORAGE_KEYS);
+  parts.push(`]},"integrity":${JSON.stringify(integrity)}}`);
+  const contents = new BlobConstructor(parts, { type: "application/json" });
+  assertNoPendingBackupTransactions(storage);
+  return {
+    createdAt,
+    contents,
+    actualBytes: contents.size,
+    estimate,
+  };
 }
 
 export function traceBackupFilename(createdAt = new Date()) {

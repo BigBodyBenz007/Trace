@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { CATEGORY_OPTIONS } from "../constants/categories";
 import {
   PHOTO_SELECTION_ACCEPT,
@@ -6,6 +6,11 @@ import {
   webPhotoSelectionAdapter,
 } from "../services/photoSelectionAdapter";
 import { PHOTO_LOAD_PRIORITY } from "../services/photoUrlLoader";
+import {
+  ingestPhotoFiles,
+  PHOTO_INGESTION_POLICY,
+  photoSelectionSuccessMessage,
+} from "../services/photoIngestion";
 import StoredPhoto from "./StoredPhoto";
 
 function NewMemoryPage({
@@ -29,28 +34,59 @@ function NewMemoryPage({
   photoSelectionAdapter = webPhotoSelectionAdapter,
 }) {
   const initialDateRef = useRef(date);
+  const photoSelectionInFlightRef = useRef(false);
+  const [photoStatus, setPhotoStatus] = useState("");
+  const [photoError, setPhotoError] = useState("");
+  const [photosProcessing, setPhotosProcessing] = useState(false);
 
   function releaseDraftPhoto(image) {
     if (image?.isDraft && image.url) URL.revokeObjectURL(image.url);
   }
 
-  function selectPhotos(event) {
+  async function selectPhotos(event) {
+    if (photoSelectionInFlightRef.current) return;
     const input = event.currentTarget;
     const selection = photoSelectionAdapter.acquireImages({
       input,
       accept: input.accept,
       multiple: input.multiple,
+      limit: Math.max(0, PHOTO_INGESTION_POLICY.maxPhotosPerEntry - images.length),
     });
     input.value = "";
 
-    if (selection.status !== PHOTO_SELECTION_RESULT_STATUS.SUCCESS) return;
+    if (selection.status === PHOTO_SELECTION_RESULT_STATUS.CANCELED) return;
+    if (selection.status !== PHOTO_SELECTION_RESULT_STATUS.SUCCESS) {
+      setPhotoStatus("");
+      setPhotoError(selection.error?.message || "Trace could not read those photos. Choose them again.");
+      return;
+    }
 
-    const newImages = selection.files.map((file) => ({
-      blob: file,
-      isDraft: true,
-      url: URL.createObjectURL(file),
-    }));
-    setImages((current) => [...current, ...newImages]);
+    photoSelectionInFlightRef.current = true;
+    setPhotosProcessing(true);
+    setPhotoError("");
+    setPhotoStatus("Preparing photos…");
+    try {
+      const result = await ingestPhotoFiles(selection.files, {
+        existingCount: images.length,
+        existingDraftBytes: images.reduce(
+          (total, image) => total + (image?.isDraft ? Number(image.blob?.size) || 0 : 0),
+          0
+        ),
+      });
+      const newImages = result.photos.map((photo) => ({
+        ...photo,
+        isDraft: true,
+        url: URL.createObjectURL(photo.blob),
+      }));
+      setImages((current) => [...current, ...newImages]);
+      setPhotoStatus(photoSelectionSuccessMessage(result));
+    } catch (error) {
+      setPhotoStatus("");
+      setPhotoError(error.message || "Trace could not safely prepare those photos. Choose them again.");
+    } finally {
+      photoSelectionInFlightRef.current = false;
+      setPhotosProcessing(false);
+    }
   }
 
   function cancelMemory() {
@@ -98,6 +134,7 @@ function NewMemoryPage({
             aria-label={`Close ${editingIndex !== null ? "Edit Memory" : "Add Memory"}`}
             className="trace-memory-editor__close"
             type="button"
+            disabled={photosProcessing}
             onClick={cancelMemory}
           >
             ×
@@ -196,15 +233,19 @@ function NewMemoryPage({
             </div>
 
             <label className="trace-memory-editor__photo-picker">
-              {images.length ? "Add More Photos" : "Choose Photos"}
+              {photosProcessing ? "Preparing Photos…" : images.length ? "Add More Photos" : "Choose Photos"}
               <input
                 type="file"
                 accept={PHOTO_SELECTION_ACCEPT}
                 multiple
+                disabled={photosProcessing}
                 onChange={selectPhotos}
               />
             </label>
           </div>
+
+          {photoStatus && <p className="trace-photo-feedback" role="status">{photoStatus}</p>}
+          {photoError && <p className="trace-photo-feedback trace-photo-feedback--error" role="alert">{photoError}</p>}
 
           {images.length > 0 && (
             <div className="trace-memory-editor__photo-grid">
@@ -246,12 +287,14 @@ function NewMemoryPage({
         <div className="trace-memory-editor__actions">
           <button
             className="trace-memory-editor__action trace-memory-editor__action--primary"
+            disabled={photosProcessing}
             onClick={saveMemory}
           >
-            {editingIndex !== null ? "Save Changes" : "Save Memory"}
+            {photosProcessing ? "Preparing Photos…" : editingIndex !== null ? "Save Changes" : "Save Memory"}
           </button>
           <button
             className="trace-memory-editor__action trace-memory-editor__action--secondary"
+            disabled={photosProcessing}
             onClick={cancelMemory}
           >
             Cancel

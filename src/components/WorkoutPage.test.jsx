@@ -19,6 +19,7 @@ const originalCreateObjectURL = URL.createObjectURL;
 const originalRevokeObjectURL = URL.revokeObjectURL;
 const originalGetBoundingClientRect = Element.prototype.getBoundingClientRect;
 const originalScrollTo = window.scrollTo;
+const originalCreateImageBitmap = global.createImageBitmap;
 
 beforeEach(() => {
   localStorage.clear();
@@ -41,6 +42,7 @@ beforeEach(() => {
   }));
   URL.createObjectURL = jest.fn((file) => `blob:${file.name}`);
   URL.revokeObjectURL = jest.fn();
+  global.createImageBitmap = jest.fn(async () => ({ width: 1200, height: 900, close: jest.fn() }));
 });
 
 async function storedDraft() {
@@ -641,6 +643,7 @@ afterEach(() => {
   URL.revokeObjectURL = originalRevokeObjectURL;
   Element.prototype.getBoundingClientRect = originalGetBoundingClientRect;
   window.scrollTo = originalScrollTo;
+  global.createImageBitmap = originalCreateImageBitmap;
   jest.restoreAllMocks();
 });
 
@@ -2559,7 +2562,7 @@ test("cancel confirms dirty changes, resets, and scrolls to the workout top", ()
   expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth" });
 });
 
-test("adds multiple optional photos and can remove one before saving", () => {
+test("adds multiple optional photos and can remove one before saving", async () => {
   const props = renderPage();
   fillFirstSet();
   const first = new File(["first"], "first.jpg", { type: "image/jpeg" });
@@ -2568,7 +2571,7 @@ test("adds multiple optional photos and can remove one before saving", () => {
   fireEvent.change(screen.getByLabelText("Choose Photos"), {
     target: { files: [first, second] },
   });
-  expect(screen.getByAltText("Workout attachment 1")).toHaveAttribute("src", "blob:first.jpg");
+  expect(await screen.findByAltText("Workout attachment 1")).toHaveAttribute("src", "blob:first.jpg");
   expect(screen.getByAltText("Workout attachment 2")).toHaveAttribute("src", "blob:second.jpg");
   const removePhoto = screen.getByRole("button", { name: "Remove workout photo 1" });
   expect(removePhoto).toHaveTextContent("×");
@@ -2581,7 +2584,7 @@ test("adds multiple optional photos and can remove one before saving", () => {
   expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:first.jpg");
 });
 
-test("routes Workout selection through the adapter and retains its exact file order", () => {
+test("routes Workout selection through the adapter and retains its exact file order", async () => {
   const first = new File(["first"], "first.jpg", { type: "image/jpeg" });
   const second = new File(["second"], "second.png", { type: "image/png" });
   const photoSelectionAdapter = {
@@ -2599,8 +2602,9 @@ test("routes Workout selection through the adapter and retains its exact file or
     input,
     accept: "image/*",
     multiple: true,
+    limit: 12,
   });
-  expect(screen.getByAltText("Workout attachment 1")).toHaveAttribute("src", "blob:second.png");
+  expect(await screen.findByAltText("Workout attachment 1")).toHaveAttribute("src", "blob:second.png");
   expect(screen.getByAltText("Workout attachment 2")).toHaveAttribute("src", "blob:first.jpg");
   expect(URL.createObjectURL.mock.calls.map(([file]) => file)).toEqual([second, first]);
   expect(input).toHaveAttribute("accept", "image/*");

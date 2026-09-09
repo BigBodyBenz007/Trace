@@ -39,6 +39,8 @@ Limitations: the rest of Trace is not encrypted by Journal Lock; content is plai
 ## Photos and camera
 
 - Memory/workout photos enter through an HTML photo/file picker only after user selection. Object URLs are temporary display references; persisted blobs are local IndexedDB records.
+- New Memory and Workout selections share one count/byte policy. Valid reasonably sized originals remain byte-for-byte unchanged; oversized new photos are orientation-corrected and optimized at high quality before storage. Existing saved photos and legacy migrations are not recompressed.
+- Trace checks available browser quota before new photo writes and requests persistent storage on a best-effort basis where supported. Browser support and eventual eviction remain platform-dependent.
 - The barcode scanner calls `getUserMedia` only when scanning starts, requests video without audio, decodes the live stream locally through the dynamically loaded ZXing browser decoder, and stops tracks on acceptance, close, switch, unmount, background, or suspension.
 - No source path stores, uploads, or includes barcode camera frames in a backup. Manual barcode entry is available.
 - Permission grant/revocation, picker access, and device labels are controlled by the browser/operating system. Withdrawing permission does not remove already selected photo files.
@@ -58,6 +60,7 @@ The repository does not establish Vercel, USDA, or Open Food Facts access-log fi
 ## Backup and restore
 
 - Export is explicit. Trace serializes every durable structured domain plus every stored photo into one JSON file.
+- The Backup page estimates the complete archive size before export. Photos are encoded sequentially into Blob parts to reduce peak memory; browsers that expose reliable heap limits can reject an obviously unsafe export before expensive encoding.
 - On compatible iPhone/browser combinations, the file can be handed to the Web Share API; the user chooses the share-sheet destination. Otherwise Trace creates a temporary object URL and browser download.
 - The backup contains a schema/domain inventory and SHA-256 digests for structured data and each photo. Parsing validates JSON, schema compatibility, every domain, referential constraints, and integrity before restore.
 - Restore requires explicit confirmation and replaces all audited durable `localStorage` domains and the complete photo store; it does not merge. The existing state is snapshotted and an automatic rollback is attempted if replacement fails.

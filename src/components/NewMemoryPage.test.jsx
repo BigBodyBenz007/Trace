@@ -1,16 +1,20 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { PHOTO_SELECTION_RESULT_STATUS } from "../services/photoSelectionAdapter";
 import NewMemoryPage from "./NewMemoryPage";
 
 let originalCreateObjectURL;
+let originalCreateImageBitmap;
 
 beforeEach(() => {
   originalCreateObjectURL = URL.createObjectURL;
+  originalCreateImageBitmap = global.createImageBitmap;
   URL.createObjectURL = jest.fn((file) => `blob:${file.name}`);
+  global.createImageBitmap = jest.fn(async () => ({ width: 1200, height: 900, close: jest.fn() }));
 });
 
 afterEach(() => {
   URL.createObjectURL = originalCreateObjectURL;
+  global.createImageBitmap = originalCreateImageBitmap;
 });
 
 function renderPage({
@@ -160,7 +164,7 @@ test("loads every stored photo when editing while preserving photo IDs", async (
   ]);
 });
 
-test("appends each photo selection from the latest image state", () => {
+test("appends each photo selection from the latest image state", async () => {
   const setImages = jest.fn();
   renderPage({ setImages });
   const input = screen.getByLabelText("Choose Photos");
@@ -169,10 +173,11 @@ test("appends each photo selection from the latest image state", () => {
   const third = new File(["third"], "third.jpg", { type: "image/jpeg" });
 
   fireEvent.change(input, { target: { files: [first] } });
+  await waitFor(() => expect(setImages).toHaveBeenCalledTimes(1));
   fireEvent.change(input, { target: { files: [second] } });
+  await waitFor(() => expect(setImages).toHaveBeenCalledTimes(2));
   fireEvent.change(input, { target: { files: [third] } });
-
-  expect(setImages).toHaveBeenCalledTimes(3);
+  await waitFor(() => expect(setImages).toHaveBeenCalledTimes(3));
   const images = setImages.mock.calls.reduce(
     (current, [update]) => update(current),
     []
@@ -180,7 +185,7 @@ test("appends each photo selection from the latest image state", () => {
   expect(images.map(({ blob }) => blob)).toEqual([first, second, third]);
 });
 
-test("routes Edit Memory selection through the adapter while preserving existing photos and file order", () => {
+test("routes Edit Memory selection through the adapter while preserving existing photos and file order", async () => {
   const existing = { id: "stored-photo" };
   const first = new File(["first"], "first.jpg", { type: "image/jpeg" });
   const second = new File(["second"], "second.png", { type: "image/png" });
@@ -205,8 +210,9 @@ test("routes Edit Memory selection through the adapter while preserving existing
     input,
     accept: "image/*",
     multiple: true,
+    limit: 11,
   });
-  expect(setImages).toHaveBeenCalledTimes(1);
+  await waitFor(() => expect(setImages).toHaveBeenCalledTimes(1));
   const updated = setImages.mock.calls[0][0]([existing]);
   expect(updated[0]).toBe(existing);
   expect(updated.slice(1).map(({ blob }) => blob)).toEqual([second, first]);
@@ -233,7 +239,7 @@ test.each([
   expect(input).toHaveValue("");
 });
 
-test("clears the file control after accepting photos so the same photo can be selected again", () => {
+test("clears the file control after accepting photos so the same photo can be selected again", async () => {
   renderPage();
   const input = screen.getByLabelText("Choose Photos");
   const photo = new File(["photo"], "photo.jpg", { type: "image/jpeg" });
@@ -241,4 +247,50 @@ test("clears the file control after accepting photos so the same photo can be se
   fireEvent.change(input, { target: { files: [photo] } });
 
   expect(input).toHaveValue("");
+  expect(await screen.findByText(/Original file was preserved/)).toBeInTheDocument();
+});
+
+test("shows a count-limit error without changing existing photos", async () => {
+  const existing = Array.from({ length: 12 }, (_, index) => ({ id: `stored-${index}` }));
+  const photoSelectionAdapter = {
+    acquireImages: jest.fn(() => ({
+      status: PHOTO_SELECTION_RESULT_STATUS.FAILURE,
+      files: [],
+      error: new Error("This entry already has the maximum number of photos. Remove one first."),
+    })),
+  };
+  const setImages = jest.fn();
+  renderPage({ images: existing, photoSelectionAdapter, setImages });
+  const input = screen.getByLabelText("Add More Photos");
+
+  fireEvent.change(input, { target: { files: [new File(["extra"], "extra.jpg", { type: "image/jpeg" })] } });
+
+  expect(photoSelectionAdapter.acquireImages).toHaveBeenCalledWith(expect.objectContaining({ limit: 0 }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(/maximum number of photos/i);
+  expect(setImages).not.toHaveBeenCalled();
+});
+
+test("the same file can be selected again after a preparation error", async () => {
+  const file = new File(["retry"], "retry.jpg", { type: "image/jpeg" });
+  const photoSelectionAdapter = {
+    acquireImages: jest.fn()
+      .mockReturnValueOnce({
+        status: PHOTO_SELECTION_RESULT_STATUS.FAILURE,
+        files: [],
+        error: new Error("Temporary selection error. Try again."),
+      })
+      .mockReturnValue({ status: PHOTO_SELECTION_RESULT_STATUS.SUCCESS, files: [file] }),
+  };
+  const setImages = jest.fn();
+  renderPage({ photoSelectionAdapter, setImages });
+  const input = screen.getByLabelText("Choose Photos");
+
+  fireEvent.change(input, { target: { files: [file] } });
+  expect(await screen.findByRole("alert")).toHaveTextContent(/Try again/);
+  expect(input).toHaveValue("");
+  fireEvent.change(input, { target: { files: [file] } });
+
+  await waitFor(() => expect(setImages).toHaveBeenCalledTimes(1));
+  expect(input).toHaveValue("");
+  expect(URL.createObjectURL).toHaveBeenCalledWith(file);
 });

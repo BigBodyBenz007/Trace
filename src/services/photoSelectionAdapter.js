@@ -35,7 +35,7 @@ function normalizeRequest({ accept, multiple, limit }) {
   return Object.freeze({
     accept: typeof accept === "string" ? accept : PHOTO_SELECTION_ACCEPT,
     multiple: Boolean(multiple),
-    limit: Number.isInteger(limit) && limit > 0 ? limit : null,
+    limit: Number.isInteger(limit) && limit >= 0 ? limit : null,
   });
 }
 
@@ -64,6 +64,16 @@ export function createWebPhotoSelectionAdapter(options = {}) {
       const files = Array.from(input.files || []);
       if (files.length === 0) {
         return result(PHOTO_SELECTION_RESULT_STATUS.CANCELED, { files, request });
+      }
+      if (request.limit !== null && files.length > request.limit) {
+        const allowance = request.limit === 0
+          ? "This entry already has the maximum number of photos."
+          : `Choose ${request.limit} or fewer photo${request.limit === 1 ? "" : "s"} this time.`;
+        return result(PHOTO_SELECTION_RESULT_STATUS.FAILURE, {
+          files: [],
+          request,
+          error: new Error(`${allowance} Remove a photo before adding another.`),
+        });
       }
       return result(PHOTO_SELECTION_RESULT_STATUS.SUCCESS, { files, request });
     } catch (error) {
