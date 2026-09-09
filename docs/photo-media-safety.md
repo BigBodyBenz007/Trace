@@ -25,7 +25,9 @@ JPEG orientation is applied while decoding and baked into optimized pixels. PNG 
 
 Immediately before a new photo write, Trace uses `navigator.storage.estimate()` when available. It requires the prepared bytes plus 15 percent write overhead and 5 MiB of remaining headroom. An estimate that clearly cannot accommodate the write blocks it before IndexedDB mutation. Missing, malformed, or rejected quota APIs do not block an otherwise valid save because browsers do not consistently expose these APIs.
 
-Trace also calls `navigator.storage.persist()` on a best-effort basis. A rejection or unsupported API never turns a valid save into a failure. IndexedDB writes remain transactional, and the existing metadata-write rollback removes newly staged blobs if structured storage fails.
+Trace also calls `navigator.storage.persist()` on a best-effort basis. A rejection or unsupported API never turns a valid save into a failure. IndexedDB writes remain transactional. Save-time photo writes use rollback when structured storage fails; already durable Add Memory draft photos are retained so the user can retry.
+
+For Add Memory, prepared photos are staged in IndexedDB immediately and the unfinished draft stores only their IDs and display metadata in `localStorage.memoryDraft`. Back to Timeline evicts temporary preview URLs but preserves both stores. Reopening recreates previews from IndexedDB. Removing a staged photo or confirming draft discard deletes only photo IDs that are not referenced by a saved Memory or Workout. A failed final Memory save retains the complete draft and staged blobs for retry; a successful save clears the draft only after the saved Memory references are written.
 
 ## Backup safety
 
@@ -33,4 +35,4 @@ Backup size estimation includes UTF-8 structured data, base64 expansion of every
 
 When Chromium exposes trustworthy JavaScript heap figures, Trace rejects an export that clearly lacks enough working memory before photo base64 construction. Browsers without that nonstandard signal continue safely; destination free space cannot be known before the browser download/share sheet takes control.
 
-The export path encodes photos sequentially and assembles JSON as Blob parts. It avoids the prior combination of simultaneous photo buffers, a complete backup object, a deep validation clone, and a second full-payload `JSON.stringify`. The archive format, structured digest, per-photo SHA-256 digests, validation, and transactional restore behavior are unchanged.
+The export path encodes photos sequentially and assembles JSON as Blob parts. It avoids the prior combination of simultaneous photo buffers, a complete backup object, a deep validation clone, and a second full-payload `JSON.stringify`. Unfinished Memory metadata and its staged photo records are included in the same structured and per-photo SHA-256 integrity checks and transactional restore as other durable Trace data.

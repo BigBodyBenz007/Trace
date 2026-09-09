@@ -29,6 +29,7 @@ import {
 import { createProtocolCompoundOutcome } from "./services/protocolCompoundOutcome";
 import { completeProtocolOccurrence as createCompletedProtocolOccurrence } from "./services/protocolOccurrence";
 import { estimateWorkoutCalorieRange } from "./services/workoutCalorieRangeEstimator";
+import { MEMORY_DRAFT_STORAGE_KEY } from "./services/memoryDraft";
 
 jest.mock("./storage/photoStorage", () => ({
   clearCompletedMigrationBackup: jest.fn(),
@@ -140,6 +141,20 @@ function expectDestinationScrolledToTop() {
 
 function openWorkouts() {
   fireEvent.click(screen.getByRole("button", { name: "Workouts" }));
+}
+
+function useMockPhotoDatabase(initialRecords = []) {
+  const database = { name: "memory-draft-photo-db" };
+  const records = new Map(initialRecords.map((record) => [record.id, record]));
+  openPhotoDatabase.mockResolvedValue(database);
+  getPhoto.mockImplementation(async (_database, id) => records.get(id));
+  putPhotos.mockImplementation(async (_database, nextRecords) => {
+    nextRecords.forEach((record) => records.set(record.id, record));
+  });
+  deletePhotos.mockImplementation(async (_database, ids) => {
+    ids.forEach((id) => records.delete(id));
+  });
+  return { database, records };
 }
 
 function openBackupFromSettings() {
@@ -3300,6 +3315,162 @@ test("new Memory defaults to today's local calendar date and can be changed", ()
   expect(dateInput).toHaveValue("2007-04-17");
 });
 
+test("text-only Add Memory draft preserves every editable field across Back, reopen, and App remount", () => {
+  const first = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+  fireEvent.change(screen.getByPlaceholderText("Memory title..."), {
+    target: { value: "Unfinished family trip" },
+  });
+  fireEvent.change(screen.getByPlaceholderText("Tell your story..."), {
+    target: { value: "The longer unfinished story." },
+  });
+  fireEvent.change(document.querySelector('input[type="date"]'), {
+    target: { value: "2026-07-04" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Travel" }));
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(screen.getByRole("heading", { name: "Trace" })).toBeInTheDocument();
+  const stored = JSON.parse(localStorage.getItem(MEMORY_DRAFT_STORAGE_KEY));
+  expect(stored.form).toEqual({
+    title: "Unfinished family trip",
+    description: "The longer unfinished story.",
+    date: "2026-07-04",
+    categories: ["Travel"],
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+  expect(screen.getByRole("status")).toHaveTextContent("unfinished Memory draft was restored");
+  expect(screen.getByPlaceholderText("Memory title...")).toHaveValue("Unfinished family trip");
+  expect(screen.getByPlaceholderText("Tell your story...")).toHaveValue("The longer unfinished story.");
+  expect(document.querySelector('input[type="date"]')).toHaveValue("2026-07-04");
+  expect(screen.getByRole("button", { name: "Travel" })).toHaveAttribute("aria-pressed", "true");
+
+  first.unmount();
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+  expect(screen.getByPlaceholderText("Memory title...")).toHaveValue("Unfinished family trip");
+  expect(screen.getByPlaceholderText("Tell your story...")).toHaveValue("The longer unfinished story.");
+  expect(document.querySelector('input[type="date"]')).toHaveValue("2026-07-04");
+  expect(screen.getByRole("button", { name: "Travel" })).toHaveAttribute("aria-pressed", "true");
+});
+
+test("a malformed unfinished Memory draft cannot crash Add Memory or alter saved Memories", async () => {
+  const saved = [{
+    id: "safe-memory",
+    title: "Safe saved Memory",
+    description: "Must remain",
+    date: "2026-09-01",
+    categories: [],
+    images: [],
+    favorite: false,
+  }];
+  localStorage.setItem("memories", JSON.stringify(saved));
+  localStorage.setItem(MEMORY_DRAFT_STORAGE_KEY, "{malformed");
+  render(<App />);
+
+  fireEvent.click(await screen.findByRole("button", { name: "Add Memory" }));
+
+  expect(screen.getByPlaceholderText("Memory title...")).toHaveValue("");
+  expect(document.querySelector('input[type="date"]')).toHaveValue(localCalendarDateKey());
+  expect(screen.getByText(/draft because it is old or malformed/i)).toBeInTheDocument();
+  expect(localStorage.getItem(MEMORY_DRAFT_STORAGE_KEY)).toBe("{malformed");
+  expect(JSON.parse(localStorage.getItem("memories"))).toEqual(saved);
+});
+
+test("staged Add Memory photo survives Back and reload, then becomes the saved photo without an orphan", async () => {
+  const { records } = useMockPhotoDatabase();
+  const first = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+  fireEvent.change(screen.getByPlaceholderText("Memory title..."), {
+    target: { value: "Durable photo draft" },
+  });
+  const photo = new File(["durable photo bytes"], "durable.jpg", { type: "image/jpeg" });
+  fireEvent.change(screen.getByLabelText("Choose Photos"), { target: { files: [photo] } });
+  await screen.findByText(/Original file was preserved/);
+  expect(await screen.findByAltText("Memory 1")).toHaveAttribute("src", expect.stringMatching(/^blob:/));
+  const draft = JSON.parse(localStorage.getItem(MEMORY_DRAFT_STORAGE_KEY));
+  const [photoReference] = draft.photos;
+  expect(records.get(photoReference.id)).toMatchObject({
+    id: photoReference.id,
+    memoryId: draft.memoryId,
+    memoryDraftId: draft.id,
+    blob: photo,
+  });
+  expect(localStorage.getItem(MEMORY_DRAFT_STORAGE_KEY)).not.toMatch(/durable photo bytes|base64|blob:/i);
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(URL.revokeObjectURL).toHaveBeenCalled();
+  first.unmount();
+
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Add Memory" }));
+  expect(await screen.findByAltText("Memory 1")).toHaveAttribute("src", expect.stringMatching(/^blob:/));
+  fireEvent.click(screen.getByRole("button", { name: "Save Memory" }));
+  await screen.findByRole("heading", { name: "Trace" });
+
+  const saved = JSON.parse(localStorage.getItem("memories"));
+  expect(saved).toEqual([expect.objectContaining({
+    id: draft.memoryId,
+    title: "Durable photo draft",
+    images: [photoReference.id],
+  })]);
+  expect(localStorage.getItem(MEMORY_DRAFT_STORAGE_KEY)).toBeNull();
+  expect(records.has(photoReference.id)).toBe(true);
+  expect(records.get(photoReference.id)).not.toHaveProperty("memoryDraftId");
+  expect(deletePhotos).not.toHaveBeenCalledWith(expect.anything(), [photoReference.id]);
+});
+
+test("removing and confirmed discard delete only temporary Add Memory photos", async () => {
+  const savedPhoto = {
+    id: "saved-photo",
+    memoryId: "saved-memory",
+    blob: new Blob(["saved"], { type: "image/jpeg" }),
+  };
+  const { records } = useMockPhotoDatabase([savedPhoto]);
+  localStorage.setItem("memories", JSON.stringify([{
+    id: "saved-memory",
+    title: "Already saved",
+    description: "Untouched",
+    date: "2026-09-01",
+    categories: [],
+    images: ["saved-photo"],
+    favorite: false,
+  }]));
+  render(<App />);
+  fireEvent.click(await screen.findByRole("button", { name: "Add Memory" }));
+  fireEvent.change(screen.getByPlaceholderText("Memory title..."), { target: { value: "Discard me" } });
+  const first = new File(["first"], "first.jpg", { type: "image/jpeg" });
+  const second = new File(["second"], "second.jpg", { type: "image/jpeg" });
+  fireEvent.change(screen.getByLabelText("Choose Photos"), { target: { files: [first, second] } });
+  await screen.findByText(/Original files were preserved/);
+  await screen.findByAltText("Memory 2");
+  const initialDraft = JSON.parse(localStorage.getItem(MEMORY_DRAFT_STORAGE_KEY));
+  const [removedId, discardedId] = initialDraft.photos.map(({ id }) => id);
+
+  fireEvent.click(screen.getByRole("button", { name: "Remove photo 1" }));
+  await waitFor(() => expect(records.has(removedId)).toBe(false));
+  expect(records.has(discardedId)).toBe(true);
+  expect(records.has("saved-photo")).toBe(true);
+  expect(JSON.parse(localStorage.getItem(MEMORY_DRAFT_STORAGE_KEY)).photos.map(({ id }) => id))
+    .toEqual([discardedId]);
+
+  const confirm = jest.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(records.has(discardedId)).toBe(true);
+  expect(localStorage.getItem(MEMORY_DRAFT_STORAGE_KEY)).not.toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+  await screen.findByRole("heading", { name: "Trace" });
+  expect(localStorage.getItem(MEMORY_DRAFT_STORAGE_KEY)).toBeNull();
+  expect(records.has(discardedId)).toBe(false);
+  expect(records.get("saved-photo")).toBe(savedPhoto);
+  expect(JSON.parse(localStorage.getItem("memories"))).toEqual([
+    expect.objectContaining({ id: "saved-memory", images: ["saved-photo"] }),
+  ]);
+  confirm.mockRestore();
+});
+
 test("editing a Memory preserves its saved date exactly", async () => {
   localStorage.setItem("memories", JSON.stringify([{
     id: "dated-memory",
@@ -4467,6 +4638,7 @@ test("completed workout drops persist recursively and reload in Workout History"
 });
 
 test("App supplies its photo-selection adapter to both Memory and Workout entry points", async () => {
+  useMockPhotoDatabase();
   const selectedFiles = [];
   const photoSelectionAdapter = {
     acquireImages: jest.fn(({ input }) => {
@@ -4521,11 +4693,8 @@ test("App supplies its lifecycle adapter to the active Workout draft flow", () =
   });
 });
 
-test("a failed Memory metadata write rolls back newly stored selected photos", async () => {
-  const database = { name: "memory-photo-rollback" };
-  openPhotoDatabase.mockResolvedValue(database);
-  putPhotos.mockResolvedValue(undefined);
-  deletePhotos.mockResolvedValue(undefined);
+test("a failed Memory metadata write preserves the complete draft and its staged photo", async () => {
+  const { records } = useMockPhotoDatabase();
   const originalSetItem = Storage.prototype.setItem;
   const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (key, value) {
     if (key === "memories") throw new Error("quota full");
@@ -4543,13 +4712,22 @@ test("a failed Memory metadata write rolls back newly stored selected photos", a
     await screen.findByText(/Original file was preserved/);
     fireEvent.click(screen.getByRole("button", { name: "Save Memory" }));
 
-    await waitFor(() => expect(deletePhotos).toHaveBeenCalled());
+    expect(await screen.findByRole("alert")).toHaveTextContent(/browser storage is unavailable or full/i);
     const storedRecords = putPhotos.mock.calls.at(-1)[1];
     expect(storedRecords).toEqual([
       expect.objectContaining({ memoryId: expect.any(String), blob: photo }),
     ]);
-    expect(deletePhotos).toHaveBeenCalledWith(database, [storedRecords[0].id]);
+    expect(deletePhotos).not.toHaveBeenCalledWith(expect.anything(), [storedRecords[0].id]);
+    expect(records.get(storedRecords[0].id)).toMatchObject({
+      id: storedRecords[0].id,
+      memoryId: storedRecords[0].memoryId,
+      blob: photo,
+    });
     expect(localStorage.getItem("memories")).toBeNull();
+    expect(JSON.parse(localStorage.getItem(MEMORY_DRAFT_STORAGE_KEY))).toMatchObject({
+      form: { title: "Retained Memory draft" },
+      photos: [{ id: storedRecords[0].id }],
+    });
     expect(screen.getByPlaceholderText("Memory title...")).toHaveValue("Retained Memory draft");
   } finally {
     setItem.mockRestore();
@@ -4584,12 +4762,13 @@ test("an obviously insufficient photo quota leaves existing Memory data and the 
     fireEvent.change(screen.getByPlaceholderText("Memory title..."), { target: { value: "Unsaved New Memory" } });
     const photo = new File(["new photo"], "new.jpg", { type: "image/jpeg" });
     fireEvent.change(screen.getByLabelText("Choose Photos"), { target: { files: [photo] } });
-    await screen.findByText(/Original file was preserved/);
-    fireEvent.click(screen.getByRole("button", { name: "Save Memory" }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent(/does not report enough browser storage/i);
+    expect(await screen.findByText(/does not report enough browser storage/i)).toBeInTheDocument();
     expect(JSON.parse(localStorage.getItem("memories"))).toEqual(existing);
     expect(putPhotos).not.toHaveBeenCalled();
+    expect(JSON.parse(localStorage.getItem(MEMORY_DRAFT_STORAGE_KEY))).toMatchObject({
+      form: { title: "Unsaved New Memory" },
+      photos: [],
+    });
     expect(screen.getByPlaceholderText("Memory title...")).toHaveValue("Unsaved New Memory");
   } finally {
     if (storageDescriptor) Object.defineProperty(navigator, "storage", storageDescriptor);

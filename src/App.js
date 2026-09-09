@@ -125,6 +125,14 @@ import {
   preparePhotoStorage,
 } from "./services/photoStorageSafety";
 import {
+  clearMemoryDraft,
+  createMemoryDraft,
+  memoryDraftHasMeaningfulWork,
+  memoryDraftPhoto,
+  readMemoryDraft,
+  writeMemoryDraft,
+} from "./services/memoryDraft";
+import {
   APP_LIFECYCLE_PHASE,
   webAppLifecycleAdapter,
 } from "./services/appLifecycleAdapter";
@@ -361,16 +369,20 @@ function App({
     legalPageFromPathname(typeof window === "undefined" ? "/" : window.location.pathname) || "home"
   );
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [date, setDate] = useState("");
-  const [categories, setCategories] = useState([]);
+  const [initialMemoryDraft] = useState(() => readMemoryDraft(localStorage));
+  const [title, setTitle] = useState(() => initialMemoryDraft?.form.title || "");
+  const [description, setDescription] = useState(() => initialMemoryDraft?.form.description || "");
+  const [date, setDate] = useState(() => initialMemoryDraft?.form.date || "");
+  const [categories, setCategories] = useState(() => initialMemoryDraft?.form.categories || []);
 
   const [editingId, setEditingId] = useState(null);
   const [retainHomeDuringMemoryEdit, setRetainHomeDuringMemoryEdit] = useState(false);
   const [homePageGeneration, setHomePageGeneration] = useState(0);
 
-  const [images, setImages] = useState([]);
+  const [images, setImages] = useState(() =>
+    (initialMemoryDraft?.photos || []).map((photo) => ({ ...photo, isDraft: true }))
+  );
+  const [memoryDraftRecovered, setMemoryDraftRecovered] = useState(false);
   const [timelineTargetMemoryId, setTimelineTargetMemoryId] = useState(null);
 
   const [memories, setMemories] = useState([]);
@@ -445,6 +457,12 @@ function App({
     typeof document === "undefined" ? "Trace" : document.title || "Trace"
   );
   const memoryEditorFolioRef = useRef(null);
+  const memoryDraftIdentityRef = useRef(initialMemoryDraft ? {
+    id: initialMemoryDraft.id,
+    memoryId: initialMemoryDraft.memoryId,
+    initialDate: initialMemoryDraft.initialDate,
+    createdAt: initialMemoryDraft.createdAt,
+  } : null);
   const completedPlannedWorkoutIdsRef = useRef(new Set());
   const pendingPlannedWorkoutIdsRef = useRef(new Set());
   const journalSessionContextRef = useRef(null);
@@ -1027,10 +1045,160 @@ function App({
     width: "100%",
   };
 
+  function ensureMemoryDraftIdentity(initialDate = date || localCalendarDateKey()) {
+    if (memoryDraftIdentityRef.current) return memoryDraftIdentityRef.current;
+    const identity = {
+      id: createId(),
+      memoryId: createId(new Set(memories.map((memory) => memory.id))),
+      initialDate,
+      createdAt: new Date().toISOString(),
+    };
+    memoryDraftIdentityRef.current = identity;
+    return identity;
+  }
+
+  function createCurrentMemoryDraft({
+    form = { title, description, date, categories },
+    draftImages = images,
+    initialDate,
+  } = {}) {
+    const identity = ensureMemoryDraftIdentity(initialDate);
+    const draft = createMemoryDraft({
+      ...identity,
+      form: {
+        title: form.title,
+        description: form.description,
+        date: form.date,
+        categories: form.categories,
+      },
+      photos: draftImages
+        .filter((image) => image?.isDraft && image.id)
+        .map(memoryDraftPhoto)
+        .filter(Boolean),
+    });
+    if (!draft) throw new Error("Trace could not prepare the unfinished Memory draft.");
+    return draft;
+  }
+
+  function persistMemoryDraft(snapshot) {
+    const draft = createCurrentMemoryDraft(snapshot);
+    if (memoryDraftHasMeaningfulWork(draft)) writeMemoryDraft(localStorage, draft);
+    else clearMemoryDraft(localStorage);
+    setStorageError("");
+    return draft;
+  }
+
+  function savedPhotoReferences() {
+    try {
+      const storedMemories = JSON.parse(localStorage.getItem("memories") || "[]");
+      const storedWorkouts = JSON.parse(localStorage.getItem("workoutEntries") || "[]");
+      if (!Array.isArray(storedMemories) || !Array.isArray(storedWorkouts)) return null;
+      return new Set([
+        ...storedMemories.flatMap((memory) => Array.isArray(memory?.images)
+          ? memory.images.map((image) => typeof image === "string" ? image : image?.id).filter(Boolean)
+          : []),
+        ...storedWorkouts.flatMap((workout) => Array.isArray(workout?.photos)
+          ? workout.photos.map((photo) => typeof photo === "string" ? photo : photo?.id).filter(Boolean)
+          : []),
+      ]);
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function unreferencedDraftPhotoIds(photoIds) {
+    const referenced = savedPhotoReferences();
+    if (!referenced) return [];
+    return [...new Set(photoIds)].filter((id) => id && !referenced.has(id));
+  }
+
+  async function stageMemoryDraftPhotos(preparedPhotos, snapshot) {
+    const identity = ensureMemoryDraftIdentity(snapshot.initialDate);
+    const records = preparedPhotos.map((photo) => ({
+      id: createId(),
+      memoryId: identity.memoryId,
+      memoryDraftId: identity.id,
+      blob: photo.blob,
+    }));
+    await preparePhotoStorage(records.reduce((total, record) => total + record.blob.size, 0));
+    const database = await ensurePhotoDatabase();
+    await putPhotos(database, records);
+    const references = preparedPhotos.map((photo, index) => ({
+      ...memoryDraftPhoto({ ...photo, id: records[index].id }),
+      isDraft: true,
+    }));
+    try {
+      persistMemoryDraft({ ...snapshot, draftImages: [...snapshot.draftImages, ...references] });
+    } catch (error) {
+      await deletePhotos(database, records.map(({ id }) => id)).catch(() => {});
+      throw error;
+    }
+    return references;
+  }
+
+  async function removeMemoryDraftPhoto(photo, snapshot) {
+    const nextImages = snapshot.draftImages.filter((image) => image.id !== photo.id);
+    const [photoId] = unreferencedDraftPhotoIds([photo.id]);
+    const database = photoId ? await ensurePhotoDatabase() : null;
+    const storedPhoto = database ? await getPhoto(database, photoId) : null;
+    if (photoId) await deletePhotos(database, [photoId]);
+    try {
+      persistMemoryDraft({ ...snapshot, draftImages: nextImages });
+    } catch (error) {
+      if (storedPhoto?.blob) await putPhotos(database, [storedPhoto]).catch(() => {});
+      throw error;
+    }
+    photoUrlLoader.evict(photo);
+    return nextImages;
+  }
+
+  async function discardMemoryDraft() {
+    const storedDraft = readMemoryDraft(localStorage);
+    const photoIds = unreferencedDraftPhotoIds(
+      (storedDraft?.photos || images.filter(({ isDraft }) => isDraft)).map(({ id }) => id)
+    );
+    const database = photoIds.length ? await ensurePhotoDatabase() : null;
+    const rollbackPhotos = database
+      ? (await Promise.all(photoIds.map((id) => getPhoto(database, id)))).filter((photo) => photo?.blob)
+      : [];
+    if (database) await deletePhotos(database, photoIds);
+    try {
+      clearMemoryDraft(localStorage);
+    } catch (error) {
+      if (database && rollbackPhotos.length) await putPhotos(database, rollbackPhotos).catch(() => {});
+      throw error;
+    }
+    images.filter(({ isDraft }) => isDraft).forEach((image) => photoUrlLoader.evict(image));
+    memoryDraftIdentityRef.current = null;
+    setMemoryDraftRecovered(false);
+    setTitle("");
+    setDescription("");
+    setDate("");
+    setCategories([]);
+    setImages([]);
+    setEditingId(null);
+    setStorageError("");
+    setPage("home");
+  }
+
+  function backFromMemoryDraft(snapshot) {
+    try {
+      persistMemoryDraft(snapshot);
+      snapshot.draftImages.filter(({ isDraft }) => isDraft)
+        .forEach((image) => photoUrlLoader.evict(image));
+      setStorageError("");
+      setPage("home");
+      return true;
+    } catch (error) {
+      setStorageError(storageMessage("save this unfinished Memory draft"));
+      return false;
+    }
+  }
+
   async function prepareMemoryImages(memoryId, draftImages) {
     const photosToStore = [];
     const preparedImages = draftImages.map((image) => {
-      if (image.id) return image;
+      if (image.id) return { id: image.id, ...(image.url ? { url: image.url } : {}) };
       const id = createId();
       const blob = image.blob || dataUrlToBlob(image.legacyDataUrl || image.url);
       photosToStore.push({ id, memoryId, blob });
@@ -1054,7 +1222,23 @@ function App({
 
     try {
       const memoryId =
-        editingId || createId(new Set(memories.map((item) => item.id)));
+        editingId || memoryDraftIdentityRef.current?.memoryId ||
+        createId(new Set(memories.map((item) => item.id)));
+      const stagedImages = editingId === null ? images.filter(({ isDraft }) => isDraft) : [];
+      if (stagedImages.length) {
+        const database = await ensurePhotoDatabase();
+        const finalizedPhotos = [];
+        for (const image of stagedImages) {
+          const stored = await getPhoto(database, image.id);
+          if (!stored?.blob) {
+            throw new Error("A staged Memory photo is unavailable. Remove it and choose the photo again.");
+          }
+          const finalized = { ...stored, memoryId };
+          delete finalized.memoryDraftId;
+          finalizedPhotos.push(finalized);
+        }
+        await putPhotos(database, finalizedPhotos);
+      }
       const { preparedImages, newPhotoIds } = await prepareMemoryImages(
         memoryId,
         images
@@ -1089,11 +1273,21 @@ function App({
         updatedMemories = [...memories, newMemory];
       }
 
+      const previousMemoriesRaw = localStorage.getItem("memories");
       try {
         localStorage.setItem(
           "memories",
           JSON.stringify(memoryMetadata(updatedMemories))
         );
+        if (editingId === null) {
+          try {
+            clearMemoryDraft(localStorage);
+          } catch (draftError) {
+            if (previousMemoriesRaw === null) localStorage.removeItem("memories");
+            else localStorage.setItem("memories", previousMemoriesRaw);
+            throw draftError;
+          }
+        }
       } catch (error) {
         await deletePhotos(photoDatabaseRef.current, newPhotoIds).catch(() => {});
         throw error;
@@ -1107,6 +1301,11 @@ function App({
       }
       setEditingId(null);
       setRetainHomeDuringMemoryEdit(false);
+      if (editingId === null) {
+        images.filter(({ isDraft }) => isDraft).forEach((image) => photoUrlLoader.evict(image));
+        memoryDraftIdentityRef.current = null;
+        setMemoryDraftRecovered(false);
+      }
       setStorageError("");
 
       const retainedIds = new Set(preparedImages.map((image) => image.id));
@@ -1215,6 +1414,7 @@ function App({
     setDate(memory.date);
     setImages(memory.images || []);
     setCategories(Array.isArray(memory.categories) ? memory.categories : []);
+    setMemoryDraftRecovered(false);
 
     if (retainHome) skipNextPageTopScrollRef.current = true;
     setRetainHomeDuringMemoryEdit(retainHome);
@@ -1223,9 +1423,37 @@ function App({
   }
 
   function openNewMemory() {
+    const storedDraft = readMemoryDraft(localStorage);
     setRetainHomeDuringMemoryEdit(false);
     setEditingId(null);
-    setDate(localCalendarDateKey());
+    if (storedDraft) {
+      memoryDraftIdentityRef.current = {
+        id: storedDraft.id,
+        memoryId: storedDraft.memoryId,
+        initialDate: storedDraft.initialDate,
+        createdAt: storedDraft.createdAt,
+      };
+      setTitle(storedDraft.form.title);
+      setDescription(storedDraft.form.description);
+      setDate(storedDraft.form.date);
+      setCategories(storedDraft.form.categories);
+      setImages(storedDraft.photos.map((photo) => ({ ...photo, isDraft: true })));
+      setMemoryDraftRecovered(true);
+      setStorageError("");
+    } else {
+      memoryDraftIdentityRef.current = null;
+      setTitle("");
+      setDescription("");
+      setDate(localCalendarDateKey());
+      setCategories([]);
+      setImages([]);
+      setMemoryDraftRecovered(false);
+      if (localStorage.getItem("memoryDraft") !== null) {
+        setStorageError(
+          "Trace could not read the unfinished Memory draft because it is old or malformed. Saved Memories were left unchanged."
+        );
+      }
+    }
     setPage("new");
   }
 
@@ -3563,6 +3791,13 @@ function App({
           editingIndex={editingId}
           setEditingIndex={setEditingId}
           onCancelExistingMemory={cancelExistingMemoryEdit}
+          draftRecovered={memoryDraftRecovered}
+          draftInitialDate={memoryDraftIdentityRef.current?.initialDate || date}
+          persistDraft={persistMemoryDraft}
+          stageDraftPhotos={stageMemoryDraftPhotos}
+          removeDraftPhoto={removeMemoryDraftPhoto}
+          discardDraft={discardMemoryDraft}
+          onBackToTimeline={backFromMemoryDraft}
           folioRef={
             editingId !== null && retainHomeDuringMemoryEdit
               ? memoryEditorFolioRef

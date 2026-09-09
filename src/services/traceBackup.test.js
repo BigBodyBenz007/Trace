@@ -120,7 +120,7 @@ function emptyStructured(overrides = {}) {
         ? emptyInjectionSiteCollection()
       : key === "injectionSiteSettings"
         ? defaultInjectionSiteSettings()
-      : ["nutritionGoals", "appSettings", "workoutDraft", "journalDraft", "journalVault"].includes(key) ? null : [],
+      : ["nutritionGoals", "appSettings", "memoryDraft", "workoutDraft", "journalDraft", "journalVault"].includes(key) ? null : [],
   ]).concat(Object.entries(overrides)));
 }
 
@@ -848,7 +848,7 @@ test("backs up and restores the historical zero-portion shape without mutating o
     openDatabase: async () => makePhotoDatabase(),
   });
 
-  expect(created.schemaVersion).toBe(6);
+  expect(created.schemaVersion).toBe(7);
   expect(created.data.structured.nutritionEntries).toEqual([meal]);
   expect(created.data.structured.workoutEntries).toEqual([workout]);
   expect(created.data.structured.workoutTemplates).toEqual([template]);
@@ -1146,6 +1146,59 @@ test("round-trips an unfinished plaintext Journal draft and previews its presenc
   expect(restored.value("journalDraft")).toBe(JSON.stringify(draft));
 });
 
+test("round-trips an unfinished Memory draft with its integrity-checked staged photo", async () => {
+  const draft = {
+    schemaVersion: 1,
+    id: "memory-draft-1",
+    memoryId: "future-memory-1",
+    initialDate: "2026-09-09",
+    form: {
+      title: "Still writing",
+      description: "This story is not finished.",
+      date: "2026-09-08",
+      categories: ["Milestone"],
+    },
+    photos: [{ id: "draft-photo-1", name: "draft.png", storedBytes: 11 }],
+    createdAt: "2026-09-09T12:00:00.000Z",
+    updatedAt: "2026-09-09T12:01:00.000Z",
+  };
+  const sourcePhoto = {
+    id: "draft-photo-1",
+    memoryId: "future-memory-1",
+    memoryDraftId: "memory-draft-1",
+    blob: new Blob(["draft bytes"], { type: "image/png" }),
+  };
+  const source = makeStorage({ memoryDraft: JSON.stringify(draft) });
+  const created = await createTraceBackup({
+    storage: source,
+    openDatabase: async () => makePhotoDatabase([sourcePhoto]),
+  });
+
+  expect(created.data.structured.memoryDraft).toEqual(draft);
+  expect((await validateTraceBackup(created)).summary.activeMemoryDraft).toBe(true);
+  expect(created.integrity.photos.entries).toEqual([
+    expect.objectContaining({ id: "draft-photo-1", digest: expect.stringMatching(/^[0-9a-f]{64}$/) }),
+  ]);
+
+  const restored = makeStorage({
+    memories: JSON.stringify([{ id: "saved-memory", title: "Saved remains transactional" }]),
+    memoryDraft: JSON.stringify({ ...draft, id: "replaced-draft" }),
+  });
+  const restoredDatabase = makePhotoDatabase([]);
+  await restoreTraceBackup(created, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => restoredDatabase,
+  });
+
+  expect(restored.value("memoryDraft")).toBe(JSON.stringify(draft));
+  expect(restoredDatabase.records()[0]).toMatchObject({
+    id: "draft-photo-1",
+    memoryDraftId: "memory-draft-1",
+  });
+  expect(await readBlobText(restoredDatabase.records()[0].blob)).toBe("draft bytes");
+});
+
 test("an empty plaintext Journal draft remains empty through export and full replacement restore", async () => {
   const created = await createTraceBackup({
     storage: makeStorage(),
@@ -1201,8 +1254,11 @@ test("imports and restores an integrity-protected schema-5 backup without workou
   });
   const structured = cloneJsonForTest(current.data.structured);
   delete structured.workoutTemplates;
+  delete structured.memoryDraft;
   structured.nutritionEntries[0].portion.amount = "0.5";
-  const schemaFiveKeys = TRACE_STORAGE_KEYS.filter((key) => key !== "workoutTemplates");
+  const schemaFiveKeys = TRACE_STORAGE_KEYS.filter((key) =>
+    key !== "workoutTemplates" && key !== "memoryDraft"
+  );
   const schemaFive = {
     ...current,
     schemaVersion: 5,
@@ -1230,6 +1286,48 @@ test("imports and restores an integrity-protected schema-5 backup without workou
   expect(storage.value("workoutTemplates")).toBeNull();
   expect(JSON.parse(storage.value("plannedWorkouts"))).toEqual([plannedWorkout()]);
   expect(JSON.parse(storage.value("nutritionEntries"))[0].portion.amount).toBe(0.5);
+});
+
+test("imports schema 6 without an unfinished Memory draft and clears any current draft", async () => {
+  const current = await createTraceBackup({
+    storage: makeStorage(),
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  const structured = cloneJsonForTest(current.data.structured);
+  delete structured.memoryDraft;
+  const schemaSixKeys = TRACE_STORAGE_KEYS.filter((key) => key !== "memoryDraft");
+  const schemaSix = {
+    ...current,
+    schemaVersion: 6,
+    data: { ...current.data, structured },
+    integrity: {
+      ...current.integrity,
+      structured: {
+        digest: await sha256CanonicalJson(structured),
+        domainCount: schemaSixKeys.length,
+        domains: schemaSixKeys,
+      },
+    },
+  };
+  const existingDraft = {
+    schemaVersion: 1,
+    id: "current-draft",
+    memoryId: "future-memory",
+    initialDate: "2026-09-09",
+    form: { title: "Current", description: "", date: "2026-09-09", categories: [] },
+    photos: [],
+    createdAt: "2026-09-09T12:00:00.000Z",
+    updatedAt: "2026-09-09T12:00:00.000Z",
+  };
+  const storage = makeStorage({ memoryDraft: JSON.stringify(existingDraft) });
+
+  await restoreTraceBackup(schemaSix, {
+    confirmed: true,
+    storage,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+
+  expect(storage.value("memoryDraft")).toBeNull();
 });
 
 test("schema 4 rejects a backup that omits any classified durable domain", () => {

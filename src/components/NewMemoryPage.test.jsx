@@ -18,26 +18,40 @@ afterEach(() => {
 });
 
 function renderPage({
+  categories = [],
+  date = "2026-08-17",
+  description = "",
+  discardDraft,
+  draftInitialDate,
+  draftRecovered = false,
   editingIndex = null,
   images = [],
+  onBackToTimeline,
   onCancelExistingMemory,
   photoSelectionAdapter,
   photoLoader,
+  persistDraft,
+  removeDraftPhoto,
+  setCategories = jest.fn(),
+  setDate = jest.fn(),
+  setDescription = jest.fn(),
   setEditingIndex = jest.fn(),
   setImages = jest.fn(),
   setPage = jest.fn(),
+  setTitle = jest.fn(),
+  stageDraftPhotos,
   title = "",
 } = {}) {
   return render(
     <NewMemoryPage
       title={title}
-      setTitle={jest.fn()}
-      description=""
-      setDescription={jest.fn()}
-      date="2026-08-17"
-      setDate={jest.fn()}
-      categories={[]}
-      setCategories={jest.fn()}
+      setTitle={setTitle}
+      description={description}
+      setDescription={setDescription}
+      date={date}
+      setDate={setDate}
+      categories={categories}
+      setCategories={setCategories}
       images={images}
       setImages={setImages}
       photoLoader={photoLoader}
@@ -49,6 +63,13 @@ function renderPage({
       editingIndex={editingIndex}
       setEditingIndex={setEditingIndex}
       onCancelExistingMemory={onCancelExistingMemory}
+      draftRecovered={draftRecovered}
+      draftInitialDate={draftInitialDate}
+      persistDraft={persistDraft}
+      stageDraftPhotos={stageDraftPhotos}
+      removeDraftPhoto={removeDraftPhoto}
+      discardDraft={discardDraft}
+      onBackToTimeline={onBackToTimeline}
       photoSelectionAdapter={photoSelectionAdapter}
     />
   );
@@ -128,6 +149,102 @@ test.each(["Close Edit Memory", "Cancel"])(
     confirm.mockRestore();
   }
 );
+
+test("Back to Timeline preserves the complete Add Memory draft without discarding it", () => {
+  const onBackToTimeline = jest.fn();
+  const discardDraft = jest.fn();
+  const images = [{ id: "staged-photo", isDraft: true, storedBytes: 42 }];
+  renderPage({
+    title: "Unfinished title",
+    description: "Unfinished story",
+    date: "2026-08-15",
+    draftInitialDate: "2026-08-17",
+    categories: ["Travel"],
+    images,
+    onBackToTimeline,
+    discardDraft,
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+
+  expect(onBackToTimeline).toHaveBeenCalledWith({
+    initialDate: "2026-08-17",
+    form: {
+      title: "Unfinished title",
+      description: "Unfinished story",
+      date: "2026-08-15",
+      categories: ["Travel"],
+    },
+    draftImages: images,
+  });
+  expect(discardDraft).not.toHaveBeenCalled();
+});
+
+test("every editable Add Memory field is sent to durable draft persistence", () => {
+  const persistDraft = jest.fn();
+  const { rerender } = renderPage({ persistDraft });
+
+  fireEvent.change(screen.getByPlaceholderText("Memory title..."), { target: { value: "Title" } });
+  expect(persistDraft).toHaveBeenLastCalledWith(expect.objectContaining({
+    form: expect.objectContaining({ title: "Title" }),
+  }));
+
+  rerender(<NewMemoryPage
+    title="Title" setTitle={jest.fn()} description="" setDescription={jest.fn()}
+    date="2026-08-17" setDate={jest.fn()} categories={[]} setCategories={jest.fn()}
+    images={[]} setImages={jest.fn()} saveMemory={jest.fn()} setPage={jest.fn()}
+    editingIndex={null} setEditingIndex={jest.fn()} persistDraft={persistDraft}
+  />);
+  fireEvent.change(screen.getByPlaceholderText("Tell your story..."), { target: { value: "Story" } });
+  expect(persistDraft).toHaveBeenLastCalledWith(expect.objectContaining({
+    form: expect.objectContaining({ title: "Title", description: "Story" }),
+  }));
+  fireEvent.change(document.querySelector('input[type="date"]'), { target: { value: "2026-08-16" } });
+  expect(persistDraft).toHaveBeenLastCalledWith(expect.objectContaining({
+    form: expect.objectContaining({ date: "2026-08-16" }),
+  }));
+  fireEvent.click(screen.getByRole("button", { name: "Travel" }));
+  expect(persistDraft).toHaveBeenLastCalledWith(expect.objectContaining({
+    form: expect.objectContaining({ categories: ["Travel"] }),
+  }));
+});
+
+test("restored drafts are announced and edit mode does not expose Add Memory back navigation", () => {
+  const first = renderPage({ draftRecovered: true });
+  expect(screen.getByRole("status")).toHaveTextContent("unfinished Memory draft was restored");
+  first.unmount();
+  renderPage({ editingIndex: "saved-memory", title: "Saved" });
+  expect(screen.queryByRole("button", { name: "Back to Timeline" })).not.toBeInTheDocument();
+});
+
+test("confirmed discard clears the draft while canceling confirmation preserves everything", async () => {
+  const discardDraft = jest.fn(async () => {});
+  const confirm = jest.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+  renderPage({ title: "Meaningful", discardDraft });
+
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(discardDraft).not.toHaveBeenCalled();
+  expect(screen.getByPlaceholderText("Memory title...")).toHaveValue("Meaningful");
+
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  await waitFor(() => expect(discardDraft).toHaveBeenCalledTimes(1));
+  confirm.mockRestore();
+});
+
+test("removing a staged Add photo delegates durable deletion before updating the draft", async () => {
+  const staged = { id: "draft-photo", isDraft: true, storedBytes: 99 };
+  const removeDraftPhoto = jest.fn(async () => []);
+  const setImages = jest.fn();
+  renderPage({ images: [staged], removeDraftPhoto, setImages });
+
+  fireEvent.click(screen.getByRole("button", { name: "Remove photo 1" }));
+
+  await waitFor(() => expect(removeDraftPhoto).toHaveBeenCalledWith(
+    staged,
+    expect.objectContaining({ draftImages: [staged] })
+  ));
+  expect(setImages).toHaveBeenCalledWith([]);
+});
 
 test("keeps editor photo wrappers stable with an accessible touch-target removal control", () => {
   renderPage({ images: [{ id: "styled-photo", url: "blob:styled-photo" }] });

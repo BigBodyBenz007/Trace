@@ -1,5 +1,6 @@
 import { normalizePlannedWorkouts } from "./plannedWorkout";
 import { normalizeWorkoutDraft } from "./workoutDraft";
+import { normalizeMemoryDraft } from "./memoryDraft";
 import { normalizeWorkoutTemplates } from "./workoutTemplate";
 import { normalizeJournalDraft } from "./journalEntry";
 import { normalizeWaterCollection } from "./waterTracker";
@@ -420,6 +421,7 @@ export function validateTraceStructuredDomains(data) {
   if (data.plannedWorkouts != null) assert(normalizePlannedWorkouts(data.plannedWorkouts), "The backup contains invalid planned workout data.");
   if (data.workoutTemplates != null) assert(normalizeWorkoutTemplates(data.workoutTemplates), "The backup contains invalid workout template data.");
   if (data.dailyActions != null) assert(normalizeDailyActionCollection(data.dailyActions), "The backup contains invalid daily action data.");
+  if (data.memoryDraft != null) assert(normalizeMemoryDraft(data.memoryDraft), "The backup contains invalid unfinished Memory draft data.");
   if (data.workoutDraft != null) assert(normalizeWorkoutDraft(data.workoutDraft), "The backup contains invalid active workout draft data.");
   if (data.workoutEntries != null) recordArray(data.workoutEntries, "workout", validateWorkout);
   if (data.savedExercises != null) recordArray(data.savedExercises, "saved exercise", validateSavedExercise);

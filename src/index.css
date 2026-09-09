@@ -559,6 +559,25 @@ code {
   padding-right: 62px;
 }
 
+.trace-memory-editor__navigation {
+  display: flex;
+  margin-bottom: var(--trace-space-5);
+}
+
+.trace-memory-editor__navigation .trace-memory-editor__action {
+  flex: 0 1 auto;
+  margin: 0;
+}
+
+.trace-memory-editor__recovery {
+  background: color-mix(in srgb, var(--trace-success-bg, #14532d) 72%, transparent);
+  border: 1px solid var(--trace-success-border, #22c55e);
+  border-radius: var(--trace-radius-md);
+  color: var(--trace-text);
+  margin: var(--trace-space-5) 0 0;
+  padding: 11px 14px;
+}
+
 .trace-memory-editor__close {
   align-items: center;
   background: rgba(16, 37, 56, 0.9);
@@ -2097,6 +2116,10 @@ code {
 
   .trace-memory-editor__action {
     flex-basis: 100%;
+  }
+
+  .trace-memory-editor__navigation .trace-memory-editor__action {
+    width: 100%;
   }
 
   .trace-memory-detail__dismiss {

@@ -154,10 +154,13 @@ export default function BackupPage({
     const draftEffect = preview.summary.activeWorkoutDraft
       ? "Any current active workout draft will be replaced by the active draft in this backup."
       : "Any current active workout draft will be removed because this backup has none.";
+    const memoryDraftEffect = preview.summary.activeMemoryDraft
+      ? " Any current unfinished Memory draft will be replaced by the draft in this backup."
+      : " Any current unfinished Memory draft will be removed because this backup has none.";
     const journalEffect = preview.summary.encryptedJournal
       ? ` The encrypted Journal in the backup will replace the current Journal and will require that backup's Journal password or ${backupRecoveryLabel}.`
       : "";
-    if (!window.confirm(`Replace all current Trace data with this backup? ${draftEffect}${journalEffect} This cannot be merged.`)) {
+    if (!window.confirm(`Replace all current Trace data with this backup? ${draftEffect}${memoryDraftEffect}${journalEffect} This cannot be merged.`)) {
       setBackupCredentialValue("");
       return;
     }
@@ -231,6 +234,7 @@ export default function BackupPage({
           <ul>
             <li>Memories: {summary.memories}</li><li>Photos: {summary.photos}</li>
             <li>Nutrition entries: {summary.nutritionEntries}</li><li>Water entries: {summary.waterEntries || 0}</li><li>Health measurements: {summary.healthMeasurementEntries || 0}</li><li>Planned workouts: {summary.plannedWorkouts || 0}</li><li>Workout templates: {summary.workoutTemplates || 0}</li><li>Daily actions: {summary.dailyActions || 0}</li><li>Workouts: {summary.workouts}</li>
+            <li>Unfinished Memory draft: {summary.activeMemoryDraft ? "Included — it will replace any current unfinished Memory draft" : "None — any current unfinished Memory draft will be removed"}</li>
             <li>Active workout draft: {summary.activeWorkoutDraft ? "Included — it will replace any current active workout draft" : "None — any current active workout draft will be removed"}</li>
             <li>Medication & supplement entries: {summary.medicationEntries}</li><li>Scheduled doses: {summary.medicationDoseSchedules || 0}</li><li>Dose occurrence changes: {summary.medicationDoseOccurrences || 0}</li><li>Protocols: {summary.protocols}</li><li>Protocol daily statuses: {summary.protocolOccurrences || 0}</li><li>Protocol compound results: {summary.protocolCompoundOutcomes || 0}</li><li>Injection shots: {summary.injectionSiteEntries || 0}</li>
             <li>Trophy Case entries: {summary.trophyCaseEntries}</li><li>Saved exercises: {summary.savedExercises}</li>

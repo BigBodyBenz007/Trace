@@ -30,10 +30,17 @@ function NewMemoryPage({
   editingIndex,
   setEditingIndex,
   onCancelExistingMemory,
+  draftRecovered = false,
+  draftInitialDate,
+  persistDraft = () => {},
+  stageDraftPhotos,
+  removeDraftPhoto,
+  discardDraft,
+  onBackToTimeline,
   folioRef = null,
   photoSelectionAdapter = webPhotoSelectionAdapter,
 }) {
-  const initialDateRef = useRef(date);
+  const initialDateRef = useRef(draftInitialDate || date);
   const photoSelectionInFlightRef = useRef(false);
   const [photoStatus, setPhotoStatus] = useState("");
   const [photoError, setPhotoError] = useState("");
@@ -41,6 +48,56 @@ function NewMemoryPage({
 
   function releaseDraftPhoto(image) {
     if (image?.isDraft && image.url) URL.revokeObjectURL(image.url);
+  }
+
+  function draftSnapshot({
+    nextTitle = title,
+    nextDescription = description,
+    nextDate = date,
+    nextCategories = categories,
+    nextImages = images,
+  } = {}) {
+    return {
+      initialDate: initialDateRef.current,
+      form: {
+        title: nextTitle,
+        description: nextDescription,
+        date: nextDate,
+        categories: nextCategories,
+      },
+      draftImages: nextImages,
+    };
+  }
+
+  function persistAddDraft(snapshot) {
+    if (editingIndex !== null) return true;
+    try {
+      persistDraft(snapshot);
+      return true;
+    } catch (error) {
+      setPhotoError("Trace could not save the latest unfinished Memory draft. Keep this page open and retry.");
+      return false;
+    }
+  }
+
+  function changeTitle(value) {
+    setTitle(value);
+    persistAddDraft(draftSnapshot({ nextTitle: value }));
+  }
+
+  function changeDescription(value) {
+    setDescription(value);
+    persistAddDraft(draftSnapshot({ nextDescription: value }));
+  }
+
+  function changeDate(value) {
+    setDate(value);
+    persistAddDraft(draftSnapshot({ nextDate: value }));
+  }
+
+  function changeCategories(value) {
+    setCategories(value);
+    persistAddDraft(draftSnapshot({ nextCategories: value }));
   }
 
   async function selectPhotos(event) {
@@ -69,15 +126,22 @@ function NewMemoryPage({
       const result = await ingestPhotoFiles(selection.files, {
         existingCount: images.length,
         existingDraftBytes: images.reduce(
-          (total, image) => total + (image?.isDraft ? Number(image.blob?.size) || 0 : 0),
+          (total, image) => total + (image?.isDraft
+            ? Number(image.storedBytes) || Number(image.blob?.size) || 0
+            : 0),
           0
         ),
       });
-      const newImages = result.photos.map((photo) => ({
-        ...photo,
-        isDraft: true,
-        url: URL.createObjectURL(photo.blob),
-      }));
+      let newImages;
+      if (editingIndex === null && stageDraftPhotos) {
+        newImages = await stageDraftPhotos(result.photos, draftSnapshot());
+      } else {
+        newImages = result.photos.map((photo) => ({
+          ...photo,
+          isDraft: true,
+          url: URL.createObjectURL(photo.blob),
+        }));
+      }
       setImages((current) => [...current, ...newImages]);
       setPhotoStatus(photoSelectionSuccessMessage(result));
     } catch (error) {
@@ -89,7 +153,7 @@ function NewMemoryPage({
     }
   }
 
-  function cancelMemory() {
+  async function cancelMemory() {
     const wasEditingExistingMemory = editingIndex !== null;
     const hasUnsavedContent =
       title !== "" ||
@@ -102,6 +166,19 @@ function NewMemoryPage({
       (editingIndex !== null || hasUnsavedContent) &&
       !window.confirm("Discard your changes? Your unsaved changes will be lost.")
     ) {
+      return;
+    }
+
+    if (!wasEditingExistingMemory && discardDraft) {
+      setPhotosProcessing(true);
+      setPhotoError("");
+      try {
+        await discardDraft();
+      } catch (error) {
+        setPhotoError("Trace could not safely discard this Memory draft. Nothing else was changed; try again.");
+      } finally {
+        setPhotosProcessing(false);
+      }
       return;
     }
 
@@ -119,6 +196,41 @@ function NewMemoryPage({
     }
   }
 
+  function backToTimeline() {
+    if (editingIndex !== null) return;
+    setPhotoError("");
+    const snapshot = draftSnapshot();
+    try {
+      const result = onBackToTimeline?.(snapshot);
+      if (result && typeof result.then === "function") {
+        result.catch(() => setPhotoError(
+          "Trace could not save the latest unfinished Memory draft. Keep this page open and retry."
+        ));
+      }
+    } catch (error) {
+      setPhotoError("Trace could not save the latest unfinished Memory draft. Keep this page open and retry.");
+    }
+  }
+
+  async function removePhoto(image, index) {
+    if (photosProcessing) return;
+    if (editingIndex === null && image?.isDraft && removeDraftPhoto) {
+      setPhotosProcessing(true);
+      setPhotoError("");
+      try {
+        const nextImages = await removeDraftPhoto(image, draftSnapshot());
+        setImages(nextImages);
+      } catch (error) {
+        setPhotoError("Trace could not safely remove that staged photo. It remains in your draft; try again.");
+      } finally {
+        setPhotosProcessing(false);
+      }
+      return;
+    }
+    releaseDraftPhoto(image);
+    setImages((current) => current.filter((_, itemIndex) => itemIndex !== index));
+  }
+
   return (
     <main
       className="trace-memory-editor"
@@ -129,6 +241,18 @@ function NewMemoryPage({
         data-testid="memory-editor-folio"
         ref={folioRef}
       >
+        {editingIndex === null && (
+          <nav className="trace-memory-editor__navigation" aria-label="Add Memory navigation">
+            <button
+              className="trace-memory-editor__action trace-memory-editor__action--secondary"
+              type="button"
+              disabled={photosProcessing}
+              onClick={backToTimeline}
+            >
+              Back to Timeline
+            </button>
+          </nav>
+        )}
         <header className="trace-memory-editor__header">
           <button
             aria-label={`Close ${editingIndex !== null ? "Edit Memory" : "Add Memory"}`}
@@ -148,12 +272,19 @@ function NewMemoryPage({
           </p>
         </header>
 
+        {draftRecovered && editingIndex === null && (
+          <p className="trace-memory-editor__recovery" role="status">
+            Your unfinished Memory draft was restored.
+          </p>
+        )}
+
         <div className="trace-memory-editor__primary-fields">
           <input
             className="trace-memory-editor__field trace-memory-editor__field--title"
             placeholder="Memory title..."
             value={title}
-            onChange={(event) => setTitle(event.target.value)}
+            disabled={photosProcessing}
+            onChange={(event) => changeTitle(event.target.value)}
           />
 
           <label className="trace-memory-editor__date-field">
@@ -163,7 +294,8 @@ function NewMemoryPage({
                 className="trace-memory-editor__field trace-memory-editor__field--date"
                 type="date"
                 value={date}
-                onChange={(event) => setDate(event.target.value)}
+                disabled={photosProcessing}
+                onChange={(event) => changeDate(event.target.value)}
               />
               {!date && (
                 <span
@@ -180,7 +312,8 @@ function NewMemoryPage({
             className="trace-memory-editor__field trace-memory-editor__field--story"
             placeholder="Tell your story..."
             value={description}
-            onChange={(event) => setDescription(event.target.value)}
+            disabled={photosProcessing}
+            onChange={(event) => changeDescription(event.target.value)}
           />
         </div>
 
@@ -201,12 +334,11 @@ function NewMemoryPage({
                   key={category}
                   type="button"
                   aria-pressed={isSelected}
+                  disabled={photosProcessing}
                   onClick={() => {
-                    setCategories(
-                      isSelected
-                        ? categories.filter((item) => item !== category)
-                        : [...categories, category]
-                    );
+                    changeCategories(isSelected
+                      ? categories.filter((item) => item !== category)
+                      : [...categories, category]);
                   }}
                 >
                   {category}
@@ -271,10 +403,8 @@ function NewMemoryPage({
                     aria-label={`Remove photo ${index + 1}`}
                     className="trace-memory-editor__photo-remove"
                     type="button"
-                    onClick={() => {
-                      releaseDraftPhoto(image);
-                      setImages((current) => current.filter((_, itemIndex) => itemIndex !== index));
-                    }}
+                    disabled={photosProcessing}
+                    onClick={() => removePhoto(image, index)}
                   >
                     ×
                   </button>
