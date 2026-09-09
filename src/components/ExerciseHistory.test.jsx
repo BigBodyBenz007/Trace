@@ -41,6 +41,43 @@ function builtInExercise(id, name, reps, occurredSetId) {
   };
 }
 
+function historyWorkouts(count, { exerciseId, exerciseName, titlePrefix }) {
+  return Array.from({ length: count }, (_, index) => {
+    const sequence = index + 1;
+    const day = String(sequence).padStart(2, "0");
+    return workout(
+      `${titlePrefix.toLowerCase()}-${sequence}`,
+      `${titlePrefix} Session ${sequence}`,
+      `2026-08-${day}T12:00:00.000Z`,
+      builtInExercise(exerciseId, exerciseName, 8, `${titlePrefix.toLowerCase()}-set-${sequence}`)
+    );
+  });
+}
+
+function distinctExerciseWorkouts(count) {
+  return Array.from({ length: count }, (_, index) => {
+    const sequence = index + 1;
+    const day = String(sequence).padStart(2, "0");
+    return workout(
+      `exercise-workout-${sequence}`,
+      `Exercise Session ${sequence}`,
+      `2026-08-${day}T12:00:00.000Z`,
+      builtInExercise(
+        `trace:exercise-${sequence}`,
+        `Exercise ${sequence}`,
+        8,
+        `exercise-set-${sequence}`
+      )
+    );
+  });
+}
+
+function exerciseSummaryButtons() {
+  return screen.getAllByRole("button").filter((button) => (
+    button.getAttribute("aria-controls")?.startsWith("exercise-history-detail-")
+  ));
+}
+
 function expandPrTimeline() {
   fireEvent.click(screen.getByRole("button", { name: "View PR Timeline" }));
 }
@@ -87,6 +124,182 @@ test("renders summaries and opens newest-first performance details", () => {
   expect(within(detailArticles[0]).getByText("80 lb × 10 reps")).toBeInTheDocument();
   expect(within(detailArticles[0]).getByText("Controlled")).toBeInTheDocument();
   expect(within(detailArticles[1]).getByText("Old Chest Day")).toBeInTheDocument();
+});
+
+test("shows exercise performances newest-first in batches of 10 through the final partial batch", () => {
+  const entries = historyWorkouts(25, {
+    exerciseId: "trace:bench",
+    exerciseName: "Bench Press",
+    titlePrefix: "Bench",
+  });
+  entries[0].exercises[0].sets[0].load.amount = 200;
+  render(<ExerciseHistory workoutEntries={entries} buttonStyle={{}} />);
+
+  const summary = screen.getByRole("button", { name: /Bench Press.*25 performances/ });
+  fireEvent.click(summary);
+  let performances = screen.getAllByRole("article");
+  expect(performances).toHaveLength(10);
+  expect(within(performances[0]).getByText("Bench Session 25")).toBeInTheDocument();
+  expect(within(performances[9]).getByText("Bench Session 16")).toBeInTheDocument();
+  expect(screen.getByRole("region", { name: "Bench Press current records" })).toHaveTextContent("200 lb");
+
+  let showMore = screen.getByRole("button", { name: "Show 10 more older Bench Press history entries" });
+  expect(showMore).toHaveTextContent("Show more (15 older)");
+  expect(showMore).toHaveStyle({ minHeight: "44px", width: "100%" });
+  fireEvent.click(showMore);
+
+  performances = screen.getAllByRole("article");
+  expect(performances).toHaveLength(20);
+  expect(within(performances[19]).getByText("Bench Session 6")).toBeInTheDocument();
+  fireEvent.click(summary);
+  expect(screen.queryByRole("article")).not.toBeInTheDocument();
+  fireEvent.click(summary);
+  expect(screen.getAllByRole("article")).toHaveLength(20);
+  showMore = screen.getByRole("button", { name: "Show 5 more older Bench Press history entries" });
+  expect(showMore).toHaveTextContent("Show more (5 older)");
+  fireEvent.click(showMore);
+
+  performances = screen.getAllByRole("article");
+  expect(performances).toHaveLength(25);
+  expect(within(performances[24]).getByText("Bench Session 1")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /more older Bench Press history entries/ })).not.toBeInTheDocument();
+});
+
+test("shows distinct exercise summaries in independent batches without collapsing expanded history", () => {
+  const entries = distinctExerciseWorkouts(25);
+  render(<ExerciseHistory workoutEntries={entries} buttonStyle={{}} />);
+
+  let summaries = exerciseSummaryButtons();
+  expect(summaries).toHaveLength(10);
+  expect(summaries[0]).toHaveAccessibleName(/Exercise 25.*1 performance/);
+  expect(summaries[9]).toHaveAccessibleName(/Exercise 16.*1 performance/);
+
+  let showMore = screen.getByRole("button", { name: "Show 10 more older exercise history summaries" });
+  expect(showMore).toHaveTextContent("Show more (15 older)");
+  fireEvent.click(showMore);
+  summaries = exerciseSummaryButtons();
+  expect(summaries).toHaveLength(20);
+  expect(summaries[19]).toHaveAccessibleName(/Exercise 6.*1 performance/);
+
+  const expandedSummary = screen.getByRole("button", { name: /Exercise 10.*1 performance/ });
+  fireEvent.click(expandedSummary);
+  expect(expandedSummary).toHaveAttribute("aria-expanded", "true");
+  showMore = screen.getByRole("button", { name: "Show 5 more older exercise history summaries" });
+  fireEvent.mouseDown(showMore);
+  fireEvent.click(showMore);
+
+  expect(exerciseSummaryButtons()).toHaveLength(25);
+  expect(expandedSummary).toHaveAttribute("aria-expanded", "true");
+  expect(screen.queryByRole("button", { name: /more older exercise history summaries/ })).not.toBeInTheDocument();
+  fireEvent.click(expandedSummary);
+  expect(exerciseSummaryButtons()).toHaveLength(25);
+});
+
+test("keeps exercise-summary and performance batches independent", () => {
+  const entries = [
+    ...historyWorkouts(25, {
+      exerciseId: "trace:bench",
+      exerciseName: "Bench Press",
+      titlePrefix: "Bench",
+    }),
+    ...distinctExerciseWorkouts(25),
+  ];
+  render(<ExerciseHistory workoutEntries={entries} buttonStyle={{}} />);
+
+  expect(exerciseSummaryButtons()).toHaveLength(10);
+  const benchSummary = screen.getByRole("button", { name: /Bench Press.*25 performances/ });
+  fireEvent.click(benchSummary);
+  fireEvent.click(screen.getByRole("button", { name: "Show 10 more older Bench Press history entries" }));
+  expect(screen.getAllByRole("article")).toHaveLength(20);
+  expect(exerciseSummaryButtons()).toHaveLength(10);
+
+  const showMoreExercises = screen.getByRole("button", { name: "Show 10 more older exercise history summaries" });
+  fireEvent.mouseDown(showMoreExercises);
+  fireEvent.click(showMoreExercises);
+  expect(exerciseSummaryButtons()).toHaveLength(20);
+  expect(screen.getAllByRole("article")).toHaveLength(20);
+  expect(benchSummary).toHaveAttribute("aria-expanded", "true");
+});
+
+test("reveals linked exercises and performances beyond their first batches", () => {
+  const distinctEntries = distinctExerciseWorkouts(25);
+  const returnFromExercise = jest.fn();
+  const exerciseView = render(
+    <ExerciseHistory
+      workoutEntries={distinctEntries}
+      trophySourceTarget={{
+        exerciseIdentityKey: "trace|trace:exercise-11",
+        performanceId: "exercise-workout-11|instance-exercise-set-11|0",
+        setId: "exercise-set-11",
+      }}
+      onReturnToTrophyCase={returnFromExercise}
+      buttonStyle={{}}
+    />
+  );
+
+  expect(exerciseSummaryButtons()).toHaveLength(15);
+  const linkedExercise = screen.getByRole("button", { name: /Exercise 11.*1 performance/ });
+  expect(linkedExercise).toHaveAttribute("aria-expanded", "true");
+  const linkedExercisePerformance = document.querySelector('[data-performance-id="exercise-workout-11|instance-exercise-set-11|0"]');
+  expect(linkedExercisePerformance).toBeInTheDocument();
+  expect(within(linkedExercisePerformance).getByText(/80 lb/).closest("li")).toHaveAttribute("data-source-set", "true");
+  fireEvent.click(within(linkedExercisePerformance).getByRole("button", { name: "Back to Trophy Case" }));
+  expect(returnFromExercise).toHaveBeenCalledTimes(1);
+  exerciseView.unmount();
+
+  const performanceEntries = historyWorkouts(25, {
+    exerciseId: "trace:bench",
+    exerciseName: "Bench Press",
+    titlePrefix: "Bench",
+  });
+  render(
+    <ExerciseHistory
+      workoutEntries={performanceEntries}
+      trophySourceTarget={{
+        exerciseIdentityKey: "trace|trace:bench",
+        performanceId: "bench-11|instance-bench-set-11|0",
+        setId: "bench-set-11",
+      }}
+      onReturnToTrophyCase={jest.fn()}
+      buttonStyle={{}}
+    />
+  );
+
+  expect(screen.getByRole("button", { name: /Bench Press.*25 performances/ })).toHaveAttribute("aria-expanded", "true");
+  expect(screen.getAllByRole("article")).toHaveLength(15);
+  expect(document.querySelector('[data-performance-id="bench-11|instance-bench-set-11|0"]')).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Show 10 more older Bench Press history entries" })).toBeInTheDocument();
+});
+
+test("resets the performance batch after selecting another exercise or matching history changes", () => {
+  const benchEntries = historyWorkouts(22, {
+    exerciseId: "trace:bench",
+    exerciseName: "Bench Press",
+    titlePrefix: "Bench",
+  });
+  const squatEntries = historyWorkouts(12, {
+    exerciseId: "trace:squat",
+    exerciseName: "Back Squat",
+    titlePrefix: "Squat",
+  });
+  const { rerender } = render(<ExerciseHistory workoutEntries={[...benchEntries, ...squatEntries]} buttonStyle={{}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: /Bench Press.*22 performances/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Show 10 more older Bench Press history entries" }));
+  expect(screen.getAllByRole("article")).toHaveLength(20);
+
+  const squatSummary = screen.getByRole("button", { name: /Back Squat.*12 performances/ });
+  fireEvent.mouseDown(squatSummary);
+  fireEvent.click(squatSummary);
+  expect(screen.getAllByRole("article")).toHaveLength(10);
+  expect(screen.getByRole("button", { name: "Show 2 more older Back Squat history entries" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Show 2 more older Back Squat history entries" }));
+  expect(screen.getAllByRole("article")).toHaveLength(12);
+
+  rerender(<ExerciseHistory workoutEntries={[...benchEntries, ...squatEntries.slice(0, 11)]} buttonStyle={{}} />);
+  expect(screen.getAllByRole("article")).toHaveLength(10);
+  expect(within(screen.getAllByRole("article")[0]).getByText("Squat Session 11")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Show 1 more older Back Squat history entries" })).toBeInTheDocument();
 });
 
 test("expands details directly below their summary and toggles one exercise at a time", () => {

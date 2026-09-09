@@ -10,6 +10,8 @@ import {
 } from "../services/exerciseRecordDescriptor";
 import WorkoutPhotos from "./WorkoutPhotos";
 
+const HISTORY_BATCH_SIZE = 10;
+
 function formatDate(timestamp) {
   const date = new Date(timestamp);
   return Number.isNaN(date.getTime())
@@ -87,6 +89,10 @@ function timestampValue(value) {
 
 function isModalInteraction(target) {
   return Boolean(target?.closest?.('[aria-modal="true"]'));
+}
+
+function isHistoryPaginationInteraction(target) {
+  return Boolean(target?.closest?.('[data-history-pagination="true"]'));
 }
 
 function compareProgressionEventsForDisplay(first, second) {
@@ -370,12 +376,15 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
   const [selectedIdentityKey, setSelectedIdentityKey] = useState(null);
   const [isPrTimelineOpen, setIsPrTimelineOpen] = useState(false);
   const [isFullPrHistoryOpen, setIsFullPrHistoryOpen] = useState(false);
+  const [visibleExerciseCount, setVisibleExerciseCount] = useState(HISTORY_BATCH_SIZE);
+  const [visiblePerformanceCount, setVisiblePerformanceCount] = useState(HISTORY_BATCH_SIZE);
   const prHistoryScrollYRef = useRef(null);
   const prTimelineRef = useRef(null);
   const exerciseHistoryDetailRef = useRef(null);
   const exerciseSummaryRefs = useRef(new Map());
   const pendingSwitchScrollIdentityRef = useRef(null);
   const performanceRefs = useRef(new Map());
+  const performanceHistoryContextRef = useRef(null);
   const trophySourceKeys = useMemo(
     () => new Set(trophyEntries.map(({ sourceKey }) => sourceKey)),
     [trophyEntries]
@@ -383,6 +392,23 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
   const selectedHistory = history.find(
     ({ identityKey }) => identityKey === selectedIdentityKey
   );
+  const exerciseHistoryTargetIdentity = trophySourceTarget?.exerciseIdentityKey || selectedIdentityKey;
+  const targetedExerciseIndex = history.findIndex(({ identityKey }) => identityKey === exerciseHistoryTargetIdentity);
+  const effectiveVisibleExerciseCount = Math.max(visibleExerciseCount, targetedExerciseIndex + 1);
+  const visibleExerciseHistory = history.slice(0, effectiveVisibleExerciseCount);
+  const remainingExerciseCount = Math.max(0, history.length - visibleExerciseHistory.length);
+  const nextExerciseBatchCount = Math.min(HISTORY_BATCH_SIZE, remainingExerciseCount);
+  const selectedPerformances = selectedHistory?.performances || [];
+  const targetedPerformanceIndex = selectedIdentityKey === trophySourceTarget?.exerciseIdentityKey
+    ? selectedPerformances.findIndex(({ performanceId }) => performanceId === trophySourceTarget?.performanceId)
+    : -1;
+  const effectiveVisiblePerformanceCount = Math.max(
+    visiblePerformanceCount,
+    targetedPerformanceIndex + 1
+  );
+  const visiblePerformances = selectedPerformances.slice(0, effectiveVisiblePerformanceCount);
+  const remainingPerformanceCount = Math.max(0, selectedPerformances.length - visiblePerformances.length);
+  const nextPerformanceBatchCount = Math.min(HISTORY_BATCH_SIZE, remainingPerformanceCount);
   const compactButtonStyle = {
     ...buttonStyle,
     fontSize: "16px",
@@ -425,9 +451,25 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
     if (!trophySourceTarget?.exerciseIdentityKey) return undefined;
     setIsPrTimelineOpen(false);
     setIsFullPrHistoryOpen(false);
+    setVisiblePerformanceCount(HISTORY_BATCH_SIZE);
+    const linkedExerciseIndex = history.findIndex(({ identityKey }) => identityKey === trophySourceTarget.exerciseIdentityKey);
+    if (linkedExerciseIndex >= 0) {
+      setVisibleExerciseCount((current) => Math.max(current, linkedExerciseIndex + 1));
+    }
     setSelectedIdentityKey(trophySourceTarget.exerciseIdentityKey);
     return undefined;
-  }, [trophySourceTarget]);
+  }, [history, trophySourceTarget]);
+
+  useEffect(() => {
+    if (!selectedHistory) return;
+    const previousHistory = performanceHistoryContextRef.current;
+    if (previousHistory
+      && previousHistory.identityKey === selectedHistory.identityKey
+      && previousHistory !== selectedHistory) {
+      setVisiblePerformanceCount(HISTORY_BATCH_SIZE);
+    }
+    performanceHistoryContextRef.current = selectedHistory;
+  }, [selectedHistory]);
 
   useEffect(() => {
     if (!trophySourceTarget?.performanceId || selectedIdentityKey !== trophySourceTarget.exerciseIdentityKey) return undefined;
@@ -452,7 +494,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
     if (!isPrTimelineOpen) return undefined;
 
     function handlePointerDown(event) {
-      if (isModalInteraction(event.target)) return;
+      if (isModalInteraction(event.target) || isHistoryPaginationInteraction(event.target)) return;
       if (prTimelineRef.current?.contains(event.target)) return;
       setIsPrTimelineOpen(false);
       setIsFullPrHistoryOpen(false);
@@ -468,7 +510,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
     if (!selectedIdentityKey) return undefined;
 
     function handlePointerDown(event) {
-      if (isModalInteraction(event.target)) return;
+      if (isModalInteraction(event.target) || isHistoryPaginationInteraction(event.target)) return;
       if (exerciseHistoryDetailRef.current?.contains(event.target)) return;
       if ([...exerciseSummaryRefs.current.values()].some((summary) => summary.contains(event.target))) return;
       closeExerciseHistory({ restoreContext: false });
@@ -504,7 +546,8 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
       ) : (
         <>
           <div style={{ display: "grid", gap: "10px" }}>
-            {history.map((exercise, exerciseIndex) => {
+            {visibleExerciseHistory.map((exercise) => {
+              const exerciseIndex = history.findIndex(({ identityKey }) => identityKey === exercise.identityKey);
               const isExpanded = exercise.identityKey === selectedIdentityKey;
               const detailId = `exercise-history-detail-${exerciseIndex}`;
 
@@ -530,6 +573,9 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                         }
                         setIsPrTimelineOpen(false);
                         setIsFullPrHistoryOpen(false);
+                        if (performanceHistoryContextRef.current?.identityKey !== exercise.identityKey) {
+                          setVisiblePerformanceCount(HISTORY_BATCH_SIZE);
+                        }
                         setSelectedIdentityKey(exercise.identityKey);
                       }
                     }}
@@ -599,7 +645,7 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                         </button>
                       )}
                       <div style={{ display: "grid", gap: "12px", marginTop: "14px" }}>
-                        {exercise.performances.map((performance) => (
+                        {visiblePerformances.map((performance) => (
                           <article
                             key={performance.performanceId}
                             ref={(node) => {
@@ -632,6 +678,18 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                             </ol>
                           </article>
                         ))}
+                        {remainingPerformanceCount > 0 && (
+                          <button
+                            aria-label={`Show ${nextPerformanceBatchCount} more older ${exercise.displayName} history entries`}
+                            className="trace-action trace-action--secondary trace-exercise-history__show-more"
+                            data-history-pagination="true"
+                            onClick={() => setVisiblePerformanceCount(effectiveVisiblePerformanceCount + HISTORY_BATCH_SIZE)}
+                            style={{ ...compactButtonStyle, backgroundColor: "#374151", width: "100%" }}
+                            type="button"
+                          >
+                            Show more ({remainingPerformanceCount} older)
+                          </button>
+                        )}
                       </div>
                       <button
                         type="button"
@@ -645,6 +703,18 @@ function ExerciseHistory({ workoutEntries, trophyEntries = [], addTrophyCaseEntr
                 </div>
               );
             })}
+            {remainingExerciseCount > 0 && (
+              <button
+                aria-label={`Show ${nextExerciseBatchCount} more older exercise history summaries`}
+                className="trace-action trace-action--secondary trace-exercise-history__show-more-exercises"
+                data-history-pagination="true"
+                onClick={() => setVisibleExerciseCount(effectiveVisibleExerciseCount + HISTORY_BATCH_SIZE)}
+                style={{ ...compactButtonStyle, backgroundColor: "#374151", width: "100%" }}
+                type="button"
+              >
+                Show more ({remainingExerciseCount} older)
+              </button>
+            )}
           </div>
         </>
       )}

@@ -129,6 +129,7 @@ const EXERCISE_SKIP_REASONS = [
   "Low energy",
   "Schedule conflict",
 ];
+const WORKOUT_HISTORY_BATCH_SIZE = 10;
 
 function roadmapSetSummary(set) {
   const setType = set.setType === "warm-up" ? "Warm-up" : "Working";
@@ -519,6 +520,7 @@ function WorkoutPage({
   const [expandedWorkoutEntryIds, setExpandedWorkoutEntryIds] = useState(
     () => new Set()
   );
+  const [visibleWorkoutHistoryCount, setVisibleWorkoutHistoryCount] = useState(WORKOUT_HISTORY_BATCH_SIZE);
   const [roadmapEditingExerciseId, setRoadmapEditingExerciseId] = useState(
     restoredDraftRef.current?.context?.roadmapEditingExerciseId || null
   );
@@ -861,6 +863,15 @@ function WorkoutPage({
   const sortedEntries = [...workoutEntries].sort(
     (first, second) => new Date(second.occurredAt) - new Date(first.occurredAt)
   );
+  const workoutHistoryTargetId = workoutEntryTargetId || activeWorkoutEntryId;
+  const targetedWorkoutHistoryIndex = sortedEntries.findIndex(({ id }) => id === workoutHistoryTargetId);
+  const effectiveVisibleWorkoutHistoryCount = Math.max(
+    visibleWorkoutHistoryCount,
+    targetedWorkoutHistoryIndex + 1
+  );
+  const visibleWorkoutHistoryEntries = sortedEntries.slice(0, effectiveVisibleWorkoutHistoryCount);
+  const remainingWorkoutHistoryCount = Math.max(0, sortedEntries.length - visibleWorkoutHistoryEntries.length);
+  const nextWorkoutHistoryBatchCount = Math.min(WORKOUT_HISTORY_BATCH_SIZE, remainingWorkoutHistoryCount);
 
   useLayoutEffect(() => {
     const anchor = pendingWorkoutDeleteAnchorRef.current;
@@ -2792,7 +2803,7 @@ function WorkoutPage({
           <p style={{ color: "#bbb" }}>No workouts logged yet.</p>
         ) : (
           <div style={{ display: "grid", gap: "14px" }}>
-            {sortedEntries.map((entry) => {
+            {visibleWorkoutHistoryEntries.map((entry) => {
               const expanded = expandedWorkoutEntryIds.has(entry.id);
               const detailId = `workout-history-details-${entry.id}`;
               const totalSets = countCompletedWorkoutSets(entry);
@@ -2874,6 +2885,18 @@ function WorkoutPage({
                 </article>
               );
             })}
+            {remainingWorkoutHistoryCount > 0 && (
+              <button
+                aria-label={`Show ${nextWorkoutHistoryBatchCount} more older completed workouts`}
+                className="trace-action trace-action--secondary trace-workout-history__show-more"
+                data-history-pagination="true"
+                onClick={() => setVisibleWorkoutHistoryCount(effectiveVisibleWorkoutHistoryCount + WORKOUT_HISTORY_BATCH_SIZE)}
+                style={{ ...smallButtonStyle, minHeight: "44px", width: "100%" }}
+                type="button"
+              >
+                Show more ({remainingWorkoutHistoryCount} older)
+              </button>
+            )}
           </div>
         )}
       </section>}

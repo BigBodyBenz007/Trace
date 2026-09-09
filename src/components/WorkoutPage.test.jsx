@@ -711,6 +711,18 @@ function entry(overrides = {}) {
   };
 }
 
+function workoutHistoryEntries(count) {
+  return Array.from({ length: count }, (_, index) => {
+    const sequence = index + 1;
+    const day = String(sequence).padStart(2, "0");
+    return entry({
+      id: `workout-history-${sequence}`,
+      title: `Workout ${sequence}`,
+      occurredAt: `2026-08-${day}T12:00:00.000Z`,
+    });
+  });
+}
+
 function calorieEstimate(overrides = {}) {
   return {
     schemaVersion: 1,
@@ -2231,6 +2243,73 @@ test("Workout History cards start collapsed with their title and date visible", 
   expect(within(card).queryByText("Incline Press")).not.toBeInTheDocument();
   expect(within(card).queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
   expect(within(card).queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+});
+
+test("shows completed workouts newest-first in independent batches through the final partial batch", () => {
+  const entries = workoutHistoryEntries(25);
+  render(<WorkoutPage {...renderPageProps({ workoutEntries: entries })} />);
+  const workoutCards = () => [...document.querySelectorAll(".trace-workout-history-card")];
+
+  let cards = workoutCards();
+  expect(cards).toHaveLength(10);
+  expect(within(cards[0]).getByRole("heading", { name: "Workout 25" })).toBeInTheDocument();
+  expect(within(cards[9]).getByRole("heading", { name: "Workout 16" })).toBeInTheDocument();
+  const exerciseSummary = screen.getByRole("button", { name: /Incline Press.*25 performances/ });
+  fireEvent.click(exerciseSummary);
+  expect(document.querySelectorAll("[data-performance-id]")).toHaveLength(10);
+
+  let showMore = screen.getByRole("button", { name: "Show 10 more older completed workouts" });
+  expect(showMore).toHaveTextContent("Show more (15 older)");
+  expect(showMore).toHaveStyle({ minHeight: "44px", width: "100%" });
+  fireEvent.mouseDown(showMore);
+  fireEvent.click(showMore);
+
+  cards = workoutCards();
+  expect(cards).toHaveLength(20);
+  expect(exerciseSummary).toHaveAttribute("aria-expanded", "true");
+  expect(document.querySelectorAll("[data-performance-id]")).toHaveLength(10);
+  expect(within(cards[19]).getByRole("heading", { name: "Workout 6" })).toBeInTheDocument();
+  const expandedCard = screen.getByRole("heading", { name: "Workout 10" }).closest("article");
+  fireEvent.click(within(expandedCard).getByRole("button", { name: "Expand workout: Workout 10" }));
+  expect(within(expandedCard).getByRole("button", { name: "Collapse workout: Workout 10" })).toBeInTheDocument();
+  fireEvent.click(within(expandedCard).getByRole("button", { name: "Collapse workout: Workout 10" }));
+  expect(workoutCards()).toHaveLength(20);
+
+  showMore = screen.getByRole("button", { name: "Show 5 more older completed workouts" });
+  expect(showMore).toHaveTextContent("Show more (5 older)");
+  fireEvent.click(showMore);
+  cards = workoutCards();
+  expect(cards).toHaveLength(25);
+  expect(within(cards[24]).getByRole("heading", { name: "Workout 1" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: /more older completed workouts/ })).not.toBeInTheDocument();
+});
+
+test("reveals a directly linked completed workout beyond the first history batch", () => {
+  const entries = workoutHistoryEntries(25);
+  const target = entries[10];
+  const onWorkoutEntryTargetShown = jest.fn();
+  const onReturnToTrophyCase = jest.fn();
+  render(
+    <WorkoutPage
+      {...renderPageProps({
+        navigationOriginPage: "trophy-case",
+        onReturnToTrophyCase,
+        workoutEntries: entries,
+        workoutEntryTargetId: target.id,
+        onWorkoutEntryTargetShown,
+      })}
+    />
+  );
+
+  expect(document.querySelectorAll(".trace-workout-history-card")).toHaveLength(15);
+  const targetCard = screen.getByRole("heading", { name: "Workout 11" }).closest("article");
+  expect(targetCard).toHaveAttribute("aria-current", "true");
+  expect(within(targetCard).getByRole("button", { name: "Collapse workout: Workout 11" })).toBeInTheDocument();
+  expect(targetCard.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+  expect(onWorkoutEntryTargetShown).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("button", { name: "Show 10 more older completed workouts" })).toBeInTheDocument();
+  fireEvent.click(within(targetCard).getByRole("button", { name: "Back to Trophy Case" }));
+  expect(onReturnToTrophyCase).toHaveBeenCalledTimes(1);
 });
 
 test("collapsed Workout History cards show total set counts across multiple exercises", () => {
