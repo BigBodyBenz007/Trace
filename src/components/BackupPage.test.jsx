@@ -23,7 +23,7 @@ jest.mock("../services/traceBackup", () => ({
 
 const summary = {
   memories: 2, photos: 3, nutritionEntries: 4, waterEntries: 5, healthMeasurementEntries: 12, workouts: 5,
-  plannedWorkouts: 13, workoutTemplates: 4, activeMemoryDraft: true, activeWorkoutDraft: true,
+  plannedWorkouts: 13, workoutTemplates: 4, activeMemoryDraft: true, activeWorkoutDraft: true, activeFormDrafts: 2,
   dailyActions: 14,
   medicationDoseSchedules: 17,
   medicationDoseOccurrences: 18,
@@ -402,6 +402,7 @@ test("validates a selected backup and previews counts without restoring", async 
   expect(screen.getByText("Protocol compound results: 19")).toBeInTheDocument();
   expect(screen.getByText("Injection shots: 16")).toBeInTheDocument();
   expect(screen.getByText("Unfinished Journal draft: Included")).toBeInTheDocument();
+  expect(screen.getByText("Other unfinished form drafts: 2")).toBeInTheDocument();
   expect(screen.getByText("Active workout draft: Included — it will replace any current active workout draft")).toBeInTheDocument();
   expect(screen.getByText("No Trace data has been changed yet.")).toBeInTheDocument();
   expect(restoreTraceBackup).not.toHaveBeenCalled();
@@ -417,7 +418,7 @@ test("requires explicit browser confirmation before applying a full restore", as
   await screen.findByRole("heading", { name: "Review Backup" });
   fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
   expect(window.confirm).toHaveBeenCalledWith(
-    "Replace all current Trace data with this backup? Any current active workout draft will be replaced by the active draft in this backup. Any current unfinished Memory draft will be replaced by the draft in this backup. This cannot be merged."
+    "Replace all current Trace data with this backup? Any current active workout draft will be replaced by the active draft in this backup. Any current unfinished Memory draft will be replaced by the draft in this backup. 2 unfinished form drafts in this backup will replace the current unfinished form drafts. This cannot be merged."
   );
   expect(restoreTraceBackup).not.toHaveBeenCalled();
 });
@@ -489,7 +490,7 @@ test("encrypted legacy backup alone uses legacy recovery-key labels", async () =
 test("preview and confirmation explain that a backup without a draft removes the current draft", async () => {
   parseTraceBackupText.mockReturnValue({
     ...parsed,
-    summary: { ...summary, activeMemoryDraft: false, activeWorkoutDraft: false },
+    summary: { ...summary, activeMemoryDraft: false, activeWorkoutDraft: false, activeFormDrafts: 0 },
   });
   window.confirm.mockReturnValue(false);
   render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
@@ -499,9 +500,10 @@ test("preview and confirmation explain that a backup without a draft removes the
   await screen.findByRole("heading", { name: "Review Backup" });
   expect(screen.getByText("Active workout draft: None — any current active workout draft will be removed")).toBeInTheDocument();
   expect(screen.getByText("Unfinished Memory draft: None — any current unfinished Memory draft will be removed")).toBeInTheDocument();
+  expect(screen.getByText("Other unfinished form drafts: 0")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
   expect(window.confirm).toHaveBeenCalledWith(
-    "Replace all current Trace data with this backup? Any current active workout draft will be removed because this backup has none. Any current unfinished Memory draft will be removed because this backup has none. This cannot be merged."
+    "Replace all current Trace data with this backup? Any current active workout draft will be removed because this backup has none. Any current unfinished Memory draft will be removed because this backup has none. Any current unfinished form drafts will be removed because this backup has none. This cannot be merged."
   );
   expect(restoreTraceBackup).not.toHaveBeenCalled();
 });

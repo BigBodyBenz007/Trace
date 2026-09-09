@@ -30,6 +30,10 @@ import {
   persistProtocolCompoundUndo as persistCompoundUndo,
 } from "../services/protocolCompoundOutcome";
 
+beforeEach(() => {
+  localStorage.clear();
+});
+
 const TODAY = new Date(2026, 7, 22, 12, 0, 0);
 const CREATED_AT = new Date("2026-08-20T12:00:00.000Z");
 
@@ -568,6 +572,26 @@ test("edits a planned workout through the immutable record update path", () => {
   );
   expect(existing.title).toBe("Upper Body");
   expect(showToast).toHaveBeenCalledWith("Planned workout updated.");
+});
+
+test("planned-workout edit drafts are record-isolated and ignored after a saved baseline change", () => {
+  const firstPlan = plan({ id: "planned-workout:first", title: "First plan", notes: "first saved" });
+  const secondPlan = plan({ id: "planned-workout:second", title: "Second plan", notes: "second saved" });
+  const first = renderPage({ plannedWorkouts: [firstPlan, secondPlan] });
+  fireEvent.click(screen.getByRole("button", { name: "Edit planned workout First plan" }));
+  fireEvent.change(screen.getByLabelText("Planned workout notes (optional)"), { target: { value: "unfinished first" } });
+  first.unmount();
+
+  const second = renderPage({ plannedWorkouts: [firstPlan, secondPlan] });
+  fireEvent.click(screen.getByRole("button", { name: "Edit planned workout Second plan" }));
+  expect(screen.getByLabelText("Planned workout notes (optional)")).toHaveValue("second saved");
+  second.unmount();
+
+  const newerFirst = { ...firstPlan, notes: "newer saved first", updatedAt: "2026-09-10T00:00:00.000Z" };
+  renderPage({ plannedWorkouts: [newerFirst] });
+  fireEvent.click(screen.getByRole("button", { name: "Edit planned workout First plan" }));
+  expect(screen.getByLabelText("Planned workout notes (optional)")).toHaveValue("newer saved first");
+  expect(screen.getByRole("alert")).toHaveTextContent("changed after an unfinished edit");
 });
 
 test("adds an exercise by appending it and preserves the original order", () => {
@@ -1401,6 +1425,46 @@ test("daily action validation preserves entered values and changed Cancel confir
   confirm.mockRestore();
 });
 
+test("daily action draft survives closing to the schedule and remounting", () => {
+  const first = renderPage({}, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Add to Today" }));
+  fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Unfinished action" } });
+  fireEvent.change(screen.getByLabelText("Timing"), { target: { value: "time" } });
+  fireEvent.change(screen.getByLabelText("Time"), { target: { value: "" } });
+  fireEvent.change(screen.getByLabelText("Notes (optional)"), { target: { value: "exact action notes" } });
+  fireEvent.click(screen.getByRole("button", { name: "Back to Today's Schedule" }));
+  first.unmount();
+
+  renderPage({}, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Add to Today" }));
+  expect(screen.getByLabelText("Title")).toHaveValue("Unfinished action");
+  expect(screen.getByLabelText("Time")).toHaveValue("");
+  expect(screen.getByLabelText("Notes (optional)")).toHaveValue("exact action notes");
+});
+
+test("daily-action edit drafts are record-isolated and ignored after a saved baseline change", () => {
+  const firstAction = dailyAction({ id: "daily-action:first", title: "First action", notes: "first saved" });
+  const secondAction = dailyAction({ id: "daily-action:second", title: "Second action", notes: "second saved", time: "11:00" });
+  const first = renderPage({ dailyActions: [firstAction, secondAction] }, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Open daily action First action" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Notes (optional)"), { target: { value: "unfinished first" } });
+  first.unmount();
+
+  const second = renderPage({ dailyActions: [firstAction, secondAction] }, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Open daily action Second action" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(screen.getByLabelText("Notes (optional)")).toHaveValue("second saved");
+  second.unmount();
+
+  const newerFirst = { ...firstAction, notes: "newer saved first", updatedAt: "2026-09-10T00:00:00.000Z" };
+  renderPage({ dailyActions: [newerFirst] }, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Open daily action First action" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(screen.getByLabelText("Notes (optional)")).toHaveValue("newer saved first");
+  expect(screen.getByRole("alert")).toHaveTextContent("changed after an unfinished edit");
+});
+
 test("daily actions filter by local date and expose complete focused details", () => {
   renderPage({
     dailyActions: [
@@ -1690,6 +1754,25 @@ test("Cancel closes an unchanged planner without confirmation", () => {
   expect(confirm).not.toHaveBeenCalled();
   expect(screen.queryByRole("form", { name: "Create planned workout" })).not.toBeInTheDocument();
   confirm.mockRestore();
+});
+
+test("Back to Timeline preserves an exact planned-workout draft across reopening", () => {
+  const first = renderPage();
+  fireEvent.click(screen.getByRole("button", { name: "Create planned workout" }));
+  fireEvent.change(screen.getByLabelText("Scheduled date"), { target: { value: "" } });
+  fireEvent.change(screen.getByLabelText("Planned workout title"), { target: { value: "Unfinished plan" } });
+  fireEvent.change(screen.getByLabelText("Planned workout notes (optional)"), { target: { value: "exact plan notes" } });
+  fireEvent.change(screen.getByLabelText("Exercise 1 name"), { target: { value: "Draft exercise" } });
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  expect(first.onBack).toHaveBeenCalledTimes(1);
+  first.unmount();
+
+  renderPage();
+  fireEvent.click(screen.getByRole("button", { name: "Create planned workout" }));
+  expect(screen.getByLabelText("Scheduled date")).toHaveValue("");
+  expect(screen.getByLabelText("Planned workout title")).toHaveValue("Unfinished plan");
+  expect(screen.getByLabelText("Planned workout notes (optional)")).toHaveValue("exact plan notes");
+  expect(screen.getByLabelText("Exercise 1 name")).toHaveValue("Draft exercise");
 });
 
 test("planning multiple sets preserves each intended reps and intended weight", () => {
@@ -2320,6 +2403,62 @@ test("skip, reschedule, and remove act on only the focused dose occurrence", () 
   }));
   expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("Medication History will not be deleted"));
   window.confirm = originalConfirm;
+});
+
+test("dose reschedule restores across navigation and remount, preserves failed save, and clears after success", () => {
+  const scheduledDose = medicationSchedule();
+  const rescheduleMedicationDoseOccurrence = jest.fn(() => ({ status: "error", message: "Storage full" }));
+  const first = renderPage({ medicationDoseSchedules: [scheduledDose], rescheduleMedicationDoseOccurrence }, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Open scheduled dose Vitamin D" }));
+  let details = screen.getByRole("region", { name: "Scheduled dose Vitamin D" });
+  fireEvent.click(within(details).getByRole("button", { name: "Reschedule" }));
+  fireEvent.change(within(details).getByLabelText("Date"), { target: { value: "2026-08-25" } });
+  fireEvent.change(within(details).getByLabelText("Time"), { target: { value: "13:45" } });
+  fireEvent.click(screen.getByRole("button", { name: "Back to Today's Schedule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Open scheduled dose Vitamin D" }));
+  details = screen.getByRole("region", { name: "Scheduled dose Vitamin D" });
+  fireEvent.click(within(details).getByRole("button", { name: "Reschedule" }));
+  expect(within(details).getByLabelText("Date")).toHaveValue("2026-08-25");
+  expect(within(details).getByLabelText("Time")).toHaveValue("13:45");
+  first.unmount();
+
+  renderPage({ medicationDoseSchedules: [scheduledDose], rescheduleMedicationDoseOccurrence }, { expanded: false });
+  fireEvent.click(screen.getByRole("button", { name: "Open scheduled dose Vitamin D" }));
+  details = screen.getByRole("region", { name: "Scheduled dose Vitamin D" });
+  fireEvent.click(within(details).getByRole("button", { name: "Reschedule" }));
+  expect(within(details).getByLabelText("Date")).toHaveValue("2026-08-25");
+  expect(within(details).getByLabelText("Time")).toHaveValue("13:45");
+  fireEvent.click(within(details).getByRole("button", { name: "Save reschedule" }));
+  expect(rescheduleMedicationDoseOccurrence).toHaveBeenCalledTimes(1);
+  expect(within(details).getByRole("alert")).toHaveTextContent("Storage full");
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "dose-reschedule")).toBe(true);
+
+  rescheduleMedicationDoseOccurrence.mockReturnValue({ status: "saved" });
+  fireEvent.click(within(details).getByRole("button", { name: "Save reschedule" }));
+  expect(rescheduleMedicationDoseOccurrence).toHaveBeenCalledTimes(2);
+  expect(within(details).queryByRole("form", { name: "Reschedule Vitamin D" })).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "dose-reschedule")).toBe(false);
+});
+
+test("dose reschedule Cancel preserves on decline and clears only after confirmed discard", () => {
+  const scheduledDose = medicationSchedule();
+  const confirm = jest.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+  try {
+    renderPage({ medicationDoseSchedules: [scheduledDose] }, { expanded: false });
+    fireEvent.click(screen.getByRole("button", { name: "Open scheduled dose Vitamin D" }));
+    const details = screen.getByRole("region", { name: "Scheduled dose Vitamin D" });
+    fireEvent.click(within(details).getByRole("button", { name: "Reschedule" }));
+    fireEvent.change(within(details).getByLabelText("Time"), { target: { value: "14:30" } });
+    fireEvent.click(within(details).getByRole("button", { name: "Cancel" }));
+    expect(within(details).getByLabelText("Time")).toHaveValue("14:30");
+    expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "dose-reschedule")).toBe(true);
+
+    fireEvent.click(within(details).getByRole("button", { name: "Cancel" }));
+    expect(within(details).queryByRole("form", { name: "Reschedule Vitamin D" })).not.toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "dose-reschedule")).toBe(false);
+  } finally {
+    confirm.mockRestore();
+  }
 });
 
 test("recurring dose occurrence records remain independent across dates", () => {

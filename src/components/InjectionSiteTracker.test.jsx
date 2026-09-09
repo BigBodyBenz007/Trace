@@ -23,6 +23,7 @@ let frames;
 let originalRequestAnimationFrame;
 
 beforeEach(() => {
+  localStorage.clear();
   frames = [];
   originalRequestAnimationFrame = window.requestAnimationFrame;
   window.requestAnimationFrame = (callback) => { frames.push(callback); return frames.length; };
@@ -68,7 +69,11 @@ function renderTracker(overrides = {}) {
     updateShot: jest.fn(() => ({ status: "saved" })),
     ...overrides,
   };
-  render(<InjectionSiteTracker {...props} />);
+  const view = render(<InjectionSiteTracker {...props} />);
+  Object.defineProperty(props, "unmount", {
+    enumerable: false,
+    value: view.unmount,
+  });
   return props;
 }
 
@@ -332,11 +337,100 @@ test("final marker classes remain red solid, yellow diamond, and green hollow wi
   expect(container.innerHTML.toLowerCase()).not.toContain("orange");
 });
 
-test("warns before leaving with a pending or queued unsaved shot", () => {
-  window.confirm = jest.fn(() => false);
+test("Back to Protocols preserves pending work without a discard warning", () => {
+  window.confirm = jest.fn();
   const props = renderTracker();
   selectBody();
   fireEvent.click(screen.getByRole("button", { name: "Back to Protocols" }));
-  expect(window.confirm).toHaveBeenCalledWith("Leave the Injection Site Tracker? Unsaved shots will be discarded.");
-  expect(props.onBack).not.toHaveBeenCalled();
+  expect(window.confirm).not.toHaveBeenCalled();
+  expect(props.onBack).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries[0].value.pending).toMatchObject({ view: "front" });
+});
+
+test("restores an unfinished multi-shot session exactly after remount and keeps it after failed save", () => {
+  const first = renderTracker({ protocols: [], saveSession: jest.fn(() => ({ status: "error", message: "Storage full" })) });
+  selectBody(); flushFrame(); openEditor();
+  fireEvent.change(screen.getByLabelText("What did you inject?"), { target: { value: "First draft" } });
+  fireEvent.change(screen.getByLabelText("Injection notes"), { target: { value: "exact first notes" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add Another Shot" }));
+  flushFrame();
+  selectBody("back", 450, 400); flushFrame(); openEditor();
+  fireEvent.change(screen.getByLabelText("What did you inject?"), { target: { value: "Second draft" } });
+  fireEvent.change(screen.getByLabelText("Injection amount"), { target: { value: "-2" } });
+  first.unmount();
+
+  const props = renderTracker({ protocols: [], saveSession: jest.fn(() => ({ status: "error", message: "Storage full" })) });
+  expect(screen.getByLabelText("What did you inject?")).toHaveValue("Second draft");
+  expect(screen.getByLabelText("Injection amount")).toHaveValue(-2);
+  expect(screen.getAllByRole("status").some((element) => element.textContent.includes("1 shot queued"))).toBe(true);
+  fireEvent.change(screen.getByLabelText("Injection amount"), { target: { value: "2" } });
+  fireEvent.change(screen.getByLabelText("Injection unit"), { target: { value: "mg" } });
+  fireEvent.click(screen.getByRole("button", { name: "Finish & Save" }));
+  expect(props.saveSession).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("alert")).toHaveTextContent("Storage full");
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "injection-session")).toBe(true);
+
+  props.saveSession.mockReturnValue({ status: "saved" });
+  fireEvent.click(screen.getByRole("button", { name: "Finish & Save" }));
+  expect(props.saveSession).toHaveBeenCalledTimes(2);
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "injection-session")).toBe(false);
+  expect(screen.queryByRole("region", { name: "Log shot" })).not.toBeInTheDocument();
+});
+
+test("canceling a changed shot keeps everything when declined and clears only after confirmation", () => {
+  const confirm = jest.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+  renderTracker({ protocols: [] });
+  selectBody(); flushFrame(); openEditor();
+  fireEvent.change(screen.getByLabelText("What did you inject?"), { target: { value: "Unfinished injection" } });
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(screen.getByRole("region", { name: "Log shot" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(screen.queryByRole("region", { name: "Log shot" })).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries[0].value.pending).toMatchObject({ view: "front" });
+  confirm.mockRestore();
+});
+
+test("failed injection edit preserves its draft and successful retry clears it", () => {
+  const savedShot = shot({ id: "shot:edit" });
+  const data = dataWith([savedShot]);
+  const updateShot = jest.fn(() => ({ status: "error", message: "Storage full" }));
+  renderTracker({ data, updateShot });
+  fireEvent.click(screen.getByRole("button", { name: /Edit Vitamin B12 injection/ }));
+  fireEvent.change(screen.getByLabelText("Injection notes"), { target: { value: "retry exact edit" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(updateShot).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("alert")).toHaveTextContent("Storage full");
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain, context }) => domain === "injection-shot" && context === "edit:shot:edit")).toBe(true);
+
+  updateShot.mockReturnValue({ status: "saved" });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(updateShot).toHaveBeenCalledTimes(2);
+  expect(screen.queryByRole("region", { name: "Edit shot" })).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain, context }) => domain === "injection-shot" && context === "edit:shot:edit")).toBe(false);
+});
+
+test("injection edit drafts are record-specific and ignored after the saved shot changes", () => {
+  const firstShot = shot({ id: "shot:first", notes: "first saved" });
+  const secondShot = shot({ id: "shot:second", substanceName: "NAD+", protocolItemId: "item:nad", amount: 50, unit: "mg", notes: "second saved" });
+  const originalData = dataWith([firstShot, secondShot]);
+  const first = renderTracker({ data: originalData });
+  fireEvent.click(screen.getByRole("button", { name: /Edit Vitamin B12 injection/ }));
+  fireEvent.change(screen.getByLabelText("Injection notes"), { target: { value: "unfinished first" } });
+  first.unmount();
+
+  const second = renderTracker({ data: originalData });
+  fireEvent.click(screen.getByRole("button", { name: /Edit NAD\+ injection/ }));
+  expect(screen.getByLabelText("Injection notes")).toHaveValue("second saved");
+  second.unmount();
+
+  const changedData = {
+    ...originalData,
+    shots: originalData.shots.map((entry) => entry.id === "shot:first"
+      ? { ...entry, notes: "newer saved first", updatedAt: "2026-09-10T00:00:00.000Z" }
+      : entry),
+  };
+  renderTracker({ data: changedData });
+  fireEvent.click(screen.getByRole("button", { name: /Edit Vitamin B12 injection/ }));
+  expect(screen.getByLabelText("Injection notes")).toHaveValue("newer saved first");
+  expect(screen.getByRole("alert")).toHaveTextContent("changed after an unfinished edit");
 });

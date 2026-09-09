@@ -46,6 +46,13 @@ import {
   workoutTemplateDraftForEditing,
   workoutTemplateDraftFromWorkoutEntry,
 } from "../services/workoutTemplate";
+import {
+  clearFormDraft,
+  clearFormDraftsForContext,
+  formDraftFingerprint,
+  readFormDraft,
+  writeFormDraft,
+} from "../services/formDrafts";
 
 function currentLocalDateTime() {
   const now = new Date();
@@ -521,11 +528,26 @@ function WorkoutPage({
   const [templateError, setTemplateError] = useState("");
   const [templateConflict, setTemplateConflict] = useState(null);
   const templateInitialDraftRef = useRef(null);
+  const templateDraftContextRef = useRef(null);
   const templateToggleButtonRef = useRef(null);
   const templateEditorReturnFocusRef = useRef(null);
   const templateEditorWasOpenRef = useRef(false);
   const templateStartButtonRefs = useRef(new Map());
   const pendingTemplateFocusIdRef = useRef(null);
+
+  useEffect(() => {
+    if (!templateDraft || !templateDraftContextRef.current || !templateInitialDraftRef.current) return;
+    try {
+      writeFormDraft(
+        localStorage,
+        templateDraftContextRef.current,
+        JSON.parse(templateInitialDraftRef.current),
+        templateDraft
+      );
+    } catch (storageFailure) {
+      setTemplateError("Trace could not preserve this unfinished workout template. Keep the editor open and try again.");
+    }
+  }, [templateDraft]);
 
   async function selectWorkoutPhotos(event) {
     if (photoSelectionInFlightRef.current) return;
@@ -1699,29 +1721,53 @@ function WorkoutPage({
   }
 
   function openTemplateFromWorkout(entry, trigger = null) {
-    const nextDraft = workoutTemplateDraftFromWorkoutEntry(entry);
-    if (!nextDraft) {
+    const baseDraft = workoutTemplateDraftFromWorkoutEntry(entry);
+    if (!baseDraft) {
       showToast("This completed workout could not be copied into a template.");
       return;
     }
-    templateInitialDraftRef.current = JSON.stringify(nextDraft);
+    const context = {
+      domain: "workout-template",
+      context: `create:workout:${entry.id}`,
+      sourceFingerprint: formDraftFingerprint(entry),
+    };
+    const restored = readFormDraft(localStorage, context, baseDraft);
+    const nextDraft = restored.status === "restored" ? restored.value : baseDraft;
+    templateDraftContextRef.current = context;
+    templateInitialDraftRef.current = JSON.stringify(restored.status === "restored" ? restored.entry.initialValue : baseDraft);
     templateEditorReturnFocusRef.current = trigger || document.activeElement;
     setTemplateDraft(nextDraft);
     setTemplateEditor({ mode: "create", sourceWorkoutId: entry.id });
-    setTemplateError("");
+    setTemplateError(restored.status === "conflict"
+      ? "This completed workout changed after an unfinished template was stored, so Trace did not apply the older draft."
+      : restored.status === "malformed" || restored.status === "invalid-value"
+        ? "Trace found malformed unfinished form data and left it unchanged."
+        : "");
   }
 
   function openTemplateEditor(template, trigger = null) {
-    const nextDraft = workoutTemplateDraftForEditing(template);
-    if (!nextDraft) {
+    const baseDraft = workoutTemplateDraftForEditing(template);
+    if (!baseDraft) {
       showToast("This workout template could not be opened.");
       return;
     }
-    templateInitialDraftRef.current = JSON.stringify(nextDraft);
+    const context = {
+      domain: "workout-template",
+      context: `edit:${template.id}`,
+      sourceFingerprint: formDraftFingerprint(template),
+    };
+    const restored = readFormDraft(localStorage, context, baseDraft);
+    const nextDraft = restored.status === "restored" ? restored.value : baseDraft;
+    templateDraftContextRef.current = context;
+    templateInitialDraftRef.current = JSON.stringify(restored.status === "restored" ? restored.entry.initialValue : baseDraft);
     templateEditorReturnFocusRef.current = trigger || document.activeElement;
     setTemplateDraft(nextDraft);
     setTemplateEditor({ mode: "edit", templateId: template.id });
-    setTemplateError("");
+    setTemplateError(restored.status === "conflict"
+      ? "This workout template changed after an unfinished edit was stored, so Trace did not apply the older draft."
+      : restored.status === "malformed" || restored.status === "invalid-value"
+        ? "Trace found malformed unfinished form data and left it unchanged."
+        : "");
   }
 
   function closeTemplateEditor() {
@@ -1729,12 +1775,19 @@ function WorkoutPage({
     setTemplateDraft(null);
     setTemplateError("");
     templateInitialDraftRef.current = null;
+    templateDraftContextRef.current = null;
   }
 
   function cancelTemplateEditor() {
     const changed = templateDraft
       && JSON.stringify(templateDraft) !== templateInitialDraftRef.current;
     if (changed && !window.confirm("Cancel this workout template? Your unsaved changes will be lost.")) {
+      return;
+    }
+    try {
+      if (templateDraftContextRef.current) clearFormDraft(localStorage, templateDraftContextRef.current);
+    } catch (storageFailure) {
+      setTemplateError("Trace could not discard this unfinished workout template. It was left available for recovery.");
       return;
     }
     closeTemplateEditor();
@@ -1749,6 +1802,12 @@ function WorkoutPage({
       setTemplateError(result?.message || "The workout template could not be saved.");
       return;
     }
+    try {
+      if (templateDraftContextRef.current) clearFormDraft(localStorage, templateDraftContextRef.current);
+    } catch (storageFailure) {
+      setTemplateError("The workout template was saved, but Trace could not clear its unfinished draft. Reload and verify it before saving again.");
+      return;
+    }
     setTemplatesExpanded(true);
     closeTemplateEditor();
     showToast(templateEditor.mode === "edit" ? "Workout template updated." : "Workout template saved.");
@@ -1761,6 +1820,11 @@ function WorkoutPage({
     if (!deleteWorkoutTemplate(template.id)) {
       showToast("The workout template could not be deleted.");
       return;
+    }
+    try {
+      clearFormDraftsForContext(localStorage, "workout-template", `edit:${template.id}`);
+    } catch (storageFailure) {
+      showToast("The template was deleted, but an older unfinished edit could not be cleared. It will not be restored without its saved record.");
     }
     showToast("Workout template deleted.");
     window.requestAnimationFrame(() => templateToggleButtonRef.current?.focus());

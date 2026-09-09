@@ -5,6 +5,13 @@ import ConfirmationMessage from "./ConfirmationMessage";
 import WaterTrackerSection from "./WaterTrackerSection";
 import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import { motionScrollBehavior } from "../services/motionPreference";
+import {
+  clearFormDraft,
+  clearFormDraftsForContext,
+  formDraftFingerprint,
+  readFormDraft,
+  writeFormDraft,
+} from "../services/formDrafts";
 import { createRemoteBarcodeLookup } from "../services/remoteBarcodeLookup";
 import { applyRemoteNutrientPrecision } from "../services/barcodeNutritionSelection";
 import { lookupUserFoodByBarcode } from "../services/userFoodCatalog";
@@ -145,6 +152,34 @@ function isSameLocalDate(firstDate, secondDate) {
 
 function getLocalDateKey(date) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+}
+
+function emptyNutritionEntryDraft(dateTime = getCurrentLocalDateTime()) {
+  return {
+    name: "",
+    calories: "",
+    protein: "",
+    carbohydrates: "",
+    fat: "",
+    fiber: "",
+    sodium: "",
+    totalSugar: "",
+    addedSugar: "",
+    date: dateTime.date,
+    time: dateTime.time,
+    notes: "",
+    foodReference: null,
+    servingQuantity: "1",
+    portionBasis: null,
+    nutritionBasis: null,
+    unknownNutritionKeys: [],
+    restaurantServingOptions: [],
+    selectedRestaurantServingId: "",
+    manualServingAmount: "1",
+    manualServingUnit: "serving",
+    customServingDescription: "",
+    saveAsReusableFood: true,
+  };
 }
 
 export function calculateDailySugarTotals(nutritionEntries, today = new Date()) {
@@ -308,34 +343,44 @@ function NutritionPage({
   reducedMotion = false,
 }) {
   const initialDateTime = getCurrentLocalDateTime();
-  const [name, setName] = useState("");
-  const [calories, setCalories] = useState("");
-  const [protein, setProtein] = useState("");
-  const [carbohydrates, setCarbohydrates] = useState("");
-  const [fat, setFat] = useState("");
-  const [fiber, setFiber] = useState("");
-  const [sodium, setSodium] = useState("");
-  const [totalSugar, setTotalSugar] = useState("");
-  const [addedSugar, setAddedSugar] = useState("");
-  const [date, setDate] = useState(initialDateTime.date);
-  const [time, setTime] = useState(initialDateTime.time);
-  const [notes, setNotes] = useState("");
-  const [isDraftDirty, setIsDraftDirty] = useState(false);
+  const entryDraftContextRef = useRef({ domain: "nutrition-entry", context: "create", sourceFingerprint: null });
+  const initialEntryDraftRef = useRef(emptyNutritionEntryDraft(initialDateTime));
+  const restoredEntryDraftRef = useRef(readFormDraft(localStorage, entryDraftContextRef.current, initialEntryDraftRef.current));
+  const restoredEntryValue = restoredEntryDraftRef.current.status === "restored"
+    ? restoredEntryDraftRef.current.value
+    : initialEntryDraftRef.current;
+  if (restoredEntryDraftRef.current.status === "restored") {
+    initialEntryDraftRef.current = restoredEntryDraftRef.current.entry.initialValue;
+  }
+  const [name, setName] = useState(restoredEntryValue.name);
+  const [calories, setCalories] = useState(restoredEntryValue.calories);
+  const [protein, setProtein] = useState(restoredEntryValue.protein);
+  const [carbohydrates, setCarbohydrates] = useState(restoredEntryValue.carbohydrates);
+  const [fat, setFat] = useState(restoredEntryValue.fat);
+  const [fiber, setFiber] = useState(restoredEntryValue.fiber);
+  const [sodium, setSodium] = useState(restoredEntryValue.sodium);
+  const [totalSugar, setTotalSugar] = useState(restoredEntryValue.totalSugar);
+  const [addedSugar, setAddedSugar] = useState(restoredEntryValue.addedSugar);
+  const [date, setDate] = useState(restoredEntryValue.date);
+  const [time, setTime] = useState(restoredEntryValue.time);
+  const [notes, setNotes] = useState(restoredEntryValue.notes);
   const [editingEntryId, setEditingEntryId] = useState(null);
-  const [foodReference, setFoodReference] = useState(null);
-  const [servingQuantity, setServingQuantity] = useState("1");
-  const [portionBasis, setPortionBasis] = useState(null);
-  const [nutritionBasis, setNutritionBasis] = useState(null);
-  const [unknownNutritionKeys, setUnknownNutritionKeys] = useState(new Set());
-  const [restaurantServingOptions, setRestaurantServingOptions] = useState([]);
-  const [selectedRestaurantServingId, setSelectedRestaurantServingId] = useState("");
+  const [foodReference, setFoodReference] = useState(restoredEntryValue.foodReference);
+  const [servingQuantity, setServingQuantity] = useState(restoredEntryValue.servingQuantity);
+  const [portionBasis, setPortionBasis] = useState(restoredEntryValue.portionBasis);
+  const [nutritionBasis, setNutritionBasis] = useState(restoredEntryValue.nutritionBasis);
+  const [unknownNutritionKeys, setUnknownNutritionKeys] = useState(new Set(restoredEntryValue.unknownNutritionKeys));
+  const [restaurantServingOptions, setRestaurantServingOptions] = useState(restoredEntryValue.restaurantServingOptions);
+  const [selectedRestaurantServingId, setSelectedRestaurantServingId] = useState(restoredEntryValue.selectedRestaurantServingId);
   const [foodSearchResetKey, setFoodSearchResetKey] = useState(0);
-  const [manualServingAmount, setManualServingAmount] = useState("1");
-  const [manualServingUnit, setManualServingUnit] = useState("serving");
-  const [customServingDescription, setCustomServingDescription] = useState("");
-  const [saveAsReusableFood, setSaveAsReusableFood] = useState(true);
+  const [manualServingAmount, setManualServingAmount] = useState(restoredEntryValue.manualServingAmount);
+  const [manualServingUnit, setManualServingUnit] = useState(restoredEntryValue.manualServingUnit);
+  const [customServingDescription, setCustomServingDescription] = useState(restoredEntryValue.customServingDescription);
+  const [saveAsReusableFood, setSaveAsReusableFood] = useState(restoredEntryValue.saveAsReusableFood);
   const [servingDefinitionError, setServingDefinitionError] = useState("");
-  const [nutritionValidationError, setNutritionValidationError] = useState("");
+  const [nutritionValidationError, setNutritionValidationError] = useState(restoredEntryDraftRef.current.status === "malformed" || restoredEntryDraftRef.current.status === "invalid-value"
+    ? "Trace found malformed unfinished form data and left it unchanged."
+    : "");
   const [entryStatusMessage, setEntryStatusMessage] = useState("");
   const [confirmationMessage, setConfirmationMessage] = useState("");
   const [goalsExpanded, setGoalsExpanded] = useState(false);
@@ -352,19 +397,46 @@ function NutritionPage({
   const nameInputRef = useRef(null);
   const previousWaterUnitRef = useRef(waterUnit);
   const savedWaterGoalMlRef = useRef(toNutritionNumber(nutritionGoals.waterGoalMl));
-  const [goalValues, setGoalValues] = useState({
+  const goalDraftContextRef = useRef({
+    domain: "nutrition-goals",
+    context: "goals",
+    sourceFingerprint: formDraftFingerprint(nutritionGoals),
+  });
+  const initialGoalDraftRef = useRef({
+    goalValues: {
+      calories: String(nutritionGoals.calories),
+      protein: String(nutritionGoals.protein),
+      carbohydrates: String(nutritionGoals.carbohydrates),
+      fat: String(nutritionGoals.fat),
+      sodium: String(nutritionGoals.sodium ?? 0),
+    },
+    waterGoalDraftMl: toNutritionNumber(nutritionGoals.waterGoalMl),
+    waterGoalValue: waterGoalInputValue(nutritionGoals.waterGoalMl, waterUnit),
+    waterUnit,
+  });
+  const restoredGoalDraftRef = useRef(readFormDraft(localStorage, goalDraftContextRef.current, initialGoalDraftRef.current));
+  const restoredGoalValue = restoredGoalDraftRef.current.status === "restored"
+    ? restoredGoalDraftRef.current.value
+    : initialGoalDraftRef.current;
+  if (restoredGoalDraftRef.current.status === "restored") {
+    initialGoalDraftRef.current = restoredGoalDraftRef.current.entry.initialValue;
+  }
+  const [goalValues, setGoalValues] = useState(restoredGoalValue.goalValues || {
     calories: String(nutritionGoals.calories),
     protein: String(nutritionGoals.protein),
     carbohydrates: String(nutritionGoals.carbohydrates),
     fat: String(nutritionGoals.fat),
     sodium: String(nutritionGoals.sodium ?? 0),
   });
-  const [waterGoalDraftMl, setWaterGoalDraftMl] = useState(
-    toNutritionNumber(nutritionGoals.waterGoalMl)
-  );
-  const [waterGoalValue, setWaterGoalValue] = useState(
-    waterGoalInputValue(nutritionGoals.waterGoalMl, waterUnit)
-  );
+  const [waterGoalDraftMl, setWaterGoalDraftMl] = useState(restoredGoalValue.waterGoalDraftMl);
+  const [waterGoalValue, setWaterGoalValue] = useState(restoredGoalValue.waterUnit === waterUnit
+    ? restoredGoalValue.waterGoalValue
+    : waterGoalInputValue(restoredGoalValue.waterGoalDraftMl, waterUnit));
+  const [goalDraftError, setGoalDraftError] = useState(restoredGoalDraftRef.current.status === "conflict"
+    ? "Nutrition goals changed after an unfinished edit was stored, so Trace did not apply the older draft."
+    : restoredGoalDraftRef.current.status === "malformed" || restoredGoalDraftRef.current.status === "invalid-value"
+      ? "Trace found malformed unfinished form data and left it unchanged."
+      : "");
   const barcodeAccess = barcodeFeatureAccess.getAccess(TRACE_FEATURES.BARCODE_SCANNER);
 
   useEffect(() => () => clearTimeout(confirmationTimerRef.current), []);
@@ -376,14 +448,29 @@ function NutritionPage({
   }
 
   useEffect(() => {
-    setGoalValues({
+    const sourceFingerprint = formDraftFingerprint(nutritionGoals);
+    if (sourceFingerprint === goalDraftContextRef.current.sourceFingerprint) return;
+    const nextGoalValues = {
       calories: String(nutritionGoals.calories),
       protein: String(nutritionGoals.protein),
       carbohydrates: String(nutritionGoals.carbohydrates),
       fat: String(nutritionGoals.fat),
       sodium: String(nutritionGoals.sodium ?? 0),
-    });
-  }, [nutritionGoals]);
+    };
+    const nextWaterGoalMl = toNutritionNumber(nutritionGoals.waterGoalMl);
+    const nextInitial = {
+      goalValues: nextGoalValues,
+      waterGoalDraftMl: nextWaterGoalMl,
+      waterGoalValue: waterGoalInputValue(nextWaterGoalMl, waterUnit),
+      waterUnit,
+    };
+    goalDraftContextRef.current = { ...goalDraftContextRef.current, sourceFingerprint };
+    initialGoalDraftRef.current = nextInitial;
+    setGoalValues(nextGoalValues);
+    setWaterGoalDraftMl(nextWaterGoalMl);
+    setWaterGoalValue(nextInitial.waterGoalValue);
+    setGoalDraftError("");
+  }, [nutritionGoals, waterUnit]);
 
   useEffect(() => {
     const savedWaterGoalMl = toNutritionNumber(nutritionGoals.waterGoalMl);
@@ -399,6 +486,51 @@ function NutritionPage({
     setWaterGoalValue(waterGoalInputValue(waterGoalDraftMl, waterUnit));
     previousWaterUnitRef.current = waterUnit;
   }, [waterGoalDraftMl, waterUnit]);
+
+  useEffect(() => {
+    try {
+      writeFormDraft(localStorage, entryDraftContextRef.current, initialEntryDraftRef.current, {
+        name,
+        calories,
+        protein,
+        carbohydrates,
+        fat,
+        fiber,
+        sodium,
+        totalSugar,
+        addedSugar,
+        date,
+        time,
+        notes,
+        foodReference,
+        servingQuantity,
+        portionBasis,
+        nutritionBasis,
+        unknownNutritionKeys: [...unknownNutritionKeys],
+        restaurantServingOptions,
+        selectedRestaurantServingId,
+        manualServingAmount,
+        manualServingUnit,
+        customServingDescription,
+        saveAsReusableFood,
+      });
+    } catch (storageFailure) {
+      setNutritionValidationError("Trace could not preserve this unfinished Nutrition entry. Keep this page open and try again.");
+    }
+  }, [name, calories, protein, carbohydrates, fat, fiber, sodium, totalSugar, addedSugar, date, time, notes, foodReference, servingQuantity, portionBasis, nutritionBasis, unknownNutritionKeys, restaurantServingOptions, selectedRestaurantServingId, manualServingAmount, manualServingUnit, customServingDescription, saveAsReusableFood]);
+
+  useEffect(() => {
+    try {
+      writeFormDraft(localStorage, goalDraftContextRef.current, initialGoalDraftRef.current, {
+        goalValues,
+        waterGoalDraftMl,
+        waterGoalValue,
+        waterUnit,
+      });
+    } catch (storageFailure) {
+      setGoalDraftError("Trace could not preserve these unfinished Nutrition goals. Keep this page open and try again.");
+    }
+  }, [goalValues, waterGoalDraftMl, waterGoalValue, waterUnit]);
 
   const sortedEntries = [...nutritionEntries].sort(
     (a, b) => new Date(b.loggedAt) - new Date(a.loggedAt)
@@ -467,6 +599,34 @@ function NutritionPage({
     return ["calories", "sodium"].includes(metricKey)
       ? Math.round(value)
       : Number(value.toFixed(1));
+  }
+
+  function entryDraftValue() {
+    return {
+      name,
+      calories,
+      protein,
+      carbohydrates,
+      fat,
+      fiber,
+      sodium,
+      totalSugar,
+      addedSugar,
+      date,
+      time,
+      notes,
+      foodReference,
+      servingQuantity,
+      portionBasis,
+      nutritionBasis,
+      unknownNutritionKeys: [...unknownNutritionKeys],
+      restaurantServingOptions,
+      selectedRestaurantServingId,
+      manualServingAmount,
+      manualServingUnit,
+      customServingDescription,
+      saveAsReusableFood,
+    };
   }
 
   function saveFood(event) {
@@ -590,13 +750,22 @@ function NutritionPage({
     }
     showConfirmation("Meal traced");
 
-    resetForm();
+    if (!resetForm({ clearCurrent: true })) return;
     setFoodSearchResetKey((currentKey) => currentKey + 1);
     todaySectionRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
   }
 
-  function resetForm() {
+  function resetForm({ clearCurrent = false } = {}) {
+    if (clearCurrent) {
+      try {
+        clearFormDraft(localStorage, entryDraftContextRef.current);
+      } catch (storageFailure) {
+        setNutritionValidationError("The Nutrition entry was saved, but Trace could not clear its unfinished draft. Reload and verify it before saving again.");
+        return false;
+      }
+    }
     const currentDateTime = getCurrentLocalDateTime();
+    const nextInitial = emptyNutritionEntryDraft(currentDateTime);
 
     setName("");
     setCalories("");
@@ -610,7 +779,6 @@ function NutritionPage({
     setDate(currentDateTime.date);
     setTime(currentDateTime.time);
     setNotes("");
-    setIsDraftDirty(false);
     setEditingEntryId(null);
     setFoodReference(null);
     setServingQuantity("1");
@@ -625,6 +793,9 @@ function NutritionPage({
     setSaveAsReusableFood(true);
     setServingDefinitionError("");
     setNutritionValidationError("");
+    entryDraftContextRef.current = { domain: "nutrition-entry", context: "create", sourceFingerprint: null };
+    initialEntryDraftRef.current = nextInitial;
+    return true;
   }
 
   function markSelectedFoodModified() {
@@ -772,7 +943,6 @@ function NutritionPage({
     setServingDefinitionError("");
     setNutritionValidationError("");
     setEntryStatusMessage("");
-    setIsDraftDirty(true);
 
     window.requestAnimationFrame(() => {
       entryFormRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
@@ -803,43 +973,80 @@ function NutritionPage({
     const completeness = NUTRIENT_KEYS.every((nutrient) => option.nutrients[nutrient] !== null) ? "complete" : "partial";
     setFoodReference((current) => current ? { ...current, sourceId: option.provenance.sourceId, completeness } : current);
     setNutritionValidationError("");
-    setIsDraftDirty(true);
   }
 
   function editEntry(entry) {
     const localDateTime = getLocalDateTimeFromTimestamp(entry.loggedAt);
-
-    setName(entry.name);
-    setCalories(entry.calories === null ? "" : String(entry.calories));
-    setProtein(entry.protein === null ? "" : String(entry.protein));
-    setCarbohydrates(entry.carbohydrates === null ? "" : String(entry.carbohydrates));
-    setFat(entry.fat === null ? "" : String(entry.fat));
-    setFiber(entry.fiber === null || entry.fiber === undefined ? "" : String(entry.fiber));
-    setSodium(entry.sodium === null || entry.sodium === undefined ? "" : String(entry.sodium));
-    setTotalSugar(entry.totalSugar === null || entry.totalSugar === undefined ? "" : String(entry.totalSugar));
-    setAddedSugar(entry.addedSugar === null || entry.addedSugar === undefined ? "" : String(entry.addedSugar));
-    setDate(localDateTime.date);
-    setTime(localDateTime.time);
-    setNotes(entry.notes);
-    setIsDraftDirty(false);
+    const hasCalculationBasis = hasValidSavedCalculationBasis(entry);
+    const baseDraft = {
+      name: entry.name,
+      calories: entry.calories === null ? "" : String(entry.calories),
+      protein: entry.protein === null ? "" : String(entry.protein),
+      carbohydrates: entry.carbohydrates === null ? "" : String(entry.carbohydrates),
+      fat: entry.fat === null ? "" : String(entry.fat),
+      fiber: hasCalculationBasis
+        ? (entry.nutritionBasis.fiber == null ? "" : String(entry.nutritionBasis.fiber))
+        : (entry.fiber == null ? "" : String(entry.fiber)),
+      sodium: hasCalculationBasis
+        ? (entry.nutritionBasis.sodium == null ? "" : String(entry.nutritionBasis.sodium))
+        : (entry.sodium == null ? "" : String(entry.sodium)),
+      totalSugar: entry.totalSugar == null ? "" : String(entry.totalSugar),
+      addedSugar: entry.addedSugar == null ? "" : String(entry.addedSugar),
+      date: localDateTime.date,
+      time: localDateTime.time,
+      notes: entry.notes,
+      foodReference: entry.foodReference ? { ...entry.foodReference } : null,
+      servingQuantity: hasCalculationBasis ? String(entry.portion.amount) : "1",
+      portionBasis: hasCalculationBasis ? { ...entry.portion.basis } : null,
+      nutritionBasis: hasCalculationBasis ? { ...entry.nutritionBasis } : null,
+      unknownNutritionKeys: NUTRITION_ENTRY_NUTRIENT_KEYS.filter((nutrient) => (
+        hasCalculationBasis ? entry.nutritionBasis[nutrient] == null : entry[nutrient] == null
+      )),
+      restaurantServingOptions: [],
+      selectedRestaurantServingId: "",
+      manualServingAmount: "1",
+      manualServingUnit: "serving",
+      customServingDescription: "",
+      saveAsReusableFood: true,
+    };
+    const context = {
+      domain: "nutrition-entry",
+      context: `edit:${entry.id}`,
+      sourceFingerprint: formDraftFingerprint(entry),
+    };
+    const restored = readFormDraft(localStorage, context, baseDraft);
+    const nextDraft = restored.status === "restored" ? restored.value : baseDraft;
+    entryDraftContextRef.current = context;
+    initialEntryDraftRef.current = restored.status === "restored" ? restored.entry.initialValue : baseDraft;
+    setName(nextDraft.name);
+    setCalories(nextDraft.calories);
+    setProtein(nextDraft.protein);
+    setCarbohydrates(nextDraft.carbohydrates);
+    setFat(nextDraft.fat);
+    setFiber(nextDraft.fiber);
+    setSodium(nextDraft.sodium);
+    setTotalSugar(nextDraft.totalSugar);
+    setAddedSugar(nextDraft.addedSugar);
+    setDate(nextDraft.date);
+    setTime(nextDraft.time);
+    setNotes(nextDraft.notes);
     setEditingEntryId(entry.id);
-    setFoodReference(
-      entry.foodReference ? { ...entry.foodReference } : null
-    );
-    if (hasValidSavedCalculationBasis(entry)) {
-      setServingQuantity(String(entry.portion.amount));
-      setPortionBasis({ ...entry.portion.basis });
-      setNutritionBasis({ ...entry.nutritionBasis });
-      setSodium(entry.nutritionBasis.sodium == null ? "" : String(entry.nutritionBasis.sodium));
-      setFiber(entry.nutritionBasis.fiber == null ? "" : String(entry.nutritionBasis.fiber));
-      setUnknownNutritionKeys(new Set(NUTRITION_ENTRY_NUTRIENT_KEYS.filter((nutrient) => entry.nutritionBasis[nutrient] == null)));
-    } else {
-      setServingQuantity("1");
-      setPortionBasis(null);
-      setNutritionBasis(null);
-      setUnknownNutritionKeys(new Set(NUTRITION_ENTRY_NUTRIENT_KEYS.filter((nutrient) => entry[nutrient] == null)));
-    }
-    setNutritionValidationError("");
+    setFoodReference(nextDraft.foodReference);
+    setServingQuantity(nextDraft.servingQuantity);
+    setPortionBasis(nextDraft.portionBasis);
+    setNutritionBasis(nextDraft.nutritionBasis);
+    setUnknownNutritionKeys(new Set(nextDraft.unknownNutritionKeys));
+    setRestaurantServingOptions(nextDraft.restaurantServingOptions);
+    setSelectedRestaurantServingId(nextDraft.selectedRestaurantServingId);
+    setManualServingAmount(nextDraft.manualServingAmount);
+    setManualServingUnit(nextDraft.manualServingUnit);
+    setCustomServingDescription(nextDraft.customServingDescription);
+    setSaveAsReusableFood(nextDraft.saveAsReusableFood);
+    setNutritionValidationError(restored.status === "conflict"
+      ? "This Nutrition entry changed after an unfinished edit was stored, so Trace did not apply the older draft."
+      : restored.status === "malformed" || restored.status === "invalid-value"
+        ? "Trace found malformed unfinished form data and left it unchanged."
+        : "");
     entryFormRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
   }
 
@@ -862,13 +1069,18 @@ function NutritionPage({
     setTotalSugar(formNutrition.totalSugar === null || formNutrition.totalSugar === undefined ? "" : String(formNutrition.totalSugar));
     setAddedSugar(formNutrition.addedSugar === null || formNutrition.addedSugar === undefined ? "" : String(formNutrition.addedSugar));
     setNutritionValidationError("");
-    setIsDraftDirty(true);
   }
 
   function deleteEntry(id) {
     if (!window.confirm("Delete this nutrition entry?")) return;
 
     if (!deleteNutritionEntry(id)) return;
+
+    try {
+      clearFormDraftsForContext(localStorage, "nutrition-entry", `edit:${id}`);
+    } catch (storageFailure) {
+      setNutritionValidationError("The entry was deleted, but an older unfinished edit could not be cleared. It will not be restored without its saved record.");
+    }
 
     if (editingEntryId === id) {
       resetForm();
@@ -877,13 +1089,13 @@ function NutritionPage({
 
   function cancelEntry() {
     if (
-      (editingEntryId !== null || isDraftDirty) &&
+      formDraftFingerprint(entryDraftValue()) !== formDraftFingerprint(initialEntryDraftRef.current) &&
       !window.confirm("Discard this entry? Your unsaved changes will be lost.")
     ) {
       return;
     }
 
-    resetForm();
+    if (!resetForm({ clearCurrent: true })) return;
     setFoodSearchResetKey((currentKey) => currentKey + 1);
     window.requestAnimationFrame(() => {
       nutritionPageTopRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior() });
@@ -915,7 +1127,33 @@ function NutritionPage({
       fat: toNutritionNumber(goalValues.fat),
       sodium: toNutritionNumber(goalValues.sodium),
       waterGoalMl: waterGoalDraftMl,
-    })) showConfirmation("Goals traced");
+    })) {
+      try {
+        clearFormDraft(localStorage, goalDraftContextRef.current);
+      } catch (storageFailure) {
+        setGoalDraftError("Nutrition goals were saved, but Trace could not clear their unfinished draft. Reload and verify them before saving again.");
+        return;
+      }
+      initialGoalDraftRef.current = { goalValues, waterGoalDraftMl, waterGoalValue, waterUnit };
+      setGoalDraftError("");
+      showConfirmation("Goals traced");
+    }
+  }
+
+  function backToTimeline() {
+    try {
+      writeFormDraft(localStorage, entryDraftContextRef.current, initialEntryDraftRef.current, entryDraftValue());
+      writeFormDraft(localStorage, goalDraftContextRef.current, initialGoalDraftRef.current, {
+        goalValues,
+        waterGoalDraftMl,
+        waterGoalValue,
+        waterUnit,
+      });
+    } catch (storageFailure) {
+      setNutritionValidationError("Trace could not preserve the unfinished Nutrition form. Keep this page open and try again.");
+      return;
+    }
+    onBack();
   }
 
   const formInputStyle = {
@@ -943,7 +1181,7 @@ function NutritionPage({
       <button
         className="trace-action trace-action--secondary"
         type="button"
-        onClick={onBack}
+        onClick={backToTimeline}
         style={{
           ...buttonStyle,
           backgroundColor: "#666",
@@ -985,6 +1223,7 @@ function NutritionPage({
           }}
         >
           <h2 style={{ marginTop: 0 }}>Daily Goals</h2>
+          {goalDraftError && <p role="alert" style={{ color: "#fca5a5" }}>{goalDraftError}</p>}
 
           <div
             style={{
@@ -1170,7 +1409,6 @@ function NutritionPage({
             value={name}
             onChange={(event) => {
               setName(event.target.value);
-              setIsDraftDirty(true);
               markSelectedFoodModified();
             }}
           />
@@ -1212,7 +1450,6 @@ function NutritionPage({
                     else next.delete(nutrient);
                     return next;
                   });
-                  setIsDraftDirty(true);
                   setNutritionValidationError("");
                   markSelectedFoodModified();
                 }}
@@ -1246,7 +1483,6 @@ function NutritionPage({
                 onChange={(event) => {
                   setSaveAsReusableFood(event.target.checked);
                   setServingDefinitionError("");
-                  setIsDraftDirty(true);
                 }}
               />{" "}
               Save as reusable food
@@ -1274,7 +1510,6 @@ function NutritionPage({
                       onChange={(event) => {
                         setManualServingAmount(event.target.value);
                         setServingDefinitionError("");
-                        setIsDraftDirty(true);
                       }}
                     />
                   </label>
@@ -1287,7 +1522,6 @@ function NutritionPage({
                       onChange={(event) => {
                         setManualServingUnit(event.target.value);
                         setServingDefinitionError("");
-                        setIsDraftDirty(true);
                       }}
                     >
                       {SERVING_UNIT_OPTIONS.map((option) => (
@@ -1310,7 +1544,6 @@ function NutritionPage({
                       onChange={(event) => {
                         setCustomServingDescription(event.target.value);
                         setServingDefinitionError("");
-                        setIsDraftDirty(true);
                       }}
                     />
                   </label>
@@ -1349,7 +1582,6 @@ function NutritionPage({
               value={date}
               onChange={(event) => {
                 setDate(event.target.value);
-                setIsDraftDirty(true);
               }}
             />
           </label>
@@ -1362,7 +1594,6 @@ function NutritionPage({
               value={time}
               onChange={(event) => {
                 setTime(event.target.value);
-                setIsDraftDirty(true);
               }}
             />
           </label>
@@ -1379,7 +1610,6 @@ function NutritionPage({
             value={notes}
             onChange={(event) => {
               setNotes(event.target.value);
-              setIsDraftDirty(true);
             }}
           />
         </label>
@@ -1787,7 +2017,7 @@ function NutritionPage({
           className="trace-action trace-action--secondary"
           data-testid="nutrition-bottom-back"
           type="button"
-          onClick={onBack}
+          onClick={backToTimeline}
           style={{
             ...buttonStyle,
             backgroundColor: "#666",

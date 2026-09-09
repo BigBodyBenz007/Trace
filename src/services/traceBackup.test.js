@@ -44,6 +44,7 @@ import {
   emptyProtocolCompoundOutcomeCollection,
 } from "./protocolCompoundOutcome";
 import { JOURNAL_VAULT_TRANSACTION_KEY } from "./journalVault";
+import { emptyFormDraftCollection, writeFormDraft } from "./formDrafts";
 import {
   canonicalJson,
   sha256Bytes,
@@ -120,6 +121,8 @@ function emptyStructured(overrides = {}) {
         ? emptyInjectionSiteCollection()
       : key === "injectionSiteSettings"
         ? defaultInjectionSiteSettings()
+      : key === "formDrafts"
+        ? emptyFormDraftCollection()
       : ["nutritionGoals", "appSettings", "memoryDraft", "workoutDraft", "journalDraft", "journalVault"].includes(key) ? null : [],
   ]).concat(Object.entries(overrides)));
 }
@@ -427,6 +430,7 @@ test("exports empty Trace data with stable version metadata and filename", async
   expect(result.data.structured.protocolCompoundOutcomes).toEqual(emptyProtocolCompoundOutcomeCollection());
   expect(result.data.structured.injectionSiteEntries).toEqual(emptyInjectionSiteCollection());
   expect(result.data.structured.injectionSiteSettings).toEqual(defaultInjectionSiteSettings());
+  expect(result.data.structured.formDrafts).toEqual(emptyFormDraftCollection());
   expect(traceBackupFilename(new Date(result.createdAt))).toBe("trace-backup-2026-08-12T10-20-30-000Z.json");
 });
 
@@ -848,7 +852,7 @@ test("backs up and restores the historical zero-portion shape without mutating o
     openDatabase: async () => makePhotoDatabase(),
   });
 
-  expect(created.schemaVersion).toBe(7);
+  expect(created.schemaVersion).toBe(TRACE_BACKUP_SCHEMA_VERSION);
   expect(created.data.structured.nutritionEntries).toEqual([meal]);
   expect(created.data.structured.workoutEntries).toEqual([workout]);
   expect(created.data.structured.workoutTemplates).toEqual([template]);
@@ -1199,6 +1203,72 @@ test("round-trips an unfinished Memory draft with its integrity-checked staged p
   expect(await readBlobText(restoredDatabase.records()[0].blob)).toBe("draft bytes");
 });
 
+test("round-trips isolated unfinished form drafts through integrity-checked replacement restore", async () => {
+  const source = makeStorage();
+  writeFormDraft(
+    source,
+    { domain: "nutrition-entry", context: "create", sourceFingerprint: null },
+    { name: "", calories: "" },
+    { name: "Half entered meal", calories: "invalid for now" },
+    new Date("2026-09-09T12:00:00.000Z")
+  );
+  writeFormDraft(
+    source,
+    { domain: "protocol", context: "edit:protocol-one", sourceFingerprint: "saved-v1" },
+    { name: "Original", items: [] },
+    { name: "Edited but unfinished", items: [] },
+    new Date("2026-09-09T12:01:00.000Z")
+  );
+
+  const created = await createTraceBackup({ storage: source, openDatabase: async () => makePhotoDatabase() });
+  const validated = await validateTraceBackup(created);
+  expect(validated.summary.activeFormDrafts).toBe(2);
+  expect(validated.backup.data.structured.formDrafts.entries).toHaveLength(2);
+
+  const destination = makeStorage({
+    formDrafts: JSON.stringify({
+      schemaVersion: 1,
+      entries: [],
+    }),
+    memories: JSON.stringify([{ id: "current-memory" }]),
+  });
+  await restoreTraceBackup(created, {
+    confirmed: true,
+    storage: destination,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(JSON.parse(destination.value("formDrafts"))).toEqual(created.data.structured.formDrafts);
+});
+
+test("rejects malformed unfinished form drafts before transactional restore mutates current data", async () => {
+  const current = await createTraceBackup({ storage: makeStorage(), openDatabase: async () => makePhotoDatabase() });
+  const structured = cloneJsonForTest(current.data.structured);
+  structured.formDrafts = { schemaVersion: 1, entries: [{ domain: "nutrition-entry" }] };
+  const corrupt = {
+    ...current,
+    data: { ...current.data, structured },
+    integrity: {
+      ...current.integrity,
+      structured: {
+        ...current.integrity.structured,
+        digest: await sha256CanonicalJson(structured),
+      },
+    },
+  };
+  const original = JSON.stringify({ schemaVersion: 1, entries: [] });
+  const destination = makeStorage({ formDrafts: original, memories: JSON.stringify([{ id: "keep" }]) });
+  const openDatabase = jest.fn(async () => makePhotoDatabase());
+
+  await expect(restoreTraceBackup(corrupt, {
+    confirmed: true,
+    storage: destination,
+    openDatabase,
+  })).rejects.toThrow("invalid unfinished form draft data");
+  expect(openDatabase).not.toHaveBeenCalled();
+  expect(destination.value("formDrafts")).toBe(original);
+  expect(JSON.parse(destination.value("memories"))).toEqual([{ id: "keep" }]);
+});
+
 test("an empty plaintext Journal draft remains empty through export and full replacement restore", async () => {
   const created = await createTraceBackup({
     storage: makeStorage(),
@@ -1255,9 +1325,10 @@ test("imports and restores an integrity-protected schema-5 backup without workou
   const structured = cloneJsonForTest(current.data.structured);
   delete structured.workoutTemplates;
   delete structured.memoryDraft;
+  delete structured.formDrafts;
   structured.nutritionEntries[0].portion.amount = "0.5";
   const schemaFiveKeys = TRACE_STORAGE_KEYS.filter((key) =>
-    key !== "workoutTemplates" && key !== "memoryDraft"
+    key !== "workoutTemplates" && key !== "memoryDraft" && key !== "formDrafts"
   );
   const schemaFive = {
     ...current,
@@ -1275,6 +1346,7 @@ test("imports and restores an integrity-protected schema-5 backup without workou
 
   const validated = await validateTraceBackup(schemaFive);
   expect(validated.backup.data.structured).not.toHaveProperty("workoutTemplates");
+  expect(validated.backup.data.structured).not.toHaveProperty("formDrafts");
   expect(validated.backup.data.structured.nutritionEntries[0].portion.amount).toBe(0.5);
   await expect(validateTraceBackup(validated.backup)).resolves.toBeDefined();
   const storage = makeStorage({ workoutTemplates: JSON.stringify([backedUpWorkoutTemplate()]) });
@@ -1295,7 +1367,8 @@ test("imports schema 6 without an unfinished Memory draft and clears any current
   });
   const structured = cloneJsonForTest(current.data.structured);
   delete structured.memoryDraft;
-  const schemaSixKeys = TRACE_STORAGE_KEYS.filter((key) => key !== "memoryDraft");
+  delete structured.formDrafts;
+  const schemaSixKeys = TRACE_STORAGE_KEYS.filter((key) => key !== "memoryDraft" && key !== "formDrafts");
   const schemaSix = {
     ...current,
     schemaVersion: 6,
@@ -1328,6 +1401,41 @@ test("imports schema 6 without an unfinished Memory draft and clears any current
   });
 
   expect(storage.value("memoryDraft")).toBeNull();
+  expect(storage.value("formDrafts")).toBeNull();
+});
+
+test("imports schema 7 without unfinished form drafts and clears current drafts", async () => {
+  const current = await createTraceBackup({ storage: makeStorage(), openDatabase: async () => makePhotoDatabase() });
+  const structured = cloneJsonForTest(current.data.structured);
+  delete structured.formDrafts;
+  const schemaSevenKeys = TRACE_STORAGE_KEYS.filter((key) => key !== "formDrafts");
+  const schemaSeven = {
+    ...current,
+    schemaVersion: 7,
+    data: { ...current.data, structured },
+    integrity: {
+      ...current.integrity,
+      structured: {
+        digest: await sha256CanonicalJson(structured),
+        domainCount: schemaSevenKeys.length,
+        domains: schemaSevenKeys,
+      },
+    },
+  };
+  const destination = makeStorage({
+    formDrafts: JSON.stringify({ schemaVersion: 1, entries: [{
+      domain: "nutrition-entry", context: "create", sourceFingerprint: null,
+      initialValue: { name: "" }, value: { name: "current" },
+      createdAt: "2026-09-09T12:00:00.000Z", updatedAt: "2026-09-09T12:00:00.000Z",
+    }] }),
+  });
+
+  await restoreTraceBackup(schemaSeven, {
+    confirmed: true,
+    storage: destination,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  expect(destination.value("formDrafts")).toBeNull();
 });
 
 test("schema 4 rejects a backup that omits any classified durable domain", () => {

@@ -2,12 +2,14 @@ import { useState } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import ProtocolsPage from "./ProtocolsPage";
 import { defaultInjectionSiteSettings, emptyInjectionSiteCollection } from "../services/injectionSite";
+import { readFormDraftCollection, writeFormDraft } from "../services/formDrafts";
 
 const item = { id: "item:1", compound: { name: "Creatine", reference: { source: "missing", sourceId: "gone" } }, dose: { amount: 5, unit: "g" }, route: { code: "oral" }, schedule: { type: "weekly-days", weekdays: [1,3,5] }, notes: "snapshot" };
 const active = { id: "protocol:1", schemaVersion: 1, name: "Training plan", startDate: "2026-08-20", endDate: null, status: "active", notes: "Mine", items: [item], createdAt: "2026-08-01T00:00:00.000Z", updatedAt: "2026-08-01T00:00:00.000Z", endedAt: null };
 const ended = { ...active, id: "protocol:2", name: "Old plan", status: "ended", endDate: "2026-08-10", endedAt: "2026-08-10T00:00:00.000Z" };
 
 beforeEach(() => {
+  localStorage.clear();
   window.requestAnimationFrame = (callback) => { callback(); return 1; };
   Element.prototype.scrollIntoView = jest.fn();
 });
@@ -19,8 +21,8 @@ function renderPage(overrides = {}) {
     injectionSiteSettings: defaultInjectionSiteSettings(), saveInjectionSession: jest.fn(), updateInjectionShot: jest.fn(),
     deleteInjectionShot: jest.fn(), updateInjectionBodyStyle: jest.fn(), trackerBodyHitTest: () => true, ...overrides,
   };
-  render(<ProtocolsPage {...props} />);
-  return props;
+  const view = render(<ProtocolsPage {...props} />);
+  return { ...props, unmount: view.unmount };
 }
 
 test("uses the scoped ongoing-plan presentation and explicit primary action", () => {
@@ -108,6 +110,28 @@ test("detail and list navigation scroll only after destination render and restor
   expect(Element.prototype.scrollIntoView).not.toHaveBeenCalled();
   act(() => frames.shift()());
   expect(originRow.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "center" });
+});
+
+test("successful protocol deletion clears only that record's edit drafts and failure preserves them", () => {
+  window.confirm = jest.fn(() => true);
+  const deletedContext = { domain: "protocol", context: `edit:${active.id}`, sourceFingerprint: "old" };
+  const keptContext = { domain: "protocol", context: "edit:protocol:other", sourceFingerprint: "other" };
+  writeFormDraft(localStorage, deletedContext, {}, { name: "Deleted draft" });
+  writeFormDraft(localStorage, keptContext, {}, { name: "Keep draft" });
+  const failed = renderPage({ protocols: [active], deleteProtocol: jest.fn(() => false) });
+  fireEvent.click(screen.getByRole("button", { name: "View Protocol" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Delete Protocol" })[0]);
+  expect(failed.deleteProtocol).toHaveBeenCalledWith(active.id);
+  expect(readFormDraftCollection(localStorage).entries).toHaveLength(2);
+
+  failed.unmount();
+  const passed = renderPage({ protocols: [active], deleteProtocol: jest.fn(() => true) });
+  fireEvent.click(screen.getByRole("button", { name: "View Protocol" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Delete Protocol" })[0]);
+  expect(passed.deleteProtocol).toHaveBeenCalledWith(active.id);
+  expect(readFormDraftCollection(localStorage).entries).toEqual([
+    expect.objectContaining({ context: "edit:protocol:other", value: { name: "Keep draft" } }),
+  ]);
 });
 
 test("Reduced motion makes Protocol and Injection Tracker navigation instant", () => {

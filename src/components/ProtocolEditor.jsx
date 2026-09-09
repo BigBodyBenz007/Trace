@@ -3,6 +3,12 @@ import ProtocolCompoundPicker from "./ProtocolCompoundPicker";
 import { DOSE_UNIT_OPTIONS, ROUTE_OPTIONS } from "../constants/medicationOptions";
 import { createProtocolId, getProtocolError, WEEKDAYS } from "../services/protocol";
 import { motionScrollBehavior } from "../services/motionPreference";
+import {
+  clearFormDraft,
+  formDraftFingerprint,
+  readFormDraft,
+  writeFormDraft,
+} from "../services/formDrafts";
 
 function todayKey() {
   const date = new Date();
@@ -29,19 +35,48 @@ function editableItems(protocol) {
   }));
 }
 
-function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, buttonStyle = {}, inputStyle = {} }) {
-  const [name, setName] = useState(protocol?.name || "");
-  const [startDate, setStartDate] = useState(protocol?.startDate || todayKey());
-  const [endDate, setEndDate] = useState(protocol?.endDate || "");
-  const [notes, setNotes] = useState(protocol?.notes || "");
-  const [items, setItems] = useState(() => editableItems(protocol));
+function editorValue(protocol) {
+  return {
+    name: protocol?.name || "",
+    startDate: protocol?.startDate || todayKey(),
+    endDate: protocol?.endDate || "",
+    notes: protocol?.notes || "",
+    items: editableItems(protocol),
+  };
+}
+
+function ProtocolEditor({ protocol = null, compounds = [], onSave, onSaved = () => {}, onCancel, buttonStyle = {}, inputStyle = {} }) {
+  const contextRef = useRef({
+    domain: "protocol",
+    context: protocol ? `edit:${protocol.id}` : "create",
+    sourceFingerprint: protocol ? formDraftFingerprint(protocol) : null,
+  });
+  const baseValueRef = useRef(editorValue(protocol));
+  const restoredRef = useRef(readFormDraft(localStorage, contextRef.current, baseValueRef.current));
+  const initialValueRef = useRef(restoredRef.current.status === "restored"
+    ? restoredRef.current.entry.initialValue
+    : baseValueRef.current);
+  const restoredValue = restoredRef.current.status === "restored"
+    ? restoredRef.current.value
+    : baseValueRef.current;
+  const [name, setName] = useState(restoredValue.name);
+  const [startDate, setStartDate] = useState(restoredValue.startDate);
+  const [endDate, setEndDate] = useState(restoredValue.endDate);
+  const [notes, setNotes] = useState(restoredValue.notes);
+  const [items, setItems] = useState(restoredValue.items);
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [error, setError] = useState("");
+  const [actionInProgress, setActionInProgress] = useState(false);
+  const [error, setError] = useState(restoredRef.current.status === "conflict"
+    ? "This Protocol changed after an unfinished edit was stored, so Trace did not apply the older draft."
+    : restoredRef.current.status === "malformed" || restoredRef.current.status === "invalid-value"
+      ? "Trace found malformed unfinished form data and left it unchanged."
+      : "");
   const pickerRef = useRef(null);
   const addItemRef = useRef(null);
   const itemSectionRef = useRef(null);
   const itemRefs = useRef(new Map());
   const everyDaySnapshotsRef = useRef(new Map());
+  const actionInProgressRef = useRef(false);
 
   useEffect(() => {
     if (!pickerOpen) return undefined;
@@ -51,6 +86,20 @@ function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, but
     });
     return () => window.cancelAnimationFrame(frame);
   }, [pickerOpen]);
+
+  useEffect(() => {
+    try {
+      writeFormDraft(localStorage, contextRef.current, initialValueRef.current, {
+        name,
+        startDate,
+        endDate,
+        notes,
+        items,
+      });
+    } catch (storageFailure) {
+      setError("Trace could not preserve this unfinished Protocol. Keep this editor open and try again.");
+    }
+  }, [name, startDate, endDate, notes, items]);
 
   function updateItem(id, updater) {
     setItems((current) =>
@@ -126,6 +175,7 @@ function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, but
 
   function submit(event) {
     event.preventDefault();
+    if (actionInProgressRef.current) return;
     const draft = {
       name,
       startDate,
@@ -139,17 +189,55 @@ function ProtocolEditor({ protocol = null, compounds = [], onSave, onCancel, but
       setError(validationError);
       return;
     }
-    const result = onSave(draft);
-    if (result?.status !== "saved") {
-      setError(result?.message || "The protocol could not be saved.");
+    actionInProgressRef.current = true;
+    setActionInProgress(true);
+    let result;
+    try {
+      result = onSave(draft);
+    } catch (saveFailure) {
+      actionInProgressRef.current = false;
+      setActionInProgress(false);
+      setError(saveFailure?.message || "The protocol could not be saved.");
+      return;
     }
+    if (result?.status !== "saved") {
+      actionInProgressRef.current = false;
+      setActionInProgress(false);
+      setError(result?.message || "The protocol could not be saved.");
+      return;
+    }
+    try {
+      clearFormDraft(localStorage, contextRef.current);
+    } catch (storageFailure) {
+      actionInProgressRef.current = false;
+      setActionInProgress(false);
+      setError("The Protocol was saved, but Trace could not clear its unfinished draft. Reload and verify it before saving again.");
+      return;
+    }
+    onSaved(result);
+  }
+
+  function cancel() {
+    if (actionInProgressRef.current) return;
+    const current = { name, startDate, endDate, notes, items };
+    if (
+      formDraftFingerprint(current) !== formDraftFingerprint(initialValueRef.current) &&
+      !window.confirm("Cancel this Protocol? Your unsaved changes will be lost.")
+    ) return;
+    try {
+      clearFormDraft(localStorage, contextRef.current);
+    } catch (storageFailure) {
+      setError("Trace could not discard this unfinished Protocol. It was left available for recovery.");
+      return;
+    }
+    onCancel();
   }
 
   const formInput = { ...inputStyle, boxSizing: "border-box", marginTop: "8px", padding: "10px", width: "100%" };
   const actions = (position) => (
     <div aria-label={`${position} protocol editor actions`} style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "16px" }}>
-      <button className="trace-action trace-action--primary" type="submit" style={buttonStyle}>Save Protocol</button>
-      <button className="trace-action trace-action--secondary" type="button" onClick={onCancel} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel Protocol</button>
+      <button className="trace-action trace-action--primary" disabled={actionInProgress} type="submit" style={buttonStyle}>Save Protocol</button>
+      <button className="trace-action trace-action--secondary" disabled={actionInProgress} type="button" onClick={cancel} style={{ ...buttonStyle, backgroundColor: "#666" }}>Cancel Protocol</button>
     </div>
   );
 

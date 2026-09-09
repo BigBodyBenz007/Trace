@@ -4,6 +4,7 @@ import InjectionSiteTracker from "./InjectionSiteTracker";
 import { formatDoseUnit, formatRoute } from "../services/medicationEntry";
 import { formatProtocolSchedule } from "../services/protocol";
 import { motionScrollBehavior } from "../services/motionPreference";
+import { clearFormDraftsForContext } from "../services/formDrafts";
 
 function formatDate(dateKey) {
   if (!dateKey) return "Open-ended";
@@ -40,6 +41,7 @@ function ProtocolsPage({
   const [editorMode, setEditorMode] = useState(null);
   const [trackerProtocolId, setTrackerProtocolId] = useState(null);
   const [pendingNavigation, setPendingNavigation] = useState(null);
+  const [draftCleanupError, setDraftCleanupError] = useState("");
   const originRef = useRef(null);
   const pageTopRef = useRef(null);
   const listRef = useRef(null);
@@ -107,13 +109,15 @@ function ProtocolsPage({
   }
 
   function saveCreated(draft) {
-    const result = saveProtocol(draft);
+    return saveProtocol(draft);
+  }
+
+  function finishCreated(result) {
     if (result?.status === "saved") {
       setEditorMode(null);
       originRef.current = { id: result.protocol.id, status: result.protocol.status };
       setPendingNavigation({ type: "row", id: result.protocol.id, status: result.protocol.status });
     }
-    return result;
   }
 
   function openEdit() {
@@ -127,12 +131,14 @@ function ProtocolsPage({
   }
 
   function saveEdited(draft) {
-    const result = updateProtocol(selectedId, draft);
+    return updateProtocol(selectedId, draft);
+  }
+
+  function finishEdited(result) {
     if (result?.status === "saved") {
       setEditorMode(null);
       setPendingNavigation({ type: "detail" });
     }
-    return result;
   }
 
   function finishProtocol() {
@@ -146,10 +152,17 @@ function ProtocolsPage({
 
   function removeProtocol() {
     if (!window.confirm("Delete this protocol? Medication and injection-site history will not be changed.")) return;
-    if (!deleteProtocol(selectedId)) return;
+    const deletedId = selectedId;
+    if (!deleteProtocol(deletedId)) return;
+    try {
+      clearFormDraftsForContext(localStorage, "protocol", `edit:${deletedId}`);
+      setDraftCleanupError("");
+    } catch (storageFailure) {
+      setDraftCleanupError("The protocol was deleted, but Trace could not clear its unfinished edit draft. Do not restore that draft if it appears again.");
+    }
     setSelectedId(null);
     setEditorMode(null);
-    setPendingNavigation({ type: "row", ...(originRef.current || { id: selectedId, status: selected?.status || "active" }) });
+    setPendingNavigation({ type: "row", ...(originRef.current || { id: deletedId, status: selected?.status || "active" }) });
   }
 
   const backStyle = { ...buttonStyle, backgroundColor: "#666" };
@@ -212,6 +225,7 @@ function ProtocolsPage({
             protocol={editorMode === "edit" ? selected : null}
             compounds={compounds}
             onSave={editorMode === "edit" ? saveEdited : saveCreated}
+            onSaved={editorMode === "edit" ? finishEdited : finishCreated}
             onCancel={editorMode === "edit" ? cancelEdit : cancelCreate}
             buttonStyle={buttonStyle}
             inputStyle={inputStyle}
@@ -269,6 +283,7 @@ function ProtocolsPage({
       <nav className="trace-protocols-navigation" aria-label="Protocols navigation">
         <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={backStyle}>Back to Timeline</button>
       </nav>
+      {draftCleanupError && <p role="alert" style={{ color: "#fca5a5", maxWidth: "800px" }}>{draftCleanupError}</p>}
       <div className="trace-protocols-primary-actions" aria-label="Protocol actions">
         <button className="trace-action trace-action--primary" ref={createRef} type="button" onClick={openCreate} style={buttonStyle}>Create Protocol</button>
         <button className="trace-action trace-action--brass" type="button" onClick={() => setTrackerProtocolId("")}>Injection Site Tracker</button>

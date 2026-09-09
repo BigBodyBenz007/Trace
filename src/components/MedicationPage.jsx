@@ -30,6 +30,13 @@ import {
   medicationDoseSchedulePresentation,
   medicationDoseScheduleOccursOnDate,
 } from "../services/medicationDoseSchedule";
+import {
+  clearFormDraft,
+  clearFormDraftsForContext,
+  formDraftFingerprint,
+  readFormDraft,
+  writeFormDraft,
+} from "../services/formDrafts";
 
 function getCurrentLocalDateTime() {
   const now = new Date();
@@ -66,6 +73,23 @@ function localTimeLabel(time) {
     .toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 }
 
+function emptyMedicationEntryDraft(dateTime = getCurrentLocalDateTime()) {
+  return {
+    name: "",
+    doseAmount: "",
+    doseUnit: "",
+    customDoseUnit: "",
+    route: "",
+    customRoute: "",
+    date: dateTime.date,
+    time: dateTime.time,
+    notes: "",
+    compoundReference: null,
+    saveAsReusableCompound: false,
+    defaultDoseAmount: "",
+  };
+}
+
 function MedicationPage({
   onBack,
   medicationEntries,
@@ -94,21 +118,31 @@ function MedicationPage({
   containerStyle,
 }) {
   const initialDateTime = getCurrentLocalDateTime();
-  const [name, setName] = useState("");
-  const [doseAmount, setDoseAmount] = useState("");
-  const [doseUnit, setDoseUnit] = useState("");
-  const [customDoseUnit, setCustomDoseUnit] = useState("");
-  const [route, setRoute] = useState("");
-  const [customRoute, setCustomRoute] = useState("");
-  const [date, setDate] = useState(initialDateTime.date);
-  const [time, setTime] = useState(initialDateTime.time);
-  const [notes, setNotes] = useState("");
+  const entryDraftContextRef = useRef({ domain: "medication-entry", context: "create", sourceFingerprint: null });
+  const initialEntryDraftRef = useRef(emptyMedicationEntryDraft(initialDateTime));
+  const restoredEntryDraftRef = useRef(readFormDraft(localStorage, entryDraftContextRef.current, initialEntryDraftRef.current));
+  const initialEntryValue = restoredEntryDraftRef.current.status === "restored"
+    ? restoredEntryDraftRef.current.value
+    : initialEntryDraftRef.current;
+  if (restoredEntryDraftRef.current.status === "restored") {
+    initialEntryDraftRef.current = restoredEntryDraftRef.current.entry.initialValue;
+  }
+  const [name, setName] = useState(initialEntryValue.name);
+  const [doseAmount, setDoseAmount] = useState(initialEntryValue.doseAmount);
+  const [doseUnit, setDoseUnit] = useState(initialEntryValue.doseUnit);
+  const [customDoseUnit, setCustomDoseUnit] = useState(initialEntryValue.customDoseUnit);
+  const [route, setRoute] = useState(initialEntryValue.route);
+  const [customRoute, setCustomRoute] = useState(initialEntryValue.customRoute);
+  const [date, setDate] = useState(initialEntryValue.date);
+  const [time, setTime] = useState(initialEntryValue.time);
+  const [notes, setNotes] = useState(initialEntryValue.notes);
   const [editingEntryId, setEditingEntryId] = useState(null);
-  const [isDraftDirty, setIsDraftDirty] = useState(false);
-  const [formError, setFormError] = useState("");
-  const [compoundReference, setCompoundReference] = useState(null);
-  const [saveAsReusableCompound, setSaveAsReusableCompound] = useState(false);
-  const [defaultDoseAmount, setDefaultDoseAmount] = useState("");
+  const [formError, setFormError] = useState(restoredEntryDraftRef.current.status === "malformed" || restoredEntryDraftRef.current.status === "invalid-value"
+    ? "Trace found malformed unfinished form data and left it unchanged."
+    : "");
+  const [compoundReference, setCompoundReference] = useState(initialEntryValue.compoundReference);
+  const [saveAsReusableCompound, setSaveAsReusableCompound] = useState(initialEntryValue.saveAsReusableCompound);
+  const [defaultDoseAmount, setDefaultDoseAmount] = useState(initialEntryValue.defaultDoseAmount);
   const [compoundSearchResetKey, setCompoundSearchResetKey] = useState(0);
   const [entryStatusMessage, setEntryStatusMessage] = useState("");
   const [editingCompound, setEditingCompound] = useState(null);
@@ -172,6 +206,27 @@ function MedicationPage({
     return () => window.cancelAnimationFrame(frameId);
   }, [formNavigationRequest]);
 
+  useEffect(() => {
+    try {
+      writeFormDraft(localStorage, entryDraftContextRef.current, initialEntryDraftRef.current, {
+        name,
+        doseAmount,
+        doseUnit,
+        customDoseUnit,
+        route,
+        customRoute,
+        date,
+        time,
+        notes,
+        compoundReference,
+        saveAsReusableCompound,
+        defaultDoseAmount,
+      });
+    } catch (storageFailure) {
+      setFormError("Trace could not preserve this unfinished medication or supplement entry. Keep this page open and try again.");
+    }
+  }, [name, doseAmount, doseUnit, customDoseUnit, route, customRoute, date, time, notes, compoundReference, saveAsReusableCompound, defaultDoseAmount]);
+
   function draft() {
     return {
       name,
@@ -184,11 +239,22 @@ function MedicationPage({
       time,
       notes,
       compoundReference,
+      saveAsReusableCompound,
+      defaultDoseAmount,
     };
   }
 
-  function resetForm() {
+  function resetForm({ clearCurrent = false } = {}) {
+    if (clearCurrent) {
+      try {
+        clearFormDraft(localStorage, entryDraftContextRef.current);
+      } catch (storageFailure) {
+        setFormError("The record was saved, but Trace could not clear its unfinished draft. Reload and verify it before saving again.");
+        return false;
+      }
+    }
     const currentDateTime = getCurrentLocalDateTime();
+    const nextInitial = emptyMedicationEntryDraft(currentDateTime);
 
     setName("");
     setDoseAmount("");
@@ -200,11 +266,13 @@ function MedicationPage({
     setTime(currentDateTime.time);
     setNotes("");
     setEditingEntryId(null);
-    setIsDraftDirty(false);
     setFormError("");
     setCompoundReference(null);
     setSaveAsReusableCompound(false);
     setDefaultDoseAmount("");
+    entryDraftContextRef.current = { domain: "medication-entry", context: "create", sourceFingerprint: null };
+    initialEntryDraftRef.current = nextInitial;
+    return true;
   }
 
   function scrollToHistoryContext({ entryId, dateKey } = {}) {
@@ -325,7 +393,7 @@ function MedicationPage({
       }
       setEntryStatusMessage(statusMessage);
 
-      resetForm();
+      if (!resetForm({ clearCurrent: true })) return;
       setCompoundSearchResetKey((currentKey) => currentKey + 1);
       if (wasEditing) {
         scrollToHistoryContext({
@@ -345,24 +413,47 @@ function MedicationPage({
 
   function editEntry(entry) {
     const localDateTime = getLocalDateTimeFromTimestamp(entry.occurredAt);
-
-    setName(entry.name);
-    setDoseAmount(String(entry.dose.amount));
-    setDoseUnit(entry.dose.unit);
-    setCustomDoseUnit(entry.dose.customUnit || "");
-    setRoute(entry.route.code);
-    setCustomRoute(entry.route.customLabel || "");
-    setDate(localDateTime.date);
-    setTime(localDateTime.time);
-    setNotes(entry.notes || "");
+    const baseDraft = {
+      name: entry.name,
+      doseAmount: String(entry.dose.amount),
+      doseUnit: entry.dose.unit,
+      customDoseUnit: entry.dose.customUnit || "",
+      route: entry.route.code,
+      customRoute: entry.route.customLabel || "",
+      date: localDateTime.date,
+      time: localDateTime.time,
+      notes: entry.notes || "",
+      compoundReference: entry.compoundReference ? { ...entry.compoundReference } : null,
+      saveAsReusableCompound: false,
+      defaultDoseAmount: "",
+    };
+    const context = {
+      domain: "medication-entry",
+      context: `edit:${entry.id}`,
+      sourceFingerprint: formDraftFingerprint(entry),
+    };
+    const restored = readFormDraft(localStorage, context, baseDraft);
+    const nextDraft = restored.status === "restored" ? restored.value : baseDraft;
+    entryDraftContextRef.current = context;
+    initialEntryDraftRef.current = restored.status === "restored" ? restored.entry.initialValue : baseDraft;
+    setName(nextDraft.name);
+    setDoseAmount(nextDraft.doseAmount);
+    setDoseUnit(nextDraft.doseUnit);
+    setCustomDoseUnit(nextDraft.customDoseUnit);
+    setRoute(nextDraft.route);
+    setCustomRoute(nextDraft.customRoute);
+    setDate(nextDraft.date);
+    setTime(nextDraft.time);
+    setNotes(nextDraft.notes);
     setEditingEntryId(entry.id);
-    setIsDraftDirty(false);
-    setFormError("");
-    setCompoundReference(
-      entry.compoundReference ? { ...entry.compoundReference } : null
-    );
-    setSaveAsReusableCompound(false);
-    setDefaultDoseAmount("");
+    setFormError(restored.status === "conflict"
+      ? "This medication or supplement entry changed after an unfinished edit was stored, so Trace did not apply the older draft."
+      : restored.status === "malformed" || restored.status === "invalid-value"
+        ? "Trace found malformed unfinished form data and left it unchanged."
+        : "");
+    setCompoundReference(nextDraft.compoundReference);
+    setSaveAsReusableCompound(nextDraft.saveAsReusableCompound);
+    setDefaultDoseAmount(nextDraft.defaultDoseAmount);
     editOriginRef.current = {
       entryId: entry.id,
       dateKey: getMedicationEntryLocalDateKey(entry),
@@ -376,13 +467,19 @@ function MedicationPage({
     const entry = medicationEntries.find((item) => item.id === id);
     if (!deleteMedicationEntry(id)) return;
 
+    try {
+      clearFormDraftsForContext(localStorage, "medication-entry", `edit:${id}`);
+    } catch (storageFailure) {
+      setFormError("The entry was deleted, but an older unfinished edit could not be cleared. It will not be restored without its saved record.");
+    }
     if (editingEntryId === id) resetForm();
     scrollToHistoryContext({ dateKey: getMedicationEntryLocalDateKey(entry) });
   }
 
   function cancelEntry() {
+    const currentDraft = draft();
     if (
-      (editingEntryId !== null || isDraftDirty) &&
+      formDraftFingerprint(currentDraft) !== formDraftFingerprint(initialEntryDraftRef.current) &&
       !window.confirm("Discard this entry? Your unsaved changes will be lost.")
     ) {
       return;
@@ -390,7 +487,7 @@ function MedicationPage({
 
     const origin = editOriginRef.current;
     const returnToSearch = selectionOriginRef.current;
-    resetForm();
+    if (!resetForm({ clearCurrent: true })) return;
     if (origin) {
       setCompoundSearchResetKey((currentKey) => currentKey + 1);
       scrollToHistoryContext(origin);
@@ -426,7 +523,6 @@ function MedicationPage({
 
   function changeDraft(setValue, value, compoundChangeType = null) {
     setValue(value);
-    setIsDraftDirty(true);
     setFormError("");
     if (compoundChangeType) markCompoundModified(compoundChangeType);
   }
@@ -449,7 +545,6 @@ function MedicationPage({
     });
     setSaveAsReusableCompound(false);
     setDefaultDoseAmount("");
-    setIsDraftDirty(true);
     setFormError("");
     setEntryStatusMessage("");
     setEditingCompound(null);
@@ -472,7 +567,6 @@ function MedicationPage({
     });
     setSaveAsReusableCompound(false);
     setDefaultDoseAmount("");
-    setIsDraftDirty(true);
     setFormError("");
     setEntryStatusMessage("");
     setEditingCompound(null);
@@ -490,7 +584,6 @@ function MedicationPage({
     setCompoundReference(null);
     setSaveAsReusableCompound(false);
     setDefaultDoseAmount("");
-    setIsDraftDirty(true);
     setFormError("");
     setEntryStatusMessage("");
     setEditingCompound(null);
@@ -645,7 +738,7 @@ function MedicationPage({
   function doseScheduleSaved(schedule) {
     const revision = currentMedicationDoseRevision(schedule);
     if (revision?.source?.type === "direct-entry") {
-      resetForm();
+      if (!resetForm({ clearCurrent: true })) return;
       setCompoundSearchResetKey((currentKey) => currentKey + 1);
     }
     setScheduleSeed(null);
@@ -668,6 +761,16 @@ function MedicationPage({
       setScheduledDoseMessage(`${revision.name} schedule ended. Future doses were removed; any pending dose today remains available.`);
       focusScheduleManagement(endedSchedulesToggleRef);
     }
+  }
+
+  function backToTimeline() {
+    try {
+      writeFormDraft(localStorage, entryDraftContextRef.current, initialEntryDraftRef.current, draft());
+    } catch (storageFailure) {
+      setFormError("Trace could not preserve this unfinished medication or supplement entry. Keep this page open and try again.");
+      return;
+    }
+    onBack();
   }
 
   function deleteDoseSchedule(schedule) {
@@ -748,7 +851,7 @@ function MedicationPage({
       <button
         className="trace-action trace-action--secondary"
         type="button"
-        onClick={onBack}
+        onClick={backToTimeline}
         style={{ ...backButtonStyle, marginBottom: "24px", marginTop: 0 }}
       >
         Back to Timeline
@@ -824,6 +927,23 @@ function MedicationPage({
           seed={scheduleSeed}
           editing={Boolean(editingScheduleId)}
           restarting={Boolean(restartingScheduleId)}
+          draftContext={{
+            domain: "medication-dose-schedule",
+            context: editingScheduleId
+              ? `edit:${editingScheduleId}`
+              : restartingScheduleId
+                ? `restart:${restartingScheduleId}`
+                : scheduleSeed.source.type === "direct-entry"
+                  ? "create:direct-entry"
+                  : `create:${scheduleSeed.source.type}:${scheduleSeed.source.id}`,
+            sourceFingerprint: formDraftFingerprint(
+              editingScheduleId
+                ? medicationDoseSchedules.find(({ id }) => id === editingScheduleId) || scheduleSeed
+                : restartingScheduleId
+                  ? medicationDoseSchedules.find(({ id }) => id === restartingScheduleId) || scheduleSeed
+                  : scheduleSeed
+            ),
+          }}
           onSave={(draft, confirmed) => editingScheduleId
             ? updateMedicationDoseSchedule(editingScheduleId, draft, confirmed)
             : saveMedicationDoseSchedule(draft, confirmed)}
@@ -1029,7 +1149,6 @@ function MedicationPage({
                 onChange={(event) => {
                   setSaveAsReusableCompound(event.target.checked);
                   setDefaultDoseAmount("");
-                  setIsDraftDirty(true);
                   setFormError("");
                 }}
               />{" "}
@@ -1047,7 +1166,6 @@ function MedicationPage({
                   value={defaultDoseAmount}
                   onChange={(event) => {
                     setDefaultDoseAmount(event.target.value);
-                    setIsDraftDirty(true);
                     setFormError("");
                   }}
                 />
@@ -1300,7 +1418,7 @@ function MedicationPage({
       <button
         className="trace-action trace-action--secondary"
         type="button"
-        onClick={onBack}
+        onClick={backToTimeline}
         style={{ ...backButtonStyle, marginTop: "24px" }}
       >
         Back to Timeline

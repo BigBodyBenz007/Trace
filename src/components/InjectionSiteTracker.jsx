@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { INJECTION_BODY_STYLE_ASSETS } from "../assets/injection-body-styles";
 import {
   BODY_STYLE_OPTIONS,
@@ -11,6 +11,13 @@ import {
   shotDraftError,
 } from "../services/injectionSite";
 import { motionScrollBehavior } from "../services/motionPreference";
+import {
+  clearFormDraft,
+  clearFormDraftsForContext,
+  formDraftFingerprint,
+  readFormDraft,
+  writeFormDraft,
+} from "../services/formDrafts";
 
 const BODY_WIDTH = 600;
 const BODY_HEIGHT = 1100;
@@ -210,8 +217,10 @@ function ShotEditor({
   sessionTime,
   setSessionDate,
   setSessionTime,
+  restoredDraft = null,
+  onDraftChange = () => {},
 }) {
-  const initial = initialEditorState(editing, initialProtocolId, protocols);
+  const initial = restoredDraft || initialEditorState(editing, initialProtocolId, protocols);
   const [source, setSource] = useState(initial.source);
   const [itemId, setItemId] = useState(initial.itemId);
   const [substanceName, setSubstanceName] = useState(initial.substanceName);
@@ -244,7 +253,7 @@ function ShotEditor({
     setUnit(item?.dose?.unit === "custom" ? item.dose.customUnit || "" : item?.dose?.unit || "");
   }
 
-  function currentDraft() {
+  const currentDraft = useCallback(() => {
     const protocol = protocols.find(({ id }) => id === source);
     return {
       view: location.view,
@@ -259,7 +268,11 @@ function ShotEditor({
       unit,
       notes,
     };
-  }
+  }, [protocols, source, location, substanceName, itemId, amount, unit, notes]);
+
+  useEffect(() => {
+    onDraftChange({ source, itemId, substanceName, amount, unit, notes });
+  }, [source, itemId, substanceName, amount, unit, notes, onDraftChange]);
 
   function validate(action) {
     if (linkedProtocol?.items?.length && !itemId) {
@@ -371,15 +384,42 @@ export default function InjectionSiteTracker({
   reducedMotion = false,
 }) {
   const validInitialProtocolId = protocols.some(({ id }) => id === initialProtocolId) ? initialProtocolId : "";
-  const [filter, setFilter] = useState(validInitialProtocolId);
-  const [pending, setPending] = useState(null);
-  const [formOpen, setFormOpen] = useState(false);
-  const [queuedShots, setQueuedShots] = useState([]);
-  const [editingShot, setEditingShot] = useState(null);
-  const [activeMarkerId, setActiveMarkerId] = useState(null);
   const initialDateTime = localDateTimeParts(now);
-  const [sessionDate, setSessionDate] = useState(initialDateTime.date);
-  const [sessionTime, setSessionTime] = useState(initialDateTime.time);
+  const createDraftContextRef = useRef({ domain: "injection-session", context: "create", sourceFingerprint: null });
+  const baseSessionRef = useRef({
+    pending: null,
+    formOpen: false,
+    queuedShots: [],
+    sessionDate: initialDateTime.date,
+    sessionTime: initialDateTime.time,
+    shotDraft: null,
+  });
+  const restoredSessionRef = useRef(readFormDraft(localStorage, createDraftContextRef.current, baseSessionRef.current));
+  const initialSessionRef = useRef(restoredSessionRef.current.status === "restored"
+    ? restoredSessionRef.current.entry.initialValue
+    : baseSessionRef.current);
+  const restoredSession = restoredSessionRef.current.status === "restored"
+    ? restoredSessionRef.current.value
+    : baseSessionRef.current;
+  const [filter, setFilter] = useState(validInitialProtocolId);
+  const [pending, setPending] = useState(restoredSession.pending);
+  const [formOpen, setFormOpen] = useState(restoredSession.formOpen);
+  const [queuedShots, setQueuedShots] = useState(restoredSession.queuedShots);
+  const [editingShot, setEditingShot] = useState(null);
+  const [activeShotDraft, setActiveShotDraft] = useState(restoredSession.shotDraft);
+  const [activeMarkerId, setActiveMarkerId] = useState(null);
+  const [sessionDate, setSessionDate] = useState(restoredSession.sessionDate);
+  const [sessionTime, setSessionTime] = useState(restoredSession.sessionTime);
+  const [draftError, setDraftError] = useState(restoredSessionRef.current.status === "malformed" || restoredSessionRef.current.status === "invalid-value"
+    ? "Trace found malformed unfinished form data and left it unchanged."
+    : "");
+  const editDraftContextRef = useRef(null);
+  const initialEditSessionRef = useRef(null);
+  const initialActiveShotRef = useRef({
+    shotDraft: initialSessionRef.current.shotDraft,
+    sessionDate: initialSessionRef.current.sessionDate,
+    sessionTime: initialSessionRef.current.sessionTime,
+  });
   const instructionRef = useRef(null);
   const mapsRef = useRef(null);
   const logButtonRef = useRef(null);
@@ -388,14 +428,25 @@ export default function InjectionSiteTracker({
   const mapped = filtered.filter((shot) => injectionSiteRecency(shot.occurredAt, now));
   const activeMarker = allHistory.find(({ id }) => id === activeMarkerId) || null;
   const editingSessionShots = editingShot ? allHistory.filter(({ sessionId }) => sessionId === editingShot.sessionId) : [];
-  const hasUnsaved = Boolean(pending || formOpen || queuedShots.length);
+  const updateActiveShotDraft = useCallback((nextDraft) => setActiveShotDraft(nextDraft), []);
 
   useEffect(() => {
-    if (!hasUnsaved) return undefined;
-    const warn = (event) => { event.preventDefault(); event.returnValue = ""; };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [hasUnsaved]);
+    const context = editingShot ? editDraftContextRef.current : createDraftContextRef.current;
+    const initial = editingShot ? initialEditSessionRef.current : initialSessionRef.current;
+    if (!context || !initial) return;
+    try {
+      writeFormDraft(localStorage, context, initial, {
+        pending: editingShot ? null : pending,
+        formOpen,
+        queuedShots: editingShot ? [] : queuedShots,
+        sessionDate,
+        sessionTime,
+        shotDraft: activeShotDraft,
+      });
+    } catch (storageFailure) {
+      setDraftError("Trace could not preserve this unfinished injection form. Keep the tracker open and try again.");
+    }
+  }, [editingShot, pending, formOpen, queuedShots, sessionDate, sessionTime, activeShotDraft]);
 
   function focusLogButton() {
     window.requestAnimationFrame(() => {
@@ -412,6 +463,7 @@ export default function InjectionSiteTracker({
   function selectLocation(location) {
     setEditingShot(null);
     setFormOpen(false);
+    setActiveShotDraft(null);
     setPending(location);
     focusLogButton();
   }
@@ -427,6 +479,7 @@ export default function InjectionSiteTracker({
     setQueuedShots((existing) => [...existing, { ...shot, id: createInjectionId("queued-shot") }]);
     setPending(null);
     setFormOpen(false);
+    setActiveShotDraft(null);
     focusBodyMaps();
   }
 
@@ -434,19 +487,43 @@ export default function InjectionSiteTracker({
     if (editingShot) {
       const result = updateShot(editingShot.id, currentShot, occurredAt);
       if (result?.status === "saved") {
+        try {
+          clearFormDraft(localStorage, editDraftContextRef.current);
+        } catch (storageFailure) {
+          setDraftError("The shot was updated, but Trace could not clear its unfinished draft. Reload and verify it before saving again.");
+          return { status: "error", message: "The saved shot needs verification before this editor can close." };
+        }
         setEditingShot(null);
         setFormOpen(false);
+        setActiveShotDraft(null);
+        editDraftContextRef.current = null;
+        initialEditSessionRef.current = null;
       }
       return result;
     }
     const result = saveSession({ occurredAt, shots: [...queuedShots, currentShot].map(({ id, ...shot }) => shot) });
     if (result?.status === "saved") {
+      try {
+        clearFormDraft(localStorage, createDraftContextRef.current);
+      } catch (storageFailure) {
+        setDraftError("The injection session was saved, but Trace could not clear its unfinished draft. Reload and verify it before saving again.");
+        return { status: "error", message: "The saved injection session needs verification before this editor can close." };
+      }
       setQueuedShots([]);
       setPending(null);
       setFormOpen(false);
+      setActiveShotDraft(null);
       const reset = localDateTimeParts(now);
       setSessionDate(reset.date);
       setSessionTime(reset.time);
+      initialSessionRef.current = {
+        pending: null,
+        formOpen: false,
+        queuedShots: [],
+        sessionDate: reset.date,
+        sessionTime: reset.time,
+        shotDraft: null,
+      };
     }
     return result;
   }
@@ -454,24 +531,105 @@ export default function InjectionSiteTracker({
   function removeShot(id) {
     if (!window.confirm("Delete this shot? Other shots in the same session will remain.")) return;
     if (deleteShot(id)) {
+      try {
+        clearFormDraftsForContext(localStorage, "injection-shot", `edit:${id}`);
+      } catch (storageFailure) {
+        setDraftError("The shot was deleted, but an older unfinished edit could not be cleared. It will not be restored without its saved record.");
+      }
       setEditingShot(null);
       setFormOpen(false);
+      setActiveShotDraft(null);
       setActiveMarkerId(null);
     }
   }
 
   function leaveTracker() {
-    if (hasUnsaved && !window.confirm("Leave the Injection Site Tracker? Unsaved shots will be discarded.")) return;
+    try {
+      const context = editingShot ? editDraftContextRef.current : createDraftContextRef.current;
+      const initial = editingShot ? initialEditSessionRef.current : initialSessionRef.current;
+      if (context && initial) writeFormDraft(localStorage, context, initial, {
+        pending: editingShot ? null : pending,
+        formOpen,
+        queuedShots: editingShot ? [] : queuedShots,
+        sessionDate,
+        sessionTime,
+        shotDraft: activeShotDraft,
+      });
+    } catch (storageFailure) {
+      setDraftError("Trace could not preserve this unfinished injection form. Keep the tracker open and try again.");
+      return;
+    }
     onBack();
   }
 
   function edit(shot) {
     const parts = localDateTimeParts(shot.occurredAt);
-    setSessionDate(parts.date);
-    setSessionTime(parts.time);
+    const baseShotDraft = initialEditorState(shot, "", protocols);
+    const baseSession = {
+      pending: null,
+      formOpen: true,
+      queuedShots: [],
+      sessionDate: parts.date,
+      sessionTime: parts.time,
+      shotDraft: baseShotDraft,
+    };
+    const context = {
+      domain: "injection-shot",
+      context: `edit:${shot.id}`,
+      sourceFingerprint: formDraftFingerprint(shot),
+    };
+    const restored = readFormDraft(localStorage, context, baseSession);
+    const next = restored.status === "restored" ? restored.value : baseSession;
+    editDraftContextRef.current = context;
+    initialEditSessionRef.current = restored.status === "restored" ? restored.entry.initialValue : baseSession;
+    setSessionDate(next.sessionDate);
+    setSessionTime(next.sessionTime);
     setEditingShot(shot);
     setPending(null);
+    setQueuedShots([]);
+    setFormOpen(true);
+    setActiveShotDraft(next.shotDraft);
+    initialActiveShotRef.current = {
+      shotDraft: initialEditSessionRef.current.shotDraft,
+      sessionDate: initialEditSessionRef.current.sessionDate,
+      sessionTime: initialEditSessionRef.current.sessionTime,
+    };
+    setDraftError(restored.status === "conflict"
+      ? "This injection changed after an unfinished edit was stored, so Trace did not apply the older draft."
+      : restored.status === "malformed" || restored.status === "invalid-value"
+        ? "Trace found malformed unfinished form data and left it unchanged."
+        : "");
+  }
+
+  function openShotEditor() {
+    const nextDraft = initialEditorState(null, filter !== UNLINKED_FILTER ? filter || validInitialProtocolId : "", protocols);
+    initialActiveShotRef.current = { shotDraft: nextDraft, sessionDate, sessionTime };
+    setActiveShotDraft(nextDraft);
+    setFormOpen(true);
+  }
+
+  function cancelShotEditor() {
+    const current = {
+      shotDraft: activeShotDraft,
+      sessionDate,
+      sessionTime,
+    };
+    const shotChanged = formDraftFingerprint(current) !== formDraftFingerprint(initialActiveShotRef.current);
+    if (shotChanged && !window.confirm("Cancel this injection form? Your unsaved changes will be lost.")) return;
+    if (editingShot) {
+      try {
+        clearFormDraft(localStorage, editDraftContextRef.current);
+      } catch (storageFailure) {
+        setDraftError("Trace could not discard this unfinished injection edit. It was left available for recovery.");
+        return;
+      }
+      setEditingShot(null);
+      editDraftContextRef.current = null;
+      initialEditSessionRef.current = null;
+    }
     setFormOpen(false);
+    setActiveShotDraft(null);
+    setDraftError("");
   }
 
   return (
@@ -521,7 +679,7 @@ export default function InjectionSiteTracker({
         disabled={!pending || formOpen || Boolean(editingShot)}
         ref={logButtonRef}
         type="button"
-        onClick={() => setFormOpen(true)}
+        onClick={openShotEditor}
       >
         <span aria-hidden="true">＋</span> Log Injection
       </button>
@@ -532,16 +690,20 @@ export default function InjectionSiteTracker({
         key={editingShot?.id || `${pending?.view}:${pending?.x}:${pending?.y}:${queuedShots.length}`}
         location={editingShot || pending}
         onAddAnother={addAnother}
-        onCancel={() => { setFormOpen(false); setEditingShot(null); }}
+        onCancel={cancelShotEditor}
         onDelete={removeShot}
         onFinish={finish}
         protocols={protocols}
+        restoredDraft={activeShotDraft}
+        onDraftChange={updateActiveShotDraft}
         sessionDate={sessionDate}
         sessionShotCount={editingSessionShots.length}
         sessionTime={sessionTime}
         setSessionDate={setSessionDate}
         setSessionTime={setSessionTime}
       />}
+
+      {draftError && <p className="trace-status trace-status--error" role="alert">{draftError}</p>}
 
       <section className="trace-injection-legend" aria-labelledby="injection-recency-heading">
         <h2 id="injection-recency-heading">Recently Used</h2>

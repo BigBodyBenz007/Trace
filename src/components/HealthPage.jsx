@@ -3,6 +3,19 @@ import { HEALTH_MEASUREMENT_FIELDS, validateHealthMeasurementDraft } from "../se
 import { DEFAULT_APP_SETTINGS } from "../services/appSettings";
 import { motionScrollBehavior } from "../services/motionPreference";
 import { parseDateOnlyLocal } from "../services/dateOnly";
+import {
+  clearFormDraft,
+  clearFormDraftsForContext,
+  formDraftFingerprint,
+  readFormDraft,
+  writeFormDraft,
+} from "../services/formDrafts";
+
+const HEALTH_CREATE_DRAFT_CONTEXT = {
+  domain: "health-measurement",
+  context: "create",
+  sourceFingerprint: null,
+};
 
 function localDateTime(value = new Date()) {
   const date = new Date(value);
@@ -22,12 +35,29 @@ function initialDraft(settings) {
 }
 
 export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SETTINGS, updateSettings = () => false, saveEntry, updateEntry, deleteEntry, buttonStyle, inputStyle, containerStyle }) {
-  const [draft, setDraft] = useState(() => initialDraft(settings));
-  const [dateOfBirth, setDateOfBirth] = useState(settings.personalDetails?.dateOfBirth || "");
+  const initialCreateDraftRef = useRef(initialDraft(settings));
+  const restoredCreateDraftRef = useRef(readFormDraft(localStorage, HEALTH_CREATE_DRAFT_CONTEXT, initialCreateDraftRef.current));
+  const [draft, setDraft] = useState(() => restoredCreateDraftRef.current.status === "restored"
+    ? restoredCreateDraftRef.current.value
+    : initialCreateDraftRef.current);
+  const savedDateOfBirth = settings.personalDetails?.dateOfBirth || "";
+  const personalDetailsContextRef = useRef({
+    domain: "health-personal-details",
+    context: "settings",
+    sourceFingerprint: formDraftFingerprint({ dateOfBirth: savedDateOfBirth }),
+  });
+  const restoredPersonalDetailsRef = useRef(readFormDraft(localStorage, personalDetailsContextRef.current, { dateOfBirth: savedDateOfBirth }));
+  const [dateOfBirth, setDateOfBirth] = useState(() => restoredPersonalDetailsRef.current.status === "restored"
+    ? restoredPersonalDetailsRef.current.value.dateOfBirth
+    : savedDateOfBirth);
   const [personalDetailsStatus, setPersonalDetailsStatus] = useState("");
   const [personalDetailsError, setPersonalDetailsError] = useState("");
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState("");
+  const draftContextRef = useRef(HEALTH_CREATE_DRAFT_CONTEXT);
+  const initialEditorValueRef = useRef(restoredCreateDraftRef.current.status === "restored"
+    ? restoredCreateDraftRef.current.entry.initialValue
+    : initialCreateDraftRef.current);
   const editorRef = useRef(null);
   const entryRefs = useRef(new Map());
   const pendingHistoryScrollRef = useRef(null);
@@ -50,13 +80,42 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
   const smallButtonStyle = { ...buttonStyle, fontSize: "16px", marginTop: 0, minHeight: "44px", padding: "10px 14px" };
 
   function changeMeasurement(key, property, value) {
-    setDraft((current) => ({ ...current, measurements: { ...current.measurements, [key]: { ...current.measurements[key], [property]: value } } }));
+    changeDraft({ ...draft, measurements: { ...draft.measurements, [key]: { ...draft.measurements[key], [property]: value } } });
   }
 
-  function resetDraft() {
-    setDraft(initialDraft(settings));
+  function persistEditor(nextDraft = draft) {
+    try {
+      writeFormDraft(localStorage, draftContextRef.current, initialEditorValueRef.current, nextDraft);
+      return true;
+    } catch (storageFailure) {
+      setError("Trace could not preserve this unfinished Health form. Keep this page open and try again.");
+      return false;
+    }
+  }
+
+  function changeDraft(nextDraft) {
+    const persisted = persistEditor(nextDraft);
+    setDraft(nextDraft);
+    if (persisted) setError("");
+  }
+
+  function resetDraft({ clearCurrent = false } = {}) {
+    if (clearCurrent) {
+      try {
+        clearFormDraft(localStorage, draftContextRef.current);
+      } catch (storageFailure) {
+        setError("The Health record was saved, but Trace could not clear its unfinished draft. Reload and verify the saved record before trying again.");
+        return false;
+      }
+    }
+    const next = initialDraft(settings);
+    initialCreateDraftRef.current = next;
+    initialEditorValueRef.current = next;
+    draftContextRef.current = HEALTH_CREATE_DRAFT_CONTEXT;
+    setDraft(next);
     setEditingId(null);
     setError("");
+    return true;
   }
 
   function submit(event) {
@@ -66,7 +125,7 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
     const saved = editingId ? updateEntry(editingId, draft) : saveEntry(draft);
     if (!saved) return;
     pendingHistoryScrollRef.current = saved.id;
-    resetDraft();
+    resetDraft({ clearCurrent: true });
   }
 
   function savePersonalDetails(event) {
@@ -88,6 +147,17 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
       setPersonalDetailsStatus("");
       return;
     }
+    try {
+      clearFormDraft(localStorage, personalDetailsContextRef.current);
+    } catch (storageFailure) {
+      setPersonalDetailsError("Personal details were saved, but Trace could not clear the unfinished form draft. Reload and verify before saving again.");
+      setPersonalDetailsStatus("");
+      return;
+    }
+    personalDetailsContextRef.current = {
+      ...personalDetailsContextRef.current,
+      sourceFingerprint: formDraftFingerprint({ dateOfBirth }),
+    };
     setPersonalDetailsError("");
     setPersonalDetailsStatus("Personal details saved");
   }
@@ -104,15 +174,71 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
       : storedHeight?.unit === "cm"
         ? { unit: "cm", feet: "", inches: "", centimeters: String(storedHeight.value) }
         : { unit: settings.units.height, feet: "", inches: "", centimeters: "" };
-    setDraft({ ...dateTime, measurements, height, notes: entry.notes || "" });
+    const initialValue = { ...dateTime, measurements, height, notes: entry.notes || "" };
+    const context = {
+      domain: "health-measurement",
+      context: `edit:${entry.id}`,
+      sourceFingerprint: formDraftFingerprint(entry),
+    };
+    const restored = readFormDraft(localStorage, context, initialValue);
+    draftContextRef.current = context;
+    initialEditorValueRef.current = restored.status === "restored" ? restored.entry.initialValue : initialValue;
+    setDraft(restored.status === "restored" ? restored.value : initialValue);
     setEditingId(entry.id);
-    setError("");
+    setError(restored.status === "conflict"
+      ? "This saved Health record changed after its unfinished edit was stored, so Trace did not apply the older draft."
+      : restored.status === "malformed" || restored.status === "invalid-value"
+        ? "Trace found malformed unfinished form data and left it unchanged."
+        : "");
     window.requestAnimationFrame(() => editorRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "start" }));
   }
 
   function remove(entry) {
     if (!window.confirm("Delete this body measurement entry?")) return;
-    if (deleteEntry(entry.id) && editingId === entry.id) resetDraft();
+    if (!deleteEntry(entry.id)) return;
+    let cleanupFailed = false;
+    try {
+      clearFormDraftsForContext(localStorage, "health-measurement", `edit:${entry.id}`);
+    } catch (storageFailure) {
+      cleanupFailed = true;
+    }
+    if (editingId === entry.id) resetDraft();
+    if (cleanupFailed) {
+      setError("The Health record was deleted, but Trace could not clear its unfinished edit draft. Do not restore that draft if it appears again.");
+    }
+  }
+
+  function cancelEdit() {
+    const changed = formDraftFingerprint(draft) !== formDraftFingerprint(initialEditorValueRef.current);
+    if (changed && !window.confirm("Discard this Health measurement edit? Your unsaved changes will be lost.")) return;
+    resetDraft({ clearCurrent: true });
+  }
+
+  function changeDateOfBirth(value) {
+    try {
+      writeFormDraft(
+        localStorage,
+        personalDetailsContextRef.current,
+        { dateOfBirth: savedDateOfBirth },
+        { dateOfBirth: value }
+      );
+      setPersonalDetailsError("");
+    } catch (storageFailure) {
+      setPersonalDetailsError("Trace could not preserve these unfinished personal details. Keep this page open and try again.");
+    }
+    setDateOfBirth(value);
+    setPersonalDetailsStatus("");
+  }
+
+  function backToTimeline() {
+    if (!persistEditor()) return;
+    try {
+      writeFormDraft(localStorage, personalDetailsContextRef.current, { dateOfBirth: savedDateOfBirth }, { dateOfBirth });
+    } catch (storageFailure) {
+      setPersonalDetailsError("Trace could not preserve these unfinished personal details. Keep this page open and try again.");
+      return;
+    }
+    onBack();
   }
 
   function measurementInput(field) {
@@ -126,7 +252,7 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
         <h1>Health</h1>
         <p className="trace-feature-page__lede" style={{ color: "#bbb", marginTop: 0 }}>Record longitudinal health information without interpretation.</p>
       </header>
-      <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Timeline</button>
+      <button className="trace-action trace-action--secondary" type="button" onClick={backToTimeline} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Back to Timeline</button>
 
       <section className="trace-feature-section trace-health-personal-details" aria-labelledby="personal-details-heading" style={{ marginTop: "32px", maxWidth: "700px", width: "100%" }}>
         <h2 id="personal-details-heading">Personal Details</h2>
@@ -138,7 +264,7 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
               aria-label="Date of Birth"
               type="date"
               value={dateOfBirth}
-              onChange={(event) => { setDateOfBirth(event.target.value); setPersonalDetailsError(""); setPersonalDetailsStatus(""); }}
+              onChange={(event) => changeDateOfBirth(event.target.value)}
               style={fieldInputStyle}
             />
           </label>
@@ -152,15 +278,28 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
       <section className="trace-feature-section" ref={editorRef} aria-labelledby="body-measurements-heading" style={{ marginTop: "32px", maxWidth: "700px", scrollMarginTop: "16px", width: "100%" }}>
         <h2 id="body-measurements-heading">Body Measurements</h2>
         <form className="trace-feature-surface trace-feature-form" onSubmit={submit} noValidate style={{ background: "#111827", border: "1px solid #374151", borderRadius: "12px", boxSizing: "border-box", padding: "16px", width: "100%" }}>
+          {editingId && (
+            <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "flex-end", marginBottom: "14px" }}>
+              <button
+                aria-label="Cancel Health measurement edit"
+                className="trace-action trace-action--secondary"
+                type="button"
+                onClick={cancelEdit}
+                style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}
+              >
+                Cancel Edit
+              </button>
+            </div>
+          )}
           <div data-testid="measurement-header" style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
-            <label>Date<input aria-label="Date" type="date" required value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} style={fieldInputStyle} /></label>
-            <label>Time<input aria-label="Time" type="time" required value={draft.time} onChange={(e) => setDraft({ ...draft, time: e.target.value })} style={fieldInputStyle} /></label>
+            <label>Date<input aria-label="Date" type="date" required value={draft.date} onChange={(e) => changeDraft({ ...draft, date: e.target.value })} style={fieldInputStyle} /></label>
+            <label>Time<input aria-label="Time" type="time" required value={draft.time} onChange={(e) => changeDraft({ ...draft, time: e.target.value })} style={fieldInputStyle} /></label>
           </div>
           <div data-testid="measurement-fields" style={{ display: "grid", gap: "10px", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", marginTop: "14px" }}>
             <div data-testid="weight-height-row" style={{ display: "grid", gap: "10px", gridColumn: "1 / -1", gridTemplateColumns: "repeat(2, minmax(0, 1fr))" }}>
               {measurementInput(fieldByKey.weight)}
               <label data-measurement-field="height" style={measurementFieldGroupStyle}>Height
-              {draft.height.unit === "ft-in" ? <span style={{ display: "grid", gap: "4px", gridTemplateColumns: "minmax(0, 64px) auto minmax(0, 64px) auto", maxWidth: "100%", width: "fit-content" }}><input aria-label="Height feet" type="number" min="0" step="1" inputMode="numeric" value={draft.height.feet} onChange={(e) => setDraft({ ...draft, height: { ...draft.height, feet: e.target.value } })} style={imperialHeightInputStyle} /><span style={{ alignSelf: "center" }}>ft</span><input aria-label="Height inches" type="number" min="0" max="11.99" step="any" inputMode="decimal" value={draft.height.inches} onChange={(e) => setDraft({ ...draft, height: { ...draft.height, inches: e.target.value } })} style={imperialHeightInputStyle} /><span style={{ alignSelf: "center" }}>in</span></span> : <span style={{ display: "grid", gap: "6px", gridTemplateColumns: "minmax(0, 112px) auto", maxWidth: "100%", width: "fit-content" }}><input aria-label="Height centimeters" type="number" min="0" step="any" inputMode="decimal" value={draft.height.centimeters} onChange={(e) => setDraft({ ...draft, height: { ...draft.height, centimeters: e.target.value } })} style={measurementInputStyle} /><span style={{ alignSelf: "center" }}>cm</span></span>}
+              {draft.height.unit === "ft-in" ? <span style={{ display: "grid", gap: "4px", gridTemplateColumns: "minmax(0, 64px) auto minmax(0, 64px) auto", maxWidth: "100%", width: "fit-content" }}><input aria-label="Height feet" type="number" min="0" step="1" inputMode="numeric" value={draft.height.feet} onChange={(e) => changeDraft({ ...draft, height: { ...draft.height, feet: e.target.value } })} style={imperialHeightInputStyle} /><span style={{ alignSelf: "center" }}>ft</span><input aria-label="Height inches" type="number" min="0" max="11.99" step="any" inputMode="decimal" value={draft.height.inches} onChange={(e) => changeDraft({ ...draft, height: { ...draft.height, inches: e.target.value } })} style={imperialHeightInputStyle} /><span style={{ alignSelf: "center" }}>in</span></span> : <span style={{ display: "grid", gap: "6px", gridTemplateColumns: "minmax(0, 112px) auto", maxWidth: "100%", width: "fit-content" }}><input aria-label="Height centimeters" type="number" min="0" step="any" inputMode="decimal" value={draft.height.centimeters} onChange={(e) => changeDraft({ ...draft, height: { ...draft.height, centimeters: e.target.value } })} style={measurementInputStyle} /><span style={{ alignSelf: "center" }}>cm</span></span>}
             </label>
             </div>
             {measurementInput(fieldByKey.bodyFat)}
@@ -174,11 +313,11 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
             {measurementInput(fieldByKey.leftCalf)}
             {measurementInput(fieldByKey.rightCalf)}
           </div>
-          <label style={{ display: "block", marginTop: "12px" }}>Notes<textarea aria-label="Notes" value={draft.notes} onChange={(e) => setDraft({ ...draft, notes: e.target.value })} style={{ ...fieldInputStyle, minHeight: "90px", resize: "vertical" }} /></label>
+          <label style={{ display: "block", marginTop: "12px" }}>Notes<textarea aria-label="Notes" value={draft.notes} onChange={(e) => changeDraft({ ...draft, notes: e.target.value })} style={{ ...fieldInputStyle, minHeight: "90px", resize: "vertical" }} /></label>
           {error && <p role="alert" style={{ color: "#fca5a5" }}>{error}</p>}
           <div style={{ display: "flex", flexWrap: "wrap", gap: "10px", marginTop: "14px" }}>
             <button className="trace-action trace-action--primary" type="submit" style={{ ...smallButtonStyle, backgroundColor: "#2563eb" }}>{editingId ? "Save Changes" : "Save Measurement"}</button>
-            {editingId && <button className="trace-action trace-action--secondary" type="button" onClick={resetDraft} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Cancel Edit</button>}
+            {editingId && <button className="trace-action trace-action--secondary" type="button" onClick={cancelEdit} style={{ ...smallButtonStyle, backgroundColor: "#4b5563" }}>Cancel Edit</button>}
           </div>
         </form>
       </section>
@@ -195,7 +334,7 @@ export default function HealthPage({ onBack, entries, settings = DEFAULT_APP_SET
           </article>
         ))}</div>}
       </section>
-      <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={{ ...smallButtonStyle, backgroundColor: "#4b5563", marginTop: "24px" }}>Back to Timeline</button>
+      <button className="trace-action trace-action--secondary" type="button" onClick={backToTimeline} style={{ ...smallButtonStyle, backgroundColor: "#4b5563", marginTop: "24px" }}>Back to Timeline</button>
     </main>
   );
 }

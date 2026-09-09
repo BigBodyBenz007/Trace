@@ -3,16 +3,20 @@ import { useState } from "react";
 import WaterTrackerSection from "./WaterTrackerSection";
 import { waterAmountToMilliliters } from "../services/waterTracker";
 
+beforeEach(() => {
+  localStorage.clear();
+});
+
 function Harness({ initialEntries = [], initialUnit = "oz", spies = {} }) {
   const [entries, setEntries] = useState(initialEntries);
   const [unit, setUnit] = useState(initialUnit);
   function saveEntry(entry) {
-    spies.saveEntry?.(entry);
+    if (spies.saveEntry?.(entry) === false) return false;
     setEntries((current) => [...current, { ...entry, id: `water-${current.length + 1}` }]);
     return true;
   }
   function updateEntry(id, update) {
-    spies.updateEntry?.(id, update);
+    if (spies.updateEntry?.(id, update) === false) return false;
     setEntries((current) => current.map((entry) => entry.id === id ? { ...entry, ...update, id } : entry));
     return true;
   }
@@ -81,6 +85,26 @@ test("custom amount accepts oz and mL input", () => {
   expect(mlSpies.saveEntry).toHaveBeenCalledWith(expect.objectContaining({ amountMl: 425 }));
 });
 
+test("closing and remounting restores custom water input; save failure preserves and retry clears it", () => {
+  const failingSave = jest.fn(() => false);
+  const first = render(<Harness spies={{ saveEntry: failingSave }} />);
+  fireEvent.click(screen.getByRole("button", { name: "Custom Amount" }));
+  fireEvent.change(screen.getByLabelText("Custom water amount in oz"), { target: { value: "19.75" } });
+  fireEvent.click(screen.getByRole("button", { name: "Custom Amount" }));
+  first.unmount();
+
+  const second = render(<Harness spies={{ saveEntry: failingSave }} />);
+  expect(screen.getByLabelText("Custom water amount in oz")).toHaveValue(19.75);
+  fireEvent.click(screen.getByRole("button", { name: "Log Water" }));
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "water-custom")).toBe(true);
+  second.unmount();
+
+  render(<Harness spies={{ saveEntry: jest.fn(() => true) }} />);
+  expect(screen.getByLabelText("Custom water amount in oz")).toHaveValue(19.75);
+  fireEvent.click(screen.getByRole("button", { name: "Log Water" }));
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "water-custom")).toBe(false);
+});
+
 test("switching display units never mutates an entry's canonical amount", () => {
   const amountMl = waterAmountToMilliliters(8, "oz");
   const entry = { id: "stable", amountMl, loggedAt: new Date().toISOString() };
@@ -112,6 +136,40 @@ test("edits an entry in place and updates the total", () => {
   }));
   expect(todaySummary()).toHaveTextContent("12 oz");
   expect(screen.getByText("Water history (1)")).toBeInTheDocument();
+});
+
+test("water edit drafts restore exactly, remain record-isolated, and do not overwrite a newer saved baseline", () => {
+  const firstEntry = { id: "water-one", amountMl: 300, loggedAt: new Date(2026, 8, 1, 9, 30).toISOString() };
+  const secondEntry = { id: "water-two", amountMl: 450, loggedAt: new Date(2026, 8, 2, 10, 45).toISOString() };
+  const first = render(<Harness initialEntries={[firstEntry, secondEntry]} initialUnit="mL" />);
+  fireEvent.click(screen.getByText("Water history (2)"));
+  fireEvent.click(screen.getByRole("button", { name: /Edit 300 mL water entry/ }));
+  fireEvent.change(screen.getByLabelText("Edit water amount in mL"), { target: { value: "333" } });
+  fireEvent.change(screen.getByLabelText("Water date"), { target: { value: "2026-09-03" } });
+  fireEvent.change(screen.getByLabelText("Water time"), { target: { value: "07:15" } });
+  first.unmount();
+
+  const second = render(<Harness initialEntries={[firstEntry, secondEntry]} initialUnit="mL" />);
+  fireEvent.click(screen.getByText("Water history (2)"));
+  fireEvent.click(screen.getByRole("button", { name: /Edit 450 mL water entry/ }));
+  expect(screen.getByLabelText("Edit water amount in mL")).toHaveValue(450);
+  second.unmount();
+
+  const restored = render(<Harness initialEntries={[firstEntry, secondEntry]} initialUnit="mL" />);
+  fireEvent.click(screen.getByText("Water history (2)"));
+  fireEvent.click(screen.getByRole("button", { name: /Edit 300 mL water entry/ }));
+  expect(screen.getByLabelText("Edit water amount in mL")).toHaveValue(333);
+  expect(screen.getByLabelText("Water date")).toHaveValue("2026-09-03");
+  expect(screen.getByLabelText("Water time")).toHaveValue("07:15");
+  restored.unmount();
+
+  const newerFirst = { ...firstEntry, amountMl: 375, updatedAt: "2026-09-04T12:00:00.000Z" };
+  render(<Harness initialEntries={[newerFirst, secondEntry]} initialUnit="mL" />);
+  fireEvent.click(screen.getByText("Water history (2)"));
+  fireEvent.click(screen.getByRole("button", { name: /Edit 375 mL water entry/ }));
+  expect(screen.getByLabelText("Edit water amount in mL")).toHaveValue(375);
+  expect(screen.getByRole("alert")).toHaveTextContent("changed after an unfinished edit");
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ context }) => context === "edit:water-one")).toBe(true);
 });
 
 test("confirms and deletes a water entry", () => {

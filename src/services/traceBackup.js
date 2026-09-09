@@ -8,6 +8,7 @@ import { normalizeAppSettings } from "./appSettings";
 import { normalizePlannedWorkouts } from "./plannedWorkout";
 import { normalizeWorkoutDraft } from "./workoutDraft";
 import { normalizeMemoryDraft } from "./memoryDraft";
+import { emptyFormDraftCollection, normalizeFormDraftCollection } from "./formDrafts";
 import { normalizeWorkoutTemplates } from "./workoutTemplate";
 import { normalizeJournalDraft } from "./journalEntry";
 import {
@@ -72,19 +73,20 @@ import {
 } from "./traceBackupIntegrity";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
-export const TRACE_BACKUP_SCHEMA_VERSION = 7;
+export const TRACE_BACKUP_SCHEMA_VERSION = 8;
 export const TRACE_STORAGE_KEYS = TRACE_BACKUP_STORAGE_KEYS;
 export const TRACE_BACKUP_LARGE_WARNING_BYTES = 128 * 1024 * 1024;
 const TRACE_BACKUP_MEMORY_RESERVE_BYTES = 16 * 1024 * 1024;
-const TRACE_STORAGE_KEYS_V6 = TRACE_STORAGE_KEYS.filter((key) => key !== "memoryDraft");
+const TRACE_STORAGE_KEYS_V7 = TRACE_STORAGE_KEYS.filter((key) => key !== "formDrafts");
+const TRACE_STORAGE_KEYS_V6 = TRACE_STORAGE_KEYS_V7.filter((key) => key !== "memoryDraft");
 const TRACE_STORAGE_KEYS_V5 = TRACE_STORAGE_KEYS_V6.filter((key) => key !== "workoutTemplates");
 
 const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
-const SPECIAL_KEYS = new Set(["waterEntries", "memoryDraft", "workoutDraft", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "journalDraft", JOURNAL_VAULT_STORAGE_KEY]);
+const SPECIAL_KEYS = new Set(["waterEntries", "formDrafts", "memoryDraft", "workoutDraft", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "journalDraft", JOURNAL_VAULT_STORAGE_KEY]);
 const ARRAY_KEYS = new Set(TRACE_STORAGE_KEYS.filter(
   (key) => !OBJECT_KEYS.has(key) && !SPECIAL_KEYS.has(key)
 ));
-const LEGACY_OPTIONAL_KEYS = new Set(["healthMeasurementEntries", "appSettings", "journalEntries", "journalDraft", JOURNAL_VAULT_STORAGE_KEY, "plannedWorkouts", "workoutTemplates", "waterEntries", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "memoryDraft", "workoutDraft"]);
+const LEGACY_OPTIONAL_KEYS = new Set(["healthMeasurementEntries", "appSettings", "journalEntries", "journalDraft", JOURNAL_VAULT_STORAGE_KEY, "plannedWorkouts", "workoutTemplates", "waterEntries", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "formDrafts", "memoryDraft", "workoutDraft"]);
 const RECOVERABLE_BACKUP_TRANSACTIONS = Object.freeze([
   {
     key: JOURNAL_VAULT_TRANSACTION_KEY,
@@ -271,7 +273,8 @@ export async function estimateTraceBackupSize({
 }
 
 function storageKeysForSchema(schemaVersion) {
-  if (schemaVersion >= 7) return TRACE_STORAGE_KEYS;
+  if (schemaVersion >= 8) return TRACE_STORAGE_KEYS;
+  if (schemaVersion === 7) return TRACE_STORAGE_KEYS_V7;
   if (schemaVersion === 6) return TRACE_STORAGE_KEYS_V6;
   return TRACE_STORAGE_KEYS_V5;
 }
@@ -333,6 +336,9 @@ function readStructuredData(storage) {
     if (raw === null && key === "injectionSiteSettings") {
       return [key, defaultInjectionSiteSettings()];
     }
+    if (raw === null && key === "formDrafts") {
+      return [key, emptyFormDraftCollection()];
+    }
     if (raw === null) return [key, null];
     try {
       const parsed = JSON.parse(raw);
@@ -350,6 +356,11 @@ function readStructuredData(storage) {
       if (key === "memoryDraft") {
         const normalized = normalizeMemoryDraft(parsed);
         if (!normalized) throw new Error("Invalid unfinished Memory draft data.");
+        return [key, normalized];
+      }
+      if (key === "formDrafts") {
+        const normalized = normalizeFormDraftCollection(parsed);
+        if (!normalized) throw new Error("Invalid unfinished form draft data.");
         return [key, normalized];
       }
       if (key === "journalDraft") {
@@ -475,6 +486,13 @@ function validateStructuredData(structuredData, schemaVersion = TRACE_BACKUP_SCH
     throw new Error("The backup contains invalid workout template data.");
   }
   if (
+    structuredData.formDrafts !== undefined &&
+    structuredData.formDrafts !== null &&
+    !normalizeFormDraftCollection(structuredData.formDrafts)
+  ) {
+    throw new Error("The backup contains invalid unfinished form draft data.");
+  }
+  if (
     structuredData.memoryDraft !== undefined &&
     structuredData.memoryDraft !== null &&
     !normalizeMemoryDraft(structuredData.memoryDraft)
@@ -573,6 +591,7 @@ export function summarizeTraceBackup(backup) {
     dailyActions: data.dailyActions?.actions?.length || 0,
     activeWorkoutDraft: Boolean(data.workoutDraft),
     activeMemoryDraft: Boolean(data.memoryDraft),
+    activeFormDrafts: data.formDrafts?.entries?.length || 0,
     workouts: data.workoutEntries?.length || 0,
     medicationEntries: data.medicationEntries?.length || 0,
     medicationDoseSchedules: data.medicationDoseSchedules?.schedules?.length || 0,
@@ -686,6 +705,14 @@ function validateAndNormalizeBackup(value) {
       normalizedBackup.data.structured.memoryDraft
     );
   }
+  if (
+    Object.prototype.hasOwnProperty.call(normalizedBackup.data.structured, "formDrafts") ||
+    storageKeysForSchema(value.schemaVersion).includes("formDrafts")
+  ) {
+    normalizedBackup.data.structured.formDrafts = normalizeFormDraftCollection(
+      normalizedBackup.data.structured.formDrafts ?? emptyFormDraftCollection()
+    );
+  }
   normalizedBackup.data.structured.dailyActions = normalizeDailyActionCollection(
     normalizedBackup.data.structured.dailyActions ?? emptyDailyActionCollection()
   );
@@ -726,7 +753,7 @@ export function validateTraceBackup(value, { cryptoProvider } = {}) {
   if (value.schemaVersion > TRACE_BACKUP_SCHEMA_VERSION) {
     throw new Error("This Trace backup was created by a newer, unsupported backup version.");
   }
-  if (![1, 2, 3, 4, 5, 6, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
+  if (![1, 2, 3, 4, 5, 6, 7, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
   if (!value.createdAt || Number.isNaN(Date.parse(value.createdAt))) throw new Error("The Trace backup timestamp is invalid.");
   if (value.schemaVersion < 5) return validateAndNormalizeBackup(value);
   return verifyBackupIntegrity(value, cryptoProvider).then(async () => {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   GROCERY_FOOD_CATEGORY_OPTIONS,
 } from "../services/userFoodCatalog";
@@ -9,6 +9,11 @@ import {
 } from "../services/servingDefinition";
 import { getSugarValidationError } from "../services/nutritionCalculation";
 import { canonicalGtinKey } from "../services/productIdentifiers";
+import {
+  clearFormDraft,
+  readFormDraft,
+  writeFormDraft,
+} from "../services/formDrafts";
 
 const EMPTY_FORM = {
   name: "",
@@ -104,10 +109,31 @@ function GroceryFoodForm({
   onSaved = () => {},
   onCancel = () => {},
 }) {
+  const draftContextRef = useRef({ domain: "grocery-food", context: "create", sourceFingerprint: null });
+  const baseFormRef = useRef(formForFood(initialFood));
+  const restoredRef = useRef(recovery
+    ? { status: "missing", value: null }
+    : readFormDraft(localStorage, draftContextRef.current, baseFormRef.current));
+  const initialFormRef = useRef(restoredRef.current.status === "restored"
+    ? restoredRef.current.entry.initialValue
+    : baseFormRef.current);
   const [expanded, setExpanded] = useState(recovery);
-  const [form, setForm] = useState(() => formForFood(initialFood));
-  const [error, setError] = useState("");
+  const [form, setForm] = useState(() => restoredRef.current.status === "restored"
+    ? restoredRef.current.value
+    : baseFormRef.current);
+  const [error, setError] = useState(restoredRef.current.status === "malformed" || restoredRef.current.status === "invalid-value"
+    ? "Trace found malformed unfinished form data and left it unchanged."
+    : "");
   const [status, setStatus] = useState("");
+
+  useEffect(() => {
+    if (recovery) return;
+    try {
+      writeFormDraft(localStorage, draftContextRef.current, initialFormRef.current, form);
+    } catch (storageFailure) {
+      setError("Trace could not preserve this unfinished grocery food. Keep Nutrition open and try again.");
+    }
+  }, [form, recovery]);
 
   const fieldStyle = {
     ...inputStyle,
@@ -193,7 +219,14 @@ function GroceryFoodForm({
       const savedName = result.food?.name || form.name.trim();
       onSaved(result.food);
       if (recovery) return;
+      try {
+        clearFormDraft(localStorage, draftContextRef.current);
+      } catch (storageFailure) {
+        setError("The grocery food was saved, but Trace could not clear its unfinished draft. Reload and verify it before saving again.");
+        return;
+      }
       setForm(EMPTY_FORM);
+      initialFormRef.current = EMPTY_FORM;
       setError("");
       setStatus(`${savedName} saved. Search for it above to log a meal.`);
       return;

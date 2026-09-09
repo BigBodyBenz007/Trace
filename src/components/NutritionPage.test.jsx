@@ -7,6 +7,10 @@ import NutritionPage, {
 import { createUserFood } from "../services/userFoodCatalog";
 import brandedPackagedFoods from "../services/brandedPackagedFoodCatalog";
 
+beforeEach(() => {
+  localStorage.clear();
+});
+
 function localTimestamp(year, month, day, hour = 12) {
   return new Date(year, month, day, hour).toISOString();
 }
@@ -555,6 +559,66 @@ test("provides matching timeline navigation controls without changing draft or s
   fireEvent.click(navigationButtons[0]);
 
   expect(props.onBack).toHaveBeenCalledTimes(2);
+});
+
+test("Back persists exact Nutrition entry and goal drafts across unmount and reopening", () => {
+  const first = renderNutritionPage();
+  const form = entryForm();
+  fireEvent.change(form.getByLabelText("Food / meal name"), { target: { value: "Unfinished supper" } });
+  fireEvent.change(form.getByLabelText("Calories"), { target: { value: "-12" } });
+  fireEvent.change(form.getByLabelText("Date"), { target: { value: "" } });
+  fireEvent.change(form.getByLabelText("Notes (optional)"), { target: { value: "exact draft notes" } });
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition Goals" }));
+  const goals = screen.getByRole("heading", { name: "Daily Goals" }).closest("form");
+  fireEvent.change(within(goals).getByLabelText("Calories"), { target: { value: "2450" } });
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  expect(first.onBack).toHaveBeenCalledTimes(1);
+  first.unmount();
+
+  renderNutritionPage();
+  expect(entryForm().getByLabelText("Food / meal name")).toHaveValue("Unfinished supper");
+  expect(entryForm().getByLabelText("Calories")).toHaveValue(-12);
+  expect(entryForm().getByLabelText("Date")).toHaveValue("");
+  expect(entryForm().getByLabelText("Notes (optional)")).toHaveValue("exact draft notes");
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition Goals" }));
+  expect(within(screen.getByRole("heading", { name: "Daily Goals" }).closest("form")).getByLabelText("Calories")).toHaveValue(2450);
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries).toHaveLength(2);
+});
+
+test("failed Nutrition save remains retryable and successful save clears only the entry draft", () => {
+  const failed = renderNutritionPage({ saveNutritionEntry: jest.fn(() => false) });
+  selectBanana();
+  fireEvent.change(entryForm().getByLabelText("Number of servings"), { target: { value: "2" } });
+  fireEvent.click(entryForm().getByRole("button", { name: "Save Entry" }));
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "nutrition-entry")).toBe(true);
+  failed.unmount();
+
+  const retry = renderNutritionPage({ saveNutritionEntry: jest.fn(() => true) });
+  expect(entryForm().getByLabelText("Food / meal name")).toHaveValue("Banana, raw");
+  expect(entryForm().getByLabelText("Number of servings")).toHaveValue(2);
+  fireEvent.click(entryForm().getByRole("button", { name: "Save Entry" }));
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "nutrition-entry")).toBe(false);
+  expect(retry.saveNutritionEntry).toHaveBeenCalledTimes(1);
+});
+
+test("Nutrition edit drafts stay record-specific and do not overwrite a changed saved entry", () => {
+  const firstEntry = { ...historyEntry(1), name: "First meal", notes: "first saved", updatedAt: "2026-08-01T12:00:00.000Z" };
+  const secondEntry = { ...historyEntry(2), name: "Second meal", notes: "second saved", updatedAt: "2026-08-02T12:00:00.000Z" };
+  const first = renderNutritionPage({ nutritionEntries: [firstEntry, secondEntry] });
+  fireEvent.click(within(screen.getByRole("heading", { name: "First meal" }).closest("article")).getByRole("button", { name: "Edit" }));
+  fireEvent.change(entryForm().getByLabelText("Notes (optional)"), { target: { value: "unfinished first" } });
+  first.unmount();
+
+  const second = renderNutritionPage({ nutritionEntries: [firstEntry, secondEntry] });
+  fireEvent.click(within(screen.getByRole("heading", { name: "Second meal" }).closest("article")).getByRole("button", { name: "Edit" }));
+  expect(entryForm().getByLabelText("Notes (optional)")).toHaveValue("second saved");
+  second.unmount();
+
+  const newerFirst = { ...firstEntry, notes: "newer saved first", updatedAt: "2026-09-10T00:00:00.000Z" };
+  renderNutritionPage({ nutritionEntries: [newerFirst] });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(entryForm().getByLabelText("Notes (optional)")).toHaveValue("newer saved first");
+  expect(entryForm().getByRole("alert")).toHaveTextContent("changed after an unfinished edit");
 });
 
 test("selecting a search result populates the existing form", () => {
@@ -1435,6 +1499,24 @@ test("creates a custom grocery food with nullable nutrients and reusable source 
   expect(screen.getByRole("status")).toHaveTextContent(
     "Raw chicken breast strips saved. Search for it above to log a meal."
   );
+});
+
+test("grocery creator preserves an unfinished form through close and page remount", () => {
+  const first = renderNutritionPage();
+  fireEvent.click(screen.getByRole("button", { name: "Create grocery food" }));
+  let creator = screen.getByRole("button", { name: "Save grocery food" }).closest("form");
+  fireEvent.change(within(creator).getByLabelText("Food name"), { target: { value: "Unfinished grocery" } });
+  fireEvent.change(within(creator).getByLabelText("Serving amount"), { target: { value: "-2" } });
+  fireEvent.change(within(creator).getByLabelText("Food notes (optional)"), { target: { value: "keep exactly" } });
+  fireEvent.click(screen.getByRole("button", { name: "Close grocery food creator" }));
+  first.unmount();
+
+  renderNutritionPage();
+  fireEvent.click(screen.getByRole("button", { name: "Create grocery food" }));
+  creator = screen.getByRole("button", { name: "Save grocery food" }).closest("form");
+  expect(within(creator).getByLabelText("Food name")).toHaveValue("Unfinished grocery");
+  expect(within(creator).getByLabelText("Serving amount")).toHaveValue(-2);
+  expect(within(creator).getByLabelText("Food notes (optional)")).toHaveValue("keep exactly");
 });
 
 test("keeps the existing grocery food when a duplicate name is submitted", () => {

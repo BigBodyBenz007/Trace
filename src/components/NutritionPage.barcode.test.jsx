@@ -11,6 +11,7 @@ jest.mock("../services/barcodePhoto", () => ({
 const originalScrollTo = window.scrollTo;
 
 beforeEach(() => {
+  localStorage.clear();
   window.scrollTo = jest.fn();
 });
 

@@ -20,6 +20,7 @@ import { JOURNAL_VAULT_STORAGE_KEY } from "./journalVault";
 import { isValidLocalDate } from "./protocol";
 import { canonicalGtinKey, normalizeProductIdentifiers } from "./productIdentifiers";
 import { normalizeRemoteFood } from "./remoteFoodModel";
+import { normalizeFormDraftCollection } from "./formDrafts";
 
 const NUTRIENT_KEYS = ["calories", "protein", "carbohydrates", "fat", "fiber", "sodium", "totalSugar", "addedSugar"];
 const DATE_FIELDS = ["createdAt", "updatedAt", "occurredAt", "loggedAt", "startedAt", "finishedAt", "endedAt", "achievedAt", "addedToTrophyCaseAt"];
@@ -421,6 +422,7 @@ export function validateTraceStructuredDomains(data) {
   if (data.plannedWorkouts != null) assert(normalizePlannedWorkouts(data.plannedWorkouts), "The backup contains invalid planned workout data.");
   if (data.workoutTemplates != null) assert(normalizeWorkoutTemplates(data.workoutTemplates), "The backup contains invalid workout template data.");
   if (data.dailyActions != null) assert(normalizeDailyActionCollection(data.dailyActions), "The backup contains invalid daily action data.");
+  if (data.formDrafts != null) assert(normalizeFormDraftCollection(data.formDrafts), "The backup contains invalid unfinished form draft data.");
   if (data.memoryDraft != null) assert(normalizeMemoryDraft(data.memoryDraft), "The backup contains invalid unfinished Memory draft data.");
   if (data.workoutDraft != null) assert(normalizeWorkoutDraft(data.workoutDraft), "The backup contains invalid active workout draft data.");
   if (data.workoutEntries != null) recordArray(data.workoutEntries, "workout", validateWorkout);

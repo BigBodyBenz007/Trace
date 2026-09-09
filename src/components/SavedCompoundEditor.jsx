@@ -1,9 +1,15 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   DOSE_UNIT_OPTIONS,
   ROUTE_OPTIONS,
 } from "../constants/medicationOptions";
 import { getCompoundDefinitionError } from "../services/compoundCatalog";
+import {
+  clearFormDraft,
+  formDraftFingerprint,
+  readFormDraft,
+  writeFormDraft,
+} from "../services/formDrafts";
 
 function SavedCompoundEditor({
   compound,
@@ -12,21 +18,52 @@ function SavedCompoundEditor({
   buttonStyle,
   inputStyle,
 }) {
-  const [name, setName] = useState(compound.name);
-  const [defaultDoseAmount, setDefaultDoseAmount] = useState(
-    compound.defaults.dose.amount === undefined
+  const baseValueRef = useRef({
+    name: compound.name,
+    defaultDoseAmount: compound.defaults.dose.amount === undefined
       ? ""
-      : String(compound.defaults.dose.amount)
-  );
-  const [doseUnit, setDoseUnit] = useState(compound.defaults.dose.unit);
-  const [customDoseUnit, setCustomDoseUnit] = useState(
-    compound.defaults.dose.customUnit || ""
-  );
-  const [route, setRoute] = useState(compound.defaults.route.code);
-  const [customRoute, setCustomRoute] = useState(
-    compound.defaults.route.customLabel || ""
-  );
-  const [formError, setFormError] = useState("");
+      : String(compound.defaults.dose.amount),
+    doseUnit: compound.defaults.dose.unit,
+    customDoseUnit: compound.defaults.dose.customUnit || "",
+    route: compound.defaults.route.code,
+    customRoute: compound.defaults.route.customLabel || "",
+  });
+  const contextRef = useRef({
+    domain: "saved-compound",
+    context: `edit:${compound.id}`,
+    sourceFingerprint: formDraftFingerprint(compound),
+  });
+  const restoredRef = useRef(readFormDraft(localStorage, contextRef.current, baseValueRef.current));
+  const initialValueRef = useRef(restoredRef.current.status === "restored"
+    ? restoredRef.current.entry.initialValue
+    : baseValueRef.current);
+  const value = restoredRef.current.status === "restored" ? restoredRef.current.value : baseValueRef.current;
+  const [name, setName] = useState(value.name);
+  const [defaultDoseAmount, setDefaultDoseAmount] = useState(value.defaultDoseAmount);
+  const [doseUnit, setDoseUnit] = useState(value.doseUnit);
+  const [customDoseUnit, setCustomDoseUnit] = useState(value.customDoseUnit);
+  const [route, setRoute] = useState(value.route);
+  const [customRoute, setCustomRoute] = useState(value.customRoute);
+  const [formError, setFormError] = useState(restoredRef.current.status === "conflict"
+    ? "This saved compound changed after an unfinished edit was stored, so Trace did not apply the older draft."
+    : restoredRef.current.status === "malformed" || restoredRef.current.status === "invalid-value"
+      ? "Trace found malformed unfinished form data and left it unchanged."
+      : "");
+
+  useEffect(() => {
+    try {
+      writeFormDraft(localStorage, contextRef.current, initialValueRef.current, {
+        name,
+        defaultDoseAmount,
+        doseUnit,
+        customDoseUnit,
+        route,
+        customRoute,
+      });
+    } catch (storageFailure) {
+      setFormError("Trace could not preserve this unfinished saved-compound edit. Keep this editor open and try again.");
+    }
+  }, [name, defaultDoseAmount, doseUnit, customDoseUnit, route, customRoute]);
 
   const formInputStyle = {
     ...inputStyle,
@@ -61,7 +98,27 @@ function SavedCompoundEditor({
       );
       return;
     }
+    try {
+      clearFormDraft(localStorage, contextRef.current);
+    } catch (storageFailure) {
+      setFormError("The saved compound was updated, but Trace could not clear its unfinished draft. Reload and verify it before saving again.");
+      return;
+    }
+    onCancel();
+  }
 
+  function cancel() {
+    const current = { name, defaultDoseAmount, doseUnit, customDoseUnit, route, customRoute };
+    if (
+      formDraftFingerprint(current) !== formDraftFingerprint(initialValueRef.current) &&
+      !window.confirm("Cancel this saved compound edit? Your unsaved changes will be lost.")
+    ) return;
+    try {
+      clearFormDraft(localStorage, contextRef.current);
+    } catch (storageFailure) {
+      setFormError("Trace could not discard this unfinished saved-compound edit. It was left available for recovery.");
+      return;
+    }
     onCancel();
   }
 
@@ -195,7 +252,7 @@ function SavedCompoundEditor({
         <button
           className="trace-action trace-action--secondary"
           type="button"
-          onClick={onCancel}
+          onClick={cancel}
           style={{ ...buttonStyle, backgroundColor: "#666" }}
         >
           Cancel Saved Compound Edit

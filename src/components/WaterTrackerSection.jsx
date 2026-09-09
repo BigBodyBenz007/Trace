@@ -6,6 +6,13 @@ import {
   millilitersToWaterAmount,
   waterAmountToMilliliters,
 } from "../services/waterTracker";
+import {
+  clearFormDraft,
+  clearFormDraftsForContext,
+  formDraftFingerprint,
+  readFormDraft,
+  writeFormDraft,
+} from "../services/formDrafts";
 
 const QUICK_AMOUNTS = Object.freeze({
   [WATER_UNITS.OUNCES]: [8, 12, 16],
@@ -49,6 +56,11 @@ function editableAmount(amountMl, unit) {
     : String(Number(amount.toFixed(1)));
 }
 
+function convertedDraftAmount(amount, fromUnit, toUnit) {
+  const amountMl = waterAmountToMilliliters(amount, fromUnit);
+  return amountMl === null ? amount : editableAmount(amountMl, toUnit);
+}
+
 export default function WaterTrackerSection({
   entries = [],
   unit = WATER_UNITS.OUNCES,
@@ -58,8 +70,19 @@ export default function WaterTrackerSection({
   deleteEntry = () => false,
   showConfirmation = () => {},
 }) {
-  const [customExpanded, setCustomExpanded] = useState(false);
-  const [customAmount, setCustomAmount] = useState("");
+  const customDraftContextRef = useRef({ domain: "water-custom", context: "create", sourceFingerprint: null });
+  const baseCustomRef = useRef({ amount: "", unit });
+  const restoredCustomRef = useRef(readFormDraft(localStorage, customDraftContextRef.current, baseCustomRef.current));
+  const initialCustomRef = useRef(restoredCustomRef.current.status === "restored"
+    ? restoredCustomRef.current.entry.initialValue
+    : baseCustomRef.current);
+  const restoredCustomAmount = restoredCustomRef.current.status === "restored"
+    ? restoredCustomRef.current.value.unit === unit
+      ? restoredCustomRef.current.value.amount
+      : convertedDraftAmount(restoredCustomRef.current.value.amount, restoredCustomRef.current.value.unit, unit)
+    : "";
+  const [customExpanded, setCustomExpanded] = useState(restoredCustomRef.current.status === "restored");
+  const [customAmount, setCustomAmount] = useState(restoredCustomAmount);
   const [editingId, setEditingId] = useState(null);
   const [editAmount, setEditAmount] = useState("");
   const [editDate, setEditDate] = useState("");
@@ -67,6 +90,8 @@ export default function WaterTrackerSection({
   const [error, setError] = useState("");
   const [visibleHistoryCount, setVisibleHistoryCount] = useState(HISTORY_BATCH_SIZE);
   const previousUnitRef = useRef(unit);
+  const editDraftContextRef = useRef(null);
+  const initialEditRef = useRef(null);
   const customInputRef = useRef(null);
   const summary = calculateWaterSummary(entries);
   const sortedEntries = [...entries].sort(
@@ -93,6 +118,28 @@ export default function WaterTrackerSection({
     previousUnitRef.current = unit;
   }, [unit]);
 
+  useEffect(() => {
+    try {
+      writeFormDraft(localStorage, customDraftContextRef.current, initialCustomRef.current, { amount: customAmount, unit });
+    } catch (storageFailure) {
+      setError("Trace could not preserve this unfinished custom water amount. Keep Nutrition open and try again.");
+    }
+  }, [customAmount, unit]);
+
+  useEffect(() => {
+    if (!editingId || !editDraftContextRef.current || !initialEditRef.current) return;
+    try {
+      writeFormDraft(localStorage, editDraftContextRef.current, initialEditRef.current, {
+        amount: editAmount,
+        date: editDate,
+        time: editTime,
+        unit,
+      });
+    } catch (storageFailure) {
+      setError("Trace could not preserve this unfinished water edit. Keep Nutrition open and try again.");
+    }
+  }, [editingId, editAmount, editDate, editTime, unit]);
+
   function traceAmount(amount, loggedAt = new Date().toISOString()) {
     const amountMl = waterAmountToMilliliters(amount, unit);
     if (amountMl === null) {
@@ -108,17 +155,45 @@ export default function WaterTrackerSection({
   function saveCustom(event) {
     event.preventDefault();
     if (!traceAmount(customAmount)) return;
+    try {
+      clearFormDraft(localStorage, customDraftContextRef.current);
+    } catch (storageFailure) {
+      setError("The water entry was saved, but Trace could not clear its unfinished draft. Reload and verify it before logging again.");
+      return;
+    }
     setCustomAmount("");
+    initialCustomRef.current = { amount: "", unit };
     setCustomExpanded(false);
   }
 
   function beginEdit(entry) {
     const fields = dateTimeFields(entry.loggedAt);
+    const baseDraft = {
+      amount: editableAmount(entry.amountMl, unit),
+      date: fields.date,
+      time: fields.time,
+      unit,
+    };
+    const context = {
+      domain: "water-entry",
+      context: `edit:${entry.id}`,
+      sourceFingerprint: formDraftFingerprint(entry),
+    };
+    const restored = readFormDraft(localStorage, context, baseDraft);
+    const nextDraft = restored.status === "restored" ? restored.value : baseDraft;
+    editDraftContextRef.current = context;
+    initialEditRef.current = restored.status === "restored" ? restored.entry.initialValue : baseDraft;
     setEditingId(entry.id);
-    setEditAmount(editableAmount(entry.amountMl, unit));
-    setEditDate(fields.date);
-    setEditTime(fields.time);
-    setError("");
+    setEditAmount(nextDraft.unit === unit
+      ? nextDraft.amount
+      : convertedDraftAmount(nextDraft.amount, nextDraft.unit, unit));
+    setEditDate(nextDraft.date);
+    setEditTime(nextDraft.time);
+    setError(restored.status === "conflict"
+      ? "This water entry changed after an unfinished edit was stored, so Trace did not apply the older draft."
+      : restored.status === "malformed" || restored.status === "invalid-value"
+        ? "Trace found malformed unfinished form data and left it unchanged."
+        : "");
   }
 
   function saveEdit(event) {
@@ -130,7 +205,15 @@ export default function WaterTrackerSection({
       return;
     }
     if (!updateEntry(editingId, { amountMl, loggedAt })) return;
+    try {
+      clearFormDraft(localStorage, editDraftContextRef.current);
+    } catch (storageFailure) {
+      setError("The water entry was updated, but Trace could not clear its unfinished draft. Reload and verify it before saving again.");
+      return;
+    }
     setEditingId(null);
+    editDraftContextRef.current = null;
+    initialEditRef.current = null;
     setError("");
     showConfirmation("Water updated");
   }
@@ -138,8 +221,32 @@ export default function WaterTrackerSection({
   function confirmDelete(entry) {
     if (!window.confirm(`Delete this ${formatWaterAmount(entry.amountMl, unit)} water entry?`)) return;
     if (!deleteEntry(entry.id)) return;
+    try {
+      clearFormDraftsForContext(localStorage, "water-entry", `edit:${entry.id}`);
+    } catch (storageFailure) {
+      setError("The water entry was deleted, but an older unfinished edit could not be cleared. It will not be restored without its saved record.");
+    }
     if (editingId === entry.id) setEditingId(null);
     showConfirmation("Water entry deleted");
+  }
+
+  function cancelEdit() {
+    const current = { amount: editAmount, date: editDate, time: editTime, unit };
+    if (
+      initialEditRef.current &&
+      formDraftFingerprint(current) !== formDraftFingerprint(initialEditRef.current) &&
+      !window.confirm("Cancel this water edit? Your unsaved changes will be lost.")
+    ) return;
+    try {
+      if (editDraftContextRef.current) clearFormDraft(localStorage, editDraftContextRef.current);
+    } catch (storageFailure) {
+      setError("Trace could not discard this unfinished water edit. It was left available for recovery.");
+      return;
+    }
+    setEditingId(null);
+    editDraftContextRef.current = null;
+    initialEditRef.current = null;
+    setError("");
   }
 
   return (
@@ -283,7 +390,7 @@ export default function WaterTrackerSection({
                       </label>
                       <div className="trace-water__entry-actions">
                         <button className="trace-action trace-action--primary" type="submit">Save Water Changes</button>
-                        <button className="trace-action trace-action--secondary" onClick={() => setEditingId(null)} type="button">Cancel Water Edit</button>
+                        <button className="trace-action trace-action--secondary" onClick={cancelEdit} type="button">Cancel Water Edit</button>
                       </div>
                     </form>
                   ) : (

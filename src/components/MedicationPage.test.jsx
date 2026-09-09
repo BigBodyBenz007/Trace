@@ -16,6 +16,10 @@ import {
   undoMedicationDoseCompletion,
 } from "../services/medicationDoseSchedule";
 
+beforeEach(() => {
+  localStorage.clear();
+});
+
 function localTimestamp(year, month, day, hour = 12, minute = 0) {
   return new Date(year, month, day, hour, minute).toISOString();
 }
@@ -61,6 +65,10 @@ function renderMedicationPage(overrides = {}) {
       Object.assign(props, nextOverrides);
       view.rerender(<MedicationPage {...props} />);
     },
+  });
+  Object.defineProperty(props, "unmount", {
+    enumerable: false,
+    value: view.unmount,
   });
   return props;
 }
@@ -182,6 +190,56 @@ test("saves a trimmed historical entry with decimal precision", () => {
   );
   expect(screen.queryByRole("form", { name: /Schedule dose for/ })).not.toBeInTheDocument();
   expect(form.getByLabelText("Name")).toHaveValue("");
+});
+
+test("Back preserves the complete medication entry draft across reopening", () => {
+  const first = renderMedicationPage();
+  const form = entryForm();
+  fireEvent.change(form.getByLabelText("Name"), { target: { value: "Unfinished supplement" } });
+  fireEvent.change(form.getByLabelText("Amount / dose"), { target: { value: "-3" } });
+  fireEvent.change(form.getByLabelText("Notes (optional)"), { target: { value: "retry exactly" } });
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  expect(first.onBack).toHaveBeenCalledTimes(1);
+  first.unmount();
+
+  renderMedicationPage();
+  expect(entryForm().getByLabelText("Name")).toHaveValue("Unfinished supplement");
+  expect(entryForm().getByLabelText("Amount / dose")).toHaveValue(-3);
+  expect(entryForm().getByLabelText("Notes (optional)")).toHaveValue("retry exactly");
+});
+
+test("failed medication persistence keeps the draft and a successful retry clears it", () => {
+  const first = renderMedicationPage({ saveMedicationEntry: jest.fn(() => false) });
+  fillRequiredFields(entryForm(), { name: "Retry medication" });
+  fireEvent.click(entryForm().getByRole("button", { name: "Save Entry" }));
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "medication-entry")).toBe(true);
+  first.unmount();
+
+  const second = renderMedicationPage();
+  expect(entryForm().getByLabelText("Name")).toHaveValue("Retry medication");
+  fireEvent.click(entryForm().getByRole("button", { name: "Save Entry" }));
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "medication-entry")).toBe(false);
+  expect(second.saveMedicationEntry).toHaveBeenCalledTimes(1);
+});
+
+test("Medication edit drafts remain record-specific and are ignored after the saved baseline changes", () => {
+  const firstEntry = savedEntry({ id: "entry-one", name: "First medication", notes: "first saved" });
+  const secondEntry = savedEntry({ id: "entry-two", name: "Second medication", notes: "second saved", occurredAt: localTimestamp(2026, 7, 10) });
+  const first = renderMedicationPage({ medicationEntries: [firstEntry, secondEntry] });
+  fireEvent.click(within(historyEntry("entry-one")).getByRole("button", { name: "Edit" }));
+  fireEvent.change(entryForm().getByLabelText("Notes (optional)"), { target: { value: "unfinished first" } });
+  first.unmount();
+
+  const second = renderMedicationPage({ medicationEntries: [firstEntry, secondEntry] });
+  fireEvent.click(within(historyEntry("entry-two")).getByRole("button", { name: "Edit" }));
+  expect(entryForm().getByLabelText("Notes (optional)")).toHaveValue("second saved");
+  second.unmount();
+
+  const newerFirst = { ...firstEntry, notes: "newer saved first", updatedAt: "2026-09-10T00:00:00.000Z" };
+  renderMedicationPage({ medicationEntries: [newerFirst] });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(entryForm().getByLabelText("Notes (optional)")).toHaveValue("newer saved first");
+  expect(entryForm().getByRole("alert")).toHaveTextContent("changed after an unfinished edit");
 });
 
 test("Save & Schedule opens a prefilled direct scheduler without logging a history entry", () => {
@@ -1650,6 +1708,31 @@ test("the scheduler accepts only one successful restart submission", () => {
   expect(onSave).toHaveBeenCalledTimes(1);
   expect(onSaved).toHaveBeenCalledTimes(1);
   expect(within(form).getByRole("button", { name: "Restart Schedule" })).toBeDisabled();
+});
+
+test("dose scheduler restores an isolated draft and confirmed Cancel is the only discard", () => {
+  const seed = {
+    name: "Draft schedule", classification: "supplement", dose: { amount: 1, unit: "capsule" },
+    route: { code: "oral" }, notes: "", source: { type: "direct-entry", id: "source:draft" },
+    repeat: { type: "daily" }, startDate: medicationDoseDateKey(), endDate: null, time: "08:00",
+  };
+  const draftContext = { domain: "medication-dose-schedule", context: "create:direct-entry:source:draft", sourceFingerprint: "seed-v1" };
+  const first = render(<MedicationDoseScheduler seed={seed} draftContext={draftContext} onSave={jest.fn()} onSaved={jest.fn()} onCancel={jest.fn()} />);
+  fireEvent.change(screen.getByLabelText("Scheduled time"), { target: { value: "11:45" } });
+  fireEvent.change(screen.getByLabelText("Schedule notes (optional)"), { target: { value: "unfinished schedule" } });
+  first.unmount();
+
+  const onCancel = jest.fn();
+  const confirm = jest.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+  render(<MedicationDoseScheduler seed={seed} draftContext={draftContext} onSave={jest.fn()} onSaved={jest.fn()} onCancel={onCancel} />);
+  expect(screen.getByLabelText("Scheduled time")).toHaveValue("11:45");
+  expect(screen.getByLabelText("Schedule notes (optional)")).toHaveValue("unfinished schedule");
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(onCancel).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(onCancel).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries).toHaveLength(0);
+  confirm.mockRestore();
 });
 
 test("an equivalent active schedule requires the established duplicate confirmation before restart", () => {

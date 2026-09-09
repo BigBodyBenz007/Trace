@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DOSE_UNIT_OPTIONS } from "../constants/medicationOptions";
 import { formatRoute } from "../services/medicationEntry";
 import { motionScrollBehavior } from "../services/motionPreference";
@@ -8,6 +8,12 @@ import {
   getMedicationDoseScheduleError,
   medicationDoseDateKey,
 } from "../services/medicationDoseSchedule";
+import {
+  clearFormDraft,
+  formDraftFingerprint,
+  readFormDraft,
+  writeFormDraft,
+} from "../services/formDrafts";
 
 const WEEKDAYS = [
   { value: 7, label: "Sunday" },
@@ -75,14 +81,31 @@ export default function MedicationDoseScheduler({
   seed,
   editing = false,
   restarting = false,
+  draftContext,
   onSave,
   onCancel,
   onSaved,
   buttonStyle = {},
   inputStyle = {},
 }) {
-  const [draft, setDraft] = useState(() => initialDraft(seed));
-  const [error, setError] = useState("");
+  const contextRef = useRef(draftContext || {
+    domain: "medication-dose-schedule",
+    context: `create:${seed.source.type}:${seed.source.id}`,
+    sourceFingerprint: formDraftFingerprint(seed),
+  });
+  const baseDraftRef = useRef(initialDraft(seed));
+  const restoredRef = useRef(readFormDraft(localStorage, contextRef.current, baseDraftRef.current));
+  const initialValueRef = useRef(restoredRef.current.status === "restored"
+    ? restoredRef.current.entry.initialValue
+    : baseDraftRef.current);
+  const [draft, setDraft] = useState(() => restoredRef.current.status === "restored"
+    ? restoredRef.current.value
+    : baseDraftRef.current);
+  const [error, setError] = useState(restoredRef.current.status === "conflict"
+    ? "This dose schedule source changed after an unfinished draft was stored, so Trace did not apply the older draft."
+    : restoredRef.current.status === "malformed" || restoredRef.current.status === "invalid-value"
+      ? "Trace found malformed unfinished form data and left it unchanged."
+      : "");
   const [saveInProgress, setSaveInProgress] = useState(false);
   const saveInProgressRef = useRef(false);
   const headingRef = useRef(null);
@@ -95,7 +118,6 @@ export default function MedicationDoseScheduler({
   const intervalRef = useRef(null);
   const firstWeekdayRef = useRef(null);
   const endDateRef = useRef(null);
-  const initial = useMemo(() => JSON.stringify(initialDraft(seed)), [seed]);
   const fieldStyle = {
     ...inputStyle,
     boxSizing: "border-box",
@@ -110,6 +132,14 @@ export default function MedicationDoseScheduler({
     headingRef.current?.focus();
     headingRef.current?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "start" });
   }, []);
+
+  useEffect(() => {
+    try {
+      writeFormDraft(localStorage, contextRef.current, initialValueRef.current, draft);
+    } catch (storageFailure) {
+      setError("Trace could not preserve this unfinished dose schedule. Keep this form open and try again.");
+    }
+  }, [draft]);
 
   function change(values) {
     setDraft((current) => ({ ...current, ...values }));
@@ -170,6 +200,14 @@ export default function MedicationDoseScheduler({
         setError(result?.message || "The dose schedule could not be saved.");
         return;
       }
+      try {
+        clearFormDraft(localStorage, contextRef.current);
+      } catch (storageFailure) {
+        saveInProgressRef.current = false;
+        setSaveInProgress(false);
+        setError("The dose schedule was saved, but Trace could not clear its unfinished draft. Reload and verify it before saving again.");
+        return;
+      }
       onSaved(result.schedule);
     } catch (saveError) {
       saveInProgressRef.current = false;
@@ -180,9 +218,15 @@ export default function MedicationDoseScheduler({
 
   function cancel() {
     if (
-      JSON.stringify(draft) !== initial
+      formDraftFingerprint(draft) !== formDraftFingerprint(initialValueRef.current)
       && !window.confirm("Cancel scheduling this dose? Your unsaved changes will be lost.")
     ) return;
+    try {
+      clearFormDraft(localStorage, contextRef.current);
+    } catch (storageFailure) {
+      setError("Trace could not discard this unfinished dose schedule. It was left available for recovery.");
+      return;
+    }
     onCancel();
   }
 

@@ -3,9 +3,11 @@ import { useState } from "react";
 import HealthPage from "./HealthPage";
 import { createHealthMeasurementEntry, updateHealthMeasurementEntry } from "../services/healthMeasurements";
 import { DEFAULT_APP_SETTINGS } from "../services/appSettings";
+import { formDraftFingerprint, readFormDraftCollection, writeFormDraft } from "../services/formDrafts";
 
 let ids;
 beforeEach(() => {
+  localStorage.clear();
   ids = 0;
   Element.prototype.scrollIntoView = jest.fn();
   window.confirm = jest.fn(() => true);
@@ -121,6 +123,50 @@ test("edit scrolls to the editor, preserves identity, then scrolls to the update
   expect(article.scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
 });
 
+test("offers a prominent Health edit Cancel and only confirmed discard clears that editor draft", () => {
+  const original = createHealthMeasurementEntry({
+    date: "2026-08-01",
+    time: "08:00",
+    measurements: { weight: { value: "260", unit: "lb" } },
+    notes: "saved measurement",
+  }, { id: "stable-id", now: () => new Date("2026-01-01") }).value;
+  const unrelatedContext = {
+    domain: "health-measurement",
+    context: "edit:other-id",
+    sourceFingerprint: "other-saved-record",
+  };
+  writeFormDraft(localStorage, unrelatedContext, { notes: "other saved value" }, { notes: "other unfinished value" });
+  render(<Harness initialEntries={[original]} />);
+
+  fireEvent.click(within(screen.getByRole("article")).getByRole("button", { name: "Edit" }));
+  const prominentCancel = screen.getByRole("button", { name: "Cancel Health measurement edit" });
+  expect(prominentCancel).toBeVisible();
+  expect(prominentCancel).toHaveStyle({ minHeight: "44px" });
+  expect(prominentCancel.compareDocumentPosition(screen.getByTestId("measurement-header")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+
+  enter("Notes", "unfinished replacement");
+  window.confirm.mockReturnValueOnce(false);
+  fireEvent.click(prominentCancel);
+  expect(window.confirm).toHaveBeenLastCalledWith("Discard this Health measurement edit? Your unsaved changes will be lost.");
+  expect(screen.getByLabelText("Notes")).toHaveValue("unfinished replacement");
+  expect(screen.getByRole("button", { name: "Save Changes" })).toBeInTheDocument();
+  expect(screen.getByRole("article")).toHaveTextContent("saved measurement");
+
+  window.confirm.mockReturnValueOnce(true);
+  fireEvent.click(prominentCancel);
+  expect(screen.queryByRole("button", { name: "Cancel Health measurement edit" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Save Measurement" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Notes")).toHaveValue("");
+  expect(screen.getByRole("article")).toHaveTextContent("saved measurement");
+  expect(readFormDraftCollection(localStorage).entries).toEqual([
+    expect.objectContaining({
+      domain: "health-measurement",
+      context: "edit:other-id",
+      value: { notes: "other unfinished value" },
+    }),
+  ]);
+});
+
 test("delete removes only the selected entry without scrolling", () => {
   const make = (id, day) => createHealthMeasurementEntry({ date: `2026-08-${day}`, time: "08:00", measurements: { weight: { value: day, unit: "lb" } } }, { id }).value;
   render(<Harness initialEntries={[make("one", "01"), make("two", "02")]} />);
@@ -216,4 +262,96 @@ test("legacy Health entries without calves continue to edit", () => {
   expect(screen.getByRole("article")).not.toHaveTextContent("Calf");
   fireEvent.click(within(screen.getByRole("article")).getByRole("button", { name: "Edit" }));
   expect(screen.getByLabelText("Left Calf")).toHaveValue(null);
+});
+
+test("Health deletion clears only the deleted record's edit draft after success", () => {
+  const first = createHealthMeasurementEntry({ date: "2026-08-01", time: "08:00", measurements: { weight: { value: "201", unit: "lb" } } }, { id: "one" }).value;
+  const second = createHealthMeasurementEntry({ date: "2026-08-02", time: "08:00", measurements: { weight: { value: "202", unit: "lb" } } }, { id: "two" }).value;
+  const firstContext = { domain: "health-measurement", context: "edit:one", sourceFingerprint: formDraftFingerprint(first) };
+  const secondContext = { domain: "health-measurement", context: "edit:two", sourceFingerprint: formDraftFingerprint(second) };
+  writeFormDraft(localStorage, firstContext, {}, { notes: "one draft" });
+  writeFormDraft(localStorage, secondContext, {}, { notes: "two draft" });
+  render(<Harness initialEntries={[first, second]} />);
+
+  fireEvent.click(within(screen.getAllByRole("article")[1]).getByRole("button", { name: "Delete" }));
+  expect(readFormDraftCollection(localStorage).entries).toEqual([
+    expect.objectContaining({ context: "edit:two", value: { notes: "two draft" } }),
+  ]);
+});
+
+test("failed Health deletion preserves the record's unfinished edit draft", () => {
+  const saved = createHealthMeasurementEntry({ date: "2026-08-01", time: "08:00", measurements: { weight: { value: "201", unit: "lb" } } }, { id: "one" }).value;
+  const context = { domain: "health-measurement", context: "edit:one", sourceFingerprint: formDraftFingerprint(saved) };
+  writeFormDraft(localStorage, context, {}, { notes: "recoverable" });
+  const deleteEntry = jest.fn(() => false);
+  render(<HealthPage onBack={jest.fn()} entries={[saved]} settings={DEFAULT_APP_SETTINGS} updateSettings={jest.fn()} saveEntry={jest.fn()} updateEntry={jest.fn()} deleteEntry={deleteEntry} buttonStyle={{}} inputStyle={{}} containerStyle={{}} />);
+
+  fireEvent.click(within(screen.getByRole("article")).getByRole("button", { name: "Delete" }));
+  expect(deleteEntry).toHaveBeenCalledWith("one");
+  expect(readFormDraftCollection(localStorage).entries[0]).toMatchObject({ context: "edit:one", value: { notes: "recoverable" } });
+});
+
+test("Back preserves exact unfinished measurements and personal details across remount", () => {
+  const onBack = jest.fn();
+  const props = {
+    onBack, entries: [], settings: DEFAULT_APP_SETTINGS, updateSettings: jest.fn(() => true),
+    saveEntry: jest.fn(() => false), updateEntry: jest.fn(() => false), deleteEntry: jest.fn(() => false),
+    buttonStyle: {}, inputStyle: {}, containerStyle: {},
+  };
+  const first = render(<HealthPage {...props} />);
+  enter("Date", "");
+  enter("Weight", "-4");
+  enter("Notes", "unfinished health note");
+  enter("Date of Birth", "1990-08-30");
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  expect(onBack).toHaveBeenCalledTimes(1);
+  first.unmount();
+
+  render(<HealthPage {...props} />);
+  expect(screen.getByLabelText("Date")).toHaveValue("");
+  expect(screen.getByLabelText("Weight")).toHaveValue(-4);
+  expect(screen.getByLabelText("Notes")).toHaveValue("unfinished health note");
+  expect(screen.getByLabelText("Date of Birth")).toHaveValue("1990-08-30");
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries).toHaveLength(2);
+});
+
+test("failed Health save keeps the draft and a successful retry clears only that draft", () => {
+  const props = {
+    onBack: jest.fn(), entries: [], settings: DEFAULT_APP_SETTINGS, updateSettings: jest.fn(() => true),
+    saveEntry: jest.fn(() => false), updateEntry: jest.fn(() => false), deleteEntry: jest.fn(() => false),
+    buttonStyle: {}, inputStyle: {}, containerStyle: {},
+  };
+  const first = render(<HealthPage {...props} />);
+  enter("Weight", "202");
+  fireEvent.click(screen.getByRole("button", { name: "Save Measurement" }));
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries[0].value.measurements.weight.value).toBe("202");
+  first.unmount();
+
+  props.saveEntry.mockReturnValue({ id: "saved-health" });
+  render(<HealthPage {...props} />);
+  expect(screen.getByLabelText("Weight")).toHaveValue(202);
+  fireEvent.click(screen.getByRole("button", { name: "Save Measurement" }));
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries).toHaveLength(0);
+});
+
+test("Health edit drafts are record-isolated and ignored when the saved baseline changes", () => {
+  const firstEntry = createHealthMeasurementEntry({ date: "2026-08-01", time: "08:00", measurements: { weight: { value: "201", unit: "lb" } }, notes: "first saved" }, { id: "one" }).value;
+  const secondEntry = createHealthMeasurementEntry({ date: "2026-08-02", time: "08:00", measurements: { weight: { value: "202", unit: "lb" } }, notes: "second saved" }, { id: "two" }).value;
+  const first = render(<Harness initialEntries={[firstEntry, secondEntry]} />);
+  const firstCard = screen.getAllByRole("article").find((card) => card.dataset.entryId === "one");
+  fireEvent.click(within(firstCard).getByRole("button", { name: "Edit" }));
+  enter("Notes", "unfinished first");
+  first.unmount();
+
+  const second = render(<Harness initialEntries={[firstEntry, secondEntry]} />);
+  const secondCard = screen.getAllByRole("article").find((card) => card.dataset.entryId === "two");
+  fireEvent.click(within(secondCard).getByRole("button", { name: "Edit" }));
+  expect(screen.getByLabelText("Notes")).toHaveValue("second saved");
+  second.unmount();
+
+  const newerFirst = { ...firstEntry, notes: "newer saved first", updatedAt: "2026-09-10T00:00:00.000Z" };
+  render(<Harness initialEntries={[newerFirst]} />);
+  fireEvent.click(within(screen.getByRole("article")).getByRole("button", { name: "Edit" }));
+  expect(screen.getByLabelText("Notes")).toHaveValue("newer saved first");
+  expect(screen.getByRole("alert")).toHaveTextContent("changed after its unfinished edit was stored");
 });

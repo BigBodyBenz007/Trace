@@ -13,6 +13,7 @@ import {
   createWorkoutTemplate,
   workoutTemplateDraftFromWorkoutEntry,
 } from "../services/workoutTemplate";
+import { readFormDraftCollection, writeFormDraft } from "../services/formDrafts";
 
 const originalRequestAnimationFrame = window.requestAnimationFrame;
 const originalCreateObjectURL = URL.createObjectURL;
@@ -866,6 +867,145 @@ test("keeps templates compact and provides start, schedule, edit, and confirmed 
   } finally {
     confirmSpy.mockRestore();
   }
+});
+
+test("workout-template edits restore exactly, survive failed save, and clear after successful save", () => {
+  const saved = workoutTemplate();
+  const updateWorkoutTemplate = jest.fn(() => ({ status: "error", message: "Storage full" }));
+  const props = renderPageProps({ workoutTemplates: [saved], updateWorkoutTemplate });
+  const first = render(<WorkoutPage {...props} />);
+  fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit Template" }));
+  fireEvent.change(screen.getByLabelText("Template name"), { target: { value: "Unfinished template" } });
+  fireEvent.change(screen.getByLabelText("Template notes (optional)"), { target: { value: "exact draft notes" } });
+  fireEvent.change(screen.getByLabelText("Target reps"), { target: { value: "" } });
+  first.unmount();
+
+  render(<WorkoutPage {...props} />);
+  fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit Template" }));
+  expect(screen.getByLabelText("Template name")).toHaveValue("Unfinished template");
+  expect(screen.getByLabelText("Template notes (optional)")).toHaveValue("exact draft notes");
+  expect(screen.getByLabelText("Target reps")).toHaveValue(null);
+  fireEvent.change(screen.getByLabelText("Target reps"), { target: { value: "12" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Template" }));
+  expect(updateWorkoutTemplate).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("alert")).toHaveTextContent("Storage full");
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain, context }) => domain === "workout-template" && context === `edit:${saved.id}`)).toBe(true);
+
+  updateWorkoutTemplate.mockReturnValue({ status: "saved" });
+  fireEvent.click(screen.getByRole("button", { name: "Save Template" }));
+  expect(updateWorkoutTemplate).toHaveBeenCalledTimes(2);
+  expect(screen.queryByRole("dialog", { name: "Edit Workout Template" })).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain, context }) => domain === "workout-template" && context === `edit:${saved.id}`)).toBe(false);
+});
+
+test("heterogeneous workout templates autosave blank targets and confirmed Cancel cannot recreate the draft", () => {
+  const saved = workoutTemplate();
+  saved.exercises = [
+    saved.exercises[0],
+    {
+      id: "workout-template-exercise:custom-carry",
+      name: "Custom carry",
+      notes: "Grip focus",
+      targetSets: [{
+        id: "workout-template-set:bodyweight",
+        setType: "working",
+        reps: 30,
+        load: { mode: "bodyweight" },
+        notes: "Steady pace",
+      }],
+    },
+  ];
+  const unrelatedContext = {
+    domain: "health-measurement",
+    context: "create",
+    sourceFingerprint: null,
+  };
+  writeFormDraft(localStorage, unrelatedContext, { notes: "" }, { notes: "keep this draft" });
+  const confirm = jest.spyOn(window, "confirm").mockReturnValue(true);
+  try {
+    render(<WorkoutPage {...renderPageProps({ workoutTemplates: [saved] })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Template" }));
+    const dialog = screen.getByRole("dialog", { name: "Edit Workout Template" });
+
+    fireEvent.change(within(dialog).getByLabelText("Template name"), { target: { value: "Mixed unfinished template" } });
+    fireEvent.change(within(dialog).getAllByLabelText("Target reps")[0], { target: { value: "" } });
+    fireEvent.click(within(dialog).getByRole("button", { name: "Add exercise" }));
+
+    expect(within(dialog).queryByText("Trace could not preserve this unfinished workout template. Keep the editor open and try again.")).not.toBeInTheDocument();
+    const stored = readFormDraftCollection(localStorage).entries.find(({ domain, context }) => (
+      domain === "workout-template" && context === `edit:${saved.id}`
+    ));
+    expect(stored.value).toMatchObject({
+      name: "Mixed unfinished template",
+      exercises: [
+        { targetSets: [{ reps: "", load: { mode: "external", amount: 70.5, unit: "lb" } }] },
+        { targetSets: [{ reps: 30, load: { mode: "bodyweight" } }] },
+        { name: "", targetSets: [{ reps: "", load: null }] },
+      ],
+    });
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(confirm).toHaveBeenCalledWith("Cancel this workout template? Your unsaved changes will be lost.");
+    expect(screen.queryByRole("dialog", { name: "Edit Workout Template" })).not.toBeInTheDocument();
+    expect(readFormDraftCollection(localStorage).entries).toEqual([
+      expect.objectContaining({
+        domain: "health-measurement",
+        context: "create",
+        value: { notes: "keep this draft" },
+      }),
+    ]);
+    expect(saved.name).toBe("ARMegddon");
+    expect(saved.exercises).toHaveLength(2);
+    expect(saved.exercises[0].targetSets[0].reps).toBe(10);
+  } finally {
+    confirm.mockRestore();
+  }
+});
+
+test("workout-template Cancel declines without loss and confirmed discard clears only that draft", () => {
+  const saved = workoutTemplate();
+  const confirm = jest.spyOn(window, "confirm").mockReturnValueOnce(false).mockReturnValueOnce(true);
+  try {
+    render(<WorkoutPage {...renderPageProps({ workoutTemplates: [saved] })} />);
+    fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+    fireEvent.click(screen.getByRole("button", { name: "Edit Template" }));
+    fireEvent.change(screen.getByLabelText("Template name"), { target: { value: "Do not lose" } });
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.getByLabelText("Template name")).toHaveValue("Do not lose");
+    expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "workout-template")).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(screen.queryByRole("dialog", { name: "Edit Workout Template" })).not.toBeInTheDocument();
+    expect(JSON.parse(localStorage.getItem("formDrafts")).entries.some(({ domain }) => domain === "workout-template")).toBe(false);
+  } finally {
+    confirm.mockRestore();
+  }
+});
+
+test("workout-template edit drafts are isolated and ignored after the saved baseline changes", () => {
+  const firstTemplate = workoutTemplate();
+  const secondTemplate = workoutTemplate({ id: "workout-template:two", name: "Second template" });
+  const first = render(<WorkoutPage {...renderPageProps({ workoutTemplates: [firstTemplate, secondTemplate] })} />);
+  fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Edit Template" })[0]);
+  fireEvent.change(screen.getByLabelText("Template name"), { target: { value: "Draft for first" } });
+  first.unmount();
+
+  const second = render(<WorkoutPage {...renderPageProps({ workoutTemplates: [firstTemplate, secondTemplate] })} />);
+  fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Edit Template" })[1]);
+  expect(screen.getByLabelText("Template name")).toHaveValue("Second template");
+  second.unmount();
+
+  const newer = { ...firstTemplate, name: "Newer saved first", updatedAt: "2026-09-05T12:00:00.000Z" };
+  render(<WorkoutPage {...renderPageProps({ workoutTemplates: [newer] })} />);
+  fireEvent.click(screen.getByRole("button", { name: "Show templates" }));
+  fireEvent.click(screen.getByRole("button", { name: "Edit Template" }));
+  expect(screen.getByLabelText("Template name")).toHaveValue("Newer saved first");
+  expect(screen.getByRole("alert")).toHaveTextContent("changed after an unfinished edit");
 });
 
 test("a template-origin draft uses the focused editor and returns without discarding progress", async () => {

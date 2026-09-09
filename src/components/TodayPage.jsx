@@ -7,6 +7,13 @@ import {
 import { getExerciseDefinitionError } from "../services/exerciseCatalog";
 import { formatDateOnly } from "../services/dateOnly";
 import { motionScrollBehavior } from "../services/motionPreference";
+import {
+  clearFormDraft,
+  clearFormDraftsForContext,
+  formDraftFingerprint,
+  readFormDraft,
+  writeFormDraft,
+} from "../services/formDrafts";
 import { formatDoseUnit, formatRoute } from "../services/medicationEntry";
 import {
   getPlannedWorkoutError,
@@ -735,9 +742,13 @@ function TodayPage({
   const [internalCalendarOverlayOpen, setInternalCalendarOverlayOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= 600);
   const initialDraftRef = useRef(null);
+  const plannedDraftContextRef = useRef(null);
   const plannedRequestConsumedRef = useRef(onPlannedWorkoutDraftRequestConsumed);
   plannedRequestConsumedRef.current = onPlannedWorkoutDraftRequestConsumed;
   const initialActionDraftRef = useRef(null);
+  const actionDraftContextRef = useRef(null);
+  const initialDoseRescheduleDraftRef = useRef(null);
+  const doseRescheduleContextRef = useRef(null);
   const startButtonRefs = useRef(new Map());
   const doseCompleteButtonRefs = useRef(new Map());
   const protocolCardButtonRefs = useRef(new Map());
@@ -765,17 +776,71 @@ function TodayPage({
 
   useEffect(() => {
     if (!plannedWorkoutDraftRequest?.draft) return;
-    const nextDraft = copyPlanForEditing(plannedWorkoutDraftRequest.draft);
-    initialDraftRef.current = JSON.stringify(nextDraft);
+    const baseDraft = copyPlanForEditing(plannedWorkoutDraftRequest.draft);
+    const context = {
+      domain: "planned-workout",
+      context: `template:${plannedWorkoutDraftRequest.templateId}`,
+      sourceFingerprint: formDraftFingerprint(plannedWorkoutDraftRequest.draft),
+    };
+    const restored = readFormDraft(localStorage, context, baseDraft);
+    const nextDraft = restored.status === "restored" ? restored.value : baseDraft;
+    plannedDraftContextRef.current = context;
+    initialDraftRef.current = JSON.stringify(restored.status === "restored" ? restored.entry.initialValue : baseDraft);
     setDraft(nextDraft);
     setEditingId(null);
     setActiveSearchExerciseId(null);
-    setFormError("");
+    setFormError(restored.status === "conflict"
+      ? "This workout template changed after an unfinished plan was stored, so Trace did not apply the older draft."
+      : restored.status === "malformed" || restored.status === "invalid-value"
+        ? "Trace found malformed unfinished form data and left it unchanged."
+        : "");
     setDraftConflict(null);
     setPreviewPlanId(null);
     setFocusedScheduleItem(null);
     plannedRequestConsumedRef.current(plannedWorkoutDraftRequest.templateId);
   }, [plannedWorkoutDraftRequest]);
+
+  useEffect(() => {
+    if (!draft || !plannedDraftContextRef.current || !initialDraftRef.current) return;
+    try {
+      writeFormDraft(
+        localStorage,
+        plannedDraftContextRef.current,
+        JSON.parse(initialDraftRef.current),
+        draft
+      );
+    } catch (storageFailure) {
+      setFormError("Trace could not preserve this unfinished planned workout. Keep this editor open and try again.");
+    }
+  }, [draft]);
+
+  useEffect(() => {
+    if (!actionDraft || !actionDraftContextRef.current || !initialActionDraftRef.current) return;
+    try {
+      writeFormDraft(
+        localStorage,
+        actionDraftContextRef.current,
+        JSON.parse(initialActionDraftRef.current),
+        actionDraft
+      );
+    } catch (storageFailure) {
+      setFormError("Trace could not preserve this unfinished daily action. Keep this editor open and try again.");
+    }
+  }, [actionDraft]);
+
+  useEffect(() => {
+    if (!doseRescheduleDraft || !doseRescheduleContextRef.current || !initialDoseRescheduleDraftRef.current) return;
+    try {
+      writeFormDraft(
+        localStorage,
+        doseRescheduleContextRef.current,
+        initialDoseRescheduleDraftRef.current,
+        doseRescheduleDraft
+      );
+    } catch (storageFailure) {
+      setFormError("Trace could not preserve this unfinished dose reschedule. Keep this form open and try again.");
+    }
+  }, [doseRescheduleDraft]);
 
   useEffect(() => {
     const updateLayout = () => setIsMobile(window.innerWidth <= 600);
@@ -877,29 +942,47 @@ function TodayPage({
 
   function openCreate() {
     if (isCalendarView && !isCalendarDayOpen) openCalendarDay(document.activeElement);
-    const nextDraft = {
+    const baseDraft = {
       scheduledDate: todayKey,
       title: "",
       notes: "",
       exercises: [emptyPlannedExercise()],
     };
-    initialDraftRef.current = JSON.stringify(nextDraft);
+    const context = { domain: "planned-workout", context: "create", sourceFingerprint: null };
+    const restored = readFormDraft(localStorage, context, baseDraft);
+    const nextDraft = restored.status === "restored" ? restored.value : baseDraft;
+    plannedDraftContextRef.current = context;
+    initialDraftRef.current = JSON.stringify(restored.status === "restored" ? restored.entry.initialValue : baseDraft);
     setDraft(nextDraft);
     setEditingId(null);
     setActiveSearchExerciseId(null);
-    setFormError("");
+    setFormError(restored.status === "malformed" || restored.status === "invalid-value"
+      ? "Trace found malformed unfinished form data and left it unchanged."
+      : "");
     setDraftConflict(null);
     setPreviewPlanId(null);
     setFocusedScheduleItem(null);
   }
 
   function openEdit(plan) {
-    const nextDraft = copyPlanForEditing(plan);
-    initialDraftRef.current = JSON.stringify(nextDraft);
+    const baseDraft = copyPlanForEditing(plan);
+    const context = {
+      domain: "planned-workout",
+      context: `edit:${plan.id}`,
+      sourceFingerprint: formDraftFingerprint(plan),
+    };
+    const restored = readFormDraft(localStorage, context, baseDraft);
+    const nextDraft = restored.status === "restored" ? restored.value : baseDraft;
+    plannedDraftContextRef.current = context;
+    initialDraftRef.current = JSON.stringify(restored.status === "restored" ? restored.entry.initialValue : baseDraft);
     setDraft(nextDraft);
     setEditingId(plan.id);
     setActiveSearchExerciseId(null);
-    setFormError("");
+    setFormError(restored.status === "conflict"
+      ? "This planned workout changed after an unfinished edit was stored, so Trace did not apply the older draft."
+      : restored.status === "malformed" || restored.status === "invalid-value"
+        ? "Trace found malformed unfinished form data and left it unchanged."
+        : "");
     setDraftConflict(null);
     setPreviewPlanId(null);
   }
@@ -910,6 +993,7 @@ function TodayPage({
     setActiveSearchExerciseId(null);
     setFormError("");
     initialDraftRef.current = null;
+    plannedDraftContextRef.current = null;
   }
 
   function openPreview(plan) {
@@ -930,27 +1014,46 @@ function TodayPage({
 
   function openActionCreate() {
     if (isCalendarView && !isCalendarDayOpen) openCalendarDay(document.activeElement);
-    const nextDraft = emptyActionDraft(todayKey);
-    initialActionDraftRef.current = JSON.stringify(nextDraft);
+    const baseDraft = emptyActionDraft(todayKey);
+    const context = { domain: "daily-action", context: "create", sourceFingerprint: null };
+    const restored = readFormDraft(localStorage, context, baseDraft);
+    const nextDraft = restored.status === "restored" ? restored.value : baseDraft;
+    actionDraftContextRef.current = context;
+    initialActionDraftRef.current = JSON.stringify(restored.status === "restored" ? restored.entry.initialValue : baseDraft);
     setActionDraft(nextDraft);
     setActionEditingId(null);
     setFocusedScheduleItem(null);
-    setFormError("");
+    setFormError(restored.status === "malformed" || restored.status === "invalid-value"
+      ? "Trace found malformed unfinished form data and left it unchanged."
+      : "");
   }
 
   function openActionEdit(action) {
-    const nextDraft = actionDraftFromRecord(action);
-    initialActionDraftRef.current = JSON.stringify(nextDraft);
+    const baseDraft = actionDraftFromRecord(action);
+    const context = {
+      domain: "daily-action",
+      context: `edit:${action.id}`,
+      sourceFingerprint: formDraftFingerprint(action),
+    };
+    const restored = readFormDraft(localStorage, context, baseDraft);
+    const nextDraft = restored.status === "restored" ? restored.value : baseDraft;
+    actionDraftContextRef.current = context;
+    initialActionDraftRef.current = JSON.stringify(restored.status === "restored" ? restored.entry.initialValue : baseDraft);
     setActionDraft(nextDraft);
     setActionEditingId(action.id);
     setFocusedScheduleItem({ type: "daily-action", id: action.id });
-    setFormError("");
+    setFormError(restored.status === "conflict"
+      ? "This daily action changed after an unfinished edit was stored, so Trace did not apply the older draft."
+      : restored.status === "malformed" || restored.status === "invalid-value"
+        ? "Trace found malformed unfinished form data and left it unchanged."
+        : "");
   }
 
   function closeActionEditor() {
     setActionDraft(null);
     setActionEditingId(null);
     initialActionDraftRef.current = null;
+    actionDraftContextRef.current = null;
     setFormError("");
   }
 
@@ -961,26 +1064,45 @@ function TodayPage({
       hasUnsavedChanges
       && !window.confirm("Cancel this daily action? Your unsaved changes will be lost.")
     ) return;
+    try {
+      if (actionDraftContextRef.current) clearFormDraft(localStorage, actionDraftContextRef.current);
+    } catch (storageFailure) {
+      setFormError("Trace could not discard this unfinished daily action. It was left available for recovery.");
+      return;
+    }
     closeActionEditor();
     if (isCalendarView) closeFocusedItem();
   }
 
   function returnToOriginSchedule() {
-    if (
-      draft
-      && JSON.stringify(draft) !== initialDraftRef.current
-      && !window.confirm("Cancel planning this workout? Your unsaved changes will be lost.")
-    ) return false;
-    if (
-      actionDraft
-      && JSON.stringify(actionDraft) !== initialActionDraftRef.current
-      && !window.confirm("Cancel this daily action? Your unsaved changes will be lost.")
-    ) return false;
+    if (!persistOpenEditors()) return false;
     if (draft) closeEditor();
     if (actionDraft) closeActionEditor();
     closePreview();
     closeFocusedItem();
     return true;
+  }
+
+  function persistOpenEditors() {
+    try {
+      if (draft && plannedDraftContextRef.current && initialDraftRef.current) {
+        writeFormDraft(localStorage, plannedDraftContextRef.current, JSON.parse(initialDraftRef.current), draft);
+      }
+      if (actionDraft && actionDraftContextRef.current && initialActionDraftRef.current) {
+        writeFormDraft(localStorage, actionDraftContextRef.current, JSON.parse(initialActionDraftRef.current), actionDraft);
+      }
+      if (doseRescheduleDraft && doseRescheduleContextRef.current && initialDoseRescheduleDraftRef.current) {
+        writeFormDraft(localStorage, doseRescheduleContextRef.current, initialDoseRescheduleDraftRef.current, doseRescheduleDraft);
+      }
+      return true;
+    } catch (storageFailure) {
+      setFormError("Trace could not preserve the unfinished form. Keep this page open and try again.");
+      return false;
+    }
+  }
+
+  function backToTimeline() {
+    if (persistOpenEditors()) onBack();
   }
 
   function closeCalendarOverlay() {
@@ -998,6 +1120,12 @@ function TodayPage({
       : createDailyAction(recordDraft);
     if (result?.status !== "saved") {
       setFormError(result?.message || "The daily action could not be saved.");
+      return;
+    }
+    try {
+      if (actionDraftContextRef.current) clearFormDraft(localStorage, actionDraftContextRef.current);
+    } catch (storageFailure) {
+      setFormError("The daily action was saved, but Trace could not clear its unfinished draft. Reload and verify it before saving again.");
       return;
     }
     const wasEditing = Boolean(actionEditingId);
@@ -1212,12 +1340,27 @@ function TodayPage({
   }
 
   function openDoseReschedule(scheduleItem) {
-    setDoseRescheduleDraft({
+    const baseDraft = {
       id: scheduleItem.id,
       date: scheduleItem.doseOccurrence.scheduledDate,
       time: scheduleItem.doseOccurrence.time,
-    });
-    setFormError("");
+    };
+    const context = {
+      domain: "dose-reschedule",
+      context: `occurrence:${scheduleItem.id}`,
+      sourceFingerprint: formDraftFingerprint(scheduleItem.doseOccurrence),
+    };
+    const restored = readFormDraft(localStorage, context, baseDraft);
+    doseRescheduleContextRef.current = context;
+    initialDoseRescheduleDraftRef.current = restored.status === "restored"
+      ? restored.entry.initialValue
+      : baseDraft;
+    setDoseRescheduleDraft(restored.status === "restored" ? restored.value : baseDraft);
+    setFormError(restored.status === "conflict"
+      ? "This scheduled dose changed after an unfinished reschedule was stored, so Trace did not apply the older draft."
+      : restored.status === "malformed" || restored.status === "invalid-value"
+        ? "Trace found malformed unfinished form data and left it unchanged."
+        : "");
   }
 
   function saveDoseReschedule(event, scheduleItem) {
@@ -1244,7 +1387,15 @@ function TodayPage({
       setFormError(result?.message || "The scheduled dose could not be rescheduled.");
       return;
     }
+    try {
+      if (doseRescheduleContextRef.current) clearFormDraft(localStorage, doseRescheduleContextRef.current);
+    } catch (storageFailure) {
+      setFormError("The dose was rescheduled, but Trace could not clear its unfinished draft. Reload and verify it before trying again.");
+      return;
+    }
     setDoseRescheduleDraft(null);
+    doseRescheduleContextRef.current = null;
+    initialDoseRescheduleDraftRef.current = null;
     setFormError("");
     showToast(`${scheduleItem.doseOccurrence.snapshot.name} rescheduled.`);
     if (isCalendarView) closeFocusedItem();
@@ -1257,6 +1408,11 @@ function TodayPage({
     if (result?.status !== "saved") {
       setFormError(result?.message || "The scheduled dose could not be removed.");
       return;
+    }
+    try {
+      clearFormDraftsForContext(localStorage, "dose-reschedule", `occurrence:${scheduleItem.id}`);
+    } catch (storageFailure) {
+      setFormError("The occurrence was removed, but an older unfinished reschedule could not be cleared. It will not be restored without its source occurrence.");
     }
     setFormError("");
     showToast(`${name} occurrence removed.`);
@@ -1338,9 +1494,30 @@ function TodayPage({
       setFormError("The daily action could not be deleted.");
       return;
     }
+    try {
+      clearFormDraftsForContext(localStorage, "daily-action", `edit:${action.id}`);
+    } catch (storageFailure) {
+      setFormError("The action was deleted, but an older unfinished edit could not be cleared. It will not be restored without its saved record.");
+    }
     closeActionEditor();
     closeFocusedItem();
     showToast("Daily action deleted.");
+  }
+
+  function cancelDoseReschedule() {
+    const changed = doseRescheduleDraft && initialDoseRescheduleDraftRef.current &&
+      formDraftFingerprint(doseRescheduleDraft) !== formDraftFingerprint(initialDoseRescheduleDraftRef.current);
+    if (changed && !window.confirm("Cancel this dose reschedule? Your unsaved changes will be lost.")) return;
+    try {
+      if (doseRescheduleContextRef.current) clearFormDraft(localStorage, doseRescheduleContextRef.current);
+    } catch (storageFailure) {
+      setFormError("Trace could not discard this unfinished dose reschedule. It was left available for recovery.");
+      return;
+    }
+    setDoseRescheduleDraft(null);
+    doseRescheduleContextRef.current = null;
+    initialDoseRescheduleDraftRef.current = null;
+    setFormError("");
   }
 
   function cancelEditor() {
@@ -1350,6 +1527,12 @@ function TodayPage({
       hasUnsavedChanges
       && !window.confirm("Cancel planning this workout? Your unsaved changes will be lost.")
     ) {
+      return;
+    }
+    try {
+      if (plannedDraftContextRef.current) clearFormDraft(localStorage, plannedDraftContextRef.current);
+    } catch (storageFailure) {
+      setFormError("Trace could not discard this unfinished planned workout. It was left available for recovery.");
       return;
     }
     closeEditor();
@@ -1569,6 +1752,12 @@ function TodayPage({
       setFormError(result?.message || "The planned workout could not be saved.");
       return;
     }
+    try {
+      if (plannedDraftContextRef.current) clearFormDraft(localStorage, plannedDraftContextRef.current);
+    } catch (storageFailure) {
+      setFormError("The planned workout was saved, but Trace could not clear its unfinished draft. Reload and verify it before saving again.");
+      return;
+    }
     setPendingDeletion(null);
     showToast(editingId ? "Planned workout updated." : "Planned workout created.");
     closeEditor();
@@ -1581,6 +1770,11 @@ function TodayPage({
     if (!deletePlannedWorkout(plan.id)) {
       setFormError("The planned workout could not be deleted.");
       return;
+    }
+    try {
+      clearFormDraftsForContext(localStorage, "planned-workout", `edit:${plan.id}`);
+    } catch (storageFailure) {
+      setFormError("The workout was deleted, but an older unfinished edit could not be cleared. It will not be restored without its saved record.");
     }
     setPendingDeletion({
       plannedWorkout: plan,
@@ -1893,7 +2087,7 @@ function TodayPage({
       </header>
 
       <nav className="trace-today-page__actions" aria-label={(draft || actionDraft || previewPlan || focusedScheduleItem) ? "Focused event navigation" : isCalendarView ? "Calendar navigation" : "Today navigation"}>
-        <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={backStyle}>
+        <button className="trace-action trace-action--secondary" type="button" onClick={backToTimeline} style={backStyle}>
           Back to Timeline
         </button>
         {(draft || actionDraft || previewPlan || focusedScheduleItem) && (
@@ -2332,7 +2526,7 @@ function TodayPage({
                   {formError && <p role="alert" className="trace-today-page__error">{formError}</p>}
                   <div className="trace-today-exercise__actions">
                     <button className="trace-action trace-action--primary" type="submit" style={compactButtonStyle}>Save reschedule</button>
-                    <button className="trace-action trace-action--secondary" type="button" onClick={() => { setDoseRescheduleDraft(null); setFormError(""); }} style={compactButtonStyle}>Cancel</button>
+                    <button className="trace-action trace-action--secondary" type="button" onClick={cancelDoseReschedule} style={compactButtonStyle}>Cancel</button>
                   </div>
                 </form>
               ) : (
@@ -2401,7 +2595,7 @@ function TodayPage({
               </section>
             )}
           </section>
-          <button className="trace-action trace-action--secondary" type="button" onClick={onBack} style={backStyle}>Back to Timeline</button>
+          <button className="trace-action trace-action--secondary" type="button" onClick={backToTimeline} style={backStyle}>Back to Timeline</button>
         </>
       )}
           </section>

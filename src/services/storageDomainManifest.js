@@ -52,6 +52,7 @@ export const TRACE_STORAGE_DOMAIN_MANIFEST = Object.freeze([
   durableLocalStorage("plannedWorkouts", "plannedWorkout", "Planned workouts and Today workout state."),
   durableLocalStorage("workoutTemplates", "workoutTemplate", "Reusable workout templates and editable target guidance."),
   durableLocalStorage("dailyActions", "dailyAction", "Versioned Today actions."),
+  durableLocalStorage("formDrafts", "formDrafts", "Versioned unfinished create/edit form drafts, isolated by domain and record context."),
   durableLocalStorage("memoryDraft", "memoryDraft / App", "Unfinished Add Memory fields and IndexedDB staged-photo references."),
   durableLocalStorage("workoutDraft", "workoutDraft", "Active workout draft, including its persistent start time."),
   durableLocalStorage("workoutEntries", "App", "Workout history and IndexedDB photo references."),
