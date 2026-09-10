@@ -35,6 +35,7 @@ export function searchFoods(
   };
   const relevanceScore = (food) => {
     const foodName = normalizeFoodQuery(food.name);
+    const foodBrand = normalizeFoodQuery(food.brand);
     const foodNameWords = foodName.split(" ").filter(Boolean);
     const directNameMatch = fieldMatches(foodName);
     const leadingModifiers = new Set([
@@ -46,7 +47,11 @@ export function searchFoods(
     const preparationOnlyMatch = food.sourceType === "grocery"
       && queryTokens.every((token) => preparationWords.some((word) => word.startsWith(token)));
 
-    if ((food.searchAliases || []).some((alias) => normalizeFoodQuery(alias) === normalizedQuery)) return -1;
+    if (
+      (foodBrand && foodName === normalizedQuery)
+      || (food.searchAliases || []).some((alias) => normalizeFoodQuery(alias) === normalizedQuery)
+    ) return -1;
+    if (foodBrand === normalizedQuery) return 0;
     if (
       directNameMatch
       && !preparationOnlyMatch
@@ -55,7 +60,7 @@ export function searchFoods(
         || (leadingModifiers.has(foodNameWords[0]) && queryTokens.every((token) => foodName.includes(token)))
       )
     ) return 0;
-    if ((food.searchAliases || []).some(fieldMatches)) return 0;
+    if (queryTokens.length > 1 && (food.searchAliases || []).some(fieldMatches)) return 0;
     if (fieldMatches(food.restaurant?.name)) return 0;
     if (directNameMatch && !preparationOnlyMatch) return 1;
     if (fieldMatches(`${food.restaurant?.name || ""} ${food.name}`)) return preparationOnlyMatch ? 2 : 1;

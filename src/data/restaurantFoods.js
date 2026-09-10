@@ -574,6 +574,7 @@ const braumsFoods = [
 const TACO_BELL_SOURCE = "https://www.tacobell.com/nutrition/info";
 const CHICK_FIL_A_SOURCE = "https://www.chick-fil-a.com/nutrition-allergens";
 const WHATABURGER_SOURCE = "https://whataburger.com/menu";
+const WHATABURGER_NUTRITION_SOURCE = "https://wbimageserver.whataburger.com/Nutrition.pdf";
 
 const tacoBell = { id: "taco-bell", name: "Taco Bell" };
 const tacoBellFood = (id, name, description, nutrients) => officialFood(tacoBell, id, name, description, nutrients, TACO_BELL_SOURCE, "Taco Bell Full Nutrition Info; displayed values from the nutrition menu embedded by Taco Bell");
@@ -588,6 +589,43 @@ const tacoBellExpansionFood = (id, name, description, calories, sourceUrl, sourc
   undefined,
   { status: "partial", accessedAt: CATALOG_EXPANSION_CHECKED_AT }
 );
+const TACO_BELL_CURRENT_REFERENCE = "Taco Bell current U.S. menu and item pages; the selected page publishes the standard item, size or piece count and calories, while the full nutrition endpoint was inaccessible, so unpublished nutrients remain unknown";
+const tacoBellCurrentFood = (id, name, description, calories, sourcePath, searchAliases) => {
+  const food = officialFood(
+    tacoBell,
+    id,
+    name,
+    description,
+    { calories },
+    sourcePath.startsWith("http") ? sourcePath : `https://www.tacobell.com/food/${sourcePath}`,
+    TACO_BELL_CURRENT_REFERENCE,
+    undefined,
+    { status: "partial", accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+};
+const tacoBellCurrentOption = (id, description, calories, sourcePath, amount = 1) => {
+  const sourceUrl = sourcePath.startsWith("http") ? sourcePath : `https://www.tacobell.com/food/${sourcePath}`;
+  const option = officialOption(tacoBell.id, id, description, { calories }, amount, sourceUrl, TACO_BELL_CURRENT_REFERENCE);
+  option.provenance.verification.accessedAt = CURRENT_EXPANSION_CHECKED_AT;
+  option.provenance.verification.status = "partial";
+  return option;
+};
+const tacoBellSizedCurrentFood = (id, name, options, sourcePath, searchAliases) => {
+  const sourceUrl = sourcePath.startsWith("http") ? sourcePath : `https://www.tacobell.com/food/${sourcePath}`;
+  const food = officialFood(
+    tacoBell,
+    id,
+    name,
+    options[0][1],
+    null,
+    sourceUrl,
+    TACO_BELL_CURRENT_REFERENCE,
+    options.map(([optionId, description, calories, amount = 1]) => tacoBellCurrentOption(`${id}:${optionId}`, description, calories, sourcePath, amount)),
+    { status: "partial", accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+};
 const tacoBellFoods = [
   tacoBellFood("crunchy-taco", "Crunchy Taco", "1 taco", { calories: 170, protein: 7, carbohydrates: 13, fat: 9, sodium: 310 }),
   tacoBellFood("soft-taco", "Soft Taco", "1 taco", { calories: 180, protein: 9, carbohydrates: 18, fat: 8, sodium: 500 }),
@@ -614,6 +652,115 @@ const tacoBellFoods = [
   tacoBellExpansionFood("black-beans-and-rice", "Black Beans and Rice", "1 order: slow-simmered black beans with seasoned rice", 160, "https://www.tacobell.com/food/sides-sweets/black-beans-and-rice", "Taco Bell current U.S. Black Beans and Rice item page"),
   tacoBellExpansionFood("cinnabon-delights-2-pack", "Cinnabon Delights\u00ae 2 Pack", "2 pastries with Cinnabon frosting filling and cinnamon-sugar coating", 170, "https://www.tacobell.com/food/sides-sweets/cinnabon-delights-2-pack", "Taco Bell current U.S. Cinnabon Delights 2 Pack item page"),
   tacoBellExpansionFood("black-bean-crunchwrap-supreme", "Black Bean Crunchwrap Supreme\u00ae", "1 Crunchwrap: flour tortilla, black beans, nacho cheese sauce, tostada shell, lettuce, tomatoes and reduced-fat sour cream", 520, "https://www.tacobell.com/food/specialties/black-bean-crunchwrap-supreme", "Taco Bell current U.S. Black Bean Crunchwrap Supreme item page"),
+  ...[
+    ["cantina-chicken-crispy-taco", "Cantina Chicken Crispy Taco", "1 taco: white-corn shell, slow-roasted chicken, three-cheese blend and Creamy Jalape\u00f1o sauce; separately served salsa packets are not included", 320, "tacos"],
+    ["cantina-chicken-soft-taco", "Cantina Chicken Soft Taco", "1 taco: flour tortilla, slow-roasted chicken, lettuce, purple cabbage, pico de gallo and Avocado Ranch sauce; separately served salsa packets are not included", 260, "tacos"],
+    ["black-bean-chalupa-supreme", "Black Bean Chalupa Supreme", "1 chalupa: flatbread shell, black beans, lettuce, tomatoes, three-cheese blend and reduced-fat sour cream", 340, "tacos"],
+    ["doritos-cheesy-gordita-crunch", "Doritos\u00ae Cheesy Gordita Crunch - Nacho Cheese", "1 gordita: flatbread, three-cheese blend, Nacho Cheese Doritos shell, seasoned beef, Spicy Ranch, lettuce and cheddar cheese", 480, "tacos"],
+    ["naked-chicken-chalupa", "Naked Chicken Chalupa", "1 current featured chalupa in Taco Bell's published standard configuration; customizations excluded", 430, "tacos"],
+    ["tajin-taco", "Taj\u00edn\u00ae Taco", "1 current featured taco in Taco Bell's published standard configuration; customizations excluded", 210, "tacos", ["Tajin Taco"]],
+    ["tajin-cheesy-gordita-crunch", "Taj\u00edn\u00ae Cheesy Gordita Crunch", "1 current featured gordita in Taco Bell's published standard configuration; customizations excluded", 460, "tacos", ["Tajin Cheesy Gordita Crunch"]],
+    ["cantina-chicken-burrito", "Cantina Chicken Burrito", "1 burrito: flour tortilla, double slow-roasted chicken, Avocado Ranch, Creamy Chipotle sauce, lettuce, purple cabbage, pico de gallo and cheddar; salsa packet not included", 570, "burritos"],
+    ["cheesy-double-beef-burrito", "Cheesy Double Beef Burrito", "1 burrito: flour tortilla, seasoned beef, reduced-fat sour cream, three-cheese blend, nacho cheese, seasoned rice and fiesta strips", 560, "burritos"],
+    ["grilled-cheese-burrito", "Grilled Cheese Burrito", "1 burrito: flour tortilla, seasoned beef, nacho cheese, seasoned rice, fiesta strips, Creamy Chipotle sauce, reduced-fat sour cream and three-cheese blend grilled on top", 690, "burritos"],
+    ["black-bean-grilled-cheese-burrito", "Black Bean Grilled Cheese Burrito", "1 burrito: flour tortilla, black beans, nacho cheese, seasoned rice, fiesta strips, Creamy Chipotle sauce, reduced-fat sour cream and three-cheese blend grilled on top", 680, "burritos"],
+    ["chipotle-chicken-loaded-griller", "Chipotle Chicken Loaded Griller", "1 current published loaded griller in the standard configuration; customizations excluded", 450, "burritos"],
+    ["quesarito", "Quesarito", "1 current published Quesarito in the standard configuration; customizations excluded", 610, "burritos"],
+    ["beefy-crunch-burrito", "Beefy Crunch Burrito", "1 current published burrito in the standard configuration; customizations excluded", 450, "burritos"],
+    ["beefy-potato-loaded-griller", "Beefy Potato Loaded Griller", "1 current published loaded griller in the standard configuration; customizations excluded", 480, "burritos"],
+    ["chili-cheese-burrito", "Chili Cheese Burrito", "1 current published burrito with chili and cheese; customizations excluded", 380, "burritos"],
+    ["melty-pepper-jack-steak-burrito", "Melty Pepper Jack Steak Burrito", "1 current published steak burrito in the standard configuration; customizations excluded", 440, "burritos"],
+    ["fresca-pepper-jack-steak-burrito", "Fresca Pepper Jack Steak Burrito", "1 current published steak burrito in the standard configuration; customizations excluded", 500, "burritos"],
+    ["cantina-chicken-rolled-quesadilla", "Cantina Chicken Rolled Quesadilla", "1 rolled quesadilla with slow-roasted chicken and Taco Bell's published standard fillings; customizations excluded", 650, "quesadillas"],
+    ["cheese-quesadilla", "Cheese Quesadilla", "1 flour-tortilla quesadilla with Taco Bell's standard melted cheese blend and Creamy Jalape\u00f1o sauce", 440, "quesadillas"],
+    ["cantina-chicken-bowl", "Cantina Chicken Bowl", "1 bowl: slow-roasted chicken, seasoned rice, black beans, Avocado Ranch, reduced-fat sour cream, lettuce, purple cabbage, pico de gallo, guacamole and cheddar; salsa packet not included", 520, "bowls"],
+    ["veggie-bowl", "Veggie Bowl", "1 bowl: seasoned rice, black beans, lettuce, purple cabbage, pico de gallo, guacamole, Avocado Ranch, reduced-fat sour cream and cheddar", 410, "bowls"],
+    ["chili-cheese-nacho-fries", "Chili Cheese Nacho Fries", "1 current published order of seasoned fries with chili and cheese; customizations excluded", 460, "specialties"],
+    ["meximelt", "Meximelt\u00ae", "1 current published Meximelt in the standard configuration; customizations excluded", 250, "specialties"],
+    ["chicken-enchilada-nacho-fries", "Chicken Enchilada Nacho Fries", "1 current published order of seasoned fries in the chicken enchilada configuration; customizations excluded", 500, "specialties"],
+    ["mini-taco-salad", "Mini Taco Salad", "1 current published mini taco salad in the standard configuration; dressing or customizations not added", 280, "specialties"],
+    ["avocado-ranch-chicken-stacker", "Avocado Ranch Chicken Stacker", "1 current published chicken stacker with Avocado Ranch sauce; customizations excluded", 350, "specialties"],
+    ["three-cheese-chicken-flatbread-melt", "3 Cheese Chicken Flatbread Melt", "1 flatbread melt with chicken and three-cheese blend; customizations excluded", 320, "specialties", ["Three Cheese Chicken Flatbread Melt"]],
+    ["veggie-mexican-pizza", "Veggie Mexican Pizza", "1 vegetarian Mexican Pizza in Taco Bell's published standard configuration; customizations excluded", 460, "specialties"],
+    ["grande-nachos-seasoned-beef", "Grande Nachos - Seasoned Beef", "1 current featured order of Grande Nachos with seasoned beef in Taco Bell's published standard configuration; customizations excluded", 1110, "featured"],
+    ["large-pineapple-freeze", "Large Pineapple Freeze", "1 large current featured Pineapple Freeze; custom additions excluded", 190, "featured"],
+    ["large-mountain-dew-baja-midnight-dirty-soda", "Large MOUNTAIN DEW BAJA MIDNIGHT Dirty Soda", "1 large current featured dirty soda in Taco Bell's published standard configuration; customizations excluded", 470, "featured"],
+    ["large-pepsi-dirty-soda", "Large PEPSI Dirty Soda", "1 large current featured dirty soda in Taco Bell's published standard configuration; customizations excluded", 430, "featured"],
+    ["large-tropicana-original-dirty-lemonade", "Large TROPICANA Original Dirty Lemonade", "1 large current featured dirty lemonade in Taco Bell's published standard configuration; customizations excluded", 170, "featured"],
+    ["caramel-apple-empanada", "Caramel Apple Empanada", "1 empanada", 290, "snacks-sweets"],
+    ["chips-and-guacamole", "Chips and Guacamole", "1 order: tortilla chips with one side of guacamole", 230, "snacks-sweets"],
+    ["chili-side", "Chili", "1 side order", 60, "snacks-sweets"],
+    ["black-beans", "Black Beans", "1 side order", 50, "snacks-sweets"],
+    ["pintos-n-cheese", "Pintos N Cheese", "1 side order", 170, "snacks-sweets", ["Pintos and Cheese"]],
+    ["cinnabon-delights-12-pack", "Cinnabon Delights\u00ae 12 Pack", "12 pastries with Cinnabon frosting filling and cinnamon-sugar coating", 1010, "snacks-sweets"],
+  ].map(([id, name, description, calories, sourcePath, searchAliases]) => tacoBellCurrentFood(id, name, description, calories, sourcePath, searchAliases)),
+  tacoBellSizedCurrentFood("nacho-fries", "Nacho Fries", [
+    ["regular", "Regular order of seasoned Nacho Fries; dipping sauce not included", 350],
+    ["large", "Large order of seasoned Nacho Fries; dipping sauce not included", 500],
+  ], "specialties", ["Taco Bell Nacho Fries"]),
+  ...[
+    ["avocado-verde-salsa-sauce-packet", "Avocado Verde Salsa Sauce Packet", 50],
+    ["mild-sauce-packet", "Mild Sauce Packet", 0],
+    ["hot-sauce-packet", "Hot Sauce Packet", 0],
+    ["fire-sauce-packet", "Fire Sauce Packet", 0],
+    ["diablo-sauce-packet", "Diablo Sauce Packet", 0],
+    ["tajin-seasoning-packet", "Taj\u00edn\u00ae Seasoning Packet", 0, ["Tajin Seasoning Packet"]],
+    ["jalapeno-peppers", "Jalape\u00f1o Peppers", 0, ["Jalapeno Peppers"]],
+    ["chipotle-bacon-side", "Chipotle Bacon", 5],
+    ["pepper-jack-sauce-side", "Pepper Jack Sauce", 200],
+    ["nacho-cheese-sauce-side", "Nacho Cheese Sauce", 60],
+    ["reduced-fat-sour-cream-side", "Reduced-Fat Sour Cream", 35],
+    ["creamy-jalapeno-sauce-side", "Creamy Jalape\u00f1o Sauce", 180, ["Creamy Jalapeno Sauce"]],
+    ["guacamole-side", "Guacamole", 70],
+    ["chipotle-sauce-side", "Chipotle Sauce", 200],
+    ["avocado-ranch-sauce-side", "Avocado Ranch Sauce", 220],
+    ["spicy-ranch-side", "Spicy Ranch", 200],
+    ["red-sauce-side", "Red Sauce", 15],
+    ["mexican-pizza-sauce-side", "Mexican Pizza Sauce", 15],
+  ].map(([id, name, calories, searchAliases]) => tacoBellCurrentFood(id, name, `1 separately sold side or packet of ${name}; no other food included`, calories, "snacks-sweets", searchAliases)),
+  ...[
+    ["cheesy-toasted-breakfast-burrito-bacon", "Cheesy Toasted Breakfast Burrito Bacon", "1 burrito: flour tortilla, eggs, nacho cheese sauce and bacon", 350],
+    ["cheesy-toasted-breakfast-burrito-sausage", "Cheesy Toasted Breakfast Burrito Sausage", "1 burrito: flour tortilla, eggs, nacho cheese sauce and sausage", 350],
+    ["cheesy-toasted-breakfast-burrito-potato", "Cheesy Toasted Breakfast Burrito Potato", "1 burrito: flour tortilla, eggs, nacho cheese sauce and potatoes", 340],
+    ["grande-toasted-breakfast-burrito-steak", "Grande Toasted Breakfast Burrito Steak", "1 burrito: flour tortilla, eggs, potatoes, three-cheese blend, tomatoes and steak", 560],
+    ["grande-toasted-breakfast-burrito-sausage", "Grande Toasted Breakfast Burrito Sausage", "1 burrito: flour tortilla, eggs, potatoes, three-cheese blend, tomatoes and sausage", 570],
+    ["grande-toasted-breakfast-burrito-bacon", "Grande Toasted Breakfast Burrito Bacon", "1 burrito: flour tortilla, eggs, potatoes, three-cheese blend, tomatoes and bacon", 570],
+    ["breakfast-quesadilla-sausage", "Breakfast Quesadilla Sausage", "1 flour-tortilla quesadilla with eggs, three-cheese blend and sausage", 500],
+    ["breakfast-quesadilla-bacon", "Breakfast Quesadilla Bacon", "1 flour-tortilla quesadilla with eggs, three-cheese blend and bacon", 500],
+    ["breakfast-quesadilla-steak", "Breakfast Quesadilla Steak", "1 flour-tortilla quesadilla with eggs, three-cheese blend and steak", 500],
+    ["breakfast-california-crunchwrap", "Breakfast California Crunchwrap", "1 breakfast Crunchwrap with eggs, bacon, hash brown, guacamole, tomatoes and cheese", 640],
+    ["breakfast-crunchwrap-bacon", "Breakfast Crunchwrap Bacon", "1 breakfast Crunchwrap with eggs, bacon, hash brown, cheese and Creamy Jalape\u00f1o sauce", 660],
+    ["breakfast-crunchwrap-sausage", "Breakfast Crunchwrap Sausage", "1 breakfast Crunchwrap with eggs, sausage patty, hash brown, cheese and Creamy Jalape\u00f1o sauce", 740],
+    ["hash-brown", "Hash Brown", "1 breakfast hash brown", 170],
+    ["premium-hot-coffee", "Premium Hot Coffee", "1 restaurant cup, black; additions not included", 0],
+    ["hot-cinnabon-delights-coffee", "Hot Cinnabon Delights\u00ae Coffee", "1 restaurant cup in the published standard flavored configuration", 160],
+    ["regular-iced-coffee", "Regular Iced Coffee", "1 restaurant cup, unsweetened standard configuration; additions not included", 0],
+    ["iced-cinnabon-delights-coffee", "Iced Cinnabon Delights\u00ae Coffee", "1 restaurant cup in the published standard flavored configuration", 160],
+    ["breakfast-salsa", "Breakfast Salsa", "1 packet", 0],
+  ].map(([id, name, description, calories]) => tacoBellCurrentFood(id, name, description, calories, "breakfast")),
+  ...[
+    ["large-pepsi", "Large Pepsi\u00ae", 380],
+    ["large-diet-pepsi", "Large Diet Pepsi\u00ae", 0],
+    ["large-pepsi-zero-sugar", "Large Pepsi\u00ae Zero Sugar", 0],
+    ["large-cherry-pepsi", "Large Cherry Pepsi\u00ae", 390],
+    ["large-mtn-dew", "Large MTN DEW\u00ae", 420, "Mountain Dew"],
+    ["large-mtn-dew-zero", "Large MTN DEW\u00ae Zero", 5, "Mountain Dew"],
+    ["large-mtn-dew-baja-blast", "Large MTN DEW\u00ae Baja Blast\u00ae", 410, "Mountain Dew"],
+    ["large-mtn-dew-baja-blast-zero-sugar", "Large MTN DEW\u00ae Baja Blast\u00ae Zero Sugar", 15, "Mountain Dew"],
+    ["large-mug-root-beer", "Large Mug\u00ae Root Beer", 360],
+    ["large-starry", "Large Starry\u00ae", 370],
+    ["large-g2-gatorade-fruit-punch", "Large G2 Gatorade\u00ae Fruit Punch", 80],
+    ["large-tropicana-original-lemonade", "Large Tropicana\u00ae Original Lemonade", 120],
+    ["large-brisk-mango-fiesta", "Large Brisk\u00ae Mango Fiesta", 170],
+    ["large-lipton-unsweetened-iced-tea", "Large Lipton\u00ae Unsweetened Iced Tea", 0],
+    ["tropicana-orange-juice", "Tropicana\u00ae Orange Juice", 140],
+    ["aquafina-bottled-water", "Aquafina\u00ae Bottled Water", 0],
+    ["large-mtn-dew-baja-blast-freeze", "Large MTN DEW\u00ae Baja Blast\u00ae Freeze", 190, "Mountain Dew"],
+    ["large-blue-raspberry-freeze", "Large Blue Raspberry Freeze", 150],
+  ].map(([id, name, calories, brand]) => {
+    const food = tacoBellCurrentFood(id, name, name.includes("Large") ? "1 large restaurant fountain drink or Freeze; no custom flavor additions" : "1 published bottle or container", calories, "drinks");
+    return brand ? { ...food, brand } : food;
+  }),
 ];
 
 const chickFilA = { id: "chick-fil-a", name: "Chick-fil-A" };
@@ -631,6 +778,40 @@ const chickFilAExpansionFood = (id, name, description, nutrients, sourceReferenc
   undefined,
   { accessedAt: CATALOG_EXPANSION_CHECKED_AT }
 );
+const CHICK_FIL_A_CURRENT_REFERENCE = "Chick-fil-A current U.S. Nutrition & Allergens guide; values cover the named standard recipe, published size or count, and listed toppings where specified; separately selectable extras are excluded";
+const chickFilAPublished = (calories, protein, carbohydrates, fat, sodium, fiber, totalSugar) => ({
+  calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar: null,
+});
+const chickFilACurrentOption = (id, description, nutrients, amount = 1) => {
+  const option = officialOption(chickFilA.id, id, description, { ...nutrients, addedSugar: null }, amount, CHICK_FIL_A_SOURCE, CHICK_FIL_A_CURRENT_REFERENCE);
+  option.provenance.verification.accessedAt = CURRENT_EXPANSION_CHECKED_AT;
+  option.provenance.verification.status = ["calories", "protein", "carbohydrates", "fat"].every((key) => nutrients[key] !== null && nutrients[key] !== undefined) ? "complete" : "partial";
+  return option;
+};
+const chickFilACurrentFood = (id, name, description, nutrients, servingOptions, searchAliases, sourceReference = CHICK_FIL_A_CURRENT_REFERENCE) => {
+  const selectedNutrients = nutrients || servingOptions?.[0]?.nutrients;
+  const status = ["calories", "protein", "carbohydrates", "fat"].every((key) => selectedNutrients?.[key] !== null && selectedNutrients?.[key] !== undefined) ? "complete" : "partial";
+  const food = officialFood(
+    chickFilA,
+    id,
+    name,
+    description,
+    nutrients ? { ...nutrients, addedSugar: null } : null,
+    CHICK_FIL_A_SOURCE,
+    sourceReference,
+    servingOptions,
+    { status, accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+};
+const chickFilASizedFood = (id, name, options, searchAliases) => chickFilACurrentFood(
+  id,
+  name,
+  options[0][1],
+  null,
+  options.map(([optionId, description, nutrients, amount = 1]) => chickFilACurrentOption(`${id}:${optionId}`, description, nutrients, amount)),
+  searchAliases
+);
 const chickFilAFoods = [
   chickFilAFood("chicken-sandwich", "Chick-fil-A\u00ae Chicken Sandwich", "1 sandwich (183 g)", { calories: 420, protein: 29, carbohydrates: 41, fat: 18, sodium: 1460 }),
   chickFilAFood("spicy-chicken-sandwich", "Spicy Chicken Sandwich", "1 sandwich (188 g)", { calories: 450, protein: 28, carbohydrates: 45, fat: 19, sodium: 1730 }),
@@ -638,20 +819,35 @@ const chickFilAFoods = [
   chickFilAFood("nuggets", "Chick-fil-A\u00ae Nuggets", null, null, [
     chickFilAOption("nuggets:8-count", "8 count (113 g)", { calories: 250, protein: 27, carbohydrates: 11, fat: 11, sodium: 1210 }, 8),
     chickFilAOption("nuggets:12-count", "12 count (170 g)", { calories: 380, protein: 40, carbohydrates: 16, fat: 17, sodium: 1820 }, 12),
+    chickFilACurrentOption("nuggets:5-count", "5 count (71 g)", chickFilAPublished(160, 17, 7, 7, 760, 0, 1), 5),
+    chickFilACurrentOption("nuggets:30-count", "30 count (425 g)", chickFilAPublished(950, 100, 41, 43, 4550, 0, 4), 30),
   ]),
   chickFilAFood("grilled-nuggets", "Grilled Nuggets", null, null, [
     chickFilAOption("grilled-nuggets:8-count", "8 count (95 g)", { calories: 130, protein: 25, carbohydrates: 1, fat: 3, sodium: 440 }, 8),
     chickFilAOption("grilled-nuggets:12-count", "12 count (142 g)", { calories: 200, protein: 38, carbohydrates: 2, fat: 4.5, sodium: 660 }, 12),
+    chickFilACurrentOption("grilled-nuggets:5-count", "5 count (59 g)", chickFilAPublished(80, 16, 1, 2, 270, 0, 0), 5),
+    chickFilACurrentOption("grilled-nuggets:30-count", "30 count (369 g)", chickFilAPublished(510, 98, 4, 11, 1710, 1, 3), 30),
   ]),
-  chickFilAFood("chick-n-strips", "Chick-fil-A Chick-n-Strips\u00ae", "3 count (136 g)", { calories: 310, protein: 29, carbohydrates: 16, fat: 14, sodium: 870 }),
+  chickFilAFood("chick-n-strips", "Chick-fil-A Chick-n-Strips\u00ae", null, null, [
+    chickFilAOption("chick-n-strips:3-count", "3 count (136 g)", { calories: 310, protein: 29, carbohydrates: 16, fat: 14, sodium: 870 }, 3),
+    chickFilACurrentOption("chick-n-strips:2-count", "2 count (91 g)", chickFilAPublished(200, 19, 11, 9, 580, 0, 1), 2),
+    chickFilACurrentOption("chick-n-strips:4-count", "4 count", chickFilAPublished(410, 39, 22, 19, null, null, null), 4),
+    chickFilACurrentOption("chick-n-strips:10-count", "10 count", chickFilAPublished(1020, 96, 54, 46, null, null, null), 10),
+  ]),
   chickFilAFood("waffle-potato-fries", "Chick-fil-A Waffle Potato Fries\u00ae", null, null, [
     chickFilAOption("waffle-potato-fries:small", "Small (96 g)", { calories: 320, protein: 4, carbohydrates: 35, fat: 19, sodium: 190 }),
     chickFilAOption("waffle-potato-fries:medium", "Medium (125 g)", { calories: 420, protein: 5, carbohydrates: 45, fat: 24, sodium: 240 }),
     chickFilAOption("waffle-potato-fries:large", "Large (179 g)", { calories: 600, protein: 7, carbohydrates: 65, fat: 35, sodium: 340 }),
   ]),
-  chickFilAFood("mac-and-cheese", "Mac & Cheese", "Medium (227 g)", { calories: 450, protein: 20, carbohydrates: 28, fat: 29, sodium: 1190 }),
+  chickFilAFood("mac-and-cheese", "Mac & Cheese", null, null, [
+    chickFilAOption("mac-and-cheese:medium", "Medium (227 g)", { calories: 450, protein: 20, carbohydrates: 28, fat: 29, sodium: 1190 }),
+    chickFilACurrentOption("mac-and-cheese:small", "Small (136 g)", chickFilAPublished(270, 12, 17, 17, 710, 2, 2)),
+  ]),
   chickFilAFood("chicken-biscuit", "Chick-fil-A\u00ae Chicken Biscuit", "1 biscuit (153 g)", { calories: 460, protein: 19, carbohydrates: 45, fat: 23, sodium: 1510 }),
-  chickFilAFood("chick-n-minis", "Chick-fil-A Chick-n-Minis\u00ae", "4 count (127 g)", { calories: 360, protein: 20, carbohydrates: 41, fat: 13, sodium: 1060 }),
+  chickFilAFood("chick-n-minis", "Chick-fil-A Chick-n-Minis\u00ae", null, null, [
+    chickFilAOption("chick-n-minis:4-count", "4 count (127 g)", { calories: 360, protein: 20, carbohydrates: 41, fat: 13, sodium: 1060 }, 4),
+    chickFilACurrentOption("chick-n-minis:10-count", "10 count (318 g)", chickFilAPublished(910, 49, 103, 34, 2640, 6, 19), 10),
+  ]),
   chickFilAFood("hash-browns", "Hash Browns", "1 small order (77 g)", { calories: 270, protein: 3, carbohydrates: 23, fat: 18, sodium: 440 }),
   chickFilAFood("chick-fil-a-sauce", "Chick-fil-A\u00ae Sauce", "1 packet (28 g)", { calories: 140, protein: 0, carbohydrates: 6, fat: 13, sodium: 170 }),
   chickFilAFood("polynesian-sauce", "Polynesian Sauce", "1 packet (28 g)", { calories: 110, protein: 0, carbohydrates: 14, fat: 6, sodium: 210 }),
@@ -666,6 +862,116 @@ const chickFilAFoods = [
   chickFilAExpansionFood("zesty-buffalo-sauce", "Zesty Buffalo Sauce", "1 container (21 g)", { calories: 25, protein: 0, carbohydrates: 1, fat: 2.5, sodium: 570 }, "Chick-fil-A Nutrition & Allergens guide; one sauce container"),
   chickFilAExpansionFood("sweet-spicy-sriracha-sauce", "Sweet & Spicy Sriracha Sauce", "1 packet (28 g)", { calories: 45, protein: 0, carbohydrates: 11, fat: 0, sodium: 380 }, "Chick-fil-A Nutrition & Allergens guide; one separately packaged sauce packet"),
   chickFilAExpansionFood("garden-herb-ranch-sauce", "Garden Herb Ranch Sauce", "1 container (21 g)", { calories: 100, protein: 0, carbohydrates: 1, fat: 11, sodium: 170 }, "Chick-fil-A Nutrition & Allergens guide; one sauce container"),
+  ...[
+    ["deluxe-sandwich-colby-jack", "Chick-fil-A\u00ae Deluxe Sandwich w/ Colby Jack", "1 sandwich (254 g): Chick-fil-A filet, Colby Jack, lettuce, tomato and pickles on a toasted bun", chickFilAPublished(510, 34, 43, 24, 1610, 1, 7)],
+    ["spicy-deluxe-sandwich-american", "Spicy Deluxe Sandwich w/ American", "1 sandwich (252 g): spicy filet, American cheese, lettuce, tomato and pickles on a toasted bun", chickFilAPublished(510, 31, 47, 23, 1970, 2, 7)],
+    ["spicy-chicken-biscuit", "Spicy Chicken Biscuit", "1 biscuit (153 g): spicy chicken filet on a buttermilk biscuit", chickFilAPublished(450, 19, 44, 22, 1570, 3, 5)],
+    ["hash-brown-scramble-burrito-nuggets", "Hash Brown Scramble Burrito with Nuggets", "1 burrito (304 g): nuggets, hash browns, scrambled eggs and Monterey Jack/Cheddar in a flour tortilla; salsa packet not included", chickFilAPublished(700, 34, 51, 40, 1770, 3, 2)],
+    ["hash-brown-scramble-burrito-sausage", "Hash Brown Scramble Burrito with Sausage", "1 burrito (283 g): sausage, hash browns, scrambled eggs and Monterey Jack/Cheddar in a flour tortilla; salsa packet not included", chickFilAPublished(720, 28, 46, 47, 1450, 3, 1)],
+    ["hash-brown-scramble-bowl-sausage", "Hash Brown Scramble Bowl with Sausage", "1 bowl (212 g): sausage, hash browns, scrambled eggs and Monterey Jack/Cheddar; salsa packet not included", chickFilAPublished(480, 23, 15, 37, 1020, 2, 1)],
+    ["chicken-egg-cheese-biscuit", "Chicken, Egg & Cheese Biscuit", "1 biscuit (211 g): chicken filet, folded egg and cheese on a buttermilk biscuit", chickFilAPublished(550, 27, 48, 28, 1870, 3, 7)],
+    ["bacon-egg-cheese-biscuit", "Bacon, Egg & Cheese Biscuit", "1 biscuit (145 g): bacon, folded egg and cheese on a buttermilk biscuit", chickFilAPublished(420, 15, 38, 23, 1220, 2, 4)],
+    ["sausage-egg-cheese-biscuit", "Sausage, Egg & Cheese Biscuit", "1 biscuit (192 g): sausage, folded egg and cheese on a buttermilk biscuit", chickFilAPublished(620, 22, 38, 42, 1510, 2, 4)],
+    ["chicken-egg-cheese-muffin", "Chicken, Egg & Cheese Muffin", "1 sandwich (187 g): chicken filet, egg and cheese on an English muffin", chickFilAPublished(410, 27, 36, 18, 1320, 1, 4)],
+    ["bacon-egg-cheese-muffin", "Bacon, Egg & Cheese Muffin", "1 sandwich: bacon, folded egg and American cheese on a toasted English muffin", chickFilAPublished(300, 16, 28, 13, 780, 1, 2)],
+    ["sausage-egg-cheese-muffin", "Sausage, Egg & Cheese Muffin", "1 sandwich (173 g): sausage, egg and cheese on an English muffin", chickFilAPublished(490, 23, 29, 32, 1000, 1, 1)],
+    ["chicken-waffles-breakfast-sandwich", "Chicken & Waffles Breakfast Sandwich w/ Chick-fil-A\u00ae Filet", "1 limited-time breakfast sandwich (150 g): Chick-fil-A filet and breakfast waffle in the published configuration", chickFilAPublished(530, 22, 55, 26, 1160, 4, 27)],
+    ["spicy-chicken-waffles-breakfast-sandwich", "Chicken & Waffles Breakfast Sandwich w/ Spicy Filet", "1 limited-time breakfast sandwich (150 g): spicy filet and breakfast waffle in the published configuration", chickFilAPublished(530, 23, 54, 25, 1220, 5, 26)],
+    ["cobb-salad-nuggets", "Cobb Salad w/ Nuggets", "1 salad (411 g): mixed greens, Nuggets, roasted corn, tomatoes, cheese, bacon, egg, charred tomato peppers, crispy bell peppers and Avocado Lime Ranch dressing", chickFilAPublished(830, 41, 31, 60, 2180, 5, 8)],
+    ["spicy-southwest-salad-spicy-grilled-filet", "Spicy Southwest Salad w/ Spicy Grilled Filet", "1 salad (424 g): greens, cold spicy grilled filet, tomatoes, Monterey Jack/Cheddar, corn-and-black-bean blend, tortilla strips, chili-lime pepitas and Creamy Salsa dressing", chickFilAPublished(680, 33, 27, 49, 1570, 7, 7)],
+    ["market-salad-chick-fil-a-filet", "Market Salad w/ Chick-fil-A\u00ae Filet", "1 salad: greens, Chick-fil-A filet, blue cheese, apples, strawberries, blueberries, granola, almonds and the published dressing configuration", chickFilAPublished(460, 31, 37, 22, null, null, null)],
+    ["kale-crunch-side", "Kale Crunch Side", "1 side (112 g): kale and cabbage in apple cider/Dijon vinaigrette with roasted almonds", chickFilAPublished(170, 4, 13, 12, 250, 4, 8)],
+    ["side-salad", "Side Salad", "1 side (166 g) in the published standard configuration, including toppings and dressing", chickFilAPublished(470, 6, 14, 42, 700, 4, 5)],
+    ["buddy-fruits-apple-sauce", "Buddy Fruits\u00ae Apple Sauce", "1 sealed pouch (90 g)", chickFilAPublished(45, 0, 12, 0, 0, 1, 8)],
+    ["original-waffle-potato-chips", "Original Flavor Waffle Potato Chips", "1 bag (43 g)", chickFilAPublished(220, null, null, null, null, null, null)],
+    ["chick-fil-a-sauce-waffle-potato-chips", "Chick-fil-A\u00ae Sauce Flavored Waffle Potato Chips", "1 bag (43 g)", chickFilAPublished(210, 3, 26, 12, 330, 2, 3)],
+    ["chocolate-chunk-cookie", "Chocolate Chunk Cookie", "1 cookie (78 g)", chickFilAPublished(370, 5, 49, 17, 230, 3, 26)],
+    ["chocolate-fudge-brownie", "Chocolate Fudge Brownie", "1 brownie (85 g)", chickFilAPublished(370, 4, 47, 21, 140, 2, 35)],
+    ["frosted-lemonade", "Frosted Lemonade", "1 serving (383 g): Icedream blended with regular Chick-fil-A Lemonade", chickFilAPublished(350, 7, 67, 7, 135, 0, 65)],
+    ["frosted-diet-lemonade", "Frosted Lemonade w/ Diet Lemonade", "1 serving (383 g): Icedream blended with Chick-fil-A Diet Lemonade", chickFilAPublished(280, 7, 50, 7, 140, 0, 48)],
+    ["frosted-coffee", "Frosted Coffee", "1 serving (374 g): cold-brewed coffee blended with Icedream", chickFilAPublished(260, 7, 45, 7, 140, 0, 44)],
+    ["cookies-and-cream-milkshake", "Cookies & Cream Milkshake", "1 shake (409 g) with whipped cream and cherry", chickFilAPublished(630, 13, 91, 25, 430, 1, 84)],
+    ["chocolate-milkshake", "Chocolate Milkshake", "1 shake (409 g) with whipped cream and cherry", chickFilAPublished(600, 12, 93, 22, 350, 1, 90)],
+    ["strawberry-milkshake", "Strawberry Milkshake", "1 shake (409 g) with whipped cream and cherry", chickFilAPublished(560, 10, 92, 18, 370, 1, 87)],
+    ["vanilla-milkshake", "Vanilla Milkshake", "1 shake (409 g) with whipped cream and cherry", chickFilAPublished(580, 13, 82, 23, 390, 1, 80)],
+    ["icedream-cone", "Chick-fil-A\u00ae Icedream\u00ae Cone", "1 cone (135 g)", chickFilAPublished(180, 4, 32, 4, 90, 0, 25)],
+    ["icedream-cup", "Chick-fil-A\u00ae Icedream\u00ae Cup", "1 cup (122 g)", chickFilAPublished(140, 4, 24, 3.5, 75, 0, 24)],
+    ["simply-orange", "Simply Orange\u00ae", "1 bottle (326 g)", chickFilAPublished(160, 2, 34, 0, 10, 0, 30)],
+    ["one-percent-chocolate-milk", "1% Chocolate Milk", "1 bottle (198 g)", chickFilAPublished(140, 7, 23, 2, 160, 0, 21)],
+    ["one-percent-milk", "1% Milk", "1 bottle (213 g)", chickFilAPublished(90, 7, 10, 2, 105, 0, 10)],
+    ["honest-kids-apple-juice", "Honest Kids\u00ae Apple Juice", "1 juice box (170 g)", chickFilAPublished(35, 0, 9, 0, 15, 0, 8)],
+    ["dasani-bottled-water", "DASANI\u00ae Bottled Water", "1 bottle", chickFilAPublished(0, 0, 0, 0, 0, 0, 0)],
+    ["iced-coffee", "Iced Coffee", "1 container (661 g) in the published original configuration", chickFilAPublished(200, 7, 34, 4, 115, 0, 34)],
+    ["vanilla-iced-coffee", "Vanilla Iced Coffee", "1 container (661 g)", chickFilAPublished(210, 7, 35, 4, 115, 0, 33)],
+    ["caramel-iced-coffee", "Caramel Iced Coffee", "1 container (672 g)", chickFilAPublished(260, 8, 38, 9, 190, 0, 34)],
+    ["hot-coffee", "Hot Coffee", "1 restaurant cup, black; additions not included", chickFilAPublished(0, null, null, null, null, null, null)],
+  ].map(([id, name, description, nutrients]) => chickFilACurrentFood(id, name, description, nutrients)),
+  chickFilASizedFood("fruit-cup", "Fruit Cup", [
+    ["small", "Small Fruit Cup (107 g)", chickFilAPublished(60, 1, 14, 0, 0, 2, 11)],
+    ["medium", "Medium Fruit Cup (125 g)", chickFilAPublished(70, 1, 16, 0, 0, 2, 12)],
+    ["large", "Large Fruit Cup (215 g)", chickFilAPublished(120, 1, 28, 0, 0, 4, 21)],
+  ]),
+  chickFilASizedFood("chicken-noodle-soup", "Chicken Noodle Soup", [
+    ["cup", "Cup (252 g)", chickFilAPublished(190, 11, 27, 4.5, 1290, 2, 2)],
+    ["bowl", "Bowl (476 g)", chickFilAPublished(320, 20, 42, 8, 2280, 3, 3)],
+  ]),
+  chickFilASizedFood("berry-parfait", "Berry Parfait", [
+    ["granola", "Berry Parfait with granola (206 g)", chickFilAPublished(270, 13, 35, 9, 85, 1, 26)],
+    ["cookie-crumbs", "Berry Parfait with cookie crumbs (195 g)", chickFilAPublished(240, 12, 31, 8, 85, 1, 25)],
+  ]),
+  chickFilASizedFood("lemonade", "Chick-fil-A\u00ae Lemonade", [
+    ["small", "Small (465 g)", chickFilAPublished(190, 0, 49, 0, 0, 0, 45)],
+    ["medium", "Medium (612 g)", chickFilAPublished(260, 0, 66, 0, 0, 0, 60)],
+    ["large", "Large (916 g)", chickFilAPublished(380, 1, 98, 0, 0, 1, 90)],
+  ]),
+  chickFilASizedFood("diet-lemonade", "Chick-fil-A\u00ae Diet Lemonade", [
+    ["small", "Small (465 g)", chickFilAPublished(40, 0, 12, 0, 10, 0, 8)],
+    ["medium", "Medium (612 g)", chickFilAPublished(60, 0, 15, 0, 10, 0, 11)],
+    ["large", "Large (916 g)", chickFilAPublished(80, 0, 23, 0, 15, 0, 17)],
+  ]),
+  chickFilASizedFood("sunjoy-sweet-tea-lemonade", "Sunjoy\u00ae (1/2 Sweet Tea, 1/2 Lemonade)", [
+    ["small", "Small (479 g)", chickFilAPublished(180, 0, 45, 0, 0, 0, 43)],
+    ["medium", "Medium (641 g)", chickFilAPublished(240, 0, 60, 0, 0, 0, 57)],
+    ["large", "Large (944 g)", chickFilAPublished(350, 0, 91, 0, 0, 0, 85)],
+  ]),
+  chickFilASizedFood("freshly-brewed-sweetened-iced-tea", "Freshly-Brewed Sweetened Iced Tea", [
+    ["small", "Small (451 g)", chickFilAPublished(90, 0, 22, 0, 0, 0, 22)],
+    ["medium", "Medium (604 g)", chickFilAPublished(120, 0, 31, 0, 0, 0, 30)],
+    ["large", "Large (893 g)", chickFilAPublished(170, 0, 44, 0, 0, 0, 44)],
+  ]),
+  chickFilASizedFood("freshly-brewed-unsweetened-iced-tea", "Freshly-Brewed Unsweetened Iced Tea", [
+    ["small", "Small (451 g)", chickFilAPublished(0, 0, 0, 0, 0, 0, 0)],
+    ["medium", "Medium (604 g)", chickFilAPublished(0, 0, 0, 0, 0, 0, 0)],
+    ["large", "Large (893 g)", chickFilAPublished(0, 0, 0, 0, 0, 0, 0)],
+  ]),
+  chickFilASizedFood("coca-cola", "Fountain Coca-Cola\u00ae", [
+    ["small", "Small (451 g)", chickFilAPublished(130, 0, 35, 0, 35, 0, 35)],
+    ["medium", "Medium (584 g)", chickFilAPublished(170, 0, 46, 0, 45, 0, 46)],
+    ["large", "Large (859 g)", chickFilAPublished(250, 0, 68, 0, 65, 0, 68)],
+  ], ["Chick-fil-A Coca-Cola", "Chick-fil-A Coke"]),
+  chickFilASizedFood("dr-pepper", "Fountain Dr Pepper\u00ae", [
+    ["small", "Small (451 g)", chickFilAPublished(130, 0, 34, 0, 40, 0, 34)],
+    ["medium", "Medium (584 g)", chickFilAPublished(170, 0, 44, 0, 50, 0, 44)],
+    ["large", "Large (859 g)", chickFilAPublished(250, 0, 64, 0, 75, 0, 64)],
+  ], ["Chick-fil-A Dr Pepper"]),
+  ...[
+    ["honey-mustard-sauce", "Honey Mustard Sauce", 50],
+    ["avocado-lime-ranch-dressing", "Avocado Lime Ranch Dressing", 310, chickFilAPublished(310, 1, 3, 32, 520, 1, 2)],
+    ["creamy-salsa-dressing", "Creamy Salsa Dressing", 290, chickFilAPublished(290, 1, 2, 31, 630, 0, 1)],
+    ["fat-free-honey-mustard-dressing", "Fat-Free Honey Mustard Dressing", 90],
+    ["garden-herb-ranch-dressing", "Garden Herb Ranch Dressing", 280],
+    ["light-balsamic-vinaigrette-dressing", "Light Balsamic Vinaigrette Dressing", 80],
+    ["light-italian-dressing", "Light Italian Dressing", 25],
+    ["zesty-apple-cider-vinaigrette-dressing", "Zesty Apple Cider Vinaigrette Dressing", 230],
+  ].map(([id, name, calories, nutrients]) => chickFilACurrentFood(
+    id,
+    name,
+    `1 packet or container of ${name}; no salad or entr\u00e9e included`,
+    nutrients || { calories },
+    undefined,
+    undefined,
+    `${CHICK_FIL_A_CURRENT_REFERENCE}; only calories are populated where the accessible official menu did not expose the remaining nutrient row`
+  )),
 ];
 
 const mcdonalds = { id: "mcdonalds", name: "McDonald's" };
@@ -1352,6 +1658,41 @@ const whataburger = { id: "whataburger", name: "Whataburger" };
 const WHATABURGER_REFERENCE = "Whataburger official menu/app; default recipe nutrition displayed for the current national menu";
 const whataburgerFood = (id, name, description, nutrients, servingOptions) => officialFood(whataburger, id, name, description, nutrients, WHATABURGER_SOURCE, WHATABURGER_REFERENCE, servingOptions);
 const whataburgerOption = (id, description, nutrients) => officialOption(whataburger.id, id, description, nutrients, 1, WHATABURGER_SOURCE, WHATABURGER_REFERENCE);
+const WHATABURGER_NUTRITION_REFERENCE = "Whataburger official Nutrition Guide, nutritional information dated March 29, 2021 and still published by Whataburger; values cover the named standard item and published size, with customizations and separately listed sauces excluded unless named";
+const whataburgerPublished = (calories, protein, carbohydrates, fat, sodium, fiber, totalSugar) => ({
+  calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar: null,
+});
+const whataburgerCurrentOption = (id, description, nutrients, amount = 1) => {
+  const option = officialOption(whataburger.id, id, description, nutrients, amount, WHATABURGER_NUTRITION_SOURCE, WHATABURGER_NUTRITION_REFERENCE);
+  option.provenance.verification.accessedAt = CURRENT_EXPANSION_CHECKED_AT;
+  option.provenance.verification.status = ["calories", "protein", "carbohydrates", "fat"].every((key) => nutrients?.[key] !== null && nutrients?.[key] !== undefined) ? "complete" : "partial";
+  return option;
+};
+const whataburgerCurrentFood = (id, name, description, nutrients, servingOptions, searchAliases, sourceReference = WHATABURGER_NUTRITION_REFERENCE) => {
+  const selectedNutrients = nutrients || servingOptions?.[0]?.nutrients;
+  const status = ["calories", "protein", "carbohydrates", "fat"].every((key) => selectedNutrients?.[key] !== null && selectedNutrients?.[key] !== undefined) ? "complete" : "partial";
+  const food = officialFood(
+    whataburger,
+    id,
+    name,
+    description,
+    nutrients,
+    WHATABURGER_NUTRITION_SOURCE,
+    sourceReference,
+    servingOptions,
+    { status, accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+};
+const whataburgerSizedFood = (id, name, options, searchAliases, sourceReference) => whataburgerCurrentFood(
+  id,
+  name,
+  options[0][1],
+  null,
+  options.map(([optionId, description, nutrients, amount = 1]) => whataburgerCurrentOption(`${id}:${optionId}`, description, nutrients, amount)),
+  searchAliases,
+  sourceReference
+);
 const whataburgerFoods = [
   whataburgerFood("whataburger", "Whataburger\u00ae", "1 burger", { calories: 590, protein: 29, carbohydrates: 62, fat: 25, sodium: 1220 }),
   whataburgerFood("double-meat-whataburger", "Double Meat Whataburger\u00ae", "1 burger", { calories: 835, protein: 47, carbohydrates: 62, fat: 44, sodium: 1470 }),
@@ -1361,7 +1702,10 @@ const whataburgerFoods = [
   whataburgerFood("whataburger-jr", "Whataburger Jr.\u00ae", "1 burger", { calories: 310, protein: 14, carbohydrates: 36, fat: 11, sodium: 580 }),
   { ...whataburgerFood("premium-whatachickn-sandwich", "Premium Whatachick'n Sandwich", "1 sandwich", { calories: 515, protein: 33, carbohydrates: 66, fat: 14, sodium: 1860 }), searchAliases: ["Whata chicken sandwich", "Whatachick'n Sandwich"] },
   whataburgerFood("spicy-chicken-sandwich", "Spicy Chicken Sandwich", "1 sandwich", { calories: 545, protein: 31, carbohydrates: 55, fat: 23, sodium: 1490 }),
-  whataburgerFood("whatachickn-strips", "Whatachick'n\u00ae Strips", "3 piece serving", { calories: 550, protein: 25, carbohydrates: 40, fat: 32, sodium: 1370 }),
+  whataburgerFood("whatachickn-strips", "Whatachick'n\u00ae Strips", null, null, [
+    whataburgerOption("whatachickn-strips:3-piece", "3 piece serving", { calories: 550, protein: 25, carbohydrates: 40, fat: 32, sodium: 1370 }),
+    whataburgerCurrentOption("whatachickn-strips:2-piece", "2 piece kids' serving; sauce not included", whataburgerPublished(300, 16, 20, 18, 680, 0, 0), 2),
+  ]),
   whataburgerFood("honey-butter-chicken-biscuit", "Honey Butter Chicken Biscuit", "1 biscuit", { calories: 570, protein: 15, carbohydrates: 50, fat: 36, sodium: 1000 }),
   whataburgerFood("breakfast-on-a-bun-sausage", "Breakfast on a Bun\u00ae with Sausage", "1 sandwich", { calories: 525, protein: 26, carbohydrates: 34, fat: 32, sodium: 1190 }),
   whataburgerFood("taquito-with-cheese-sausage", "Taquito with Cheese - Sausage", "1 taquito", { calories: 435, protein: 19, carbohydrates: 28, fat: 26, sodium: 1050 }),
@@ -1370,8 +1714,309 @@ const whataburgerFoods = [
     whataburgerOption("french-fries:medium", "Medium French Fries", { calories: 420, protein: 5, carbohydrates: 52, fat: 21, sodium: 260 }),
     whataburgerOption("french-fries:large", "Large French Fries", { calories: 560, protein: 7, carbohydrates: 70, fat: 28, sodium: 350 }),
   ]),
-  whataburgerFood("onion-rings", "Onion Rings", "Medium Onion Rings", { calories: 300, protein: 4, carbohydrates: 32, fat: 17, sodium: 430 }),
+  whataburgerFood("onion-rings", "Onion Rings", null, null, [
+    whataburgerOption("onion-rings:medium", "Medium Onion Rings", { calories: 300, protein: 4, carbohydrates: 32, fat: 17, sodium: 430 }),
+    whataburgerCurrentOption("onion-rings:large", "Large Onion Rings", whataburgerPublished(450, 7, 49, 25, 650, 6, 3)),
+  ]),
   whataburgerFood("hash-brown-sticks", "Hash Brown Sticks", "1 order", { calories: 190, protein: 2, carbohydrates: 21, fat: 11, sodium: 500 }),
+  ...[
+    ["avocado-bacon-burger", "Avocado Bacon Burger", "1 burger: large beef patty, American cheese, bacon, avocado, onions, tomatoes and Creamy Pepper Sauce on a large bun", whataburgerPublished(820, 37, 52, 52, 1600, 4, 7)],
+    ["double-meat-whataburger-jr", "Double Meat Whataburger Jr.", "1 junior burger with two small beef patties and the published standard toppings", whataburgerPublished(420, 23, 37, 20, 870, 2, 6)],
+    ["bacon-and-cheese-whataburger-jr", "Bacon & Cheese Whataburger Jr.", "1 junior burger with a small beef patty, American cheese, bacon and the published standard toppings", whataburgerPublished(400, 21, 37, 18, 1140, 2, 6)],
+    ["grilled-chicken-sandwich-whatasauce", "Grilled Chicken Sandwich with Whatasauce", "1 sandwich: grilled chicken breast, lettuce, tomatoes and Whatasauce on a brioche bun", whataburgerPublished(430, 32, 44, 14, 1030, 4, 10)],
+    ["chicken-fajita-taco", "Chicken Fajita Taco", "1 flour tortilla with grilled chicken, grilled peppers and onions", whataburgerPublished(340, 29, 31, 11, 1200, 3, 1)],
+    ["grilled-chicken-melt", "Grilled Chicken Melt", "1 sandwich: grilled chicken, Monterey Jack cheese, grilled peppers and onions on a bun", whataburgerPublished(390, 33, 39, 11, 1330, 3, 6)],
+    ["whatacatch-sandwich", "Whatacatch Sandwich", "1 fish sandwich with lettuce, tomato and tartar sauce on a bun", whataburgerPublished(490, 19, 59, 20, 880, 5, 7)],
+    ["grilled-veggie-wrap", "Grilled Veggie Wrap", "1 published limited-market wrap with grilled vegetables in the standard configuration", whataburgerPublished(330, 7, 38, 18, 800, 6, 4)],
+  ].map(([id, name, description, nutrients]) => whataburgerCurrentFood(id, name, description, nutrients)),
+  whataburgerSizedFood("honey-bbq-chicken-strip-sandwich", "Honey BBQ Chicken Strip Sandwich", [
+    ["standard", "Standard sandwich: three Whatachick'n Strips, Monterey Jack cheese and Honey BBQ Sauce on Texas Toast", whataburgerPublished(890, 38, 87, 42, 2430, 3, 17)],
+    ["junior", "Junior Honey BBQ Chicken Strip Sandwich", whataburgerPublished(650, 28, 63, 31, 1840, 3, 13)],
+  ]),
+  whataburgerSizedFood("patty-melt", "Whataburger Patty Melt", [
+    ["standard", "Standard Patty Melt: two beef patties, Monterey Jack cheese, grilled onions and Creamy Pepper Sauce on Texas Toast", whataburgerPublished(940, 49, 45, 61, 1760, 1, 6)],
+    ["junior", "Junior Patty Melt with one beef patty", whataburgerPublished(640, 28, 45, 37, 1200, 1, 6)],
+  ]),
+  whataburgerSizedFood("mushroom-swiss-burger", "Mushroom Swiss Burger", [
+    ["standard", "Standard Mushroom Swiss Burger; published availability may vary", whataburgerPublished(1110, 56, 61, 70, 1890, 3, 11)],
+    ["junior", "Junior Mushroom Swiss Burger; published availability may vary", whataburgerPublished(700, 32, 47, 42, 1380, 3, 11)],
+  ]),
+  whataburgerSizedFood("sweet-and-spicy-bacon-burger", "Sweet & Spicy Bacon Burger", [
+    ["standard", "Standard limited-market Sweet & Spicy Bacon Burger", whataburgerPublished(1080, 60, 69, 62, 2310, 3, 18)],
+    ["junior", "Junior limited-market Sweet & Spicy Bacon Burger", whataburgerPublished(600, 32, 42, 33, 1350, 1, 11)],
+  ]),
+  whataburgerSizedFood("green-chile-double", "Green Chile Double", [
+    ["standard", "Standard limited-market Green Chile Double", whataburgerPublished(980, 54, 61, 57, 1950, 3, 12)],
+    ["junior", "Junior limited-market Green Chile Double", whataburgerPublished(540, 28, 37, 30, 1310, 1, 7)],
+  ]),
+  whataburgerSizedFood("buffalo-ranch-chicken-strip-sandwich", "Buffalo Ranch Chicken Strip Sandwich", [
+    ["standard", "Standard limited-time Buffalo Ranch Chicken Strip Sandwich", whataburgerPublished(990, 41, 90, 51, 2790, 5, 10)],
+    ["junior", "Junior limited-time Buffalo Ranch Chicken Strip Sandwich", whataburgerPublished(660, 28, 56, 35, 2040, 3, 6)],
+  ]),
+  whataburgerSizedFood("whatachickn-bites", "Whatachick'n Bites", [
+    ["4-piece", "4 piece kids' serving; sauce not included", whataburgerPublished(260, 20, 16, 12, 520, 1, 0), 4],
+    ["6-piece", "6 piece serving; sauce not included", whataburgerPublished(390, 30, 25, 19, 780, 2, 1), 6],
+    ["9-piece", "9 piece serving; sauce not included", whataburgerPublished(580, 45, 37, 28, 1160, 3, 1), 9],
+  ], ["Whataburger chicken bites"]),
+  ...[
+    ["taquito-with-cheese-bacon", "Taquito with Cheese - Bacon", "1 breakfast taquito: flour tortilla, scrambled eggs, bacon and American cheese", whataburgerPublished(400, 20, 29, 23, 1050, 1, 1)],
+    ["taquito-with-cheese-potato", "Taquito with Cheese - Potato", "1 breakfast taquito: flour tortilla, scrambled eggs, potato and American cheese", whataburgerPublished(440, 17, 38, 25, 1100, 2, 1)],
+    ["taquito-with-cheese-chorizo", "Taquito with Cheese - Chorizo", "1 published limited-market breakfast taquito: flour tortilla, scrambled eggs, chorizo and American cheese", whataburgerPublished(450, 19, 28, 28, 1060, 2, 1)],
+    ["breakfast-on-a-bun-bacon", "Breakfast on a Bun with Bacon", "1 sandwich: bacon, egg and American cheese on a bun", whataburgerPublished(360, 18, 35, 16, 940, 1, 5)],
+    ["biscuit-sandwich-bacon", "Biscuit Sandwich with Bacon", "1 buttermilk biscuit with bacon, egg and American cheese", whataburgerPublished(490, 18, 35, 31, 1210, 1, 3)],
+    ["biscuit-sandwich-sausage", "Biscuit Sandwich with Sausage", "1 buttermilk biscuit with sausage, egg and American cheese", whataburgerPublished(640, 27, 35, 44, 1460, 1, 3)],
+    ["jalapeno-cheddar-biscuit-sandwich-bacon", "Jalapeño Cheddar Biscuit Sandwich with Bacon", "1 jalapeño-cheddar biscuit with bacon, egg and American cheese", whataburgerPublished(500, 19, 31, 32, 1300, 2, 0)],
+    ["jalapeno-cheddar-biscuit-sandwich-sausage", "Jalapeño Cheddar Biscuit Sandwich with Sausage", "1 jalapeño-cheddar biscuit with sausage, egg and American cheese", whataburgerPublished(640, 28, 31, 45, 1550, 0, 2)],
+    ["pancake-platter-bacon", "Pancake Platter with Bacon", "1 platter: pancakes, scrambled eggs and bacon, including published syrup and margarine", whataburgerPublished(680, 12, 109, 21, 1560, 3, 33)],
+    ["pancake-platter-sausage", "Pancake Platter with Sausage", "1 platter: pancakes, scrambled eggs and sausage, including published syrup and margarine", whataburgerPublished(830, 21, 109, 33, 1810, 3, 33)],
+    ["breakfast-platter-bacon", "Breakfast Platter with Bacon", "1 platter: scrambled eggs, biscuit, hash brown sticks and bacon", whataburgerPublished(600, 28, 39, 38, 1120, 1, 5)],
+    ["breakfast-platter-sausage", "Breakfast Platter with Sausage", "1 platter: scrambled eggs, biscuit, hash brown sticks and sausage", whataburgerPublished(750, 37, 39, 50, 1370, 1, 5)],
+    ["biscuit-and-gravy", "Biscuit & Gravy", "1 buttermilk biscuit with one serving of cream gravy", whataburgerPublished(490, 8, 49, 30, 1530, 1, 5)],
+    ["jalapeno-cheddar-biscuit-and-gravy", "Jalapeño Cheddar Biscuit & Gravy", "1 jalapeño-cheddar biscuit with one serving of cream gravy", whataburgerPublished(490, 9, 44, 31, 1620, 2, 4)],
+    ["buttermilk-biscuit", "Buttermilk Biscuit", "1 plain buttermilk biscuit", whataburgerPublished(310, 5, 34, 17, 600, 1, 3)],
+    ["buttermilk-biscuit-with-bacon", "Buttermilk Biscuit with Bacon", "1 buttermilk biscuit with bacon; no egg or cheese", whataburgerPublished(360, 8, 35, 21, 810, 1, 3)],
+    ["buttermilk-biscuit-with-sausage", "Buttermilk Biscuit with Sausage", "1 buttermilk biscuit with sausage; no egg or cheese", whataburgerPublished(510, 17, 35, 34, 1060, 1, 3)],
+    ["buttermilk-biscuit-with-egg-and-cheese", "Buttermilk Biscuit with Egg & Cheese", "1 buttermilk biscuit with egg and American cheese; no meat", whataburgerPublished(440, 14, 35, 27, 1000, 1, 3)],
+    ["jalapeno-cheddar-biscuit", "Jalapeño Cheddar Biscuit", "1 plain jalapeño-cheddar biscuit", whataburgerPublished(310, 6, 30, 18, 690, 0, 0)],
+    ["jalapeno-cheddar-biscuit-with-bacon", "Jalapeño Cheddar Biscuit with Bacon", "1 jalapeño-cheddar biscuit with bacon; no egg or cheese", whataburgerPublished(370, 9, 31, 23, 900, 0, 2)],
+    ["jalapeno-cheddar-biscuit-with-sausage", "Jalapeño Cheddar Biscuit with Sausage", "1 jalapeño-cheddar biscuit with sausage; no egg or cheese", whataburgerPublished(510, 18, 30, 35, 1150, 0, 2)],
+    ["jalapeno-cheddar-biscuit-with-egg-and-cheese", "Jalapeño Cheddar Biscuit with Egg & Cheese", "1 jalapeño-cheddar biscuit with egg and American cheese; no meat", whataburgerPublished(440, 16, 30, 28, 1090, 0, 2)],
+    ["taquito-bacon-no-cheese", "Taquito with Bacon", "1 breakfast taquito with scrambled eggs and bacon; cheese not included", whataburgerPublished(360, 17, 29, 20, 830, 1, 1)],
+    ["taquito-sausage-no-cheese", "Taquito with Sausage", "1 breakfast taquito with scrambled eggs and sausage; cheese not included", whataburgerPublished(380, 16, 28, 23, 840, 1, 1)],
+    ["taquito-potato-no-cheese", "Taquito with Potato", "1 breakfast taquito with scrambled eggs and potato; cheese not included", whataburgerPublished(400, 15, 38, 21, 880, 2, 1)],
+    ["cinnamon-roll", "Cinnamon Roll", "1 cinnamon roll", whataburgerPublished(580, 8, 103, 16, 1330, 2, 59)],
+    ["egg-sandwich", "Egg Sandwich", "1 sandwich with egg and American cheese on a bun", whataburgerPublished(310, 15, 34, 12, 740, 1, 5)],
+    ["grits", "Grits", "1 published limited-market serving of plain grits", whataburgerPublished(100, 2, 22, 0.5, 320, 1, 0)],
+    ["pancakes", "Pancakes", "1 order of pancakes, including the published syrup and margarine", whataburgerPublished(630, 9, 108, 17, 1350, 3, 33)],
+  ].map(([id, name, description, nutrients]) => whataburgerCurrentFood(id, name, description, nutrients, undefined, name.includes("Jalapeño") ? [name.replace("Jalapeño", "Jalapeno")] : undefined)),
+  ...[
+    ["kids-justaburger", "Kids' Justaburger", "1 kids' plain small burger; side and drink not included", whataburgerPublished(300, 14, 35, 11, 740, 1, 5)],
+    ["kids-grilled-cheese", "Kids' Grilled Cheese", "1 kids' grilled cheese sandwich on Texas Toast; side and drink not included", whataburgerPublished(510, 16, 42, 28, 1300, 0, 4)],
+    ["apple-slices", "Apple Slices", "1 sealed side serving", whataburgerPublished(30, 0, 8, 0, 0, 1, 6)],
+    ["hot-apple-pie", "Hot Apple Pie", "1 fried apple pie", whataburgerPublished(270, 3, 34, 14, 260, 2, 7)],
+    ["hot-lemon-pie", "Hot Lemon Pie", "1 fried lemon pie", whataburgerPublished(320, 4, 41, 16, 230, 3, 12)],
+    ["fruit-chews", "Fruit Chews", "1 individually packaged serving", whataburgerPublished(80, 1, 19, 0, 20, 0, 11)],
+    ["chocolate-chunk-cookie", "Chocolate Chunk Cookie", "1 cookie", whataburgerPublished(230, 2, 32, 11, 190, 1, 18)],
+    ["sugar-cookie", "Sugar Cookie", "1 cookie", whataburgerPublished(230, 3, 34, 10, 210, 0, 17)],
+  ].map(([id, name, description, nutrients]) => whataburgerCurrentFood(id, name, description, nutrients)),
+  whataburgerSizedFood("apple-and-cranberry-chicken-salad", "Apple & Cranberry Chicken Salad", [
+    ["grilled-chicken", "Apple & Cranberry Salad with Grilled Chicken; separately listed dressing not included", whataburgerPublished(380, 33, 38, 12, 780, 6, 27)],
+    ["whatachickn", "Apple & Cranberry Salad with Whatachick'n; separately listed dressing not included", whataburgerPublished(490, 34, 47, 20, 710, 4, 27)],
+    ["spicy-chicken", "Apple & Cranberry Salad with Spicy Chicken; separately listed dressing not included", whataburgerPublished(500, 31, 49, 21, 1050, 6, 28)],
+  ]),
+  whataburgerSizedFood("cobb-salad", "Cobb Salad", [
+    ["no-chicken", "Cobb Salad without chicken or separately listed dressing", whataburgerPublished(300, 20, 8, 21, 610, 0, 3)],
+    ["grilled-chicken", "Cobb Salad with Grilled Chicken; separately listed dressing not included", whataburgerPublished(430, 44, 10, 23, 1160, 3, 3)],
+    ["whatachickn", "Cobb Salad with Whatachick'n; separately listed dressing not included", whataburgerPublished(540, 45, 20, 31, 1090, 2, 3)],
+    ["spicy-chicken", "Cobb Salad with Spicy Chicken; separately listed dressing not included", whataburgerPublished(550, 43, 21, 32, 1420, 3, 4)],
+  ]),
+  whataburgerSizedFood("buffalo-ranch-chicken-salad", "Buffalo Ranch Chicken Salad", [
+    ["grilled-chicken", "Limited-time Buffalo Ranch Chicken Salad with Grilled Chicken in the published configuration", whataburgerPublished(370, 37, 13, 19, 2070, 4, 3)],
+    ["whatachickn", "Limited-time Buffalo Ranch Chicken Salad with Whatachick'n in the published configuration", whataburgerPublished(480, 38, 23, 27, 2000, 2, 3)],
+    ["spicy-chicken", "Limited-time Buffalo Ranch Chicken Salad with Spicy Chicken in the published configuration", whataburgerPublished(480, 35, 24, 28, 2330, 4, 4)],
+  ]),
+  whataburgerSizedFood("garden-salad", "Garden Salad", [
+    ["no-chicken", "Garden Salad without chicken or separately listed dressing", whataburgerPublished(160, 10, 10, 10, 220, 5, 4)],
+    ["grilled-chicken", "Garden Salad with Grilled Chicken; separately listed dressing not included", whataburgerPublished(290, 34, 12, 12, 770, 6, 4)],
+    ["whatachickn", "Garden Salad with Whatachick'n; separately listed dressing not included", whataburgerPublished(400, 35, 22, 20, 700, 5, 4)],
+    ["spicy-chicken", "Garden Salad with Spicy Chicken; separately listed dressing not included", whataburgerPublished(400, 32, 22, 21, 1070, 4, 5)],
+  ]),
+  whataburgerSizedFood("chocolate-shake", "Chocolate Shake", [
+    ["small-16oz", "Small Chocolate Shake (16 fl oz)", whataburgerPublished(440, 10, 80, 11, 390, 0, 78)],
+    ["medium-20oz", "Medium Chocolate Shake (20 fl oz)", whataburgerPublished(560, 13, 102, 14, 490, 0, 100)],
+    ["large-32oz", "Large Chocolate Shake (32 fl oz)", whataburgerPublished(890, 20, 159, 23, 790, 0, 159)],
+  ]),
+  whataburgerSizedFood("chocolate-malt", "Chocolate Malt", [
+    ["small-16oz", "Small Chocolate Malt (16 fl oz)", whataburgerPublished(460, 10, 85, 11, 390, 1, 83)],
+    ["medium-20oz", "Medium Chocolate Malt (20 fl oz)", whataburgerPublished(590, 12, 110, 13, 490, 2, 107)],
+    ["large-32oz", "Large Chocolate Malt (32 fl oz)", whataburgerPublished(920, 19, 170, 22, 780, 2, 166)],
+  ]),
+  whataburgerSizedFood("strawberry-shake", "Strawberry Shake", [
+    ["small-16oz", "Small Strawberry Shake (16 fl oz)", whataburgerPublished(450, 9, 80, 11, 370, 0, 80)],
+    ["medium-20oz", "Medium Strawberry Shake (20 fl oz)", whataburgerPublished(560, 12, 103, 14, 460, 0, 103)],
+    ["large-32oz", "Large Strawberry Shake (32 fl oz)", whataburgerPublished(890, 19, 160, 22, 750, 0, 160)],
+  ]),
+  whataburgerSizedFood("strawberry-malt", "Strawberry Malt", [
+    ["small-16oz", "Small Strawberry Malt (16 fl oz)", whataburgerPublished(460, 9, 85, 11, 370, 0, 85)],
+    ["medium-20oz", "Medium Strawberry Malt (20 fl oz)", whataburgerPublished(590, 11, 111, 13, 460, 0, 110)],
+    ["large-32oz", "Large Strawberry Malt (32 fl oz)", whataburgerPublished(920, 18, 171, 21, 740, 0, 170)],
+  ]),
+  whataburgerSizedFood("vanilla-shake", "Vanilla Shake", [
+    ["small-16oz", "Small Vanilla Shake (16 fl oz)", whataburgerPublished(410, 10, 69, 12, 390, 0, 69)],
+    ["medium-20oz", "Medium Vanilla Shake (20 fl oz)", whataburgerPublished(510, 13, 86, 15, 490, 0, 86)],
+    ["large-32oz", "Large Vanilla Shake (32 fl oz)", whataburgerPublished(820, 21, 137, 24, 790, 0, 137)],
+  ]),
+  whataburgerSizedFood("vanilla-malt", "Vanilla Malt", [
+    ["small-16oz", "Small Vanilla Malt (16 fl oz)", whataburgerPublished(430, 10, 74, 12, 390, 0, 74)],
+    ["medium-20oz", "Medium Vanilla Malt (20 fl oz)", whataburgerPublished(540, 12, 94, 14, 490, 0, 93)],
+    ["large-32oz", "Large Vanilla Malt (32 fl oz)", whataburgerPublished(860, 20, 148, 23, 780, 0, 147)],
+  ]),
+  whataburgerSizedFood("dr-pepper-shake", "Dr Pepper Shake", [
+    ["small-16oz", "Small Dr Pepper Shake (16 fl oz)", whataburgerPublished(430, 9, 78, 11, 370, 0, 78)],
+    ["medium-20oz", "Medium Dr Pepper Shake (20 fl oz)", whataburgerPublished(550, 12, 100, 14, 460, 0, 99)],
+    ["large-32oz", "Large Dr Pepper Shake (32 fl oz)", whataburgerPublished(870, 19, 157, 22, 740, 1, 155)],
+  ], ["Whataburger Dr. Pepper Shake"], `${WHATABURGER_NUTRITION_REFERENCE}; published as a limited-time flavor, so current availability may vary`),
+  whataburgerSizedFood("coffee", "Coffee", [
+    ["small-12oz", "Small Coffee (12 fl oz), black; additions not included", whataburgerPublished(5, 0, 0, 0, 5, 0, 0)],
+    ["medium-16oz", "Medium Coffee (16 fl oz), black; additions not included", whataburgerPublished(5, 1, 0, 0, 10, 0, 0)],
+    ["large-20oz", "Large Coffee (20 fl oz), black; additions not included", whataburgerPublished(5, 1, 0, 0, 10, 0, 0)],
+  ]),
+  whataburgerSizedFood("decaf-coffee", "Decaf Coffee", [
+    ["small-12oz", "Small Decaf Coffee (12 fl oz), black; additions not included", whataburgerPublished(0, 0, 0, 0, 5, 0, 0)],
+    ["medium-16oz", "Medium Decaf Coffee (16 fl oz), black; additions not included", whataburgerPublished(0, 0, 0, 0, 10, 0, 0)],
+    ["large-20oz", "Large Decaf Coffee (20 fl oz), black; additions not included", whataburgerPublished(0, 1, 0, 0, 10, 0, 0)],
+  ]),
+  whataburgerSizedFood("sweet-tea", "Sweet Tea", [
+    ["kids-16oz", "Kids' Sweet Tea (16 fl oz)", whataburgerPublished(220, 0, 58, 0, 15, 0, 56)],
+    ["small-20oz", "Small Sweet Tea (20 fl oz)", whataburgerPublished(280, 0, 72, 0, 15, 0, 70)],
+    ["medium-32oz", "Medium Sweet Tea (32 fl oz)", whataburgerPublished(440, 0, 115, 0, 25, 0, 113)],
+    ["large-44oz", "Large Sweet Tea (44 fl oz)", whataburgerPublished(610, 0, 158, 0, 35, 0, 155)],
+  ]),
+  whataburgerSizedFood("unsweet-tea", "Unsweet Tea", [
+    ["kids-16oz", "Kids' Unsweet Tea (16 fl oz)", whataburgerPublished(5, 0, 1, 0, 15, 0, 0)],
+    ["small-20oz", "Small Unsweet Tea (20 fl oz)", whataburgerPublished(5, 0, 2, 0, 20, 0, 0)],
+    ["medium-32oz", "Medium Unsweet Tea (32 fl oz)", whataburgerPublished(10, 0, 3, 0, 30, 0, 0)],
+    ["large-44oz", "Large Unsweet Tea (44 fl oz)", whataburgerPublished(15, 0, 4, 0, 40, 0, 0)],
+  ], ["Whataburger unsweetened tea"]),
+  ...[
+    ["orange-juice", "Orange Juice", "1 bottle (11.5 fl oz)", whataburgerPublished(160, 2, 37, 0, 0, 0, 33)],
+    ["one-percent-milk", "1% Milk", "1 carton (8 fl oz)", whataburgerPublished(110, 9, 13, 2.5, 130, 0, 12)],
+    ["one-percent-chocolate-milk", "1% Chocolate Milk", "1 carton (8 fl oz)", whataburgerPublished(160, 8, 27, 2.5, 220, 0, 25)],
+  ].map(([id, name, description, nutrients]) => whataburgerCurrentFood(id, name, description, nutrients)),
+  whataburgerSizedFood("fountain-coca-cola", "Fountain Coca-Cola", [
+    ["kids-16oz", "Kids' Coca-Cola (16 fl oz)", whataburgerPublished(200, 0, 54, 0, 55, 0, 54)],
+    ["small-20oz", "Small Coca-Cola (20 fl oz)", whataburgerPublished(250, 0, 67, 0, 65, 0, 67)],
+    ["medium-32oz", "Medium Coca-Cola (32 fl oz)", whataburgerPublished(390, 0, 107, 0, 105, 0, 107)],
+    ["large-44oz", "Large Coca-Cola (44 fl oz)", whataburgerPublished(540, 0, 147, 0, 150, 0, 147)],
+  ], ["Whataburger Coke", "Whataburger Coca Cola"]),
+  whataburgerSizedFood("fountain-diet-coke", "Fountain Diet Coke", [
+    ["kids-16oz", "Kids' Diet Coke (16 fl oz)", whataburgerPublished(0, 0, 0, 0, 65, 0, 0)],
+    ["small-20oz", "Small Diet Coke (20 fl oz); carbohydrate is published as less than 1 g", whataburgerPublished(0, 0, null, 0, 80, 0, 0)],
+    ["medium-32oz", "Medium Diet Coke (32 fl oz); carbohydrate is published as less than 1 g", whataburgerPublished(0, 0, null, 0, 130, 0, 0)],
+    ["large-44oz", "Large Diet Coke (44 fl oz); carbohydrate is published as less than 1 g", whataburgerPublished(0, 0, null, 0, 180, 0, 0)],
+  ], ["Whataburger Diet Coke"]),
+  whataburgerSizedFood("fountain-coca-cola-zero-sugar", "Fountain Coca-Cola Zero Sugar", [
+    ["kids-16oz", "Kids' Coca-Cola Zero Sugar (16 fl oz)", whataburgerPublished(0, 0, 0, 0, 55, 0, 0)],
+    ["small-20oz", "Small Coca-Cola Zero Sugar (20 fl oz)", whataburgerPublished(0, 0, 0, 0, 65, 0, 0)],
+    ["medium-32oz", "Medium Coca-Cola Zero Sugar (32 fl oz)", whataburgerPublished(0, 0, 0, 0, 105, 0, 0)],
+    ["large-44oz", "Large Coca-Cola Zero Sugar (44 fl oz); carbohydrate is published as less than 1 g", whataburgerPublished(0, 0, null, 0, 150, 0, 0)],
+  ], ["Whataburger Coke Zero", "Whataburger Coca Cola Zero Sugar"]),
+  whataburgerSizedFood("fountain-cherry-coke", "Fountain Cherry Coke", [
+    ["kids-16oz", "Kids' Cherry Coke (16 fl oz)", whataburgerPublished(210, 0, 56, 0, 55, 0, 56)],
+    ["small-20oz", "Small Cherry Coke (20 fl oz)", whataburgerPublished(260, 0, 70, 0, 70, 0, 70)],
+    ["medium-32oz", "Medium Cherry Coke (32 fl oz)", whataburgerPublished(410, 0, 112, 0, 110, 0, 112)],
+    ["large-44oz", "Large Cherry Coke (44 fl oz)", whataburgerPublished(560, 0, 154, 0, 150, 0, 154)],
+  ], ["Whataburger Cherry Coke"]),
+  whataburgerSizedFood("fountain-sprite", "Fountain Sprite", [
+    ["kids-16oz", "Kids' Sprite (16 fl oz)", whataburgerPublished(180, 0, 50, 0, 95, 0, 50)],
+    ["small-20oz", "Small Sprite (20 fl oz)", whataburgerPublished(230, 0, 62, 0, 120, 0, 62)],
+    ["medium-32oz", "Medium Sprite (32 fl oz)", whataburgerPublished(370, 0, 99, 0, 190, 0, 99)],
+    ["large-44oz", "Large Sprite (44 fl oz)", whataburgerPublished(510, 0, 137, 0, 260, 0, 137)],
+  ], ["Whataburger Sprite"]),
+  whataburgerSizedFood("fountain-dr-pepper", "Fountain Dr Pepper", [
+    ["kids-16oz", "Kids' Dr Pepper (16 fl oz)", whataburgerPublished(190, 0, 52, 0, 20, 0, 51)],
+    ["small-20oz", "Small Dr Pepper (20 fl oz)", whataburgerPublished(240, 0, 65, 0, 25, 0, 64)],
+    ["medium-32oz", "Medium Dr Pepper (32 fl oz)", whataburgerPublished(380, 0, 104, 0, 40, 0, 102)],
+    ["large-44oz", "Large Dr Pepper (44 fl oz)", whataburgerPublished(530, 0, 143, 0, 60, 0, 140)],
+  ], ["Whataburger Dr. Pepper"]),
+  whataburgerSizedFood("fountain-diet-dr-pepper", "Fountain Diet Dr Pepper", [
+    ["kids-16oz", "Kids' Diet Dr Pepper (16 fl oz)", whataburgerPublished(0, 0, 0, 0, 55, 0, 0)],
+    ["small-20oz", "Small Diet Dr Pepper (20 fl oz)", whataburgerPublished(0, 0, 0, 0, 65, 0, 0)],
+    ["medium-32oz", "Medium Diet Dr Pepper (32 fl oz)", whataburgerPublished(0, 0, 1, 0, 110, 0, 0)],
+    ["large-44oz", "Large Diet Dr Pepper (44 fl oz)", whataburgerPublished(5, 0, 1, 0, 150, 0, 0)],
+  ], ["Whataburger Diet Dr. Pepper"]),
+  whataburgerSizedFood("fountain-barqs-root-beer", "Fountain Barq's Root Beer", [
+    ["kids-16oz", "Kids' Barq's Root Beer (16 fl oz)", whataburgerPublished(210, 0, 58, 0, 70, 0, 58)],
+    ["small-20oz", "Small Barq's Root Beer (20 fl oz)", whataburgerPublished(270, 0, 73, 0, 90, 0, 73)],
+    ["medium-32oz", "Medium Barq's Root Beer (32 fl oz)", whataburgerPublished(430, 0, 116, 0, 140, 0, 116)],
+    ["large-44oz", "Large Barq's Root Beer (44 fl oz)", whataburgerPublished(590, 0, 160, 0, 190, 0, 160)],
+  ], ["Whataburger Barqs Root Beer"]),
+  whataburgerSizedFood("fountain-minute-maid-light-lemonade", "Fountain Minute Maid Light Lemonade", [
+    ["kids-16oz", "Kids' Minute Maid Light Lemonade (16 fl oz)", whataburgerPublished(10, 0, 3, 0, 55, 0, 0)],
+    ["small-20oz", "Small Minute Maid Light Lemonade (20 fl oz)", whataburgerPublished(10, 0, 3, 0, 70, 0, 0)],
+    ["medium-32oz", "Medium Minute Maid Light Lemonade (32 fl oz)", whataburgerPublished(15, 0, 5, 0, 115, 0, 0)],
+    ["large-44oz", "Large Minute Maid Light Lemonade (44 fl oz)", whataburgerPublished(25, 0, 7, 0, 160, 0, 0)],
+  ], ["Whataburger light lemonade"]),
+  whataburgerSizedFood("fountain-powerade-mountain-berry-blast", "Fountain POWERADE Mountain Berry Blast", [
+    ["kids-16oz", "Kids' POWERADE Mountain Berry Blast (16 fl oz)", whataburgerPublished(110, 0, 29, 0, 150, 0, 29)],
+    ["small-20oz", "Small POWERADE Mountain Berry Blast (20 fl oz)", whataburgerPublished(140, 0, 37, 0, 190, 0, 36)],
+    ["medium-32oz", "Medium POWERADE Mountain Berry Blast (32 fl oz)", whataburgerPublished(220, 0, 58, 0, 300, 0, 58)],
+    ["large-44oz", "Large POWERADE Mountain Berry Blast (44 fl oz)", whataburgerPublished(310, 0, 80, 0, 410, 0, 80)],
+  ], ["Whataburger Powerade Mountain Blast"]),
+  whataburgerSizedFood("fountain-powerade-fruit-punch", "Fountain POWERADE Fruit Punch", [
+    ["kids-16oz", "Kids' POWERADE Fruit Punch (16 fl oz)", whataburgerPublished(110, 0, 30, 0, 150, 0, 28)],
+    ["small-20oz", "Small POWERADE Fruit Punch (20 fl oz)", whataburgerPublished(130, 0, 37, 0, 190, 0, 36)],
+    ["medium-32oz", "Medium POWERADE Fruit Punch (32 fl oz)", whataburgerPublished(220, 0, 59, 0, 310, 0, 57)],
+    ["large-44oz", "Large POWERADE Fruit Punch (44 fl oz)", whataburgerPublished(300, 0, 82, 0, 420, 0, 78)],
+  ], ["Whataburger Powerade Fruit Punch"]),
+  whataburgerSizedFood("fountain-hi-c-orange", "Fountain Hi-C Orange", [
+    ["kids-16oz", "Kids' Hi-C Orange (16 fl oz)", whataburgerPublished(220, 0, 58, 0, 55, 0, 57)],
+    ["small-20oz", "Small Hi-C Orange (20 fl oz)", whataburgerPublished(280, 0, 73, 0, 65, 0, 71)],
+    ["medium-32oz", "Medium Hi-C Orange (32 fl oz)", whataburgerPublished(440, 0, 116, 0, 105, 0, 113)],
+    ["large-44oz", "Large Hi-C Orange (44 fl oz)", whataburgerPublished(610, 0, 160, 0, 150, 0, 156)],
+  ], ["Whataburger Hi C Orange"]),
+  whataburgerSizedFood("fountain-fanta-orange", "Fountain Fanta Orange", [
+    ["kids-16oz", "Kids' Fanta Orange (16 fl oz)", whataburgerPublished(200, 0, 54, 0, 55, 0, 53)],
+    ["small-20oz", "Small Fanta Orange (20 fl oz)", whataburgerPublished(250, 0, 67, 0, 65, 0, 66)],
+    ["medium-32oz", "Medium Fanta Orange (32 fl oz)", whataburgerPublished(390, 0, 108, 0, 105, 0, 106)],
+    ["large-44oz", "Large Fanta Orange (44 fl oz)", whataburgerPublished(540, 0, 148, 0, 150, 0, 146)],
+  ], ["Whataburger Fanta Orange"]),
+  whataburgerSizedFood("fountain-fanta-strawberry", "Fountain Fanta Strawberry", [
+    ["kids-16oz", "Kids' Fanta Strawberry (16 fl oz)", whataburgerPublished(220, 0, 59, 0, 55, 0, 59)],
+    ["small-20oz", "Small Fanta Strawberry (20 fl oz)", whataburgerPublished(270, 0, 74, 0, 70, 0, 73)],
+    ["medium-32oz", "Medium Fanta Strawberry (32 fl oz)", whataburgerPublished(430, 0, 118, 0, 110, 0, 117)],
+    ["large-44oz", "Large Fanta Strawberry (44 fl oz)", whataburgerPublished(600, 0, 162, 0, 150, 0, 161)],
+  ], ["Whataburger Fanta Strawberry"]),
+  whataburgerSizedFood("fountain-mello-yello", "Fountain Mello Yello", [
+    ["kids-16oz", "Kids' Mello Yello (16 fl oz)", whataburgerPublished(220, 0, 58, 0, 65, 0, 58)],
+    ["small-20oz", "Small Mello Yello (20 fl oz)", whataburgerPublished(270, 0, 73, 0, 85, 0, 73)],
+    ["medium-32oz", "Medium Mello Yello (32 fl oz)", whataburgerPublished(440, 0, 116, 0, 135, 0, 116)],
+    ["large-44oz", "Large Mello Yello (44 fl oz)", whataburgerPublished(600, 0, 160, 0, 190, 0, 160)],
+  ], ["Whataburger Mello Yello"]),
+  whataburgerSizedFood("fountain-fuze-raspberry-tea", "Fountain FUZE Raspberry Tea", [
+    ["kids-16oz", "Kids' FUZE Raspberry Tea (16 fl oz)", whataburgerPublished(110, 0, 31, 0, 65, 0, 30)],
+    ["small-20oz", "Small FUZE Raspberry Tea (20 fl oz)", whataburgerPublished(140, 0, 38, 0, 85, 0, 37)],
+    ["medium-32oz", "Medium FUZE Raspberry Tea (32 fl oz)", whataburgerPublished(220, 0, 61, 0, 135, 0, 59)],
+    ["large-44oz", "Large FUZE Raspberry Tea (44 fl oz)", whataburgerPublished(310, 0, 84, 0, 180, 0, 81)],
+  ], ["Whataburger raspberry tea"]),
+  whataburgerSizedFood("fountain-pibb-xtra", "Fountain Pibb Xtra", [
+    ["kids-16oz", "Kids' Pibb Xtra (16 fl oz)", whataburgerPublished(190, 0, 50, 0, 70, 0, 50)],
+    ["small-20oz", "Small Pibb Xtra (20 fl oz)", whataburgerPublished(240, 0, 63, 0, 90, 0, 63)],
+    ["medium-32oz", "Medium Pibb Xtra (32 fl oz)", whataburgerPublished(380, 0, 101, 0, 140, 0, 101)],
+    ["large-44oz", "Large Pibb Xtra (44 fl oz)", whataburgerPublished(530, 0, 139, 0, 200, 0, 139)],
+  ], ["Whataburger Mr Pibb"]),
+  ...[
+    ["avocado-add-on", "Avocado Add-On", "1 published add-on serving", whataburgerPublished(90, 1, 4, 9, 20, 3, 0)],
+    ["hard-boiled-egg-add-on", "Hard-Boiled Egg Add-On", "1 published limited-time hard-boiled egg add-on", whataburgerPublished(80, 6, 1, 5, 60, 0, 1)],
+    ["bacon-slice-add-on", "Bacon Add-On", "1 slice of bacon", whataburgerPublished(25, 2, 0, 1.5, 85, 0, 0)],
+    ["grilled-peppers-and-onions-add-on", "Grilled Peppers & Onions Add-On", "1 published add-on serving", whataburgerPublished(25, 0, 3, 1.5, 130, 1, 1)],
+    ["jalapenos-add-on", "Jalapeños Add-On", "About 5-8 whole or sliced jalapeños; the PDF publishes sodium as a 90-140 mg range, so sodium remains unknown", whataburgerPublished(0, 0, 1, 0, null, 0, 0), ["Whataburger Jalapenos"]],
+  ].map(([id, name, description, nutrients, searchAliases]) => whataburgerCurrentFood(id, name, description, nutrients, undefined, searchAliases)),
+  whataburgerSizedFood("american-cheese-add-on", "American Cheese Add-On", [
+    ["small-slice", "1 small slice of American cheese", whataburgerPublished(45, 3, 0, 3.5, 220, 0, 0)],
+    ["large-slice", "1 large slice of American cheese", whataburgerPublished(90, 5, 0, 7, 430, 0, 0)],
+  ]),
+  ...[
+    ["balsamic-vinaigrette", "Balsamic Vinaigrette", whataburgerPublished(180, 0, 10, 15, 480, 0, 9)],
+    ["buffalo-sauce", "Buffalo Sauce", whataburgerPublished(25, 0, 3, 1.5, 1510, 1, 1)],
+    ["buttermilk-ranch", "Buttermilk Ranch", whataburgerPublished(240, 1, 3, 25, 500, 0, 2)],
+    ["cream-gravy", "Cream Gravy", whataburgerPublished(60, 0, 8, 3, 410, 0, 1)],
+    ["creamy-pepper-sauce", "Creamy Pepper Sauce", whataburgerPublished(240, 1, 4, 24, 550, 0, 3)],
+    ["fat-free-ranch", "Fat-Free Ranch", whataburgerPublished(50, 1, 13, 0, 770, 1, 5)],
+    ["honey-bbq-sauce", "Honey BBQ Sauce", whataburgerPublished(90, 0, 22, 0, 650, 0, 19)],
+    ["honey-butter-sauce", "Honey Butter Sauce", whataburgerPublished(300, 0, 20, 24, 180, 0, 19)],
+    ["honey-mustard", "Honey Mustard", whataburgerPublished(200, 1, 15, 16, 300, 0, 13)],
+    ["jalapeno-ranch", "Jalapeño Ranch", whataburgerPublished(280, 0, 2, 30, 580, 0, 1), ["Whataburger Jalapeno Ranch"]],
+    ["low-fat-herb-vinaigrette", "Low-Fat Herb Vinaigrette", whataburgerPublished(35, 0, 7, 0.5, 470, 0, 6)],
+    ["low-fat-honey-pepper-vinaigrette", "Low-Fat Honey Pepper Vinaigrette", whataburgerPublished(90, 0, 15, 3.5, 460, 0, 14)],
+    ["sugar-free-pancake-syrup", "Sugar-Free Pancake Syrup", whataburgerPublished(25, 0, 10, 0, 75, 0, 0)],
+    ["pancake-syrup", "Pancake Syrup", whataburgerPublished(160, 0, 39, 0, 0, 0, 21)],
+    ["thousand-island-dressing", "Thousand Island Dressing", whataburgerPublished(260, 1, 8, 25, 540, 0, 7)],
+    ["fancy-ketchup", "Fancy Ketchup", whataburgerPublished(35, 0, 8, 0, 340, 0, 6)],
+    ["spicy-ketchup", "Spicy Ketchup", whataburgerPublished(30, 0, 7, 0, 400, 0, 6)],
+    ["picante-sauce", "Picante Sauce", whataburgerPublished(5, 0, 1, 0, 170, 0, 1)],
+    ["salsa-verde", "Salsa Verde", whataburgerPublished(5, 0, 1, 0, 85, 0, 1)],
+  ].map(([id, name, nutrients, searchAliases]) => whataburgerCurrentFood(id, name, `1 separately listed packet or container of ${name}; no other food included`, nutrients, undefined, searchAliases)),
 ];
 
 const restaurantFoods = [

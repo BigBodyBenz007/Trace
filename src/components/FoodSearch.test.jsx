@@ -154,7 +154,7 @@ test("keeps USDA, restaurant, and user-entered source badges understandable", ()
   expect(within(result).getByText("Grocery")).toHaveClass("trace-badge");
 
   searchFor("McNuggets");
-  result = screen.getByRole("button", { name: /McDonald's.*Chicken McNuggets/i });
+  result = screen.getByRole("button", { name: /^McDonald's \u00b7 Chicken McNuggets\b/i });
   expect(within(result).getByText("Restaurant")).toHaveClass("trace-badge");
 
   searchFor("freezer breakfast");
