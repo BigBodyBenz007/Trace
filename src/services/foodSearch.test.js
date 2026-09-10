@@ -2,6 +2,7 @@ import starterFoods from "../data/starterFoods";
 import restaurantFoods from "../data/restaurantFoods";
 import restaurantFoodFixtures from "../data/restaurantFoodFixtures";
 import { normalizeRestaurantFood } from "./restaurantFoodModel";
+import { scaleNutrition } from "./nutritionCalculation";
 import { createUserFood } from "./userFoodCatalog";
 import {
   DEFAULT_RESULT_LIMIT,
@@ -228,21 +229,27 @@ test("searches the Sonic and Braum's batches by chain and item name", () => {
   const sonicResults = searchFoodCatalog("Sonic Drive-In", [], 30);
   const braumsResults = searchFoodCatalog("Braum's", [], 30);
 
-  expect(sonicResults).toHaveLength(12);
+  expect(sonicResults).toHaveLength(22);
   expect(sonicResults.every((food) => food.restaurant?.id === "sonic")).toBe(true);
-  expect(braumsResults).toHaveLength(10);
+  expect(braumsResults).toHaveLength(20);
   expect(braumsResults.every((food) => food.restaurant?.id === "braums")).toBe(true);
   expect(searchFoodCatalog("Footlong Quarter Pound Coney")[0]).toMatchObject({ restaurant: { id: "sonic" } });
   expect(searchFoodCatalog("Grilled Chicken Salad")[0]).toMatchObject({ restaurant: { id: "braums" } });
 });
 
 test("searches the Taco Bell, Chick-fil-A, and Whataburger batches with punctuation variants", () => {
-  expect(searchFoodCatalog("Taco Bell", [], 30)).toHaveLength(15);
-  expect(searchFoodCatalog("Chick-fil-A", [], 30)).toHaveLength(14);
+  expect(searchFoodCatalog("Taco Bell", [], 30)).toHaveLength(25);
+  expect(searchFoodCatalog("Chick-fil-A", [], 30)).toHaveLength(24);
   expect(searchFoodCatalog("Whataburger", [], 30)).toHaveLength(15);
 
-  expect(searchFoodCatalog("taco bell crunchwrap").map((food) => food.id)).toEqual(["restaurant:taco-bell:crunchwrap-supreme"]);
-  expect(searchFoodCatalog("tacobell crunchy taco").map((food) => food.id)).toEqual(["restaurant:taco-bell:crunchy-taco"]);
+  expect(searchFoodCatalog("taco bell crunchwrap").map((food) => food.id)).toEqual(expect.arrayContaining([
+    "restaurant:taco-bell:crunchwrap-supreme",
+    "restaurant:taco-bell:black-bean-crunchwrap-supreme",
+  ]));
+  expect(searchFoodCatalog("tacobell crunchy taco").map((food) => food.id)).toEqual(expect.arrayContaining([
+    "restaurant:taco-bell:crunchy-taco",
+    "restaurant:taco-bell:crunchy-taco-supreme",
+  ]));
   expect(searchFoodCatalog("chick fil a nuggets")[0].id).toBe("restaurant:chick-fil-a:nuggets");
   expect(searchFoodCatalog("chick fil a nuggets").map((food) => food.id)).toEqual(expect.arrayContaining([
     "restaurant:chick-fil-a:nuggets",
@@ -254,7 +261,7 @@ test("searches the Taco Bell, Chick-fil-A, and Whataburger batches with punctuat
   expect(searchFoodCatalog("whata chicken sandwich")[0].id).toBe("restaurant:whataburger:premium-whatachickn-sandwich");
 });
 
-test("preserves official metadata and exact published servings for the three new chains", () => {
+test("preserves official metadata and exact published servings for the prior restaurant batch", () => {
   const sourceUrls = {
     "taco-bell": "https://www.tacobell.com/nutrition/info",
     "chick-fil-a": "https://www.chick-fil-a.com/nutrition-allergens",
@@ -262,7 +269,10 @@ test("preserves official metadata and exact published servings for the three new
   };
 
   Object.entries(sourceUrls).forEach(([restaurantId, sourceUrl]) => {
-    restaurantFoods.filter((food) => food.restaurant.id === restaurantId).forEach((record) => {
+    restaurantFoods.filter((food) => (
+      food.restaurant.id === restaurantId
+      && food.provenance.verification.accessedAt === "2026-08-18"
+    )).forEach((record) => {
       const food = normalizeRestaurantFood(record);
       expect(food.provenance).toMatchObject({
         source: "official-restaurant",
@@ -288,6 +298,59 @@ test("preserves official metadata and exact published servings for the three new
   ]));
 });
 
+test("keeps the bounded restaurant expansion valid, dated, and explicit about partial nutrition", () => {
+  const expansion = restaurantFoods.filter((food) => food.provenance.verification.accessedAt === "2026-09-09");
+  const countByChain = Object.fromEntries(["sonic", "braums", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
+    chainId,
+    expansion.filter((food) => food.restaurant.id === chainId).length,
+  ]));
+
+  expect(expansion).toHaveLength(40);
+  expect(countByChain).toEqual({ sonic: 10, braums: 10, "taco-bell": 10, "chick-fil-a": 10, whataburger: 0 });
+
+  expansion.forEach((record) => {
+    const food = normalizeRestaurantFood(record);
+    expect(food).not.toBeNull();
+    expect(food.provenance.verification).toMatchObject({
+      sourceType: "official-restaurant",
+      accessedAt: "2026-09-09",
+      sourceUrl: expect.stringMatching(/^https:\/\//),
+      sourceReference: expect.any(String),
+    });
+    expect(food.serving.description).toBeTruthy();
+
+    if (food.restaurant.id === "taco-bell") {
+      expect(food.provenance).toMatchObject({ completeness: "partial", verification: { status: "partial" } });
+      expect(food.nutrients).toMatchObject({
+        calories: expect.any(Number),
+        protein: null,
+        carbohydrates: null,
+        fat: null,
+        sodium: null,
+      });
+    } else {
+      expect(food.provenance).toMatchObject({ completeness: "complete", verification: { status: "complete" } });
+      Object.values(food.nutrients).forEach((value) => expect(typeof value === "number" && value >= 0).toBe(true));
+    }
+  });
+});
+
+test("finds representative items from the bounded restaurant expansion", () => {
+  expect(searchFoodCatalog("sonic original smasher")[0].id).toBe("restaurant:sonic:original-sonic-smasher-double");
+  expect(searchFoodCatalog("braums jalapeno pepper jack")[0].id).toBe("restaurant:braums:jalapeno-pepper-jack-cheeseburger");
+  expect(searchFoodCatalog("braums jalape\u00f1o pepper jack")[0].id).toBe("restaurant:braums:jalapeno-pepper-jack-cheeseburger");
+  expect(searchFoodCatalog("taco bell spicy potato")[0].id).toBe("restaurant:taco-bell:spicy-potato-soft-taco");
+  expect(searchFoodCatalog("chickfila cool wrap")[0].id).toBe("restaurant:chick-fil-a:cool-wrap");
+});
+
+test("scales complete and partial expansion servings without inventing unknown nutrients", () => {
+  const grilledSandwich = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:chick-fil-a:grilled-chicken-sandwich"));
+  const tacoSupreme = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:taco-bell:crunchy-taco-supreme"));
+
+  expect(scaleNutrition(grilledSandwich.nutrients, 0.5)).toEqual({ calories: 195, protein: 14, carbohydrates: 22.5, fat: 5.5, sodium: 382.5 });
+  expect(scaleNutrition(tacoSupreme.nutrients, 2)).toEqual({ calories: 380, protein: null, carbohydrates: null, fat: null, sodium: null });
+});
+
 test("matches non-adjacent chain and item tokens in any searchable-field order", () => {
   expect(searchFoodCatalog("sonic groovy").map((food) => food.id)).toEqual([
     "restaurant:sonic:groovy-fries",
@@ -301,7 +364,9 @@ test("matches non-adjacent chain and item tokens in any searchable-field order",
   expect(searchFoodCatalog("mcdonalds nuggets").map((food) => food.id)).toEqual([
     "restaurant:mcdonalds:chicken-mcnuggets",
   ]);
-  expect(searchFoodCatalog("sonic french")).toEqual([]);
+  expect(searchFoodCatalog("sonic french").map((food) => food.id)).toEqual([
+    "restaurant:sonic:french-toast-sticks-4-without-syrup",
+  ]);
 });
 
 test("keeps partial single-token results, ordering, and saved-food priority", () => {
