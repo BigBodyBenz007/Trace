@@ -184,7 +184,7 @@ test("searches restaurant catalogs by chain and item while preserving saved-food
   expect(searchFoodCatalog("McNuggets")[0]).toMatchObject({ restaurant: { name: "McDonald's" } });
   expect(searchFoodCatalog("Chicken Sandwich", [userFood]).some((food) => food.id === userFood.id)).toBe(true);
   expect(searchFoodCatalog("McNuggets").some((food) => food.provenance.source === "test-fixture")).toBe(false);
-  const mcdonalds = searchFoodCatalog("McDonald's", [], 40).filter((food) => food.restaurant?.id === "mcdonalds");
+  const mcdonalds = searchFoodCatalog("McDonald's", [], restaurantFoods.length).filter((food) => food.restaurant?.id === "mcdonalds");
   expect(mcdonalds.length).toBeGreaterThanOrEqual(20);
   expect(mcdonalds.map((food) => food.name)).toEqual(expect.arrayContaining([
     "Big Mac",
@@ -225,13 +225,16 @@ test("restaurant food and menu-option IDs are collision-free", () => {
   expect(new Set(ids).size).toBe(ids.length);
 });
 
-test("searches the Sonic and Braum's batches by chain and item name", () => {
-  const sonicResults = searchFoodCatalog("Sonic Drive-In", [], 30);
-  const braumsResults = searchFoodCatalog("Braum's", [], 30);
+test("searches the McDonald's, Sonic, and Braum's batches by chain and item name", () => {
+  const mcdonaldsResults = searchFoodCatalog("McDonald's", [], 150);
+  const sonicResults = searchFoodCatalog("Sonic Drive-In", [], 150);
+  const braumsResults = searchFoodCatalog("Braum's", [], 150);
 
-  expect(sonicResults).toHaveLength(22);
+  expect(mcdonaldsResults).toHaveLength(125);
+  expect(mcdonaldsResults.every((food) => food.restaurant?.id === "mcdonalds")).toBe(true);
+  expect(sonicResults).toHaveLength(124);
   expect(sonicResults.every((food) => food.restaurant?.id === "sonic")).toBe(true);
-  expect(braumsResults).toHaveLength(20);
+  expect(braumsResults).toHaveLength(69);
   expect(braumsResults.every((food) => food.restaurant?.id === "braums")).toBe(true);
   expect(searchFoodCatalog("Footlong Quarter Pound Coney")[0]).toMatchObject({ restaurant: { id: "sonic" } });
   expect(searchFoodCatalog("Grilled Chicken Salad")[0]).toMatchObject({ restaurant: { id: "braums" } });
@@ -355,18 +358,20 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
   const expansion = restaurantFoods.filter((food) => food.provenance.verification.accessedAt === "2026-09-10");
   const sourcePatterns = {
     mcdonalds: /^https:\/\/www\.mcdonalds\.com\/us\/en-us\/product\//,
+    sonic: /^https:\/\/assets\.ctfassets\.net\/whnlxz6bna9d\/.+\/August_2026_National_Nutritional_Brochure\.pdf$/,
+    braums: /^https:\/\/www\.braums\.com\/wp-content\/uploads\/2022\/08\/2018-Nutritional-Chart-for-web\.pdf$/,
     wendys: /^https:\/\/(?:order\.wendys\.com\/us\/en\/national\/menu\/|www\.wendys\.com\/sauces-dressings$)/,
     "burger-king": /^https:\/\/origin\.bk\.com\/pdfs\/nutrition\.pdf$/,
     subway: /^https:\/\/media\.subway\.com\/dam\//,
     chipotle: /^https:\/\/www\.chipotle\.com\/content\/dam\/chipotle\/menu\/nutrition\//,
   };
-  const countByChain = Object.fromEntries(["mcdonalds", "wendys", "burger-king", "subway", "chipotle"].map((chainId) => [
+  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle"].map((chainId) => [
     chainId,
     expansion.filter((food) => food.restaurant.id === chainId).length,
   ]));
 
-  expect(expansion).toHaveLength(227);
-  expect(countByChain).toEqual({ mcdonalds: 10, wendys: 109, "burger-king": 88, subway: 10, chipotle: 10 });
+  expect(expansion).toHaveLength(468);
+  expect(countByChain).toEqual({ mcdonalds: 100, sonic: 102, braums: 49, wendys: 109, "burger-king": 88, subway: 10, chipotle: 10 });
 
   expansion.forEach((record) => {
     const food = normalizeRestaurantFood(record);
@@ -407,6 +412,131 @@ test("finds representative items from every chain added in the next restaurant e
   expect(searchFoodCatalog("subway steak philly")[0].id).toBe("restaurant:subway:steak-philly-6-inch");
   expect(searchFoodCatalog("subway bmt")[0].id).toBe("restaurant:subway:bmt-6-inch");
   expect(searchFoodCatalog("chipotle cilantro lime white rice")[0].id).toBe("restaurant:chipotle:cilantro-lime-white-rice-4oz");
+});
+
+test("finds McDonald's, Sonic, and Braum's items across the expanded menu categories", () => {
+  expect(searchFoodCatalog("mcdonalds steak egg cheese bagel")[0].id).toBe("restaurant:mcdonalds:steak-egg-cheese-bagel");
+  expect(searchFoodCatalog("mcdonalds mccrispy strips")[0].id).toBe("restaurant:mcdonalds:mccrispy-strips");
+  expect(searchFoodCatalog("mcdonalds oreo mcflurry")[0].id).toBe("restaurant:mcdonalds:oreo-mcflurry");
+  expect(searchFoodCatalog("mcdonalds premium roast decaf")[0].id).toBe("restaurant:mcdonalds:premium-roast-decaf-coffee");
+  expect(searchFoodCatalog("mcdonalds mccafe premium roast coffee")[0].id).toBe("restaurant:mcdonalds:premium-roast-coffee");
+  expect(searchFoodCatalog("mcdonalds mccafé premium roast coffee")[0].id).toBe("restaurant:mcdonalds:premium-roast-coffee");
+  expect(searchFoodCatalog("mcdonalds iced caramel macchiato")[0].id).toBe("restaurant:mcdonalds:iced-caramel-macchiato");
+  expect(searchFoodCatalog("mcdonalds dragonberry energizer")[0].id).toBe("restaurant:mcdonalds:red-bull-dragonberry-energizer");
+  expect(searchFoodCatalog("mcdonalds diet coke")[0].id).toBe("restaurant:mcdonalds:diet-coke");
+  expect(searchFoodCatalog("mcdonalds low fat milk jug")[0].id).toBe("restaurant:mcdonalds:low-fat-milk-jug");
+  expect(searchFoodCatalog("mcdonalds frozen blue raspberry")[0].id).toBe("restaurant:mcdonalds:frozen-fanta-blue-raspberry");
+  expect(searchFoodCatalog("mcdonalds mccafe mango pineapple smoothie")[0].id).toBe("restaurant:mcdonalds:mango-pineapple-smoothie");
+  expect(searchFoodCatalog("mcdonalds honey mustard")[0].id).toBe("restaurant:mcdonalds:honey-mustard-sauce");
+
+  expect(searchFoodCatalog("sonic original smasher triple")[0].id).toBe("restaurant:sonic:original-sonic-smasher-triple");
+  expect(searchFoodCatalog("sonic premium chicken bites")[0].id).toBe("restaurant:sonic:premium-chicken-bites");
+  expect(searchFoodCatalog("sonic bacon croissonic")[0].id).toBe("restaurant:sonic:croissonic-sandwich-bacon");
+  expect(searchFoodCatalog("sonic onion rings")[0].id).toBe("restaurant:sonic:onion-rings");
+  expect(searchFoodCatalog("sonic oreo blast")[0].id).toBe("restaurant:sonic:oreo-blast");
+  expect(searchFoodCatalog("sonic cherry limeade")[0].id).toBe("restaurant:sonic:cherry-limeade");
+  expect(searchFoodCatalog("sonic ocean water")[0].id).toBe("restaurant:sonic:ocean-water");
+  expect(searchFoodCatalog("sonic french vanilla cold brew")[0].id).toBe("restaurant:sonic:french-vanilla-cold-brew-iced-coffee");
+  expect(searchFoodCatalog("sonic barqs root beer")[0].id).toBe("restaurant:sonic:barqs-root-beer");
+  expect(searchFoodCatalog("sonic dr pepper")[0].id).toBe("restaurant:sonic:dr-pepper");
+  expect(searchFoodCatalog("sonic Dr. Pepper")[0].id).toBe("restaurant:sonic:dr-pepper");
+  expect(searchFoodCatalog("sonic jalapeno ranch")[0].id).toBe("restaurant:sonic:jalapeno-ranch");
+  expect(searchFoodCatalog("sonic jalapeño ranch")[0].id).toBe("restaurant:sonic:jalapeno-ranch");
+
+  expect(searchFoodCatalog("braums triple quarter cheeseburger")[0].id).toBe("restaurant:braums:triple-quarter-lb-cheeseburger");
+  expect(searchFoodCatalog("braums biscuits sausage gravy")[0].id).toBe("restaurant:braums:biscuits-sausage-gravy");
+  expect(searchFoodCatalog("braums premium vanilla ice cream")[0].id).toBe("restaurant:braums:premium-vanilla-ice-cream");
+  expect(searchFoodCatalog("braums hot fudge sundae")[0].id).toBe("restaurant:braums:hot-fudge-sundae");
+  expect(searchFoodCatalog("braums limeade")[0].id).toBe("restaurant:braums:limeade");
+  expect(searchFoodCatalog("braums cherry limeade")[0].id).toBe("restaurant:braums:cherry-limeade");
+});
+
+test("preserves published McDonald's, Sonic, and Braum's size and piece-count options", () => {
+  const mcdonaldsCoffee = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:mcdonalds:premium-roast-decaf-coffee"));
+  const mcdonaldsMacchiato = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:mcdonalds:iced-caramel-macchiato"));
+  const mcdonaldsSprite = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:mcdonalds:sprite"));
+  const sonicPeppers = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:sonic:ched-r-peppers"));
+  const sonicOceanWater = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:sonic:ocean-water"));
+  const braumsStrips = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:braums:chicken-strips"));
+
+  expect(mcdonaldsCoffee.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Small Premium Roast Decaf Coffee", 5],
+    ["Medium Premium Roast Decaf Coffee", 10],
+    ["Large Premium Roast Decaf Coffee", 15],
+  ]);
+  expect(mcdonaldsMacchiato.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Small Iced Caramel Macchiato", 200],
+    ["Medium Iced Caramel Macchiato", 240],
+    ["Large Iced Caramel Macchiato", 360],
+  ]);
+  expect(mcdonaldsSprite.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Extra Small Sprite", 140],
+    ["Small Sprite", 190],
+    ["Medium Sprite", 250],
+    ["Large Sprite", 350],
+  ]);
+  expect(sonicPeppers.servingOptions.map(({ serving, nutrients }) => [serving.amount, nutrients.calories])).toEqual([
+    [4, 330], [6, 490], [8, 660],
+  ]);
+  expect(sonicOceanWater.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Wacky Pack Ocean Water", 80],
+    ["Small Ocean Water", 110],
+    ["Medium Ocean Water", 190],
+    ["Large Ocean Water", 300],
+    ["RT 44 Ocean Water", 400],
+  ]);
+  expect(braumsStrips.servingOptions.map(({ serving, nutrients }) => [serving.amount, nutrients.calories])).toEqual([
+    [2, 250], [4, 490], [6, 740],
+  ]);
+
+  [...mcdonaldsCoffee.servingOptions, ...mcdonaldsMacchiato.servingOptions, ...mcdonaldsSprite.servingOptions, ...sonicPeppers.servingOptions, ...sonicOceanWater.servingOptions].forEach((option) => {
+    expect(option.provenance.verification).toMatchObject({
+      sourceType: "official-restaurant",
+      accessedAt: "2026-09-10",
+      sourceUrl: expect.stringMatching(/^https:\/\//),
+      sourceReference: expect.any(String),
+    });
+  });
+  expect(braumsStrips.servingOptions[0].provenance.verification).toMatchObject({
+    sourceType: "official-restaurant",
+    accessedAt: "2026-09-10",
+    sourceUrl: "https://www.braums.com/wp-content/uploads/2022/08/2018-Nutritional-Chart-for-web.pdf",
+  });
+});
+
+test("scales expanded McDonald's, Sonic, and Braum's servings without inventing nutrients", () => {
+  const mcdonaldsCoffee = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:mcdonalds:premium-roast-decaf-coffee"));
+  const sonicOnionRings = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:sonic:onion-rings"));
+  const braumsVanilla = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:braums:premium-vanilla-ice-cream"));
+
+  expect(scaleNutrition(mcdonaldsCoffee.servingOptions[1].nutrients, 2)).toEqual({
+    calories: 20,
+    protein: null,
+    carbohydrates: null,
+    fat: null,
+    sodium: null,
+    fiber: null,
+    totalSugar: null,
+    addedSugar: null,
+  });
+  expect(scaleNutrition(sonicOnionRings.servingOptions[1].nutrients, 0.5)).toEqual({
+    calories: 290,
+    protein: 4,
+    carbohydrates: 37,
+    fat: 14.5,
+    sodium: 285,
+    fiber: 2,
+    totalSugar: 9.5,
+  });
+  expect(scaleNutrition(braumsVanilla.servingOptions[0].nutrients, 2)).toEqual({
+    calories: 380,
+    protein: 6,
+    carbohydrates: 38,
+    fat: 22,
+    sodium: 120,
+    fiber: 0,
+    totalSugar: 38,
+  });
 });
 
 test("finds Wendy's and Burger King items across the expanded menu categories", () => {
@@ -529,9 +659,14 @@ test("scales published supplemental nutrients while preserving new unknown nutri
 
 test("matches non-adjacent chain and item tokens in any searchable-field order", () => {
   expect(searchFoodCatalog("sonic groovy").map((food) => food.id)).toEqual([
+    "restaurant:sonic:cheese-groovy-fries",
+    "restaurant:sonic:chili-cheese-groovy-fries",
     "restaurant:sonic:groovy-fries",
+    "restaurant:sonic:groovy-sauce",
   ]);
   expect(searchFoodCatalog("sonic fries").map((food) => food.id)).toEqual([
+    "restaurant:sonic:cheese-groovy-fries",
+    "restaurant:sonic:chili-cheese-groovy-fries",
     "restaurant:sonic:groovy-fries",
   ]);
   expect(searchFoodCatalog("braums fries").map((food) => food.id)).toEqual([
@@ -539,9 +674,11 @@ test("matches non-adjacent chain and item tokens in any searchable-field order",
   ]);
   expect(searchFoodCatalog("mcdonalds nuggets").map((food) => food.id)).toEqual([
     "restaurant:mcdonalds:chicken-mcnuggets",
+    "restaurant:mcdonalds:spicy-chicken-mcnuggets-10-piece",
   ]);
   expect(searchFoodCatalog("sonic french").map((food) => food.id)).toEqual([
     "restaurant:sonic:french-toast-sticks-4-without-syrup",
+    "restaurant:sonic:french-vanilla-cold-brew-iced-coffee",
   ]);
 });
 
@@ -586,6 +723,11 @@ test("searches branded drinks across Phase 1 categories with tokenized AND match
     id: "beverage:coca-cola:zero-sugar-12oz",
     sourceType: "beverage",
     brand: "Coca-Cola",
+  });
+  expect(searchFoodCatalog("sonic coke zero")[0]).toMatchObject({
+    id: "restaurant:sonic:coca-cola-zero-sugar",
+    sourceType: "restaurant",
+    restaurant: { id: "sonic" },
   });
   expect(searchFoodCatalog("monster ultra")[0]).toMatchObject({
     id: "beverage:monster:ultra-zero-16oz",

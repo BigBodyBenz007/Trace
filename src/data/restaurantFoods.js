@@ -149,6 +149,46 @@ const sonicExpansionFood = (id, name, description, nutrients, sourceReference) =
   undefined,
   { accessedAt: CATALOG_EXPANSION_CHECKED_AT }
 );
+const sonicPublished = (calories, protein, carbohydrates, fat, sodium, fiber, totalSugar) => ({
+  calories, protein, carbohydrates, fat, sodium, fiber, totalSugar,
+});
+const sonicCurrentOption = (id, description, nutrients, amount = 1) => {
+  const option = officialOption(sonic.id, id, description, nutrients, amount, SONIC_SOURCE, "SONIC August 2026 National Nutritional Brochure");
+  option.provenance.verification.accessedAt = CURRENT_EXPANSION_CHECKED_AT;
+  return option;
+};
+const sonicCurrentFood = (id, name, description, nutrients, servingOptions, searchAliases) => {
+  const food = officialFood(
+    sonic,
+    id,
+    name,
+    description,
+    nutrients,
+    SONIC_SOURCE,
+    "SONIC August 2026 National Nutritional Brochure; published standard item or size-specific option",
+    servingOptions,
+    { accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+};
+const sonicSizedFood = (id, name, options, searchAliases) => sonicCurrentFood(
+  id,
+  name,
+  options[0][1],
+  null,
+  options.map(([optionId, description, nutrients, amount = 1]) => sonicCurrentOption(`${id}:${optionId}`, description, nutrients, amount)),
+  searchAliases
+);
+const sonicFiveSizeDrink = (id, name, values, searchAliases) => sonicSizedFood(
+  id,
+  name,
+  ["wacky-pack", "small", "medium", "large", "rt44"].map((size, index) => [
+    size,
+    `${size === "wacky-pack" ? "Wacky Pack" : size === "rt44" ? "RT 44" : `${size[0].toUpperCase()}${size.slice(1)}`} ${name}`,
+    sonicPublished(...values[index]),
+  ]),
+  searchAliases
+);
 
 const sonicFoods = [
   sonicFood("sonic-cheeseburger-ketchup-mayo", "SONIC Cheeseburger with Ketchup & Mayo", "1 cheeseburger", { calories: 700, protein: 30, carbohydrates: 52, fat: 41, sodium: 1360 }),
@@ -188,6 +228,174 @@ const sonicFoods = [
   sonicExpansionFood("french-toast-sticks-4-without-syrup", "French Toast Sticks", "4 sticks without syrup", { calories: 480, protein: 8, carbohydrates: 54, fat: 25, sodium: 460 }, "SONIC August 2026 National Nutritional Brochure; 4-piece value explicitly excludes syrup"),
   sonicExpansionFood("supersonic-breakfast-burrito", "SuperSONIC\u00ae Breakfast Burrito", "1 burrito: sausage, eggs, cheese, tots, onions, tomatoes and jalape\u00f1os", { calories: 590, protein: 24, carbohydrates: 49, fat: 33, sodium: 1770 }, "SONIC August 2026 National Nutritional Brochure; current standard recipe"),
   sonicExpansionFood("ultimate-meat-cheese-breakfast-burrito", "Ultimate Meat & Cheese Breakfast Burrito\u2122", "1 burrito: sausage, bacon, eggs, cheese, tots and cheese sauce", { calories: 820, protein: 29, carbohydrates: 47, fat: 56, sodium: 2190 }, "SONIC August 2026 National Nutritional Brochure; current standard recipe"),
+  sonicCurrentFood("all-american-bacon-sonic-smasher-double", "All-American Bacon SONIC Smasher (Double)", "1 double burger with bacon and the published standard toppings", sonicPublished(670, 39, 32, 42, 1870, 2, 8)),
+  sonicCurrentFood("all-american-bacon-sonic-smasher-triple", "All-American Bacon SONIC Smasher (Triple)", "1 triple burger with bacon and the published standard toppings", sonicPublished(860, 52, 33, 57, 2440, 2, 9)),
+  sonicCurrentFood("all-american-sonic-smasher-triple", "All-American SONIC Smasher (Triple)", "1 triple burger with the published standard toppings", sonicPublished(790, 48, 33, 52, 2220, 2, 8)),
+  sonicCurrentFood("original-sonic-smasher-triple", "Original SONIC Smasher (Triple)", "1 triple burger with Smasher sauce, pickles and onions", sonicPublished(780, 48, 31, 51, 2070, 1, 9)),
+  sonicCurrentFood("jr-double-cheeseburger", "Jr Double Cheeseburger", "1 junior double cheeseburger", sonicPublished(390, 21, 25, 23, 870, 2, 6)),
+  sonicCurrentFood("chicken-club-toaster", "Chicken Club TOASTER", "1 chicken club sandwich on Texas toast", sonicPublished(670, 33, 55, 36, 1890, 5, 6)),
+  sonicCurrentFood("blt-toaster", "BLT TOASTER", "1 bacon, lettuce and tomato sandwich on Texas toast", sonicPublished(450, 16, 42, 25, 940, 3, 5)),
+  sonicCurrentFood("cheesy-baja-crispy-tender-wrap", "Cheesy Baja Crispy Tender Wrap", "1 standard crispy tender wrap", sonicPublished(290, 12, 30, 14, 810, 2, 1)),
+  sonicCurrentFood("garlic-parmesan-ranch-crispy-tender-wrap", "Garlic Parmesan Ranch Crispy Tender Wrap", "1 standard crispy tender wrap", sonicPublished(330, 12, 34, 16, 950, 1, 2)),
+  sonicSizedFood("premium-chicken-bites", "Premium Chicken Bites", [
+    ["small", "Small Premium Chicken Bites", sonicPublished(240, 13, 19, 12, 900, 1, 0)],
+    ["medium", "Medium Premium Chicken Bites", sonicPublished(350, 19, 28, 18, 1320, 2, 0)],
+    ["large", "Large Premium Chicken Bites", sonicPublished(510, 27, 41, 26, 1920, 3, 0)],
+  ]),
+  sonicCurrentFood("regular-hot-dog", "Regular Hot Dog", "1 plain regular hot dog in a bun", sonicPublished(360, 12, 31, 21, 800, 2, 4)),
+  sonicCurrentFood("crispy-tenders-2-piece", "Crispy Tenders (Kids 2 Piece)", "2 piece kids serving", sonicPublished(170, 14, 11, 8, 490, 1, 0)),
+  sonicCurrentFood("jr-burger", "Jr Burger", "1 kids junior burger", sonicPublished(270, 11, 24, 14, 580, 1, 6)),
+  sonicCurrentFood("jr-cheeseburger", "Jr Cheeseburger", "1 kids junior cheeseburger", sonicPublished(290, 13, 25, 16, 800, 2, 6)),
+  sonicCurrentFood("wacky-pack-white-milk", "Wacky Pack 1% White Milk", "1 kids milk serving", sonicPublished(110, 8, 12, 2.5, 125, 0, 12)),
+  sonicCurrentFood("minute-maid-apple-juice-box", "Minute Maid 100% Apple Juice Box", "1 juice box (6 fl oz)", sonicPublished(80, 0, 21, 0, 15, 0, 19)),
+  sonicCurrentFood("tree-top-applesauce", "Tree Top Applesauce", "1 kids applesauce serving", sonicPublished(45, 0, 13, 0, 0, 2, 11)),
+  sonicCurrentFood("breakfast-burrito-ham", "Breakfast Burrito Ham", "1 breakfast burrito with ham", sonicPublished(440, 27, 38, 20, 1920, 1, 2)),
+  sonicCurrentFood("jr-breakfast-burrito-bacon", "Jr Breakfast Burrito Bacon", "1 junior breakfast burrito", sonicPublished(270, 13, 22, 14, 870, 1, 0)),
+  sonicCurrentFood("jr-breakfast-burrito-sausage", "Jr Breakfast Burrito Sausage", "1 junior breakfast burrito", sonicPublished(280, 12, 22, 16, 830, 1, 0)),
+  ...[
+    ["biscuit-sandwich-bacon", "Bacon Biscuit Sandwich", 480, 20, 40, 24, 2130, 1, 5],
+    ["biscuit-sandwich-ham", "Ham Biscuit Sandwich", 500, 23, 43, 22, 2010, 1, 6],
+    ["biscuit-sandwich-sausage", "Sausage Biscuit Sandwich", 580, 21, 40, 34, 2150, 1, 5],
+    ["brioche-sandwich-bacon", "Bacon Brioche Breakfast Sandwich", 440, 20, 38, 23, 1820, 2, 9],
+    ["brioche-sandwich-ham", "Ham Brioche Breakfast Sandwich", 450, 24, 41, 21, 1700, 2, 11],
+    ["brioche-sandwich-sausage", "Sausage Brioche Breakfast Sandwich", 530, 22, 38, 33, 1840, 3, 9],
+    ["croissonic-sandwich-bacon", "Bacon CroisSONIC Breakfast Sandwich", 430, 18, 29, 27, 1540, 1, 5],
+    ["croissonic-sandwich-ham", "Ham CroisSONIC Breakfast Sandwich", 430, 22, 31, 23, 2000, 1, 6],
+    ["croissonic-sandwich-sausage", "Sausage CroisSONIC Breakfast Sandwich", 530, 19, 29, 37, 1560, 1, 5],
+  ].map(([id, name, calories, protein, carbohydrates, fat, sodium, fiber, sugar]) => sonicCurrentFood(id, name, "1 breakfast sandwich", sonicPublished(calories, protein, carbohydrates, fat, sodium, fiber, sugar))),
+  sonicSizedFood("ched-r-bites", "Ched 'R' Bites", [
+    ["small", "Small Ched 'R' Bites", sonicPublished(280, 13, 22, 15, 740, 1, 0)],
+    ["medium", "Medium Ched 'R' Bites", sonicPublished(410, 20, 32, 23, 1110, 2, 0)],
+    ["large", "Large Ched 'R' Bites", sonicPublished(550, 27, 43, 30, 1480, 2, 0)],
+  ]),
+  sonicSizedFood("ched-r-peppers", "Ched 'R' Peppers", [
+    ["4-piece", "4 piece (Small)", sonicPublished(330, 8, 36, 17, 1110, 2, 2), 4],
+    ["6-piece", "6 piece (Medium)", sonicPublished(490, 12, 54, 25, 1660, 3, 2), 6],
+    ["8-piece", "8 piece (Large)", sonicPublished(660, 17, 72, 34, 2220, 4, 3), 8],
+  ]),
+  ...[
+    ["cheese-groovy-fries", "Cheese Groovy Fries", [[330, 6, 29, 21, 900, 4, 1], [460, 8, 40, 30, 1280, 5, 1], [650, 11, 57, 42, 1770, 7, 1]]],
+    ["cheese-tots", "Cheese Tots", [[310, 6, 30, 19, 950, 3, 1], [450, 8, 43, 28, 1390, 4, 1], [840, 13, 86, 50, 2450, 8, 2]]],
+    ["chili-cheese-groovy-fries", "Chili Cheese Groovy Fries", [[360, 7, 31, 23, 950, 4, 1], [540, 12, 44, 35, 1430, 6, 1], [760, 17, 62, 49, 2020, 9, 2]]],
+    ["chili-cheese-tots", "Chili Cheese Tots", [[350, 8, 32, 22, 1030, 3, 1], [540, 13, 48, 33, 1580, 5, 2], [840, 19, 77, 51, 2420, 8, 3]]],
+    ["onion-rings", "Onion Rings", [[440, 6, 55, 21, 430, 3, 14], [580, 8, 74, 29, 570, 4, 19], [800, 11, 101, 39, 790, 5, 26]]],
+  ].map(([id, name, values]) => sonicSizedFood(id, name, ["small", "medium", "large"].map((size, index) => [size, `${size[0].toUpperCase()}${size.slice(1)} ${name}`, sonicPublished(...values[index])]))),
+  sonicCurrentFood("soft-pretzel-twist", "Soft Pretzel Twist", "1 pretzel twist", sonicPublished(250, 7, 39, 7, 440, 2, 6)),
+  ...[
+    ["caramel-sundae", "Caramel Sundae", 430, 7, 71, 13, 400, 0, 57],
+    ["chocolate-sundae", "Chocolate Sundae", 440, 7, 76, 12, 340, 0, 64],
+    ["hot-fudge-sundae", "Hot Fudge Sundae", 460, 8, 73, 17, 360, 1, 60],
+    ["strawberry-sundae", "Strawberry Sundae", 380, 7, 62, 12, 310, 1, 55],
+    ["vanilla-soft-serve-cup", "Vanilla Soft Serve Cup", 300, 7, 47, 10, 300, 0, 40],
+  ].map(([id, name, calories, protein, carbohydrates, fat, sodium, fiber, sugar]) => sonicCurrentFood(id, name, "1 published serving", sonicPublished(calories, protein, carbohydrates, fat, sodium, fiber, sugar))),
+  ...[
+    ["banana-shake", "Banana Shake", [[390, 7, 62, 14, 260, 2, 49], [590, 12, 93, 21, 460, 2, 76], [750, 15, 124, 25, 570, 3, 98], [1100, 23, 185, 36, 870, 5, 146]]],
+    ["caramel-shake", "Caramel Shake", [[380, 7, 56, 15, 320, 0, 47], [580, 11, 87, 22, 520, 0, 74], [730, 14, 112, 26, 690, 0, 94], [1070, 22, 166, 37, 1050, 0, 140]]],
+    ["chocolate-shake", "Chocolate Shake", [[370, 7, 56, 15, 340, 1, 48], [570, 11, 87, 22, 540, 1, 75], [720, 14, 112, 27, 720, 1, 95], [1050, 22, 167, 39, 1100, 2, 142]]],
+    ["hot-fudge-shake", "Hot Fudge Shake", [[410, 7, 59, 17, 290, 1, 50], [600, 11, 91, 24, 490, 1, 77], [780, 15, 119, 30, 630, 1, 100], [1150, 22, 178, 43, 960, 2, 150]]],
+    ["peanut-butter-shake", "Peanut Butter Shake", [[440, 9, 51, 23, 330, 1, 43], [630, 14, 83, 30, 530, 1, 70], [840, 19, 103, 43, 700, 2, 86], [1240, 29, 154, 63, 1070, 3, 128]]],
+    ["strawberry-shake", "Strawberry Shake", [[360, 6, 54, 14, 270, 0, 47], [560, 11, 85, 21, 460, 0, 74], [690, 14, 108, 25, 580, 1, 94], [1010, 21, 162, 36, 880, 1, 140]]],
+    ["vanilla-shake", "Vanilla Shake", [[370, 7, 53, 15, 290, 0, 46], [570, 12, 85, 22, 490, 0, 74], [710, 15, 107, 27, 630, 0, 92], [1040, 23, 160, 39, 960, 0, 137]]],
+  ].map(([id, name, values]) => sonicSizedFood(id, name, ["mini", "small", "medium", "large"].map((size, index) => [size, `${size[0].toUpperCase()}${size.slice(1)} ${name}`, sonicPublished(...values[index])]))),
+  ...[
+    ["oreo-blast", "SONIC Blast with OREO Cookie Pieces", [[370, 7, 58, 13, 390, 1, 45], [580, 11, 92, 21, 610, 1, 70], [770, 15, 121, 28, 800, 2, 93]]],
+    ["mms-blast", "SONIC Blast with M&M'S Minis", [[490, 8, 73, 20, 290, 1, 64], [730, 13, 109, 29, 460, 2, 96], [960, 17, 144, 38, 620, 2, 126]]],
+    ["reeses-blast", "SONIC Blast with Reese's Peanut Butter Cups", [[450, 10, 63, 20, 390, 1, 54], [680, 15, 96, 30, 600, 2, 83], [890, 20, 126, 39, 790, 2, 110]]],
+    ["cookie-dough-blast", "SONIC Blast with Chocolate Chip Cookie Dough", [[410, 7, 66, 14, 300, 0, 49], [620, 11, 100, 22, 470, 1, 76], [820, 15, 134, 29, 630, 1, 101]]],
+    ["chocolate-chunk-brownie-blast", "SONIC Blast with Chocolate Chunk Brownie", [[410, 7, 60, 17, 340, 0, 49], [620, 12, 92, 26, 520, 0, 76], [820, 15, 122, 34, 700, 0, 100]]],
+    ["heath-toffee-blast", "SONIC Blast with Heath Toffee Pieces", [[430, 7, 61, 19, 360, 0, 54], [650, 11, 93, 29, 560, 1, 82], [860, 15, 123, 38, 740, 1, 109]]],
+    ["turtle-truffle-nut-blast", "SONIC Blast with Turtle Truffle Nut", [[460, 8, 69, 19, 320, 0, 59], [700, 13, 104, 29, 510, 0, 90], [920, 17, 138, 38, 670, 0, 118]]],
+  ].map(([id, name, values]) => sonicSizedFood(id, name, ["mini", "small", "medium"].map((size, index) => [size, `${size[0].toUpperCase()}${size.slice(1)} ${name}`, sonicPublished(...values[index])]))),
+  sonicSizedFood("original-cold-brew-iced-coffee", "Original Cold Brew Iced Coffee", [
+    ["small", "Small Original Cold Brew", sonicPublished(170, 4, 28, 5, 150, 0, 20)],
+    ["medium", "Medium Original Cold Brew", sonicPublished(230, 6, 38, 7, 210, 0, 27)],
+    ["large", "Large Original Cold Brew", sonicPublished(360, 9, 59, 11, 330, 0, 42)],
+    ["rt44", "RT 44 Original Cold Brew", sonicPublished(500, 13, 82, 15, 460, 0, 58)],
+  ]),
+  sonicCurrentFood("hot-coffee", "Hot Coffee", "Regular (16 fl oz)", sonicPublished(0, 0, 0, 0, 0, 0, 0)),
+  sonicSizedFood("coca-cola", "Coca-Cola", [
+    ["wacky-pack", "Wacky Pack Coca-Cola", sonicPublished(70, 0, 18, 0, 15, 0, 18)],
+    ["small", "Small Coca-Cola", sonicPublished(100, 0, 28, 0, 25, 0, 28)],
+    ["medium", "Medium Coca-Cola", sonicPublished(170, 0, 47, 0, 40, 0, 47)],
+    ["large", "Large Coca-Cola", sonicPublished(260, 0, 71, 0, 65, 0, 71)],
+    ["rt44", "RT 44 Coca-Cola", sonicPublished(350, 0, 96, 0, 85, 0, 96)],
+  ], ["Sonic Coke"]),
+  sonicSizedFood("sprite", "Sprite", [
+    ["wacky-pack", "Wacky Pack Sprite", sonicPublished(70, 0, 18, 0, 35, 0, 18)],
+    ["small", "Small Sprite", sonicPublished(100, 0, 28, 0, 50, 0, 28)],
+    ["medium", "Medium Sprite", sonicPublished(170, 0, 47, 0, 85, 0, 47)],
+    ["large", "Large Sprite", sonicPublished(260, 0, 71, 0, 130, 0, 71)],
+    ["rt44", "RT 44 Sprite", sonicPublished(350, 0, 96, 0, 170, 0, 96)],
+  ]),
+  sonicSizedFood("sweet-iced-tea", "Sweet Iced Tea", [
+    ["wacky-pack", "Wacky Pack Sweet Iced Tea", sonicPublished(80, 0, 21, 0, 0, 0, 21)],
+    ["small", "Small Sweet Iced Tea", sonicPublished(140, 0, 37, 0, 10, 0, 37)],
+    ["medium", "Medium Sweet Iced Tea", sonicPublished(170, 0, 45, 0, 15, 0, 45)],
+    ["large", "Large Sweet Iced Tea", sonicPublished(290, 0, 78, 0, 20, 0, 78)],
+    ["rt44", "RT 44 Sweet Iced Tea", sonicPublished(360, 0, 96, 0, 25, 0, 96)],
+  ]),
+  sonicSizedFood("unsweet-iced-tea", "Unsweet Iced Tea", [
+    ["wacky-pack", "Wacky Pack Unsweet Iced Tea", sonicPublished(0, 0, 0, 0, 0, 0, 0)],
+    ["small", "Small Unsweet Iced Tea", sonicPublished(0, 0, 0, 0, 10, 0, 0)],
+    ["medium", "Medium Unsweet Iced Tea", sonicPublished(0, 0, 0, 0, 15, 0, 0)],
+    ["large", "Large Unsweet Iced Tea", sonicPublished(0, 0, 0, 0, 20, 0, 0)],
+    ["rt44", "RT 44 Unsweet Iced Tea", sonicPublished(0, 0, 0, 0, 25, 0, 0)],
+  ]),
+  sonicSizedFood("cherry-limeade", "Cherry Limeade", [
+    ["wacky-pack", "Wacky Pack Cherry Limeade", sonicPublished(110, 0, 29, 0, 40, 0, 29)],
+    ["small", "Small Cherry Limeade", sonicPublished(140, 0, 39, 0, 60, 0, 39)],
+    ["medium", "Medium Cherry Limeade", sonicPublished(240, 0, 65, 0, 95, 0, 64)],
+    ["large", "Large Cherry Limeade", sonicPublished(360, 0, 99, 0, 140, 0, 98)],
+    ["rt44", "RT 44 Cherry Limeade", sonicPublished(490, 0, 133, 0, 200, 0, 132)],
+  ]),
+  sonicSizedFood("all-natural-lemonade", "All-Natural Lemonade", [
+    ["wacky-pack", "Wacky Pack All-Natural Lemonade", sonicPublished(100, 0, 27, 0, 0, 0, 25)],
+    ["small", "Small All-Natural Lemonade", sonicPublished(160, 0, 42, 0, 0, 0, 38)],
+    ["medium", "Medium All-Natural Lemonade", sonicPublished(270, 0, 69, 0, 0, 0, 64)],
+    ["large", "Large All-Natural Lemonade", sonicPublished(400, 0, 105, 0, 10, 0, 97)],
+    ["rt44", "RT 44 All-Natural Lemonade", sonicPublished(540, 0, 142, 0, 10, 0, 131)],
+  ]),
+  sonicSizedFood("french-vanilla-cold-brew-iced-coffee", "French Vanilla Cold Brew Iced Coffee", [
+    ["small", "Small French Vanilla Cold Brew", sonicPublished(180, 4, 32, 5, 150, 0, 24)],
+    ["medium", "Medium French Vanilla Cold Brew", sonicPublished(260, 6, 46, 7, 210, 0, 35)],
+    ["large", "Large French Vanilla Cold Brew", sonicPublished(410, 9, 72, 11, 330, 0, 55)],
+    ["rt44", "RT 44 French Vanilla Cold Brew", sonicPublished(570, 13, 100, 15, 460, 0, 75)],
+  ]),
+  ...[
+    ["blue-coconut-cream-slush", "Blue Coconut Cream Slush", [[450, 6, 92, 9, 290, 0, 86], [630, 8, 128, 13, 400, 0, 120], [1000, 14, 205, 20, 650, 0, 190]]],
+    ["cherry-cream-slush", "Cherry Cream Slush", [[410, 6, 81, 9, 280, 0, 75], [580, 8, 117, 13, 390, 0, 108], [940, 14, 187, 20, 640, 0, 173]]],
+    ["strawberry-cream-slush", "Strawberry Cream Slush", [[480, 6, 100, 9, 290, 1, 93], [690, 8, 145, 13, 410, 2, 135], [1100, 14, 229, 20, 670, 3, 213]]],
+  ].map(([id, name, values]) => sonicSizedFood(id, name, ["small", "medium", "large"].map((size, index) => [size, `${size[0].toUpperCase()}${size.slice(1)} ${name}`, sonicPublished(...values[index])]))),
+  sonicCurrentFood("barqs-root-beer-float-small", "Barq\u2019s Root Beer Float (Small)", "Small published root beer float", sonicPublished(290, 5, 56, 7, 250, 0, 50), undefined, ["Barqs Root Beer Float"]),
+  ...[
+    ["barqs-root-beer", "Barq\u2019s Root Beer", [[70, 0, 18, 0, 35, 0, 18], [100, 0, 28, 0, 50, 0, 28], [170, 0, 47, 0, 85, 0, 47], [260, 0, 71, 0, 130, 0, 71], [350, 0, 96, 0, 190, 0, 96]], ["Barqs Root Beer"]],
+    ["coca-cola-zero-sugar", "Coca-Cola Zero Sugar", [[0, 0, 0, 0, 15, 0, 0], [0, 0, 0, 0, 25, 0, 0], [0, 0, 0, 0, 40, 0, 0], [0, 0, 0, 0, 65, 0, 0], [0, 0, 0, 0, 85, 0, 0]], ["Sonic Coke Zero"]],
+    ["diet-coke", "Diet Coke", [[0, 0, 0, 0, 25, 0, 0], [0, 0, 0, 0, 40, 0, 0], [0, 0, 0, 0, 65, 0, 0], [0, 0, 0, 0, 95, 0, 0], [0, 0, 0, 0, 130, 0, 0]]],
+    ["dr-pepper", "Dr Pepper", [[60, 0, 18, 0, 20, 0, 18], [100, 0, 28, 0, 30, 0, 28], [160, 0, 46, 0, 55, 0, 46], [240, 0, 70, 0, 80, 0, 70], [330, 0, 94, 0, 110, 0, 94]], ["Dr. Pepper", "Sonic Dr Pepper"]],
+    ["diet-dr-pepper", "Diet Dr Pepper", [[0, 0, 0, 0, 35, 0, 0], [0, 0, 0, 0, 55, 0, 0], [0, 0, 0, 0, 90, 0, 0], [0, 0, 0, 0, 135, 0, 0], [0, 0, 0, 0, 180, 0, 0]], ["Diet Dr. Pepper"]],
+    ["fanta-orange", "Fanta Orange", [[70, 0, 18, 0, 15, 0, 18], [100, 0, 28, 0, 25, 0, 28], [170, 0, 47, 0, 40, 0, 47], [260, 0, 71, 0, 65, 0, 71], [350, 0, 96, 0, 85, 0, 96]]],
+    ["hi-c-fruit-punch", "Hi-C Fruit Punch", [[70, 0, 20, 0, 35, 0, 20], [110, 0, 31, 0, 50, 0, 31], [190, 0, 51, 0, 85, 0, 51], [290, 0, 77, 0, 130, 0, 77], [390, 0, 105, 0, 170, 0, 105]], ["Hi C Fruit Punch"]],
+    ["powerade-mountain-berry-blast", "Powerade Mountain Berry Blast", [[35, 0, 10, 0, 50, 0, 10], [50, 0, 15, 0, 75, 0, 15], [80, 0, 25, 0, 125, 0, 25], [130, 0, 39, 0, 190, 0, 39], [170, 0, 52, 0, 260, 0, 52]]],
+    ["sprite-zero-sugar", "Sprite Zero Sugar", [[0, 0, 0, 0, 15, 0, 0], [0, 0, 0, 0, 25, 0, 0], [0, 0, 0, 0, 40, 0, 0], [0, 0, 0, 0, 65, 0, 0], [0, 0, 0, 0, 85, 0, 0]]],
+    ["cranberry-limeade", "Cranberry Limeade", [[100, 0, 27, 0, 35, 0, 26], [140, 0, 37, 0, 50, 0, 36], [240, 0, 65, 0, 90, 0, 63], [360, 0, 98, 0, 135, 0, 95], [480, 0, 132, 0, 190, 0, 128]]],
+    ["diet-cherry-limeade", "Diet Cherry Limeade", [[10, 0, 2, 0, 25, 0, 2], [10, 0, 2, 0, 35, 0, 2], [15, 0, 3, 0, 55, 0, 2], [15, 0, 3, 0, 80, 0, 2], [15, 0, 4, 0, 110, 0, 2]]],
+    ["diet-limeade", "Diet Limeade", [[0, 0, 0, 0, 25, 0, 0], [5, 0, 0, 0, 35, 0, 0], [5, 0, 1, 0, 55, 0, 0], [10, 0, 1, 0, 85, 0, 0], [10, 0, 2, 0, 115, 0, 0]]],
+    ["limeade", "Limeade", [[70, 0, 19, 0, 35, 0, 18], [100, 0, 29, 0, 55, 0, 28], [170, 0, 48, 0, 90, 0, 47], [260, 0, 72, 0, 140, 0, 71], [350, 0, 98, 0, 180, 0, 96]]],
+    ["strawberry-limeade", "Strawberry Limeade", [[90, 0, 25, 0, 40, 1, 24], [130, 0, 35, 0, 55, 1, 34], [220, 0, 60, 0, 100, 1, 58], [330, 0, 90, 0, 150, 1, 88], [450, 0, 121, 0, 200, 2, 118]]],
+    ["dirty-dr-pepper", "Dirty Dr Pepper", [[100, 1, 26, 1, 45, 0, 25], [140, 1, 36, 1, 55, 0, 35], [240, 1, 63, 1.5, 95, 0, 61], [370, 2, 95, 2.5, 150, 0, 92], [490, 2, 128, 3, 200, 0, 124]], ["Dirty Dr. Pepper"]],
+    ["ocean-water", "Ocean Water", [[80, 0, 21, 0, 40, 0, 21], [110, 0, 31, 0, 60, 0, 31], [190, 0, 53, 0, 95, 0, 53], [300, 0, 80, 0, 150, 0, 80], [400, 0, 108, 0, 200, 0, 108]]],
+  ].map(([id, name, values, aliases]) => sonicFiveSizeDrink(id, name, values, aliases)),
+  sonicCurrentFood("simply-orange-juice-bottle", "Simply Orange Juice Bottle", "1 bottle (11.5 fl oz)", sonicPublished(160, 2, 37, 0, 0, 0, 33)),
+  ...[
+    ["asian-sweet-chili", "Asian-Style Sweet Chili", 60, 1, 13, 0, 370, 0, 11], ["bbq", "BBQ Sauce", 50, 0, 11, 0, 300, 0, 10],
+    ["buffalo", "Buffalo Sauce", 60, 0, 1, 6, 720, 0, 0], ["garlic-parmesan-ranch", "Garlic Parmesan Ranch", 50, 0, 1, 5, 105, 0, 0],
+    ["groovy-sauce", "Groovy Sauce", 110, 0, 2, 11, 200, 0, 2], ["honey-mustard", "Honey Mustard", 90, 0, 6, 8, 170, 0, 4],
+    ["jalapeno-ranch", "Jalape\u00f1o Ranch", 130, 0, 2, 13, 170, 0, 1], ["ketchup", "Ketchup", 10, 0, 3, 0, 85, 0, 2],
+    ["light-mayo", "Light Mayo", 40, 0, 3, 3, 105, 0, 2], ["marinara", "Marinara", 15, 0, 4, 0, 135, 0, 2],
+    ["mustard", "Mustard", 5, 0, 0, 0, 95, 0, 0], ["ranch", "Ranch", 110, 0, 1, 11, 230, 0, 1],
+    ["signature-cheese", "Signature Cheese Sauce", 130, 2, 6, 11, 720, 0, 3], ["smasher-sauce", "Smasher Sauce", 35, 0, 1, 3.5, 70, 0, 1],
+    ["sweet-relish", "Sweet Relish", 10, 0, 3, 0, 55, 0, 2], ["syrup", "Breakfast Syrup", 90, 0, 22, 0, 0, 0, 15],
+  ].map(([id, name, calories, protein, carbohydrates, fat, sodium, fiber, sugar]) => sonicCurrentFood(id, name, "1 published condiment serving", sonicPublished(calories, protein, carbohydrates, fat, sodium, fiber, sugar), undefined, id === "jalapeno-ranch" ? ["Jalapeno Ranch"] : undefined)),
 ];
 
 const braums = { id: "braums", name: "Braum's" };
@@ -205,6 +413,27 @@ const braumsExpansionFood = (id, name, description, nutrients, sourceReference) 
   undefined,
   { accessedAt: CATALOG_EXPANSION_CHECKED_AT }
 );
+const braumsPublished = (calories, protein, carbohydrates, fat, sodium, fiber, totalSugar) => ({
+  calories, protein, carbohydrates, fat, sodium, fiber, totalSugar,
+});
+const BRAUMS_CURRENT_REFERENCE = "Braum's official 2018 Nutritional Chart, still published on its website; matched to the current restaurant, breakfast, beverage, or ice-cream-counter menu on 2026-09-10";
+const braumsCurrentOption = (id, description, nutrients, amount = 1) => {
+  const option = officialOption(braums.id, id, description, nutrients, amount, BRAUMS_SOURCE, BRAUMS_CURRENT_REFERENCE);
+  option.provenance.verification.accessedAt = CURRENT_EXPANSION_CHECKED_AT;
+  return option;
+};
+const braumsCurrentFood = (id, name, description, nutrients, servingOptions, searchAliases) => {
+  const food = officialFood(braums, id, name, description, nutrients, BRAUMS_SOURCE, BRAUMS_CURRENT_REFERENCE, servingOptions, { accessedAt: CURRENT_EXPANSION_CHECKED_AT });
+  return searchAliases ? { ...food, searchAliases } : food;
+};
+const braumsSizedFood = (id, name, options, searchAliases) => braumsCurrentFood(
+  id,
+  name,
+  options[0][1],
+  null,
+  options.map(([optionId, description, nutrients, amount = 1]) => braumsCurrentOption(`${id}:${optionId}`, description, nutrients, amount)),
+  searchAliases
+);
 
 const braumsFoods = [
   braumsFood("quarter-lb-cheeseburger", "Quarter lb. Cheeseburger", "1 cheeseburger", { calories: 530, protein: 29, carbohydrates: 40, fat: 28, sodium: 1420 }),
@@ -213,6 +442,7 @@ const braumsFoods = [
   braumsFood("chicken-sandwich-crispy", "Chicken Sandwich Crispy", "1 sandwich", { calories: 590, protein: 28, carbohydrates: 60, fat: 27, sodium: 1220 }),
   braumsFood("chicken-sandwich-grilled", "Chicken Sandwich Grilled", "1 sandwich", { calories: 430, protein: 32, carbohydrates: 38, fat: 18, sodium: 1260 }),
   braumsFood("chicken-strips", "Chicken Strips", null, null, [
+    braumsCurrentOption("chicken-strips:2-piece", "2 piece serving", { calories: 250, protein: 14, carbohydrates: 15, fat: 15, sodium: 680, fiber: 1, totalSugar: 0 }, 2),
     braumsOption("chicken-strips:4-piece", "4 piece serving", { calories: 490, protein: 28, carbohydrates: 29, fat: 29, sodium: 1350 }, 4),
     braumsOption("chicken-strips:6-piece", "6 piece serving", { calories: 740, protein: 41, carbohydrates: 44, fat: 44, sodium: 2030 }, 6),
   ]),
@@ -237,6 +467,108 @@ const braumsFoods = [
   braumsExpansionFood("biscuit-sausage-egg-cheese", "Biscuit with Sausage, Egg & Cheese", "1 biscuit sandwich (199 g): sausage, egg and cheese", { calories: 600, protein: 23, carbohydrates: 34, fat: 39, sodium: 1470 }, "Braum's official 2018 Nutritional Chart, still linked by the current website; breakfast-menu identity checked 2026-09-09"),
   braumsExpansionFood("english-muffin-ham-egg-cheese", "English Muffin with Ham, Egg & Cheese", "1 English muffin sandwich (160 g): ham, egg and cheese", { calories: 330, protein: 21, carbohydrates: 27, fat: 16, sodium: 600 }, "Braum's official 2018 Nutritional Chart, still linked by the current website; breakfast-menu identity checked 2026-09-09"),
   braumsExpansionFood("plain-bagel-bacon-egg-cheese", "Plain Bagel with Bacon, Egg & Cheese", "1 plain bagel sandwich (156 g): bacon, egg and cheese", { calories: 400, protein: 21, carbohydrates: 38, fat: 18, sodium: 890 }, "Braum's official 2018 Nutritional Chart, still linked by the current website; breakfast-menu identity checked 2026-09-09"),
+  braumsCurrentFood("california-cheeseburger", "California Cheeseburger", "1 standard burger (268 g)", braumsPublished(680, 30, 42, 43, 1440, 4, 8)),
+  braumsCurrentFood("triple-quarter-lb-cheeseburger", "Triple Quarter lb. Cheeseburger", "1 triple cheeseburger (427 g)", braumsPublished(1040, 71, 43, 64, 2020, 2, 12)),
+  braumsCurrentFood("quarter-lb-bbq-bacon-cheeseburger", "Quarter lb. BBQ Bacon Cheeseburger", "1 limited-time burger (300 g)", braumsPublished(710, 39, 54, 37, 1770, 3, 16)),
+  braumsCurrentFood("bowl-of-chili-cheese-sour-cream", "Bowl of Chili with Cheese & Sour Cream", "1 bowl (482 g), including cheese and sour cream", braumsPublished(600, 35, 47, 30, 1250, 8, 11)),
+  braumsCurrentFood("garden-salad", "Garden Salad", "1 salad (310 g); dressing not included", braumsPublished(170, 10, 13, 10, 240, 4, 7)),
+  braumsCurrentFood("crispy-chicken-salad", "Crispy Chicken Salad", "1 salad (430 g); dressing not included", braumsPublished(540, 30, 35, 32, 1250, 5, 7)),
+  braumsSizedFood("biscuits-sausage-gravy", "Biscuits & Sausage Gravy", [
+    ["single", "Single biscuit with sausage gravy (249 g)", braumsPublished(420, 8, 43, 21, 1480, 1, 2)],
+    ["double", "Double biscuits with sausage gravy (499 g)", braumsPublished(840, 17, 87, 43, 2970, 3, 5)],
+  ]),
+  braumsCurrentFood("cinnamon-roll", "Cinnamon Roll", "1 cinnamon roll (152 g)", braumsPublished(530, 9, 83, 18, 540, 3, 42)),
+  braumsCurrentFood("fruit-yogurt-swirl", "Fruit & Yogurt Swirl", "1 serving (308 g)", braumsPublished(280, 18, 44, 5, 60, 5, 27)),
+  braumsSizedFood("hotcakes", "Hotcakes", [
+    ["three", "3 hotcakes (188 g)", braumsPublished(340, 6, 65, 7, 1120, 1, 13), 3],
+    ["three-sausage", "3 hotcakes with sausage (228 g)", braumsPublished(510, 13, 66, 21, 1460, 1, 13), 3],
+  ]),
+  braumsSizedFood("big-country-breakfast", "Big Country Breakfast", [
+    ["standard", "Standard Big Country Breakfast (319 g)", braumsPublished(950, 29, 57, 65, 1730, 4, 3)],
+    ["with-gravy", "Big Country Breakfast with gravy (489 g)", braumsPublished(1100, 32, 70, 74, 2460, 5, 4)],
+  ]),
+  braumsCurrentFood("breakfast-california-burrito", "California Breakfast Burrito", "1 burrito (257 g)", braumsPublished(580, 21, 42, 36, 1030, 4, 4)),
+  braumsCurrentFood("breakfast-burrito-grande", "Grande Breakfast Burrito", "1 burrito (274 g)", braumsPublished(680, 24, 52, 41, 1190, 4, 3)),
+  braumsCurrentFood("biscuit-bacon-egg-cheese", "Biscuit with Bacon, Egg & Cheese", "1 biscuit sandwich (170 g)", braumsPublished(490, 20, 33, 29, 1320, 1, 3)),
+  braumsCurrentFood("biscuit-ham-egg-cheese", "Biscuit with Ham, Egg & Cheese", "1 biscuit sandwich (182 g)", braumsPublished(470, 21, 33, 26, 1140, 1, 3)),
+  braumsCurrentFood("english-muffin-bacon-egg-cheese", "English Muffin with Bacon, Egg & Cheese", "1 English muffin sandwich (148 g)", braumsPublished(360, 20, 27, 19, 780, 2, 3)),
+  braumsCurrentFood("plain-bagel-sausage-egg-cheese", "Plain Bagel with Sausage, Egg & Cheese", "1 plain bagel sandwich (185 g)", braumsPublished(510, 24, 38, 28, 1040, 2, 4)),
+  braumsSizedFood("plain-breakfast-breads", "Plain Breakfast Breads", [
+    ["biscuit", "Plain breakfast biscuit (80 g)", braumsPublished(270, 5, 31, 12, 760, 1, 1)],
+    ["english-muffin", "Plain English muffin (58 g)", braumsPublished(130, 5, 25, 2, 220, 2, 2)],
+    ["everything-bagel", "Everything bagel (65 g)", braumsPublished(180, 6, 35, 1.5, 450, 2, 3)],
+    ["plain-bagel", "Plain bagel (65 g)", braumsPublished(170, 6, 35, 0.5, 310, 2, 3)],
+  ]),
+  ...[
+    ["premium-vanilla-ice-cream", "Premium Vanilla Ice Cream", [[190, 3, 19, 11, 60, 0, 19], [280, 5, 28, 17, 90, 0, 28]]],
+    ["premium-chocolate-ice-cream", "Premium Chocolate Ice Cream", [[190, 3, 21, 11, 55, 1, 19], [280, 5, 31, 17, 80, 1, 29]]],
+    ["premium-strawberry-ice-cream", "Premium Strawberry Ice Cream", [[170, 3, 21, 9, 55, 1, 20], [260, 4, 32, 14, 80, 1, 30]]],
+  ].map(([id, name, values]) => braumsSizedFood(id, name, [
+    ["junior-3oz", `Junior dip (3 oz) ${name}`, braumsPublished(...values[0])],
+    ["single-4-5oz", `Single dip (4.5 oz) ${name}`, braumsPublished(...values[1])],
+  ])),
+  ...[
+    ["soft-serve-vanilla-cone", "Vanilla Soft Serve Cone", [[190, 4, 32, 6, 120, 1, 20], [260, 6, 38, 9, 180, 0, 27], [290, 7, 47, 9, 190, 1, 32], [560, 13, 89, 19, 360, 2, 62]]],
+    ["soft-serve-chocolate-cone", "Chocolate Soft Serve Cone", [[190, 4, 32, 6, 115, 2, 22], [260, 6, 39, 9, 170, 1, 30], [290, 7, 48, 9, 180, 3, 35], [560, 13, 91, 18, 340, 5, 68]]],
+    ["soft-serve-twist-cone", "Twist Soft Serve Cone", [[190, 4, 32, 6, 120, 1, 21], [260, 6, 39, 9, 170, 1, 28], [290, 7, 48, 9, 180, 2, 33], [560, 13, 90, 18, 350, 3, 65]]],
+  ].map(([id, name, values]) => braumsSizedFood(id, name, [
+    ["junior-sugar", `Junior sugar cone ${name}`, braumsPublished(...values[0])],
+    ["small-cake", `Small cake cone ${name}`, braumsPublished(...values[1])],
+    ["small-waffle", `Small waffle cone ${name}`, braumsPublished(...values[2])],
+    ["large-waffle", `Large waffle cone ${name}`, braumsPublished(...values[3])],
+  ])),
+  ...[
+    ["vanilla-soft-serve-dish", "Vanilla Soft Serve Dish", [[230, 6, 33, 9, 150, 0, 27], [460, 11, 65, 18, 290, 0, 53]]],
+    ["chocolate-soft-serve-dish", "Chocolate Soft Serve Dish", [[230, 6, 34, 9, 135, 1, 30], [450, 12, 67, 17, 270, 3, 59]]],
+    ["twist-soft-serve-dish", "Twist Soft Serve Dish", [[230, 6, 33, 9, 140, 1, 28], [450, 12, 66, 17, 280, 2, 56]]],
+  ].map(([id, name, values]) => braumsSizedFood(id, name, [
+    ["small", `Small ${name} (142 g)`, braumsPublished(...values[0])],
+    ["large", `Large ${name} (284 g)`, braumsPublished(...values[1])],
+  ])),
+  ...[
+    ["hot-fudge-sundae", "Hot Fudge Sundae", [[450, 8, 46, 27, 150, 1, 37], [860, 16, 89, 52, 290, 3, 72], [1310, 23, 136, 78, 440, 4, 109]]],
+    ["hot-caramel-sundae", "Hot Caramel Sundae", [[450, 8, 52, 24, 160, 1, 44], [860, 16, 101, 45, 310, 2, 87], [1300, 24, 154, 69, 470, 3, 132]]],
+    ["strawberry-sundae", "Strawberry Sundae", [[330, 5, 40, 17, 90, 1, 37], [620, 10, 77, 32, 180, 2, 72], [940, 15, 117, 49, 270, 3, 109]]],
+    ["chocolate-sundae", "Chocolate Sundae", [[460, 10, 61, 22, 125, 3, 48], [890, 19, 118, 43, 240, 7, 94], [1350, 29, 178, 65, 360, 10, 142]]],
+  ].map(([id, name, values]) => braumsSizedFood(id, name, ["single", "double", "triple"].map((size, index) => [size, `${size[0].toUpperCase()}${size.slice(1)}-dip ${name}`, braumsPublished(...values[index])]))),
+  ...[
+    ["birthday-cake-fancy-sundae", "Birthday Cake Fancy Sundae", 600, 8, 94, 23, 300, 1, 70],
+    ["black-forest-fancy-sundae", "Black Forest Fancy Sundae", 570, 8, 74, 29, 350, 2, 56],
+    ["brownie-fudge-fancy-sundae", "Brownie Fudge Fancy Sundae", 740, 11, 86, 41, 310, 3, 64],
+    ["german-chocolate-fancy-sundae", "German Chocolate Fancy Sundae", 620, 8, 67, 37, 250, 2, 52],
+    ["molten-lava-fancy-sundae", "Molten Lava Fancy Sundae", 640, 11, 72, 36, 370, 2, 52],
+    ["strawberry-shortcake-fancy-sundae", "Strawberry Shortcake Fancy Sundae", 460, 7, 63, 22, 260, 2, 51],
+    ["turtle-fancy-sundae", "Turtle Fancy Sundae", 570, 9, 62, 34, 250, 1, 49],
+  ].map(([id, name, calories, protein, carbohydrates, fat, sodium, fiber, sugar]) => braumsCurrentFood(id, name, "1 single-dip fancy sundae", braumsPublished(calories, protein, carbohydrates, fat, sodium, fiber, sugar))),
+  braumsSizedFood("premium-vanilla-malt", "Premium Vanilla Malt", [
+    ["junior-12oz", "Junior Premium Vanilla Malt (12 fl oz)", braumsPublished(540, 19, 60, 26, 310, 0, 59)],
+    ["small-16oz", "Small Premium Vanilla Malt (16 fl oz)", braumsPublished(710, 25, 80, 34, 420, 1, 77)],
+    ["large-32oz", "Large Premium Vanilla Malt (32 fl oz)", braumsPublished(1430, 49, 160, 68, 840, 1, 155)],
+  ]),
+  ...[
+    ["cherry-limeade", "Cherry Limeade", [[150, 0, 39, 0, 30, 0, 34], [230, 0, 60, 0, 45, 0, 53], [280, 0, 73, 0, 60, 0, 65], [410, 0, 105, 0, 75, 0, 92], [510, 0, 133, 0, 95, 1, 116]]],
+    ["limeade", "Limeade", [[130, 0, 33, 0, 30, 0, 31], [200, 0, 50, 0, 50, 0, 46], [250, 0, 64, 0, 60, 0, 58], [340, 0, 87, 0, 80, 0, 79], [430, 0, 111, 0, 105, 1, 100]], ["Braums Limeade"]],
+    ["coca-cola", "Coca-Cola", [[90, 0, 24, 0, 30, 0, 24], [140, 0, 37, 0, 45, 0, 37], [170, 0, 47, 0, 55, 0, 47], [240, 0, 65, 0, 75, 0, 65], [350, 0, 96, 0, 115, 0, 96]]],
+    ["dr-pepper", "Dr Pepper", [[90, 0, 25, 0, 35, 0, 25], [140, 0, 38, 0, 50, 0, 38], [180, 0, 48, 0, 60, 0, 48], [250, 0, 66, 0, 85, 0, 66], [360, 0, 98, 0, 125, 0, 98]]],
+    ["sprite", "Sprite", [[90, 0, 22, 0, 40, 0, 22], [130, 0, 34, 0, 60, 0, 34], [170, 0, 43, 0, 75, 0, 43], [230, 0, 59, 0, 105, 0, 59], [340, 0, 88, 0, 150, 0, 88]]],
+    ["sweet-tea", "Sweet Tea", [[0, 0, 0, 0, 5, 0, 0], [150, 0, 39, 0, 10, 0, 38], [200, 0, 49, 0, 10, 0, 49], [270, 0, 68, 0, 15, 0, 67], [400, 0, 101, 0, 20, 0, 100]]],
+    ["unsweet-tea", "Unsweet Tea", [[10, 0, 2, 0, 5, 0, 2], [0, 0, 0, 0, 10, 0, 0], [0, 0, 0, 0, 15, 0, 0], [0, 0, 0, 0, 20, 0, 0], [0, 0, 0, 0, 25, 0, 0]]],
+  ].map(([id, name, values, aliases]) => braumsSizedFood(id, name, ["junior-12oz", "small-16oz", "medium-22oz", "large-32oz", "44oz"].map((size, index) => [size, `${name} ${size.replace("-", " ")}`, braumsPublished(...values[index])]), aliases)),
+  braumsSizedFood("hot-coffee", "Hot Coffee", [
+    ["small-12oz", "Small Hot Coffee (12 fl oz)", braumsPublished(0, 0, 0, 0, 0, 0, 0)],
+    ["medium-16oz", "Medium Hot Coffee (16 fl oz)", braumsPublished(0, 0, 0, 0, 0, 0, 0)],
+    ["large-20oz", "Large Hot Coffee (20 fl oz)", braumsPublished(0, 0, 0, 0, 0, 0, 0)],
+  ]),
+  braumsSizedFood("hot-chocolate", "Hot Chocolate", [
+    ["small-12oz", "Small Hot Chocolate (12 fl oz)", braumsPublished(380, 11, 61, 12, 260, 3, 55)],
+    ["medium-16oz", "Medium Hot Chocolate (16 fl oz)", braumsPublished(470, 15, 73, 16, 340, 3, 66)],
+    ["large-20oz", "Large Hot Chocolate (20 fl oz)", braumsPublished(570, 19, 85, 19, 440, 4, 78)],
+  ]),
+  braumsSizedFood("iced-coffee", "Iced Coffee", [
+    ["small-12oz", "Small Iced Coffee (12 fl oz)", braumsPublished(45, 5, 6, 0, 70, 0, 6)],
+    ["medium-16oz", "Medium Iced Coffee (16 fl oz)", braumsPublished(50, 5, 7, 0, 80, 0, 7)],
+    ["large-24oz", "Large Iced Coffee (24 fl oz)", braumsPublished(60, 6, 9, 0, 100, 0, 9)],
+  ]),
 ];
 
 const TACO_BELL_SOURCE = "https://www.tacobell.com/nutrition/info";
@@ -349,6 +681,46 @@ const mcdonaldsPartialFood = (id, name, description, calories, sourceUrl) => off
   undefined,
   { status: "partial", accessedAt: CURRENT_EXPANSION_CHECKED_AT }
 );
+const mcdonaldsPartialOption = (id, description, calories, sourceUrl, amount = 1) => ({
+  id: `restaurant:mcdonalds:${id}`,
+  serving: { amount, unit: "item", description },
+  nutrients: { calories, protein: null, carbohydrates: null, fat: null, sodium: null, fiber: null, totalSugar: null, addedSugar: null },
+  provenance: {
+    source: "official-restaurant",
+    sourceId: `mcdonalds:${id}`,
+    confidence: "official-source",
+    verification: {
+      status: "partial",
+      sourceType: "official-restaurant",
+      sourceUrl,
+      accessedAt: CURRENT_EXPANSION_CHECKED_AT,
+      sourceReference: MCDONALDS_PARTIAL_REFERENCE,
+    },
+  },
+});
+const mcdonaldsSizedPartialFood = (id, name, description, options) => officialFood(
+  mcdonalds,
+  id,
+  name,
+  description,
+  null,
+  options[0][3],
+  MCDONALDS_PARTIAL_REFERENCE,
+  options.map(([optionId, optionDescription, calories, sourceUrl, amount = 1]) => (
+    mcdonaldsPartialOption(`${id}:${optionId}`, optionDescription, calories, sourceUrl, amount)
+  )),
+  { status: "partial", accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+);
+const mcdonaldsThreeSizePartialFood = (id, name, description, calories, productSlug = id) => {
+  const food = mcdonaldsSizedPartialFood(id, name, description, ["small", "medium", "large"].map((size, index) => [
+    size,
+    `${size[0].toUpperCase()}${size.slice(1)} ${name.replace(/^McCaf\u00e9 /, "")}`,
+    calories[index],
+    `https://www.mcdonalds.com/us/en-us/product/${productSlug}-${size}.html`,
+  ]));
+  const unaccentedName = name.replace(/\u00e9/g, "e");
+  return unaccentedName === name ? food : { ...food, searchAliases: [unaccentedName] };
+};
 const mcdonaldsExpansionFoods = [
   officialFood(
     mcdonalds,
@@ -370,6 +742,172 @@ const mcdonaldsExpansionFoods = [
   mcdonaldsPartialFood("ranch-snack-wrap", "Ranch Snack Wrap\u00ae", "1 wrap: one McCrispy Strip, shredded cheese, lettuce and ranch sauce in a soft flour tortilla", 400, "https://www.mcdonalds.com/us/en-us/product/ranch-snack-wrap.html"),
   mcdonaldsPartialFood("sausage-burrito", "Sausage Burrito", "1 breakfast burrito: scrambled egg, pork sausage, cheese, green chiles and onion in a soft flour tortilla", 310, "https://www.mcdonalds.com/us/en-us/product/sausage-burrito.html"),
   mcdonaldsPartialFood("fruit-maple-oatmeal", "Fruit & Maple Oatmeal", "1 serving: whole-grain oats with cream, brown sugar, red and green apples, cranberries and two varieties of raisins", 320, "https://www.mcdonalds.com/us/en-us/product/fruit-maple-oatmeal.html"),
+  mcdonaldsPartialFood("sausage-biscuit", "Sausage Biscuit", "1 sandwich: sausage patty on a buttered buttermilk biscuit", 460, "https://www.mcdonalds.com/us/en-us/product/sausage-biscuit.html"),
+  mcdonaldsPartialFood("bacon-egg-cheese-bagel", "Bacon, Egg & Cheese Bagel", "1 sandwich: toasted buttered bagel, bacon, folded egg, breakfast sauce and two American cheese slices", 590, "https://www.mcdonalds.com/us/en-us/product/bacon-egg-cheese-bagel.html"),
+  mcdonaldsPartialFood("sausage-egg-cheese-bagel", "Sausage, Egg & Cheese Bagel", "1 sandwich: toasted bagel, sausage, folded egg, breakfast sauce and two American cheese slices", 710, "https://www.mcdonalds.com/us/en-us/product/sausage-egg-and-cheese-bagel.html"),
+  mcdonaldsPartialFood("steak-egg-cheese-bagel", "Steak, Egg & Cheese Bagel", "1 sandwich: toasted buttered bagel, steak patty, folded egg, American cheese, breakfast sauce and grilled onions", 680, "https://www.mcdonalds.com/us/en-us/product/steak-egg-cheese-bagel.html"),
+  mcdonaldsPartialFood("plain-bagel", "Bagel (plain)", "1 plain breakfast bagel", 270, "https://www.mcdonalds.com/us/en-us/product/bagel-plain.html"),
+  mcdonaldsPartialFood("egg-cheese-bagel", "Egg and Cheese Bagel", "1 sandwich: bagel, folded egg, breakfast sauce and American cheese", 520, "https://www.mcdonalds.com/us/en-us/product/egg-and-cheese-bagel.html"),
+  mcdonaldsPartialFood("egg-cheese-biscuit", "Egg Cheese Biscuit", "1 sandwich: buttered buttermilk biscuit, folded egg and American cheese", 390, "https://www.mcdonalds.com/us/en-us/product/egg-cheese-biscuit.html"),
+  mcdonaldsPartialFood("quarter-pounder-cheese-deluxe", "Quarter Pounder with Cheese Deluxe", "1 burger: quarter-pound beef patty, two American cheese slices, lettuce, tomato, mayo, onions and pickles on a sesame bun", 630, "https://www.mcdonalds.com/us/en-us/product/deluxe-quarter-pounder-with-cheese.html"),
+  mcdonaldsPartialFood("daily-double", "Daily Double", "1 burger: two beef patties, American cheese, lettuce, tomato, onions and mayo", 490, "https://www.mcdonalds.com/us/en-us/product/daily-double.html"),
+  mcdonaldsPartialFood("bacon-quarter-pounder-cheese", "Bacon Quarter Pounder with Cheese", "1 burger: quarter-pound beef patty, bacon, two American cheese slices, onions and pickles on a sesame bun", 630, "https://www.mcdonalds.com/us/en-us/product/quarter-pounder-bacon.html"),
+  mcdonaldsPartialFood("deluxe-mccrispy", "Deluxe McCrispy", "1 sandwich: fried chicken fillet, lettuce, tomato and mayo on a potato roll", 530, "https://www.mcdonalds.com/us/en-us/product/deluxe-mccrispy-chicken-sandwich.html"),
+  mcdonaldsPartialFood("spicy-deluxe-mccrispy", "Spicy Deluxe McCrispy", "1 sandwich: fried chicken fillet, lettuce, tomato and Spicy Pepper Sauce on a potato roll", 530, "https://www.mcdonalds.com/us/en-us/product/spicy-deluxe-mccrispy-chicken-sandwich.html"),
+  mcdonaldsPartialFood("spicy-chicken-mcnuggets-10-piece", "Spicy Chicken McNuggets", "10 piece limited-time serving; dipping sauce not included", 490, "https://www.mcdonalds.com/us/en-us/product/spicy-chicken-mcnuggets-10-piece.html"),
+  mcdonaldsSizedPartialFood("mccrispy-strips", "McCrispy Strips", "all-white-meat chicken strips; dipping sauce not included", [
+    ["3-piece", "3 piece serving", 400, "https://www.mcdonalds.com/us/en-us/product/mccrispy-strips-3-piece.html", 3],
+    ["4-piece", "4 piece serving", 530, "https://www.mcdonalds.com/us/en-us/product/mccrispy-strips-4-piece.html", 4],
+  ]),
+  mcdonaldsPartialFood("apple-slices", "Apple Slices", "1 labelled serving of sliced apples", 15, "https://www.mcdonalds.com/us/en-us/product/apple-slices.html"),
+  mcdonaldsSizedPartialFood("oreo-mcflurry", "OREO McFlurry", "vanilla soft serve with OREO cookie pieces", [
+    ["mini", "Mini OREO McFlurry", 240, "https://www.mcdonalds.com/us/en-us/product/mini-mcflurry-with-oreo-cookies.html"],
+    ["regular", "Regular OREO McFlurry", 410, "https://www.mcdonalds.com/us/en-us/product/mcflurry-with-oreo-cookies.html"],
+  ]),
+  mcdonaldsSizedPartialFood("mms-mcflurry", "M&M'S McFlurry", "vanilla soft serve with M&M'S Minis candies", [
+    ["mini", "Mini M&M'S McFlurry", 340, "https://www.mcdonalds.com/us/en-us/product/mini-mm-candy-mcflurry.html"],
+    ["regular", "Regular M&M'S McFlurry", 570, "https://www.mcdonalds.com/us/en-us/product/mm-candy-mcflurry.html"],
+  ]),
+  mcdonaldsPartialFood("vanilla-cone", "Vanilla Cone", "1 cone with vanilla soft serve", 200, "https://www.mcdonalds.com/us/en-us/product/vanilla-cone.html"),
+  mcdonaldsSizedPartialFood("chocolate-shake", "Chocolate Shake", "soft serve with chocolate syrup and whipped light cream", [
+    ["small", "Small Chocolate Shake", 520, "https://www.mcdonalds.com/us/en-us/product/chocolate-shake-small.html"],
+    ["medium", "Medium Chocolate Shake", 650, "https://www.mcdonalds.com/us/en-us/product/chocolate-shake-medium.html"],
+    ["large", "Large Chocolate Shake", 800, "https://www.mcdonalds.com/us/en-us/product/chocolate-shake-large.html"],
+  ]),
+  mcdonaldsSizedPartialFood("vanilla-shake", "Vanilla Shake", "soft serve with vanilla syrup and whipped light cream", [
+    ["small", "Small Vanilla Shake", 480, "https://www.mcdonalds.com/us/en-us/product/vanilla-shake-small.html"],
+    ["medium", "Medium Vanilla Shake", 570, "https://www.mcdonalds.com/us/en-us/product/vanilla-shake-medium.html"],
+    ["large", "Large Vanilla Shake", 780, "https://www.mcdonalds.com/us/en-us/product/vanilla-shake-large.html"],
+  ]),
+  mcdonaldsSizedPartialFood("strawberry-shake", "Strawberry Shake", "soft serve with strawberry syrup and whipped light cream", [
+    ["small", "Small Strawberry Shake", 470, "https://www.mcdonalds.com/us/en-us/product/strawberry-shake-small.html"],
+    ["medium", "Medium Strawberry Shake", 600, "https://www.mcdonalds.com/us/en-us/product/strawberry-shake-medium.html"],
+    ["large", "Large Strawberry Shake", 850, "https://www.mcdonalds.com/us/en-us/product/strawberry-shake-large.html"],
+  ]),
+  { ...mcdonaldsSizedPartialFood("premium-roast-coffee", "McCafé Premium Roast Coffee", "black 100% Arabica coffee; sugar, sweetener and dairy creamer not included", [
+    ["small", "Small Premium Roast Coffee", 5, "https://www.mcdonalds.com/us/en-us/product/coffee-small.html"],
+    ["medium", "Medium Premium Roast Coffee", 10, "https://www.mcdonalds.com/us/en-us/product/coffee-medium.html"],
+    ["large", "Large Premium Roast Coffee", 10, "https://www.mcdonalds.com/us/en-us/product/coffee-large.html"],
+  ]), searchAliases: ["McCafe Premium Roast Coffee"] },
+  { ...mcdonaldsSizedPartialFood("premium-roast-decaf-coffee", "McCafé Premium Roast Decaf Coffee", "black decaffeinated 100% Arabica coffee; sugar, sweetener and dairy creamer not included", [
+    ["small", "Small Premium Roast Decaf Coffee", 5, "https://www.mcdonalds.com/us/en-us/product/coffee-decaf-small.html"],
+    ["medium", "Medium Premium Roast Decaf Coffee", 10, "https://www.mcdonalds.com/us/en-us/product/coffee-decaf-medium.html"],
+    ["large", "Large Premium Roast Decaf Coffee", 15, "https://www.mcdonalds.com/us/en-us/product/coffee-decaf-large.html"],
+  ]), searchAliases: ["McCafe Premium Roast Decaf Coffee"] },
+  mcdonaldsThreeSizePartialFood("caramel-apple-pie-iced-coffee", "McCaf\u00e9 Caramel Apple Pie Iced Coffee", "limited-time iced coffee with caramel apple pie syrup, apple pie crumble and salted-caramel flavored whipped topping", [240, 290, 330], "caramel-apple-pie-iced-coffee"),
+  mcdonaldsThreeSizePartialFood("iced-coffee", "McCaf\u00e9 Iced Coffee", "100% Arabica iced coffee with cream in the standard product-page configuration; optional flavor substitutions are not included", [150, 190, 270], "iced-coffee"),
+  mcdonaldsThreeSizePartialFood("iced-black-coffee", "McCaf\u00e9 Iced Black Coffee", "100% Arabica coffee served over ice without cream or flavored syrup", [5, 10, 15], "iced-coffee-black"),
+  mcdonaldsThreeSizePartialFood("iced-caramel-coffee", "McCaf\u00e9 Iced Caramel Coffee", "premium-roast iced coffee with caramel syrup and cream", [150, 200, 280], "iced-coffee-caramel"),
+  mcdonaldsThreeSizePartialFood("iced-french-vanilla-coffee", "McCaf\u00e9 Iced French Vanilla Coffee", "premium-roast iced coffee with French vanilla flavor and cream", [150, 200, 280], "iced-coffee-french-vanilla"),
+  mcdonaldsThreeSizePartialFood("hot-tea", "Hot Tea", "orange pekoe and pekoe-cut black tea in the standard product-page configuration", [10, 10, 15], "hot-tea"),
+  mcdonaldsThreeSizePartialFood("hot-chocolate", "McCaf\u00e9 Hot Chocolate", "steamed whole milk and hot-chocolate syrup with whipped light cream and chocolate drizzle", [360, 440, 540], "hot-chocolate"),
+  mcdonaldsThreeSizePartialFood("caramel-apple-pie-frappe", "McCaf\u00e9 Caramel Apple Pie Frapp\u00e9", "limited-time blended coffee with caramel apple pie syrup, apple pie crumble and salted-caramel flavored whipped topping", [530, 620, 840], "caramel-apple-frappe"),
+  mcdonaldsThreeSizePartialFood("caramel-frappe", "McCaf\u00e9 Caramel Frapp\u00e9", "caramel-flavored blended coffee with ice and whipped light cream", [420, 490, 650], "frappe-caramel"),
+  mcdonaldsThreeSizePartialFood("mocha-frappe", "McCaf\u00e9 Mocha Frapp\u00e9", "chocolate-flavored blended coffee with ice and whipped light cream", [430, 490, 660], "frappe-mocha"),
+  mcdonaldsThreeSizePartialFood("caramel-macchiato", "McCaf\u00e9 Caramel Macchiato", "dark-roast espresso, caramel syrup and steamed whole milk", [260, 320, 400], "caramel-macchiato"),
+  mcdonaldsThreeSizePartialFood("iced-caramel-macchiato", "McCaf\u00e9 Iced Caramel Macchiato", "dark-roast espresso, whole milk, caramel syrup and caramel drizzle served over ice", [200, 240, 360], "iced-caramel-macchiato"),
+  mcdonaldsThreeSizePartialFood("mocha-latte", "McCaf\u00e9 Mocha Latte", "espresso, steamed whole milk and chocolate syrup", [290, 370, 460], "mocha-latte"),
+  mcdonaldsThreeSizePartialFood("iced-mocha-latte", "McCaf\u00e9 Iced Mocha Latte", "espresso, whole milk and chocolate syrup over ice with whipped light cream and chocolate drizzle", [270, 320, 440], "iced-mocha"),
+  mcdonaldsThreeSizePartialFood("caramel-apple-pie-latte", "McCaf\u00e9 Caramel Apple Pie Latte", "limited-time espresso and steamed milk with caramel apple pie syrup, apple pie crumble and salted-caramel flavored whipped topping", [340, 410, 490], "caramel-apple-pie-latte"),
+  mcdonaldsThreeSizePartialFood("caramel-apple-pie-iced-latte", "McCaf\u00e9 Caramel Apple Pie Iced Latte", "limited-time espresso and cold milk over ice with caramel apple pie syrup, apple pie crumble and salted-caramel flavored whipped topping", [280, 310, 420], "caramel-apple-pie-iced-latte"),
+  mcdonaldsThreeSizePartialFood("latte", "McCaf\u00e9 Latte", "espresso and steamed whole milk without added flavor syrup", [140, 190, 250], "latte"),
+  mcdonaldsThreeSizePartialFood("caramel-latte", "McCaf\u00e9 Caramel Latte", "espresso, steamed whole milk and caramel syrup", [250, 320, 390], "latte-caramel"),
+  mcdonaldsThreeSizePartialFood("french-vanilla-latte", "McCaf\u00e9 French Vanilla Latte", "espresso, steamed whole milk and French vanilla syrup", [250, 320, 400], "latte-french-vanilla"),
+  mcdonaldsThreeSizePartialFood("iced-latte", "McCaf\u00e9 Iced Latte", "espresso and whole milk served over ice without added flavor syrup", [80, 120, 170], "iced-latte"),
+  mcdonaldsThreeSizePartialFood("iced-caramel-latte", "McCaf\u00e9 Iced Caramel Latte", "espresso, whole milk and caramel syrup served over ice", [180, 220, 330], "iced-caramel-latte"),
+  mcdonaldsThreeSizePartialFood("cappuccino", "McCaf\u00e9 Cappuccino", "espresso with steamed whole milk and foam without added flavor syrup", [110, 160, 200], "cappuccino"),
+  mcdonaldsThreeSizePartialFood("french-vanilla-cappuccino", "McCaf\u00e9 French Vanilla Cappuccino", "espresso, steamed whole milk, foam and French vanilla flavor", [210, 260, 340], "french-vanilla-cappuccino"),
+  mcdonaldsThreeSizePartialFood("caramel-cappuccino", "McCaf\u00e9 Caramel Cappuccino", "espresso, steamed whole milk, foam and caramel flavor", [210, 260, 340], "caramel-cappuccino"),
+  mcdonaldsThreeSizePartialFood("americano", "McCaf\u00e9 Americano", "espresso and hot water without milk, sweetener or flavor syrup", [0, 5, 5], "espresso-americano-coffee"),
+  mcdonaldsPartialFood("red-bull-dragonberry-energizer", "Red Bull Dragonberry Energizer", "1 published serving over ice: Red Bull, blue-raspberry flavor and freeze-dried dragon fruit; contains 80 mg caffeine", 200, "https://www.mcdonalds.com/us/en-us/product/red-bull-dragonberry-energizer.html"),
+  mcdonaldsPartialFood("reduced-sugar-red-bull-dragonberry-energizer", "Reduced Sugar Red Bull Dragonberry Energizer", "1 published serving over ice: Red Bull Zero, blue-raspberry flavor and freeze-dried dragon fruit; contains 80 mg caffeine", 100, "https://www.mcdonalds.com/us/en-us/product/reduced-sugar-red-bull-dragonberry-energizer.html"),
+  mcdonaldsThreeSizePartialFood("sprite-berry-blast", "Sprite Berry Blast", "Sprite with blue-raspberry flavor and chilled cold foam, served over ice", [210, 290, 390], "sprite-berry-blast"),
+  mcdonaldsThreeSizePartialFood("strawberry-watermelon-refresher", "Strawberry Watermelon Refresher", "standard caffeinated configuration with strawberry and watermelon flavors, lemonade and freeze-dried strawberries over ice", [160, 210, 260], "strawberry-watermelon-refresher"),
+  mcdonaldsThreeSizePartialFood("dirty-dr-pepper", "Dirty Dr Pepper", "Dr Pepper with vanilla flavor and chilled cold foam, served over ice", [220, 300, 410], "dirty-dr-pepper"),
+  mcdonaldsThreeSizePartialFood("vanilla-swirl-coca-cola", "Vanilla Swirl with Coca-Cola", "Coca-Cola with vanilla flavor and chilled cold foam, served over ice", [250, 340, 430], "vanilla-swirl-with-coke"),
+  mcdonaldsThreeSizePartialFood("reduced-sugar-vanilla-swirl-diet-coke", "Reduced Sugar Vanilla Swirl with Diet Coke", "Diet Coke with vanilla syrup and chilled cold foam, served over ice", [150, 190, 230], "reduced-sugar-vanilla-swirl-with-diet-coke"),
+  mcdonaldsThreeSizePartialFood("mango-pineapple-refresher", "Mango Pineapple Refresher", "standard caffeinated configuration with mango and pineapple flavors, lemonade and strawberry popping boba over ice", [180, 250, 330], "mango-pineapple-refresher"),
+  mcdonaldsThreeSizePartialFood("blackberry-passion-fruit-refresher", "Blackberry Passion Fruit Refresher", "standard caffeinated configuration with blackberry and passion-fruit flavors, lemonade and freeze-dried dragon fruit over ice", [170, 230, 270], "blackberry-passionfruit-refresher"),
+  mcdonaldsThreeSizePartialFood("orange-dream-hi-c", "Orange Dream with Hi-C", "Hi-C Orange Lavaburst with vanilla flavor and chilled cold foam, served over ice", [230, 320, 430], "orange-dream"),
+  mcdonaldsThreeSizePartialFood("orange-dream-fanta", "Orange Dream with Fanta", "Fanta with vanilla flavor and chilled cold foam, served over ice", [250, 340, 440], "orange-dream-with-fanta"),
+  mcdonaldsSizedPartialFood("diet-coke", "Diet Coke", "fountain Diet Coke with standard ice fill", [
+    ["extra-small", "Extra Small Diet Coke", 0, "https://www.mcdonalds.com/us/en-us/product/diet-coke-small.html"],
+    ["small", "Small Diet Coke", 0, "https://www.mcdonalds.com/us/en-us/product/diet-coke-small.html"],
+    ["medium", "Medium Diet Coke", 0, "https://www.mcdonalds.com/us/en-us/product/diet-coke-small.html"],
+    ["large", "Large Diet Coke", 0, "https://www.mcdonalds.com/us/en-us/product/diet-coke-small.html"],
+  ]),
+  mcdonaldsSizedPartialFood("sprite", "Sprite", "fountain Sprite with standard ice fill", [
+    ["extra-small", "Extra Small Sprite", 140, "https://www.mcdonalds.com/us/en-us/product/sprite-extra-small.html"],
+    ["small", "Small Sprite", 190, "https://www.mcdonalds.com/us/en-us/product/sprite-small.html"],
+    ["medium", "Medium Sprite", 250, "https://www.mcdonalds.com/us/en-us/product/sprite-medium.html"],
+    ["large", "Large Sprite", 350, "https://www.mcdonalds.com/us/en-us/product/sprite-large.html"],
+  ]),
+  mcdonaldsSizedPartialFood("hi-c-orange-lavaburst", "Hi-C Orange Lavaburst", "fountain Hi-C Orange Lavaburst with standard ice fill", [
+    ["extra-small", "Extra Small Hi-C Orange Lavaburst", 160, "https://www.mcdonalds.com/us/en-us/product/hi-c-orange-lavaburst-extra-small.html"],
+    ["small", "Small Hi-C Orange Lavaburst", 220, "https://www.mcdonalds.com/us/en-us/product/hi-c-orange-lavaburst-small.html"],
+    ["medium", "Medium Hi-C Orange Lavaburst", 280, "https://www.mcdonalds.com/us/en-us/product/hi-c-orange-lavaburst-medium.html"],
+    ["large", "Large Hi-C Orange Lavaburst", 410, "https://www.mcdonalds.com/us/en-us/product/hi-c-orange-lavaburst-large.html"],
+  ]),
+  mcdonaldsSizedPartialFood("dr-pepper", "Dr Pepper", "fountain Dr Pepper with standard ice fill", [
+    ["extra-small", "Extra Small Dr Pepper", 140, "https://www.mcdonalds.com/us/en-us/product/dr-pepper-extra-small.html"],
+    ["small", "Small Dr Pepper", 190, "https://www.mcdonalds.com/us/en-us/product/dr-pepper-small.html"],
+    ["medium", "Medium Dr Pepper", 250, "https://www.mcdonalds.com/us/en-us/product/dr-pepper-medium.html"],
+    ["large", "Large Dr Pepper", 360, "https://www.mcdonalds.com/us/en-us/product/dr-pepper-large.html"],
+  ]),
+  mcdonaldsSizedPartialFood("lemonade", "Lemonade", "lemonade with real lemon juice, lemon pulp and cane sugar", [
+    ["small", "Small Lemonade", 120, "https://www.mcdonalds.com/us/en-us/product/lemonade-small.html"],
+    ["medium", "Medium Lemonade", 190, "https://www.mcdonalds.com/us/en-us/product/lemonade-medium.html"],
+    ["large", "Large Lemonade", 270, "https://www.mcdonalds.com/us/en-us/product/lemonade-large.html"],
+  ]),
+  mcdonaldsSizedPartialFood("sweet-tea", "Sweet Tea", "sweetened orange pekoe and pekoe-cut black iced tea", [
+    ["small", "Small Sweet Tea", 170, "https://www.mcdonalds.com/us/en-us/product/sweet-tea-small.html"],
+  ]),
+  mcdonaldsSizedPartialFood("unsweetened-iced-tea", "Unsweetened Iced Tea", "fresh-brewed orange pekoe black tea served over ice without sweetener", [
+    ["extra-small", "Extra Small Unsweetened Iced Tea", 0, "https://www.mcdonalds.com/us/en-us/product/iced-tea-small.html"],
+    ["small", "Small Unsweetened Iced Tea", 0, "https://www.mcdonalds.com/us/en-us/product/iced-tea-small.html"],
+    ["medium", "Medium Unsweetened Iced Tea", 0, "https://www.mcdonalds.com/us/en-us/product/iced-tea-small.html"],
+    ["large", "Large Unsweetened Iced Tea", 0, "https://www.mcdonalds.com/us/en-us/product/iced-tea-small.html"],
+  ]),
+  mcdonaldsPartialFood("dasani-water", "DASANI Water", "1 bottle of purified water enhanced with minerals", 0, "https://www.mcdonalds.com/us/en-us/product/dasani-water.html"),
+  mcdonaldsPartialFood("low-fat-milk-jug", "1% Low Fat Milk Jug", "1 individual milk jug; standalone or Happy Meal drink component", 100, "https://www.mcdonalds.com/us/en-us/product/1-low-fat-milk-jug.html"),
+  mcdonaldsPartialFood("reduced-sugar-chocolate-milk-jug", "Reduced Sugar Low Fat Chocolate Milk Jug", "1 individual chocolate milk jug; standalone or Happy Meal drink component", 130, "https://www.mcdonalds.com/us/en-us/product/reduced-sugar-low-fat-chocolate-milk-jug.html"),
+  mcdonaldsSizedPartialFood("minute-maid-orange-juice", "Minute Maid Premium Orange Juice", "100% orange juice", [
+    ["small", "Small Minute Maid Premium Orange Juice", 150, "https://www.mcdonalds.com/us/en-us/product/minute-maid-orange-juice-small.html"],
+    ["medium", "Medium Minute Maid Premium Orange Juice", 190, "https://www.mcdonalds.com/us/en-us/product/minute-maid-orange-juice-medium-201248.html"],
+    ["large", "Large Minute Maid Premium Orange Juice", 270, "https://www.mcdonalds.com/us/en-us/product/minute-maid-orange-juice-large.html"],
+  ]),
+  mcdonaldsPartialFood("honest-kids-appley-ever-after", "Honest Kids Appley Ever After Organic Juice Drink", "1 organic apple juice drink box; standalone or Happy Meal drink component", 35, "https://www.mcdonalds.com/us/en-us/product/honest-kids-appley-ever-after-6-fl-oz-drink-box.html"),
+  mcdonaldsSizedPartialFood("frozen-hawaiian-punch", "Frozen Hawaiian Punch", "frozen Hawaiian Punch beverage", [
+    ["small", "Small Frozen Hawaiian Punch", 60, "https://www.mcdonalds.com/us/en-us/product/frozen-hawaiian-punch-small.html"],
+  ]),
+  mcdonaldsSizedPartialFood("frozen-coke", "Frozen Coca-Cola Classic", "limited-time frozen Coca-Cola Classic beverage", [
+    ["small", "Small Frozen Coca-Cola Classic", 60, "https://www.mcdonalds.com/us/en-us/product/frozen-coke-small.html"],
+  ]),
+  mcdonaldsSizedPartialFood("frozen-fanta-blue-raspberry", "Frozen Fanta Blue Raspberry", "limited-time frozen Fanta Blue Raspberry beverage", [
+    ["small", "Small Frozen Fanta Blue Raspberry", 60, "https://www.mcdonalds.com/us/en-us/product/frozen-fanta-blue-raspberry-small.html"],
+  ]),
+  { ...mcdonaldsSizedPartialFood("strawberry-banana-smoothie", "McCaf\u00e9 Strawberry Banana Smoothie", "strawberry and banana fruit smoothie blended with low-fat yogurt and ice", [
+    ["small", "Small Strawberry Banana Smoothie", 190, "https://www.mcdonalds.com/us/en-us/product/strawberry-banana-smoothie-small.html"],
+  ]), searchAliases: ["McCafe Strawberry Banana Smoothie"] },
+  { ...mcdonaldsSizedPartialFood("mango-pineapple-smoothie", "McCaf\u00e9 Mango Pineapple Smoothie", "mango and pineapple fruit smoothie blended with low-fat yogurt and ice", [
+    ["small", "Small Mango Pineapple Smoothie", 200, "https://www.mcdonalds.com/us/en-us/product/mango-pineapple-smoothie-small.html"],
+  ]), searchAliases: ["McCafe Mango Pineapple Smoothie"] },
+  mcdonaldsPartialFood("hot-fudge-sundae", "Hot Fudge Sundae", "1 sundae: vanilla soft serve with hot fudge topping", 330, "https://www.mcdonalds.com/us/en-us/product/hot-fudge-sundae.html"),
+  mcdonaldsPartialFood("baked-apple-pie", "Baked Apple Pie", "1 baked apple pie", 230, "https://www.mcdonalds.com/us/en-us/product/baked-hot-apple-pie.html"),
+  mcdonaldsPartialFood("chocolate-chip-cookie", "Chocolate Chip Cookie", "1 cookie", 170, "https://www.mcdonalds.com/us/en-us/product/chocolate-chip-cookie.html"),
+  ...[
+    ["mighty-hot-sauce", "Mighty Hot Sauce", "1 dipping cup", 25, "mighty-hot-sauce-dip-cup"],
+    ["creamy-chili-dip", "Creamy Chili McCrispy Strip Dip", "1 dipping cup", 110, "creamy-chili-sauce"],
+    ["tangy-barbeque-sauce", "Tangy Barbeque Sauce", "1 sauce serving", 45, "tangy-barbeque-sauce"],
+    ["spicy-buffalo-sauce", "Spicy Buffalo Sauce", "1 sauce serving", 30, "spicy-buffalo-sauce"],
+    ["creamy-ranch-sauce", "Creamy Ranch Sauce", "1 sauce serving", 110, "creamy-ranch-sauce"],
+    ["honey-mustard-sauce", "Honey Mustard Sauce", "1 sauce serving", 60, "honey-mustard-sauce"],
+    ["sweet-n-sour-sauce", "Sweet 'N Sour Sauce", "1 sauce serving", 50, "sweet-n-sour-sauce"],
+    ["ketchup-packet", "Ketchup Packet", "1 packet", 10, "ketchup-packet"],
+    ["mayonnaise-packet", "Mayonnaise Packet", "1 packet", 90, "mayonnaise-packet"],
+    ["mustard-packet", "Mustard Packet", "1 packet", 0, "mustard-package"],
+    ["honey", "Honey", "1 sauce serving", 50, "honey"],
+  ].map(([id, name, description, calories, slug]) => mcdonaldsPartialFood(id, name, description, calories, `https://www.mcdonalds.com/us/en-us/product/${slug}.html`)),
 ];
 
 const wendys = { id: "wendys", name: "Wendy's" };
