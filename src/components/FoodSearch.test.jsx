@@ -57,6 +57,33 @@ test("shows Unknown for unavailable nutrients instead of treating them as zero",
   expect(result.querySelector('[data-nutrient="carbohydrates"]')).toHaveTextContent("Carbs 0 g");
 });
 
+test("formats floating-point nutrient tails in serving search previews without changing source values", () => {
+  const food = createUserFood(
+    "Chicken serving preview",
+    {
+      calories: 360.59999999999997,
+      protein: 76.55999999999999,
+      carbohydrates: 5.999999999999993,
+      fat: 6.569999999999999,
+      fiber: 2.0000000000000004,
+      sodium: 223.79999999999998,
+    },
+    { amount: 0.3, unit: "serving", description: "0.3 chicken serving" }
+  );
+  renderFoodSearch({ userFoods: [food] });
+  searchFor("chicken serving preview");
+
+  const result = screen.getByRole("button", { name: /Chicken serving preview/i });
+  expect(result.querySelector('[data-nutrient="calories"]')).toHaveTextContent("Calories 360.6");
+  expect(result.querySelector('[data-nutrient="protein"]')).toHaveTextContent("Protein 76.56 g");
+  expect(result.querySelector('[data-nutrient="carbohydrates"]')).toHaveTextContent("Carbs 6 g");
+  expect(result.querySelector('[data-nutrient="fat"]')).toHaveTextContent("Fat 6.57 g");
+  expect(result.querySelector('[data-nutrient="fiber"]')).toHaveTextContent("Fiber 2 g");
+  expect(result.querySelector('[data-nutrient="sodium"]')).toHaveTextContent("Sodium 223.8 mg");
+  expect(food.nutrients.fat).toBe(6.569999999999999);
+  expect(food.nutrients.sodium).toBe(223.79999999999998);
+});
+
 test("keeps raw and dried ingredient states separate and clearly labeled", () => {
   renderFoodSearch();
   searchFor("whole egg");

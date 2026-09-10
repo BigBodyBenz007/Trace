@@ -547,6 +547,49 @@ test("custom barcode review supports edit and confirmed delete", async () => {
   expect(deleteUserFood).toHaveBeenCalledWith(customFood.id);
 });
 
+test("custom barcode editing formats inputs but preserves untouched nutrient precision", async () => {
+  const preciseNutrients = {
+    calories: 360.59999999999997,
+    protein: 76.55999999999999,
+    carbohydrates: 5.999999999999993,
+    fat: 6.569999999999999,
+    fiber: 2.0000000000000004,
+    sodium: 223.79999999999998,
+    totalSugar: 3.000000000000003,
+    addedSugar: 0,
+  };
+  const customFood = {
+    ...createUserFood("Precise saved scan", preciseNutrients),
+    nutrients: preciseNutrients,
+    identifiers: [{ scheme: "gtin", value: "00012345600012" }],
+  };
+  const updateUserFood = jest.fn((id, payload) => ({
+    status: "updated",
+    food: { ...customFood, ...payload, id },
+  }));
+  setup({
+    barcodeLookup: { lookup: jest.fn().mockResolvedValue({ status: "found", food: customFood }) },
+    updateUserFood,
+  });
+  const barcode = screen.getByLabelText("Enter barcode manually");
+  fireEvent.change(barcode, { target: { value: "00012345600012" } });
+  fireEvent.submit(barcode.closest("form"));
+  fireEvent.click(await screen.findByRole("button", { name: "Edit Custom Food" }));
+
+  expect(screen.getByLabelText("Fat (g)")).toHaveValue(6.57);
+  expect(screen.getByLabelText("Sodium (mg), optional")).toHaveValue(223.8);
+  fireEvent.change(screen.getByLabelText("Protein (g)"), { target: { value: "77.125" } });
+  fireEvent.click(screen.getByRole("button", { name: "Update Barcode Food" }));
+
+  expect(updateUserFood).toHaveBeenCalledWith(customFood.id, expect.objectContaining({
+    nutrients: expect.objectContaining({
+      protein: "77.125",
+      fat: customFood.nutrients.fat,
+      sodium: customFood.nutrients.sodium,
+    }),
+  }));
+});
+
 function nutrientsForCustom() {
   return {
     calories: 100,

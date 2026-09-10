@@ -177,6 +177,65 @@ test("shape validation accepts blank or invalid form strings derived from numeri
   expect(readFormDraft(target, context, initial)).toMatchObject({ status: "restored", value });
 });
 
+test("Nutrition drafts accept legacy values without input metadata and validate new precise metadata", () => {
+  const target = storage();
+  const legacyInitial = { name: "", calories: "", fat: "", sodium: "" };
+  const legacyValue = { ...legacyInitial, name: "Legacy draft", fat: "6.57", sodium: "223.8" };
+  writeFormDraft(target, createContext, legacyInitial, legacyValue);
+  const currentShape = {
+    ...legacyInitial,
+    nutrientInputMetadata: { preciseValues: {}, editedKeys: [] },
+  };
+
+  expect(readFormDraft(target, createContext, currentShape)).toMatchObject({
+    status: "restored",
+    value: legacyValue,
+  });
+
+  const currentValue = {
+    ...legacyValue,
+    nutrientInputMetadata: {
+      preciseValues: { fat: 6.569999999999999, sodium: 223.79999999999998 },
+      editedKeys: ["fat"],
+    },
+  };
+  expect(() => writeFormDraft(target, createContext, currentShape, currentValue)).not.toThrow();
+  expect(readFormDraft(target, createContext, currentShape)).toMatchObject({
+    status: "restored",
+    value: currentValue,
+  });
+
+  const groceryContext = { domain: "grocery-food", context: "create", sourceFingerprint: null };
+  const groceryTarget = storage();
+  writeFormDraft(groceryTarget, groceryContext, legacyInitial, legacyValue);
+  expect(readFormDraft(groceryTarget, groceryContext, currentShape)).toMatchObject({
+    status: "restored",
+    value: legacyValue,
+  });
+});
+
+test("Nutrition draft shape guards quarantine malformed precise nutrient metadata", () => {
+  const target = storage();
+  const initial = {
+    name: "",
+    nutrientInputMetadata: { preciseValues: {}, editedKeys: [] },
+  };
+  const value = {
+    name: "Recoverable text",
+    nutrientInputMetadata: {
+      preciseValues: { fat: "not-a-precise-number" },
+      editedKeys: ["not-a-nutrient"],
+    },
+  };
+  writeFormDraft(target, createContext, initial, value);
+
+  expect(readFormDraft(target, createContext, initial)).toMatchObject({
+    status: "invalid-value",
+    value: null,
+  });
+  expect(readFormDraftCollection(target).entries[0].value.name).toBe("Recoverable text");
+});
+
 test("workout-template shape validation permits heterogeneous optional fields while domain guards validate each item", () => {
   const target = storage();
   const context = { domain: "workout-template", context: "edit:template:mixed", sourceFingerprint: "saved-v1" };

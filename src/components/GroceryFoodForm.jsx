@@ -14,6 +14,7 @@ import {
   readFormDraft,
   writeFormDraft,
 } from "../services/formDrafts";
+import { formatNutrientValue } from "../services/nutritionDisplay";
 
 const EMPTY_FORM = {
   name: "",
@@ -35,6 +36,7 @@ const EMPTY_FORM = {
   totalSugar: "",
   addedSugar: "",
   notes: "",
+  nutrientInputMetadata: { preciseValues: {}, editedKeys: [] },
 };
 
 const NUTRIENT_FIELDS = [
@@ -49,6 +51,7 @@ const NUTRIENT_FIELDS = [
 ];
 
 const REQUIRED_NUTRIENTS = new Set(["calories", "protein", "carbohydrates", "fat"]);
+const NUTRIENT_FIELD_KEYS = new Set(NUTRIENT_FIELDS.map(([key]) => key));
 const SERVING_UNITS = new Set(SERVING_UNIT_OPTIONS.map(({ value }) => value));
 
 function formForFood(food) {
@@ -57,6 +60,10 @@ function formForFood(food) {
   const servingUnit = SERVING_UNITS.has(providerServingUnit)
     ? providerServingUnit
     : "custom";
+  const preciseValues = Object.fromEntries(NUTRIENT_FIELDS.map(([key]) => [
+    key,
+    food.nutrients?.[key] == null ? null : Number(food.nutrients[key]),
+  ]));
   return {
     ...EMPTY_FORM,
     name: food.name || "",
@@ -77,10 +84,17 @@ function formForFood(food) {
       : String(food.servingsPerContainer),
     ...Object.fromEntries(NUTRIENT_FIELDS.map(([key]) => [
       key,
-      food.nutrients?.[key] == null ? "" : String(food.nutrients[key]),
+      food.nutrients?.[key] == null ? "" : formatNutrientValue(food.nutrients[key], key),
     ])),
     notes: food.notes || "",
+    nutrientInputMetadata: { preciseValues, editedKeys: [] },
   };
+}
+
+function formWithNutrientInputMetadata(form) {
+  return form?.nutrientInputMetadata?.preciseValues && Array.isArray(form.nutrientInputMetadata.editedKeys)
+    ? form
+    : { ...form, nutrientInputMetadata: { preciseValues: {}, editedKeys: [] } };
 }
 
 function nutrientInputError(form, requireCore) {
@@ -118,9 +132,11 @@ function GroceryFoodForm({
     ? restoredRef.current.entry.initialValue
     : baseFormRef.current);
   const [expanded, setExpanded] = useState(recovery);
-  const [form, setForm] = useState(() => restoredRef.current.status === "restored"
-    ? restoredRef.current.value
-    : baseFormRef.current);
+  const [form, setForm] = useState(() => formWithNutrientInputMetadata(
+    restoredRef.current.status === "restored"
+      ? restoredRef.current.value
+      : baseFormRef.current
+  ));
   const [error, setError] = useState(restoredRef.current.status === "malformed" || restoredRef.current.status === "invalid-value"
     ? "Trace found malformed unfinished form data and left it unchanged."
     : "");
@@ -146,7 +162,17 @@ function GroceryFoodForm({
   };
 
   function updateField(field, value) {
-    setForm((current) => ({ ...current, [field]: value }));
+    setForm((current) => {
+      if (!NUTRIENT_FIELD_KEYS.has(field)) return { ...current, [field]: value };
+      const editedKeys = current.nutrientInputMetadata.editedKeys.includes(field)
+        ? current.nutrientInputMetadata.editedKeys
+        : [...current.nutrientInputMetadata.editedKeys, field];
+      return {
+        ...current,
+        [field]: value,
+        nutrientInputMetadata: { ...current.nutrientInputMetadata, editedKeys },
+      };
+    });
     setError("");
     setStatus("");
   }
@@ -203,7 +229,13 @@ function GroceryFoodForm({
       category: form.category,
       serving,
       nutrients: Object.fromEntries(
-        NUTRIENT_FIELDS.map(([nutrient]) => [nutrient, form[nutrient]])
+        NUTRIENT_FIELDS.map(([nutrient]) => [
+          nutrient,
+          !form.nutrientInputMetadata.editedKeys.includes(nutrient)
+            && Object.prototype.hasOwnProperty.call(form.nutrientInputMetadata.preciseValues, nutrient)
+            ? form.nutrientInputMetadata.preciseValues[nutrient]
+            : form[nutrient],
+        ])
       ),
       notes: form.notes,
       identifiers: identifier ? [identifier] : initialFood?.identifiers,

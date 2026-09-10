@@ -14,6 +14,7 @@ import {
 } from "../services/appLifecycleAdapter";
 import { acquireDocumentScrollLock } from "../services/documentScrollLock";
 import GroceryFoodForm from "./GroceryFoodForm";
+import { formatNutrientValue } from "../services/nutritionDisplay";
 import "./BarcodeScannerDialog.css";
 
 const FOCUSABLE = [
@@ -53,10 +54,6 @@ const COMPACT_LANDSCAPE_MEDIA = "(orientation: landscape) and (max-height: 600px
 
 function availableScreenOrientation() {
   return typeof window === "undefined" ? null : window.screen?.orientation || null;
-}
-
-function nutrientValue(value, unit) {
-  return value === null || value === undefined ? "Unknown" : `${value}${unit}`;
 }
 
 function missingLabel(field) {
@@ -716,7 +713,7 @@ export default function BarcodeScannerDialog({
               {NUTRIENT_ROWS.map(([key, label, unit]) => (
                 <div key={key}>
                   <dt>{label}</dt>
-                  <dd>{nutrientValue(candidate.display.nutrients[key], unit)}</dd>
+                  <dd>{formatNutrientValue(candidate.display.nutrients[key], key, unit)}</dd>
                 </div>
               ))}
             </dl>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { searchFoodCatalog } from "../services/foodSearch";
+import { formatNutrientValue } from "../services/nutritionDisplay";
 import "./FoodSearch.css";
 
 const CONFIDENCE_LABELS = {
@@ -8,9 +9,6 @@ const CONFIDENCE_LABELS = {
   "user-added": "User-entered",
   "official-source": "Official restaurant source",
 };
-const displayNutrient = (value, unit = "") =>
-  value === null || value === undefined ? "Unknown" : `${value}${unit}`;
-
 const NUTRIENT_SUMMARY = [
   ["calories", "Calories", ""],
   ["protein", "Protein", " g"],
@@ -127,12 +125,12 @@ function FoodSearch({
                   {NUTRIENT_SUMMARY.map(([nutrient, label, unit]) => (
                     <span className="trace-food-result__nutrient" data-nutrient={nutrient} key={nutrient}>
                       <span className="trace-food-result__nutrient-label">{label}{" "}</span>
-                      <strong>{displayNutrient(food.nutrients[nutrient], unit)}</strong>
+                      <strong>{formatNutrientValue(food.nutrients[nutrient], nutrient, unit)}</strong>
                     </span>
                   ))}
                 </span>
                 {food.beverage?.caffeineMg !== null && food.beverage?.caffeineMg !== undefined && (
-                  <span className="trace-food-result__caffeine">Caffeine <strong>{food.beverage.caffeineMg} mg</strong></span>
+                  <span className="trace-food-result__caffeine">Caffeine <strong>{formatNutrientValue(food.beverage.caffeineMg, "caffeine", " mg")}</strong></span>
                 )}
                 {food.provenance.completeness === "partial" && <span className="trace-food-result__completeness">{food.sourceType === "restaurant" ? "Some nutrition values are unavailable because the restaurant does not publish them." : ["beverage", "packaged-food"].includes(food.sourceType) ? "Nutrition values not published by the manufacturer remain unknown." : food.sourceType === "grocery" ? "Some USDA nutrient values are unavailable and remain unknown." : "Nutrition values left blank by the user remain unknown."}</span>}
                 {food.notes && <span className="trace-food-result__notes">{food.notes}</span>}

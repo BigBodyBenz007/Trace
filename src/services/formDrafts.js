@@ -219,6 +219,27 @@ function validQueuedInjectionShape(value) {
     && typeof value.notes === "string";
 }
 
+const NUTRITION_DRAFT_NUTRIENT_KEYS = new Set([
+  "calories",
+  "protein",
+  "carbohydrates",
+  "fat",
+  "fiber",
+  "sodium",
+  "totalSugar",
+  "addedSugar",
+]);
+
+function validNutrientInputMetadata(value) {
+  if (!object(value) || !object(value.preciseValues) || !Array.isArray(value.editedKeys)) return false;
+  const preciseEntries = Object.entries(value.preciseValues);
+  return preciseEntries.every(([key, nutrientValue]) => (
+    NUTRITION_DRAFT_NUTRIENT_KEYS.has(key)
+      && (nutrientValue === null || (Number.isFinite(nutrientValue) && nutrientValue >= 0))
+  )) && value.editedKeys.every((key) => NUTRITION_DRAFT_NUTRIENT_KEYS.has(key))
+    && new Set(value.editedKeys).size === value.editedKeys.length;
+}
+
 function validKnownDomainShape(domain, value) {
   if (!object(value)) return false;
   if (domain === "protocol") {
@@ -239,6 +260,7 @@ function validKnownDomainShape(domain, value) {
     return (value.foodReference === undefined || nullableObject(value.foodReference))
       && (value.portionBasis === undefined || nullableObject(value.portionBasis))
       && (value.nutritionBasis === undefined || nullableObject(value.nutritionBasis))
+      && (value.nutrientInputMetadata === undefined || validNutrientInputMetadata(value.nutrientInputMetadata))
       && (value.unknownNutritionKeys === undefined || (
         Array.isArray(value.unknownNutritionKeys)
         && value.unknownNutritionKeys.every((key) => typeof key === "string")
@@ -253,6 +275,10 @@ function validKnownDomainShape(domain, value) {
         ))
       ));
   }
+  if (domain === "grocery-food") {
+    return value.nutrientInputMetadata === undefined
+      || validNutrientInputMetadata(value.nutrientInputMetadata);
+  }
   if (domain === "daily-action") {
     return value.recurrence === undefined || nullableObject(value.recurrence);
   }
@@ -265,6 +291,17 @@ function validKnownDomainShape(domain, value) {
 function formDraftValueMatchesDomainShape(domain, value, template) {
   if (domain === "workout-template" && object(template) && Array.isArray(template.exercises)) {
     return formDraftValueMatchesShape(value, { ...template, exercises: [] });
+  }
+  if (
+    (domain === "nutrition-entry" || domain === "grocery-food")
+    && object(value)
+    && object(template)
+    && !Object.prototype.hasOwnProperty.call(value, "nutrientInputMetadata")
+    && Object.prototype.hasOwnProperty.call(template, "nutrientInputMetadata")
+  ) {
+    const legacyTemplate = { ...template };
+    delete legacyTemplate.nutrientInputMetadata;
+    return formDraftValueMatchesShape(value, legacyTemplate);
   }
   return formDraftValueMatchesShape(value, template);
 }

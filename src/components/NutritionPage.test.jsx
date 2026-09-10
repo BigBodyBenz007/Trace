@@ -462,6 +462,67 @@ test("shows today's sodium total and an incomplete warning", () => {
   expect(screen.getByText("400mg · Incomplete: one or more logged foods had unknown sodium.")).toBeInTheDocument();
 });
 
+test("formats floating-point nutrient tails across saved cards, totals, and averages", () => {
+  const loggedAt = new Date().toISOString();
+  const floatingEntry = {
+    ...historyEntry(1),
+    name: "Floating nutrients",
+    loggedAt,
+    calories: 360.59999999999997,
+    protein: 76.55999999999999,
+    carbohydrates: 5.999999999999993,
+    fat: 6.569999999999999,
+    fiber: 2.0000000000000004,
+    sodium: 223.79999999999998,
+    totalSugar: 3.000000000000003,
+    addedSugar: 0,
+    portion: {
+      amount: 0.3,
+      unit: "serving",
+      basis: { amount: 1, unit: "serving", description: "1 chicken serving" },
+    },
+  };
+  renderNutritionPage({
+    nutritionEntries: [
+      floatingEntry,
+      { ...historyEntry(2), name: "Whole sodium", loggedAt, calories: 0, protein: 0, carbohydrates: 0, fat: 0, fiber: 0, sodium: 224 },
+      { ...historyEntry(3), name: "Zero sodium", loggedAt, calories: 0, protein: 0, carbohydrates: 0, fat: 0, fiber: 0, sodium: 0 },
+      { ...historyEntry(4), name: "Unknown sodium", loggedAt, calories: 0, protein: 0, carbohydrates: 0, fat: 0, fiber: 0, sodium: null },
+    ],
+  });
+  const history = within(savedEntriesSection());
+  const floatingCard = history.getByRole("heading", { name: "Floating nutrients" }).closest("article");
+
+  expect(floatingCard).toHaveTextContent(
+    "360.6 calories · Protein 76.56 g · Carbohydrates 6 g · Fat 6.57 g · Fiber 2 g · Sodium 223.8 mg"
+  );
+  expect(floatingCard).toHaveTextContent("Total Sugar 3 g · Added Sugar 0 g");
+  expect(history.getByRole("heading", { name: "Whole sodium" }).closest("article"))
+    .toHaveTextContent("Sodium 224 mg");
+  expect(history.getByRole("heading", { name: "Zero sodium" }).closest("article"))
+    .toHaveTextContent("Sodium 0 mg");
+  expect(history.getByRole("heading", { name: "Unknown sodium" }).closest("article"))
+    .toHaveTextContent("Sodium Unknown");
+  expect(dailyTotalsSection())
+    .toHaveTextContent("447.8mg · Incomplete: one or more logged foods had unknown sodium.");
+  const dailyTotals = within(dailyTotalsSection());
+  expect(dailyTotals.getByText("Calories").closest(".trace-stat-card")).toHaveTextContent("360.6 · No goal set");
+  expect(dailyTotals.getByText("Protein (g)").closest(".trace-stat-card")).toHaveTextContent("76.56g · No goal set");
+  expect(dailyTotals.getByText("Carbohydrates (g)").closest(".trace-stat-card")).toHaveTextContent("6g · No goal set");
+  expect(dailyTotals.getByText("Fat (g)").closest(".trace-stat-card")).toHaveTextContent("6.57g · No goal set");
+  expect(dailyTotals.getByText("Known Total Sugar (g)").closest(".trace-stat-card")).toHaveTextContent("3g");
+  expect(dailyTotals.getByText("Known Added Sugar (g)").closest(".trace-stat-card")).toHaveTextContent("0g");
+
+  const weeklyTotals = within(screen.getByRole("heading", { name: "Weekly Totals" }).closest("article"));
+  expect(weeklyTotals.getByText("360.6")).toBeInTheDocument();
+  expect(weeklyTotals.getByText("76.56g")).toBeInTheDocument();
+  expect(weeklyTotals.getByText("6g")).toBeInTheDocument();
+  expect(weeklyTotals.getByText("6.57g")).toBeInTheDocument();
+  expect(weeklyTotals.getByText("447.8mg (incomplete)")).toBeInTheDocument();
+  expect(floatingEntry.fat).toBe(6.569999999999999);
+  expect(floatingEntry.sodium).toBe(223.79999999999998);
+});
+
 test("shows sodium goal progress in a standard nutrient-sized grid item", () => {
   renderNutritionPage({
     nutritionGoals: { calories: 0, protein: 0, carbohydrates: 0, fat: 0, sodium: 2300 },
@@ -1154,7 +1215,7 @@ test("Braum's menu size selection keeps the published size separate from serving
 });
 
 test("fractional servings recalculate all nutrients live", () => {
-  renderNutritionPage();
+  const props = renderNutritionPage();
   selectBanana();
   const form = entryForm();
 
@@ -1163,9 +1224,145 @@ test("fractional servings recalculate all nutrients live", () => {
   });
 
   expect(form.getByLabelText("Calories")).toHaveValue(52.5);
-  expect(form.getByLabelText("Protein (g)")).toHaveValue(0.645);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(0.65);
   expect(form.getByLabelText("Carbohydrates (g)")).toHaveValue(13.45);
-  expect(form.getByLabelText("Fat (g)")).toHaveValue(0.195);
+  expect(form.getByLabelText("Fat (g)")).toHaveValue(0.2);
+
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+  expect(props.saveNutritionEntry).toHaveBeenCalledWith(expect.objectContaining({
+    protein: 1.29 * 0.5,
+    fat: 0.39 * 0.5,
+  }));
+});
+
+function precisionFood() {
+  return createUserFood(
+    "Precision chicken",
+    {
+      calories: 120.2,
+      protein: 25.52,
+      carbohydrates: 0,
+      fat: 2.19,
+      fiber: null,
+      sodium: 74.6,
+      totalSugar: null,
+      addedSugar: null,
+    },
+    { amount: 1, unit: "serving", description: "1 chicken serving" }
+  );
+}
+
+function selectPrecisionFood(food) {
+  fireEvent.change(screen.getByLabelText("Food search"), { target: { value: food.name } });
+  fireEvent.click(screen.getByRole("button", { name: new RegExp(food.name, "i") }));
+}
+
+function precisionSavedEntry() {
+  return {
+    ...historyEntry(1),
+    name: "Precise saved meal",
+    calories: 360.59999999999997,
+    protein: 76.55999999999999,
+    carbohydrates: 5.999999999999993,
+    fat: 6.569999999999999,
+    sodium: 223.79999999999998,
+  };
+}
+
+test("fractional serving calculations format sodium and fat inputs while saving full precision", () => {
+  const food = precisionFood();
+  const props = renderNutritionPage({ userFoods: [food] });
+  selectPrecisionFood(food);
+  const form = entryForm();
+
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "3" } });
+
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(223.8);
+  expect(form.getByLabelText("Fat (g)")).toHaveValue(6.57);
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+  expect(props.saveNutritionEntry).toHaveBeenCalledWith(expect.objectContaining({
+    sodium: 74.6 * 3,
+    fat: 2.19 * 3,
+  }));
+});
+
+test("opening and saving an existing entry preserves every untouched nutrient value", () => {
+  const savedEntry = precisionSavedEntry();
+  const props = renderNutritionPage({ nutritionEntries: [savedEntry] });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const form = entryForm();
+
+  expect(form.getByLabelText("Calories")).toHaveValue(360.6);
+  expect(form.getByLabelText("Fat (g)")).toHaveValue(6.57);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(223.8);
+  fireEvent.click(form.getByRole("button", { name: "Save Changes" }));
+
+  expect(props.updateNutritionEntry).toHaveBeenCalledWith(savedEntry.id, expect.objectContaining({
+    calories: savedEntry.calories,
+    protein: savedEntry.protein,
+    carbohydrates: savedEntry.carbohydrates,
+    fat: savedEntry.fat,
+    sodium: savedEntry.sodium,
+  }));
+});
+
+test("editing one existing nutrient preserves the precision of every untouched nutrient", () => {
+  const savedEntry = precisionSavedEntry();
+  const props = renderNutritionPage({ nutritionEntries: [savedEntry] });
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  const form = entryForm();
+
+  expect(form.getByLabelText("Calories")).toHaveValue(360.6);
+  expect(form.getByLabelText("Fat (g)")).toHaveValue(6.57);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(223.8);
+  fireEvent.change(form.getByLabelText("Fat (g)"), { target: { value: "7.125" } });
+  fireEvent.click(form.getByRole("button", { name: "Save Changes" }));
+
+  expect(props.updateNutritionEntry).toHaveBeenCalledWith(savedEntry.id, expect.objectContaining({
+    calories: savedEntry.calories,
+    protein: savedEntry.protein,
+    carbohydrates: savedEntry.carbohydrates,
+    fat: 7.125,
+    sodium: savedEntry.sodium,
+  }));
+});
+
+test("draft restoration preserves typed and blank nutrient inputs plus untouched precision", () => {
+  const food = precisionFood();
+  const first = renderNutritionPage({ userFoods: [food] });
+  selectPrecisionFood(food);
+  fireEvent.change(entryForm().getByLabelText("Fat (g)"), { target: { value: "7.125" } });
+  fireEvent.change(entryForm().getByLabelText("Protein (g)"), { target: { value: "" } });
+  first.unmount();
+
+  const reopened = renderNutritionPage({ userFoods: [food] });
+  const form = entryForm();
+  expect(form.getByLabelText("Fat (g)")).toHaveValue(7.125);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(null);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(74.6);
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+  expect(reopened.saveNutritionEntry).toHaveBeenCalledWith(expect.objectContaining({
+    fat: 7.125,
+    protein: null,
+    sodium: 74.6,
+  }));
+});
+
+test("changing servings replaces a manual nutrient override with the recalculated precise value", () => {
+  const food = precisionFood();
+  const props = renderNutritionPage({ userFoods: [food] });
+  selectPrecisionFood(food);
+  const form = entryForm();
+  fireEvent.change(form.getByLabelText("Fat (g)"), { target: { value: "7.125" } });
+
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "3" } });
+
+  expect(form.getByLabelText("Fat (g)")).toHaveValue(6.57);
+  fireEvent.click(form.getByRole("button", { name: "Save Entry" }));
+  expect(props.saveNutritionEntry).toHaveBeenCalledWith(expect.objectContaining({
+    fat: 2.19 * 3,
+    sodium: 74.6 * 3,
+  }));
 });
 
 test("multiple servings recalculate all nutrients live", () => {
