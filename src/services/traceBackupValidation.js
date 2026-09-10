@@ -208,6 +208,29 @@ function validateNutritionShape(record, domain) {
   if (record.portion !== undefined && record.portion !== null && !object(record.portion)) {
     throw nutritionPortionError(record);
   }
+  if (object(record.portion)) {
+    optionalText(record.portion, ["unit"], `${domain} portion`);
+    optionalObject(record.portion.basis, `${domain} portion basis`);
+    if (object(record.portion.basis)) {
+      optionalText(record.portion.basis, ["unit", "description"], `${domain} portion basis`);
+      validateNumbers(record.portion.basis, ["amount", "grams"], `${domain} portion basis`, { nonNegative: true });
+    }
+  }
+  if (object(record.foodReference)) {
+    optionalText(record.foodReference, [
+      "sourceType",
+      "source",
+      "restaurantName",
+      "label",
+      "categoryLabel",
+      "category",
+      "brand",
+      "providerAttribution",
+      "packageSize",
+      "sourceUrl",
+    ], `${domain} food reference`);
+    validateNumbers(record.foodReference, ["caffeineMg"], `${domain} food reference`, { nonNegative: true });
+  }
   optionalProductIdentifiers(record.foodReference?.identifiers, `${domain} food reference`);
   if (record.foodReference?.providerSourceSnapshot !== undefined) {
     validateProviderSourceSnapshot(
@@ -221,6 +244,12 @@ function validateNutritionShape(record, domain) {
     validateSugarValues(record.nutritionBasis, `${domain} nutrition basis`);
   }
   normalizedPortionAmount(record);
+}
+
+export function normalizeAndValidateNutritionEntry(record) {
+  const [normalized] = normalizeNutritionEntryPortions([record]);
+  recordArray([normalized], "nutrition entry", (entry) => validateNutritionShape(entry, "nutrition entry"));
+  return normalized;
 }
 
 function validatePhotoReferences(values, domain) {

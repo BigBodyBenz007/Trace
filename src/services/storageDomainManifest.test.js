@@ -139,3 +139,14 @@ test("classifies remote barcode responses as rebuildable and excludes them from 
   }));
   expect(TRACE_BACKUP_STORAGE_KEYS).not.toContain("remoteBarcodeFoodResponses");
 });
+
+test("classifies raw Nutrition recovery snapshots as durable recovery data outside normal backups", () => {
+  expect(TRACE_STORAGE_DOMAIN_MANIFEST).toContainEqual(expect.objectContaining({
+    key: "nutritionEntriesRecovery",
+    storage: "localStorage",
+    classification: STORAGE_DOMAIN_CLASSIFICATION.DURABLE_RECOVERY_EXCLUDED,
+    backupLocation: null,
+  }));
+  expect(TRACE_BACKUP_STORAGE_KEYS).not.toContain("nutritionEntriesRecovery");
+  expect(TRACE_RECOVERABLE_TRANSACTION_KEYS).not.toContain("nutritionEntriesRecovery");
+});

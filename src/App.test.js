@@ -869,6 +869,245 @@ test("successful same-tab restore immediately refreshes planned-workout App stat
   expect(localStorage.getItem("workoutEntries")).toBeNull();
 });
 
+test("mixed damaged Nutrition storage renders only usable entries and downloads the exact raw recovery source", async () => {
+  const usable = {
+    id: "nutrition-usable",
+    name: "Usable meal",
+    loggedAt: "2026-09-09T12:00:00.000Z",
+    calories: 300,
+    protein: 20,
+    carbohydrates: 30,
+    fat: 10,
+    notes: "",
+  };
+  const raw = JSON.stringify([
+    null,
+    usable,
+    { id: "nutrition-object-name", name: { damaged: true }, loggedAt: "2026-09-09T13:00:00.000Z" },
+  ]);
+  localStorage.setItem("nutritionEntries", raw);
+  const backupAdapter = {
+    prepareExport: jest.fn(() => ({ status: "ready", file: new File([raw], "recovery.txt") })),
+    downloadExport: jest.fn(() => ({ status: "success", method: "download" })),
+    shareExport: jest.fn(() => Promise.resolve({ status: "success", method: "share" })),
+  };
+
+  render(<App backupFileAdapter={backupAdapter} />);
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+
+  expect(screen.getByRole("heading", { name: "Usable meal" })).toBeInTheDocument();
+  expect(screen.queryByText("[object Object]")).not.toBeInTheDocument();
+  expect(screen.getByRole("alert", { name: "Nutrition data needs recovery" }))
+    .toHaveTextContent("2 saved records could not be loaded");
+  fireEvent.click(screen.getByRole("button", { name: "Download raw Nutrition recovery file" }));
+  await waitFor(() => expect(backupAdapter.downloadExport).toHaveBeenCalledWith(expect.objectContaining({
+    contents: raw,
+    filename: expect.stringMatching(/^trace-nutrition-recovery-.*\.txt$/),
+    mimeType: "text/plain;charset=utf-8",
+  })));
+  expect(backupAdapter.prepareExport).not.toHaveBeenCalled();
+  expect(backupAdapter.shareExport).not.toHaveBeenCalled();
+  expect(localStorage.getItem("nutritionEntries")).toBe(raw);
+});
+
+test("a denied Nutrition recovery share offers an explicit standard download without changing recovery contents", async () => {
+  const raw = JSON.stringify([
+    null,
+    {
+      id: "nutrition-usable",
+      name: "Usable meal",
+      loggedAt: "2026-09-09T12:00:00.000Z",
+    },
+  ]);
+  const recoveryFile = new File([raw], "recovery.txt", { type: "text/plain" });
+  const backupAdapter = {
+    prepareExport: jest.fn(() => ({ status: "ready", method: "share", file: recoveryFile })),
+    shareExport: jest.fn(() => Promise.resolve({
+      status: "failure",
+      method: "share",
+      error: new Error("Permission denied."),
+    })),
+    downloadExport: jest.fn(() => ({ status: "success", method: "download" })),
+  };
+  localStorage.setItem("nutritionEntries", raw);
+
+  render(<App backupFileAdapter={backupAdapter} />);
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  fireEvent.click(screen.getByRole("button", { name: "Share raw Nutrition recovery file" }));
+
+  expect(await screen.findByText(/Trace could not share.*Permission denied\./)).toBeInTheDocument();
+  expect(backupAdapter.shareExport).toHaveBeenCalledWith(recoveryFile);
+  expect(backupAdapter.downloadExport).not.toHaveBeenCalled();
+  expect(backupAdapter.prepareExport).toHaveBeenCalledWith(expect.objectContaining({ contents: raw }));
+
+  fireEvent.click(screen.getByRole("button", { name: "Use standard browser download" }));
+  await waitFor(() => {
+    expect(backupAdapter.downloadExport).toHaveBeenCalledWith(expect.objectContaining({
+      contents: raw,
+      filename: expect.stringMatching(/^trace-nutrition-recovery-.*\.txt$/),
+      mimeType: "text/plain;charset=utf-8",
+    }));
+    expect(screen.queryByRole("button", { name: "Use standard browser download" }))
+      .not.toBeInTheDocument();
+  });
+  expect(localStorage.getItem("nutritionEntries")).toBe(raw);
+});
+
+test("canceling a Nutrition recovery share is not reported as failure and does not download implicitly", async () => {
+  const raw = JSON.stringify([null, {
+    id: "nutrition-usable",
+    name: "Usable meal",
+    loggedAt: "2026-09-09T12:00:00.000Z",
+  }]);
+  const recoveryFile = new File([raw], "recovery.txt", { type: "text/plain" });
+  const backupAdapter = {
+    prepareExport: jest.fn(() => ({ status: "ready", method: "share", file: recoveryFile })),
+    shareExport: jest.fn(() => Promise.resolve({ status: "canceled", method: "share" })),
+    downloadExport: jest.fn(() => ({ status: "success", method: "download" })),
+  };
+  localStorage.setItem("nutritionEntries", raw);
+
+  render(<App backupFileAdapter={backupAdapter} />);
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  fireEvent.click(screen.getByRole("button", { name: "Share raw Nutrition recovery file" }));
+
+  expect(await screen.findByText(/Sharing was canceled\. Your Nutrition data was not changed/))
+    .toBeInTheDocument();
+  expect(screen.queryByText(/Trace could not share/)).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Use standard browser download" })).toBeInTheDocument();
+  expect(backupAdapter.downloadExport).not.toHaveBeenCalled();
+  expect(backupAdapter.prepareExport).toHaveBeenCalledWith(expect.objectContaining({ contents: raw }));
+  expect(localStorage.getItem("nutritionEntries")).toBe(raw);
+});
+
+test.each([
+  { caseName: "malformed JSON", raw: "{not-json" },
+  { caseName: "non-array JSON", raw: JSON.stringify({ entries: [] }) },
+])("$caseName Nutrition storage blocks saving and preserves the unfinished form", ({ raw }) => {
+  localStorage.setItem("nutritionEntries", raw);
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  expect(screen.getByRole("alert", { name: "Nutrition data needs recovery" }))
+    .toHaveTextContent("Saving, editing, and deleting Nutrition entries are blocked");
+
+  fireEvent.change(screen.getByLabelText("Food / meal name"), {
+    target: { value: "Keep this blocked draft" },
+  });
+  fireEvent.click(screen.getByLabelText("Save as reusable food"));
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(screen.getByLabelText("Food / meal name")).toHaveValue("Keep this blocked draft");
+  expect(screen.getByText(/Nutrition saving is blocked because the saved Nutrition data cannot be read/))
+    .toBeInTheDocument();
+  expect(localStorage.getItem("nutritionEntries")).toBe(raw);
+});
+
+test("failed Nutrition storage writes retain displayed state and the retryable form draft", () => {
+  const originalRaw = JSON.stringify([{
+    id: "nutrition-existing",
+    name: "Existing meal",
+    loggedAt: "2026-09-09T12:00:00.000Z",
+  }]);
+  localStorage.setItem("nutritionEntries", originalRaw);
+  renderAppAtTimeline();
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  fireEvent.change(screen.getByLabelText("Food / meal name"), {
+    target: { value: "Retry this meal" },
+  });
+  fireEvent.click(screen.getByLabelText("Save as reusable food"));
+  const originalSetItem = Storage.prototype.setItem;
+  const setItemSpy = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function setItem(key, value) {
+    if (key === "nutritionEntries") throw new Error("quota full");
+    return originalSetItem.call(this, key, value);
+  });
+
+  try {
+    fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+    expect(screen.getByText(/could not write the Nutrition change/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Food / meal name")).toHaveValue("Retry this meal");
+    expect(screen.getByRole("heading", { name: "Existing meal" })).toBeInTheDocument();
+    expect(localStorage.getItem("nutritionEntries")).toBe(originalRaw);
+    expect(localStorage.getItem("formDrafts")).toContain("Retry this meal");
+  } finally {
+    setItemSpy.mockRestore();
+  }
+});
+
+test("same-tab restore refreshes Nutrition before an immediate food save", async () => {
+  const original = [{
+    id: "nutrition-original",
+    name: "Original meal",
+    loggedAt: "2026-09-08T12:00:00.000Z",
+  }];
+  const restored = [{
+    id: "nutrition-restored",
+    name: "Restored meal",
+    loggedAt: "2026-09-09T12:00:00.000Z",
+  }];
+  localStorage.setItem("nutritionEntries", JSON.stringify(original));
+  const restoredSummary = { memories: 0, photos: 0, nutritionEntries: 1 };
+  parseTraceBackupText.mockReturnValue({
+    backup: { createdAt: "2026-09-09T13:00:00.000Z", data: { structured: { nutritionEntries: restored }, photos: [] } },
+    summary: restoredSummary,
+  });
+  restoreTraceBackup.mockImplementation(async () => {
+    localStorage.setItem("nutritionEntries", JSON.stringify(restored));
+    return restoredSummary;
+  });
+  window.confirm = jest.fn(() => true);
+
+  renderAppAtTimeline();
+  openBackupFromSettings();
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["backup"], "trace-backup.json", { type: "application/json" })] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  await screen.findByRole("heading", { name: /Trace restored successfully/ });
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" }).at(-1));
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+  expect(screen.getByRole("heading", { name: "Restored meal" })).toBeInTheDocument();
+  expect(screen.queryByRole("heading", { name: "Original meal" })).not.toBeInTheDocument();
+
+  fireEvent.change(screen.getByLabelText("Food / meal name"), { target: { value: "Logged immediately" } });
+  fireEvent.click(screen.getByLabelText("Save as reusable food"));
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(JSON.parse(localStorage.getItem("nutritionEntries"))).toEqual([
+    restored[0],
+    expect.objectContaining({ name: "Logged immediately" }),
+  ]);
+});
+
+test("failed restore retains the prior usable Nutrition state and storage", async () => {
+  const prior = [{
+    id: "nutrition-prior",
+    name: "Prior usable meal",
+    loggedAt: "2026-09-09T12:00:00.000Z",
+  }];
+  localStorage.setItem("nutritionEntries", JSON.stringify(prior));
+  parseTraceBackupText.mockReturnValue({
+    backup: { createdAt: "2026-09-09T13:00:00.000Z", data: { structured: {}, photos: [] } },
+    summary: { memories: 0, photos: 0, nutritionEntries: 0 },
+  });
+  restoreTraceBackup.mockRejectedValue(new Error("integrity check failed"));
+  window.confirm = jest.fn(() => true);
+
+  renderAppAtTimeline();
+  openBackupFromSettings();
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["backup"], "trace-backup.json", { type: "application/json" })] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  expect(await screen.findByText(/integrity check failed/)).toBeInTheDocument();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Nutrition" }));
+
+  expect(screen.getByRole("heading", { name: "Prior usable meal" })).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("nutritionEntries"))).toEqual(prior);
+});
+
 test("same-tab restore makes a plaintext Journal draft available when Journal opens", async () => {
   const restoredDraft = {
     schemaVersion: 1,

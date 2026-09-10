@@ -63,6 +63,7 @@ import {
   normalizeNutritionEntryPortions,
   validateTraceStructuredDomains,
 } from "./traceBackupValidation";
+import { preserveNutritionRecoveryBeforeReplacement } from "./nutritionEntryStorage";
 import {
   sha256Bytes,
   sha256CanonicalJson,
@@ -920,6 +921,13 @@ export async function restoreTraceBackup(value, {
   const previousStructured = Object.fromEntries(TRACE_STORAGE_KEYS.map((key) => [key, storage.getItem(key)]));
   const previousPhotos = await getAllPhotos(database);
   const restoredPhotos = backup.data.photos.map(decodePhoto);
+  try {
+    preserveNutritionRecoveryBeforeReplacement(storage);
+  } catch (error) {
+    throw new Error(
+      `Trace stopped the restore before changing data because the current damaged Nutrition source could not be preserved. Check available storage and try again. ${error.message}`
+    );
+  }
   try {
     restoreStructuredSnapshot(storage, Object.fromEntries(
       TRACE_STORAGE_KEYS.map((key) => [key, backup.data.structured[key] == null

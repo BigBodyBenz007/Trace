@@ -77,6 +77,15 @@ import {
   writeWaterEntries,
 } from "./services/waterTracker";
 import {
+  NUTRITION_MUTATION_STATUS,
+  NUTRITION_STORAGE_STATUS,
+  appendNutritionEntry,
+  deleteStoredNutritionEntry,
+  nutritionRecoveryFilename,
+  readNutritionEntries,
+  updateStoredNutritionEntry,
+} from "./services/nutritionEntryStorage";
+import {
   createWorkoutCalorieEstimateSnapshot,
   isStructurallyValidWorkoutCalorieEstimateSnapshot,
   refreshEditedWorkoutCalorieEstimateSnapshot,
@@ -387,7 +396,13 @@ function App({
 
   const [memories, setMemories] = useState([]);
   const [memoryCount, setMemoryCount] = useState(0);
-  const [nutritionEntries, setNutritionEntries] = useState([]);
+  const [nutritionStorageReport, setNutritionStorageReport] = useState(() => readNutritionEntries(localStorage));
+  const nutritionEntries = nutritionStorageReport.entries;
+  const [nutritionRecoveryDelivery, setNutritionRecoveryDelivery] = useState({
+    status: "idle",
+    message: "",
+    standardDownloadAvailable: false,
+  });
   const [waterEntries, setWaterEntries] = useState(() => readWaterEntries(localStorage).entries);
   const [healthMeasurementEntries, setHealthMeasurementEntries] = useState([]);
   const [appSettings, setAppSettings] = useState(() => readAppSettings(localStorage));
@@ -441,7 +456,11 @@ function App({
   const [nutritionGoals, setNutritionGoals] = useState(
     DEFAULT_NUTRITION_GOALS
   );
-  const [storageError, setStorageError] = useState("");
+  const [storageError, setStorageError] = useState(() =>
+    nutritionStorageReport.status === NUTRITION_STORAGE_STATUS.BLOCKED
+      ? "Trace couldn't read the saved nutrition entries. The stored value was left unchanged, and Nutrition saving is blocked."
+      : ""
+  );
   const [confirmation, setConfirmation] = useState(null);
   const confirmationTimerRef = useRef(null);
   const confirmationIdRef = useRef(0);
@@ -705,18 +724,6 @@ function App({
       setStorageError(
         "Trace couldn't read the saved user food catalog. The stored value was left unchanged."
       );
-    }
-  }, []);
-
-  useEffect(() => {
-    try {
-      const savedNutritionEntries = localStorage.getItem("nutritionEntries");
-      if (!savedNutritionEntries) return;
-      const parsedEntries = JSON.parse(savedNutritionEntries);
-      if (!Array.isArray(parsedEntries)) throw new Error("Invalid nutrition data.");
-      setNutritionEntries(parsedEntries);
-    } catch (error) {
-      setStorageError("Trace couldn't read the saved nutrition entries. The stored value was left unchanged.");
     }
   }, []);
 
@@ -1464,21 +1471,132 @@ function App({
   }
 
   function saveNutritionEntry(entry) {
-    const newEntry = {
-      ...entry,
-      id: createId(new Set(nutritionEntries.map((item) => item.id))),
-    };
-    const updatedEntries = [...nutritionEntries, newEntry];
-
-    try {
-      localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
-      setNutritionEntries(updatedEntries);
-      setStorageError("");
-      return true;
-    } catch (error) {
-      setStorageError(storageMessage("save this nutrition entry"));
+    const result = appendNutritionEntry(localStorage, entry, {
+      createId: (existingIds) => createId(existingIds),
+    });
+    if (result.status !== NUTRITION_MUTATION_STATUS.SAVED) {
+      setStorageError(result.message || storageMessage("save this nutrition entry"));
       return false;
     }
+    setNutritionStorageReport(result.report);
+    setStorageError("");
+    return true;
+  }
+
+  function nutritionRecoveryDescriptor() {
+    const report = readNutritionEntries(localStorage);
+    const raw = report.recoveryRaw;
+    if (typeof raw !== "string") {
+      setNutritionRecoveryDelivery({
+        status: "failure",
+        message: "Trace could not find preserved raw Nutrition data to download.",
+        standardDownloadAvailable: false,
+      });
+      return null;
+    }
+    return {
+      contents: raw,
+      filename: nutritionRecoveryFilename(new Date()),
+      mimeType: "text/plain;charset=utf-8",
+    };
+  }
+
+  function nutritionRecoveryDeliveryError(delivery, fallbackMessage) {
+    const detail = delivery?.error?.message;
+    return detail ? `${fallbackMessage} ${detail}` : fallbackMessage;
+  }
+
+  async function downloadNutritionRecovery() {
+    const descriptor = nutritionRecoveryDescriptor();
+    if (!descriptor) return false;
+    let delivery;
+    try {
+      delivery = await Promise.resolve(backupFileAdapter.downloadExport(descriptor));
+    } catch (error) {
+      setNutritionRecoveryDelivery({
+        status: "failure",
+        message: error.message || "Trace could not download the raw Nutrition recovery file.",
+        standardDownloadAvailable: false,
+      });
+      return false;
+    }
+    if (delivery?.status === BACKUP_FILE_RESULT_STATUS.CANCELED) {
+      setNutritionRecoveryDelivery({
+        status: "canceled",
+        message: "The recovery-file download was canceled. Your Nutrition data was not changed.",
+        standardDownloadAvailable: false,
+      });
+      return false;
+    }
+    if (delivery?.status !== BACKUP_FILE_RESULT_STATUS.SUCCESS) {
+      setNutritionRecoveryDelivery({
+        status: "failure",
+        message: nutritionRecoveryDeliveryError(
+          delivery,
+          "Trace could not download the raw Nutrition recovery file."
+        ),
+        standardDownloadAvailable: false,
+      });
+      return false;
+    }
+    setNutritionRecoveryDelivery({
+      status: "success",
+      message: "Raw Nutrition recovery file downloaded.",
+      standardDownloadAvailable: false,
+    });
+    showConfirmation("Raw Nutrition recovery file downloaded", "nutrition");
+    return true;
+  }
+
+  async function shareNutritionRecovery() {
+    const descriptor = nutritionRecoveryDescriptor();
+    if (!descriptor) return false;
+    let delivery;
+    try {
+      if (!backupFileAdapter.prepareExport || !backupFileAdapter.shareExport) {
+        throw new Error("File sharing is unavailable in this browser.");
+      }
+      delivery = await Promise.resolve(backupFileAdapter.prepareExport(descriptor));
+      if (delivery?.status === BACKUP_FILE_RESULT_STATUS.READY && delivery.file) {
+        delivery = await backupFileAdapter.shareExport(delivery.file);
+      }
+    } catch (error) {
+      delivery = { status: BACKUP_FILE_RESULT_STATUS.FAILURE, error };
+    }
+    if (delivery?.status === BACKUP_FILE_RESULT_STATUS.CANCELED) {
+      setNutritionRecoveryDelivery({
+        status: "canceled",
+        message: "Sharing was canceled. Your Nutrition data was not changed. You can still use a standard browser download.",
+        standardDownloadAvailable: true,
+      });
+      return false;
+    }
+    if (delivery?.status !== BACKUP_FILE_RESULT_STATUS.SUCCESS) {
+      setNutritionRecoveryDelivery({
+        status: "failure",
+        message: nutritionRecoveryDeliveryError(
+          delivery,
+          "Trace could not share the raw Nutrition recovery file. Use a standard browser download instead."
+        ),
+        standardDownloadAvailable: true,
+      });
+      return false;
+    }
+    const downloaded = delivery.method === "download";
+    setNutritionRecoveryDelivery({
+      status: "success",
+      message: downloaded
+        ? "Raw Nutrition recovery file downloaded."
+        : "Raw Nutrition recovery file shared.",
+      standardDownloadAvailable: false,
+    });
+    showConfirmation(
+      downloaded
+        ? "Raw Nutrition recovery file downloaded"
+        : "Raw Nutrition recovery file shared",
+      "nutrition"
+    );
+    return true;
   }
 
   function saveHealthMeasurement(draft) {
@@ -1526,6 +1644,10 @@ function App({
       const restoredNutritionGoals = normalizeNutritionGoals(
         restoredNutritionGoalsRaw ? JSON.parse(restoredNutritionGoalsRaw) : null
       );
+      const restoredNutritionEntries = readNutritionEntries(localStorage);
+      if (restoredNutritionEntries.status === NUTRITION_STORAGE_STATUS.BLOCKED) {
+        throw new Error("The restored Nutrition entries could not be read.");
+      }
       const restoredJournalPrivacyState = journalVaultStorageState(localStorage);
       const restoredJournalEntries = restoredJournalPrivacyState.enabled
         ? []
@@ -1549,6 +1671,7 @@ function App({
       setAppSettings(restoredAppSettings);
       setWaterEntries(restoredWaterEntries);
       setNutritionGoals(restoredNutritionGoals);
+      setNutritionStorageReport(restoredNutritionEntries);
       setJournalEntries(restoredJournalEntries);
       setJournalPrivacy({
         enabled: restoredJournalPrivacyState.enabled,
@@ -1656,35 +1779,25 @@ function App({
   }
 
   function updateNutritionEntry(id, entry) {
-    const updatedEntries = nutritionEntries.map((existingEntry) =>
-      existingEntry.id === id
-        ? { ...existingEntry, ...entry, id: existingEntry.id }
-        : existingEntry
-    );
-
-    try {
-      localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
-      setNutritionEntries(updatedEntries);
-      setStorageError("");
-      return true;
-    } catch (error) {
-      setStorageError(storageMessage("update this nutrition entry"));
+    const result = updateStoredNutritionEntry(localStorage, id, entry);
+    if (result.status !== NUTRITION_MUTATION_STATUS.SAVED) {
+      setStorageError(result.message || storageMessage("update this nutrition entry"));
       return false;
     }
+    setNutritionStorageReport(result.report);
+    setStorageError("");
+    return true;
   }
 
   function deleteNutritionEntry(id) {
-    const updatedEntries = nutritionEntries.filter((entry) => entry.id !== id);
-
-    try {
-      localStorage.setItem("nutritionEntries", JSON.stringify(updatedEntries));
-      setNutritionEntries(updatedEntries);
-      setStorageError("");
-      return true;
-    } catch (error) {
-      setStorageError(storageMessage("delete this nutrition entry"));
+    const result = deleteStoredNutritionEntry(localStorage, id);
+    if (result.status !== NUTRITION_MUTATION_STATUS.SAVED) {
+      setStorageError(result.message || storageMessage("delete this nutrition entry"));
       return false;
     }
+    setNutritionStorageReport(result.report);
+    setStorageError("");
+    return true;
   }
 
   function saveNutritionGoals(goals) {
@@ -3496,6 +3609,10 @@ function App({
         <NutritionPage
           onBack={() => setPage("home")}
           nutritionEntries={nutritionEntries}
+          nutritionRecovery={nutritionStorageReport}
+          nutritionRecoveryDelivery={nutritionRecoveryDelivery}
+          downloadNutritionRecovery={downloadNutritionRecovery}
+          shareNutritionRecovery={shareNutritionRecovery}
           userFoods={userFoods}
           nutritionGoals={nutritionGoals}
           saveNutritionEntry={saveNutritionEntry}

@@ -314,6 +314,10 @@ export function calculateNutritionAverages(nutritionEntries, now = new Date()) {
 function NutritionPage({
   onBack,
   nutritionEntries,
+  nutritionRecovery = null,
+  nutritionRecoveryDelivery = null,
+  downloadNutritionRecovery = () => false,
+  shareNutritionRecovery = () => false,
   userFoods = [],
   nutritionGoals,
   saveNutritionEntry,
@@ -1191,6 +1195,96 @@ function NutritionPage({
       >
         Back to Timeline
       </button>
+
+      {nutritionRecovery && (
+        nutritionRecovery.status === "blocked" ||
+        nutritionRecovery.status === "partial" ||
+        nutritionRecovery.recoveryAvailable
+      ) && (
+        <section
+          aria-labelledby="nutrition-recovery-heading"
+          className="trace-app-alert trace-app-alert--error"
+          role="alert"
+          style={{
+            background: "#7f1d1d",
+            border: "1px solid #fca5a5",
+            borderRadius: "10px",
+            boxSizing: "border-box",
+            color: "white",
+            marginBottom: "24px",
+            maxWidth: "700px",
+            padding: "16px",
+            width: "100%",
+          }}
+        >
+          <h2 id="nutrition-recovery-heading" style={{ fontSize: "18px", marginTop: 0 }}>
+            Nutrition data needs recovery
+          </h2>
+          {nutritionRecovery.status === "blocked" ? (
+            <p>
+              Trace could not read the saved Nutrition collection. Saving, editing, and deleting Nutrition entries are blocked so the original data cannot be overwritten.
+            </p>
+          ) : nutritionRecovery.status === "partial" ? (
+            <p>
+              Trace loaded the usable Nutrition entries. {nutritionRecovery.damagedCount} saved {nutritionRecovery.damagedCount === 1 ? "record could" : "records could"} not be loaded and remain preserved outside the visible history.
+            </p>
+          ) : (
+            <p>
+              Trace is using readable Nutrition data, and an earlier damaged Nutrition source remains preserved for recovery.
+            </p>
+          )}
+          {nutritionRecovery.recoveryError && (
+            <p>
+              Trace cannot verify the durable recovery copy. Nutrition changes that could replace damaged data will remain blocked.
+            </p>
+          )}
+          {typeof nutritionRecovery.recoveryRaw === "string" ? (
+            <>
+              <p id="nutrition-recovery-file-description">
+                This raw recovery file preserves the original Nutrition text. It is not a normal restorable Trace backup.
+              </p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "12px" }}>
+                <button
+                  aria-describedby="nutrition-recovery-file-description"
+                  className="trace-action trace-action--secondary"
+                  type="button"
+                  onClick={downloadNutritionRecovery}
+                  style={{ ...buttonStyle, backgroundColor: "#374151", maxWidth: "100%" }}
+                >
+                  Download raw Nutrition recovery file
+                </button>
+                <button
+                  aria-describedby="nutrition-recovery-file-description"
+                  className="trace-action trace-action--secondary"
+                  type="button"
+                  onClick={shareNutritionRecovery}
+                  style={{ ...buttonStyle, backgroundColor: "#374151", maxWidth: "100%" }}
+                >
+                  Share raw Nutrition recovery file
+                </button>
+              </div>
+              {nutritionRecoveryDelivery?.message && (
+                <p aria-live="polite">
+                  {nutritionRecoveryDelivery.message}
+                </p>
+              )}
+              {nutritionRecoveryDelivery?.standardDownloadAvailable && (
+                <button
+                  aria-describedby="nutrition-recovery-file-description"
+                  className="trace-action trace-action--secondary"
+                  type="button"
+                  onClick={downloadNutritionRecovery}
+                  style={{ ...buttonStyle, backgroundColor: "#374151", maxWidth: "100%" }}
+                >
+                  Use standard browser download
+                </button>
+              )}
+            </>
+          ) : (
+            <p>The raw recovery file will be available after Trace can read browser storage again.</p>
+          )}
+        </section>
+      )}
 
       <section className="trace-nutrition-goals-disclosure" aria-labelledby="nutrition-goals-toggle">
         <button

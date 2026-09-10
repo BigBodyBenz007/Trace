@@ -1,5 +1,6 @@
 export const STORAGE_DOMAIN_CLASSIFICATION = Object.freeze({
   DURABLE_BACKUP: "durable-backup",
+  DURABLE_RECOVERY_EXCLUDED: "durable-recovery-excluded",
   DERIVED_EXCLUDED: "derived-excluded",
   TRANSACTION_RECOVERY_EXCLUDED: "transaction-recovery-excluded",
   EPHEMERAL_EXCLUDED: "ephemeral-excluded",
@@ -32,11 +33,25 @@ const excludedLocalStorageDerived = (key, owner, description) => ({
   description,
 });
 
+const excludedLocalStorageRecovery = (key, owner, description) => ({
+  key,
+  storage: "localStorage",
+  classification: STORAGE_DOMAIN_CLASSIFICATION.DURABLE_RECOVERY_EXCLUDED,
+  backupLocation: null,
+  owner,
+  description,
+});
+
 export const TRACE_STORAGE_DOMAIN_MANIFEST = Object.freeze([
   durableLocalStorage("memories", "App / photoStorage", "Memory metadata and IndexedDB photo references."),
   durableLocalStorage("nutritionGoals", "App", "Nutrition and water goals."),
   durableLocalStorage("userFoods", "userFoodCatalog", "User-created grocery and other saved foods."),
   durableLocalStorage("nutritionEntries", "App", "Logged nutrition, including branded and restaurant snapshots."),
+  excludedLocalStorageRecovery(
+    "nutritionEntriesRecovery",
+    "nutritionEntryStorage",
+    "Exact raw Nutrition source snapshots retained before damaged collections are rewritten; intentionally preserved across full backup restores and excluded from normal restorable backups."
+  ),
   durableLocalStorage("waterEntries", "waterTracker", "Versioned water history."),
   durableLocalStorage("healthMeasurementEntries", "healthMeasurements", "Health measurement history."),
   durableLocalStorage("appSettings", "appSettings", "Settings, Home visibility, theme, units, and motion preference."),

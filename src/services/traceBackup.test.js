@@ -46,6 +46,10 @@ import {
 import { JOURNAL_VAULT_TRANSACTION_KEY } from "./journalVault";
 import { emptyFormDraftCollection, writeFormDraft } from "./formDrafts";
 import {
+  NUTRITION_RECOVERY_STORAGE_KEY,
+  readNutritionRecoveryCollection,
+} from "./nutritionEntryStorage";
+import {
   canonicalJson,
   sha256Bytes,
   sha256CanonicalJson,
@@ -974,6 +978,61 @@ test("backup creation identifies an unrepairable Nutrition portion and leaves st
   })).rejects.toThrow(/Mystery soup.*date 2026-08-10.*ID meal-corrupt-portion/);
   expect(source.value("nutritionEntries")).toBe(stored);
   expect(source.setItem).not.toHaveBeenCalled();
+});
+
+test("normal backups exclude raw Nutrition recovery snapshots and full restore preserves damaged current Nutrition", async () => {
+  const recoveryRaw = JSON.stringify({
+    schemaVersion: 1,
+    snapshots: [{
+      capturedAt: "2026-09-09T13:00:00.000Z",
+      damageKey: "records:damaged",
+      raw: "[null]",
+    }],
+  });
+  const source = makeStorage({
+    nutritionEntries: JSON.stringify([{ id: "meal-valid" }]),
+    [NUTRITION_RECOVERY_STORAGE_KEY]: recoveryRaw,
+  });
+  const created = await createTraceBackup({
+    storage: source,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+
+  expect(created.data.structured).not.toHaveProperty(NUTRITION_RECOVERY_STORAGE_KEY);
+
+  const damagedBeforeRestore = "{damaged-current-nutrition";
+  const restored = makeStorage({
+    nutritionEntries: damagedBeforeRestore,
+    [NUTRITION_RECOVERY_STORAGE_KEY]: recoveryRaw,
+  });
+  await restoreTraceBackup(created, {
+    confirmed: true,
+    storage: restored,
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  const recovery = readNutritionRecoveryCollection(restored);
+  expect(recovery.snapshots[0].raw).toBe("[null]");
+  expect(recovery.snapshots[1].raw).toBe(damagedBeforeRestore);
+  expect(JSON.parse(restored.value("nutritionEntries"))).toEqual([{ id: "meal-valid" }]);
+});
+
+test("restore does not replace damaged current Nutrition when its recovery snapshot cannot be stored", async () => {
+  const created = await createTraceBackup({
+    storage: makeStorage({ nutritionEntries: JSON.stringify([{ id: "meal-restored" }]) }),
+    openDatabase: async () => makePhotoDatabase(),
+  });
+  const damagedBeforeRestore = "{damaged-current-nutrition";
+  const target = makeStorage(
+    { nutritionEntries: damagedBeforeRestore },
+    NUTRITION_RECOVERY_STORAGE_KEY
+  );
+
+  await expect(restoreTraceBackup(created, {
+    confirmed: true,
+    storage: target,
+    openDatabase: async () => makePhotoDatabase(),
+  })).rejects.toThrow("stopped the restore before changing data");
+  expect(target.value("nutritionEntries")).toBe(damagedBeforeRestore);
 });
 
 test("round-trips barcode custom-food identity and its original provider snapshot", async () => {

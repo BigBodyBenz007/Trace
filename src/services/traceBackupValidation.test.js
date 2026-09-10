@@ -1,4 +1,5 @@
 import {
+  normalizeAndValidateNutritionEntry,
   normalizeNutritionEntryPortions,
   validateTraceStructuredDomains,
 } from "./traceBackupValidation";
@@ -189,6 +190,18 @@ test("identifies an unrepairable Nutrition entry without exposing its private no
     expect(error.message).toContain("delete only this entry");
     expect(error.message).not.toContain(record.notes);
   }
+});
+
+test.each([
+  [{ portion: { amount: 1, unit: {}, basis: { amount: 1, unit: "serving", description: "Serving" } } }, "portion unit"],
+  [{ portion: { amount: 1, unit: "serving", basis: [] } }, "portion basis"],
+  [{ portion: { amount: 1, unit: "serving", basis: { amount: 1, unit: "serving", description: {} } } }, "portion basis description"],
+  [{ foodReference: { sourceType: "beverage", brand: {} } }, "food reference brand"],
+  [{ foodReference: { sourceType: "beverage", caffeineMg: {} } }, "food reference caffeineMg"],
+])("rejects render-unsafe nested Nutrition values without weakening the shared validator", (fields, message) => {
+  const record = { id: "entry:nested-invalid", ...fields };
+  expect(() => normalizeAndValidateNutritionEntry(record)).toThrow(message);
+  expect(() => validateTraceStructuredDomains({ nutritionEntries: [record] })).toThrow(message);
 });
 
 test.each([
