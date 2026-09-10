@@ -374,17 +374,44 @@ const mcdonaldsExpansionFoods = [
 
 const wendys = { id: "wendys", name: "Wendy's" };
 const WENDYS_PARTIAL_REFERENCE = "Wendy's official current US item page and national menu calorie listing; the detailed nutrient panel was unavailable in the accessible response, so unpublished nutrients remain unknown";
-const wendysFood = (id, name, description, calories, sourceUrl) => officialFood(
+const WENDYS_DETAILED_REFERENCE = "Wendy's official current US item page nutritional-value panel; calories, fat, sodium, carbohydrate, fiber, total sugars and protein are recorded, while added sugars were not published and remain unknown";
+const WENDYS_SAUCES_REFERENCE = "Wendy's official Sauces & Dressings page; published calories, fat, carbohydrate and protein are recorded, while serving weight, sodium, fiber and sugars were unavailable and remain unknown";
+const wendysFood = (id, name, description, calories, sourceUrl, servingOptions, publishedNutrients = {}, sourceReference = WENDYS_PARTIAL_REFERENCE) => officialFood(
   wendys,
   id,
   name,
   description,
-  { calories, protein: null, carbohydrates: null, fat: null, sodium: null, fiber: null, totalSugar: null, addedSugar: null },
+  { calories, protein: null, carbohydrates: null, fat: null, sodium: null, fiber: null, totalSugar: null, addedSugar: null, ...publishedNutrients },
   sourceUrl,
-  WENDYS_PARTIAL_REFERENCE,
-  undefined,
+  sourceReference,
+  servingOptions,
   { status: "partial", accessedAt: CURRENT_EXPANSION_CHECKED_AT }
 );
+const wendysOption = (id, description, calories, sourceUrl, amount = 1) => ({
+  id: `restaurant:wendys:${id}`,
+  serving: { amount, unit: "item", description },
+  nutrients: { calories, protein: null, carbohydrates: null, fat: null, sodium: null, fiber: null, totalSugar: null, addedSugar: null },
+  provenance: {
+    source: "official-restaurant",
+    sourceId: `wendys:${id}`,
+    confidence: "official-source",
+    verification: {
+      status: "partial",
+      sourceType: "official-restaurant",
+      sourceUrl,
+      accessedAt: CURRENT_EXPANSION_CHECKED_AT,
+      sourceReference: WENDYS_PARTIAL_REFERENCE,
+    },
+  },
+});
+const wendysMenuUrl = (category, slug) => `https://order.wendys.com/us/en/national/menu/${category}/${slug}`;
+const wendysSizedFood = (id, name, category, description, options, searchAliases) => {
+  const sourceUrl = wendysMenuUrl(category, id);
+  const food = wendysFood(id, name, description, null, sourceUrl, options.map(([optionId, optionDescription, calories, amount = 1]) => (
+    wendysOption(`${id}:${optionId}`, optionDescription, calories, sourceUrl, amount)
+  )));
+  return searchAliases ? { ...food, searchAliases } : food;
+};
 const wendysFoods = [
   wendysFood("daves-single", "Dave's Single®", "1 standard burger: quarter-pound beef patty (pre-cooked weight), American cheese, lettuce, tomato, pickle, ketchup, mustard, mayo and onion on a potato bun", 560, "https://order.wendys.com/us/en/national/menu/hamburgers/daves-single"),
   wendysFood("baconator", "Baconator®", "1 standard burger: half-pound beef (pre-cooked weight), American cheese, 6 pieces of Applewood smoked bacon, ketchup and mayo on a potato bun", 890, "https://order.wendys.com/us/en/national/menu/hamburgers/baconator"),
@@ -392,15 +419,164 @@ const wendysFoods = [
   wendysFood("classic-chicken-sandwich", "Classic Chicken Sandwich", "1 standard sandwich: crispy chicken breast, lettuce, tomato, mayo and pickles on a potato bun", 550, "https://order.wendys.com/us/en/national/menu/chicken-nuggets-more/classic-chicken-sandwich"),
   wendysFood("spicy-chicken-sandwich", "Spicy Chicken Sandwich", "1 standard sandwich: breaded spicy chicken breast, lettuce, pickles, tomato and mayo on a potato bun", 560, "https://order.wendys.com/us/en/national/menu/chicken-nuggets-more/spicy-chicken-sandwich"),
   { ...wendysFood("grilled-chicken-ranch-wrap", "Grilled Chicken Ranch Wrap", "1 standard wrap: herb-marinated grilled chicken breast, shredded cheddar, romaine and ranch sauce in a warm tortilla", 420, "https://order.wendys.com/us/en/national/menu/chicken-nuggets-more/grilled-chicken-wrap"), searchAliases: ["Grilled Chicken Wrap"] },
-  wendysFood("10-piece-chicken-nuggets", "10 PC. Chicken Nuggets", "10 breaded all-white-meat chicken nuggets; dipping sauce is selected separately and is not included in this record", 430, "https://order.wendys.com/us/en/national/menu/chicken-nuggets-more/10-pc-chicken-nuggets"),
+  wendysFood("10-piece-chicken-nuggets", "10 PC. Chicken Nuggets", "Breaded all-white-meat chicken nuggets; dipping sauce is selected separately and is not included", 430, "https://order.wendys.com/us/en/national/menu/chicken-nuggets-more/10-pc-chicken-nuggets", [
+    wendysOption("10-piece-chicken-nuggets:10-piece", "10 piece serving; dipping sauce not included", 430, wendysMenuUrl("chicken-nuggets-more", "10-pc-chicken-nuggets"), 10),
+    wendysOption("10-piece-chicken-nuggets:4-piece", "4 piece serving; dipping sauce not included", 170, wendysMenuUrl("chicken-nuggets-more", "4-pc-chicken-nuggets"), 4),
+    wendysOption("10-piece-chicken-nuggets:6-piece", "6 piece serving; dipping sauce not included", 260, wendysMenuUrl("chicken-nuggets-more", "6-pc-chicken-nuggets"), 6),
+  ]),
   wendysFood("plain-baked-potato", "Plain Baked Potato", "1 plain baked potato with no toppings", 270, "https://order.wendys.com/us/en/national/menu/fries-sides/plain-baked-potato"),
   wendysFood("apple-bites", "Apple Bites", "1 side of sliced apple pieces", 35, "https://order.wendys.com/us/en/national/menu/fries-sides/apple-bites"),
   wendysFood("breakfast-baconator", "Breakfast Baconator®", "1 standard breakfast sandwich: grilled sausage, American cheese, Applewood smoked bacon, egg and Swiss cheese sauce on a potato bun", 630, "https://order.wendys.com/us/en/national/menu/classics/breakfast-baconator"),
+  ...[
+    ["pretzel-bacon-pub-cheeseburger", "Pretzel Bacon Pub Cheeseburger", "1 standard burger: quarter-pound beef patty, muenster, Applewood smoked bacon, beer cheese, crispy onions, pickles and smoky honey mustard on a pretzel bun", 780],
+    ["pretzel-bacon-pub-double-cheeseburger", "Pretzel Bacon Pub Double Cheeseburger", "1 standard double burger with muenster, Applewood smoked bacon, beer cheese, crispy onions, pickles and smoky honey mustard on a pretzel bun", 1110],
+    ["pretzel-bacon-pub-triple-cheeseburger", "Pretzel Bacon Pub Triple Cheeseburger", "1 standard triple burger with muenster, Applewood smoked bacon, beer cheese, crispy onions, pickles and smoky honey mustard on a pretzel bun", 1430],
+    ["daves-double", "Dave's Double®", "1 standard burger: two beef patties, American cheese, lettuce, tomato, pickle, ketchup, mustard, mayo and onion on a potato bun", 810],
+    ["daves-triple", "Dave's Triple®", "1 standard burger: three beef patties, American cheese, lettuce, tomato, pickle, ketchup, mustard, mayo and onion on a potato bun", 1100],
+    ["son-of-baconator", "Son of Baconator®", "1 standard burger: two beef patties, American cheese, Applewood smoked bacon, ketchup and mayo on a potato bun", 590],
+    ["big-bacon-classic", "Big Bacon Classic®", "1 standard burger: beef patty, Applewood smoked bacon, American cheese, lettuce, tomato, pickle, ketchup, mustard, mayo and onion on a potato bun", 610],
+    ["big-bacon-classic-double", "Big Bacon Classic® Double", "1 standard double burger with Applewood smoked bacon, American cheese, lettuce, tomato, pickle, ketchup, mustard, mayo and onion on a potato bun", 860],
+    ["big-bacon-classic-triple", "Big Bacon Classic® Triple", "1 standard triple burger with Applewood smoked bacon, American cheese, lettuce, tomato, pickle, ketchup, mustard, mayo and onion on a potato bun", 1140],
+    ["bacon-double-stack-tm", "Bacon Double Stack™", "1 standard burger: two beef patties, Applewood smoked bacon, American cheese, ketchup, mustard, pickle and onion on a bun", 420],
+    ["jr-cheeseburger-deluxe", "Jr. Cheeseburger Deluxe", "1 standard junior burger: beef patty, American cheese, pickles, onion, tomato, lettuce, ketchup, mustard and mayo on a bun", 330],
+    ["jr-cheeseburger", "Jr. Cheeseburger", "1 standard junior burger: beef patty, American cheese, pickles, onion, ketchup and mustard on a bun", 270],
+    ["double-stack-tm", "Double Stack™", "1 standard burger: two beef patties, American cheese, ketchup, mustard, pickle and onion on a bun", 380],
+    ["jr-hamburger", "Jr. Hamburger", "1 standard junior burger: beef patty, pickles, onion, ketchup and mustard on a bun", 230],
+  ].map(([id, name, description, calories]) => wendysFood(id, name, description, calories, wendysMenuUrl("hamburgers", id))),
+  wendysFood("pretzel-bacon-pub-chicken-sandwich", "Pretzel Bacon Pub Chicken Sandwich", "1 standard sandwich: crispy chicken breast, muenster, Applewood smoked bacon, beer cheese, crispy onions, pickles and smoky honey mustard on a pretzel bun", 860, wendysMenuUrl("chicken-nuggets-more", "pretzel-bacon-pub-chicken-sandwich")),
+  wendysFood("asiago-ranch-club-sandwich-classic", "Asiago Ranch Club Sandwich, Classic", "1 classic chicken sandwich with Asiago cheese, Applewood smoked bacon, lettuce, tomato and ranch; customizations excluded", 670, wendysMenuUrl("chicken-nuggets-more", "asiago-ranch-club-sandwich-classic")),
+  wendysFood("asiago-ranch-club-sandwich-spicy", "Asiago Ranch Club Sandwich, Spicy", "1 spicy chicken sandwich with Asiago cheese, Applewood smoked bacon, lettuce, tomato and ranch; customizations excluded", 680, wendysMenuUrl("chicken-nuggets-more", "asiago-ranch-club-sandwich-spicy")),
+  wendysFood("crispy-chicken-blt", "Crispy Chicken BLT", "1 standard crispy chicken sandwich with Applewood smoked bacon, American cheese, lettuce, tomato and mayo; customizations excluded", 420, wendysMenuUrl("chicken-nuggets-more", "crispy-chicken-blt")),
+  wendysFood("crispy-chicken-sandwich", "Crispy Chicken Sandwich", "1 standard crispy chicken sandwich with lettuce and mayo; customizations excluded", 340, wendysMenuUrl("chicken-nuggets-more", "crispy-chicken-sandwich")),
+  wendysFood("spicy-chicken-nuggets", "Spicy Chicken Nuggets", "Breaded spicy all-white-meat chicken nuggets; dipping sauce is selected separately and is not included", null, wendysMenuUrl("chicken-nuggets-more", "10-pc-spicy-chicken-nuggets"), [
+    wendysOption("spicy-chicken-nuggets:10-piece", "10 piece serving; dipping sauce not included", 470, wendysMenuUrl("chicken-nuggets-more", "10-pc-spicy-chicken-nuggets"), 10),
+    wendysOption("spicy-chicken-nuggets:4-piece", "4 piece serving; dipping sauce not included", 190, wendysMenuUrl("chicken-nuggets-more", "4-pc-spicy-chicken-nuggets"), 4),
+    wendysOption("spicy-chicken-nuggets:6-piece", "6 piece serving; dipping sauce not included", 280, wendysMenuUrl("chicken-nuggets-more", "6-pc-spicy-chicken-nuggets"), 6),
+  ]),
+  wendysFood("tenders", "Chicken Tenders", "Breaded chicken tenders; dipping sauce is selected separately and is not included", null, wendysMenuUrl("tenders", "3-pc-tenders"), [
+    wendysOption("tenders:3-piece", "3 piece serving; dipping sauce not included", 420, wendysMenuUrl("tenders", "3-pc-tenders"), 3),
+    wendysOption("tenders:4-piece", "4 piece serving; dipping sauce not included", 560, wendysMenuUrl("tenders", "4-pc-tenders"), 4),
+  ]),
+  ...[
+    ["parmesan-caesar-salad", "Parmesan Caesar Salad", 520],
+    ["cobb-salad", "Cobb Salad", 660],
+    ["apple-pecan-salad", "Apple Pecan Salad", 510],
+    ["taco-salad", "Taco Salad", 610],
+  ].map(([id, name, calories]) => wendysFood(id, name, "1 standard salad with its restaurant-listed toppings and dressing components; substitutions and extra dressing excluded", calories, wendysMenuUrl("fresh-made-salads", id))),
+  wendysSizedFood("french-fries", "Natural-Cut French Fries", "fries-sides", "Natural-cut, skin-on fries with sea salt; customizations and combo components excluded", [
+    ["junior", "Junior Natural-Cut Fries", 210],
+    ["small", "Small Natural-Cut Fries", 260],
+    ["medium", "Medium Natural-Cut Fries", 350],
+    ["large", "Large Natural-Cut Fries", 470],
+  ]),
+  ...[
+    ["baconator-fries", "Baconator Fries", "1 standard order of fries topped with cheese sauce, shredded cheddar and Applewood smoked bacon", 450],
+    ["chili-cheese-fries", "Chili Cheese Fries", "1 standard order of fries topped with Wendy's chili and cheese sauce", 510],
+    ["cheese-fries", "Cheese Fries", "1 standard order of fries topped with cheese sauce", 470],
+    ["pub-fries", "Pub Fries", "1 standard order of fries with warm beer cheese, shredded cheddar and Applewood smoked bacon", 460],
+    ["sour-cream-and-chive-baked-potato", "Sour Cream and Chive Baked Potato", "1 baked potato with sour cream and chives", 300],
+    ["bacon-cheese-baked-potato", "Bacon Cheese Baked Potato", "1 baked potato with cheese sauce, shredded cheddar and Applewood smoked bacon", 420],
+    ["cheese-baked-potato", "Cheese Baked Potato", "1 baked potato with cheese sauce and shredded cheddar", 440],
+  ].map(([id, name, description, calories]) => wendysFood(id, name, description, calories, wendysMenuUrl("fries-sides", id))),
+  wendysSizedFood("chili", "Chili", "fries-sides", "Wendy's beef-and-bean chili; crackers, cheese, onions and other add-ons are not included", [
+    ["small", "Small Chili", 280],
+    ["large", "Large Chili", 370],
+  ]),
+  wendysFood("maple-bacon-chicken-croissant", "Maple Bacon Chicken Croissant", "1 breakfast sandwich: chicken filet, Applewood smoked bacon and maple butter on a croissant bun", 540, wendysMenuUrl("croissants", "maple-bacon-chicken-croissant"), undefined, { protein: 19, carbohydrates: 48, fat: 30, sodium: 880, fiber: 3, totalSugar: 12 }, WENDYS_DETAILED_REFERENCE),
+  wendysFood("honey-buddy-chicken-biscuit", "Honey Buddy Chicken Biscuit", "1 breakfast sandwich: chicken filet and honey butter on a buttermilk biscuit", 490, wendysMenuUrl("biscuits", "honey-buddy-chicken-biscuit")),
+  wendysFood("honey-butter-biscuit", "Honey Butter Biscuit", "1 buttermilk biscuit with honey butter", 330, wendysMenuUrl("biscuits", "honey-butter-biscuit"), undefined, { protein: 5, carbohydrates: 39, fat: 17, sodium: 740, fiber: 2, totalSugar: 8 }, WENDYS_DETAILED_REFERENCE),
+  wendysFood("sausage-biscuit", "Sausage Biscuit", "1 grilled sausage patty on a buttermilk biscuit", 470, wendysMenuUrl("biscuits", "sausage-biscuit")),
+  wendysFood("homestyle-french-toast-sticks", "Homestyle French Toast Sticks", "French toast sticks; syrup is selected separately and is not included", null, wendysMenuUrl("classics", "homestyle-french-toast-sticks-4-pc"), [
+    wendysOption("homestyle-french-toast-sticks:4-piece", "4 piece serving; syrup not included", 460, wendysMenuUrl("classics", "homestyle-french-toast-sticks-4-pc"), 4),
+    wendysOption("homestyle-french-toast-sticks:6-piece", "6 piece serving; syrup not included", 630, wendysMenuUrl("classics", "homestyle-french-toast-sticks-6-pc"), 6),
+  ]),
+  wendysFood("breakfast-burrito-bacon", "Breakfast Burrito, Bacon", "1 burrito: eggs, Applewood smoked bacon, American cheese, seasoned potatoes and Swiss cheese sauce in a flour tortilla; Cholula packet is served on the side and not included", 700, wendysMenuUrl("breakfast-burrito", "breakfast-burrito-bacon"), undefined, { protein: 32, carbohydrates: 55, fat: 39, sodium: 2140, fiber: 2, totalSugar: 3 }, WENDYS_DETAILED_REFERENCE),
+  wendysFood("breakfast-burrito-sausage", "Breakfast Burrito, Sausage", "1 burrito: eggs, grilled sausage, American cheese, seasoned potatoes and Swiss cheese sauce in a flour tortilla; Cholula packet is served on the side and not included", 820, wendysMenuUrl("breakfast-burrito", "breakfast-burrito-sausage")),
+  wendysSizedFood("seasoned-potatoes", "Seasoned Potatoes", "sides-and-sweets", "Natural-cut, skin-on potatoes seasoned with cracked black pepper and garlic powder", [
+    ["small", "Small Seasoned Potatoes", 280],
+    ["medium", "Medium Seasoned Potatoes", 400],
+    ["large", "Large Seasoned Potatoes", 510],
+  ]),
+  ...[
+    ["cinnabon-pull-apart", "Cinnabon® Pull-Apart", "1 standard bakery serving", 550],
+    ["chocolate-chunk-cookie", "Chocolate Chunk Cookie", "1 cookie", 330],
+    ["sugar-cookie", "Sugar Cookie", "1 cookie", 330],
+  ].map(([id, name, description, calories]) => wendysFood(id, name, description, calories, wendysMenuUrl("bakery", id))),
+  ...[
+    ["regular-hot-coffee", "Regular Hot Coffee", "coffee", [["small", "Small Regular Hot Coffee", 5], ["large", "Large Regular Hot Coffee", 5]]],
+    ["cold-brew", "Cold Brew", "coffee", [["small", "Small Cold Brew", 20], ["medium", "Medium Cold Brew", 25], ["large", "Large Cold Brew", 40]]],
+    ["vanilla-cold-brew-with-cream", "Vanilla Cold Brew with Cream", "coffee", [["small", "Small Vanilla Cold Brew with Cream", 120], ["medium", "Medium Vanilla Cold Brew with Cream", 190], ["large", "Large Vanilla Cold Brew with Cream", 270]]],
+    ["caramel-cold-brew-with-cream", "Caramel Cold Brew with Cream", "coffee", [["small", "Small Caramel Cold Brew with Cream", 120], ["medium", "Medium Caramel Cold Brew with Cream", 190], ["large", "Large Caramel Cold Brew with Cream", 270]]],
+    ["chocolate-cold-brew-with-cream", "Chocolate Cold Brew with Cream", "coffee", [["small", "Small Chocolate Cold Brew with Cream", 120], ["medium", "Medium Chocolate Cold Brew with Cream", 190], ["large", "Large Chocolate Cold Brew with Cream", 280]]],
+    ["cold-brew-with-cream-and-sugar", "Cold Brew with Cream and Sugar", "coffee", [["small", "Small Cold Brew with Cream and Sugar", 110], ["medium", "Medium Cold Brew with Cream and Sugar", 190], ["large", "Large Cold Brew with Cream and Sugar", 270]]],
+  ].map(([id, name, category, options]) => wendysSizedFood(id, name, category, "1 restaurant beverage in the selected published size; standard recipe and ice where applicable, with customizations excluded", options)),
+  ...[
+    ["watermelon-lemonade", "Watermelon Lemonade", [["small", "Small Watermelon Lemonade", 220], ["medium", "Medium Watermelon Lemonade", 330], ["large", "Large Watermelon Lemonade", 420]]],
+    ["pineapple-mango-lemonade", "Pineapple Mango Lemonade", [["small", "Small Pineapple Mango Lemonade", 230], ["medium", "Medium Pineapple Mango Lemonade", 330], ["large", "Large Pineapple Mango Lemonade", 420]]],
+    ["all-natural-lemonade", "All-Natural Lemonade", [["small", "Small All-Natural Lemonade", 190], ["medium", "Medium All-Natural Lemonade", 280], ["large", "Large All-Natural Lemonade", 330]]],
+    ["strawberry-lemonade", "Strawberry Lemonade", [["small", "Small Strawberry Lemonade", 230], ["medium", "Medium Strawberry Lemonade", 330], ["large", "Large Strawberry Lemonade", 420]]],
+    ["sprite-watermelon", "Sprite® Watermelon", [["small", "Small Sprite Watermelon", 170], ["medium", "Medium Sprite Watermelon", 260], ["large", "Large Sprite Watermelon", 370]]],
+    ["watermelon-sparkling-energy", "Watermelon Sparkling Energy", [["small", "Small Watermelon Sparkling Energy", 190], ["medium", "Medium Watermelon Sparkling Energy", 280]]],
+    ["pineapple-citrus-sparkling-energy", "Pineapple Citrus Sparkling Energy", [["small", "Small Pineapple Citrus Sparkling Energy", 160], ["medium", "Medium Pineapple Citrus Sparkling Energy", 230]]],
+    ["coca-cola", "Coca-Cola®", [["small", "Small Coca-Cola", 180], ["medium", "Medium Coca-Cola", 250], ["large", "Large Coca-Cola", 320]], ["Wendy's Coke"]],
+    ["coca-cola-zero-sugar", "Coca-Cola® Zero Sugar", [["small", "Small Coca-Cola Zero Sugar", 0], ["medium", "Medium Coca-Cola Zero Sugar", 0], ["large", "Large Coca-Cola Zero Sugar", 0]], ["Wendy's Coke Zero", "Wendy's Coca Cola Zero"]],
+    ["diet-coke", "Diet Coke®", [["small", "Small Diet Coke", 0], ["medium", "Medium Diet Coke", 0], ["large", "Large Diet Coke", 0]]],
+    ["sprite", "Sprite®", [["small", "Small Sprite", 160], ["medium", "Medium Sprite", 240], ["large", "Large Sprite", 300]]],
+    ["dr-pepper", "Dr Pepper®", [["small", "Small Dr Pepper", 170], ["medium", "Medium Dr Pepper", 250], ["large", "Large Dr Pepper", 310]]],
+    ["diet-dr-pepper", "Diet Dr Pepper®", [["small", "Small Diet Dr Pepper", 0], ["medium", "Medium Diet Dr Pepper", 0], ["large", "Large Diet Dr Pepper", 0]]],
+    ["barqs-root-beer", "Barq's® Root Beer", [["small", "Small Barq's Root Beer", 180], ["medium", "Medium Barq's Root Beer", 260], ["large", "Large Barq's Root Beer", 330]]],
+    ["fanta-orange", "Fanta® Orange", [["small", "Small Fanta Orange", 180], ["medium", "Medium Fanta Orange", 260], ["large", "Large Fanta Orange", 320]]],
+    ["minute-maid-light-lemonade", "Minute Maid® Light Lemonade", [["small", "Small Minute Maid Light Lemonade", 10], ["medium", "Medium Minute Maid Light Lemonade", 10], ["large", "Large Minute Maid Light Lemonade", 15]]],
+    ["hi-c-flashin-fruit-punch", "Hi-C® Flashin' Fruit Punch®", [["small", "Small Hi-C Flashin' Fruit Punch", 200], ["medium", "Medium Hi-C Flashin' Fruit Punch", 290], ["large", "Large Hi-C Flashin' Fruit Punch", 370]]],
+  ].map(([id, name, options, aliases]) => wendysSizedFood(id, name, "beverages", "1 fountain beverage in the selected published size with Wendy's standard ice fill; ice customizations excluded", options, aliases)),
+  ...[
+    ["pure-life-bottled-water", "Pure Life® Bottled Water", 0],
+    ["milk", "Milk", 90],
+    ["chocolate-milk", "Chocolate Milk", 140],
+    ["honest-kids-fruit-punch", "Honest Kids® Fruit Punch", 35],
+    ["simply-orange-juice", "Simply Orange® Juice", 160],
+  ].map(([id, name, calories]) => wendysFood(id, name, "1 restaurant-packaged beverage; no substitutions or combo components included", calories, wendysMenuUrl("beverages", id))),
+  wendysSizedFood("classic-chocolate-frosty", "Classic Chocolate Frosty®", "frosty", "1 Classic Chocolate Frosty in the selected published size; toppings and mix-ins are not included", [
+    ["junior", "Junior Classic Chocolate Frosty", 190], ["small", "Small Classic Chocolate Frosty", 310], ["medium", "Medium Classic Chocolate Frosty", 390], ["large", "Large Classic Chocolate Frosty", 510],
+  ]),
+  wendysSizedFood("vanilla-frosty", "Vanilla Frosty®", "frosty", "1 Vanilla Frosty in the selected published size; toppings and mix-ins are not included", [
+    ["junior", "Junior Vanilla Frosty", 190], ["small", "Small Vanilla Frosty", 310], ["medium", "Medium Vanilla Frosty", 390], ["large", "Large Vanilla Frosty", 510],
+  ]),
+  ...[
+    ["apple-crumble-frosty-fusion-vanilla", "Apple Crumble Frosty Fusion®, Vanilla", [390, 540, 680]],
+    ["brownie-batter-chocolate-frosty-swirl-tm", "Brownie Batter Chocolate Frosty Swirl™", [500, 600, 710]],
+    ["brownie-batter-vanilla-frosty-swirl-tm", "Brownie Batter Vanilla Frosty Swirl™", [500, 600, 710]],
+    ["caramel-chocolate-frosty-swirl-tm", "Caramel Chocolate Frosty Swirl™", [380, 470, 570]],
+    ["caramel-crunch-chocolate-frosty-fusion-tm", "Caramel Crunch Chocolate Frosty Fusion™", [420, 580, 740]],
+    ["caramel-crunch-vanilla-frosty-fusion-tm", "Caramel Crunch Vanilla Frosty Fusion™", [420, 580, 740]],
+    ["caramel-vanilla-frosty-swirl-tm", "Caramel Vanilla Frosty Swirl™", [380, 470, 570]],
+    ["cookie-dough-frosty-fusion-chocolate", "Cookie Dough Frosty Fusion®, Chocolate", [540, 740, 930]],
+    ["cookie-dough-frosty-fusion-vanilla", "Cookie Dough Frosty Fusion®, Vanilla", [540, 740, 930]],
+    ["oreo-brownie-chocolate-frosty-fusion-tm", "OREO® Brownie Chocolate Frosty Fusion™", [520, 680, 850]],
+    ["oreo-brownie-vanilla-frosty-fusion-tm", "OREO® Brownie Vanilla Frosty Fusion™", [520, 680, 850]],
+    ["strawberry-chocolate-frosty-swirl-tm", "Strawberry Chocolate Frosty Swirl™", [330, 430, 530]],
+    ["strawberry-vanilla-frosty-swirl-tm", "Strawberry Vanilla Frosty Swirl™", [330, 430, 530]],
+  ].map(([id, name, calories]) => wendysSizedFood(id, name, "frosty", "1 current specialty Frosty in the selected published size and named base/configuration; customizations excluded", [
+    ["small", `Small ${name}`, calories[0]], ["medium", `Medium ${name}`, calories[1]], ["large", `Large ${name}`, calories[2]],
+  ])),
+  ...[
+    ["signature-sauce", "Wendy's Signature Sauce", 130, { protein: 0, carbohydrates: 4, fat: 13 }],
+    ["scorchin-hot-sauce", "Scorchin' Hot Sauce", 150, { protein: 0, carbohydrates: 2, fat: 16 }],
+    ["sweet-chili-sauce", "Sweet Chili Sauce", 80, { protein: 0, carbohydrates: 21, fat: 0 }],
+    ["creamy-ranch-sauce", "Creamy Ranch Sauce", 130, { protein: 0, carbohydrates: 1, fat: 14 }],
+    ["honey-bbq-sauce", "Honey BBQ Sauce", 70, { protein: 0, carbohydrates: 16, fat: 0 }],
+    ["honey-mustard-sauce", "Honey Mustard Sauce", 110, { protein: 0, carbohydrates: 7, fat: 9 }],
+    ["pomegranate-vinaigrette-dressing", "Pomegranate Vinaigrette Dressing", 90, { protein: 0, carbohydrates: 16, fat: 3 }],
+    ["caesar-dressing", "Caesar Dressing", 240, { protein: 2, carbohydrates: 2, fat: 25 }],
+    ["ranch-dressing", "Ranch Dressing", 250, { protein: 1, carbohydrates: 2, fat: 26 }],
+    ["creamy-salsa-dressing", "Creamy Salsa Dressing", 150, { protein: 1, carbohydrates: 3, fat: 15 }],
+    ["cheddar-cheese-sauce", "Cheddar Cheese Sauce", 70, { protein: 3, carbohydrates: 2, fat: 6 }],
+  ].map(([id, name, calories, nutrients]) => wendysFood(id, name, "1 restaurant sauce or dressing serving; serving weight was not published on the accessible official page", calories, "https://www.wendys.com/sauces-dressings", undefined, nutrients, WENDYS_SAUCES_REFERENCE)),
 ];
 
 const burgerKing = { id: "burger-king", name: "Burger King" };
 const BURGER_KING_SOURCE = "https://origin.bk.com/pdfs/nutrition.pdf";
-const BURGER_KING_REFERENCE = "Burger King USA Nutritionals: Core, Regional and Limited Time Offerings, April 2020; still published by Burger King when accessed. The chart identifies each standard item and serving weight but does not enumerate its components. Burger King's March 17, 2026 help guidance points to its Nutrition Explorer for the newest values, but that detailed explorer response was inaccessible, so this record uses the older official chart without combining sources. Burger King also announced February 2026 Whopper recipe refinements (https://news.bk.com/blog-posts/burger-king-elevates-its-most-iconic-product-the-whopper-r), adding formulation uncertainty to Whopper-family values";
+const BURGER_KING_REFERENCE = "Burger King USA Nutritionals: Core, Regional and Limited Time Offerings, April 2020; still published by Burger King when accessed. The chart identifies each standard item and serving weight but does not enumerate its components. Burger King's March 17, 2026 help guidance points to its Nutrition Explorer for the newest values, but that detailed explorer response was inaccessible, so this record uses the older official chart without combining sources. Burger King announced February 2026 Whopper recipe refinements (https://news.bk.com/blog-posts/burger-king-elevates-its-most-iconic-product-the-whopper-r) and a new nugget recipe plus refreshed sauce lineup effective September 1, 2026 (https://news.bk.com/blog-posts/burger-king-r-introduces-latest-innovation-inspired-by-guest-feedback---new-chicken-nuggets-and-sauces), adding formulation uncertainty to the chart's Whopper, nugget and sauce values";
 const burgerKingFood = (id, name, description, nutrients) => officialFood(
   burgerKing,
   id,
@@ -412,6 +588,37 @@ const burgerKingFood = (id, name, description, nutrients) => officialFood(
   undefined,
   { accessedAt: CURRENT_EXPANSION_CHECKED_AT }
 );
+const burgerKingOption = (id, description, nutrients, amount = 1) => ({
+  id: `restaurant:burger-king:${id}`,
+  serving: { amount, unit: "item", description },
+  nutrients: { calories: null, protein: null, carbohydrates: null, fat: null, sodium: null, fiber: null, totalSugar: null, addedSugar: null, ...nutrients },
+  provenance: {
+    source: "official-restaurant",
+    sourceId: `burger-king:${id}`,
+    confidence: "official-source",
+    verification: {
+      status: ["calories", "protein", "carbohydrates", "fat"].every((key) => nutrients[key] !== null && nutrients[key] !== undefined) ? "complete" : "partial",
+      sourceType: "official-restaurant",
+      sourceUrl: BURGER_KING_SOURCE,
+      accessedAt: CURRENT_EXPANSION_CHECKED_AT,
+      sourceReference: BURGER_KING_REFERENCE,
+    },
+  },
+});
+const burgerKingSizedFood = (id, name, description, options, searchAliases) => {
+  const food = officialFood(
+    burgerKing,
+    id,
+    name,
+    description,
+    null,
+    BURGER_KING_SOURCE,
+    BURGER_KING_REFERENCE,
+    options.map(([optionId, optionDescription, nutrients, amount = 1]) => burgerKingOption(`${id}:${optionId}`, optionDescription, nutrients, amount)),
+    { accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+};
 const burgerKingFoods = [
   burgerKingFood("whopper", "WHOPPER\u00ae Sandwich", "1 standard sandwich (270 g), as listed in Burger King's April 2020 US nutrition chart", { calories: 660, protein: 28, carbohydrates: 49, fat: 40, sodium: 980, fiber: 2, totalSugar: 11 }),
   burgerKingFood("whopper-with-cheese", "WHOPPER\u00ae Sandwich with Cheese", "1 standard sandwich with cheese (292 g), as listed in Burger King's April 2020 US nutrition chart", { calories: 740, protein: 32, carbohydrates: 50, fat: 46, sodium: 1340, fiber: 2, totalSugar: 11 }),
@@ -422,7 +629,132 @@ const burgerKingFoods = [
   burgerKingFood("original-chicken-sandwich", "Original Chicken Sandwich", "1 standard sandwich (219 g), as listed in Burger King's April 2020 US nutrition chart", { calories: 660, protein: 28, carbohydrates: 48, fat: 40, sodium: 1170, fiber: 2, totalSugar: 5 }),
   burgerKingFood("chicken-fries-9-piece", "Chicken Fries (9 Piece)", "9 Chicken Fries (91 g); dipping sauce is listed separately and is not included", { calories: 280, protein: 13, carbohydrates: 20, fat: 17, sodium: 850, fiber: 1, totalSugar: 1 }),
   burgerKingFood("sausage-egg-cheese-croissanwich", "Sausage, Egg & Cheese CROISSAN'WICH\u00ae", "1 breakfast sandwich (169 g), as listed in Burger King's April 2020 US nutrition chart", { calories: 500, protein: 19, carbohydrates: 30, fat: 33, sodium: 930, fiber: 1, totalSugar: 4 }),
-  burgerKingFood("hash-browns-small", "Hash Browns (Small)", "1 small order (84 g), as listed in Burger King's April 2020 US nutrition chart", { calories: 250, protein: 2, carbohydrates: 24, fat: 16, sodium: 580, fiber: 3, totalSugar: 0 }),
+  burgerKingSizedFood("hash-browns-small", "Hash Browns", "1 order in the selected published size, as listed in Burger King's April 2020 US nutrition chart", [
+    ["small", "Small order (84 g)", { calories: 250, protein: 2, carbohydrates: 24, fat: 16, sodium: 580, fiber: 3, totalSugar: 0 }],
+    ["medium", "Medium order (169 g)", { calories: 500, protein: 4, carbohydrates: 48, fat: 33, sodium: 1140, fiber: 7, totalSugar: 0 }],
+    ["large", "Large order (225 g)", { calories: 670, protein: 5, carbohydrates: 65, fat: 44, sodium: 1530, fiber: 9, totalSugar: 0 }],
+  ]),
+  ...[
+    ["bacon-cheese-whopper", "Bacon & Cheese WHOPPER® Sandwich", "1 standard sandwich (303 g)", { calories: 790, protein: 35, carbohydrates: 50, fat: 51, sodium: 1560, fiber: 2, totalSugar: 11 }],
+    ["double-whopper-with-cheese", "DOUBLE WHOPPER® Sandwich with Cheese", "1 standard sandwich with cheese (377 g)", { calories: 980, protein: 52, carbohydrates: 50, fat: 64, sodium: 1410, fiber: 2, totalSugar: 11 }],
+    ["triple-whopper", "TRIPLE WHOPPER® Sandwich", "1 standard triple-patty sandwich (438 g)", { calories: 1130, protein: 67, carbohydrates: 49, fat: 75, sodium: 1120, fiber: 2, totalSugar: 11 }],
+    ["triple-whopper-with-cheese", "TRIPLE WHOPPER® Sandwich with Cheese", "1 standard triple-patty sandwich with cheese (461 g)", { calories: 1220, protein: 71, carbohydrates: 50, fat: 82, sodium: 1470, fiber: 2, totalSugar: 11 }],
+    ["hamburger", "Hamburger", "1 standard hamburger (99 g)", { calories: 240, protein: 13, carbohydrates: 26, fat: 10, sodium: 380, fiber: 1, totalSugar: 6 }],
+    ["cheeseburger", "Cheeseburger", "1 standard cheeseburger (111 g)", { calories: 280, protein: 15, carbohydrates: 27, fat: 13, sodium: 560, fiber: 1, totalSugar: 7 }],
+    ["double-hamburger", "Double Hamburger", "1 standard double hamburger (136 g)", { calories: 350, protein: 21, carbohydrates: 26, fat: 18, sodium: 410, fiber: 1, totalSugar: 6 }],
+    ["double-cheeseburger", "Double Cheeseburger", "1 standard double cheeseburger (148 g)", { calories: 390, protein: 23, carbohydrates: 27, fat: 21, sodium: 590, fiber: 1, totalSugar: 7 }],
+    ["bacon-cheeseburger", "Bacon Cheeseburger", "1 standard bacon cheeseburger (118 g)", { calories: 320, protein: 17, carbohydrates: 27, fat: 16, sodium: 710, fiber: 1, totalSugar: 7 }],
+    ["bacon-double-cheeseburger", "Bacon Double Cheeseburger", "1 standard bacon double cheeseburger (155 g)", { calories: 420, protein: 25, carbohydrates: 27, fat: 24, sodium: 740, fiber: 1, totalSugar: 7 }],
+  ].map(([id, name, description, nutrients]) => burgerKingFood(id, name, `${description}, as listed in Burger King's April 2020 US nutrition chart`, nutrients)),
+  burgerKingSizedFood("chicken-nuggets", "Chicken Nuggets", "April 2020 breaded chicken nugget formulation in the selected published piece count; dipping sauce is not included; Burger King replaced the nugget recipe in September 2026 without accessible replacement nutrition values", [
+    ["4-piece", "4 piece serving (58 g); dipping sauce not included", { calories: 170, protein: 8, carbohydrates: 11, fat: 11, sodium: 310, fiber: 1, totalSugar: 0 }, 4],
+    ["6-piece", "6 piece serving (88 g); dipping sauce not included", { calories: 260, protein: 12, carbohydrates: 16, fat: 16, sodium: 470, fiber: 1, totalSugar: 0 }, 6],
+    ["10-piece", "10 piece serving (146 g); dipping sauce not included", { calories: 430, protein: 20, carbohydrates: 27, fat: 27, sodium: 780, fiber: 2, totalSugar: 0 }, 10],
+    ["20-piece", "20 piece serving (292 g); dipping sauce not included", { calories: 860, protein: 39, carbohydrates: 53, fat: 54, sodium: 1570, fiber: 3, totalSugar: 1 }, 20],
+  ]),
+  burgerKingSizedFood("spicy-chicken-nuggets", "Spicy Chicken Nuggets", "April 2020 breaded spicy chicken nugget formulation in the selected published piece count; dipping sauce is not included; current availability and replacement nutrition values were not accessible", [
+    ["4-piece", "4 piece serving (66 g); dipping sauce not included", { calories: 210, protein: 8, carbohydrates: 11, fat: 15, sodium: 570, fiber: 2, totalSugar: 0 }, 4],
+    ["6-piece", "6 piece serving (99 g); dipping sauce not included", { calories: 320, protein: 12, carbohydrates: 17, fat: 22, sodium: 850, fiber: 3, totalSugar: 0 }, 6],
+    ["10-piece", "10 piece serving (165 g); dipping sauce not included", { calories: 530, protein: 20, carbohydrates: 28, fat: 37, sodium: 1420, fiber: 4, totalSugar: 1 }, 10],
+    ["20-piece", "20 piece serving (330 g); dipping sauce not included", { calories: 1050, protein: 40, carbohydrates: 56, fat: 74, sodium: 2840, fiber: 9, totalSugar: 1 }, 20],
+  ]),
+  burgerKingFood("big-fish", "BIG FISH Sandwich", "1 standard fish sandwich (188 g), as listed in Burger King's April 2020 US nutrition chart; dipping sauce and combo components are not included", { calories: 510, protein: 16, carbohydrates: 51, fat: 28, sodium: 1180, fiber: 2, totalSugar: 7 }),
+  ...[
+    ["egg-cheese-croissanwich", "Egg & Cheese CROISSAN'WICH®", "1 breakfast sandwich (125 g)", { calories: 340, protein: 12, carbohydrates: 29, fat: 18, sodium: 610, fiber: 1, totalSugar: 4 }],
+    ["ham-egg-cheese-croissanwich", "Ham, Egg & Cheese CROISSAN'WICH®", "1 breakfast sandwich (156 g)", { calories: 370, protein: 17, carbohydrates: 30, fat: 19, sodium: 1030, fiber: 1, totalSugar: 5 }],
+    ["bacon-egg-cheese-croissanwich", "Bacon, Egg & Cheese CROISSAN'WICH®", "1 breakfast sandwich (132 g)", { calories: 370, protein: 14, carbohydrates: 30, fat: 21, sodium: 760, fiber: 1, totalSugar: 4 }],
+    ["fully-loaded-croissanwich", "Fully Loaded CROISSAN'WICH®", "1 breakfast sandwich (218 g)", { calories: 610, protein: 28, carbohydrates: 31, fat: 40, sodium: 1680, fiber: 1, totalSugar: 5 }],
+    ["double-croissanwich-sausage-bacon", "Double CROISSAN'WICH® with Sausage & Bacon", "1 breakfast sandwich (187 g)", { calories: 580, protein: 23, carbohydrates: 31, fat: 40, sodium: 1260, fiber: 1, totalSugar: 5 }],
+    ["double-croissanwich-sausage", "Double Sausage CROISSAN'WICH®", "1 breakfast sandwich (224 g)", { calories: 710, protein: 29, carbohydrates: 31, fat: 52, sodium: 1420, fiber: 1, totalSugar: 5 }],
+    ["double-croissanwich-ham-sausage", "Double CROISSAN'WICH® with Ham & Sausage", "1 breakfast sandwich (211 g)", { calories: 580, protein: 27, carbohydrates: 31, fat: 38, sodium: 1530, fiber: 1, totalSugar: 5 }],
+    ["fully-loaded-biscuit", "Fully Loaded Biscuit", "1 breakfast sandwich (238 g)", { calories: 640, protein: 28, carbohydrates: 31, fat: 45, sodium: 2190, fiber: 1, totalSugar: 4 }],
+    ["ham-egg-cheese-biscuit", "Ham, Egg & Cheese Biscuit", "1 breakfast sandwich (176 g)", { calories: 400, protein: 17, carbohydrates: 29, fat: 24, sodium: 1550, fiber: 1, totalSugar: 3 }],
+    ["sausage-egg-cheese-biscuit", "Sausage, Egg & Cheese Biscuit", "1 breakfast sandwich (189 g)", { calories: 530, protein: 19, carbohydrates: 29, fat: 38, sodium: 1440, fiber: 1, totalSugar: 3 }],
+    ["bacon-egg-cheese-biscuit", "Bacon, Egg & Cheese Biscuit", "1 breakfast sandwich (152 g)", { calories: 400, protein: 13, carbohydrates: 29, fat: 26, sodium: 1270, fiber: 1, totalSugar: 3 }],
+    ["sausage-biscuit", "Sausage Biscuit", "1 breakfast sandwich (121 g)", { calories: 420, protein: 12, carbohydrates: 28, fat: 28, sodium: 1050, fiber: 1, totalSugar: 2 }],
+    ["breakfast-burrito-jr", "Breakfast Burrito Jr.", "1 breakfast burrito (143 g)", { calories: 370, protein: 15, carbohydrates: 27, fat: 23, sodium: 930, fiber: 3, totalSugar: 2 }],
+    ["egg-normous-burrito", "Egg-Normous Burrito", "1 breakfast burrito (310 g)", { calories: 780, protein: 32, carbohydrates: 68, fat: 42, sodium: 1960, fiber: 3, totalSugar: 4 }],
+    ["bk-ultimate-breakfast-platter", "BK Ultimate Breakfast Platter", "1 platter (390 g)", { calories: 930, protein: 24, carbohydrates: 110, fat: 44, sodium: 2230, fiber: 4, totalSugar: 40 }],
+    ["pancake-sausage-platter", "Pancake & Sausage Platter", "1 platter (217 g)", { calories: 610, protein: 12, carbohydrates: 72, fat: 31, sodium: 1010, fiber: 1, totalSugar: 30 }],
+  ].map(([id, name, description, nutrients]) => burgerKingFood(id, name, `${description}, as listed in Burger King's April 2020 US nutrition chart; syrup and other separately packaged condiments are not included unless named`, nutrients)),
+  burgerKingSizedFood("french-toast-sticks", "French Toast Sticks", "French toast sticks in the selected published piece count; syrup is listed separately and is not included", [
+    ["3-piece", "3 piece serving (65 g); syrup not included", { calories: 230, protein: 3, carbohydrates: 29, fat: 11, sodium: 260, fiber: 1, totalSugar: 8 }, 3],
+    ["5-piece", "5 piece serving (109 g); syrup not included", { calories: 380, protein: 5, carbohydrates: 49, fat: 18, sodium: 430, fiber: 2, totalSugar: 13 }, 5],
+  ]),
+  burgerKingSizedFood("french-fries", "French Fries (Unsalted)", "French fries without added salt in the selected published size", [
+    ["value", "Value French Fries, unsalted (89 g)", { calories: 220, protein: 2, carbohydrates: 34, fat: 9, sodium: 210, fiber: 3, totalSugar: 1 }],
+    ["small", "Small French Fries, unsalted (128 g)", { calories: 320, protein: 4, carbohydrates: 49, fat: 13, sodium: 300, fiber: 5, totalSugar: 1 }],
+    ["medium", "Medium French Fries, unsalted (153 g)", { calories: 380, protein: 4, carbohydrates: 58, fat: 16, sodium: 360, fiber: 6, totalSugar: 1 }],
+    ["large", "Large French Fries, unsalted (173 g)", { calories: 430, protein: 5, carbohydrates: 66, fat: 18, sodium: 410, fiber: 7, totalSugar: 2 }],
+  ]),
+  burgerKingSizedFood("onion-rings", "Onion Rings", "Onion rings in the selected published size; dipping sauce is not included", [
+    ["value", "Value Onion Rings (43 g)", { calories: 150, protein: 1, carbohydrates: 19, fat: 8, sodium: 400, fiber: 1, totalSugar: 2 }],
+    ["small", "Small Onion Rings (91 g)", { calories: 320, protein: 3, carbohydrates: 41, fat: 16, sodium: 840, fiber: 3, totalSugar: 4 }],
+    ["medium", "Medium Onion Rings (117 g)", { calories: 410, protein: 4, carbohydrates: 53, fat: 21, sodium: 1080, fiber: 4, totalSugar: 5 }],
+    ["large", "Large Onion Rings (142 g)", { calories: 500, protein: 5, carbohydrates: 64, fat: 25, sodium: 1310, fiber: 5, totalSugar: 7 }],
+  ]),
+  ...[
+    ["garden-chicken-salad-crispy-no-dressing", "Garden Chicken Salad with Crispy Chicken", "1 salad without dressing (287 g)", { calories: 440, protein: 25, carbohydrates: 31, fat: 25, sodium: 930, fiber: 3, totalSugar: 4 }],
+    ["club-salad-crispy-no-dressing", "Club Salad with Crispy Chicken", "1 salad without dressing (308 g)", { calories: 540, protein: 31, carbohydrates: 31, fat: 33, sodium: 1380, fiber: 3, totalSugar: 5 }],
+    ["garden-side-salad-no-dressing", "Garden Side Salad", "1 side salad without dressing (99 g)", { calories: 60, protein: 4, carbohydrates: 3, fat: 4, sodium: 95, fiber: 1, totalSugar: 2 }],
+    ["kens-ranch-dressing", "Ken's Ranch Dressing", "1 packet (43 g)", { calories: 260, protein: 1, carbohydrates: 2, fat: 28, sodium: 240, fiber: 0, totalSugar: 2 }],
+    ["kens-golden-italian-dressing", "Ken's Golden Italian Dressing", "1 packet (43 g)", { calories: 160, protein: 0, carbohydrates: 4, fat: 17, sodium: 380, fiber: 0, totalSugar: 3 }],
+    ["kens-lite-honey-balsamic-vinaigrette", "Ken's Lite Honey Balsamic Vinaigrette", "1 packet (43 g)", { calories: 120, protein: 0, carbohydrates: 14, fat: 8, sodium: 220, fiber: 0, totalSugar: 11 }],
+    ["buttery-garlic-croutons", "Buttery Garlic Croutons", "1 packet (14 g)", { calories: 60, protein: 1, carbohydrates: 9, fat: 2.5, sodium: 180, fiber: 0, totalSugar: 1 }],
+  ].map(([id, name, description, nutrients]) => burgerKingFood(id, name, `${description}, as listed in Burger King's April 2020 US nutrition chart`, nutrients)),
+  ...[
+    ["kids-oatmeal", "Kids Oatmeal", "1 serving (167 g)", { calories: 170, protein: 4, carbohydrates: 32, fat: 3, sodium: 260, fiber: 3, totalSugar: 12 }],
+    ["motts-natural-applesauce", "Mott's® Natural Applesauce", "1 kids side (111 g)", { calories: 50, protein: 0, carbohydrates: 13, fat: 0, sodium: 0, fiber: 1, totalSugar: 11 }],
+    ["fat-free-milk-8-fl-oz", "Fat Free Milk", "1 carton (8 fl oz)", { calories: 90, protein: 9, carbohydrates: 13, fat: 0, sodium: 125, fiber: 0, totalSugar: 12 }],
+    ["low-fat-chocolate-milk-8-fl-oz", "1% Low Fat Chocolate Milk", "1 carton (8 fl oz)", { calories: 160, protein: 8, carbohydrates: 26, fat: 2.5, sodium: 150, fiber: 0, totalSugar: 25 }],
+    ["capri-sun-apple-juice-6-fl-oz", "Capri Sun® 100% Apple Juice", "1 pouch (6 fl oz)", { calories: 80, protein: 0, carbohydrates: 20, fat: 0, sodium: 25, fiber: 0, totalSugar: 20 }],
+    ["pbj-jamwich", "PB&J Jamwich", "1 sandwich (79 g)", { calories: 300, protein: 11, carbohydrates: 33, fat: 16, sodium: 290, fiber: 4, totalSugar: 11 }],
+  ].map(([id, name, description, nutrients]) => burgerKingFood(id, name, `${description}, as listed in the KING JR. section of Burger King's April 2020 US nutrition chart`, nutrients)),
+  ...[
+    ["dutch-apple-pie", "Dutch Apple Pie", "1 piece (107 g)", { calories: 340, protein: 3, carbohydrates: 51, fat: 14, sodium: 310, fiber: 1, totalSugar: 25 }],
+    ["hershey-sundae-pie", "HERSHEY'S® Sundae Pie", "1 piece (79 g)", { calories: 310, protein: 3, carbohydrates: 32, fat: 19, sodium: 220, fiber: 1, totalSugar: 22 }],
+    ["twix-pie", "TWIX® Pie", "1 piece (102 g)", { calories: 370, protein: 4, carbohydrates: 45, fat: 20, sodium: 330, fiber: 1, totalSugar: 30 }],
+    ["oreo-cheesecake", "OREO® Cheesecake", "1 piece (92 g)", { calories: 350, protein: 6, carbohydrates: 41, fat: 18, sodium: 310, fiber: 1, totalSugar: 25 }],
+    ["soft-serve-cone", "Soft Serve Cone", "1 cone (120 g)", { calories: 190, protein: 5, carbohydrates: 32, fat: 4.5, sodium: 150, fiber: 0, totalSugar: 24 }],
+    ["soft-serve-cup", "Soft Serve Cup", "1 cup (115 g)", { calories: 170, protein: 5, carbohydrates: 28, fat: 4.5, sodium: 150, fiber: 0, totalSugar: 24 }],
+    ["hersheys-chocolate-sundae", "HERSHEY'S® Chocolate Sundae", "1 sundae (149 g)", { calories: 260, protein: 5, carbohydrates: 49, fat: 5, sodium: 160, fiber: 1, totalSugar: 43 }],
+    ["caramel-sundae", "Caramel Sundae", "1 sundae (137 g)", { calories: 240, protein: 5, carbohydrates: 42, fat: 5, sodium: 210, fiber: 0, totalSugar: 33 }],
+    ["chocolate-chip-cookie", "Chocolate Chip Cookie", "1 cookie (38 g)", { calories: 160, protein: 2, carbohydrates: 24, fat: 8, sodium: 125, fiber: 1, totalSugar: 15 }],
+  ].map(([id, name, description, nutrients]) => burgerKingFood(id, name, `${description}, as listed in Burger King's April 2020 US nutrition chart`, nutrients)),
+  ...[
+    ["american-cheese-slice", "American Cheese Slice", "1 slice (11 g)", { calories: 40, protein: 2, carbohydrates: 1, fat: 3.5, sodium: 180, fiber: 0, totalSugar: 0 }],
+    ["ketchup-packet", "Ketchup", "1 packet (10 g)", { calories: 10, protein: 0, carbohydrates: 3, fat: 0, sodium: 125, fiber: 0, totalSugar: 2 }],
+    ["mayonnaise-packet", "Mayonnaise", "1 packet (12 g)", { calories: 80, protein: 0, carbohydrates: 1, fat: 9, sodium: 75, fiber: 0, totalSugar: 0 }],
+    ["jam-packet", "Jam", "1 packet (12 g)", { calories: 30, protein: 0, carbohydrates: 7, fat: 0, sodium: 0, fiber: 0, totalSugar: 6 }],
+    ["breakfast-syrup", "Breakfast Syrup", "1 packet (1 oz / 41 g)", { calories: 120, protein: 0, carbohydrates: 30, fat: 0, sodium: 15, fiber: 0, totalSugar: 18 }],
+    ["bbq-dipping-sauce", "BBQ Dipping Sauce", "1 packet (1 oz / 28 g)", { calories: 40, protein: 0, carbohydrates: 11, fat: 0, sodium: 310, fiber: 0, totalSugar: 10 }],
+    ["ranch-dipping-sauce", "Ranch Dipping Sauce", "1 packet (1 oz / 28 g)", { calories: 140, protein: 1, carbohydrates: 1, fat: 15, sodium: 85, fiber: 0, totalSugar: 1 }],
+    ["buffalo-dipping-sauce", "Buffalo Dipping Sauce", "1 packet (1 oz / 28 g)", { calories: 80, protein: 0, carbohydrates: 2, fat: 8, sodium: 360, fiber: 0, totalSugar: 1 }],
+    ["zesty-onion-ring-dipping-sauce", "Zesty Onion Ring Dipping Sauce", "1 packet (1 oz / 28 g)", { calories: 150, protein: 0, carbohydrates: 3, fat: 15, sodium: 240, fiber: 0, totalSugar: 0 }],
+    ["honey-mustard-dipping-sauce", "Honey Mustard Dipping Sauce", "1 packet (1 oz / 28 g)", { calories: 90, protein: 0, carbohydrates: 8, fat: 6, sodium: 180, fiber: 0, totalSugar: 7 }],
+  ].map(([id, name, description, nutrients]) => burgerKingFood(id, name, `${description}, as listed in Burger King's April 2020 US nutrition chart`, nutrients)),
+  ...[
+    ["oreo-shake", "OREO® Shake", 720, { protein: 16, carbohydrates: 118, fat: 20, sodium: 540, fiber: 1, totalSugar: 98 }],
+    ["chocolate-oreo-shake", "Chocolate OREO® Shake", 740, { protein: 17, carbohydrates: 121, fat: 22, sodium: 680, fiber: 1, totalSugar: 101 }],
+    ["vanilla-shake", "Vanilla Shake", 580, { protein: 14, carbohydrates: 98, fat: 15, sodium: 420, fiber: 0, totalSugar: 85 }],
+    ["hersheys-chocolate-shake", "HERSHEY'S® Chocolate Shake", 610, { protein: 14, carbohydrates: 103, fat: 16, sodium: 500, fiber: 1, totalSugar: 88 }],
+    ["strawberry-shake", "Strawberry Shake", 640, { protein: 14, carbohydrates: 113, fat: 15, sodium: 440, fiber: 0, totalSugar: 99 }],
+    ["strawberry-banana-smoothie-16-fl-oz", "Strawberry Banana Smoothie", 310, { protein: 4, carbohydrates: 71, fat: 1, sodium: 55, fiber: 3, totalSugar: 50 }],
+  ].map(([id, name, calories, nutrients]) => burgerKingFood(id, name, `1 restaurant beverage${id.endsWith("16-fl-oz") ? " (16 fl oz)" : "; serving size was not stated in the published chart"}`, { calories, ...nutrients })),
+  ...[
+    ["coca-cola", "Coca-Cola®", [[210, 50, 58, 58], [270, 60, 73, 73], [390, 85, 105, 105], [510, 115, 138, 138]], ["Burger King Coke"]],
+    ["diet-coke", "Diet Coke®", [[0, 70, 0, 0], [0, 85, null, 0], [0, 120, null, 0], [0, 160, null, 0]]],
+    ["sprite", "Sprite®", [[210, 95, 56, 56], [260, 120, 70, 70], [380, 170, 102, 102], [500, 230, 133, 133]]],
+    ["dr-pepper", "Dr Pepper®", [[190, 60, 52, 51], [240, 75, 65, 64], [350, 105, 94, 93], [450, 140, 124, 121]]],
+    ["barqs-root-beer", "Barq's® Root Beer", [[240, 100, 65, 65], [300, 120, 81, 81], [430, 180, 118, 118], [570, 230, 155, 155]]],
+    ["cherry-coke", "Cherry Coke®", [[220, 55, 61, 61], [280, 70, 76, 76], [410, 100, 110, 110], [530, 130, 145, 145]]],
+    ["fanta-orange", "Fanta® Orange", [[230, 60, 62, 61], [280, 70, 78, 77], [410, 105, 113, 111], [540, 135, 148, 146]]],
+    ["hi-c-fruit-punch", "Hi-C® Fruit Punch", [[220, 75, 62, 60], [280, 95, 77, 75], [410, 135, 111, 109], [530, 180, 146, 143]]],
+  ].map(([id, name, values, aliases]) => burgerKingSizedFood(id, name, "Soft drink without ice in the selected published cup size; these chart values must not be used for a standard-ice cup", [16, 20, 29, 38].map((ounces, index) => [
+    `${ounces}-fl-oz-no-ice`,
+    `${ounces} fl oz cup, no ice`,
+    { calories: values[index][0], protein: 0, carbohydrates: values[index][2], fat: 0, sodium: values[index][1], fiber: 0, totalSugar: values[index][3] },
+  ]), aliases)),
 ];
 
 const subway = { id: "subway", name: "Subway" };

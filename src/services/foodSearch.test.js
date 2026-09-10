@@ -196,7 +196,7 @@ test("searches restaurant catalogs by chain and item while preserving saved-food
     "Coca-Cola",
   ]));
   expect(searchFoodCatalog("Hotcakes").some((food) => food.name === "Hotcakes" && food.restaurant?.name === "McDonald's" && food.provenance?.verification?.status === "complete")).toBe(true);
-  expect(searchFoodCatalog("Coca-Cola")[0].servingOptions.map((option) => option.serving.description)).toEqual([
+  expect(searchFoodCatalog("mcdonalds coca cola")[0].servingOptions.map((option) => option.serving.description)).toEqual([
     "Small Coca-Cola",
     "Medium Coca-Cola",
     "Large Coca-Cola",
@@ -351,11 +351,11 @@ test("scales complete and partial expansion servings without inventing unknown n
   expect(scaleNutrition(tacoSupreme.nutrients, 2)).toEqual({ calories: 380, protein: null, carbohydrates: null, fat: null, sodium: null });
 });
 
-test("keeps the next bounded restaurant expansion valid, dated, and source-specific", () => {
+test("keeps the current restaurant records valid, dated, and source-specific", () => {
   const expansion = restaurantFoods.filter((food) => food.provenance.verification.accessedAt === "2026-09-10");
   const sourcePatterns = {
     mcdonalds: /^https:\/\/www\.mcdonalds\.com\/us\/en-us\/product\//,
-    wendys: /^https:\/\/order\.wendys\.com\/us\/en\/national\/menu\//,
+    wendys: /^https:\/\/(?:order\.wendys\.com\/us\/en\/national\/menu\/|www\.wendys\.com\/sauces-dressings$)/,
     "burger-king": /^https:\/\/origin\.bk\.com\/pdfs\/nutrition\.pdf$/,
     subway: /^https:\/\/media\.subway\.com\/dam\//,
     chipotle: /^https:\/\/www\.chipotle\.com\/content\/dam\/chipotle\/menu\/nutrition\//,
@@ -365,8 +365,8 @@ test("keeps the next bounded restaurant expansion valid, dated, and source-speci
     expansion.filter((food) => food.restaurant.id === chainId).length,
   ]));
 
-  expect(expansion).toHaveLength(50);
-  expect(countByChain).toEqual({ mcdonalds: 10, wendys: 10, "burger-king": 10, subway: 10, chipotle: 10 });
+  expect(expansion).toHaveLength(227);
+  expect(countByChain).toEqual({ mcdonalds: 10, wendys: 109, "burger-king": 88, subway: 10, chipotle: 10 });
 
   expansion.forEach((record) => {
     const food = normalizeRestaurantFood(record);
@@ -381,17 +381,10 @@ test("keeps the next bounded restaurant expansion valid, dated, and source-speci
     expect(food.serving.description).toBeTruthy();
 
     if (food.provenance.verification.status === "partial") {
-      expect(food.provenance).toMatchObject({ completeness: "partial", verification: { status: "partial" } });
-      expect(food.nutrients).toMatchObject({
-        calories: expect.any(Number),
-        protein: null,
-        carbohydrates: null,
-        fat: null,
-        sodium: null,
-        fiber: null,
-        totalSugar: null,
-        addedSugar: null,
-      });
+      expect(food.provenance.verification.status).toBe("partial");
+      expect(["partial", "complete"]).toContain(food.provenance.completeness);
+      expect(food.nutrients.calories).toEqual(expect.any(Number));
+      Object.values(food.nutrients).forEach((value) => expect(value === null || (typeof value === "number" && value >= 0)).toBe(true));
     } else if (["burger-king", "chipotle"].includes(food.restaurant.id)) {
       expect(food.provenance).toMatchObject({ completeness: "complete", verification: { status: "complete" } });
       expect(food.nutrients.addedSugar).toBeNull();
@@ -414,6 +407,87 @@ test("finds representative items from every chain added in the next restaurant e
   expect(searchFoodCatalog("subway steak philly")[0].id).toBe("restaurant:subway:steak-philly-6-inch");
   expect(searchFoodCatalog("subway bmt")[0].id).toBe("restaurant:subway:bmt-6-inch");
   expect(searchFoodCatalog("chipotle cilantro lime white rice")[0].id).toBe("restaurant:chipotle:cilantro-lime-white-rice-4oz");
+});
+
+test("finds Wendy's and Burger King items across the expanded menu categories", () => {
+  expect(searchFoodCatalog("wendys daves double")[0].id).toBe("restaurant:wendys:daves-double");
+  expect(searchFoodCatalog("wendys spicy nuggets")[0].id).toBe("restaurant:wendys:spicy-chicken-nuggets");
+  expect(searchFoodCatalog("wendys maple bacon croissant")[0].id).toBe("restaurant:wendys:maple-bacon-chicken-croissant");
+  expect(searchFoodCatalog("wendys natural cut fries")[0].id).toBe("restaurant:wendys:french-fries");
+  expect(searchFoodCatalog("wendys classic chocolate frosty")[0].id).toBe("restaurant:wendys:classic-chocolate-frosty");
+  expect(searchFoodCatalog("wendys signature sauce")[0].id).toBe("restaurant:wendys:signature-sauce");
+  expect(searchFoodCatalog("wendys coke")[0].id).toBe("restaurant:wendys:coca-cola");
+
+  expect(searchFoodCatalog("burger king bacon double cheeseburger")[0].id).toBe("restaurant:burger-king:bacon-double-cheeseburger");
+  expect(searchFoodCatalog("burger king chicken nuggets")[0].id).toBe("restaurant:burger-king:chicken-nuggets");
+  expect(searchFoodCatalog("burger king fully loaded croissanwich")[0].id).toBe("restaurant:burger-king:fully-loaded-croissanwich");
+  expect(searchFoodCatalog("burger king french fries")[0].id).toBe("restaurant:burger-king:french-fries");
+  expect(searchFoodCatalog("burger king applesauce")[0].id).toBe("restaurant:burger-king:motts-natural-applesauce");
+  expect(searchFoodCatalog("burger king hershey pie")[0].id).toBe("restaurant:burger-king:hershey-sundae-pie");
+  expect(searchFoodCatalog("burger king zesty sauce")[0].id).toBe("restaurant:burger-king:zesty-onion-ring-dipping-sauce");
+  expect(searchFoodCatalog("burger king coke")[0].id).toBe("restaurant:burger-king:coca-cola");
+});
+
+test("preserves published Wendy's and Burger King size and piece-count options", () => {
+  const wendysFries = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:wendys:french-fries"));
+  const wendysNuggets = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:wendys:10-piece-chicken-nuggets"));
+  const burgerKingNuggets = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:burger-king:chicken-nuggets"));
+  const burgerKingHashBrowns = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:burger-king:hash-browns-small"));
+
+  expect(wendysFries.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Junior Natural-Cut Fries", 210],
+    ["Small Natural-Cut Fries", 260],
+    ["Medium Natural-Cut Fries", 350],
+    ["Large Natural-Cut Fries", 470],
+  ]);
+  expect(wendysNuggets.servingOptions.map(({ serving, nutrients }) => [serving.amount, nutrients.calories])).toEqual([
+    [10, 430], [4, 170], [6, 260],
+  ]);
+  expect(burgerKingNuggets.servingOptions.map(({ serving, nutrients }) => [serving.amount, nutrients.calories])).toEqual([
+    [4, 170], [6, 260], [10, 430], [20, 860],
+  ]);
+  expect(burgerKingHashBrowns.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Small order (84 g)", 250],
+    ["Medium order (169 g)", 500],
+    ["Large order (225 g)", 670],
+  ]);
+
+  [...wendysFries.servingOptions, ...wendysNuggets.servingOptions, ...burgerKingNuggets.servingOptions, ...burgerKingHashBrowns.servingOptions].forEach((option) => {
+    expect(option.provenance.verification).toMatchObject({
+      sourceType: "official-restaurant",
+      accessedAt: "2026-09-10",
+      sourceUrl: expect.stringMatching(/^https:\/\//),
+      sourceReference: expect.any(String),
+    });
+  });
+});
+
+test("scales expanded serving options without converting unknown nutrients to zero", () => {
+  const wendysFries = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:wendys:french-fries"));
+  const burgerKingNuggets = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:burger-king:chicken-nuggets"));
+  const wendysMedium = wendysFries.servingOptions.find((option) => option.id.endsWith(":medium"));
+  const burgerKingSixPiece = burgerKingNuggets.servingOptions.find((option) => option.id.endsWith(":6-piece"));
+
+  expect(scaleNutrition(wendysMedium.nutrients, 2)).toEqual({
+    calories: 700,
+    protein: null,
+    carbohydrates: null,
+    fat: null,
+    sodium: null,
+    fiber: null,
+    totalSugar: null,
+    addedSugar: null,
+  });
+  expect(scaleNutrition(burgerKingSixPiece.nutrients, 0.5)).toEqual({
+    calories: 130,
+    protein: 6,
+    carbohydrates: 8,
+    fat: 8,
+    sodium: 235,
+    fiber: 0.5,
+    totalSugar: 0,
+    addedSugar: null,
+  });
 });
 
 test("scales published supplemental nutrients while preserving new unknown nutrients", () => {
@@ -475,9 +549,9 @@ test("keeps partial single-token results, ordering, and saved-food priority", ()
   expect(searchFoodCatalog("frie").slice(0, 5).map((food) => food.id)).toEqual([
     "restaurant:braums:french-fries",
     "restaurant:burger-king:chicken-fries-9-piece",
+    "restaurant:burger-king:french-fries",
     "restaurant:chick-fil-a:waffle-potato-fries",
     "restaurant:mcdonalds:french-fries",
-    "restaurant:sonic:groovy-fries",
   ]);
   expect(searchFoodCatalog("nugget").map((food) => food.id)).toContain("restaurant:mcdonalds:chicken-mcnuggets");
   expect(searchFoodCatalog("sonic").every((food) => food.restaurant?.id === "sonic")).toBe(true);
