@@ -2,13 +2,18 @@ import { NUTRIENT_KEYS } from "./nutritionCalculation";
 import { normalizeProductIdentifiers } from "./productIdentifiers";
 
 const OPTIONAL_NUTRIENT_KEYS = ["sodium"];
+const SUPPLEMENTAL_NUTRIENT_KEYS = ["fiber", "totalSugar", "addedSugar"];
 
 export const RESTAURANT_FOOD_SOURCE = "official-restaurant";
 
 export function normalizeRestaurantFood(food) {
   const identifiers = normalizeProductIdentifiers(food?.identifiers);
   if (!food?.id || !food.restaurant?.id || !food.restaurant?.name || !food.name || !food.serving?.description || identifiers === null) return null;
-  const normalizeNutrients = (source) => Object.fromEntries([...NUTRIENT_KEYS, ...OPTIONAL_NUTRIENT_KEYS].map((nutrient) => {
+  const normalizeNutrients = (source) => Object.fromEntries([
+    ...NUTRIENT_KEYS,
+    ...OPTIONAL_NUTRIENT_KEYS,
+    ...SUPPLEMENTAL_NUTRIENT_KEYS.filter((nutrient) => Object.prototype.hasOwnProperty.call(source || {}, nutrient)),
+  ].map((nutrient) => {
     const value = source?.[nutrient];
     if (value === null || value === undefined || value === "") return [nutrient, null];
     const number = Number(value);

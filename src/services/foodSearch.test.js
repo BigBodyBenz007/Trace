@@ -351,6 +351,108 @@ test("scales complete and partial expansion servings without inventing unknown n
   expect(scaleNutrition(tacoSupreme.nutrients, 2)).toEqual({ calories: 380, protein: null, carbohydrates: null, fat: null, sodium: null });
 });
 
+test("keeps the next bounded restaurant expansion valid, dated, and source-specific", () => {
+  const expansion = restaurantFoods.filter((food) => food.provenance.verification.accessedAt === "2026-09-10");
+  const sourcePatterns = {
+    mcdonalds: /^https:\/\/www\.mcdonalds\.com\/us\/en-us\/product\//,
+    wendys: /^https:\/\/order\.wendys\.com\/us\/en\/national\/menu\//,
+    "burger-king": /^https:\/\/origin\.bk\.com\/pdfs\/nutrition\.pdf$/,
+    subway: /^https:\/\/media\.subway\.com\/dam\//,
+    chipotle: /^https:\/\/www\.chipotle\.com\/content\/dam\/chipotle\/menu\/nutrition\//,
+  };
+  const countByChain = Object.fromEntries(["mcdonalds", "wendys", "burger-king", "subway", "chipotle"].map((chainId) => [
+    chainId,
+    expansion.filter((food) => food.restaurant.id === chainId).length,
+  ]));
+
+  expect(expansion).toHaveLength(50);
+  expect(countByChain).toEqual({ mcdonalds: 10, wendys: 10, "burger-king": 10, subway: 10, chipotle: 10 });
+
+  expansion.forEach((record) => {
+    const food = normalizeRestaurantFood(record);
+    expect(food).not.toBeNull();
+    expect(food.provenance.verification).toMatchObject({
+      sourceType: "official-restaurant",
+      accessedAt: "2026-09-10",
+      sourceUrl: expect.stringMatching(/^https:\/\//),
+      sourceReference: expect.any(String),
+    });
+    expect(food.provenance.verification.sourceUrl).toMatch(sourcePatterns[food.restaurant.id]);
+    expect(food.serving.description).toBeTruthy();
+
+    if (food.provenance.verification.status === "partial") {
+      expect(food.provenance).toMatchObject({ completeness: "partial", verification: { status: "partial" } });
+      expect(food.nutrients).toMatchObject({
+        calories: expect.any(Number),
+        protein: null,
+        carbohydrates: null,
+        fat: null,
+        sodium: null,
+        fiber: null,
+        totalSugar: null,
+        addedSugar: null,
+      });
+    } else if (["burger-king", "chipotle"].includes(food.restaurant.id)) {
+      expect(food.provenance).toMatchObject({ completeness: "complete", verification: { status: "complete" } });
+      expect(food.nutrients.addedSugar).toBeNull();
+      Object.entries(food.nutrients).filter(([key]) => key !== "addedSugar").forEach(([, value]) => (
+        expect(typeof value === "number" && value >= 0).toBe(true)
+      ));
+    } else {
+      expect(food.provenance).toMatchObject({ completeness: "complete", verification: { status: "complete" } });
+      Object.values(food.nutrients).forEach((value) => expect(typeof value === "number" && value >= 0).toBe(true));
+    }
+  });
+});
+
+test("finds representative items from every chain added in the next restaurant expansion", () => {
+  expect(searchFoodCatalog("mcdonalds surf turf")[0].id).toBe("restaurant:mcdonalds:surf-and-turf");
+  expect(searchFoodCatalog("mcdonalds ranch snack wrap")[0].id).toBe("restaurant:mcdonalds:ranch-snack-wrap");
+  expect(searchFoodCatalog("wendys breakfast baconator")[0].id).toBe("restaurant:wendys:breakfast-baconator");
+  expect(searchFoodCatalog("wendy's grilled chicken wrap")[0].id).toBe("restaurant:wendys:grilled-chicken-ranch-wrap");
+  expect(searchFoodCatalog("burger king impossible whopper")[0].id).toBe("restaurant:burger-king:impossible-whopper");
+  expect(searchFoodCatalog("subway steak philly")[0].id).toBe("restaurant:subway:steak-philly-6-inch");
+  expect(searchFoodCatalog("subway bmt")[0].id).toBe("restaurant:subway:bmt-6-inch");
+  expect(searchFoodCatalog("chipotle cilantro lime white rice")[0].id).toBe("restaurant:chipotle:cilantro-lime-white-rice-4oz");
+});
+
+test("scales published supplemental nutrients while preserving new unknown nutrients", () => {
+  const chipotleSteak = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:chipotle:steak-4oz"));
+  const burgerKingImpossible = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:burger-king:impossible-whopper"));
+  const wendysSingle = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:wendys:daves-single"));
+
+  expect(scaleNutrition(chipotleSteak.nutrients, 0.5)).toEqual({
+    calories: 75,
+    protein: 10.5,
+    carbohydrates: 0.5,
+    fat: 3,
+    sodium: 165,
+    fiber: 0.5,
+    totalSugar: 0,
+    addedSugar: null,
+  });
+  expect(scaleNutrition(burgerKingImpossible.nutrients, 0.5)).toEqual({
+    calories: 315,
+    protein: 12.5,
+    carbohydrates: 29,
+    fat: 17,
+    sodium: 540,
+    fiber: 2,
+    totalSugar: 6,
+    addedSugar: null,
+  });
+  expect(scaleNutrition(wendysSingle.nutrients, 2)).toEqual({
+    calories: 1120,
+    protein: null,
+    carbohydrates: null,
+    fat: null,
+    sodium: null,
+    fiber: null,
+    totalSugar: null,
+    addedSugar: null,
+  });
+});
+
 test("matches non-adjacent chain and item tokens in any searchable-field order", () => {
   expect(searchFoodCatalog("sonic groovy").map((food) => food.id)).toEqual([
     "restaurant:sonic:groovy-fries",
@@ -372,10 +474,10 @@ test("matches non-adjacent chain and item tokens in any searchable-field order",
 test("keeps partial single-token results, ordering, and saved-food priority", () => {
   expect(searchFoodCatalog("frie").slice(0, 5).map((food) => food.id)).toEqual([
     "restaurant:braums:french-fries",
+    "restaurant:burger-king:chicken-fries-9-piece",
     "restaurant:chick-fil-a:waffle-potato-fries",
     "restaurant:mcdonalds:french-fries",
     "restaurant:sonic:groovy-fries",
-    "restaurant:whataburger:french-fries",
   ]);
   expect(searchFoodCatalog("nugget").map((food) => food.id)).toContain("restaurant:mcdonalds:chicken-mcnuggets");
   expect(searchFoodCatalog("sonic").every((food) => food.restaurant?.id === "sonic")).toBe(true);
@@ -592,7 +694,8 @@ test("every restaurant catalog record follows the normalized data contract", () 
     expect(food.provenance.sourceId).toBeTruthy();
     expect(food.provenance.verification.sourceUrl).toBeTruthy();
     [food, ...(food.servingOptions || [])].forEach((record) => {
-      expect(Object.keys(record.nutrients).sort()).toEqual(["calories", "carbohydrates", "fat", "protein", "sodium"]);
+      expect(Object.keys(record.nutrients)).toEqual(expect.arrayContaining(["calories", "carbohydrates", "fat", "protein", "sodium"]));
+      expect(Object.keys(record.nutrients).every((key) => ["calories", "carbohydrates", "fat", "protein", "sodium", "fiber", "totalSugar", "addedSugar"].includes(key))).toBe(true);
       Object.values(record.nutrients).forEach((value) => expect(value === null || (typeof value === "number" && value >= 0)).toBe(true));
     });
   });
