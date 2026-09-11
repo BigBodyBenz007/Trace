@@ -159,7 +159,9 @@ import {
   readTimeCapsuleDraft,
   readTimeCapsuleReminders,
   readTimeCapsules,
+  recordTimeCapsuleOpening,
   reminderFor,
+  resealOpenedTimeCapsule,
   timeCapsuleState,
   writeTimeCapsuleDraft,
   writeTimeCapsuleReminders,
@@ -1728,11 +1730,12 @@ function App({
     const capsule = current.records.find((item) => item.id === id);
     if (!capsule || timeCapsuleState(capsule, capsuleLocalDateKey()) === TIME_CAPSULE_STATE.SEALED) return false;
     if (capsule.openedAt) return capsule;
-    const timestamp = new Date().toISOString();
+    const opened = recordTimeCapsuleOpening(capsule);
+    if (!opened.value) return false;
     const previousCapsuleRaw = current.raw;
     const previousReminderRaw = reminderReport.raw;
     try {
-      const records = writeTimeCapsules(localStorage, current.records.map((item) => item.id === id ? { ...item, openedAt: timestamp, updatedAt: timestamp } : item));
+      const records = writeTimeCapsules(localStorage, current.records.map((item) => item.id === id ? opened.value : item));
       const reminders = writeTimeCapsuleReminders(localStorage, reminderReport.records.filter((item) => item.capsuleId !== id));
       setTimeCapsuleReport({ status: "ok", records, raw: localStorage.getItem(TIME_CAPSULE_STORAGE_KEY) });
       setTimeCapsuleReminderReport({ status: "ok", records: reminders, raw: localStorage.getItem(TIME_CAPSULE_REMINDER_STORAGE_KEY) });
@@ -1751,6 +1754,40 @@ function App({
       }
       setStorageError(storageMessage("open this Time Capsule"));
       return false;
+    }
+  }
+
+  function resealTimeCapsule(id, openOn, expectedCycle) {
+    const current = readTimeCapsules(localStorage);
+    if (current.status !== "ok") { setStorageError(current.message); return { error: current.message }; }
+    const reminderReport = readTimeCapsuleReminders(localStorage);
+    if (reminderReport.status !== "ok") { setStorageError(reminderReport.message); return { error: reminderReport.message }; }
+    const capsule = current.records.find((item) => item.id === id);
+    const result = resealOpenedTimeCapsule(capsule, openOn, new Date(), expectedCycle);
+    if (!result.value) return result;
+    const previousCapsuleRaw = current.raw;
+    const previousReminderRaw = reminderReport.raw;
+    try {
+      const records = writeTimeCapsules(localStorage, current.records.map((item) => item.id === id ? result.value : item));
+      const reminders = writeTimeCapsuleReminders(localStorage, [
+        ...reminderReport.records.filter((item) => item.capsuleId !== id),
+        reminderFor(id, TIME_CAPSULE_REMINDER_STATE.PENDING),
+      ]);
+      setTimeCapsuleReport({ status: "ok", records, raw: localStorage.getItem(TIME_CAPSULE_STORAGE_KEY) });
+      setTimeCapsuleReminderReport({ status: "ok", records: reminders, raw: localStorage.getItem(TIME_CAPSULE_REMINDER_STORAGE_KEY) });
+      return result;
+    } catch (error) {
+      let rollbackFailed = false;
+      try { restoreRawStorageValue(localStorage, TIME_CAPSULE_STORAGE_KEY, previousCapsuleRaw); } catch (rollbackError) { rollbackFailed = true; }
+      try { restoreRawStorageValue(localStorage, TIME_CAPSULE_REMINDER_STORAGE_KEY, previousReminderRaw); } catch (rollbackError) { rollbackFailed = true; }
+      if (rollbackFailed) {
+        const message = "Trace could not seal this Time Capsule again, and storage recovery needs attention. Reload before retrying.";
+        setStorageError(message);
+        return { error: message };
+      }
+      const message = storageMessage("seal this Time Capsule again");
+      setStorageError(message);
+      return { error: message };
     }
   }
 
@@ -3975,6 +4012,7 @@ function App({
           onDiscardDraft={discardTimeCapsuleDraft}
           onSeal={sealTimeCapsule}
           onOpen={openTimeCapsule}
+          onReseal={resealTimeCapsule}
           onDelete={deleteTimeCapsule}
           today={timeCapsuleToday}
         />

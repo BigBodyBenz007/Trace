@@ -4191,6 +4191,19 @@ code {
   min-height: 44px;
 }
 
+.trace-capsule-reseal {
+  border-top: 1px solid var(--trace-border);
+  display: grid;
+  gap: 14px;
+  margin-top: var(--trace-space-5, 20px);
+  padding-top: var(--trace-space-5, 20px);
+}
+
+.trace-capsule-reseal label {
+  display: grid;
+  gap: 8px;
+}
+
 .trace-timeline-capsule-card {
   appearance: none;
   background: transparent;

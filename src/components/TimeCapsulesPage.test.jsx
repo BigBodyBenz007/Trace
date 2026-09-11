@@ -34,6 +34,15 @@ function capsule(overrides = {}) {
   };
 }
 
+function openedLifecycleCapsule(overrides = {}) {
+  return capsule({
+    openedAt: "2026-09-11T12:00:00.000Z",
+    sealCycle: { number: 1, sealedAt: "2025-09-11T12:01:00.000Z" },
+    openingHistory: [{ cycle: 1, openOn: "2026-09-11", openedAt: "2026-09-11T12:00:00.000Z" }],
+    ...overrides,
+  });
+}
+
 const baseProps = {
   capsules: [],
   draft: null,
@@ -178,6 +187,79 @@ test("restores every draft field and attachment reference and preserves it on Ba
   fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
   expect(onPersistDraft).toHaveBeenLastCalledWith(draft.form, draft.media);
   expect(onBack).toHaveBeenCalledTimes(1);
+});
+
+test("allows today in the initial opening-date picker and explains immediate readiness", () => {
+  render(<TimeCapsulesPage {...baseProps} />);
+  fireEvent.click(screen.getByRole("button", { name: "Create Time Capsule" }));
+  expect(screen.getByLabelText("Custom date")).toHaveAttribute("min", "2026-09-11");
+  expect(screen.getByText(/Choose today to make the capsule ready immediately/)).toBeInTheDocument();
+});
+
+test("reseals opened content for a future cycle while preserving identity and cleaning up playback", async () => {
+  const original = openedLifecycleCapsule();
+  const loader = {
+    load: jest.fn().mockResolvedValue({ id: "private-audio", unavailable: false, url: "blob:voice" }),
+    evict: jest.fn(),
+  };
+  let updateRecords;
+  const onReseal = jest.fn((id, openOn, expectedCycle) => {
+    const value = {
+      ...original,
+      openOn,
+      openedAt: null,
+      updatedAt: "2026-09-12T12:00:00.000Z",
+      sealCycle: { number: 2, sealedAt: "2026-09-12T12:00:00.000Z" },
+    };
+    updateRecords([value]);
+    return { value };
+  });
+  function Harness() {
+    const [records, setRecords] = useState([original]);
+    updateRecords = setRecords;
+    return <TimeCapsulesPage {...baseProps} capsules={records} initialCapsuleId="capsule-1" mediaLoader={loader} onReseal={onReseal} />;
+  }
+  window.confirm = jest.fn(() => true);
+  render(<Harness />);
+  const audio = await screen.findByLabelText("secret-name.m4a");
+  audio.pause = jest.fn();
+  fireEvent.click(screen.getByRole("button", { name: "Seal again for later" }));
+  expect(screen.getByRole("button", { name: "1 year" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "5 years" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "10 years" })).toBeInTheDocument();
+  expect(screen.getByLabelText("New opening date")).toHaveAttribute("min", "2026-09-12");
+  fireEvent.change(screen.getByLabelText("New opening date"), { target: { value: "2028-04-17" } });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Confirm seal again" })); });
+
+  expect(onReseal).toHaveBeenCalledWith("capsule-1", "2028-04-17", 1);
+  expect(screen.getByText("This capsule remains sealed. Its private contents are hidden.")).toBeInTheDocument();
+  expect(screen.queryByText("Private words for the future")).not.toBeInTheDocument();
+  expect(audio.pause).toHaveBeenCalledTimes(1);
+  expect(loader.evict).toHaveBeenCalledWith("private-audio");
+  expect(original).toMatchObject({ id: "capsule-1", sealedAt: "2025-09-11T12:01:00.000Z", openedAt: "2026-09-11T12:00:00.000Z" });
+});
+
+test("canceling or failing to reseal leaves opened content visible and prevents duplicate submissions", async () => {
+  let finishReseal;
+  const onReseal = jest.fn(() => new Promise((resolve) => { finishReseal = resolve; }));
+  window.confirm = jest.fn(() => true);
+  render(<TimeCapsulesPage {...baseProps} capsules={[openedLifecycleCapsule({ media: [] })]} initialCapsuleId="capsule-1" onReseal={onReseal} />);
+  fireEvent.click(screen.getByRole("button", { name: "Seal again for later" }));
+  fireEvent.change(screen.getByLabelText("New opening date"), { target: { value: "2028-09-11" } });
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  expect(onReseal).not.toHaveBeenCalled();
+  expect(screen.getByText("Private words for the future")).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Seal again for later" }));
+  const confirm = screen.getByRole("button", { name: "Confirm seal again" });
+  fireEvent.click(confirm);
+  expect(confirm).toBeDisabled();
+  fireEvent.click(confirm);
+  expect(onReseal).toHaveBeenCalledTimes(1);
+  await act(async () => finishReseal({ error: "storage failed" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("storage failed");
+  expect(screen.getByText("Private words for the future")).toBeInTheDocument();
+  expect(screen.getByText("Opened")).toBeInTheDocument();
 });
 
 test("chooses audio files without exposing a capture control or affecting photo and video controls", async () => {

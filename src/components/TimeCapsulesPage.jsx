@@ -49,6 +49,7 @@ export default function TimeCapsulesPage({
   onDiscardDraft,
   onSeal,
   onOpen,
+  onReseal = () => ({ error: "Sealing again is unavailable." }),
   onDelete,
   today = localDateKey(),
 }) {
@@ -61,6 +62,8 @@ export default function TimeCapsulesPage({
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [ceremony, setCeremony] = useState(false);
+  const [resealOpen, setResealOpen] = useState(false);
+  const [resealOn, setResealOn] = useState(() => addCalendarYears(today, 1));
   const ceremonyTimerRef = useRef(null);
   const selected = capsules.find(({ id }) => id === selectedId) || null;
   const sorted = useMemo(() => [...capsules].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [capsules]);
@@ -70,6 +73,11 @@ export default function TimeCapsulesPage({
   }, [initialCapsuleId]);
 
   useEffect(() => () => clearTimeout(ceremonyTimerRef.current), []);
+
+  useEffect(() => {
+    setResealOpen(false);
+    setResealOn(addCalendarYears(today, 1));
+  }, [selectedId, today]);
 
   function updateForm(field, value) {
     const next = { ...form, [field]: value };
@@ -158,6 +166,19 @@ export default function TimeCapsulesPage({
     }
   }
 
+  async function resealSelected() {
+    if (!window.confirm(`Seal ${selected.name} again until ${formatDateOnly(resealOn)}? Its contents will be hidden in Trace, but this does not revoke copies exported earlier.`)) return;
+    setBusy(true); setError("");
+    try {
+      const result = await onReseal(selected.id, resealOn, selected.sealCycle?.number || 1);
+      if (!result?.value) { setError(result?.error || "This capsule could not be sealed again."); return; }
+      setResealOpen(false);
+      setStatus("Time Capsule sealed again for a future opening.");
+    } catch (reason) {
+      setError(reason.message || "This capsule could not be sealed again. Its opened state is unchanged.");
+    } finally { setBusy(false); }
+  }
+
   if (mode === "edit") return (
     <main className="trace-feature-page trace-feature-page--capsules">
       <header className="trace-feature-page__identity"><p className="trace-feature-page__kicker">For your future self</p><h1>Create Time Capsule</h1></header>
@@ -168,7 +189,8 @@ export default function TimeCapsulesPage({
         <label>Private message<textarea value={form.text} disabled={busy} onChange={(event) => updateForm("text", event.target.value)} /></label>
         <fieldset><legend>Opening date</legend>
           {[1, 5, 10].map((years) => <button key={years} type="button" disabled={busy} onClick={() => updateForm("openOn", addCalendarYears(today, years))}>{years} year{years === 1 ? "" : "s"}</button>)}
-          <label>Custom date<input type="date" min={addCalendarDays(today, 1)} value={form.openOn} disabled={busy} onChange={(event) => updateForm("openOn", event.target.value)} /></label>
+          <label>Custom date<input type="date" min={today} value={form.openOn} disabled={busy} onChange={(event) => updateForm("openOn", event.target.value)} /></label>
+          <p>Choose today to make the capsule ready immediately, or choose a future local calendar date.</p>
         </fieldset>
         <p>Up to 12 photos (48 MiB prepared), 3 audio files (20 MiB each), 1 video (75 MiB), and 100 MiB combined.</p>
         <div className="trace-capsule-actions">
@@ -201,6 +223,21 @@ export default function TimeCapsulesPage({
           {!opened && state === TIME_CAPSULE_STATE.AVAILABLE && <><p>This capsule is ready. Its contents stay hidden until you choose to open it.</p><button type="button" disabled={busy} onClick={openSelected}>Open Capsule</button></>}
           {ceremony && <div className="trace-capsule-ceremony" role="status"><strong>Your moment is opening…</strong></div>}
           {opened && !ceremony && <section aria-label="Opened capsule contents"><p className="trace-capsule-private-text">{selected.text}</p><div className="trace-capsule-media">{selected.media.map((item) => <CapsuleMedia item={item} key={item.id} loader={mediaLoader} />)}</div></section>}
+          {opened && !resealOpen && <button type="button" disabled={busy} onClick={() => setResealOpen(true)}>Seal again for later</button>}
+          {opened && resealOpen && (
+            <section aria-label="Seal again for later" className="trace-capsule-reseal">
+              <h2>Seal again for later</h2>
+              <p>Choose a strictly future local date. Capsule content cannot be edited here, and previously exported copies are not revoked.</p>
+              <div className="trace-capsule-actions">
+                {[1, 5, 10].map((years) => <button key={years} type="button" disabled={busy} onClick={() => setResealOn(addCalendarYears(today, years))}>{years} year{years === 1 ? "" : "s"}</button>)}
+              </div>
+              <label>New opening date<input type="date" min={addCalendarDays(today, 1)} value={resealOn} disabled={busy} onChange={(event) => setResealOn(event.target.value)} /></label>
+              <div className="trace-capsule-actions">
+                <button type="button" disabled={busy} onClick={resealSelected}>Confirm seal again</button>
+                <button type="button" disabled={busy} onClick={() => { setResealOpen(false); setResealOn(addCalendarYears(today, 1)); setError(""); }}>Cancel</button>
+              </div>
+            </section>
+          )}
           <button type="button" onClick={async () => { if (window.confirm(`Delete ${selected.name}? This permanently removes the capsule and its attachments.`) && await onDelete(selected.id)) { setMode("archive"); setSelectedId(null); } }}>Delete Time Capsule</button>
         </article>
       </main>
@@ -209,7 +246,7 @@ export default function TimeCapsulesPage({
 
   return (
     <main className="trace-feature-page trace-feature-page--capsules">
-      <header className="trace-feature-page__identity"><p className="trace-feature-page__kicker">Messages across time</p><h1>Time Capsules</h1><p>Seal words and media for a future local calendar date.</p></header>
+      <header className="trace-feature-page__identity"><p className="trace-feature-page__kicker">Messages across time</p><h1>Time Capsules</h1><p>Seal words and media for today or a future local calendar date.</p></header>
       <nav><button type="button" onClick={onBack}>Back to Timeline</button> <button type="button" disabled={Boolean(blockedMessage)} onClick={startDraft}>{draft ? "Continue draft" : "Create Time Capsule"}</button></nav>
       {blockedMessage && <p role="alert">{blockedMessage}</p>}{status && <p role="status">{status}</p>}
       <section aria-label="Time Capsule archive" className="trace-capsule-archive">

@@ -61,6 +61,23 @@ function timestamp(value) {
   return typeof value === "string" && !Number.isNaN(Date.parse(value));
 }
 
+function normalizeSealCycle(value) {
+  if (!object(value) || !Number.isSafeInteger(value.number) || value.number < 1 || !timestamp(value.sealedAt)) return null;
+  return { number: value.number, sealedAt: value.sealedAt };
+}
+
+function normalizeOpeningHistory(values) {
+  if (!Array.isArray(values)) return null;
+  const history = values.map((entry) => {
+    if (!object(entry) || !Number.isSafeInteger(entry.cycle) || entry.cycle < 1 ||
+      !isLocalDate(entry.openOn) || !timestamp(entry.openedAt)) return null;
+    return { cycle: entry.cycle, openOn: entry.openOn, openedAt: entry.openedAt };
+  });
+  if (history.some((entry) => !entry)) return null;
+  if (history.some((entry, index) => entry.cycle !== index + 1)) return null;
+  return history;
+}
+
 export function normalizeCapsuleMediaReference(value) {
   if (!object(value) || !text(value.id) || !["photo", "audio", "video"].includes(value.kind)) return null;
   if (!text(value.name) || !text(value.mimeType) || !Number.isSafeInteger(value.bytes) || value.bytes < 0) return null;
@@ -105,6 +122,21 @@ export function normalizeTimeCapsule(value) {
     (value.openedAt !== null && !timestamp(value.openedAt))) return null;
   const media = normalizeMediaList(value.media);
   if (!media || (!value.text.trim() && media.length === 0)) return null;
+  const legacyLifecycle = value.sealCycle === undefined && value.openingHistory === undefined;
+  if (!legacyLifecycle && (value.sealCycle === undefined || value.openingHistory === undefined)) return null;
+  const sealCycle = legacyLifecycle
+    ? { number: 1, sealedAt: value.sealedAt }
+    : normalizeSealCycle(value.sealCycle);
+  const openingHistory = legacyLifecycle
+    ? (value.openedAt ? [{ cycle: 1, openOn: value.openOn, openedAt: value.openedAt }] : [])
+    : normalizeOpeningHistory(value.openingHistory);
+  if (!sealCycle || !openingHistory) return null;
+  if (sealCycle.number === 1 && sealCycle.sealedAt !== value.sealedAt) return null;
+  const expectedHistoryLength = value.openedAt ? sealCycle.number : sealCycle.number - 1;
+  if (openingHistory.length !== expectedHistoryLength) return null;
+  const latestOpening = openingHistory[openingHistory.length - 1];
+  if (value.openedAt && (!latestOpening || latestOpening.cycle !== sealCycle.number ||
+    latestOpening.openOn !== value.openOn || latestOpening.openedAt !== value.openedAt)) return null;
   return {
     schemaVersion: TIME_CAPSULE_SCHEMA_VERSION,
     id: value.id.trim(),
@@ -116,6 +148,8 @@ export function normalizeTimeCapsule(value) {
     updatedAt: value.updatedAt,
     sealedAt: value.sealedAt,
     openedAt: value.openedAt,
+    sealCycle,
+    openingHistory,
   };
 }
 
@@ -159,8 +193,8 @@ export function createSealedTimeCapsule(draft, now = new Date()) {
   if (!normalized) return { error: "This Time Capsule draft is invalid." };
   if (!normalized.form.name.trim()) return { error: "Give this Time Capsule a visible name." };
   if (!normalized.form.text.trim() && normalized.media.length === 0) return { error: "Add private text or at least one attachment before sealing." };
-  if (!isLocalDate(normalized.form.openOn) || normalized.form.openOn <= localDateKey(now)) {
-    return { error: "Choose a future opening date." };
+  if (!isLocalDate(normalized.form.openOn) || normalized.form.openOn < localDateKey(now)) {
+    return { error: "Choose today or a future opening date." };
   }
   const timestampValue = now.toISOString();
   const value = normalizeTimeCapsule({
@@ -174,8 +208,50 @@ export function createSealedTimeCapsule(draft, now = new Date()) {
     updatedAt: timestampValue,
     sealedAt: timestampValue,
     openedAt: null,
+    sealCycle: { number: 1, sealedAt: timestampValue },
+    openingHistory: [],
   });
   return value ? { value } : { error: "Trace could not prepare this Time Capsule." };
+}
+
+export function recordTimeCapsuleOpening(capsule, now = new Date()) {
+  const normalized = normalizeTimeCapsule(capsule);
+  if (!normalized) return { error: "This Time Capsule is invalid." };
+  if (normalized.openedAt) return { value: normalized };
+  if (timeCapsuleState(normalized, localDateKey(now)) === TIME_CAPSULE_STATE.SEALED) {
+    return { error: "This Time Capsule is still sealed." };
+  }
+  const openedAt = now.toISOString();
+  const value = normalizeTimeCapsule({
+    ...normalized,
+    openedAt,
+    updatedAt: openedAt,
+    openingHistory: [
+      ...normalized.openingHistory,
+      { cycle: normalized.sealCycle.number, openOn: normalized.openOn, openedAt },
+    ],
+  });
+  return value ? { value } : { error: "Trace could not record this Time Capsule opening." };
+}
+
+export function resealOpenedTimeCapsule(capsule, openOn, now = new Date(), expectedCycle = null) {
+  const normalized = normalizeTimeCapsule(capsule);
+  if (!normalized || !normalized.openedAt) return { error: "Only an opened Time Capsule can be sealed again." };
+  if (expectedCycle !== null && expectedCycle !== normalized.sealCycle.number) {
+    return { error: "This Time Capsule changed before it could be sealed again. Review it and retry." };
+  }
+  if (!isLocalDate(openOn) || openOn <= localDateKey(now)) {
+    return { error: "Choose a future date to seal this Time Capsule again." };
+  }
+  const sealedAt = now.toISOString();
+  const value = normalizeTimeCapsule({
+    ...normalized,
+    openOn,
+    openedAt: null,
+    updatedAt: sealedAt,
+    sealCycle: { number: normalized.sealCycle.number + 1, sealedAt },
+  });
+  return value ? { value } : { error: "Trace could not prepare this Time Capsule for another opening." };
 }
 
 export function timeCapsuleState(capsule, today = localDateKey()) {

@@ -181,6 +181,8 @@ function timeCapsuleFixture() {
     updatedAt: "2026-09-11T12:01:00.000Z",
     sealedAt: "2026-09-11T12:01:00.000Z",
     openedAt: null,
+    sealCycle: { number: 1, sealedAt: "2026-09-11T12:01:00.000Z" },
+    openingHistory: [],
   };
 }
 
@@ -624,6 +626,32 @@ test("schema 9 round-trips capsules, a complete media draft, reminders, and medi
   const wrongOwner = cloneJsonForTest(created);
   wrongOwner.data.media[0].capsuleId = "some-other-capsule";
   await expect(validateTraceBackup(wrongOwner)).rejects.toThrow(/ownership metadata/i);
+});
+
+test("verifies an existing schema 9 capsule payload before adding legacy lifecycle defaults", async () => {
+  const opened = {
+    ...timeCapsuleFixture(),
+    media: [],
+    openedAt: "2030-09-11T12:30:00.000Z",
+    openingHistory: [{ cycle: 1, openOn: "2030-09-11", openedAt: "2030-09-11T12:30:00.000Z" }],
+  };
+  const signed = await createTraceBackup({
+    storage: makeStorage({ timeCapsules: JSON.stringify([opened]) }),
+    openDatabase: async () => makeDatabaseWithMedia(),
+  });
+  const legacy = cloneJsonForTest(signed);
+  delete legacy.data.structured.timeCapsules[0].sealCycle;
+  delete legacy.data.structured.timeCapsules[0].openingHistory;
+  legacy.integrity.structured.digest = await sha256CanonicalJson(legacy.data.structured);
+
+  const validated = await validateTraceBackup(legacy);
+  expect(validated.backup.data.structured.timeCapsules[0]).toMatchObject({
+    openedAt: opened.openedAt,
+    sealCycle: { number: 1, sealedAt: opened.sealedAt },
+    openingHistory: [{ cycle: 1, openOn: opened.openOn, openedAt: opened.openedAt }],
+  });
+  expect(validated.backup.integrity.structured.digest)
+    .toBe(await sha256CanonicalJson(validated.backup.data.structured));
 });
 
 test("schema 8 validates with its historical manifest and restores empty capsule domains", async () => {

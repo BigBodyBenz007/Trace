@@ -10,7 +10,7 @@ import { normalizeAppSettings } from "./appSettings";
 import { normalizePlannedWorkouts } from "./plannedWorkout";
 import { normalizeWorkoutDraft } from "./workoutDraft";
 import { normalizeMemoryDraft } from "./memoryDraft";
-import { normalizeTimeCapsuleDraft } from "./timeCapsule";
+import { normalizeTimeCapsule, normalizeTimeCapsuleDraft } from "./timeCapsule";
 import { emptyFormDraftCollection, normalizeFormDraftCollection } from "./formDrafts";
 import { normalizeWorkoutTemplates } from "./workoutTemplate";
 import { normalizeJournalDraft } from "./journalEntry";
@@ -370,6 +370,14 @@ function readStructuredData(storage) {
         if (parsed === null) return [key, null];
         const normalized = normalizeTimeCapsuleDraft(parsed);
         if (!normalized) throw new Error("Invalid unfinished Time Capsule draft data.");
+        return [key, normalized];
+      }
+      if (key === "timeCapsules") {
+        if (!Array.isArray(parsed)) throw new Error("Invalid Time Capsule data.");
+        const normalized = parsed.map(normalizeTimeCapsule);
+        if (normalized.some((capsule) => !capsule) || new Set(normalized.map(({ id }) => id)).size !== normalized.length) {
+          throw new Error("Invalid Time Capsule data.");
+        }
         return [key, normalized];
       }
       if (key === "formDrafts") {
@@ -762,6 +770,10 @@ function validateAndNormalizeBackup(value) {
     normalizedBackup.data.structured.timeCapsuleDraft = normalizeTimeCapsuleDraft(
       normalizedBackup.data.structured.timeCapsuleDraft
     );
+  }
+  if (normalizedBackup.data.structured.timeCapsules != null) {
+    normalizedBackup.data.structured.timeCapsules = normalizedBackup.data.structured.timeCapsules
+      .map(normalizeTimeCapsule);
   }
   if (
     Object.prototype.hasOwnProperty.call(normalizedBackup.data.structured, "formDrafts") ||

@@ -330,7 +330,7 @@ test("passes authoritative structured activity to the Home Life Current", async 
   renderAppAtTimeline();
 
   expect(await screen.findByTestId("life-current")).toBeInTheDocument();
-  expect(screen.getByText("No memories found.")).toBeInTheDocument();
+  expect(screen.getByText("No Timeline items yet.")).toBeInTheDocument();
 });
 
 test("default theme and motion identities coexist on the HTML root and app shell", async () => {
@@ -6513,6 +6513,121 @@ test("shows a sealed capsule on the Timeline and navigates to and from details w
   fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
   expect(screen.getByTestId("timeline-time-capsule-capsule-timeline")).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("timeCapsules"))).toEqual([capsule]);
+});
+
+test("seals for today as immediately ready while keeping contents hidden until explicit opening", async () => {
+  const today = localCalendarDateKey();
+  window.confirm = jest.fn(() => true);
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Time Capsules" }));
+  fireEvent.click(screen.getByRole("button", { name: "Create Time Capsule" }));
+  fireEvent.change(screen.getByLabelText("Visible capsule name"), { target: { value: "Ready immediately" } });
+  fireEvent.change(screen.getByLabelText("Private message"), { target: { value: "Same-day private words" } });
+  fireEvent.change(screen.getByLabelText("Custom date"), { target: { value: today } });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Seal Time Capsule" })); });
+
+  expect(screen.getByText("This capsule is ready. Its contents stay hidden until you choose to open it.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Open Capsule" })).toBeInTheDocument();
+  expect(screen.queryByText("Same-day private words")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(screen.getByRole("dialog", { name: "Your Time Capsule is ready" })).toHaveTextContent("Ready immediately");
+  expect(screen.queryByText("Same-day private words")).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("timeCapsules"))[0]).toMatchObject({
+    openOn: today,
+    openedAt: null,
+    sealCycle: { number: 1 },
+    openingHistory: [],
+  });
+});
+
+test("reseals an opened capsule in place, preserves opening history, and resets its reminder", async () => {
+  const today = localCalendarDateKey();
+  const openedAt = new Date().toISOString();
+  const capsule = {
+    schemaVersion: 1,
+    id: "capsule-reseal",
+    name: "Open again later",
+    text: "Keep this private again",
+    openOn: today,
+    media: [],
+    createdAt: "2025-09-10T12:00:00.000Z",
+    updatedAt: openedAt,
+    sealedAt: "2025-09-11T12:01:00.000Z",
+    openedAt,
+  };
+  localStorage.setItem("timeCapsules", JSON.stringify([capsule]));
+  localStorage.setItem("timeCapsuleReminders", JSON.stringify([{
+    schemaVersion: 1,
+    capsuleId: capsule.id,
+    state: "acknowledged",
+    remindOn: null,
+    updatedAt: openedAt,
+  }]));
+  window.confirm = jest.fn(() => true);
+
+  render(<App />);
+  fireEvent.click(screen.getByTestId("timeline-time-capsule-capsule-reseal"));
+  fireEvent.click(screen.getByRole("button", { name: "Seal again for later" }));
+  fireEvent.change(screen.getByLabelText("New opening date"), { target: { value: "2099-12-31" } });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Confirm seal again" })); });
+
+  const stored = JSON.parse(localStorage.getItem("timeCapsules"));
+  expect(stored).toHaveLength(1);
+  expect(stored[0]).toMatchObject({
+    id: capsule.id,
+    text: capsule.text,
+    media: capsule.media,
+    createdAt: capsule.createdAt,
+    sealedAt: capsule.sealedAt,
+    openOn: "2099-12-31",
+    openedAt: null,
+    sealCycle: { number: 2, sealedAt: expect.any(String) },
+    openingHistory: [{ cycle: 1, openOn: today, openedAt }],
+  });
+  expect(JSON.parse(localStorage.getItem("timeCapsuleReminders"))).toEqual([
+    expect.objectContaining({ capsuleId: capsule.id, state: "pending", remindOn: null }),
+  ]);
+  expect(screen.getByText("This capsule remains sealed. Its private contents are hidden.")).toBeInTheDocument();
+  expect(screen.queryByText("Keep this private again")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(screen.getAllByTestId("timeline-time-capsule-capsule-reseal")).toHaveLength(1);
+  expect(screen.getByTestId("timeline-time-capsule-capsule-reseal")).toHaveTextContent("Sealed");
+});
+
+test("a failed reminder reset rolls resealing back and leaves the capsule opened", async () => {
+  const today = localCalendarDateKey();
+  const capsule = {
+    schemaVersion: 1,
+    id: "capsule-reseal-failure",
+    name: "Remain opened",
+    text: "Still visible after failure",
+    openOn: today,
+    media: [],
+    createdAt: "2025-09-10T12:00:00.000Z",
+    updatedAt: "2026-09-11T12:02:00.000Z",
+    sealedAt: "2025-09-11T12:01:00.000Z",
+    openedAt: "2026-09-11T12:02:00.000Z",
+  };
+  const originalRaw = JSON.stringify([capsule]);
+  localStorage.setItem("timeCapsules", originalRaw);
+  window.confirm = jest.fn(() => true);
+  render(<App />);
+  fireEvent.click(screen.getByTestId("timeline-time-capsule-capsule-reseal-failure"));
+  fireEvent.click(screen.getByRole("button", { name: "Seal again for later" }));
+
+  const nativeSetItem = Storage.prototype.setItem;
+  let failed = false;
+  const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (key, value) {
+    if (key === "timeCapsuleReminders" && !failed) { failed = true; throw new Error("quota full"); }
+    return nativeSetItem.call(this, key, value);
+  });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Confirm seal again" })); });
+  setItem.mockRestore();
+
+  expect(localStorage.getItem("timeCapsules")).toBe(originalRaw);
+  expect(screen.getByText("Still visible after failure")).toBeInTheDocument();
+  expect(screen.getByText("Opened")).toBeInTheDocument();
+  expect(screen.getAllByRole("alert").every((alert) => /couldn't seal/i.test(alert.textContent))).toBe(true);
 });
 
 test("Home reminder navigates without revealing a capsule until the explicit durable opening", async () => {
