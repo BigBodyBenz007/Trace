@@ -2646,9 +2646,11 @@ const menuPublished = (calories, protein, carbohydrates, fat, sodium, fiber = nu
 const expansionMenuOption = (chain, sourceUrl, sourceReference, id, description, nutrients, amount = 1) => {
   const option = officialOption(chain.id, id, description, nutrients, amount, sourceUrl, sourceReference);
   option.provenance.verification.accessedAt = NEXT_MENU_EXPANSION_ACCESSED_AT;
+  option.provenance.verification.status = ["calories", "protein", "carbohydrates", "fat"].every((key) => nutrients?.[key] !== null && nutrients?.[key] !== undefined) ? "complete" : "partial";
   return option;
 };
 const menuFood = (chain, sourceUrl, sourceReference, id, name, description, nutrients, servingOptions, searchAliases) => {
+  const selectedNutrients = nutrients || servingOptions?.[0]?.nutrients;
   const food = officialFood(
     chain,
     id,
@@ -2658,7 +2660,10 @@ const menuFood = (chain, sourceUrl, sourceReference, id, name, description, nutr
     sourceUrl,
     sourceReference,
     servingOptions,
-    { accessedAt: NEXT_MENU_EXPANSION_ACCESSED_AT }
+    {
+      status: ["calories", "protein", "carbohydrates", "fat"].every((key) => selectedNutrients?.[key] !== null && selectedNutrients?.[key] !== undefined) ? "complete" : "partial",
+      accessedAt: NEXT_MENU_EXPANSION_ACCESSED_AT,
+    }
   );
   return searchAliases ? { ...food, searchAliases } : food;
 };
@@ -3251,6 +3256,476 @@ const jackInTheBoxFoods = [
   ...jackFlatDrinks,
 ];
 
+const scalePublished = (nutrients, factor) => Object.fromEntries(Object.entries(nutrients).map(([key, value]) => [
+  key,
+  value === null ? null : value * factor,
+]));
+const pizzaServingOptions = (chain, sourceUrl, sourceReference, foodId, configurations) => configurations.flatMap(([
+  configurationId, description, slicesPerPizza, nutrients, basis = "published",
+]) => {
+  const sliceDescription = `1 slice — ${description} (${slicesPerPizza} slices per pizza${basis === "calculated" ? "; calculated configuration" : ""})`;
+  const wholeDescription = `Whole ${description} pizza (${slicesPerPizza} slices; calculated from the published per-slice nutrition)`;
+  return [
+    expansionMenuOption(chain, sourceUrl, sourceReference, `${foodId}:${configurationId}:slice`, sliceDescription, nutrients),
+    expansionMenuOption(chain, sourceUrl, `${sourceReference} Whole-pizza nutrition is calculated by multiplying the published per-slice serving by the published slice count.`, `${foodId}:${configurationId}:whole`, wholeDescription, scalePublished(nutrients, slicesPerPizza)),
+  ];
+});
+
+const dominos = { id: "dominos", name: "Domino's" };
+const DOMINOS_SOURCE = "https://www.dominos.com/cms/assets/7d2e19df-e360-41eb-a367-5ab794ab2ebc";
+const DOMINOS_REFERENCE = "Domino's official U.S. Nutrition Guide, January 2026; serving fractions and nutrients are published for the named size, crust, and standard recipe.";
+const dominosFood = (id, name, description, nutrients, servingOptions, aliases, sourceReference = DOMINOS_REFERENCE) => menuFood(
+  dominos, DOMINOS_SOURCE, sourceReference, id, name, description, nutrients, servingOptions,
+  [`Dominos ${name}`, `Domino's ${name}`, ...(aliases || [])]
+);
+const dominosOption = (id, description, nutrients, amount = 1, sourceReference = DOMINOS_REFERENCE) => expansionMenuOption(
+  dominos, DOMINOS_SOURCE, sourceReference, id, description, nutrients, amount
+);
+const dominosPizzaFood = (id, name, configurations, aliases, sourceReference = DOMINOS_REFERENCE) => dominosFood(
+  id,
+  name,
+  `Standard ${name}; choose a published size/crust slice or a calculated whole-pizza option`,
+  null,
+  pizzaServingOptions(dominos, DOMINOS_SOURCE, sourceReference, id, configurations),
+  aliases,
+  sourceReference
+);
+
+const dominosSpecialtyConfigurations = [
+  ["ultimate-pepperoni", "Ultimate Pepperoni", [[360, 14, 38, 16, 700, 1, 3, 1], [390, 15, 39, 19, 780, 2, 4, 1], [340, 13, 35, 16, 680, 1, 3, 1], [450, 18, 46, 21, 900, 2, 4, 2]]],
+  ["wisconsin-6-cheese", "Wisconsin 6 Cheese", [[400, 16, 38, 19, 900, 2, 3, 1], [440, 18, 40, 22, 1040, 2, 4, 1], [380, 16, 36, 19, 900, 2, 3, 1], [500, 21, 47, 25, 1220, 2, 4, 2]]],
+  ["meatzza", "MeatZZa", [[350, 15, 39, 15, 780, 1, 4, 2], [380, 17, 40, 17, 910, 1, 5, 2], [330, 14, 36, 14, 760, 1, 4, 2], [430, 19, 47, 18, 1010, 2, 6, 2]]],
+  ["memphis-bbq-chicken", "Memphis BBQ Chicken", [[390, 16, 38, 19, 870, 1, 3, 1], [420, 18, 38, 21, 1000, 1, 3, 1], [370, 15, 34, 18, 850, 1, 3, 1], [480, 20, 45, 24, 1160, 2, 4, 2]]],
+  ["pacific-veggie", "Pacific Veggie", [[360, 15, 41, 14, 680, 1, 7, 5], [410, 18, 44, 17, 800, 1, 8, 7], [350, 15, 39, 14, 680, 1, 7, 6], [460, 20, 51, 18, 880, 2, 9, 7]]],
+  ["philly-cheese-steak", "Philly Cheese Steak", [[330, 13, 38, 13, 620, 1, 3, 1], [360, 14, 39, 15, 730, 2, 4, 1], [310, 12, 35, 13, 630, 1, 3, 1], [400, 16, 46, 16, 790, 2, 4, 1]]],
+  ["spicy-chicken-bacon-ranch", "Spicy Chicken Bacon Ranch", [[340, 14, 36, 15, 790, 1, 3, 1], [370, 15, 37, 16, 890, 1, 3, 1], [310, 13, 33, 13, 720, 1, 3, 1], [400, 17, 43, 17, 920, 2, 3, 1]]],
+  ["spinach-feta", "Spinach & Feta", [[390, 16, 34, 21, 1110, 1, 2, 1], [480, 19, 38, 27, 1280, 1, 3, 1], [410, 16, 34, 22, 1090, 1, 3, 1], [530, 21, 44, 29, 1410, 1, 3, 1]]],
+  ["honolulu-hawaiian", "Honolulu Hawaiian", [[340, 14, 36, 15, 620, 1, 2, 1], [370, 15, 37, 17, 710, 1, 2, 1], [320, 13, 33, 15, 610, 1, 2, 1], [420, 17, 43, 19, 770, 2, 3, 1]]],
+  ["peoples-pizza-deluxe", "The People's Pizza — Deluxe", [[380, 16, 38, 18, 850, 1, 3, 1], [420, 17, 38, 21, 960, 1, 3, 1], [360, 15, 34, 18, 830, 1, 3, 1], [480, 20, 45, 23, 1110, 2, 4, 2]]],
+  ["extravaganzza", "ExtravaganZZa", [[340, 14, 38, 14, 660, 1, 3, 1], [390, 17, 39, 18, 790, 1, 3, 1], [330, 14, 35, 15, 670, 1, 3, 1], [440, 19, 46, 19, 880, 2, 4, 2]]],
+];
+const dominosSpecialtyFoods = dominosSpecialtyConfigurations.map(([id, name, rows]) => dominosPizzaFood(
+  id,
+  name,
+  [
+    ["small-hand-tossed", `10" Small Hand Tossed ${name}`, 4, menuPublished(...rows[0])],
+    ["medium-hand-tossed", `12" Medium Hand Tossed ${name}`, 5, menuPublished(...rows[1])],
+    ["large-hand-tossed", `14" Large Hand Tossed ${name}`, 8, menuPublished(...rows[2])],
+    ["xl-hand-tossed", `16" Extra Large Hand Tossed ${name}`, 8, menuPublished(...rows[3])],
+  ]
+));
+
+const dominosBuildReference = `${DOMINOS_REFERENCE} Cheese and Pepperoni configurations are calculated only by summing the guide's matching crust, finish, sauce, cheese, and optional pepperoni rows for the same published serving fraction.`;
+const dominosBuildRows = [
+  ["xs-hand-tossed", "8\" Extra Small Hand Tossed", 2, [230, 7, 42, 3, 230, 1, 2, 0], [35, 0, 0, 3.5, 65, 0, 0, 0], [10, 0, 2, 0, 90, 0, 2, 1], [100, 6, 2, 7, 300, 0, 0, 0], [70, 4, 1, 5, 200, 0, 0, 0], [50, 2, 0, 4.5, 200, 0, 0, 0]],
+  ["small-hand-tossed", "10\" Small Hand Tossed", 3, [220, 7, 40, 3, 230, 1, 2, 0], [25, 0, 0, 2.5, 50, 0, 0, 0], [15, 1, 3, 0, 120, 1, 2, 1], [130, 8, 3, 9, 400, 0, 0, 0], [90, 5, 2, 7, 280, 0, 0, 0], [50, 2, 0, 4.5, 220, 0, 0, 0]],
+  ["small-thin", "10\" Small Crunchy Thin", 4, [110, 2, 15, 4.5, 40, 0, 0, 0], null, [10, 0, 2, 0, 90, 0, 2, 1], [100, 6, 2, 7, 300, 0, 0, 0], [70, 4, 1, 5, 210, 0, 0, 0], [40, 2, 0, 3.5, 170, 0, 0, 0]],
+  ["small-gluten-free", "10\" Small Gluten Free", 3, [170, 2, 37, 1.5, 180, 1, 4, 4], null, [15, 1, 3, 0, 120, 1, 2, 1], [130, 8, 3, 9, 400, 0, 0, 0], [90, 5, 2, 7, 280, 0, 0, 0], [50, 2, 0, 4.5, 220, 0, 0, 0]],
+  ["medium-hand-tossed", "12\" Medium Hand Tossed", 8, [110, 4, 21, 1.5, 115, 1, 1, 0], [10, 0, 0, 1, 20, 0, 0, 0], [10, 0, 2, 0, 65, 0, 1, 0], [70, 4, 1, 5, 220, 0, 0, 0], [50, 3, 1, 3.5, 150, 0, 0, 0], [30, 1, 0, 2.5, 125, 0, 0, 0]],
+  ["medium-thin", "12\" Medium Crunchy Thin", 4, [150, 3, 20, 6, 55, 1, 0, 0], null, [15, 1, 3, 0, 125, 1, 2, 1], [150, 9, 3, 11, 450, 0, 0, 0], [100, 6, 2, 7, 300, 0, 0, 0], [60, 3, 0, 5, 250, 0, 0, 0]],
+  ["large-hand-tossed", "14\" Large Hand Tossed", 8, [160, 5, 30, 2, 170, 1, 1, 0], [15, 0, 0, 1.5, 25, 0, 0, 0], [10, 0, 2, 0, 90, 0, 2, 1], [100, 6, 2, 7, 310, 0, 0, 0], [70, 4, 1, 5, 210, 0, 0, 0], [50, 2, 0, 4.5, 220, 0, 0, 0]],
+  ["large-thin", "14\" Large Crunchy Thin", 8, [100, 2, 13, 4, 35, 0, 0, 0], null, [10, 0, 2, 0, 90, 0, 2, 1], [100, 6, 2, 7, 310, 0, 0, 0], [70, 4, 1, 5, 210, 0, 0, 0], [50, 2, 0, 4.5, 220, 0, 0, 0]],
+  ["large-new-york", "14\" Large New York Style", 6, [150, 5, 28, 2, 160, 1, 1, 0], null, [15, 1, 3, 0, 120, 1, 2, 1], [110, 6, 2, 9, 300, 0, 0, 0], [110, 6, 2, 9, 300, 0, 0, 0], [50, 2, 0, 4.5, 220, 0, 0, 0]],
+];
+const sumMenuRows = (...rows) => rows.filter(Boolean).map((row) => menuPublished(...row)).reduce(sumPublished);
+const dominosCheeseConfigurations = dominosBuildRows.map(([id, label, slices, crust, finish, sauce, cheese]) => [
+  id, `${label} Cheese`, slices, sumMenuRows(crust, finish, sauce, cheese), "calculated",
+]);
+const dominosPepperoniConfigurations = dominosBuildRows.map(([id, label, slices, crust, finish, sauce, , toppingCheese, pepperoni]) => [
+  id, `${label} Pepperoni`, slices, sumMenuRows(crust, finish, sauce, toppingCheese, pepperoni), "calculated",
+]);
+
+const dominosFlatRows = [
+  ["garlic-bread-bites", "Garlic Bread Bites", "4 pieces", [210, 5, 27, 9, 200, 1, 1, 1], 4],
+  ["parmesan-bread-bites", "Parmesan Bread Bites", "4 pieces", [210, 5, 27, 9, 220, 1, 1, 1], 4],
+  ["stuffed-cheesy-bread", "Stuffed Cheesy Bread", "1 piece", [160, 5, 15, 8, 220, 0, 1, 0]],
+  ["stuffed-cheesy-bread-bacon-jalapeno", "Bacon & Jalapeño Stuffed Cheesy Bread", "1 piece", [170, 6, 15, 10, 330, 0, 1, 0], 1, ["Dominos bacon jalapeno stuffed cheesy bread"]],
+  ["stuffed-cheesy-bread-pepperoni", "Pepperoni Stuffed Cheesy Bread", "1 piece", [170, 6, 15, 10, 290, 0, 1, 0]],
+  ["stuffed-cheesy-bread-spinach-feta", "Spinach & Feta Stuffed Cheesy Bread", "1 piece", [160, 6, 15, 9, 250, 0, 1, 0]],
+  ["boneless-chicken", "Boneless Chicken", "3 plain pieces; dipping sauce excluded", [170, 9, 18, 7, 660, 0, 1, 1], 3],
+  ["plain-wings", "Plain Wings", "4 bone-in wings; dipping sauce excluded", [250, 14, 8, 20, 720, 0, 0, 0], 4],
+  ["honey-bbq-wings", "Honey BBQ Wings", "4 bone-in wings with Honey BBQ sauce; dipping cup excluded", [310, 15, 22, 20, 940, 0, 13, 12], 4],
+  ["hot-buffalo-wings", "Hot Buffalo Wings", "4 bone-in wings with Hot Buffalo sauce; dipping cup excluded", [260, 15, 9, 20, 1520, 0, 0, 0], 4],
+  ["mild-buffalo-wings", "Mild Buffalo Wings", "4 bone-in wings with Mild Buffalo sauce; dipping cup excluded", [260, 15, 10, 20, 1420, 0, 0, 0], 4],
+  ["garlic-parmesan-wings", "Garlic Parmesan Wings", "4 bone-in wings with Garlic Parmesan sauce; dipping cup excluded", [390, 15, 10, 34, 960, 0, 1, 0], 4],
+  ["mango-habanero-wings", "Mango Habanero Wings", "4 bone-in wings with Mango Habanero sauce; dipping cup excluded", [310, 15, 21, 20, 790, 0, 10, 10], 4],
+  ["loaded-chicken-classic-hot-buffalo", "Loaded Chicken — Classic Hot Buffalo", "4 loaded boneless chicken pieces; named toppings included", [200, 10, 16, 11, 1080, 0, 1, 1], 4],
+  ["loaded-chicken-crispy-bacon-tomato", "Loaded Chicken — Crispy Bacon & Tomato", "4 loaded boneless chicken pieces; named toppings included", [270, 12, 16, 18, 860, 0, 1, 1], 4],
+  ["loaded-chicken-spicy-jalapeno-pineapple", "Loaded Chicken — Spicy Jalapeño Pineapple", "4 loaded boneless chicken pieces; named toppings included", [200, 9, 23, 8, 720, 0, 7, 6], 4],
+  ["loaded-chicken-sweet-bbq-bacon", "Loaded Chicken — Sweet BBQ Bacon", "4 loaded boneless chicken pieces; named toppings included", [220, 11, 22, 11, 840, 0, 7, 7], 4],
+  ["chicken-alfredo-pasta", "Chicken Alfredo Pasta", "1 complete pasta dish", [590, 24, 60, 28, 1020, 2, 5, 0]],
+  ["five-cheese-mac-pasta", "Five Cheese Mac Pasta", "1 complete pasta dish", [830, 30, 64, 50, 1680, 2, 6, 0]],
+  ["spicy-buffalo-five-cheese-mac-pasta", "Spicy Buffalo Five Cheese Mac Pasta", "1 complete pasta dish", [840, 31, 64, 50, 2090, 2, 6, 0]],
+  ["chocolate-lava-crunch-cake", "Chocolate Lava Crunch Cake", "1 cake", [350, 4, 47, 17, 180, 1, 30, 29]],
+  ["marbled-cookie-brownie", "Marbled Cookie Brownie", "1 brownie", [200, 2, 26, 10, 125, 1, 18, 18]],
+  ["cinnamon-bread-bites", "Cinnamon Bread Bites", "4 pieces", [230, 5, 30, 9, 160, 1, 4, 4], 4],
+];
+const dominosDipRows = [
+  ["honey-bbq-dipping-cup", "Honey BBQ Dipping Cup", [70, 0, 17, 0, 310, 1, 15, 14]],
+  ["blue-cheese-dipping-cup", "Blue Cheese Dipping Cup", [200, 1, 2, 21, 270, 0, 1, 1]],
+  ["garlic-dipping-cup", "Garlic Dipping Cup", [250, 0, 0, 28, 170, 0, 0, 0]],
+  ["hot-buffalo-dipping-cup", "Hot Buffalo Dipping Cup", [15, 0, 1, 1, 860, 0, 0, 0]],
+  ["marinara-dipping-cup", "Marinara Dipping Cup", [30, 0, 6, 0, 290, 0, 4, 1]],
+  ["ranch-dipping-cup", "Ranch Dipping Cup", [160, 0, 1, 17, 300, 0, 1, 1]],
+  ["icing-dipping-cup", "Icing Dipping Cup", [220, 0, 52, 4, 110, 0, 52, 52]],
+  ["mango-habanero-dipping-cup", "Mango Habanero Dipping Cup", [70, 0, 17, 0, 65, 0, 13, 13]],
+  ["nacho-cheese-dipping-cup", "Nacho Cheese Dipping Cup", [120, 6, 5, 8, 830, 0, 0, 0]],
+];
+const dominosHalfRows = [
+  ["buffalo-chicken-sandwich", "Buffalo Chicken Sandwich", [420, 20, 39, 20, 1300, 0, 2, 0]],
+  ["chicken-bacon-ranch-sandwich", "Chicken Bacon Ranch Sandwich", [450, 23, 37, 22, 1190, 0, 2, 1]],
+  ["chicken-parmesan-sandwich", "Chicken Parmesan Sandwich", [400, 24, 38, 15, 1050, 0, 2, 0]],
+  ["italian-sandwich", "Italian Sandwich", [420, 21, 37, 20, 1530, 0, 1, 0]],
+  ["philly-cheese-steak-sandwich", "Philly Cheese Steak Sandwich", [380, 20, 38, 15, 1280, 0, 3, 1]],
+  ["sweet-spicy-chicken-habanero-sandwich", "Sweet & Spicy Chicken Habanero Sandwich", [390, 21, 44, 14, 1080, 0, 6, 4]],
+];
+const dominosTotsRows = [
+  ["loaded-tots-cheddar-bacon", "Loaded Tots — Cheddar Bacon", [240, 7, 17, 16, 590, 1, 1, 1]],
+  ["loaded-tots-melty-three-cheese", "Loaded Tots — Melty 3-Cheese", [210, 6, 17, 13, 510, 1, 1, 0]],
+  ["loaded-tots-philly-cheese-steak", "Loaded Tots — Philly Cheese Steak", [200, 6, 18, 12, 530, 1, 1, 0]],
+];
+const dominosFoods = [
+  dominosPizzaFood("cheese-pizza", "Cheese Pizza", dominosCheeseConfigurations, ["Dominos plain cheese pizza"], dominosBuildReference),
+  dominosPizzaFood("pepperoni-pizza", "Pepperoni Pizza", dominosPepperoniConfigurations, undefined, dominosBuildReference),
+  ...dominosSpecialtyFoods,
+  ...dominosFlatRows.map(([id, name, description, values, amount = 1, aliases]) => {
+    const nutrients = menuPublished(...values);
+    return amount === 1
+      ? dominosFood(id, name, description, nutrients, undefined, aliases)
+      : dominosFood(id, name, description, null, [dominosOption(`${id}:published-serving`, description, nutrients, amount)], aliases);
+  }),
+  ...dominosDipRows.map(([id, name, values]) => dominosFood(id, name, "1 separately packaged dipping cup", menuPublished(...values))),
+  ...dominosHalfRows.map(([id, name, values]) => {
+    const half = menuPublished(...values);
+    return dominosFood(id, name, "Choose a published half-sandwich serving or calculated whole sandwich", null, [
+      dominosOption(`${id}:half`, `Half ${name}`, half),
+      dominosOption(`${id}:whole`, `Whole ${name}; calculated as two published half-sandwich servings`, scalePublished(half, 2)),
+    ]);
+  }),
+  ...dominosTotsRows.map(([id, name, values]) => {
+    const quarter = menuPublished(...values);
+    return dominosFood(id, name, "Choose one published quarter-order serving or a calculated whole order", null, [
+      dominosOption(`${id}:quarter`, `1/4 order of ${name}`, quarter),
+      dominosOption(`${id}:whole`, `Whole order of ${name}; calculated as four published quarter-order servings`, scalePublished(quarter, 4)),
+    ]);
+  }),
+];
+
+const pizzaHut = { id: "pizza-hut", name: "Pizza Hut" };
+const PIZZA_HUT_SOURCE = "https://www.nutritionix.com/pizza-hut/menu/premium";
+const PIZZA_HUT_REFERENCE = "Pizza Hut official U.S. Nutrition page-linked full nutrition menu, operated by Nutritionix and updated September 10, 2026; values are for the named published size, crust, recipe, and serving.";
+const pizzaHutFood = (id, name, description, nutrients, servingOptions, aliases, sourceReference = PIZZA_HUT_REFERENCE) => menuFood(
+  pizzaHut, PIZZA_HUT_SOURCE, sourceReference, id, name, description, nutrients, servingOptions,
+  [`Pizza Hut ${name}`, `PizzaHut ${name}`, ...(aliases || [])]
+);
+const pizzaHutOption = (id, description, nutrients, amount = 1, sourceReference = PIZZA_HUT_REFERENCE) => expansionMenuOption(
+  pizzaHut, PIZZA_HUT_SOURCE, sourceReference, id, description, nutrients, amount
+);
+const pizzaHutRecipes = [
+  ["backyard-bbq-chicken-pizza", "Backyard BBQ Chicken Pizza"],
+  ["cheese-pizza", "Cheese Pizza"],
+  ["chicken-sausage-bacon-classic-pizza", "Chicken Sausage & Bacon Classic Pizza"],
+  ["double-pepperoni-pizza", "Double Pepperoni Pizza"],
+  ["meat-lovers-pizza", "Meat Lover's Pizza"],
+  ["pepperoni-pizza", "Pepperoni Pizza"],
+  ["pepperoni-lovers-pizza", "Pepperoni Lover's Pizza"],
+  ["pesto-margherita-pizza", "Pesto Margherita Pizza"],
+  ["supreme-pizza", "Supreme Pizza"],
+  ["the-ultimate-pizza", "The Ultimate Pizza"],
+  ["veggie-lovers-pizza", "Veggie Lover's Pizza"],
+];
+const ph = (...values) => menuPublished(...values);
+const pizzaHutConfigRows = [
+  ["personal-pan", "Personal Pan", 4, [
+    [190, 6, 27, 6, 350, null, 7], [160, 6, 19, 6, 310, 1, 1], [160, 6, 19, 6, 310, 1, 1], [160, 6, 19, 6, 310, 1, 1], [190, 7, 19, 9, 400, 1, 1], [160, 6, 19, 7, 320, 1, null], [190, 7, 19, 9, 380, 1, 1], [150, 5, 20, 6, 290, 1, 1], [170, 6, 20, 7, 330, 1, 1], [170, 6, 20, 7, 320, 1, 1], [150, 5, 20, 5, 290, 1, 1],
+  ]],
+  ["small-original-pan", "Small Original Pan", 8, [
+    [140, 6, 18, 5, 250, null, 1], [140, 6, 17, 5, 280, 1, null], [150, 6, 18, 6, 300, 1, 1], [140, 5, 17, 6, 290, null, 1], [180, 7, 18, 9, 390, 1, 1], [150, 5, 17, 6, 290, null, null], [170, 7, 18, 8, 350, 1, null], [140, 5, 18, 5, 260, 1, 1], [150, 6, 18, 7, 310, 1, 1], [160, 6, 18, 7, 300, 1, 1], [130, 5, 18, 4.5, 270, 1, 1],
+  ]],
+  ["small-hand-tossed", "Small Hand Tossed", 8, [
+    [150, 6, 21, 5, 280, null, 4], [140, 6, 17, 5, 280, null, 1], [140, 6, 17, 5, 290, 1, 1], [140, 5, 17, 6, 280, null, 1], [180, 7, 17, 9, 380, null, 1], [140, 5, 16, 6, 290, null, 1], [170, 7, 17, 8, 340, null, 1], [130, 5, 17, 5, 250, 1, 1], [150, 6, 17, 6, 300, 1, 1], [150, 6, 17, 7, 300, 1, 2], [130, 5, 17, 4.5, 260, 1, 1],
+  ]],
+  ["small-thin", "Small Thin 'N Crispy", 8, [
+    [130, 6, 17, 4, 270, null, 5], [110, 5, 13, 4, 260, null, 2], [120, 6, 13, 4.5, 280, null, 2], [110, 5, 13, 4, 260, null, 2], [160, 7, 13, 9, 390, null, 2], [110, 5, 13, 4.5, 270, null, 2], [140, 7, 13, 7, 330, null, 2], [100, 4, 14, 3.5, 240, null, 2], [120, 6, 14, 5, 290, null, 2], [130, 6, 14, 6, 290, null, 2], [100, 5, 14, 3, 250, 1, 2],
+  ]],
+  ["medium-original-pan", "Medium Original Pan", 8, [
+    [280, 11, 35, 11, 490, 1, 6], [260, 10, 30, 11, 480, 2, 1], [270, 10, 30, 12, 520, 2, 2], [270, 9, 29, 12, 490, 2, 1], [340, 13, 30, 19, 690, 2, 2], [270, 9, 29, 12, 500, 2, 1], [310, 12, 30, 16, 610, 2, 1], [250, 8, 31, 11, 440, 2, 2], [280, 10, 30, 13, 530, 2, 2], [290, 10, 30, 14, 520, 2, 2], [240, 8, 31, 10, 450, 2, 2],
+  ]],
+  ["medium-hand-tossed", "Medium Hand Tossed", 8, [
+    [250, 10, 31, 9, 450, 1, 6], [220, 10, 26, 9, 440, 1, 2], [240, 10, 26, 10, 480, 2, 2], [230, 9, 26, 10, 450, 1, 2], [300, 12, 26, 16, 650, 1, 2], [230, 9, 26, 10, 460, 1, 2], [280, 12, 26, 14, 570, 1, 2], [220, 8, 27, 8, 400, 2, 2], [250, 10, 27, 11, 490, 2, 2], [250, 10, 27, 12, 480, 2, 2], [210, 8, 27, 7, 410, 2, 2],
+  ]],
+  ["medium-thin", "Medium Thin 'N Crispy", 8, [
+    [210, 10, 27, 7, 440, 1, 7], [180, 9, 22, 7, 420, 1, 3], [200, 10, 22, 8, 470, 1, 3], [190, 9, 21, 8, 440, 1, 3], [260, 12, 22, 14, 630, 1, 3], [200, 9, 21, 9, 470, 1, 3], [250, 12, 22, 12, 580, 1, 3], [180, 8, 23, 6, 380, 1, 3], [210, 10, 23, 9, 480, 2, 3], [210, 9, 22, 10, 470, 1, 3], [170, 8, 23, 6, 410, 2, 4],
+  ]],
+  ["medium-stuffed-crust", "Medium Original Stuffed Crust", 8, [
+    [300, 13, 35, 12, 610, 1, 6], [280, 13, 30, 12, 600, 2, 2], [300, 13, 29, 14, 590, 1, 1], [290, 12, 29, 13, 610, 2, 2], [360, 15, 30, 19, 810, 2, 2], [290, 12, 29, 13, 630, 2, 2], [330, 15, 30, 17, 730, 2, 2], [270, 11, 31, 11, 550, 2, 2], [300, 13, 30, 14, 650, 2, 2], [300, 13, 29, 14, 570, 1, null], [260, 11, 31, 10, 570, 2, 2],
+  ]],
+  ["medium-chicago-tavern", "Medium Chicago Tavern square-cut", 16, [
+    [90, 5, 11, 3.5, 200, 0, 3], [80, 4, 8, 3.5, 200, null, 1], [80, 4, 8, 4, 220, null, 1], [80, 4, 8, 4, 200, null, 1], [120, 6, 8, 7, 300, null, 1], [80, 4, 8, 4, 210, null, 1], [110, 5, 8, 6, 260, null, 1], [70, 3, 9, 3, 180, null, 1], [90, 5, 9, 4.5, 220, null, 1], [90, 4, 8, 5, 220, null, 1], [70, 4, 9, 2.5, 190, null, 2],
+  ]],
+  ["large-original-pan", "Large Original Pan", 8, [
+    [400, 15, 46, 17, 660, 2, 7], [370, 14, 40, 18, 660, 2, 2], [380, 14, 40, 19, 710, 2, 2], [380, 13, 39, 19, 690, 2, 2], [480, 18, 40, 28, 950, 2, 2], [380, 13, 39, 19, 680, 2, 2], [450, 17, 40, 24, 840, 2, 2], [360, 12, 41, 17, 600, 2, 2], [410, 15, 41, 21, 740, 3, 3], [420, 14, 41, 22, 720, 3, 3], [350, 12, 41, 16, 630, 3, 3],
+  ]],
+  ["large-hand-tossed", "Large Hand Tossed", 8, [
+    [330, 14, 42, 12, 610, 2, 7], [310, 14, 36, 12, 610, 2, 2], [320, 14, 36, 13, 660, 2, 3], [320, 13, 35, 14, 640, 2, 2], [420, 17, 36, 23, 900, 2, 2], [320, 13, 36, 14, 650, 2, 2], [390, 17, 36, 19, 810, 2, 2], [300, 11, 37, 11, 550, 2, 3], [350, 14, 37, 16, 690, 2, 3], [350, 14, 37, 16, 670, 2, 3], [290, 11, 37, 10, 580, 3, 3],
+  ]],
+  ["large-thin", "Large Thin 'N Crispy", 8, [
+    [280, 14, 35, 9, 580, 1, 9], [250, 13, 29, 10, 590, 2, 4], [260, 13, 29, 11, 640, 2, 4], [260, 12, 28, 11, 620, 2, 4], [360, 17, 29, 20, 870, 2, 4], [270, 13, 28, 12, 650, 2, 4], [340, 16, 29, 18, 800, 2, 4], [240, 11, 30, 9, 530, 2, 4], [290, 14, 30, 13, 670, 2, 5], [300, 13, 30, 14, 650, 2, 5], [230, 11, 31, 8, 570, 2, 5],
+  ]],
+  ["large-stuffed-crust", "Large Original Stuffed Crust", 8, [
+    [370, 16, 45, 14, 750, 2, 7], [340, 15, 39, 13, 730, 2, 2], [360, 16, 40, 15, 810, 2, 3], [360, 15, 39, 16, 780, 2, 2], [460, 19, 40, 25, 1040, 2, 2], [360, 15, 39, 16, 790, 2, 2], [420, 18, 39, 20, 920, 2, 2], [340, 13, 41, 13, 700, 2, 3], [390, 16, 40, 18, 840, 2, 3], [390, 16, 40, 18, 820, 2, 3], [330, 13, 41, 12, 720, 3, 3],
+  ]],
+  ["large-chicago-tavern", "Large Chicago Tavern square-cut", 16, [
+    [120, 6, 14, 4.5, 270, null, 4], [110, 6, 11, 4.5, 270, null, 2], [110, 6, 11, 5, 300, null, 2], [110, 5, 10, 6, 280, null, 2], [160, 8, 11, 10, 410, null, 2], [120, 6, 10, 6, 300, null, 2], [150, 8, 11, 9, 370, null, 2], [100, 5, 11, 4.5, 240, null, 2], [130, 6, 11, 7, 310, null, 2], [130, 6, 11, 7, 300, null, 2], [100, 5, 12, 4, 260, 1, 2],
+  ]],
+];
+const pizzaHutSpecialConfigs = {
+  "cheese-pizza": [["medium-caulicrust", "Medium Caulicrust", 8, ph(180, 8, 18, 9, 350, 1, 2)], ["gluten-free", "Gluten-Free", 8, ph(110, 5, 14, 4.5, 240, null, 2)]],
+  "meat-lovers-pizza": [["medium-caulicrust", "Medium Caulicrust", 8, ph(270, 11, 18, 17, 580, 1, 2)], ["gluten-free", "Gluten-Free", 8, ph(160, 6, 14, 9, 380, null, 2)]],
+  "pepperoni-pizza": [["medium-caulicrust", "Medium Caulicrust", 8, ph(190, 7, 17, 11, 400, 1, 2)], ["gluten-free", "Gluten-Free", 8, ph(120, 4, 14, 6, 270, null, 2)]],
+  "pepperoni-lovers-pizza": [["medium-caulicrust", "Medium Caulicrust", 8, ph(240, 10, 18, 15, 500, 1, 2)], ["gluten-free", "Gluten-Free", 8, ph(150, 6, 14, 7, 320, null, 2)]],
+  "supreme-pizza": [["medium-caulicrust", "Medium Caulicrust", 8, ph(200, 8, 19, 11, 400, 1, 2)], ["gluten-free", "Gluten-Free", 8, ph(130, 5, 15, 6, 270, null, 3)]],
+  "the-ultimate-pizza": [["medium-caulicrust", "Medium Caulicrust", 8, ph(200, 8, 17, 11, 330, null, null)]],
+  "veggie-lovers-pizza": [["medium-caulicrust", "Medium Caulicrust", 8, ph(170, 6, 19, 8, 340, 2, 2)], ["gluten-free", "Gluten-Free", 8, ph(110, 4, 15, 3.5, 230, 1, 3)]],
+};
+const pizzaHutPizzaFoods = pizzaHutRecipes.map(([id, name], recipeIndex) => {
+  const configs = pizzaHutConfigRows.map(([configId, crust, slices, rows]) => [configId, `${crust} ${name}`, slices, ph(...rows[recipeIndex])]);
+  return pizzaHutFood(id, name, `Standard ${name}; choose a published crust/size slice or calculated whole pizza`, null, [
+    ...pizzaServingOptions(pizzaHut, PIZZA_HUT_SOURCE, PIZZA_HUT_REFERENCE, id, configs),
+    ...pizzaServingOptions(pizzaHut, PIZZA_HUT_SOURCE, PIZZA_HUT_REFERENCE, id, (pizzaHutSpecialConfigs[id] || []).map(([configId, crust, slices, nutrients]) => [configId, `${crust} ${name}`, slices, nutrients])),
+  ]);
+});
+
+const pizzaHutFlatRows = [
+  ["cheesy-alfredo-pasta", "Cheesy Alfredo Pasta", "1 published pasta dish", [880, 30, 85, 47, 1120, 4, 7]],
+  ["chicken-alfredo-pasta", "Chicken Alfredo Pasta", "1 published pasta dish", [920, 37, 86, 49, 1280, 4, 7]],
+  ["italian-meats-pasta", "Italian Meats Pasta", "1 published pasta dish", [850, 36, 97, 37, 1640, 8, 16]],
+  ["triple-cheese-mac-pasta", "Triple Cheese Mac Pasta", "1 published pasta dish", [830, 38, 44, 56, 1810, 2, 8]],
+  ["veggie-pasta", "Veggie Pasta", "1 published pasta dish", [640, 27, 98, 16, 1170, 8, 17]],
+  ["breadsticks", "Breadsticks", "1 breadstick", [150, 4, 19, 7, 260, null, 1]],
+  ["cheese-breadsticks", "Cheese Breadsticks", "1 cheese breadstick", [100, 4, 10, 5, 190, null, null]],
+  ["roasted-garlic-cheese-breadsticks", "Roasted Garlic Cheese Breadsticks", "1 breadstick", [100, 5, 10, 5, 170, null, null]],
+  ["bacon-cheddar-cheese-breadsticks", "Bacon Cheddar Cheese Breadsticks", "1 breadstick", [120, 5, 10, 6, 200, null, null]],
+  ["fries-with-ketchup", "French Fries with Ketchup", "1 order with ketchup included", [500, 4, 67, 24, 1230, 3, 7]],
+  ["garlic-bread", "Garlic Bread", "1 piece", [190, 5, 29, 6, 330, 1, 0]],
+  ["garlic-bread-with-cheese", "Garlic Bread with Cheese", "1 piece", [210, 7, 16, 13, 390, null, 0]],
+  ["stuffed-pizza-roller", "Stuffed Pizza Roller", "1 roller", [230, 9, 27, 10, 520, 1, null]],
+  ["apple-dessert-pizza", "Apple Dessert Pizza", "1 slice", [250, 4, 50, 4, 190, 2, 25]],
+  ["blueberry-dessert-pizza", "Blueberry Dessert Pizza", "1 slice", [230, 4, 46, 4, 190, 2, 21]],
+  ["cherry-dessert-pizza", "Cherry Dessert Pizza", "1 slice", [240, 4, 47, 4, 190, 2, 22]],
+  ["chocolate-donut-bites", "Chocolate Donut Bites", "1 published serving", [250, 3, 36, 10, 170, null, 19]],
+  ["cinnamon-stick", "Cinnamon Stick", "1 stick", [90, 2, 13, 3, 105, null, 4]],
+  ["fried-apple-pie", "Fried Apple Pie", "1 pie", [170, null, 22, 9, 100, null, 12]],
+  ["ultimate-chocolate-chip-cookie", "Ultimate Chocolate Chip Cookie", "1/8 cookie", [190, 2, 26, 9, 110, null, 17]],
+  ["triple-chocolate-brownie", "Triple Chocolate Brownie", "1/9 brownie tray", [230, 3, 34, 10, 80, 2, 25]],
+];
+const pizzaHutDipRows = [
+  ["bbq-dip", "BBQ Dip", [210, null, 51, 0, 540, null, 39]], ["blue-cheese-dip", "Blue Cheese Dip", [220, 1, 2, 23, 380, 0, 2]],
+  ["buffalo-dip", "Buffalo Dip", [100, 0, 23, 0, 1140, 0, 3]], ["cheese-dip", "Cheese Dip", [250, 6, 11, 20, 1230, 0, 7]],
+  ["marinara-dip", "Marinara Dip", [45, 1, 9, 0, 290, 2, 6]], ["nacho-cheese-dip", "Nacho Cheese Dip", [90, null, 7, 6, 330, 0, 2]],
+  ["ranch-dip", "Ranch Dip", [210, 0, 2, 22, 400, 0, 2]],
+];
+const pizzaHutWingRows = [
+  ["naked", "Naked", [[80, 5, 6, 4, 160, 0, 0], [80, 9, 0, 4.5, 160, 0, 0]]],
+  ["burnin-hot", "Burnin' Hot", [[90, 5, 9, 4, 340, 0, null], [100, 9, 5, 4.5, 390, 0, null]]],
+  ["buffalo-medium", "Buffalo Medium", [[90, 5, 9, 4, 330, 0, null], [100, 9, 5, 4.5, 370, 0, null]]],
+  ["buffalo-mild", "Buffalo Mild", [[90, 5, 10, 4, 340, 0, null], [100, 9, 5, 4.5, 380, 0, null]]],
+  ["cajun", "Cajun", [[80, 5, 6, 4, 210, 0, 0], [80, 9, null, 4.5, 220, 0, 0]]],
+  ["garlic-parmesan", "Garlic Parmesan", [[130, 5, 6, 9, 270, 0, 0], [140, 10, null, 11, 300, 0, 0]]],
+  ["honey-bbq", "Honey BBQ", [[100, 5, 11, 4, 220, 0, 4], [110, 9, 7, 4.5, 230, 0, 5]]],
+  ["lemon-pepper", "Lemon Pepper", [[80, 5, 6, 4, 200, 0, 0], [80, 9, null, 4.5, 200, 0, 0]]],
+  ["smoky-garlic", "Smoky Garlic", [[110, 5, 9, 6, 220, 0, 2], [120, 9, 5, 7, 230, 0, 3]]],
+  ["spicy-garlic", "Spicy Garlic", [[110, 5, 8, 6, 290, 0, 0], [120, 9, 3, 8, 330, 0, null]]],
+  ["sweet-chili", "Sweet Chili", [[100, 5, 10, 4.5, 230, 0, 4], [100, 9, 4, 5, 220, 0, 4]]],
+];
+const pizzaHutMeltRows = [
+  ["burger-melt", "Burger Melt", [730, 21, 44, 53, 1320, 2, 6], [1180, 42, 85, 77, 2300, 4, 10]],
+  ["chicken-bacon-parmesan-melt", "Chicken Bacon Parmesan Melt", [690, 25, 43, 47, 1410, 2, 6], [1170, 49, 85, 71, 2430, 4, 10]],
+  ["meat-lovers-melt", "Meat Lover's Melt", [560, 25, 47, 30, 1390, 3, 8], [1080, 49, 87, 60, 2580, 5, 12]],
+  ["pepperoni-lovers-melt", "Pepperoni Lover's Melt", [580, 27, 47, 31, 1370, 3, 8], [1130, 53, 88, 63, 2550, 5, 11]],
+];
+const pizzaHutFoods = [
+  ...pizzaHutPizzaFoods,
+  ...pizzaHutFlatRows.map(([id, name, description, values]) => pizzaHutFood(id, name, description, ph(...values))),
+  ...pizzaHutDipRows.map(([id, name, values]) => pizzaHutFood(id, name, "1 separately listed dipping container", ph(...values))),
+  ...pizzaHutWingRows.map(([id, flavor, rows]) => pizzaHutFood(`${id}-wings`, `${flavor} Wings`, `Named flavor is included in each wing value; separately chosen dipping sauce is excluded`, null, [
+    pizzaHutOption(`${id}-wings:bone-out`, `1 bone-out wing with ${flavor} flavor included`, ph(...rows[0])),
+    pizzaHutOption(`${id}-wings:bone-in`, `1 bone-in wing with ${flavor} flavor included`, ph(...rows[1])),
+  ], [`Pizza Hut ${flavor} boneless wings`, `Pizza Hut ${flavor} bone in wings`])),
+  ...pizzaHutMeltRows.map(([id, name, halfValues, fullValues]) => pizzaHutFood(id, name, "Choose the separately published half or full melt", null, [
+    pizzaHutOption(`${id}:half`, `Half ${name}`, ph(...halfValues)),
+    pizzaHutOption(`${id}:full`, `Full ${name}`, ph(...fullValues)),
+  ])),
+  pizzaHutFood("penne-meatballs", "Penne with Meatballs", "Choose the separately published half or regular portion", null, [
+    pizzaHutOption("penne-meatballs:half", "Half portion", ph(630, 34, 61, 28, 1580, 6, 16)),
+    pizzaHutOption("penne-meatballs:regular", "Regular portion", ph(1120, 58, 119, 47, 2760, 11, 31)),
+  ]),
+  ...[
+    ["pepsi", "Pepsi", [["20-ounce", "20 fl oz bottle", [250, 0, 69, 0, 55, 0, 69]], ["two-liter", "2 liter bottle", [840, 0, 229, 0, 170, 0, 229]]]],
+    ["diet-pepsi", "Diet Pepsi", [["20-ounce", "20 fl oz bottle", [0, 0, 0, 0, 60, 0, 0]], ["two-liter", "2 liter bottle", [0, 0, 0, 0, 200, 0, 0]]]],
+    ["mountain-dew", "Mountain Dew", [["20-ounce", "20 fl oz bottle", [290, 0, 77, 0, 105, 0, 77]], ["two-liter", "2 liter bottle", [950, 0, 257, 0, 340, 0, 257]]]],
+    ["starry", "Starry", [["20-ounce", "20 fl oz bottle", [240, 0, 65, 0, 55, 0, 65]], ["two-liter", "2 liter bottle", [900, 0, 230, 0, 210, 0, 230]]]],
+  ].map(([id, name, sizes]) => pizzaHutFood(id, name, "Choose a published packaged size", null, sizes.map(([sizeId, description, values]) => pizzaHutOption(`${id}:${sizeId}`, description, ph(...values))), [`Pizza Hut ${name}`])),
+];
+
+const papaJohns = { id: "papa-johns", name: "Papa Johns" };
+const PAPA_JOHNS_PIZZA_SOURCE = "https://www.papajohns.com/company/nutritional-details/index.html";
+const PAPA_JOHNS_REFERENCE = "Papa Johns official U.S. Nutritional Details pages, accessed September 10, 2026; nutrients and serving counts are for the named standard product.";
+const papaJohnsFood = (sourceUrl, id, name, description, nutrients, servingOptions, aliases, sourceReference = PAPA_JOHNS_REFERENCE) => menuFood(
+  papaJohns, sourceUrl, sourceReference, id, name, description, nutrients, servingOptions,
+  [`Papa John's ${name}`, `PapaJohns ${name}`, ...(aliases || [])]
+);
+const papaJohnsOption = (sourceUrl, id, description, nutrients, amount = 1, sourceReference = PAPA_JOHNS_REFERENCE) => expansionMenuOption(
+  papaJohns, sourceUrl, sourceReference, id, description, nutrients, amount
+);
+const papaJohnsPizzaRows = [
+  ["cheese-pizza", "Cheese Pizza", [
+    [200, 8, 25, 7, 500, 1, 3], [180, 7, 25, 6, 440, 1, 3], [210, 8, 27, 7, 520, 1, 3], [290, 11, 38, 10, 710, 2, 5], [300, 11, 40, 10, 730, 2, 5], [360, 15, 40, 14, 900, 2, 4], [210, 8, 20, 11, 490, 1, 2], [290, 10, 36, 11, 680, 2, 3],
+  ]],
+  ["pepperoni-pizza", "Pepperoni Pizza", [
+    [220, 8, 25, 10, 580, 1, 3], [210, 8, 25, 8, 530, 1, 3], [230, 8, 26, 9, 570, 1, 3], [320, 12, 38, 13, 810, 2, 5], [330, 12, 40, 13, 840, 2, 5], [390, 16, 40, 17, 980, 2, 4], [250, 9, 20, 14, 590, 1, 2], [340, 11, 36, 16, 820, 2, 3],
+  ]],
+  ["bbq-chicken-bacon-pizza", "BBQ Chicken Bacon Pizza", [
+    [240, 12, 30, 8, 740, 1, 8], [230, 10, 30, 7, 660, 1, 7], [240, 11, 32, 8, 730, 1, 8], [340, 16, 45, 11, 1020, 2, 11], [360, 16, 48, 11, 1070, 2, 11], [400, 20, 45, 15, 1090, 2, 10], [270, 13, 27, 12, 800, 1, 8], [340, 13, 42, 12, 950, 2, 9],
+  ]],
+  ["garden-fresh-pizza", "Garden Fresh Pizza", [
+    [190, 7, 26, 6, 470, 1, 4], [190, 7, 26, 6, 450, 1, 3], [200, 7, 27, 7, 480, 1, 4], [280, 10, 39, 9, 680, 2, 5], [300, 11, 41, 9, 710, 2, 6], [350, 15, 41, 14, 870, 2, 5], [210, 8, 21, 10, 460, 1, 3], [280, 10, 37, 10, 640, 2, 3],
+  ]],
+  ["the-meats-pizza", "The Meats Pizza", [
+    [260, 11, 26, 12, 720, 1, 3], [250, 10, 26, 12, 700, 1, 3], [260, 11, 27, 11, 710, 1, 3], [380, 15, 38, 17, 1040, 2, 5], [410, 17, 41, 19, 1130, 2, 5], [440, 20, 40, 22, 1200, 2, 5], [300, 13, 20, 19, 820, 1, 2], [340, 13, 36, 15, 870, 2, 3],
+  ]],
+  ["the-works-pizza", "The Works Pizza", [
+    [230, 9, 26, 10, 610, 1, 4], [230, 9, 26, 9, 590, 1, 3], [230, 9, 27, 9, 620, 1, 4], [340, 13, 39, 14, 890, 2, 5], [360, 14, 41, 15, 940, 2, 6], [410, 18, 41, 19, 1080, 2, 5], [270, 11, 21, 15, 670, 1, 3], [320, 12, 37, 13, 780, 2, 3],
+  ]],
+  ["super-hawaiian-pizza", "Super Hawaiian Pizza", [
+    [230, 10, 27, 9, 630, 1, 5], [230, 10, 27, 8, 610, 1, 4], [230, 10, 28, 9, 630, 1, 5], [340, 15, 40, 13, 920, 2, 7], [360, 16, 42, 13, 970, 2, 4], [400, 19, 42, 17, 1060, 2, 6], [260, 12, 22, 14, 700, 1, 4], [170, 8, 17, 8, 450, 1, 3],
+  ]],
+  ["extra-cheesy-alfredo-pizza", "Extra Cheesy Alfredo Pizza", [
+    [220, 9, 24, 9, 520, 1, 2], [210, 9, 25, 9, 500, 1, 2], [230, 10, 26, 10, 550, 1, 2], [320, 13, 37, 13, 750, 1, 3], [330, 13, 39, 13, 760, 1, 4], [390, 18, 39, 18, 970, 1, 3], [260, 11, 19, 14, 530, 0, 1], [180, 7, 18, 9, 350, 1, 2],
+  ]],
+];
+const papaJohnsPizzaConfigs = [
+  ["pizza-for-one-original", "Pizza for One Original Crust", 4],
+  ["small-original", "Small Original Crust", 6],
+  ["medium-original", "Medium Original Crust", 8],
+  ["large-original", "Large Original Crust", 8],
+  ["extra-large-original", "Extra Large Original Crust", 10],
+  ["epic-stuffed-crust", "Epic Stuffed Crust", 8],
+  ["thin-crust", "Thin Crust", 8],
+  ["gluten-free-crust", "Gluten-Free Crust", 8],
+];
+const papaJohnsPizzaFoods = papaJohnsPizzaRows.map(([id, name, rows]) => papaJohnsFood(
+  PAPA_JOHNS_PIZZA_SOURCE,
+  id,
+  name,
+  `Standard ${name}; choose a published size/crust slice or calculated whole pizza`,
+  null,
+  pizzaServingOptions(papaJohns, PAPA_JOHNS_PIZZA_SOURCE, PAPA_JOHNS_REFERENCE, id, papaJohnsPizzaConfigs.map(([configId, crust, slices], index) => [
+    configId, `${crust} ${name}`, slices, ph(...rows[index]),
+  ]))
+));
+
+const PAPA_JOHNS_PAPADIA_SOURCE = "https://www.papajohns.com/company/nutritional-details/papadias.html";
+const PAPA_JOHNS_SANDWICH_SOURCE = "https://www.papajohns.com/company/nutritional-details/sandwiches.html";
+const PAPA_JOHNS_WINGS_SOURCE = "https://www.papajohns.com/company/nutritional-details/wings.html";
+const PAPA_JOHNS_SIDES_SOURCE = "https://www.papajohns.com/company/nutritional-details/sides.html";
+const PAPA_JOHNS_DESSERT_SOURCE = "https://www.papajohns.com/company/nutritional-details/desserts.html";
+const PAPA_JOHNS_DIPS_SOURCE = "https://www.papajohns.com/company/nutritional-details/dipping-sauces.html";
+const PAPA_JOHNS_EXTRAS_SOURCE = "https://www.papajohns.com/company/nutritional-details/extras.html";
+const papaJohnsFlatRows = [
+  [PAPA_JOHNS_PAPADIA_SOURCE, "philly-cheesesteak-papadia", "Philly Cheesesteak Papadia", "1 Papadia with garlic dipping sauce included", [810, 40, 80, 35, 2090, 4, 11]],
+  [PAPA_JOHNS_PAPADIA_SOURCE, "grilled-bbq-chicken-bacon-papadia", "Grilled BBQ Chicken Bacon Papadia", "1 Papadia with BBQ dipping sauce included", [840, 60, 85, 28, 2410, 4, 26]],
+  [PAPA_JOHNS_PAPADIA_SOURCE, "grilled-buffalo-chicken-papadia", "Grilled Buffalo Chicken Papadia", "1 Papadia with ranch dipping sauce included", [920, 63, 80, 39, 2860, 4, 9]],
+  [PAPA_JOHNS_PAPADIA_SOURCE, "meatball-pepperoni-papadia", "Meatball Pepperoni Papadia", "1 Papadia with pizza dipping sauce included", [940, 42, 79, 49, 2390, 4, 8]],
+  [PAPA_JOHNS_PAPADIA_SOURCE, "italian-papadia", "Italian Papadia", "1 Papadia with pizza dipping sauce included", [940, 38, 76, 53, 2670, 4, 8]],
+  [PAPA_JOHNS_SANDWICH_SOURCE, "philly-cheesesteak-sandwich", "Philly Cheesesteak Sandwich", "1 sandwich", [790, 39, 73, 37, 2500, 1, 8]],
+  [PAPA_JOHNS_SANDWICH_SOURCE, "italian-chicken-bacon-ranch-sandwich", "Italian Chicken Bacon Ranch Sandwich", "1 sandwich; unpublished fiber remains unknown", [780, 52, 71, 34, 2770, null, 7]],
+  [PAPA_JOHNS_SANDWICH_SOURCE, "steak-mushroom-sandwich", "Steak & Mushroom Sandwich", "1 sandwich", [820, 41, 74, 41, 2690, 0, 8]],
+  [PAPA_JOHNS_SIDES_SOURCE, "cheesy-garlic-bread", "Cheesy Garlic Bread", "1 of 6 pieces; pizza dipping sauce excluded and loggable separately", [140, 6, 12, 8, 460, 0, 1]],
+  [PAPA_JOHNS_SIDES_SOURCE, "garlic-knots", "Garlic Knots", "1 knot from an 8-piece order; pizza dipping sauce excluded", [110, 2, 14, 4.5, 260, 0, 1]],
+  [PAPA_JOHNS_DESSERT_SOURCE, "cinnamon-pullaparts", "Cinnamon Pullaparts", "1 complete tray", [1960, 19, 264, 94, 1660, 8, 150]],
+  [PAPA_JOHNS_EXTRAS_SOURCE, "parmesan-cheese-packet", "Parmesan Cheese Packet", "1 packet", [15, 1, 0, 1, 35, 0, 0]],
+  [PAPA_JOHNS_EXTRAS_SOURCE, "crushed-red-pepper-packet", "Crushed Red Pepper Packet", "1 packet", [0, 0, 0, 0, 0, 0, 0]],
+  [PAPA_JOHNS_EXTRAS_SOURCE, "special-seasoning-packet", "Special Seasoning Packet", "1 packet", [5, 0, 1, 0, 420, 0, 0]],
+  [PAPA_JOHNS_EXTRAS_SOURCE, "pepperoncini", "Pepperoncini", "10 g serving", [0, 0, 0, 0, 140, 0, 4]],
+  [PAPA_JOHNS_EXTRAS_SOURCE, "anchovies", "Anchovies", "14 g serving", [30, 4, 0, 1.5, 750, 0, 0]],
+  [PAPA_JOHNS_EXTRAS_SOURCE, "banana-peppers", "Banana Peppers", "14 g serving", [5, 0, 1, 0, 200, 0, 0]],
+  [PAPA_JOHNS_EXTRAS_SOURCE, "jalapeno-peppers", "Jalapeño Peppers", "14 g serving", [5, 0, 1, 0, 105, 0, 0]],
+];
+const papaJohnsSideRows = [
+  ["bacon-cheesy-burger-papa-bites", "Bacon Cheesy Burger Papa Bites", 8, [100, 4, 10, 5, 290, 0, 1]],
+  ["calzones-papa-bites", "Calzones Papa Bites", 8, [110, 4, 10, 6, 280, 0, 1]],
+  ["chicken-parmesan-papa-bites", "Chicken Parmesan Papa Bites", 8, [110, 6, 10, 4.5, 280, 0, 1]],
+  ["jalapeno-papa-bites", "Jalapeño Papa Bites", 8, [80, 3, 10, 3, 220, 0, 1]],
+  ["oreo-cookie-papa-bites", "OREO Cookie Papa Bites", 8, [80, 2, 13, 2, 110, 0, 4], PAPA_JOHNS_DESSERT_SOURCE],
+  ["garlic-knots-order", "Garlic Knots Order", 8, [110, 2, 14, 4.5, 260, 0, 1]],
+];
+const papaJohnsStickRows = [
+  ["cheesesticks", "Cheesesticks", [["10-inch", "1 stick from 10-inch, 14-stick order", 14, [90, 3, 10, 4, 210, 0, 1]], ["12-inch", "1 stick from 12-inch, 16-stick order", 16, [110, 4, 13, 5, 260, 1, 1]]]],
+  ["bacon-cheesesticks", "Bacon Cheesesticks", [["10-inch", "1 stick from 10-inch, 14-stick order", 14, [110, 4, 11, 5, 260, 0, 1]], ["12-inch", "1 stick from 12-inch, 16-stick order", 16, [130, 5, 13, 6, 330, 1, 1]]]],
+  ["tuscan-six-cheese-cheesesticks", "Tuscan 6-Cheese Cheesesticks", [["10-inch", "1 stick from 10-inch, 14-stick order", 14, [110, 4, 11, 5, 250, 0, 1]], ["12-inch", "1 stick from 12-inch, 16-stick order", 16, [130, 5, 13, 6, 310, 1, 1]]]],
+  ["breadsticks", "Breadsticks", [["12-inch", "1 stick from 12-inch, 8-stick order", 8, [130, 4, 24, 2, 240, 1, 2]], ["14-inch", "1 stick from 14-inch, 10-stick order", 10, [150, 4, 27, 2, 270, 1, 2]]]],
+  ["garlic-parmesan-breadsticks", "Garlic Parmesan Breadsticks", [["12-inch", "1 stick from 12-inch, 8-stick order", 8, [160, 4, 24, 5, 340, 1, 2]], ["14-inch", "1 stick from 14-inch, 10-stick order", 10, [170, 4, 27, 5, 360, 1, 2]]]],
+];
+const papaJohnsDessertRows = [
+  ["salted-caramel-blondie", "Salted Caramel Blondie", 8, [200, 2, 26, 10, 170, null, 15]],
+  ["chocolate-chip-cookie", "Chocolate Chip Cookie", 8, [190, 2, 26, 9, 105, 1, 18]],
+  ["double-chocolate-chip-brownie", "Double Chocolate Chip Brownie", 9, [240, 2, 34, 12, 70, 1, 23]],
+];
+const papaJohnsDipRows = [
+  ["cheesy-burger-sauce", "Cheesy Burger Sauce", [160, 0, 4, 16, 240, 0, 3]],
+  ["doritos-cool-ranch-sauce", "Doritos Cool Ranch Sauce", [180, 1, 5, 18, 560, null, 1]],
+  ["special-zesty-sauce", "Special Zesty Sauce", [150, 0, 0, 17, 310, 0, 0]],
+  ["special-garlic-sauce", "Special Garlic Sauce", [140, 0, 2, null, 350, 0, 1]],
+  ["pizza-sauce", "Pizza Dipping Sauce", [20, 0, 3, 1, 230, 0, 1]],
+  ["cheese-sauce", "Cheese Sauce", [40, 1, 2, 3.5, 160, 0, 0]],
+  ["honey-mustard-sauce", "Honey Mustard Sauce", [150, 0, 5, 15, 120, 0, 4]],
+  ["bbq-sauce", "BBQ Sauce", [45, 0, 11, 0, 240, 0, 10]],
+  ["buffalo-sauce", "Buffalo Sauce", [15, 0, 3, 0.5, 900, 1, 2]],
+  ["ranch-sauce", "Ranch Sauce", [100, 1, 2, 10, 240, 0, 1]],
+  ["blue-cheese-sauce", "Blue Cheese Sauce", [160, 1, 1, 16, 250, 0, 1]],
+  ["cream-cheese-icing", "Cream Cheese Icing", [150, 1, 32, 2.5, 85, 0, 31]],
+  ["rootin-tootin-ranch", "Rootin' Tootin' Ranch", [100, 0, 2, 10, 240, null, 1]],
+];
+const papaJohnsWingRows = [
+  ["unsauced", "Unsauced", [[10, [590, 49, 41, 26, 1930, 2, 1]], [15, [890, 74, 62, 38, 2900, 2, 2]], [30, [1910, 159, 133, 83, 6240, 5, 3]]], [[8, [810, 66, 4, 57, 1460, 0, 0]], [16, [1620, 133, 8, 113, 2920, 0, 1]], [24, [2430, 199, 12, 170, 4380, 0, 1]], [32, [3240, 265, 16, 226, 5830, 0, 1]], [50, [5060, 415, 25, 353, 9120, 0, 2]]]],
+  ["buffalo", "Buffalo", [[10, [630, 50, 44, 29, 2840, 2, 3]], [15, [1110, 87, 77, 50, 4930, 3, 5]], [30, [1890, 149, 132, 85, 8520, 1, 8]]], [[8, [840, 67, 8, 58, 2920, 1, 3]], [16, [1670, 133, 16, 115, 5840, 2, 6]], [24, [2510, 200, 24, 173, 8770, 3, 9]], [32, [3340, 267, 33, 231, 11690, 4, 12]], [50, [5220, 417, 51, 360, 18260, 6, 18]]]],
+  ["bbq", "BBQ", [[10, [640, 49, 54, 26, 2190, 1, 27]], [15, [1130, 85, 99, 44, 2890, 3, 59]], [30, [1920, 148, 160, 77, 6530, 5, 78]]], [[8, [880, 67, 20, 57, 1940, 1, 14]], [16, [1750, 134, 40, 114, 3880, 1, 28]], [24, [2630, 200, 60, 170, 5830, 2, 43]], [32, [3500, 267, 80, 227, 7770, 2, 57]], [50, [5470, 418, 125, 355, 12140, 4, 89]]]],
+  ["garlic-parmesan", "Garlic Parmesan", [[10, [680, 50, 42, 35, 2250, 2, 1]], [15, [1070, 76, 63, 58, 3550, 2, 2]], [30, [2170, 151, 126, 119, 7230, 5, 3]]], [[8, [1040, 68, 6, 81, 2290, 0, 0]], [16, [2080, 137, 11, 162, 4580, 1, 1]], [24, [3120, 205, 17, 243, 6870, 1, 1]], [32, [4160, 273, 23, 324, 9160, 1, 1]], [50, [6500, 427, 35, 507, 14310, 2, 2]]]],
+  ["honey-chipotle", "Honey Chipotle", [[10, [630, 49, 52, 26, 2100, 2, 11]], [15, [990, 74, 86, 38, 3270, 2, 24]], [30, [1940, 148, 164, 77, 6410, 5, 40]]], [[8, [900, 67, 27, 57, 1810, 1, 21]], [16, [1800, 133, 55, 113, 3620, 1, 42]], [24, [2710, 200, 82, 170, 5430, 2, 64]], [32, [3610, 267, 109, 227, 7240, 2, 85]], [50, [5640, 417, 171, 354, 11320, 4, 132]]]],
+  ["hot-lemon-pepper", "Hot Lemon Pepper", [[10, [600, 47, 43, 27, 2830, 2, 3]], [15, [950, 75, 68, 43, 4580, 2, 4]], [30, [1810, 142, 128, 82, 8540, 5, 8]]], []],
+];
+const papaJohnsFoods = [
+  ...papaJohnsPizzaFoods,
+  ...papaJohnsFlatRows.map(([sourceUrl, id, name, description, values]) => papaJohnsFood(sourceUrl, id, name, description, ph(...values))),
+  ...papaJohnsSideRows.map(([id, name, count, values, sourceUrl = PAPA_JOHNS_SIDES_SOURCE]) => {
+    const unit = ph(...values);
+    return papaJohnsFood(sourceUrl, id, name, `Choose one published piece or a calculated complete ${count}-piece order; separately served dipping sauce is excluded`, null, [
+      papaJohnsOption(sourceUrl, `${id}:piece`, `1 ${name.replace(/ Papa Bites| Order/, "").toLowerCase()} piece`, unit),
+      papaJohnsOption(sourceUrl, `${id}:order`, `Complete ${count}-piece order; calculated from the published per-piece serving`, scalePublished(unit, count), count),
+    ]);
+  }),
+  ...papaJohnsStickRows.map(([id, name, sizes]) => papaJohnsFood(PAPA_JOHNS_SIDES_SOURCE, id, name, "Choose a published per-stick size or a calculated complete order", null, sizes.flatMap(([sizeId, description, count, values]) => {
+    const unit = ph(...values);
+    return [
+      papaJohnsOption(PAPA_JOHNS_SIDES_SOURCE, `${id}:${sizeId}:stick`, description, unit),
+      papaJohnsOption(PAPA_JOHNS_SIDES_SOURCE, `${id}:${sizeId}:order`, `Complete ${count}-stick ${sizeId} order; calculated from the published per-stick serving`, scalePublished(unit, count), count),
+    ];
+  }))),
+  ...papaJohnsDessertRows.map(([id, name, count, values]) => {
+    const unit = ph(...values);
+    return papaJohnsFood(PAPA_JOHNS_DESSERT_SOURCE, id, name, "Choose one published piece or the calculated complete order", null, [
+      papaJohnsOption(PAPA_JOHNS_DESSERT_SOURCE, `${id}:piece`, `1 piece (${count} pieces per order)`, unit),
+      papaJohnsOption(PAPA_JOHNS_DESSERT_SOURCE, `${id}:order`, `Complete ${count}-piece order; calculated from the published per-piece serving`, scalePublished(unit, count), count),
+    ]);
+  }),
+  ...papaJohnsDipRows.map(([id, name, values]) => papaJohnsFood(PAPA_JOHNS_DIPS_SOURCE, id, name, "1 separately listed dipping cup", ph(...values))),
+  ...papaJohnsWingRows.map(([id, flavor, boneless, boneIn]) => papaJohnsFood(PAPA_JOHNS_WINGS_SOURCE, `${id}-wings`, `${flavor} Wings`, "Named toss sauce is included; separately selected dipping cup is excluded and loggable separately", null, [
+    ...boneless.map(([count, values]) => papaJohnsOption(PAPA_JOHNS_WINGS_SOURCE, `${id}-wings:boneless-${count}`, `${count} boneless wings with ${flavor} flavor included`, ph(...values), count)),
+    ...boneIn.map(([count, values]) => papaJohnsOption(PAPA_JOHNS_WINGS_SOURCE, `${id}-wings:bone-in-${count}`, `${count} bone-in wings with ${flavor} flavor included`, ph(...values), count)),
+  ], [`Papa Johns ${flavor} boneless wings`, `Papa Johns ${flavor} bone in wings`])),
+];
+
 const whataburger = { id: "whataburger", name: "Whataburger" };
 const WHATABURGER_REFERENCE = "Whataburger official menu/app; default recipe nutrition displayed for the current national menu";
 const whataburgerFood = (id, name, description, nutrients, servingOptions) => officialFood(whataburger, id, name, description, nutrients, WHATABURGER_SOURCE, WHATABURGER_REFERENCE, servingOptions);
@@ -3654,6 +4129,9 @@ const restaurantFoods = [
   ...dairyQueenFoods,
   ...arbysFoods,
   ...jackInTheBoxFoods,
+  ...dominosFoods,
+  ...pizzaHutFoods,
+  ...papaJohnsFoods,
   ...sonicFoods,
   ...braumsFoods,
   ...tacoBellFoods,

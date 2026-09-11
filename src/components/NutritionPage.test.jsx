@@ -1210,6 +1210,47 @@ test("selects, scales, and saves a published Dairy Queen Blizzard size", () => {
   expect(props.saveNutritionEntry.mock.calls[0][0].addedSugar).toBeNull();
 });
 
+test("selects a square-cut pizza slice, logs two slices, and preserves unknown nutrients", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "pizza hut cheese pizza" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Pizza Hut.*Cheese Pizza/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  fireEvent.change(sizeSelect, {
+    target: { value: "restaurant:pizza-hut:cheese-pizza:medium-chicago-tavern:slice" },
+  });
+  expect(sizeSelect).toHaveDisplayValue(/1 slice.*Medium Chicago Tavern square-cut.*16 slices per pizza/i);
+  expect(form.getByLabelText("Calories")).toHaveValue(80);
+  expect(form.getByLabelText("Fiber (g)")).toHaveValue(null);
+
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "2" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(160);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Cheese Pizza",
+    calories: 160,
+    protein: 8,
+    carbohydrates: 16,
+    fat: 7,
+    sodium: 400,
+    fiber: null,
+    portion: {
+      amount: 2,
+      basis: { description: expect.stringContaining("16 slices per pizza") },
+    },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "pizza-hut",
+      restaurantName: "Pizza Hut",
+      sourceId: "pizza-hut:cheese-pizza:medium-chicago-tavern:slice",
+    },
+  });
+});
+
 test("normal Sonic and Braum's items log with chain identity and known sodium", () => {
   const props = renderNutritionPage();
 

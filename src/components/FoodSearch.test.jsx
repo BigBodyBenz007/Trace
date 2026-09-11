@@ -257,6 +257,39 @@ test("discovers and selects Dairy Queen, Arby's, and Jack in the Box records", (
   }));
 });
 
+test("discovers and selects pizza-chain records with ordinary brand spellings", () => {
+  const onSelectFood = renderFoodSearch();
+
+  searchFor("domino's ultimate pepperoni");
+  let result = screen.getByRole("button", { name: /Domino's.*Ultimate Pepperoni/i });
+  expect(result).toHaveTextContent("1 slice");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:dominos:ultimate-pepperoni",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:dominos:ultimate-pepperoni:large-hand-tossed:whole" }),
+    ]),
+  }));
+
+  searchFor("pizzahut meat lovers pizza");
+  result = screen.getByRole("button", { name: /Pizza Hut.*Meat Lover's Pizza/i });
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:pizza-hut:meat-lovers-pizza",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:pizza-hut:meat-lovers-pizza:medium-chicago-tavern:slice" }),
+    ]),
+  }));
+
+  searchFor("papa johns philly cheesesteak papadia");
+  result = screen.getByRole("button", { name: /Papa Johns.*Philly Cheesesteak Papadia/i });
+  expect(result).toHaveTextContent("garlic dipping sauce included");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:papa-johns:philly-cheesesteak-papadia",
+  }));
+});
+
 test("shows branded-drink source, package, caffeine, and unknown nutrient details", () => {
   const onSelectFood = renderFoodSearch();
   searchFor("monster ultra zero");

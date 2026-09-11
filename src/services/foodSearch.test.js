@@ -373,16 +373,19 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     "dairy-queen": /^https:\/\/www\.dairyqueen\.com\/en-us\/nutrition\/food-treats\/$/,
     arbys: /^https:\/\/assets\.ctfassets\.net\/o19mhvm9a2cm\/.+\/Arbys_Nutritional_and_Allergen_FEB_2025\.pdf$/,
     "jack-in-the-box": /^https:\/\/assets\.ctfassets\.net\/5hs630wuugof\/.+\/Nutrition_Facts_2025\.PDF$/,
+    dominos: /^https:\/\/www\.dominos\.com\/cms\/assets\/7d2e19df-e360-41eb-a367-5ab794ab2ebc$/,
+    "pizza-hut": /^https:\/\/www\.nutritionix\.com\/pizza-hut\/menu\/premium$/,
+    "papa-johns": /^https:\/\/www\.papajohns\.com\/company\/nutritional-details\//,
     "taco-bell": /^https:\/\/www\.tacobell\.com\/food\//,
     "chick-fil-a": /^https:\/\/www\.chick-fil-a\.com\/nutrition-allergens$/,
     whataburger: /^https:\/\/wbimageserver\.whataburger\.com\/Nutrition\.pdf$/,
   };
-  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "dairy-queen", "arbys", "jack-in-the-box", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
+  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "dairy-queen", "arbys", "jack-in-the-box", "dominos", "pizza-hut", "papa-johns", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
     chainId,
     expansion.filter((food) => food.restaurant.id === chainId).length,
   ]));
 
-  expect(expansion).toHaveLength(1469);
+  expect(expansion).toHaveLength(1641);
   expect(countByChain).toEqual({
     mcdonalds: 100,
     sonic: 102,
@@ -398,6 +401,9 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     "dairy-queen": 91,
     arbys: 95,
     "jack-in-the-box": 92,
+    dominos: 54,
+    "pizza-hut": 59,
+    "papa-johns": 59,
     "taco-bell": 95,
     "chick-fil-a": 60,
     whataburger: 112,
@@ -585,6 +591,67 @@ test("finds Dairy Queen, Arby's, and Jack in the Box foods across standard menu 
   expect(searchFoodCatalog("dairy queen chocolate shake")[0].id).toBe("restaurant:dairy-queen:chocolate-shake");
   expect(searchFoodCatalog("arbys coke zero")[0].id).toBe("restaurant:arbys:coca-cola-zero-sugar");
   expect(searchFoodCatalog("coke zero")[0].id).toBe("beverage:coca-cola:zero-sugar-12oz");
+});
+
+test("finds Domino's, Pizza Hut, and Papa Johns foods across pizza and side categories", () => {
+  expect(searchFoodCatalog("Domino's", [], restaurantFoods.length)).toHaveLength(54);
+  expect(searchFoodCatalog("Pizza Hut", [], restaurantFoods.length)).toHaveLength(59);
+  expect(searchFoodCatalog("Papa Johns", [], restaurantFoods.length)).toHaveLength(59);
+
+  const expectedFirstResults = [
+    ["dominos ultimate pepperoni", "restaurant:dominos:ultimate-pepperoni"],
+    ["domino's bacon jalapeno stuffed cheesy bread", "restaurant:dominos:stuffed-cheesy-bread-bacon-jalapeno"],
+    ["dominos chicken alfredo pasta", "restaurant:dominos:chicken-alfredo-pasta"],
+    ["pizza hut meat lovers pizza", "restaurant:pizza-hut:meat-lovers-pizza"],
+    ["pizzahut breadsticks", "restaurant:pizza-hut:breadsticks"],
+    ["pizza hut garlic parmesan wings", "restaurant:pizza-hut:garlic-parmesan-wings"],
+    ["papa johns pepperoni pizza", "restaurant:papa-johns:pepperoni-pizza"],
+    ["papa john's philly cheesesteak papadia", "restaurant:papa-johns:philly-cheesesteak-papadia"],
+    ["papajohns garlic knots", "restaurant:papa-johns:garlic-knots"],
+  ];
+  expect(expectedFirstResults.map(([query]) => [query, searchFoodCatalog(query)[0]?.id])).toEqual(expectedFirstResults);
+
+  expect(searchFoodCatalog("pepsi")[0].id).toBe("beverage:pepsi:pepsi-20oz");
+  expect(searchFoodCatalog("pizza hut pepsi")[0].id).toBe("restaurant:pizza-hut:pepsi");
+});
+
+test("keeps pizza slice, square-cut, and whole-pizza servings explicit and independently scalable", () => {
+  const dominosCheese = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:dominos:cheese-pizza"));
+  const pizzaHutCheese = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:pizza-hut:cheese-pizza"));
+  const papaJohnsPepperoni = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:papa-johns:pepperoni-pizza"));
+
+  const dominosSlice = dominosCheese.servingOptions.find((option) => option.id.endsWith("medium-thin:slice"));
+  const dominosWhole = dominosCheese.servingOptions.find((option) => option.id.endsWith("medium-thin:whole"));
+  expect(dominosSlice).toMatchObject({
+    serving: { amount: 1, description: expect.stringContaining("1 slice — 12\" Medium Crunchy Thin Cheese (4 slices per pizza; calculated configuration)") },
+    nutrients: { calories: 315, protein: 13, carbohydrates: 26, fat: 17, sodium: 630, fiber: 2, totalSugar: 2, addedSugar: 1 },
+  });
+  expect(dominosWhole).toMatchObject({
+    serving: { amount: 1, description: expect.stringContaining("Whole 12\" Medium Crunchy Thin Cheese pizza (4 slices") },
+    nutrients: { calories: 1260, protein: 52, carbohydrates: 104, fat: 68, sodium: 2520, fiber: 8, totalSugar: 8, addedSugar: 4 },
+  });
+  expect(scaleNutrition(dominosSlice.nutrients, 2).calories).toBe(630);
+
+  const tavernSlice = pizzaHutCheese.servingOptions.find((option) => option.id.endsWith("medium-chicago-tavern:slice"));
+  const tavernWhole = pizzaHutCheese.servingOptions.find((option) => option.id.endsWith("medium-chicago-tavern:whole"));
+  expect(tavernSlice.serving.description).toContain("square-cut");
+  expect(tavernSlice.serving.description).toContain("16 slices per pizza");
+  expect(tavernWhole.nutrients).toMatchObject({ calories: 1280, protein: 64, carbohydrates: 128, fat: 56, sodium: 3200, fiber: null });
+  expect(scaleNutrition(tavernSlice.nutrients, 2)).toMatchObject({ calories: 160, fiber: null });
+
+  const papaSmallSlice = papaJohnsPepperoni.servingOptions.find((option) => option.id.endsWith("small-original:slice"));
+  const papaSmallWhole = papaJohnsPepperoni.servingOptions.find((option) => option.id.endsWith("small-original:whole"));
+  expect(papaSmallSlice.serving.description).toContain("6 slices per pizza");
+  expect(papaSmallWhole.nutrients).toMatchObject({ calories: 1260, protein: 48, carbohydrates: 150, fat: 48, sodium: 3180 });
+
+  [dominosSlice, dominosWhole, tavernSlice, tavernWhole, papaSmallSlice, papaSmallWhole].forEach((option) => {
+    expect(option.provenance.verification).toMatchObject({
+      sourceType: "official-restaurant",
+      accessedAt: "2026-09-10",
+      sourceUrl: expect.stringMatching(/^https:\/\//),
+      sourceReference: expect.any(String),
+    });
+  });
 });
 
 test("preserves published sizes and unknown nutrients across the three-chain expansion", () => {
