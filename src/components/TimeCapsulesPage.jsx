@@ -11,6 +11,8 @@ import {
   timeCapsuleState,
 } from "../services/timeCapsule";
 
+const AUDIO_FILE_ACCEPT = ".mp3,.m4a,.aac,.wav,.oga,.ogg,.weba,audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/ogg,audio/webm";
+
 function CapsuleMedia({ item, loader }) {
   const loaded = useStoredPhoto(item, { loader });
   const elementRef = useRef(null);
@@ -169,11 +171,11 @@ export default function TimeCapsulesPage({
         <div className="trace-capsule-actions">
           <label>Choose photos<input type="file" accept="image/*" multiple disabled={busy} onChange={(event) => selectFiles("photo", event)} /></label>
           <label>Take photo<input type="file" accept="image/*" capture="environment" disabled={busy} onChange={(event) => selectFiles("photo", event)} /></label>
-          <label>Choose audio<input type="file" accept="audio/*" multiple disabled={busy} onChange={(event) => selectFiles("audio", event)} /></label>
-          <label>Record audio<input type="file" accept="audio/*" capture="user" disabled={busy} onChange={(event) => selectFiles("audio", event)} /></label>
+          <label>Choose audio file<input type="file" accept={AUDIO_FILE_ACCEPT} multiple disabled={busy} onChange={(event) => selectFiles("audio", event)} /></label>
           <label>Choose video<input type="file" accept="video/*" disabled={busy} onChange={(event) => selectFiles("video", event)} /></label>
           <label>Record video<input type="file" accept="video/*" capture="environment" disabled={busy} onChange={(event) => selectFiles("video", event)} /></label>
         </div>
+        <p>On iPhone, save or share a Voice Memo to Files first, then choose it here.</p>
         {media.length > 0 && <ul aria-label="Draft attachments">{media.map((item) => <li key={item.id}>{item.kind}: {item.name} ({Math.ceil(item.bytes / 1024)} KiB) <button type="button" disabled={busy} onClick={() => remove(item)}>Remove</button></li>)}</ul>}
         <div className="trace-capsule-actions"><button type="button" disabled={busy} onClick={seal}>Seal Time Capsule</button><button type="button" disabled={busy} onClick={discard}>Discard draft</button></div>
       </section>

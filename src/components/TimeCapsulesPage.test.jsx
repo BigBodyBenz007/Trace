@@ -1,7 +1,13 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { useState } from "react";
+import { prepareCapsuleMediaFiles } from "../services/capsuleMedia";
 import TimeCapsuleReadyOverlay from "./TimeCapsuleReadyOverlay";
 import TimeCapsulesPage from "./TimeCapsulesPage";
+
+jest.mock("../services/capsuleMedia", () => ({
+  ...jest.requireActual("../services/capsuleMedia"),
+  prepareCapsuleMediaFiles: jest.fn(),
+}));
 
 function capsule(overrides = {}) {
   return {
@@ -113,6 +119,48 @@ test("restores every draft field and attachment reference and preserves it on Ba
   fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
   expect(onPersistDraft).toHaveBeenLastCalledWith(draft.form, draft.media);
   expect(onBack).toHaveBeenCalledTimes(1);
+});
+
+test("chooses audio files without exposing a capture control or affecting photo and video controls", async () => {
+  const preparedAudio = {
+    id: "voice-memo",
+    kind: "audio",
+    name: "Voice Memo.m4a",
+    mimeType: "audio/mp4",
+    bytes: 4,
+    blob: new Blob(["memo"], { type: "audio/mp4" }),
+  };
+  const onStageMedia = jest.fn().mockResolvedValue([preparedAudio]);
+  prepareCapsuleMediaFiles.mockResolvedValueOnce([preparedAudio]);
+  render(<TimeCapsulesPage {...baseProps} onStageMedia={onStageMedia} />);
+  fireEvent.click(screen.getByRole("button", { name: "Create Time Capsule" }));
+
+  const audioInput = screen.getByLabelText("Choose audio file");
+  expect(audioInput).toHaveAttribute("type", "file");
+  expect(audioInput).not.toHaveAttribute("capture");
+  expect(audioInput).toHaveAttribute("multiple");
+  expect(audioInput.getAttribute("accept")).toContain(".m4a");
+  expect(audioInput.getAttribute("accept")).toContain("audio/mp4");
+  expect(screen.queryByLabelText(/record audio/i)).not.toBeInTheDocument();
+
+  expect(screen.getByLabelText("Choose photos")).not.toHaveAttribute("capture");
+  expect(screen.getByLabelText("Take photo")).toHaveAttribute("capture", "environment");
+  expect(screen.getByLabelText("Choose video")).not.toHaveAttribute("capture");
+  expect(screen.getByLabelText("Record video")).toHaveAttribute("capture", "environment");
+
+  const voiceMemo = new File(["memo"], "Voice Memo.m4a", { type: "audio/mp4" });
+  await act(async () => {
+    fireEvent.change(audioInput, { target: { files: [voiceMemo] } });
+  });
+
+  expect(prepareCapsuleMediaFiles).toHaveBeenCalledWith([voiceMemo], []);
+  expect(onStageMedia).toHaveBeenCalledWith([preparedAudio], {
+    name: "",
+    text: "",
+    openOn: "2027-09-11",
+  }, []);
+  expect(screen.getByRole("status")).toHaveTextContent("1 audio added.");
+  expect(screen.getByRole("list", { name: "Draft attachments" })).toHaveTextContent("Voice Memo.m4a");
 });
 
 test("paginates the capsule archive in batches of ten", () => {
