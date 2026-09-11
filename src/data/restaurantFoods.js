@@ -4054,6 +4054,573 @@ const marcosFoods = [
   ...marcosDrinkRows.map(([id, name, description, values]) => marcosFood(id, name, description, menuPublished(...values), undefined, [`Marco's Pizza ${name}`])),
 ];
 
+const chilis = { id: "chilis", name: "Chili's" };
+const CHILIS_SOURCE = "https://cdn.builder.io/o/assets%2F4967176e01a141828a5fad701f6faa79%2F146cf251ade9498a8257cc6d9f38e3b4?alt=media&apiKey=4967176e01a141828a5fad701f6faa79&token=c7f3a4ea-6aaf-4aa5-be1e-bee4ba930ede";
+const CHILIS_MENU_SOURCE = "https://www.chilis.com/menu";
+const CHILIS_REFERENCE = "Chili's official U.S. Nutrition Guide, effective June 24, 2025; values are for the named serving as served unless the description states an exclusion.";
+const chilisFood = (id, name, description, nutrients, servingOptions, aliases, sourceUrl = CHILIS_SOURCE, sourceReference = CHILIS_REFERENCE) => menuFood(
+  chilis,
+  sourceUrl,
+  sourceReference,
+  id,
+  name,
+  description,
+  nutrients,
+  servingOptions,
+  [`Chilis ${name}`, ...(servingOptions || []).map((option) => `Chilis ${name} ${option.serving.description}`), ...(aliases || [])]
+);
+const chilisOption = (id, description, nutrients, amount = 1) => expansionMenuOption(
+  chilis, CHILIS_SOURCE, CHILIS_REFERENCE, id, description, nutrients, amount
+);
+const chilisNutrients = ([calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => menuPublished(
+  calories, protein, carbohydrates, fat, sodium, fiber, totalSugar
+);
+const chilisRows = [
+  ["southwestern-eggrolls", "Southwestern Eggrolls", "1 full appetizer order; avocado-ranch dipping sauce is included in the published as-served value", [1020, 36, 108, 50, 2810, 11, 11]],
+  ["white-skillet-queso-and-chips", "White Skillet Queso & Chips", "1 full appetizer order with chips", [1450, 34, 128, 89, 3310, 9, 12]],
+  ["skillet-beef-queso-and-chips", "Skillet Beef Queso & Chips", "1 full appetizer order with chips", [1340, 35, 129, 77, 4560, 10, 13]],
+  ["texas-cheese-fries", "Texas Cheese Fries", "1 full appetizer order without added chili", [1800, 77, 99, 122, 4130, 8, 4]],
+  ["big-mouth-bites", "Big Mouth Bites", "1 order of four mini burgers; side fries excluded", [1210, 60, 78, 74, 2610, 3, 19]],
+  ["alexs-santa-fe-burger", "Alex's Santa Fe Burger", "1 burger; side fries excluded", [930, 49, 48, 62, 1290, 4, 11]],
+  ["bacon-cheeseburger", "Bacon Cheeseburger", "1 burger; side fries excluded", [1110, 59, 45, 78, 1780, 1, 10]],
+  ["bacon-rancher-burger", "Bacon Rancher Burger", "1 burger; side fries excluded", [1700, 101, 49, 123, 2860, 2, 13]],
+  ["mushroom-swiss-burger", "Mushroom Swiss Burger", "1 burger; side fries excluded", [1000, 51, 49, 68, 990, 3, 12]],
+  ["oldtimer-with-cheese", "Oldtimer with Cheese", "1 burger; side fries excluded", [850, 49, 45, 53, 1200, 2, 10]],
+  ["big-qp-burger", "The Big QP Burger", "1 burger; side fries excluded", [890, 51, 47, 56, 1680, 2, 12]],
+  ["big-smasher-burger", "Big Smasher Burger", "1 burger; side fries excluded", [950, 47, 49, 64, 1440, 2, 14]],
+  ["veggie-santa-fe-burger", "Veggie Santa Fe Burger", "1 burger; side fries excluded", [640, 28, 74, 31, 1410, 13, 14]],
+  ["cajun-pasta-grilled-chicken", "Cajun Pasta with Grilled Chicken", "1 complete pasta entree as served", [1160, 65, 110, 51, 3550, 8, 5]],
+  ["chicken-bacon-ranch-quesadillas", "Chicken Bacon Ranch Quesadillas", "1 full quesadilla entree as served", [1670, 70, 69, 125, 2950, 4, 10]],
+  ["brisket-quesadillas", "Brisket Quesadillas", "1 full quesadilla entree as served", [1600, 53, 85, 119, 2880, 4, 24]],
+  ["margarita-grilled-chicken", "Margarita Grilled Chicken", "1 complete Guiltless Grill entree as served, including published rice and beans", [660, 69, 61, 14, 2900, 9, 7]],
+  ["ancho-salmon", "Ancho Salmon", "1 complete Guiltless Grill entree as served, including published rice and broccoli", [620, 48, 40, 31, 1790, 5, 3]],
+  ["santa-fe-salad", "Santa Fe Grilled Chicken Salad", "1 salad as served with dressing", [540, 35, 24, 35, 1510, 6, 7]],
+  ["quesadilla-explosion-salad", "Quesadilla Explosion Salad with Grilled Chicken", "1 salad as served with dressing", [1160, 53, 67, 78, 1510, 6, 16]],
+  ["quesadilla-explosion-crispers-salad", "Quesadilla Explosion Salad with Chicken Crispers", "1 salad as served with dressing", [1420, 51, 86, 99, 2840, 7, 16]],
+  ["house-salad-no-dressing", "House Salad without Dressing", "1 side house salad; dressing excluded", [140, 6, 14, 7, 280, 2, 4]],
+  ["homestyle-fries", "Homestyle Fries", "1 full side order", [420, 6, 60, 17, 660, 5, 0]],
+  ["mexican-rice", "Mexican Rice", "1 side order", [160, 3, 27, 4.5, 480, 1, 1]],
+  ["steamed-broccoli", "Steamed Broccoli", "1 side order", [40, 3, 8, 0, 250, 4, 2]],
+  ["white-cheddar-mac-and-cheese", "White Cheddar Mac & Cheese", "1 side order", [260, 12, 19, 15, 930, 1, 4]],
+  ["molten-chocolate-cake", "Molten Chocolate Cake", "1 complete dessert", [1150, 12, 149, 58, 1020, 4, 105]],
+  ["peanut-butter-pie", "Peanut Butter Pie made with Reese's", "1 slice", [920, 13, 81, 65, 400, 6, 57]],
+  ["skillet-chocolate-chip-cookie", "Skillet Chocolate Chip Cookie", "1 complete skillet dessert", [1210, 15, 177, 50, 890, 5, 106]],
+  ["kids-cheeseburger-bites", "Kids Cheeseburger Bites", "1 kids' entree; side and beverage excluded", [450, 25, 35, 23, 720, 2, 8]],
+  ["kids-chicken-bites", "Kids Chicken Bites", "1 kids' entree; side and beverage excluded", [320, 27, 35, 8, 770, 2, 8]],
+  ["kids-crispy-crispers", "Kids Crispy Chicken Crispers", "1 kids' entree; side, sauce, and beverage excluded", [570, 24, 21, 43, 1620, 1, 2]],
+  ["kids-grilled-chicken-dippers", "Kids Grilled Chicken Dippers", "1 kids' entree; side, sauce, and beverage excluded", [280, 22, 3, 21, 770, 0, 2]],
+  ["kids-kraft-macaroni-and-cheese", "Kids Kraft Macaroni & Cheese", "1 kids' entree; side and beverage excluded", [310, 11, 44, 9, 830, 2, 10]],
+  ["kids-cheese-pizza", "Kids Cheese Pizza", "1 kids' pizza; side and beverage excluded", [500, 17, 34, 33, 760, 2, 3]],
+  ["ranch", "Ranch", "1 separately published 1.5 fl oz serving", [170, 1, 2, 18, 290, 0, 2]],
+  ["honey-mustard", "Honey Mustard", "1 separately published 1.5 fl oz serving", [200, 1, 10, 18, 330, 0, 10]],
+  ["buffalo-sauce", "Buffalo Sauce", "1 separately published 1.5 fl oz serving", [40, 0, 2, 3, 1590, 0, 1]],
+  ["honey-chipotle-sauce", "Honey-Chipotle Sauce", "1 separately published 1.5 fl oz serving", [140, 0, 35, 0, 500, 0, 26]],
+  ["house-bbq-sauce", "House BBQ Sauce", "1 separately published 1.5 fl oz serving", [140, 1, 35, 0, 560, 0, 32]],
+  ["nashville-hot-sauce", "Nashville Hot Sauce", "1 separately published 1.5 fl oz serving", [290, 2, 11, 27, 1270, 0, 3]],
+  ["sweet-chili-zing-sauce", "Sweet Chili Zing Sauce", "1 separately published 1.5 fl oz serving", [140, 1, 34, 0, 1120, 1, 31]],
+].map(([id, name, description, values]) => chilisFood(id, name, description, chilisNutrients(values)));
+
+const chilisSizedFoods = [
+  chilisFood("classic-sirloin", "Classic Sirloin", "Menu-listed steak weight; cooked weight is not inferred, and sides are excluded", null, [
+    chilisOption("classic-sirloin:6oz", "6 oz menu-listed Classic Sirloin; sides excluded", chilisNutrients([250, 34, 1, 12, 630, 0, 0])),
+    chilisOption("classic-sirloin:10oz", "10 oz menu-listed Classic Sirloin; sides excluded", chilisNutrients([390, 54, 2, 18, 950, 0, 1])),
+  ], ["Chilis 6 oz sirloin", "Chilis 10 oz sirloin"]),
+  chilisFood("guiltless-sirloin", "Guiltless Sirloin with Grilled Avocado", "Menu-listed steak weight; complete published Guiltless Grill configuration with avocado and sides", null, [
+    chilisOption("guiltless-sirloin:6oz", "6 oz menu-listed sirloin with grilled avocado and published sides", chilisNutrients([300, 38, 9, 13, 1010, 3, 2])),
+    chilisOption("guiltless-sirloin:10oz", "10 oz menu-listed sirloin with grilled avocado and published sides", chilisNutrients([450, 59, 9, 20, 1310, 3, 3])),
+  ]),
+  chilisFood("house-bbq-ribs", "House BBQ Ribs", "Ribs with House BBQ sauce; sides excluded", null, [
+    chilisOption("house-bbq-ribs:half-rack", "Half rack with House BBQ sauce; sides excluded", chilisNutrients([1130, 68, 54, 73, 1650, 1, 49])),
+    chilisOption("house-bbq-ribs:full-rack", "Full rack with House BBQ sauce; sides excluded", chilisNutrients([2160, 136, 81, 145, 2860, 2, 74])),
+  ]),
+  chilisFood("crispy-chicken-crispers-no-sauce", "Crispy Chicken Crispers without Sauce", "Plain Crispers; dipping sauce and sides excluded", null, [
+    chilisOption("crispy-chicken-crispers-no-sauce:4-piece", "4 Crispy Chicken Crispers; sauce and sides excluded", chilisNutrients([790, 45, 38, 51, 2650, 2, 1]), 4),
+    chilisOption("crispy-chicken-crispers-no-sauce:5-piece", "5 Crispy Chicken Crispers; sauce and sides excluded", chilisNutrients([990, 57, 47, 64, 3320, 3, 1]), 5),
+    chilisOption("crispy-chicken-crispers-no-sauce:6-piece", "6 Crispy Chicken Crispers; sauce and sides excluded", chilisNutrients([1190, 68, 57, 76, 3980, 3, 1]), 6),
+  ], ["Chilis chicken tenders"]),
+  chilisFood("plain-bone-in-wings", "Plain Bone-In Wings", "Plain bone-in wings; sauces, ranch, and sides excluded", null, [
+    chilisOption("plain-bone-in-wings:8-piece", "8 plain bone-in wings; sauces and ranch excluded", chilisNutrients([610, 72, 0, 36, 1130, 0, 0]), 8),
+    chilisOption("plain-bone-in-wings:12-piece", "12 plain bone-in wings; sauces and ranch excluded", chilisNutrients([910, 107, 0, 54, 1690, 0, 0]), 12),
+    chilisOption("plain-bone-in-wings:16-piece", "16 plain bone-in wings; sauces and ranch excluded", chilisNutrients([1220, 143, 0, 72, 2250, 0, 0]), 16),
+  ]),
+  chilisFood("lemon-pepper-bone-in-wings", "Lemon Pepper Bone-In Wings", "Lemon-pepper flavor is included; sauces, ranch, and sides excluded", null, [
+    chilisOption("lemon-pepper-bone-in-wings:8-piece", "8 lemon-pepper bone-in wings; ranch excluded", chilisNutrients([740, 72, 1, 50, 1820, 0, 0]), 8),
+    chilisOption("lemon-pepper-bone-in-wings:12-piece", "12 lemon-pepper bone-in wings; ranch excluded", chilisNutrients([1110, 108, 2, 75, 2730, 0, 1]), 12),
+    chilisOption("lemon-pepper-bone-in-wings:16-piece", "16 lemon-pepper bone-in wings; ranch excluded", chilisNutrients([1480, 144, 3, 100, 3640, 0, 1]), 16),
+  ]),
+  chilisFood("plain-boneless-wings", "Plain Boneless Wings", "Plain boneless wings; sauces, ranch, and sides excluded", null, [
+    chilisOption("plain-boneless-wings:8-piece", "8 plain boneless wings; sauces and ranch excluded", chilisNutrients([540, 34, 38, 28, 1200, 2, 0]), 8),
+    chilisOption("plain-boneless-wings:12-piece", "12 plain boneless wings; sauces and ranch excluded", chilisNutrients([820, 50, 57, 43, 1810, 3, 0]), 12),
+    chilisOption("plain-boneless-wings:16-piece", "16 plain boneless wings; sauces and ranch excluded", chilisNutrients([1090, 67, 76, 57, 2410, 4, 0]), 16),
+  ]),
+];
+
+const chilisCurrentPartialFoods = [
+  ["big-crispy-chicken-sandwich", "Big Crispy Chicken Sandwich", "1 current-menu sandwich; side excluded", 880],
+  ["buffalo-big-crispy-chicken-sandwich", "Buffalo Big Crispy Chicken Sandwich", "1 current-menu sandwich; side excluded", 710],
+  ["deluxe-big-crispy-chicken-sandwich", "Deluxe Big Crispy Chicken Sandwich", "1 current-menu sandwich; side excluded", 1050],
+  ["deluxe-grilled-chicken-sandwich", "Deluxe Grilled Chicken Sandwich", "1 current-menu sandwich; side excluded", 800],
+  ["honey-chipotle-big-crispy-chicken-sandwich", "Honey-Chipotle Big Crispy Chicken Sandwich", "1 current-menu sandwich; side excluded", 840],
+  ["nashville-hot-big-crispy-chicken-sandwich", "Nashville Hot Big Crispy Chicken Sandwich", "1 current-menu sandwich; side excluded", 950],
+  ["blackberry-iced-tea", "Blackberry Iced Tea", "1 current-menu restaurant serving; published volume and nutrients beyond calories are unavailable", 80],
+  ["mango-iced-tea", "Mango Iced Tea", "1 current-menu restaurant serving; published volume and nutrients beyond calories are unavailable", 80],
+  ["blackberry-lemonade", "Blackberry Lemonade", "1 current-menu restaurant serving; published volume and nutrients beyond calories are unavailable", 240],
+  ["watermelon-lemonade", "Watermelon Lemonade", "1 current-menu restaurant serving; published volume and nutrients beyond calories are unavailable", 270],
+].map(([id, name, description, calories]) => chilisFood(
+  id,
+  name,
+  description,
+  menuPublished(calories, null, null, null, null),
+  undefined,
+  undefined,
+  CHILIS_MENU_SOURCE,
+  "Chili's current official U.S. online menu; calories are published for the named item, while unavailable nutrients remain unknown."
+));
+const chilisFoods = [...chilisRows, ...chilisSizedFoods, ...chilisCurrentPartialFoods];
+
+const applebees = { id: "applebees", name: "Applebee's" };
+const APPLEBEES_SOURCE = "https://www.nutritionix.com/applebees/menu/premium";
+const APPLEBEES_REFERENCE = "Applebee's officially linked Nutritionix U.S. Interactive Nutrition Menu, last updated September 9, 2026; values represent the named standardized menu configuration.";
+const applebeesFood = (id, name, description, nutrients, servingOptions, aliases) => menuFood(
+  applebees,
+  APPLEBEES_SOURCE,
+  APPLEBEES_REFERENCE,
+  id,
+  name,
+  description,
+  nutrients,
+  servingOptions,
+  [`Applebees ${name}`, ...(servingOptions || []).map((option) => `Applebees ${name} ${option.serving.description}`), ...(aliases || [])]
+);
+const applebeesOption = (id, description, nutrients, amount = 1) => expansionMenuOption(
+  applebees, APPLEBEES_SOURCE, APPLEBEES_REFERENCE, id, description, nutrients, amount
+);
+const applebeesNutrients = ([calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => menuPublished(
+  calories, protein, carbohydrates, fat, sodium, fiber, totalSugar
+);
+const applebeesCategoryFoods = (rows, description) => rows.map(([id, name, values, aliases]) => applebeesFood(
+  id, name, description, applebeesNutrients(values), undefined, aliases
+));
+
+const applebeesAppetizerFoods = applebeesCategoryFoods([
+  ["bacon-cheeseburger-wonton-tacos", "Bacon Cheeseburger Wonton Tacos", [720, 33, 34, 51, 1820, 2, 7]],
+  ["boneless-wings-plain", "Boneless Wings without Flavor or Dipping Sauce", [660, 38, 54, 32, 1720, 4, null], ["Applebees plain boneless wings"]],
+  ["classic-bone-in-wings-plain", "Classic Bone-In Wings without Flavor or Dipping Sauce", [410, 56, 3, 20, 960, 2, null]],
+  ["brew-pub-loaded-waffle-fries", "Brew Pub Loaded Waffle Fries", [1570, 31, 94, 115, 3990, 8, 6]],
+  ["brew-pub-pretzels-beer-cheese", "Brew Pub Pretzels & Beer Cheese Dip", [1160, 34, 146, 49, 3540, 6, 17]],
+  ["chicken-quesadilla", "Chicken Quesadilla", [1170, 48, 74, 75, 2510, 5, 8]],
+  ["chicken-wonton-tacos", "Chicken Wonton Tacos", [590, 30, 58, 26, 1500, 3, 27]],
+  ["crispy-pickle-fries", "Crispy Pickle Fries", [720, 6, 52, 54, 3620, 5, 4]],
+  ["crunchy-onion-rings", "Crunchy Onion Rings", [1330, 15, 181, 60, 3200, 10, 51]],
+  ["loaded-potato-waves", "Loaded Potato Waves", [1420, 43, 63, 111, 2490, 5, 5]],
+  ["mozzarella-sticks", "Mozzarella Sticks", [860, 41, 76, 44, 2440, 7, 12]],
+  ["spinach-artichoke-dip", "Spinach & Artichoke Dip", [990, 21, 89, 61, 2340, 9, 7]],
+  ["white-queso-dip-chips", "White Queso Dip & Chips", [920, 28, 83, 54, 2610, 5, 6]],
+], "1 entire appetizer order as published; only sauces named in the item are included");
+
+const applebeesSoupSaladFoods = applebeesCategoryFoods([
+  ["caesar-side-salad", "Caesar Side Salad", [220, 5, 13, 17, 440, 2, 3]],
+  ["chicken-tortilla-soup", "Chicken Tortilla Soup", [280, 11, 26, 15, 930, 2, 3]],
+  ["french-onion-soup", "French Onion Soup", [370, 16, 26, 21, 1250, 2, 9]],
+  ["house-side-salad-no-dressing", "House Side Salad without Dressing", [140, 6, 14, 7, 230, 2, 4]],
+  ["tomato-basil-soup", "Tomato Basil Soup", [210, 5, 22, 12, 1260, 2, 8]],
+], "1 published restaurant serving; dressing is included only when named");
+
+const applebeesSteakRibFoods = [
+  applebeesFood("top-sirloin", "USDA Select Top Sirloin", "Complete standardized portal meal; menu-listed steak weight is not a cooked weight. The total includes the source's two side selections, whose exact pairing is not identified in the portal table; do not add separate sides.", null, [
+    applebeesOption("top-sirloin:6oz", "6 oz menu-listed sirloin meal with source-configured sides", applebeesNutrients([560, 42, 43, 25, 1880, 7, 6])),
+    applebeesOption("top-sirloin:8oz", "8 oz menu-listed sirloin meal with source-configured sides", applebeesNutrients([620, 53, 44, 27, 2000, 7, 6])),
+  ], ["Applebees 6 oz sirloin", "Applebees 8 oz sirloin"]),
+  applebeesFood("riblets", "Applebee's Riblets without Sauce", "Published meal totals include the named default sides and exclude rib sauce", null, [
+    applebeesOption("riblets:plate", "Riblets Plate without sauce, with classic fries included", applebeesNutrients([940, 61, 56, 53, 1510, 6, 3])),
+    applebeesOption("riblets:platter", "Riblets Platter without sauce, with classic fries and coleslaw included", applebeesNutrients([1400, 94, 73, 82, 2000, 8, 17])),
+  ]),
+  applebeesFood("double-glazed-baby-back-ribs-no-sauce", "Double-Glazed Baby Back Ribs without Sauce", "Published meal total excludes rib sauce and includes the source-configured sides; do not add separate sides", null, [
+    applebeesOption("double-glazed-baby-back-ribs-no-sauce:half-rack", "Half rack without sauce, with source-configured sides", applebeesNutrients([760, 44, 53, 42, 1300, 6, 0])),
+    applebeesOption("double-glazed-baby-back-ribs-no-sauce:full-rack", "Full rack without sauce, with source-configured sides", applebeesNutrients([1260, 84, 68, 73, 1790, 9, 13])),
+  ]),
+  ...applebeesCategoryFoods([
+    ["ribeye-12oz", "12 oz Ribeye", [870, 76, 46, 43, 2010, 7, 6]],
+    ["bourbon-street-steak", "Bourbon Street Steak", [820, 52, 47, 48, 1970, 6, 7]],
+    ["shrimp-parmesan-sirloin", "Shrimp 'N Parmesan Sirloin", [910, 66, 48, 52, 2900, 8, 7]],
+  ], "Complete standardized portal entree including source-configured sides; the table does not name the side pairing, so do not add separate sides"),
+];
+
+const applebeesEntreeFoods = applebeesCategoryFoods([
+  ["bourbon-street-chicken-shrimp", "Bourbon Street Chicken & Shrimp", [800, 56, 48, 44, 2650, 7, 7]],
+  ["chicken-tenders-plate", "Chicken Tenders Plate", [1080, 38, 90, 64, 2430, 7, 10]],
+  ["chicken-tenders-platter", "Chicken Tenders Platter", [1410, 52, 116, 83, 3090, 10, 23]],
+  ["fiesta-lime-chicken", "Fiesta Lime Chicken", [1190, 60, 98, 62, 3670, 7, 9]],
+  ["grilled-chicken-breast", "Grilled Chicken Breast", [560, 49, 43, 22, 1800, 7, 5]],
+  ["hot-honey-glazed-chicken-bacon-skillet", "Hot Honey Glazed Chicken & Bacon Skillet", [1110, 50, 96, 58, 2950, 8, 38]],
+  ["lemon-parmesan-chicken", "Lemon Parmesan Chicken", [920, 48, 65, 53, 2340, 9, 7]],
+  ["blackened-cajun-salmon", "Blackened Cajun Salmon", [640, 42, 47, 33, 1750, 8, 6]],
+  ["double-crunch-shrimp", "Double Crunch Shrimp", [1120, 28, 139, 49, 3940, 12, 32]],
+  ["hand-battered-fish-chips", "Hand-Battered Fish & Chips", [1470, 42, 115, 95, 3190, 10, 20]],
+], "1 complete standardized entree as published, including the default side, sauce, or meal components represented by the portal total");
+
+const applebeesSaladFoods = applebeesCategoryFoods([
+  ["caesar-salad-blackened-shrimp", "Caesar Salad with Blackened Shrimp", [830, 32, 57, 54, 2360, 8, 10]],
+  ["caesar-salad-grilled-chicken", "Caesar Salad with Grilled Chicken", [950, 57, 56, 57, 2250, 8, 10]],
+  ["california-grilled-chicken-salad", "California Grilled Chicken Salad", [510, 53, 34, 19, 3290, 8, 18]],
+  ["crispy-chicken-tender-salad", "Crispy Chicken Tender Salad", [1230, 46, 78, 83, 2070, 8, 27]],
+  ["grilled-chicken-balsamic-berry-salad", "Grilled Chicken Balsamic Berry Salad", [980, 54, 66, 58, 1740, 15, 26]],
+  ["oriental-chicken-salad-crispy", "Oriental Chicken Salad with Crispy Chicken", [1550, 40, 116, 105, 1670, 12, 45]],
+  ["oriental-chicken-salad-grilled", "Oriental Chicken Salad with Grilled Chicken", [1370, 56, 94, 86, 1570, 11, 45]],
+  ["quesadilla-chicken-salad", "Quesadilla Chicken Salad", [2230, 123, 88, 154, 4670, 12, 17]],
+  ["strawberry-balsamic-chicken-salad", "Strawberry Balsamic Chicken Salad", [480, 48, 49, 12, 2540, 12, 28]],
+], "1 complete salad; the published total includes its standard dressing and breadstick where served");
+
+const applebeesPastaBowlFoods = applebeesCategoryFoods([
+  ["bourbon-street-chicken-sausage-penne", "Bourbon Street Chicken & Sausage Penne", [1410, 82, 86, 83, 3680, 8, 12]],
+  ["bourbon-street-shrimp-sausage-penne", "Bourbon Street Shrimp & Sausage Penne", [1290, 57, 87, 81, 3850, 7, 12]],
+  ["chicken-parmesan-fettuccine", "Chicken Parmesan Fettuccine", [1230, 56, 94, 71, 2510, 7, 13]],
+  ["broccoli-alfredo-blackened-shrimp", "Classic Broccoli Alfredo with Blackened Shrimp", [1320, 54, 108, 76, 2970, 9, 12]],
+  ["broccoli-alfredo-grilled-chicken", "Classic Broccoli Alfredo with Grilled Chicken", [1440, 79, 107, 79, 2860, 9, 12]],
+  ["four-cheese-mac-honey-pepper-chicken", "Four-Cheese Mac & Cheese with Honey Pepper Chicken Tenders", [1360, 56, 159, 55, 3320, 7, 44]],
+  ["three-cheese-chicken-penne", "Three-Cheese Chicken Penne", [1350, 77, 102, 71, 2760, 7, 12]],
+  ["sesame-salmon-bowl", "Sesame Salmon Bowl", [1100, 51, 109, 54, 2090, 11, 22]],
+  ["southwest-chicken-bowl", "Southwest Chicken Bowl", [830, 54, 90, 30, 1730, 10, 6]],
+  ["tex-mex-shrimp-bowl", "Tex-Mex Shrimp Bowl", [710, 29, 91, 27, 1760, 10, 6]],
+], "1 complete standardized pasta or bowl as served; its named protein, sauce, toppings, and breadstick where offered are included");
+
+const applebeesBurgerFoods = applebeesCategoryFoods([
+  ["big-classic-bacon-cheeseburger", "Big Classic Bacon Cheeseburger", [1320, 58, 95, 80, 3040, 7, 9]],
+  ["bourbon-street-mushroom-swiss-burger", "Bourbon Street Mushroom Swiss Burger", [1560, 56, 98, 105, 2340, 8, 10]],
+  ["classic-burger", "Classic Burger", [1090, 43, 93, 61, 2050, 7, 8]],
+  ["classic-cheeseburger", "Classic Cheeseburger", [1220, 50, 95, 72, 2670, 7, 9]],
+  ["grilled-cheese-cheeseburger", "Grilled Cheese Cheeseburger", [1210, 58, 78, 76, 3230, 4, 18]],
+  ["omcheese-burger", "O-M-Cheese Burger", [1900, 83, 107, 127, 3950, 7, 19]],
+  ["quesadilla-burger", "Quesadilla Burger", [1580, 70, 94, 103, 3470, 9, 5]],
+  ["ultimate-breakfast-burger", "Ultimate Breakfast Burger", [1650, 65, 106, 108, 3570, 8, 8]],
+  ["whisky-bacon-burger", "Whisky Bacon Burger", [1590, 63, 120, 97, 3070, 9, 19]],
+], "1 standard burger with bun, toppings, and classic fries included");
+
+const applebeesSandwichFoods = applebeesCategoryFoods([
+  ["bacon-ranch-grilled-chicken-sandwich", "Bacon Ranch Grilled Chicken Sandwich", [1190, 63, 93, 64, 3220, 7, 9]],
+  ["bacon-ranch-crispy-chicken-sandwich", "Bacon Ranch Crispy Chicken Sandwich", [1320, 58, 110, 72, 3170, 8, 10]],
+  ["chicken-fajita-rollup", "Chicken Fajita Rollup", [1500, 62, 114, 88, 3610, 9, 7]],
+  ["clubhouse-grille", "Clubhouse Grille", [1460, 56, 129, 81, 3670, 8, 22]],
+  ["spicy-honey-mustard-grilled-chicken-sandwich", "Spicy Honey Mustard Grilled Chicken Sandwich", [1220, 62, 106, 62, 3300, 7, 22]],
+  ["spicy-honey-mustard-crispy-chicken-sandwich", "Spicy Honey Mustard Crispy Chicken Sandwich", [1350, 58, 122, 70, 3260, 8, 22]],
+  ["sweet-spicy-grilled-chicken-sandwich", "Sweet & Spicy Grilled Chicken Sandwich", [1220, 56, 140, 48, 3500, 9, 49]],
+  ["prime-rib-dipper", "The Prime Rib Dipper", [1440, 73, 124, 74, 4450, 9, 14]],
+], "1 standard sandwich or wrap with toppings, sauce, and classic fries included");
+
+const applebeesDessertSideFoods = [
+  ...applebeesCategoryFoods([
+    ["brownie-bite", "Brownie Bite", [330, 4, 48, 15, 190, 2, 34]],
+    ["oreo-cookie-shake", "Oreo Cookie Shake", [840, 15, 104, 41, 410, null, 71]],
+    ["sizzlin-butter-pecan-blondie", "Sizzlin' Butter Pecan Blondie", [1020, 13, 115, 57, 390, 2, 70]],
+    ["sizzlin-caramel-apple-pie", "Sizzlin' Caramel Apple Pie", [1030, 8, 151, 45, 980, 4, 87]],
+    ["triple-chocolate-meltdown", "Triple Chocolate Meltdown", [910, 12, 116, 48, 640, 5, 87]],
+  ], "1 complete dessert or shake"),
+  ...applebeesCategoryFoods([
+    ["baked-potato", "Baked Potato", [530, 9, 59, 31, 1120, 4, 4]],
+    ["breadstick", "Breadstick", [180, 4, 25, 7, 250, 1, 3]],
+    ["classic-fries-side", "Classic Fries", [400, 6, 53, 18, 1000, 5, 0]],
+    ["crunchy-onion-rings-side", "Crunchy Onion Rings Side", [560, 7, 66, 30, 1170, 4, 5]],
+    ["four-cheese-mac-bacon-side", "Four-Cheese Mac & Cheese with Applewood-Smoked Bacon", [390, 18, 39, 18, 1160, 2, 4]],
+    ["garlicky-green-beans", "Garlicky Green Beans", [150, 2, 8, 12, 420, 3, 2]],
+    ["garlic-mashed-potatoes", "Garlic Mashed Potatoes", [260, 5, 37, 11, 720, 4, 3]],
+    ["homestyle-cheesy-broccoli", "Homestyle Cheesy Broccoli", [220, 10, 8, 17, 720, 3, 3]],
+    ["loaded-baked-potato", "Loaded Baked Potato", [600, 13, 59, 36, 1290, 4, 4]],
+    ["loaded-garlic-mashed-potatoes", "Loaded Garlic Mashed Potatoes", [440, 10, 40, 26, 910, 4, 5]],
+    ["signature-coleslaw", "Signature Coleslaw", [130, null, 15, 8, 180, 2, 12]],
+    ["steamed-broccoli", "Steamed Broccoli", [100, 3, 5, 8, 240, 2, 2]],
+    ["waffle-fries", "Waffle Fries", [490, 2, 50, 29, 1150, 5, 0]],
+  ], "1 separately published side; not included again when a selected entree already states that it includes a side"),
+];
+
+const applebeesKidsFoods = applebeesCategoryFoods([
+  ["kids-cheeseburger", "Kids Cheeseburger", [570, 25, 39, 35, 1170, 2, 7]],
+  ["kids-cheesy-pizza", "Kids Cheesy Pizza", [670, 25, 85, 27, 1310, 4, 13]],
+  ["kids-chicken-quesadilla", "Kids Chicken Quesadilla", [360, 16, 33, 18, 710, 2, 2]],
+  ["kids-chicken-taco", "Kids Chicken Taco", [210, 19, 18, 7, 560, 1, 2]],
+  ["kids-chicken-tenders", "Kids Chicken Tenders", [290, 19, 17, 17, 710, 1, 0]],
+  ["kids-corn-dog", "Kids Corn Dog", [180, 7, 19, 9, 400, 1, 5]],
+  ["kids-grilled-chicken-alfredo", "Kids Grilled Chicken Alfredo", [680, 34, 41, 42, 1320, 2, 5]],
+  ["kids-kraft-macaroni-cheese", "Kids Kraft Macaroni & Cheese", [310, 11, 44, 9, 830, 2, 10]],
+  ["kids-mozzarella-sticks", "Kids Mozzarella Sticks", [330, 16, 30, 17, 970, 3, 5]],
+  ["kids-hot-fudge-sundae", "Kids Hot Fudge Sundae", [330, 4, 46, 14, 135, null, 38]],
+], "1 kids' entree or dessert; required side and beverage are excluded unless named");
+
+const applebeesBeverageFoods = [
+  ["coca-cola", "Coca-Cola", [["restaurant", "Restaurant fountain serving", [90, 0, 26, 0, 30, 0, 26]], ["to-go", "To-Go fountain serving", [140, 0, 39, 0, 45, 0, 39]]]],
+  ["diet-coke", "Diet Coke", [["restaurant", "Restaurant fountain serving", [0, 0, 0, 0, 25, 0, 0]], ["to-go", "To-Go fountain serving", [0, 0, 0, 0, 40, 0, 0]]]],
+  ["coke-zero", "Coke Zero", [["restaurant", "Restaurant fountain serving", [0, 0, 0, 0, 25, 0, 0]], ["to-go", "To-Go fountain serving", [0, 0, 0, 0, 40, 0, 0]]]],
+  ["dr-pepper", "Dr Pepper", [["restaurant", "Restaurant fountain serving", [100, 0, 26, 0, 40, 0, 26]], ["to-go", "To-Go fountain serving", [150, 0, 40, 0, 60, 0, 38]]]],
+  ["pepsi", "Pepsi", [["restaurant", "Restaurant fountain serving", [100, 0, 27, 0, 20, 0, 27]], ["to-go", "To-Go fountain serving", [150, 0, 41, 0, 30, 0, 41]]]],
+  ["sweet-tea", "Sweet Tea", [["restaurant", "Restaurant serving", [90, 0, 23, 0, 10, 0, 22]], ["to-go", "To-Go serving", [130, 0, 34, 0, 10, 0, 33]]]],
+  ["brewed-iced-tea", "Brewed Iced Tea", [["restaurant", "Restaurant serving", [0, 0, 2, 0, 5, 0, 0]], ["to-go", "To-Go serving", [5, 0, 2, 0, 10, 0, 0]]]],
+  ["strawberry-lemonade", "Strawberry Lemonade", [["restaurant", "Restaurant serving", [190, 0, 49, 0, 60, 0, 47]], ["to-go", "To-Go serving", [280, 0, 73, 0, 85, 0, 70]]]],
+  ["blackberry-iced-tea", "Blackberry Iced Tea", [["restaurant", "Restaurant serving", [50, 0, 13, 0, 10, 0, 12]], ["to-go", "To-Go serving", [80, 0, 20, 0, 15, 0, 18]]]],
+  ["vanilla-shake", "Vanilla Shake", [["one-size", "1 shake", [680, 14, 79, 35, 290, 0, 58]]]],
+  ["chocolate-shake", "Chocolate Shake", [["one-size", "1 shake", [900, 15, 132, 35, 370, 2, 107]]]],
+].map(([id, name, options]) => applebeesFood(
+  id,
+  name,
+  "Choose a separately published restaurant or To-Go serving; the portal does not state fluid-ounce volumes",
+  null,
+  options.map(([optionId, description, values]) => applebeesOption(`${id}:${optionId}`, description, applebeesNutrients(values))),
+  [`Applebee's ${name}`]
+));
+const applebeesFoods = [
+  ...applebeesAppetizerFoods,
+  ...applebeesSoupSaladFoods,
+  ...applebeesSteakRibFoods,
+  ...applebeesEntreeFoods,
+  ...applebeesSaladFoods,
+  ...applebeesPastaBowlFoods,
+  ...applebeesBurgerFoods,
+  ...applebeesSandwichFoods,
+  ...applebeesDessertSideFoods,
+  ...applebeesKidsFoods,
+  ...applebeesBeverageFoods,
+];
+
+const texasRoadhouse = { id: "texas-roadhouse", name: "Texas Roadhouse" };
+const TEXAS_ROADHOUSE_SOURCE = "https://www.nutritionix.com/texas-roadhouse/menu/premium";
+const TEXAS_ROADHOUSE_REFERENCE = "Texas Roadhouse officially linked Nutritionix U.S. Interactive Nutrition Menu, last updated September 3, 2026; values reflect standardized recipes and the named portions.";
+const texasRoadhouseFood = (id, name, description, nutrients, servingOptions, aliases) => menuFood(
+  texasRoadhouse,
+  TEXAS_ROADHOUSE_SOURCE,
+  TEXAS_ROADHOUSE_REFERENCE,
+  id,
+  name,
+  description,
+  nutrients,
+  servingOptions,
+  [`Texas Roadhouse ${name}`, ...(servingOptions || []).map((option) => `Texas Roadhouse ${name} ${option.serving.description}`), ...(aliases || [])]
+);
+const texasRoadhouseOption = (id, description, nutrients, amount = 1) => expansionMenuOption(
+  texasRoadhouse, TEXAS_ROADHOUSE_SOURCE, TEXAS_ROADHOUSE_REFERENCE, id, description, nutrients, amount
+);
+const texasRoadhouseNutrients = ([calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => menuPublished(
+  calories, protein, carbohydrates, fat, sodium, fiber, totalSugar
+);
+const texasRoadhouseCategoryFoods = (rows, description) => rows.map(([id, name, values, aliases]) => texasRoadhouseFood(
+  id, name, description, texasRoadhouseNutrients(values), undefined, aliases
+));
+
+const texasRoadhouseAppetizerFoods = texasRoadhouseCategoryFoods([
+  ["cactus-blossom", "Cactus Blossom", [2250, 25, 236, 135, 5000, 19, 36]],
+  ["cheese-fries-regular", "Cheese Fries - Regular", [1240, 38, 126, 65, 5400, 14, 2]],
+  ["cheese-fries-small", "Cheese Fries - Small", [860, 25, 90, 44, 3770, 10, 2]],
+  ["fried-pickles", "Fried Pickles", [550, 6, 48, 38, 2580, 5, 1]],
+  ["grilled-shrimp-appetizer", "Grilled Shrimp Appetizer", [370, 20, 29, 19, 1740, 1, 4]],
+  ["killer-ribs", "Killer Ribs", [910, 49, 59, 53, 2830, 8, 5]],
+  ["rattlesnake-bites", "Rattlesnake Bites", [560, 25, 34, 36, 1430, 3, 3]],
+  ["tater-skins", "Tater Skins", [1320, 63, 63, 88, 2470, 7, 5]],
+  ["twisted-mozzarella", "Twisted Mozzarella", [710, 27, 64, 39, 2610, 4, 6]],
+], "1 entire appetizer order; separately listed dipping sauce and additional toppings are excluded");
+
+const texasRoadhouseSoupFoods = [
+  texasRoadhouseFood("baked-potato-soup", "Baked Potato Soup", "Choose the separately published cup or bowl", null, [
+    texasRoadhouseOption("baked-potato-soup:cup", "1 cup of Baked Potato Soup", texasRoadhouseNutrients([220, 5, 16, 15, 530, 1, 2])),
+    texasRoadhouseOption("baked-potato-soup:bowl", "1 bowl of Baked Potato Soup", texasRoadhouseNutrients([380, 9, 27, 25, 910, 2, 4])),
+  ]),
+  texasRoadhouseFood("texas-red-chili-no-beans", "Texas Red Chili without Beans", "Choose the separately published cup or bowl; crackers excluded", null, [
+    texasRoadhouseOption("texas-red-chili-no-beans:cup", "1 cup without beans; crackers excluded", texasRoadhouseNutrients([250, 17, 13, 15, 800, 3, 4])),
+    texasRoadhouseOption("texas-red-chili-no-beans:bowl", "1 bowl without beans; crackers excluded", texasRoadhouseNutrients([500, 33, 23, 31, 1460, 5, 8])),
+  ]),
+  texasRoadhouseFood("texas-red-chili-with-beans", "Texas Red Chili with Beans", "Choose the separately published cup or bowl; crackers excluded", null, [
+    texasRoadhouseOption("texas-red-chili-with-beans:cup", "1 cup with beans; crackers excluded", texasRoadhouseNutrients([210, 16, 14, 10, 640, 4, 3])),
+    texasRoadhouseOption("texas-red-chili-with-beans:bowl", "1 bowl with beans; crackers excluded", texasRoadhouseNutrients([430, 31, 25, 23, 1180, 6, 5])),
+  ]),
+];
+
+const texasRoadhouseSaladFoods = [
+  ...texasRoadhouseCategoryFoods([
+    ["caesar-salad", "Caesar Salad", [440, 6, 9, 43, 450, 2, 2]],
+    ["california-chicken-salad", "California Chicken Salad", [970, 74, 73, 46, 2460, 9, 62]],
+    ["steakhouse-filet-salad", "Steakhouse Filet Salad", [1340, 71, 42, 103, 2870, 8, 21]],
+  ], "1 full salad with its standard dressing included"),
+  ...texasRoadhouseCategoryFoods([
+    ["chicken-caesar-salad", "Chicken Caesar Salad", [1100, 60, 20, 89, 1070, 7, 5]],
+    ["chicken-critter-salad", "Chicken Critter Salad", [690, 56, 27, 40, 1440, 6, 8]],
+    ["grilled-salmon-salad", "Grilled Salmon Salad", [830, 66, 19, 55, 1310, 6, 9]],
+    ["house-salad", "House Salad", [230, 13, 9, 16, 290, 2, 4]],
+    ["salmon-caesar-salad", "Salmon Caesar Salad", [1110, 40, 20, 99, 1150, 5, 5]],
+  ], "1 full salad; a separately selected made-from-scratch dressing is excluded unless the item name explicitly identifies Caesar"),
+];
+
+const texasRoadhouseDressingSauceFoods = texasRoadhouseCategoryFoods([
+  ["ranch-dressing-3oz", "Ranch Dressing - 3 oz", [430, null, 5, 47, 520, 0, 1]],
+  ["blue-cheese-dressing-3oz", "Bleu Cheese Dressing - 3 oz", [430, 3, 5, 45, 600, 0, 1]],
+  ["caesar-dressing-3oz", "Caesar Dressing - 3 oz", [540, 4, 6, 56, 500, 0, 1]],
+  ["honey-mustard-dressing-3oz", "Honey Mustard Dressing - 3 oz", [480, 0, 16, 48, 420, 0, 11]],
+  ["italian-dressing-3oz", "Italian Dressing - 3 oz", [410, null, 17, 36, 640, null, 16]],
+  ["thousand-island-dressing-3oz", "Thousand Island Dressing - 3 oz", [400, 0, 14, 39, 660, 0, 7]],
+  ["honey-mustard-dip-2oz", "Honey Mustard Dipping Sauce - 2 oz", [320, 0, 11, 32, 280, 0, 8]],
+  ["barbecue-sauce-2oz", "Texas Roadhouse Barbecue Sauce - 2 oz", [80, 0, 18, 0, 270, 0, 14]],
+  ["tartar-sauce-2oz", "Tartar Sauce - 2 oz", [320, 0, 9, 32, 380, 0, 5]],
+  ["creamy-horseradish-sauce-2oz", "Creamy Horseradish Sauce - 2 oz", [190, 1, 4, 18, 200, 0, 2]],
+], "1 separately published sauce or dressing portion; do not add it to an item whose description says dressing or sauce is already included");
+
+const texasRoadhouseSteakFoods = [
+  texasRoadhouseFood("dallas-filet", "Dallas Filet", "Menu-listed steak weight; cooked weight is not inferred, and sides are excluded", null, [
+    texasRoadhouseOption("dallas-filet:6oz", "6 oz menu-listed Dallas Filet; sides excluded", texasRoadhouseNutrients([270, 45, 6, 10, 720, 2, 2])),
+    texasRoadhouseOption("dallas-filet:8oz", "8 oz menu-listed Dallas Filet; sides excluded", texasRoadhouseNutrients([360, 60, 8, 13, 960, 2, 2])),
+  ]),
+  texasRoadhouseFood("ft-worth-ribeye", "Ft. Worth Ribeye", "Menu-listed steak weight; cooked weight is not inferred, and sides are excluded", null, [
+    texasRoadhouseOption("ft-worth-ribeye:12oz", "12 oz menu-listed ribeye; sides excluded", texasRoadhouseNutrients([960, 78, 12, 72, 1180, 4, 2])),
+    texasRoadhouseOption("ft-worth-ribeye:14oz", "14 oz menu-listed ribeye; sides excluded", texasRoadhouseNutrients([1120, 90, 14, 84, 1370, 4, 2])),
+    texasRoadhouseOption("ft-worth-ribeye:16oz", "16 oz menu-listed ribeye; sides excluded", texasRoadhouseNutrients([1280, 103, 16, 96, 1570, 5, 3])),
+  ]),
+  texasRoadhouseFood("new-york-strip", "New York Strip", "Menu-listed steak weight and cut; cooked weight is not inferred, and sides are excluded", null, [
+    texasRoadhouseOption("new-york-strip:8oz-thick", "8 oz menu-listed thick-cut strip; sides excluded", texasRoadhouseNutrients([420, 57, null, 22, 660, null, 2])),
+    texasRoadhouseOption("new-york-strip:12oz", "12 oz menu-listed traditional-cut strip; sides excluded", texasRoadhouseNutrients([640, 85, 1, 33, 980, 1, 3])),
+    texasRoadhouseOption("new-york-strip:16oz", "16 oz menu-listed traditional-cut strip; sides excluded", texasRoadhouseNutrients([850, 114, 2, 44, 1310, 2, 3])),
+  ]),
+  texasRoadhouseFood("prime-rib", "Prime Rib", "Menu-listed steak weight; cooked weight is not inferred. Au jus is included; sides are excluded", null, [
+    texasRoadhouseOption("prime-rib:12oz", "12 oz menu-listed prime rib with au jus; sides excluded", texasRoadhouseNutrients([950, 74, 3, 72, 1660, 2, 2])),
+    texasRoadhouseOption("prime-rib:14oz", "14 oz menu-listed prime rib with au jus; sides excluded", texasRoadhouseNutrients([1110, 87, 3, 84, 1810, 3, 2])),
+    texasRoadhouseOption("prime-rib:16oz", "16 oz menu-listed prime rib with au jus; sides excluded", texasRoadhouseNutrients([1260, 99, 4, 95, 1960, 3, 2])),
+  ]),
+  texasRoadhouseFood("usda-choice-sirloin", "USDA Choice Sirloin", "Menu-listed steak weight; cooked weight is not inferred, and sides are excluded", null, [
+    texasRoadhouseOption("usda-choice-sirloin:6oz", "6 oz menu-listed sirloin; sides excluded", texasRoadhouseNutrients([250, 46, 3, 6, 560, 1, 1])),
+    texasRoadhouseOption("usda-choice-sirloin:8oz", "8 oz menu-listed sirloin; sides excluded", texasRoadhouseNutrients([340, 61, 5, 8, 740, 2, 2])),
+    texasRoadhouseOption("usda-choice-sirloin:11oz", "11 oz menu-listed sirloin; sides excluded", texasRoadhouseNutrients([460, 84, 6, 11, 1020, 2, 3])),
+    texasRoadhouseOption("usda-choice-sirloin:16oz", "16 oz menu-listed sirloin; sides excluded", texasRoadhouseNutrients([670, 122, 9, 16, 1490, 3, 4])),
+  ]),
+  texasRoadhouseFood("fall-off-the-bone-ribs", "Fall-off-the-Bone Ribs", "Rib portion with standard sauce; sides excluded", null, [
+    texasRoadhouseOption("fall-off-the-bone-ribs:half-slab", "Half slab; sides excluded", texasRoadhouseNutrients([900, 72, 9, 63, 1400, 3, 6])),
+    texasRoadhouseOption("fall-off-the-bone-ribs:full-slab", "Full slab; sides excluded", texasRoadhouseNutrients([1450, 116, 15, 102, 2260, 4, 10])),
+  ]),
+  ...texasRoadhouseCategoryFoods([
+    ["bone-in-ribeye", "Bone-In Ribeye", [1480, 143, 20, 101, 1720, 4, 4]],
+    ["filet-medallions", "Filet Medallions", [760, 74, 56, 30, 2510, 5, 5]],
+    ["porterhouse-t-bone", "Porterhouse T-Bone", [1040, 139, 1, 54, 1440, 2, 4]],
+    ["road-kill", "Road Kill", [760, 55, 10, 56, 1420, 3, 4]],
+    ["steak-kabob", "Steak Kabob", [920, 58, 78, 41, 2740, 4, 24]],
+  ], "1 entree; sides are excluded, except Filet Medallions and Steak Kabob include seasoned rice as published"),
+];
+
+const texasRoadhouseComboFoods = texasRoadhouseCategoryFoods([
+  ["sirloin-6oz-grilled-shrimp", "6 oz Sirloin & Grilled Shrimp", [670, 66, 34, 30, 2430, 3, 6]],
+  ["sirloin-6oz-ribs", "6 oz Sirloin & Ribs", [800, 90, 9, 45, 1420, 3, 5]],
+  ["sirloin-8oz-grilled-shrimp", "8 oz Sirloin & Grilled Shrimp", [750, 81, 35, 32, 2610, 3, 6]],
+  ["sirloin-8oz-ribs", "8 oz Sirloin & Ribs", [890, 105, 10, 47, 1600, 3, 6]],
+  ["chicken-critters-ribs", "Chicken Critters & Ribs", [820, 70, 21, 51, 1540, 3, 5]],
+  ["grilled-bbq-chicken-sirloin", "Grilled BBQ Chicken & Sirloin", [590, 92, 31, 10, 1150, 3, 23]],
+], "1 published Texas Size Combo; entree components are included and sides are excluded");
+
+const texasRoadhouseChickenDinnerFoods = texasRoadhouseCategoryFoods([
+  ["chicken-critters", "Chicken Critters", [480, 45, 26, 21, 1190, 3, 2]],
+  ["country-fried-chicken", "Country Fried Chicken", [770, 48, 45, 44, 1460, 1, 9]],
+  ["grilled-bbq-chicken", "Grilled BBQ Chicken", [300, 46, 19, 3.5, 450, 2, 15]],
+  ["herb-crusted-chicken", "Herb Crusted Chicken", [260, 47, 12, 4, 1210, 4, 8]],
+  ["smothered-chicken-cream-gravy", "Smothered Chicken with Cream Gravy", [330, 48, 8, 12, 600, 3, 4]],
+  ["smothered-chicken-jack-cheese", "Smothered Chicken with Jack Cheese", [430, 55, 8, 20, 780, 3, 4]],
+  ["beef-tips-mashed-potatoes", "Beef Tips with Mashed Potatoes", [960, 61, 48, 58, 3300, 6, 12]],
+  ["beef-tips-seasoned-rice", "Beef Tips with Seasoned Rice", [1060, 63, 71, 57, 4400, 5, 12]],
+  ["country-fried-sirloin", "Country Fried Sirloin", [1170, 52, 72, 75, 2220, 2, 9]],
+  ["pulled-pork-dinner", "Pulled Pork Dinner", [890, 80, 54, 41, 1130, 4, 23]],
+], "1 published entree as named; ordinary side choices and separately listed dipping sauce are excluded unless named in the item");
+
+const texasRoadhouseSeafoodFoods = [
+  texasRoadhouseFood("grilled-salmon", "Grilled Salmon", "Menu-listed fish portion; cooked weight is not inferred, and sides are excluded", null, [
+    texasRoadhouseOption("grilled-salmon:5oz", "5 oz menu-listed grilled salmon; sides excluded", texasRoadhouseNutrients([410, 27, 2, 33, 770, null, null])),
+    texasRoadhouseOption("grilled-salmon:8oz", "8 oz menu-listed grilled salmon; sides excluded", texasRoadhouseNutrients([560, 45, 2, 42, 950, null, null])),
+  ]),
+  texasRoadhouseFood("fried-catfish", "Fried Catfish", "Fried catfish pieces; sides and tartar sauce excluded", null, [
+    texasRoadhouseOption("fried-catfish:3-piece", "3 fried catfish pieces; sides and sauce excluded", texasRoadhouseNutrients([990, 30, 35, 82, 1230, null, null]), 3),
+    texasRoadhouseOption("fried-catfish:4-piece", "4 fried catfish pieces; sides and sauce excluded", texasRoadhouseNutrients([1170, 40, 45, 93, 1490, 1, 1]), 4),
+  ]),
+  texasRoadhouseFood("grilled-shrimp-dinner", "Grilled Shrimp Dinner", "Grilled shrimp with the published dinner components; ordinary side choices are excluded", null, [
+    texasRoadhouseOption("grilled-shrimp-dinner:9-piece", "9-shrimp dinner; ordinary side choices excluded", texasRoadhouseNutrients([660, 29, 50, 37, 3880, 3, 4]), 9),
+    texasRoadhouseOption("grilled-shrimp-dinner:12-piece", "12-shrimp dinner; ordinary side choices excluded", texasRoadhouseNutrients([700, 37, 50, 38, 4520, 3, 4]), 12),
+  ]),
+  texasRoadhouseFood("fish-and-chips", "Fish & Chips", "1 complete selected-store entree as published; tartar sauce excluded", texasRoadhouseNutrients([790, 42, 71, 38, 3020, 8, 2])),
+];
+
+const texasRoadhouseBurgerFoods = texasRoadhouseCategoryFoods([
+  ["all-american-cheeseburger", "All-American Cheeseburger", [880, 50, 48, 55, 1970, 5, 11]],
+  ["bacon-cheeseburger", "Bacon Cheeseburger", [980, 59, 48, 62, 2410, 5, 12]],
+  ["bbq-chicken-sandwich", "BBQ Chicken Sandwich", [640, 55, 63, 18, 1310, 6, 24]],
+  ["fried-chicken-sandwich", "Fried Chicken Sandwich", [830, 50, 72, 37, 1760, 4, 10]],
+  ["grilled-chicken-sandwich", "Grilled Chicken Sandwich", [560, 55, 45, 18, 1040, 6, 10]],
+  ["mushroom-jack-chicken-sandwich", "Mushroom Jack Chicken Sandwich", [710, 63, 48, 30, 1410, 6, 11]],
+  ["pulled-pork-sandwich", "Pulled Pork Sandwich", [870, 68, 62, 40, 1220, 4, 22]],
+  ["smokehouse-burger", "Smokehouse Burger", [1080, 58, 60, 67, 2490, 6, 20]],
+], "1 burger or sandwich with bun and standard toppings; fries and other sides are excluded");
+
+const texasRoadhouseSideFoods = texasRoadhouseCategoryFoods([
+  ["applesauce", "Applesauce", [110, 0, 28, 0, 15, 3, 23]],
+  ["baked-potato", "Baked Potato", [380, 7, 60, 13, 1950, 6, 3]],
+  ["caesar-side-salad", "Caesar Side Salad", [440, 6, 9, 43, 450, 2, 2]],
+  ["fresh-baked-bread", "Fresh-Baked Bread", [200, 5, 28, 8, 200, 1, 4], ["Texas Roadhouse roll"]],
+  ["fresh-vegetables", "Fresh Vegetables", [190, 3, 13, 15, 480, 5, 4]],
+  ["green-beans", "Green Beans", [100, 6, 13, 3.5, 1070, 2, 4]],
+  ["house-side-salad", "House Side Salad", [230, 13, 9, 16, 290, 2, 4]],
+  ["mac-and-cheese", "Mac and Cheese", [380, 17, 37, 18, 450, 2, 2]],
+  ["mashed-potatoes", "Mashed Potatoes", [260, 3, 24, 17, 330, 2, 2]],
+  ["sauteed-mushrooms", "Sauteed Mushrooms", [120, 3, 5, 11, 480, 2, 2]],
+  ["sauteed-onions", "Sauteed Onions", [150, 2, 13, 10, 570, 2, 6]],
+  ["seasoned-corn", "Seasoned Corn", [190, 5, 29, 9, 550, 3, 6]],
+  ["seasoned-rice", "Seasoned Rice", [360, 6, 47, 15, 1430, 2, 3]],
+  ["steak-fries", "Steak Fries", [360, 5, 53, 14, 1970, 6, null]],
+  ["steamed-broccoli", "Steamed Broccoli", [210, 5, 17, 16, 490, 8, 3]],
+  ["sweet-potato", "Sweet Potato", [350, 6, 62, 9, 105, 10, 19]],
+  ["whipped-buttery-spread", "Whipped Buttery Spread", [90, 0, 0, 10, 120, 0, 0], ["Texas Roadhouse butter"]],
+], "1 separately published side or extra; toppings are excluded unless named");
+
+const texasRoadhouseKidsFoods = texasRoadhouseCategoryFoods([
+  ["kids-all-beef-hot-dog", "Kids All-Beef Hot Dog", [390, 14, 27, 23, 1010, 0, 4]],
+  ["kids-jr-chicken-tenders", "Kids Jr. Chicken Tenders", [360, 31, 24, 16, 780, 2, 0]],
+  ["kids-grilled-chicken", "Kids Grilled Chicken", [110, 23, 0, 2, 90, null, 0]],
+  ["kids-lil-dillo-steak-bites", "Kids Lil' Dillo Steak Bites", [170, 31, 2, 4, 370, null, null]],
+  ["kids-mac-and-cheese", "Kids Mac and Cheese", [380, 17, 37, 18, 450, 2, 2]],
+  ["kids-mini-cheeseburgers", "Kids Mini-Cheeseburgers", [670, 30, 57, 36, 950, 3, 9]],
+  ["ranger-andys-steak", "Ranger Meal - Andy's Steak", [250, 46, 3, 6, 560, 1, 1]],
+  ["ranger-chicken-critters-basket", "Ranger Meal - Chicken Critters Basket", [340, 32, 19, 15, 850, 2, 1]],
+  ["ranger-rib-basket", "Ranger Meal - Ranger Rib Basket", [550, 44, 6, 39, 860, 2, 4]],
+], "1 kids' or Ranger entree; side and beverage are excluded");
+
+const texasRoadhouseDessertDrinkFoods = [
+  ...texasRoadhouseCategoryFoods([
+    ["big-ol-brownie", "Big Ol' Brownie", [1200, 12, 203, 40, 740, 8, 151]],
+    ["bread-pudding", "Bread Pudding", [1390, 26, 204, 53, 830, 4, 135]],
+    ["grannys-apple-classic", "Granny's Apple Classic", [1110, 9, 161, 50, 970, 2, 97]],
+    ["strawberry-cheesecake", "Strawberry Cheesecake", [800, 10, 76, 47, 550, 3, 60]],
+  ], "1 complete dessert as published"),
+  ...texasRoadhouseCategoryFoods([
+    ["coca-cola", "Coca-Cola", [120, 0, 34, 0, 0, 0, 0]],
+    ["diet-coke", "Diet Coke", [0, 1, 0, 0, 10, 0, 0]],
+    ["dr-pepper", "Dr Pepper", [130, 0, 33, 0, 50, 0, 32]],
+    ["sprite", "Sprite", [120, 0, 31, 0, 30, 0, 31]],
+    ["minute-maid-lemonade", "Minute Maid Lemonade", [130, 0, 36, 0, 90, 0, 34]],
+    ["blue-crush-lemonade", "Blue Crush Lemonade", [150, 0, 40, 0, 30, 0, 38]],
+    ["wild-strawberry-lemonade", "Wild Strawberry Lemonade", [150, 0, 40, 0, 30, 0, 38]],
+    ["sweet-iced-tea", "Original Sweet Iced Tea", [110, 0, 28, 0, 5, 0, 27]],
+    ["unsweet-iced-tea", "Original Unsweet Iced Tea", [0, 0, 0, 0, 0, 0, 0]],
+    ["regular-coffee", "Regular Coffee", [5, 0, 1, 0, 0, 0, 0]],
+    ["chocolate-milk", "Chocolate Milk", [150, 7, 26, 2.5, 170, null, 23]],
+    ["regular-milk", "Regular Milk", [90, 7, 10, 2, 105, 0, 10]],
+  ], "1 published restaurant beverage serving; the portal does not state a fluid-ounce volume"),
+  texasRoadhouseFood("original-margarita", "Original Margarita", "Choose the published preparation and glass size; this restaurant-specific alcoholic nutrition is supported by the existing serving model", null, [
+    texasRoadhouseOption("original-margarita:frozen-10oz", "10 oz frozen Original Margarita", texasRoadhouseNutrients([230, 0, 35, 0, 5, 0, 31])),
+    texasRoadhouseOption("original-margarita:frozen-18oz", "18 oz frozen Original Margarita", texasRoadhouseNutrients([490, 0, 75, 0, 10, 0, 66])),
+    texasRoadhouseOption("original-margarita:rocks-10oz", "10 oz Original Margarita on the rocks", texasRoadhouseNutrients([170, 0, 16, 0, 0, 0, 14])),
+    texasRoadhouseOption("original-margarita:rocks-18oz", "18 oz Original Margarita on the rocks", texasRoadhouseNutrients([270, 0, 26, 0, 0, 0, 23])),
+  ]),
+];
+const texasRoadhouseFoods = [
+  ...texasRoadhouseAppetizerFoods,
+  ...texasRoadhouseSoupFoods,
+  ...texasRoadhouseSaladFoods,
+  ...texasRoadhouseDressingSauceFoods,
+  ...texasRoadhouseSteakFoods,
+  ...texasRoadhouseComboFoods,
+  ...texasRoadhouseChickenDinnerFoods,
+  ...texasRoadhouseSeafoodFoods,
+  ...texasRoadhouseBurgerFoods,
+  ...texasRoadhouseSideFoods,
+  ...texasRoadhouseKidsFoods,
+  ...texasRoadhouseDessertDrinkFoods,
+];
+
 const whataburger = { id: "whataburger", name: "Whataburger" };
 const WHATABURGER_REFERENCE = "Whataburger official menu/app; default recipe nutrition displayed for the current national menu";
 const whataburgerFood = (id, name, description, nutrients, servingOptions) => officialFood(whataburger, id, name, description, nutrients, WHATABURGER_SOURCE, WHATABURGER_REFERENCE, servingOptions);
@@ -4463,6 +5030,9 @@ const restaurantFoods = [
   ...littleCaesarsFoods,
   ...hideawayFoods,
   ...marcosFoods,
+  ...chilisFoods,
+  ...applebeesFoods,
+  ...texasRoadhouseFoods,
   ...sonicFoods,
   ...braumsFoods,
   ...tacoBellFoods,

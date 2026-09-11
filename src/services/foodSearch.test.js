@@ -237,7 +237,7 @@ test("searches the McDonald's, Sonic, and Braum's batches by chain and item name
   expect(braumsResults).toHaveLength(69);
   expect(braumsResults.every((food) => food.restaurant?.id === "braums")).toBe(true);
   expect(searchFoodCatalog("Footlong Quarter Pound Coney")[0]).toMatchObject({ restaurant: { id: "sonic" } });
-  expect(searchFoodCatalog("Grilled Chicken Salad")[0]).toMatchObject({ restaurant: { id: "braums" } });
+  expect(searchFoodCatalog("braums Grilled Chicken Salad")[0]).toMatchObject({ restaurant: { id: "braums" } });
 });
 
 test("searches the Taco Bell, Chick-fil-A, and Whataburger batches with punctuation variants", () => {
@@ -379,16 +379,19 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     "little-caesars": /^https:\/\/littlecaesars\.com\/static\/usnutritionguide\.pdf$/,
     "hideaway-pizza": /^https:\/\/www\.hideawaypizza\.com\/s\/Hideaway-Pizza-Nutrition-Information\.pdf$/,
     "marcos-pizza": /^https:\/\/www\.nutritionix\.com\/marcos-pizza\/menu\/premium$/,
+    chilis: /^https:\/\/(?:(?:cdn\.builder\.io\/o\/assets)|(?:www\.chilis\.com\/menu))/,
+    applebees: /^https:\/\/www\.nutritionix\.com\/applebees\/menu\/premium$/,
+    "texas-roadhouse": /^https:\/\/www\.nutritionix\.com\/texas-roadhouse\/menu\/premium$/,
     "taco-bell": /^https:\/\/www\.tacobell\.com\/food\//,
     "chick-fil-a": /^https:\/\/www\.chick-fil-a\.com\/nutrition-allergens$/,
     whataburger: /^https:\/\/wbimageserver\.whataburger\.com\/Nutrition\.pdf$/,
   };
-  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "dairy-queen", "arbys", "jack-in-the-box", "dominos", "pizza-hut", "papa-johns", "little-caesars", "hideaway-pizza", "marcos-pizza", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
+  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "dairy-queen", "arbys", "jack-in-the-box", "dominos", "pizza-hut", "papa-johns", "little-caesars", "hideaway-pizza", "marcos-pizza", "chilis", "applebees", "texas-roadhouse", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
     chainId,
     expansion.filter((food) => food.restaurant.id === chainId).length,
   ]));
 
-  expect(expansion).toHaveLength(1852);
+  expect(expansion).toHaveLength(2132);
   expect(countByChain).toEqual({
     mcdonalds: 100,
     sonic: 102,
@@ -410,6 +413,9 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     "little-caesars": 47,
     "hideaway-pizza": 90,
     "marcos-pizza": 74,
+    chilis: 59,
+    applebees: 109,
+    "texas-roadhouse": 112,
     "taco-bell": 95,
     "chick-fil-a": 60,
     whataburger: 112,
@@ -715,6 +721,89 @@ test("keeps new pizza slice, whole-pizza, size, and unknown-nutrient servings ex
   expect(scaleNutrition(marcosSmallSlice.nutrients, 2)).toMatchObject({ calories: 420, fiber: null });
 
   [littleSlice, littleWhole, hideawayThinMedium, marcosSmallSlice, marcosSmallWhole].forEach((option) => expect(option.provenance.verification).toMatchObject({
+    sourceType: "official-restaurant",
+    accessedAt: "2026-09-10",
+    sourceUrl: expect.stringMatching(/^https:\/\//),
+    sourceReference: expect.any(String),
+  }));
+});
+
+test("finds Chili's, Applebee's, and Texas Roadhouse foods across standard menu categories", () => {
+  expect(searchFoodCatalog("Chili's", [], restaurantFoods.length)).toHaveLength(59);
+  expect(searchFoodCatalog("Applebees", [], restaurantFoods.length)).toHaveLength(109);
+  expect(searchFoodCatalog("Texas Roadhouse", [], restaurantFoods.length)).toHaveLength(112);
+
+  const expectedFirstResults = [
+    ["chilis southwestern eggrolls", "restaurant:chilis:southwestern-eggrolls"],
+    ["chili's classic sirloin 10 oz", "restaurant:chilis:classic-sirloin"],
+    ["chilis lemon pepper bone in wings", "restaurant:chilis:lemon-pepper-bone-in-wings"],
+    ["chilis chicken bacon ranch quesadilla", "restaurant:chilis:chicken-bacon-ranch-quesadillas"],
+    ["chilis molten chocolate cake", "restaurant:chilis:molten-chocolate-cake"],
+    ["applebees spinach artichoke dip", "restaurant:applebees:spinach-artichoke-dip"],
+    ["applebee's top sirloin 8 oz", "restaurant:applebees:top-sirloin"],
+    ["applebees bourbon street chicken shrimp", "restaurant:applebees:bourbon-street-chicken-shrimp"],
+    ["applebees four cheese mac honey pepper chicken", "restaurant:applebees:four-cheese-mac-honey-pepper-chicken"],
+    ["applebees kids corn dog", "restaurant:applebees:kids-corn-dog"],
+    ["texas roadhouse cactus blossom", "restaurant:texas-roadhouse:cactus-blossom"],
+    ["texas roadhouse dallas filet 8 oz", "restaurant:texas-roadhouse:dallas-filet"],
+    ["texas roadhouse fall off the bone ribs half slab", "restaurant:texas-roadhouse:fall-off-the-bone-ribs"],
+    ["texas roadhouse herb crusted chicken", "restaurant:texas-roadhouse:herb-crusted-chicken"],
+    ["texas roadhouse steak fries", "restaurant:texas-roadhouse:steak-fries"],
+    ["texas roadhouse strawberry cheesecake", "restaurant:texas-roadhouse:strawberry-cheesecake"],
+  ];
+
+  expect(expectedFirstResults.map(([query]) => [query, searchFoodCatalog(query)[0]?.id])).toEqual(expectedFirstResults);
+  expect(searchFoodCatalog("applebees coke zero")[0].id).toBe("restaurant:applebees:coke-zero");
+  expect(searchFoodCatalog("texas roadhouse dr pepper")[0].id).toBe("restaurant:texas-roadhouse:dr-pepper");
+  expect(searchFoodCatalog("coke zero")[0].id).toBe("beverage:coca-cola:zero-sugar-12oz");
+});
+
+test("preserves sit-down portions, included components, and unknown nutrients while scaling", () => {
+  const chilisSirloin = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:chilis:classic-sirloin"));
+  const chilisPartialDrink = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:chilis:blackberry-iced-tea"));
+  const applebeesRiblets = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:applebees:riblets"));
+  const texasSirloin = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:texas-roadhouse:usda-choice-sirloin"));
+  const cactusBlossom = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:texas-roadhouse:cactus-blossom"));
+
+  expect(chilisSirloin.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["6 oz menu-listed Classic Sirloin; sides excluded", 250],
+    ["10 oz menu-listed Classic Sirloin; sides excluded", 390],
+  ]);
+  expect(applebeesRiblets.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Riblets Plate without sauce, with classic fries included", 940],
+    ["Riblets Platter without sauce, with classic fries and coleslaw included", 1400],
+  ]);
+  expect(texasSirloin.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["6 oz menu-listed sirloin; sides excluded", 250],
+    ["8 oz menu-listed sirloin; sides excluded", 340],
+    ["11 oz menu-listed sirloin; sides excluded", 460],
+    ["16 oz menu-listed sirloin; sides excluded", 670],
+  ]);
+  expect(scaleNutrition(cactusBlossom.nutrients, 0.5)).toMatchObject({
+    calories: 1125,
+    protein: 12.5,
+    carbohydrates: 118,
+    fat: 67.5,
+    sodium: 2500,
+  });
+  expect(scaleNutrition(chilisPartialDrink.nutrients, 2)).toEqual({
+    calories: 160,
+    protein: null,
+    carbohydrates: null,
+    fat: null,
+    sodium: null,
+    fiber: null,
+    totalSugar: null,
+    addedSugar: null,
+  });
+  expect(applebeesRiblets.serving.description).toContain("classic fries included");
+  expect(cactusBlossom.serving.description).toContain("entire appetizer order");
+
+  [
+    ...chilisSirloin.servingOptions,
+    ...applebeesRiblets.servingOptions,
+    ...texasSirloin.servingOptions,
+  ].forEach((option) => expect(option.provenance.verification).toMatchObject({
     sourceType: "official-restaurant",
     accessedAt: "2026-09-10",
     sourceUrl: expect.stringMatching(/^https:\/\//),

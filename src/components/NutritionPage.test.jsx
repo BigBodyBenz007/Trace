@@ -1326,6 +1326,111 @@ test("saves a calculated Marco's whole-pizza option without filling unknown nutr
   });
 });
 
+test("selects and scales a published Chili's steak size with sides excluded", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "chilis classic sirloin" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Chili's.*Classic Sirloin/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  expect(sizeSelect).toHaveDisplayValue("6 oz menu-listed Classic Sirloin; sides excluded");
+  fireEvent.change(sizeSelect, {
+    target: { value: "restaurant:chilis:classic-sirloin:10oz" },
+  });
+  expect(sizeSelect).toHaveDisplayValue("10 oz menu-listed Classic Sirloin; sides excluded");
+  expect(form.getByLabelText("Calories")).toHaveValue(390);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(54);
+
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "2" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(780);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Classic Sirloin",
+    calories: 780,
+    protein: 108,
+    carbohydrates: 4,
+    fat: 36,
+    sodium: 1900,
+    portion: { amount: 2, basis: { description: "10 oz menu-listed Classic Sirloin; sides excluded" } },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "chilis",
+      restaurantName: "Chili's",
+      sourceId: "chilis:classic-sirloin:10oz",
+    },
+  });
+});
+
+test("logs a fractional Texas Roadhouse shareable as half of the published platter", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "texas roadhouse cactus blossom" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Texas Roadhouse.*Cactus Blossom/i }));
+
+  const form = entryForm();
+  expect(form.getByText(/One serving: 1 entire appetizer order/)).toBeInTheDocument();
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "0.5" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(1125);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(2500);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Cactus Blossom",
+    calories: 1125,
+    protein: 12.5,
+    carbohydrates: 118,
+    fat: 67.5,
+    sodium: 2500,
+    portion: { amount: 0.5, basis: { description: expect.stringContaining("entire appetizer order") } },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "texas-roadhouse",
+      restaurantName: "Texas Roadhouse",
+      sourceId: "texas-roadhouse:cactus-blossom",
+    },
+  });
+});
+
+test("saves Applebee's Riblets with the selected included-side label", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "applebees riblets" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Applebee's.*Riblets without Sauce/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  fireEvent.change(sizeSelect, {
+    target: { value: "restaurant:applebees:riblets:platter" },
+  });
+  expect(sizeSelect).toHaveDisplayValue("Riblets Platter without sauce, with classic fries and coleslaw included");
+  expect(form.getByLabelText("Calories")).toHaveValue(1400);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Applebee's Riblets without Sauce",
+    calories: 1400,
+    protein: 94,
+    carbohydrates: 73,
+    fat: 82,
+    sodium: 2000,
+    portion: {
+      amount: 1,
+      basis: { description: "Riblets Platter without sauce, with classic fries and coleslaw included" },
+    },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "applebees",
+      restaurantName: "Applebee's",
+      sourceId: "applebees:riblets:platter",
+    },
+  });
+});
+
 test("normal Sonic and Braum's items log with chain identity and known sodium", () => {
   const props = renderNutritionPage();
 

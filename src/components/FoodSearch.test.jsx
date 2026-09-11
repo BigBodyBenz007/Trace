@@ -326,6 +326,44 @@ test("discovers and selects Little Caesars, Hideaway, and Marco's pizza records"
   }));
 });
 
+test("discovers and selects Chili's, Applebee's, and Texas Roadhouse records", () => {
+  const onSelectFood = renderFoodSearch();
+
+  searchFor("chilis classic sirloin");
+  let result = screen.getByRole("button", { name: /Chili's.*Classic Sirloin/i });
+  expect(result).toHaveTextContent("6 oz menu-listed Classic Sirloin");
+  expect(result).toHaveTextContent("sides excluded");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:chilis:classic-sirloin",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:chilis:classic-sirloin:10oz" }),
+    ]),
+  }));
+
+  searchFor("applebees riblets");
+  result = screen.getByRole("button", { name: /Applebee's.*Riblets without Sauce/i });
+  expect(result).toHaveTextContent("classic fries included");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:applebees:riblets",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:applebees:riblets:platter" }),
+    ]),
+  }));
+
+  searchFor("texas roadhouse dallas filet");
+  result = screen.getByRole("button", { name: /Texas Roadhouse.*Dallas Filet/i });
+  expect(result).toHaveTextContent("6 oz menu-listed Dallas Filet");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:texas-roadhouse:dallas-filet",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:texas-roadhouse:dallas-filet:8oz" }),
+    ]),
+  }));
+});
+
 test("shows branded-drink source, package, caffeine, and unknown nutrient details", () => {
   const onSelectFood = renderFoodSearch();
   searchFor("monster ultra zero");
