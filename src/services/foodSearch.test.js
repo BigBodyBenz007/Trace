@@ -61,7 +61,11 @@ test("combined catalog search includes user foods and keeps starter foods", () =
     },
   };
 
-  expect(searchFoodCatalog("meatloaf", [userFood])).toEqual([userFood]);
+  const meatloafResults = searchFoodCatalog("meatloaf", [userFood]);
+  expect(meatloafResults[0]).toEqual(userFood);
+  expect(meatloafResults).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: "restaurant:cheesecake-factory:famous-factory-meatloaf" }),
+  ]));
   expect(searchFoodCatalog("banana", [userFood])[0].id).toBe("grocery:usda:173944");
 });
 
@@ -385,16 +389,19 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     "olive-garden": /^https:\/\/media\.olivegarden\.com\/en_us\/pdf\/olive_garden_nutrition\.pdf$/,
     "longhorn-steakhouse": /^https:\/\/media\.longhornsteakhouse\.com\/en_us\/pdf\/nutrition_allergen_guide\.pdf$/,
     "outback-steakhouse": /^https:\/\/edge\.sitecorecloud\.io\/osirestaurantpartners-piq24hos\/media\/Project\/BBI\/outback\/files\/obs-full-nutrition-information\.pdf$/,
+    "cheesecake-factory": /^https:\/\/www\.thecheesecakefactory\.com\/nutrition$/,
+    "red-lobster": /^https:\/\/img-ecomm-rl-prod-fye5gqbxdtbghqer\.a03\.azurefd\.net\/brandsite\/documents\/US_Nutrition_8-17-26\.pdf$/,
+    "red-robin": /^https:\/\/www\.redrobin\.com\/sites\/default\/files\/2023-12\/0124_NS_US-ALL\.pdf$/,
     "taco-bell": /^https:\/\/www\.tacobell\.com\/food\//,
     "chick-fil-a": /^https:\/\/www\.chick-fil-a\.com\/nutrition-allergens$/,
     whataburger: /^https:\/\/wbimageserver\.whataburger\.com\/Nutrition\.pdf$/,
   };
-  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "dairy-queen", "arbys", "jack-in-the-box", "dominos", "pizza-hut", "papa-johns", "little-caesars", "hideaway-pizza", "marcos-pizza", "chilis", "applebees", "texas-roadhouse", "olive-garden", "longhorn-steakhouse", "outback-steakhouse", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
+  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "dairy-queen", "arbys", "jack-in-the-box", "dominos", "pizza-hut", "papa-johns", "little-caesars", "hideaway-pizza", "marcos-pizza", "chilis", "applebees", "texas-roadhouse", "olive-garden", "longhorn-steakhouse", "outback-steakhouse", "cheesecake-factory", "red-lobster", "red-robin", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
     chainId,
     expansion.filter((food) => food.restaurant.id === chainId).length,
   ]));
 
-  expect(expansion).toHaveLength(2412);
+  expect(expansion).toHaveLength(2881);
   expect(countByChain).toEqual({
     mcdonalds: 100,
     sonic: 102,
@@ -422,6 +429,9 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     "olive-garden": 96,
     "longhorn-steakhouse": 82,
     "outback-steakhouse": 102,
+    "cheesecake-factory": 227,
+    "red-lobster": 112,
+    "red-robin": 130,
     "taco-bell": 95,
     "chick-fil-a": 60,
     whataburger: 112,
@@ -881,6 +891,80 @@ test("preserves restaurant portions, excluded components, fractional sharing, an
     sourceUrl: expect.stringMatching(/^https:\/\//),
     sourceReference: expect.any(String),
   }));
+});
+
+test("finds Cheesecake Factory, Red Lobster, and Red Robin foods across standard menu categories", () => {
+  expect(searchFoodCatalog("The Cheesecake Factory", [], restaurantFoods.length)).toHaveLength(227);
+  expect(searchFoodCatalog("Red Lobster", [], restaurantFoods.length)).toHaveLength(112);
+  expect(searchFoodCatalog("Red Robin", [], restaurantFoods.length)).toHaveLength(130);
+
+  const expectedFirstResults = [
+    ["cheesecake factory avocado eggrolls", "restaurant:cheesecake-factory:avocado-eggrolls"],
+    ["the cheesecake factory chicken madeira", "restaurant:cheesecake-factory:chicken-madeira"],
+    ["cheesecake factory skinnylicious hamburger", "restaurant:cheesecake-factory:skinnylicious-hamburger"],
+    ["cheesecake factory breakfast burrito", "restaurant:cheesecake-factory:breakfast-burrito"],
+    ["cheesecake factory original cheesecake", "restaurant:cheesecake-factory:original-cheesecake"],
+    ["red lobster cheddar bay biscuit", "restaurant:red-lobster:cheddar-bay-biscuit"],
+    ["red lobster lobster bisque bowl", "restaurant:red-lobster:lobster-bisque"],
+    ["red lobster ultimate feast", "restaurant:red-lobster:ultimate-feast"],
+    ["red lobster shrimp your way coconut", "restaurant:red-lobster:shrimp-your-way-coconut"],
+    ["red lobster kids popcorn shrimp", "restaurant:red-lobster:kids-popcorn-shrimp"],
+    ["red robin gourmet cheeseburger", "restaurant:red-robin:red-robin-gourmet-cheeseburger"],
+    ["red robin bottomless steak fries", "restaurant:red-robin:bottomless-steak-fries"],
+    ["red robin clucks fries buffalo", "restaurant:red-robin:clucks-fries-buffalo"],
+    ["red robin kids corn doggies 9 piece", "restaurant:red-robin:kids-corn-doggies-9"],
+    ["red robin oreo cookie magic shake", "restaurant:red-robin:oreo-shake"],
+  ];
+
+  expect(expectedFirstResults.map(([query]) => [query, searchFoodCatalog(query)[0]?.id])).toEqual(expectedFirstResults);
+  expect(searchFoodCatalog("red lobster pepsi")[0].id).toBe("restaurant:red-lobster:pepsi");
+  expect(searchFoodCatalog("red robin coke zero")[0].id).toBe("restaurant:red-robin:coca-cola-zero");
+  expect(searchFoodCatalog("pepsi")[0].id).toBe("beverage:pepsi:pepsi-20oz");
+  expect(searchFoodCatalog("coke zero")[0].id).toBe("beverage:coca-cola:zero-sugar-12oz");
+});
+
+test("preserves sit-down serving boundaries, size choices, and fractional scaling for the new chains", () => {
+  const sliders = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:cheesecake-factory:roadside-sliders"));
+  const originalCheesecake = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:cheesecake-factory:original-cheesecake"));
+  const lobsterBisque = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:red-lobster:lobster-bisque"));
+  const cheddarBayBiscuit = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:red-lobster:cheddar-bay-biscuit"));
+  const bottomlessFries = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:red-robin:bottomless-steak-fries"));
+
+  expect(scaleNutrition(sliders.nutrients, 0.5)).toMatchObject({
+    calories: 400,
+    protein: 24,
+    carbohydrates: 35,
+    fat: 17.5,
+    sodium: 860,
+  });
+  expect(sliders.serving.description).toContain("full appetizer order");
+  expect(originalCheesecake.serving.description).toContain("1 restaurant slice");
+  expect(originalCheesecake.serving.description).toContain("whole-cake nutrition is not published");
+  expect(lobsterBisque.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["1 cup of Lobster Bisque", 340],
+    ["1 bowl of Lobster Bisque", 630],
+  ]);
+  expect(cheddarBayBiscuit.serving.description).toContain("separately published side order");
+  expect(bottomlessFries.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["1 standard published serving of Bottomless Steak Fries", 350],
+    ["8 oz serving of Bottomless Steak Fries", 570],
+  ]);
+  expect(scaleNutrition(bottomlessFries.servingOptions[1].nutrients, 2)).toMatchObject({
+    calories: 1140,
+    protein: 16,
+    carbohydrates: 154,
+    fat: 50,
+    sodium: 1220,
+  });
+
+  [...lobsterBisque.servingOptions, ...bottomlessFries.servingOptions].forEach((option) => (
+    expect(option.provenance.verification).toMatchObject({
+      sourceType: "official-restaurant",
+      accessedAt: "2026-09-10",
+      sourceUrl: expect.stringMatching(/^https:\/\//),
+      sourceReference: expect.any(String),
+    })
+  ));
 });
 
 test("preserves published sizes and unknown nutrients across the three-chain expansion", () => {

@@ -403,6 +403,41 @@ test("discovers and selects Olive Garden, LongHorn, and Outback records", () => 
   }));
 });
 
+test("discovers and selects Cheesecake Factory, Red Lobster, and Red Robin records", () => {
+  const onSelectFood = renderFoodSearch();
+
+  searchFor("cheesecake factory original cheesecake");
+  let result = screen.getByRole("button", { name: /The Cheesecake Factory.*Original Cheesecake/i });
+  expect(result).toHaveTextContent("1 restaurant slice");
+  expect(result).toHaveTextContent("whole-cake nutrition is not published");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:cheesecake-factory:original-cheesecake",
+  }));
+
+  searchFor("red lobster lobster bisque");
+  result = screen.getByRole("button", { name: /Red Lobster.*Lobster Bisque/i });
+  expect(result).toHaveTextContent("1 cup of Lobster Bisque");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:red-lobster:lobster-bisque",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:red-lobster:lobster-bisque:bowl" }),
+    ]),
+  }));
+
+  searchFor("red robin bottomless steak fries");
+  result = screen.getByRole("button", { name: /Red Robin.*Bottomless Steak Fries/i });
+  expect(result).toHaveTextContent("1 standard published serving");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:red-robin:bottomless-steak-fries",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:red-robin:bottomless-steak-fries:8oz" }),
+    ]),
+  }));
+});
+
 test("shows branded-drink source, package, caffeine, and unknown nutrient details", () => {
   const onSelectFood = renderFoodSearch();
   searchFor("monster ultra zero");

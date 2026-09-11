@@ -1497,6 +1497,107 @@ test("logs a fractional Outback Bloomin' Onion against the published platter", (
   });
 });
 
+test("logs a fractional Cheesecake Factory shareable against the full published order", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "cheesecake factory roadside sliders" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /The Cheesecake Factory · Roadside Sliders\b/i }));
+
+  const form = entryForm();
+  expect(form.getByText(/One serving: 1 full appetizer order, published as serving 2-4/)).toBeInTheDocument();
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "0.5" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(400);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(24);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Roadside Sliders",
+    calories: 400,
+    protein: 24,
+    carbohydrates: 35,
+    fat: 17.5,
+    sodium: 860,
+    portion: { amount: 0.5, basis: { description: expect.stringContaining("full appetizer order") } },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "cheesecake-factory",
+      restaurantName: "The Cheesecake Factory",
+      sourceId: "cheesecake-factory:roadside-sliders",
+    },
+  });
+});
+
+test("selects and saves Red Lobster's published bowl serving", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "red lobster lobster bisque" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Red Lobster.*Lobster Bisque/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  expect(sizeSelect).toHaveDisplayValue("1 cup of Lobster Bisque");
+  fireEvent.change(sizeSelect, {
+    target: { value: "restaurant:red-lobster:lobster-bisque:bowl" },
+  });
+  expect(sizeSelect).toHaveDisplayValue("1 bowl of Lobster Bisque");
+  expect(form.getByLabelText("Calories")).toHaveValue(630);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(1520);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Lobster Bisque",
+    calories: 630,
+    protein: 11,
+    carbohydrates: 27,
+    fat: 52,
+    sodium: 1520,
+    portion: { amount: 1, basis: { description: "1 bowl of Lobster Bisque" } },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "red-lobster",
+      restaurantName: "Red Lobster",
+      sourceId: "red-lobster:lobster-bisque:bowl",
+    },
+  });
+});
+
+test("saves a selected Red Robin Bottomless Steak Fries serving with refill-safe scaling", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "red robin bottomless steak fries" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Red Robin.*Bottomless Steak Fries/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  fireEvent.change(sizeSelect, {
+    target: { value: "restaurant:red-robin:bottomless-steak-fries:8oz" },
+  });
+  expect(sizeSelect).toHaveDisplayValue("8 oz serving of Bottomless Steak Fries");
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "2" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(1140);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(1220);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Bottomless Steak Fries",
+    calories: 1140,
+    protein: 16,
+    carbohydrates: 154,
+    fat: 50,
+    sodium: 1220,
+    portion: { amount: 2, basis: { description: "8 oz serving of Bottomless Steak Fries" } },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "red-robin",
+      restaurantName: "Red Robin",
+      sourceId: "red-robin:bottomless-steak-fries:8oz",
+    },
+  });
+});
+
 test("normal Sonic and Braum's items log with chain identity and known sodium", () => {
   const props = renderNutritionPage();
 
@@ -2127,7 +2228,7 @@ test("a saved user food appears in search and scales like a catalog food", () =>
   fireEvent.change(screen.getByLabelText("Food search"), {
     target: { value: "MEATLOAF" },
   });
-  fireEvent.click(screen.getByRole("button", { name: /Meatloaf/i }));
+  fireEvent.click(screen.getByRole("button", { name: /^Meatloaf\b/i }));
   const form = entryForm();
 
   expect(screen.getByText("Grocery")).toBeInTheDocument();
@@ -2175,7 +2276,7 @@ test("a richer saved user food can be searched, selected, and scaled", () => {
   fireEvent.change(screen.getByLabelText("Food search"), {
     target: { value: "meatloaf" },
   });
-  fireEvent.click(screen.getByRole("button", { name: /Meatloaf/i }));
+  fireEvent.click(screen.getByRole("button", { name: /^Meatloaf\b/i }));
   const form = entryForm();
 
   expect(form.queryByLabelText("Serving amount")).not.toBeInTheDocument();
