@@ -1134,6 +1134,44 @@ test("number of servings scales the selected official McNuggets menu size", () =
   expect(props.saveNutritionEntry.mock.calls[0][0].sodium).toBe(1500);
 });
 
+test("selects a flavored Wingstop count, scales it, and saves the flavor-inclusive serving", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "wingstop 10 piece lemon pepper bone in wings" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Wingstop.*Classic Bone-In Wings - Lemon Pepper/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  expect(sizeSelect).toHaveDisplayValue(/6 piece order.*flavor already included/i);
+  fireEvent.change(sizeSelect, { target: { value: "restaurant:wingstop:classic-wings-lemon-pepper:10-piece" } });
+  expect(sizeSelect).toHaveDisplayValue(/10 piece order.*flavor already included/i);
+  expect(form.getByLabelText("Calories")).toHaveValue(1200);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(2100);
+
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "0.5" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(600);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Classic Bone-In Wings - Lemon Pepper",
+    calories: 600,
+    protein: 50,
+    carbohydrates: 0,
+    fat: 40,
+    sodium: 1050,
+    portion: { amount: 0.5 },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "wingstop",
+      restaurantName: "Wingstop",
+      sourceId: "wingstop:classic-wings-lemon-pepper:10-piece",
+    },
+  });
+  expect(props.saveNutritionEntry.mock.calls[0][0].fiber).toBe(0);
+  expect(props.saveNutritionEntry.mock.calls[0][0].addedSugar).toBeNull();
+});
+
 test("normal Sonic and Braum's items log with chain identity and known sodium", () => {
   const props = renderNutritionPage();
 

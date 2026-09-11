@@ -367,16 +367,19 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     subway: /^https:\/\/media\.subway\.com\/dam\//,
     chipotle: /^https:\/\/www\.chipotle\.com\/content\/dam\/chipotle\/menu\/nutrition\//,
     popeyes: /^https:\/\/plk-use1-prod\.sites\.rbictg\.com\/nutrition\/PLK_Nutrition\.pdf$/,
+    kfc: /^https:\/\/www\.kfc\.com\/full-nutrition-guide$/,
+    "raising-canes": /^https:\/\/raisingcanes\.cdn\.prismic\.io\/raisingcanes\//,
+    wingstop: /^https:\/\/www\.wingstop\.com\/nutrition$/,
     "taco-bell": /^https:\/\/www\.tacobell\.com\/food\//,
     "chick-fil-a": /^https:\/\/www\.chick-fil-a\.com\/nutrition-allergens$/,
     whataburger: /^https:\/\/wbimageserver\.whataburger\.com\/Nutrition\.pdf$/,
   };
-  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
+  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
     chainId,
     expansion.filter((food) => food.restaurant.id === chainId).length,
   ]));
 
-  expect(expansion).toHaveLength(1023);
+  expect(expansion).toHaveLength(1191);
   expect(countByChain).toEqual({
     mcdonalds: 100,
     sonic: 102,
@@ -386,6 +389,9 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     subway: 193,
     chipotle: 54,
     popeyes: 61,
+    kfc: 86,
+    "raising-canes": 12,
+    wingstop: 70,
     "taco-bell": 95,
     "chick-fil-a": 60,
     whataburger: 112,
@@ -461,6 +467,87 @@ test("finds Subway, Chipotle, and Popeyes items across the completed menu catego
     .toEqual(expectedFirstResults);
   expect(searchFoodCatalog("popeyes pepsi")[0].id).toBe("restaurant:popeyes:pepsi");
   expect(searchFoodCatalog("pepsi")[0].id).toBe("beverage:pepsi:pepsi-20oz");
+});
+
+test("finds KFC, Raising Cane's, and Wingstop foods across the expanded menu categories", () => {
+  const expectedFirstResults = [
+    ["kfc original recipe breast", "restaurant:kfc:original-recipe-chicken-breast"],
+    ["kentucky fried chicken grilled drumstick", "restaurant:kfc:kentucky-grilled-chicken-drumstick"],
+    ["kfc 8 piece nuggets", "restaurant:kfc:kentucky-fried-nuggets"],
+    ["kfc secret recipe fries", "restaurant:kfc:secret-recipe-fries"],
+    ["kfc famous bowl", "restaurant:kfc:famous-bowl"],
+    ["kfc honey mustard", "restaurant:kfc:honey-mustard-dipping-sauce"],
+    ["kfc chocolate chip cake", "restaurant:kfc:chocolate-chip-cake-slice"],
+    ["raising canes 4 fingers", "restaurant:raising-canes:chicken-finger"],
+    ["raising cane's texas toast", "restaurant:raising-canes:texas-toast"],
+    ["raising canes sauce", "restaurant:raising-canes:canes-sauce"],
+    ["raising canes lemonade", "restaurant:raising-canes:lemonade"],
+    ["wingstop 10 piece lemon pepper bone in wings", "restaurant:wingstop:classic-wings-lemon-pepper"],
+    ["wingstop 8 piece mango habanero boneless wings", "restaurant:wingstop:boneless-wings-mango-habanero"],
+    ["wingstop 5 piece louisiana rub tenders", "restaurant:wingstop:crispy-tenders-louisiana-rub"],
+    ["wingstop garlic parmesan chicken sandwich", "restaurant:wingstop:chicken-sandwich-garlic-parmesan"],
+    ["wingstop voodoo fries", "restaurant:wingstop:louisiana-voodoo-fries"],
+    ["wingstop ranch dip", "restaurant:wingstop:ranch-dip"],
+    ["wingstop brownie", "restaurant:wingstop:brownie"],
+  ];
+
+  expect(expectedFirstResults.map(([query]) => [query, searchFoodCatalog(query)[0]?.id]))
+    .toEqual(expectedFirstResults);
+  expect(searchFoodCatalog("kfc pepsi")[0].id).toBe("restaurant:kfc:pepsi");
+  expect(searchFoodCatalog("wingstop dr pepper")[0].id).toBe("restaurant:wingstop:dr-pepper");
+  expect(searchFoodCatalog("pepsi")[0].id).toBe("beverage:pepsi:pepsi-20oz");
+});
+
+test("preserves chicken-chain size and piece-count options with flavor-safe scaling", () => {
+  const kfcNuggets = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:kfc:kentucky-fried-nuggets"));
+  const kfcFries = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:kfc:secret-recipe-fries"));
+  const canesFingers = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:raising-canes:chicken-finger"));
+  const canesLemonade = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:raising-canes:lemonade"));
+  const wingstopWings = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:wingstop:classic-wings-lemon-pepper"));
+  const wingstopFries = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:wingstop:seasoned-fries"));
+
+  expect(kfcNuggets.servingOptions.map(({ serving, nutrients }) => [serving.amount, nutrients.calories])).toEqual([
+    [5, 175], [8, 280], [12, 420], [36, 1260],
+  ]);
+  expect(kfcFries.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Individual Secret Recipe Fries side", 320], ["Family Secret Recipe Fries side", 840],
+  ]);
+  expect(canesFingers.servingOptions.map(({ serving, nutrients }) => [serving.amount, nutrients.calories])).toEqual([
+    [1, 130], [2, 260], [3, 390], [4, 520], [6, 780],
+  ]);
+  expect(canesLemonade.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["12 fl oz kids' serving", 160], ["22 fl oz regular serving", 290], ["32 fl oz large serving", 420], ["1 gallon jug", 1700],
+  ]);
+  expect(wingstopWings.servingOptions.map(({ serving, nutrients }) => [serving.amount, nutrients.calories])).toEqual([
+    [6, 720], [8, 960], [10, 1200], [15, 1800], [20, 2400], [30, 3600],
+  ]);
+  expect(wingstopFries.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Regular seasoned fries", 500], ["Large seasoned fries", 900],
+  ]);
+
+  expect(scaleNutrition(wingstopWings.servingOptions[2].nutrients, 0.5)).toEqual({
+    calories: 600,
+    protein: 50,
+    carbohydrates: 0,
+    fat: 40,
+    sodium: 1050,
+    fiber: 0,
+    totalSugar: 0,
+    addedSugar: null,
+  });
+  expect(scaleNutrition(canesFingers.nutrients, 2).fiber).toBeNull();
+  expect(wingstopWings.serving.description).toContain("flavor already included");
+  [
+    ...kfcNuggets.servingOptions,
+    ...canesFingers.servingOptions,
+    ...wingstopWings.servingOptions,
+    ...wingstopFries.servingOptions,
+  ].forEach((option) => expect(option.provenance.verification).toMatchObject({
+    sourceType: "official-restaurant",
+    accessedAt: "2026-09-10",
+    sourceUrl: expect.stringMatching(/^https:\/\//),
+    sourceReference: expect.any(String),
+  }));
 });
 
 test("preserves published options and scales unknown restaurant nutrients without inventing zero", () => {

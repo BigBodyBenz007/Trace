@@ -2240,6 +2240,405 @@ const popeyesFoods = [
   popeyesFood("kids-classic-leg", "Kids' Classic Chicken Leg", "1 classic bone-in leg; kids' side, beverage and sauce excluded", popeyesPublished(190, 12, 9, 11, 350, 0, 0)),
 ];
 
+const CHICKEN_CHAIN_EXPANSION_ACCESSED_AT = "2026-09-10";
+const KFC_SOURCE = "https://www.kfc.com/full-nutrition-guide";
+const CANES_SOURCE = "https://raisingcanes.cdn.prismic.io/raisingcanes/IxTKraMRo_HyNWx2_Allergen%26NutritionalInformation_ALL_DIGITAL_8.26.pdf";
+const WINGSTOP_SOURCE = "https://www.wingstop.com/nutrition";
+const KFC_REFERENCE = "KFC official Full Nutrition Guide, current U.S. standard formulations; nutrition table updated June 6, 2025. Regional and limited-time availability can vary.";
+const CANES_REFERENCE = "Raising Cane's official Allergen & Nutritional Information PDF linked from raisingcanes.com, file labeled 8.26; values are for the named standalone item or published drink size.";
+const WINGSTOP_REFERENCE = "Wingstop official nutrition route and linked interactive nutrition table, updated March 24, 2025; each chicken value already includes the named sauce or dry rub.";
+
+const chickenChainPublished = (calories, protein, carbohydrates, fat, sodium, fiber = null, totalSugar = null, addedSugar = null) => ({
+  calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar,
+});
+
+function chickenChainOption(chainId, id, description, nutrients, amount, sourceUrl, sourceReference) {
+  const option = officialOption(chainId, id, description, nutrients, amount, sourceUrl, sourceReference);
+  option.provenance.verification.accessedAt = CHICKEN_CHAIN_EXPANSION_ACCESSED_AT;
+  return option;
+}
+
+function chickenChainFood(chain, id, name, description, nutrients, sourceUrl, sourceReference, servingOptions, searchAliases) {
+  const food = officialFood(
+    chain,
+    id,
+    name,
+    description,
+    nutrients,
+    sourceUrl,
+    sourceReference,
+    servingOptions,
+    { accessedAt: CHICKEN_CHAIN_EXPANSION_ACCESSED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+}
+
+const kfc = { id: "kfc", name: "KFC" };
+const kfcFood = (id, name, description, nutrients, servingOptions, searchAliases, sourceReference = KFC_REFERENCE) => chickenChainFood(
+  kfc, id, name, description, nutrients, KFC_SOURCE, sourceReference, servingOptions, searchAliases
+);
+const kfcOption = (id, description, nutrients, amount = 1, sourceReference = KFC_REFERENCE) => chickenChainOption(
+  kfc.id, id, description, nutrients, amount, KFC_SOURCE, sourceReference
+);
+const kfcCalculatedOptions = (id, itemName, perPiece, counts) => counts.map((count) => kfcOption(
+  `${id}:${count}-piece`,
+  `${count} piece order; calculated as ${count} × the published per-piece ${itemName} nutrition`,
+  Object.fromEntries(Object.entries(perPiece).map(([key, value]) => [key, value === null ? null : value * count])),
+  count,
+  `${KFC_REFERENCE} This option is calculated from the guide's explicit per-piece value.`
+));
+
+const kfcChickenStyles = [
+  ["original-recipe", "Original Recipe", [
+    ["breast", "Breast", chickenChainPublished(390, 39, 11, 21, 1190, 2, 0, 0)],
+    ["drumstick", "Drumstick", chickenChainPublished(130, 12, 4, 8, 430, 1, 0, 0)],
+    ["thigh", "Thigh", chickenChainPublished(280, 19, 8, 19, 910, 1, 0, 0)],
+    ["whole-wing", "Whole Wing", chickenChainPublished(130, 10, 3, 8, 380, 0, 0, 0)],
+  ]],
+  ["extra-crispy", "Extra Crispy", [
+    ["breast", "Breast", chickenChainPublished(530, 35, 18, 35, 1150, 0, 0, 0)],
+    ["drumstick", "Drumstick", chickenChainPublished(170, 10, 5, 12, 390, 0, 0, 0)],
+    ["thigh", "Thigh", chickenChainPublished(330, 22, 9, 23, 700, 0, 0, 0)],
+    ["whole-wing", "Whole Wing", chickenChainPublished(170, 10, 5, 13, 340, 0, 0, 0)],
+  ]],
+  ["kentucky-grilled", "Kentucky Grilled Chicken", [
+    ["breast", "Breast", chickenChainPublished(210, 38, 0, 7, 710, 0, 0, 0)],
+    ["drumstick", "Drumstick", chickenChainPublished(80, 11, 0, 4, 220, 0, 0, 0)],
+    ["thigh", "Thigh", chickenChainPublished(150, 17, 0, 9, 420, 0, 0, 0)],
+    ["whole-wing", "Whole Wing", chickenChainPublished(70, 9, 0, 3, 180, 0, 0, 0)],
+  ]],
+  ["spicy-crispy", "Spicy Crispy Chicken", [
+    ["breast", "Breast", chickenChainPublished(350, 30, 11, 20, 1100, 1, 0, 0)],
+    ["drumstick", "Drumstick", chickenChainPublished(130, 9, 5, 8, 420, 1, 0, 0)],
+    ["thigh", "Thigh", chickenChainPublished(270, 13, 10, 20, 720, 1, 0, 0)],
+    ["whole-wing", "Whole Wing", chickenChainPublished(120, 7, 5, 8, 350, 0, 0, 0)],
+  ]],
+];
+
+const kfcFoods = [
+  ...kfcChickenStyles.flatMap(([styleId, styleName, cuts]) => cuts.map(([cutId, cutName, nutrients]) => kfcFood(
+    `${styleId}-chicken-${cutId}`,
+    `${styleName} ${cutName}`,
+    `1 ${cutName.toLowerCase()} piece; ${styleName.toLowerCase()} preparation`,
+    nutrients,
+    undefined,
+    [`Kentucky Fried Chicken ${styleName} ${cutName}`]
+  ))),
+  (() => {
+    const nutrients = chickenChainPublished(170, 11, 20, 6, 400, 0, 0, 0);
+    return kfcFood(
+      "original-recipe-tenders",
+      "Original Recipe Tenders",
+      "1 Original Recipe tender; sauce and sides not included",
+      nutrients,
+      kfcCalculatedOptions("original-recipe-tenders", "Original Recipe Tender", nutrients, [1, 3, 4, 5]),
+      ["KFC chicken tenders", "KFC 3 piece tenders", "KFC 4 piece tenders", "KFC 5 piece tenders"]
+    );
+  })(),
+  (() => {
+    const nutrients = chickenChainPublished(35, 3, 1, 1.5, 140, 0, 0, 0);
+    return kfcFood(
+      "kentucky-fried-nuggets",
+      "Kentucky Fried Nuggets",
+      "1 plain Kentucky Fried Nugget; sauce and sides not included",
+      nutrients,
+      kfcCalculatedOptions("kentucky-fried-nuggets", "Kentucky Fried Nugget", nutrients, [5, 8, 12, 36]),
+      ["KFC nuggets", "KFC 5 piece nuggets", "KFC 8 piece nuggets", "KFC 12 piece nuggets", "KFC 36 piece nuggets"]
+    );
+  })(),
+  ...[
+    ["chipotle-ranch", "Chipotle Ranch", chickenChainPublished(50, 4, 1, 4, 160, 0, 0, 0)],
+    ["honey-bbq", "Honey BBQ", chickenChainPublished(45, 4, 4, 1.5, 170, 0, 2, 0)],
+    ["honey-garlic", "Honey Garlic", chickenChainPublished(40, 4, 3, 1.5, 160, 0, 1, 0)],
+    ["korean-bbq", "Korean BBQ", chickenChainPublished(45, 4, 4, 1.5, 210, 0, 2, 0)],
+    ["mango-habanero", "Mango Habanero", chickenChainPublished(40, 4, 3, 1.5, 170, 0, 1, 0)],
+  ].map(([id, flavor, nutrients]) => kfcFood(
+    `saucy-nuggets-${id}`,
+    `Saucy Nuggets - ${flavor}`,
+    `1 nugget with ${flavor} sauce already included; do not add a separate sauce serving`,
+    nutrients,
+    kfcCalculatedOptions(`saucy-nuggets-${id}`, `${flavor} Saucy Nugget`, nutrients, [5, 10]),
+    [`KFC ${flavor} nuggets`]
+  )),
+  ...[
+    ["classic-chicken-sandwich", "Classic Chicken Sandwich", "1 sandwich with crispy chicken, pickles and mayonnaise on a brioche-style bun", chickenChainPublished(650, 34, 49, 35, 1260, 1, 6, 0)],
+    ["spicy-chicken-sandwich", "Spicy Chicken Sandwich", "1 sandwich with crispy chicken, pickles and spicy sauce on a brioche-style bun", chickenChainPublished(620, 34, 49, 33, 2140, 1, 6, 0)],
+    ["chicken-little", "Chicken Little", "1 small chicken sandwich; side and drink not included", chickenChainPublished(350, 15, 39, 16, 730, null, 3, 0)],
+    ["twister", "Twister", "1 published wrap configuration", chickenChainPublished(680, 29, 74, 31, 1360, null, 3, 0)],
+    ["chipotle-ranch-chicken-sandwich", "Chipotle Ranch Chicken Sandwich", "1 limited-time sandwich with Chipotle Ranch sauce included", chickenChainPublished(670, 34, 49, 38, 1330, 1, 7, 0)],
+    ["honey-bbq-chicken-sandwich", "Honey BBQ Chicken Sandwich", "1 limited-time sandwich with Honey BBQ sauce included", chickenChainPublished(600, 34, 58, 26, 1330, 1, 15, 5)],
+    ["honey-garlic-chicken-sandwich", "Honey Garlic Chicken Sandwich", "1 limited-time sandwich with Honey Garlic sauce included", chickenChainPublished(610, 34, 61, 26, 1370, 1, 16, 0)],
+    ["korean-bbq-chicken-sandwich", "Korean BBQ Chicken Sandwich", "1 limited-time sandwich with Korean BBQ sauce included", chickenChainPublished(620, 34, 61, 27, 1580, 1, 17, 5)],
+    ["mango-habanero-chicken-sandwich", "Mango Habanero Chicken Sandwich", "1 limited-time sandwich with Mango Habanero sauce included", chickenChainPublished(590, 34, 56, 26, 1330, 1, 13, 0)],
+  ].map(([id, name, description, nutrients]) => kfcFood(id, name, description, nutrients)),
+  ...[
+    ["chicken-pot-pie", "Chicken Pot Pie", "1 complete pot pie", chickenChainPublished(720, 26, 60, 41, 1750, 7, 5, 0)],
+    ["famous-bowl", "Famous Bowl", "1 standard bowl with mashed potatoes, gravy, corn, cheese and chicken", chickenChainPublished(590, 31, 67, 22, 2160, 4, 3, 0)],
+    ["mac-and-cheese-bowl", "Mac & Cheese Bowl", "1 limited-time bowl with macaroni and cheese, chicken and cheese", chickenChainPublished(480, 30, 42, 22, 1970, 2, 4, 0)],
+    ["korean-bbq-mac-and-cheese-bowl", "Korean BBQ Mac & Cheese Bowl", "1 limited-time bowl with Korean BBQ sauce included", chickenChainPublished(530, 30, 52, 23, 2250, 2, 12, 0)],
+    ["korean-bbq-loaded-fries-bowl", "Korean BBQ Loaded Fries Bowl", "1 limited-time loaded fries bowl with Korean BBQ sauce included", chickenChainPublished(770, 27, 76, 39, 2640, 8, 23, 0)],
+    ["nashville-hot-mac-and-cheese-bowl", "Nashville Hot Mac & Cheese Bowl", "1 limited-time bowl with Nashville Hot seasoning included", chickenChainPublished(610, 30, 44, 36, 2180, 3, 5, 0)],
+    ["nashville-hot-mashed-potato-bowl", "Nashville Hot Mashed Potato Bowl", "1 limited-time bowl with Nashville Hot seasoning included", chickenChainPublished(680, 29, 66, 34, 2230, 5, 3, 0)],
+    ["nashville-hot-loaded-fries-bowl", "Nashville Hot Loaded Fries Bowl", "1 limited-time loaded fries bowl with Nashville Hot seasoning included", chickenChainPublished(910, 26, 63, 60, 2530, 8, 12, 0)],
+  ].map(([id, name, description, nutrients]) => kfcFood(id, name, description, nutrients)),
+  ...[
+    ["bbq-baked-beans", "BBQ Baked Beans", chickenChainPublished(190, 11, 34, 1, 650, 7, 15, 0), chickenChainPublished(830, 47, 148, 5, 2810, 31, 63, 0)],
+    ["coleslaw", "Coleslaw", chickenChainPublished(170, 1, 14, 12, 180, 4, 10, 0), chickenChainPublished(640, 4, 54, 46, 670, 14, 37, 0)],
+    ["corn-on-the-cob", "Corn on the Cob", chickenChainPublished(70, 2, 17, 0.5, 0, 2, 3, 0), chickenChainPublished(280, 9, 67, 2, 15, 8, 11, 0)],
+    ["green-beans", "Green Beans", chickenChainPublished(25, 1, 5, 0, 300, 3, 1, 0), chickenChainPublished(80, 4, 15, 0, 930, 9, 3, 0)],
+    ["macaroni-and-cheese", "Macaroni & Cheese", chickenChainPublished(140, 5, 17, 6, 590, 1, 2, 0), chickenChainPublished(540, 18, 66, 23, 2220, 5, 8, 0)],
+    ["mashed-potatoes", "Mashed Potatoes", chickenChainPublished(110, 2, 17, 3.5, 330, 1, 0, 0), chickenChainPublished(460, 9, 72, 15, 1410, 6, 0, 0)],
+    ["mashed-potatoes-with-gravy", "Mashed Potatoes with Gravy", chickenChainPublished(130, 3, 20, 4.5, 520, 1, 0, 0), chickenChainPublished(590, 12, 88, 21, 2590, 6, 1, 0)],
+    ["secret-recipe-fries", "Secret Recipe Fries", chickenChainPublished(320, 5, 41, 15, 1100, 3, 0, 0), chickenChainPublished(840, 13, 108, 40, 2890, 9, 0, 0)],
+  ].map(([id, name, individual, family]) => kfcFood(
+    id,
+    name,
+    `1 individual ${name.toLowerCase()} side`,
+    individual,
+    [
+      kfcOption(`${id}:individual`, `Individual ${name} side`, individual),
+      kfcOption(`${id}:family`, `Family ${name} side`, family),
+    ],
+    name === "Secret Recipe Fries" ? ["KFC fries"] : undefined
+  )),
+  ...[
+    ["biscuit", "Biscuit", "1 biscuit", chickenChainPublished(180, 4, 22, 8, 520, 1, 1, 0)],
+    ["cornbread-muffin", "Cornbread Muffin", "1 regional cornbread muffin", chickenChainPublished(210, 3, 28, 9, 240, 0, 11, 0)],
+    ["sweet-kernel-corn", "Sweet Kernel Corn", "1 individual side", chickenChainPublished(70, 2, 16, 0.5, 0, 2, 2, 0)],
+  ].map(([id, name, description, nutrients]) => kfcFood(id, name, description, nutrients)),
+  ...[
+    ["bbq-dipping-sauce", "BBQ Dipping Sauce", chickenChainPublished(45, 0, 11, 0, 150, 0, 11, 0)],
+    ["buffalo-ranch-dipping-sauce", "Buffalo Ranch Dipping Sauce", chickenChainPublished(120, 1, 2, 13, 290, 0, 1, 0)],
+    ["comeback-dipping-sauce", "Comeback Dipping Sauce", chickenChainPublished(120, 0, 2, 12, 340, 0, 2, 0)],
+    ["honey-mustard-dipping-sauce", "Honey Mustard Dipping Sauce", chickenChainPublished(110, 0, 6, 9, 120, 0, 6, 0)],
+    ["kfc-dipping-sauce", "KFC Sauce", chickenChainPublished(90, 0, 5, 8, 170, 0, 5, 0)],
+    ["ranch-dipping-sauce", "Ranch Dipping Sauce", chickenChainPublished(130, 0, 2, 14, 240, 0, 1, 0)],
+    ["sticky-chicky-sweet-and-sour", "Sticky Chicky Sweet & Sour Sauce", chickenChainPublished(45, 0, 11, 0, 180, 0, 10, 10)],
+    ["honey-sauce-packet", "Honey Sauce Packet", chickenChainPublished(30, 0, 8, 0, 0, 0, 5, 0)],
+    ["ketchup-packet", "Ketchup Packet", chickenChainPublished(30, 0, 8, 0, 250, 0, 6, 0)],
+    ["colonels-buttery-spread", "Colonel's Buttery Spread", chickenChainPublished(35, 0, 0, 4, 35, 0, 0, 0)],
+    ["grape-jelly-packet", "Grape Jelly Packet", chickenChainPublished(35, 0, 9, 0, 10, 0, 7, 0)],
+    ["strawberry-jam-packet", "Strawberry Jam Packet", chickenChainPublished(35, 0, 9, 0, 0, 0, 6, 0)],
+    ["lemon-juice-packet", "Lemon Juice Packet", chickenChainPublished(5, 0, 1, 0, 20, 0, 0, 0)],
+  ].map(([id, name, nutrients]) => kfcFood(id, name, `1 separately listed ${name.toLowerCase()}; no chicken or side included`, nutrients)),
+  ...[
+    ["apple-pie-popper", "Apple Pie Popper", chickenChainPublished(80, 1, 9, 5, 55, 1, 3, 0)],
+    ["cherry-pie-popper", "Cherry Pie Popper", chickenChainPublished(70, 1, 7, 4.5, 40, 0, 2, 0)],
+    ["strawberry-cream-pie-popper", "Strawberry Cream Pie Popper", chickenChainPublished(70, 1, 7, 4.5, 40, 0, 2, 0)],
+    ["apple-turnover", "Apple Turnover", chickenChainPublished(230, 2, 32, 10, 140, 0, 12, 0)],
+    ["chocolate-chip-cake-slice", "Chocolate Chip Cake Slice", chickenChainPublished(300, 4, 39, 15, 260, 1, 27, 0)],
+    ["lemon-cake-slice", "Lemon Cake Slice", chickenChainPublished(220, 2, 30, 10, 170, 0, 20, 0)],
+    ["mini-chocolate-chip-cake", "Mini Chocolate Chip Cake", chickenChainPublished(300, 3, 49, 12, 190, 1, 35, 0)],
+    ["mini-lemon-cake", "Mini Lemon Cake", chickenChainPublished(300, 3, 43, 13, 230, 0, 31, 0)],
+  ].map(([id, name, nutrients]) => kfcFood(id, name, `1 ${name.toLowerCase()}; limited-time or market availability may vary`, nutrients)),
+  ...[
+    ["kids-applesauce", "Kids' Applesauce", "1 Musselman's applesauce pouch", chickenChainPublished(45, 0, 12, 0, 0, 1, 8, 0)],
+    ["kids-capri-sun-fruit-punch", "Kids' Capri Sun Fruit Punch", "1 kids' juice pouch", chickenChainPublished(80, 0, 21, 0, 25, 0, 20, 0)],
+    ["kids-1-percent-milk", "Kids' 1% Milk", "1 kids' milk container", chickenChainPublished(90, 7, 10, 2, 105, 0, 10, 0)],
+    ["kids-1-percent-chocolate-milk", "Kids' 1% Chocolate Milk", "1 kids' chocolate milk container", chickenChainPublished(150, 7, 26, 2.5, 170, 0, 23, 0)],
+  ].map(([id, name, description, nutrients]) => kfcFood(id, name, description, nutrients)),
+  ...[
+    ["pepsi", "Pepsi", [[12, 150, 41, 30, 41], [16, 200, 55, 45, 55], [20, 250, 69, 55, 69], [30, 380, 104, 80, 103]]],
+    ["pepsi-zero-sugar", "Pepsi Zero Sugar", [[12, 0, 0, 35, 0], [16, 0, 0, 50, 0], [20, 0, 0, 60, 0], [30, 0, 1, 95, 0]]],
+    ["mountain-dew", "Mountain Dew", [[12, 160, 44, 50, 44], [16, 220, 59, 70, 58], [20, 270, 73, 85, 73], [30, 410, 110, 125, 109]]],
+    ["starry", "Starry", [[12, 150, 39, 35, 39], [16, 200, 52, 45, 52], [20, 240, 65, 55, 65], [30, 370, 97, 85, 97]]],
+    ["dr-pepper", "Dr Pepper", [[12, 140, 39, 45, 38], [16, 190, 52, 60, 51], [20, 240, 65, 75, 64], [30, 360, 98, 110, 96]]],
+    ["mug-root-beer", "Mug Root Beer", [[12, 140, 39, 45, 39], [16, 190, 52, 60, 52], [20, 240, 65, 75, 65], [30, 360, 98, 110, 98]]],
+    ["wild-cherry-pepsi", "Wild Cherry Pepsi", [[12, 160, 42, 30, 42], [16, 210, 56, 40, 56], [20, 260, 70, 50, 70], [30, 390, 105, 80, 105]]],
+    ["brisk-sweet-iced-tea", "Brisk Sweet Iced Tea", [[12, 80, 22, 45, 21], [16, 110, 29, 65, 29], [20, 130, 36, 80, 36], [30, 200, 54, 120, 54]]],
+    ["brisk-unsweetened-iced-tea", "Brisk Unsweetened Iced Tea", [[12, 0, 0, 45, 0], [16, 0, 0, 60, 0], [20, 0, 0, 75, 0], [30, 0, 0, 115, 0]]],
+    ["classic-lemonade", "Classic Lemonade", [[20, 140, 39, 130, 38], [64, 880, 234, 780, 228]]],
+  ].map(([id, name, sizes]) => kfcFood(
+    id,
+    name,
+    `${sizes[0][0]} fl oz fountain serving`,
+    null,
+    sizes.map(([ounces, calories, carbohydrates, sodium, totalSugar]) => kfcOption(
+      `${id}:${ounces}oz`,
+      ounces === 64 ? "1/2 gallon" : `${ounces} fl oz fountain serving`,
+      chickenChainPublished(calories, 0, carbohydrates, 0, sodium, 0, totalSugar, name === "Starry" ? totalSugar : 0)
+    )),
+    [`KFC ${name}`]
+  )),
+];
+
+const raisingCanes = { id: "raising-canes", name: "Raising Cane's" };
+const canesFood = (id, name, description, nutrients, servingOptions, searchAliases) => chickenChainFood(
+  raisingCanes, id, name, description, nutrients, CANES_SOURCE, CANES_REFERENCE, servingOptions, searchAliases
+);
+const canesOption = (id, description, nutrients, amount = 1, sourceReference = CANES_REFERENCE) => chickenChainOption(
+  raisingCanes.id, id, description, nutrients, amount, CANES_SOURCE, sourceReference
+);
+const canesFoods = [
+  (() => {
+    const nutrients = chickenChainPublished(130, 13, 5, 7, 200, null, 0, null);
+    return canesFood(
+      "chicken-finger",
+      "Chicken Finger",
+      "1 hand-battered chicken finger (1.9 oz / 55 g); sauce and sides not included",
+      nutrients,
+      [1, 2, 3, 4, 6].map((count) => canesOption(
+        `chicken-finger:${count}-piece`,
+        `${count} chicken finger${count === 1 ? "" : "s"}; calculated as ${count} × the official per-finger value`,
+        Object.fromEntries(Object.entries(nutrients).map(([key, value]) => [key, value === null ? null : value * count])),
+        count,
+        `${CANES_REFERENCE} This option is calculated from the PDF's explicit per-finger serving.`
+      )),
+      ["Raising Canes tenders", "Canes chicken fingers", "Raising Canes 2 finger kids", "Raising Canes 3 fingers", "Raising Canes 4 fingers", "Raising Canes 6 fingers"]
+    );
+  })(),
+  canesFood("crinkle-cut-fries", "Crinkle-Cut Fries", "1 standard order (5.1 oz / 144 g)", chickenChainPublished(400, 5, 50, 20, 310, 6, 0, null), undefined, ["Raising Canes fries"]),
+  canesFood("texas-toast", "Texas Toast", "1 slice (1.7 oz / 48 g)", chickenChainPublished(150, 4, 23, 4.5, 300, 1, 4, null)),
+  canesFood("coleslaw", "Coleslaw", "1 side (3.1 oz / 87 g)", chickenChainPublished(100, 1, 10, 6, 350, 2, 8, null)),
+  canesFood("canes-sauce", "Cane's Sauce", "1 dipping sauce cup (1.5 oz / 43 g)", chickenChainPublished(190, 0, 6, 18, 590, null, 5, null), undefined, ["Raising Canes sauce"]),
+  canesFood("chicken-sandwich", "Chicken Sandwich", "1 sandwich (10.4 oz / 296 g): 3 chicken fingers, Cane's Sauce and lettuce on a toasted bun", chickenChainPublished(830, 47, 69, 41, 1500, 5, 14, null)),
+  ...[
+    ["sweet-tea", "Sweet Tea", [[12, 130, 33, 15, 33], [22, 240, 61, 25, 61], [32, 340, 88, 35, 88], [128, 1360, 352, 140, 351]]],
+    ["unsweet-tea", "Unsweet Tea", [[12, 0, 0, 15, 0], [22, 0, 0, 25, 0], [32, 0, 0, 35, 0], [128, 0, 0, 140, 0]]],
+    ["lemonade", "Freshly Squeezed Lemonade", [[12, 160, 41, 10, 40], [22, 290, 76, 20, 73], [32, 420, 111, 35, 107], [128, 1700, 442, 130, 427]]],
+    ["half-sweet-tea-half-lemonade", "Half Sweet Tea / Half Lemonade", [[12, 140, 37, 15, 37], [22, 260, 68, 25, 67], [32, 380, 99, 35, 97]]],
+    ["half-unsweet-tea-half-lemonade", "Half Unsweet Tea / Half Lemonade", [[12, 80, 20, 15, 20], [22, 150, 38, 25, 37], [32, 210, 55, 35, 53]]],
+    ["barqs-root-beer", "Barq's Root Beer", [[12, 150, 42, 70, 42], [22, 280, 77, 130, 77]]],
+  ].map(([id, name, sizes]) => canesFood(
+    id,
+    name,
+    `${sizes[0][0]} fl oz published serving`,
+    null,
+    sizes.map(([ounces, calories, carbohydrates, sodium, totalSugar]) => canesOption(
+      `${id}:${ounces}oz`,
+      ounces === 128 ? "1 gallon jug" : `${ounces} fl oz ${ounces === 12 ? "kids'" : ounces === 22 ? "regular" : "large"} serving`,
+      chickenChainPublished(calories, ounces === 128 && id === "lemonade" ? 1 : 0, carbohydrates, 0, sodium, ounces === 128 && id === "lemonade" ? null : 0, totalSugar, null)
+    )),
+    [`Raising Canes ${name}`, `Raising Cane's ${name}`]
+  )),
+];
+
+const wingstop = { id: "wingstop", name: "Wingstop" };
+const wingstopFood = (id, name, description, nutrients, servingOptions, searchAliases, sourceReference = WINGSTOP_REFERENCE) => chickenChainFood(
+  wingstop, id, name, description, nutrients, WINGSTOP_SOURCE, sourceReference, servingOptions, searchAliases
+);
+const wingstopOption = (id, description, nutrients, amount = 1, sourceReference = WINGSTOP_REFERENCE) => chickenChainOption(
+  wingstop.id, id, description, nutrients, amount, WINGSTOP_SOURCE, sourceReference
+);
+const wingstopCountOptions = (id, itemName, perPiece, counts) => counts.map((count) => wingstopOption(
+  `${id}:${count}-piece`,
+  `${count} piece order; calculated as ${count} × the published per-piece ${itemName} value, with flavor already included`,
+  Object.fromEntries(Object.entries(perPiece).map(([key, value]) => [key, value === null ? null : value * count])),
+  count,
+  `${WINGSTOP_REFERENCE} This option is calculated from the table's explicit per-piece flavored value.`
+));
+
+const wingstopFlavors = [
+  ["atomic", "Atomic", [90, 10, 1, 5, 220, 0, 0], [90, 4, 7, 4.5, 380, 0, 0], [150, 10, 12, 7, 850, 0, 0], [650, 33, 74, 24, 3230, 2, 11]],
+  ["cajun", "Cajun", [90, 10, 0, 5, 310, 0, 0], [80, 4, 6, 4.5, 450, 0, 0], [150, 10, 11, 7, 1020, 0, 0], [640, 33, 70, 25, 3940, 2, 11]],
+  ["garlic-parmesan", "Garlic Parmesan", [120, 10, 1, 8, 75, 0, 0], [110, 4, 6, 7, 260, 0, 0], [210, 10, 11, 14, 550, 0, 0], [890, 34, 71, 52, 2060, 2, 11]],
+  ["hawaiian", "Hawaiian", [100, 10, 3, 5, 85, 0, 2], [90, 4, 8, 4.5, 270, 0, 2], [160, 10, 16, 7, 580, 0, 5], [710, 33, 90, 24, 2150, 2, 30]],
+  ["hickory-smoked-bbq", "Hickory Smoked BBQ", [100, 10, 4, 5, 150, 0, 3], [90, 5, 9, 4.5, 330, 0, 3], [170, 10, 17, 7, 710, 0, 6], [730, 34, 96, 24, 2680, 2, 36]],
+  ["spicy-korean-q", "Spicy Korean Q", [100, 10, 3, 5, 135, 0, 3], [90, 5, 8, 4.5, 320, 0, 2], [170, 10, 16, 7, 680, 0, 6], [720, 34, 90, 24, 2570, 2, 32]],
+  ["lemon-pepper", "Lemon Pepper", [120, 10, 0, 8, 210, 0, 0], [110, 4, 6, 7, 290, 0, 0], [200, 10, 10, 13, 620, 0, 0], [850, 32, 67, 50, 2320, 2, 10]],
+  ["louisiana-rub", "Louisiana Rub", [110, 10, 0, 7, 140, 0, 0], [100, 4, 6, 6, 260, 0, 0], [180, 10, 10, 12, 540, 0, 0], [790, 32, 67, 43, 2020, 2, 10]],
+  ["mango-habanero", "Mango Habanero", [100, 10, 4, 5, 80, 0, 3], [90, 4, 9, 4.5, 270, 0, 3], [170, 10, 17, 7, 570, 0, 7], [740, 32, 94, 24, 2120, 2, 7]],
+  ["mild", "Mild", [120, 10, 0, 8, 160, 0, 0], [110, 4, 6, 7, 330, 0, 0], [200, 10, 10, 14, 730, 0, 0], [870, 32, 67, 52, 2750, 2, 10]],
+  ["original-hot", "Original Hot", [90, 10, 0, 5, 230, 0, 0], [80, 4, 6, 4.5, 390, 0, 0], [140, 10, 10, 7, 870, 0, 0], [630, 32, 68, 25, 3340, 2, 10]],
+  ["plain", "Plain", [90, 10, 0, 5, 30, 0, 0], [80, 4, 6, 4.5, 230, 0, 0], [140, 10, 10, 7, 470, 0, 0], [610, 32, 66, 24, 1720, 2, 10]],
+  ["old-bay", "Old Bay", [100, 10, 0, 7, 110, 0, 1], [100, 4, 6, 6, 290, 0, 1], [170, 10, 10, 11, 420, 0, 2], null],
+];
+const wingstopFlavorNutrients = (values) => chickenChainPublished(...values, null);
+
+const wingstopFoods = [
+  ...wingstopFlavors.flatMap(([id, flavor, classicValues, bonelessValues, tenderValues]) => {
+    const classic = wingstopFlavorNutrients(classicValues);
+    const boneless = wingstopFlavorNutrients(bonelessValues);
+    const tender = wingstopFlavorNutrients(tenderValues);
+    return [
+      wingstopFood(
+        `classic-wings-${id}`,
+        `Classic Bone-In Wings - ${flavor}`,
+        `1 classic bone-in wing with ${flavor} flavor already included; dip not included`,
+        classic,
+        wingstopCountOptions(`classic-wings-${id}`, `${flavor} classic wing`, classic, [6, 8, 10, 15, 20, 30]),
+        [
+          `Wingstop bone in ${flavor} wings`,
+          ...[6, 8, 10, 15, 20, 30].map((count) => `Wingstop ${count} piece ${flavor} bone in wings`),
+        ]
+      ),
+      wingstopFood(
+        `boneless-wings-${id}`,
+        `Boneless Wings - ${flavor}`,
+        `1 boneless wing with ${flavor} flavor already included; dip not included`,
+        boneless,
+        wingstopCountOptions(`boneless-wings-${id}`, `${flavor} boneless wing`, boneless, [6, 8, 10, 15, 20, 30]),
+        [
+          `Wingstop ${flavor} boneless wings`,
+          ...[6, 8, 10, 15, 20, 30].map((count) => `Wingstop ${count} piece ${flavor} boneless wings`),
+        ]
+      ),
+      wingstopFood(
+        `crispy-tenders-${id}`,
+        `Crispy Tenders - ${flavor}`,
+        `1 crispy tender with ${flavor} flavor already included; dip not included`,
+        tender,
+        wingstopCountOptions(`crispy-tenders-${id}`, `${flavor} crispy tender`, tender, [3, 5, 10]),
+        [
+          `Wingstop ${flavor} tenders`,
+          ...[3, 5, 10].map((count) => `Wingstop ${count} piece ${flavor} tenders`),
+        ]
+      ),
+    ];
+  }),
+  ...wingstopFlavors.filter(([, , , , , sandwichValues]) => Boolean(sandwichValues)).map(([id, flavor, , , , sandwichValues]) => wingstopFood(
+    `chicken-sandwich-${id}`,
+    `Chicken Sandwich - ${flavor}`,
+    `1 chicken sandwich with ${flavor} flavor already included; dip, fries and drink not included`,
+    wingstopFlavorNutrients(sandwichValues),
+    undefined,
+    [`Wingstop ${flavor} chicken sandwich`]
+  )),
+  ...[
+    ["seasoned-fries", "Seasoned Fries", ["Regular seasoned fries", chickenChainPublished(500, 8, 69, 21, 620, 0, 3, null)], ["Large seasoned fries", chickenChainPublished(900, 14, 126, 37, 1060, 0, 6, null)]],
+    ["buffalo-ranch-fries", "Buffalo Ranch Fries", ["Regular Buffalo Ranch Fries", chickenChainPublished(610, 8, 71, 32, 1720, 0, 4, null)], ["Large Buffalo Ranch Fries", chickenChainPublished(1070, 15, 129, 55, 2710, 0, 8, null)]],
+    ["louisiana-voodoo-fries", "Louisiana Voodoo Fries", ["Regular Louisiana Voodoo Fries", chickenChainPublished(680, 9, 75, 38, 1270, 0, 4, null)], ["Large Louisiana Voodoo Fries", chickenChainPublished(1180, 16, 133, 64, 1870, 0, 6, null)]],
+    ["cheese-fries", "Cheese Fries", ["Regular Cheese Fries", chickenChainPublished(580, 9, 75, 27, 1190, 0, 4, null)], ["Large Cheese Fries", chickenChainPublished(1020, 15, 134, 47, 1910, 0, 8, null)]],
+    ["cajun-fried-corn", "Cajun Fried Corn", ["Regular order (5 pieces)", chickenChainPublished(200, 6, 24, 9, 300, 0, 10, null)], ["Large order (10 pieces)", chickenChainPublished(400, 12, 48, 18, 600, 0, 19, null)]],
+  ].map(([id, name, regular, large]) => wingstopFood(
+    id,
+    name,
+    regular[0],
+    null,
+    [wingstopOption(`${id}:regular`, regular[0], regular[1]), wingstopOption(`${id}:large`, large[0], large[1])],
+    name === "Seasoned Fries" ? ["Wingstop fries"] : undefined
+  )),
+  ...[
+    ["carrot-sticks", "Carrot Sticks", "4 carrot sticks", chickenChainPublished(25, 1, 7, 0, 45, 2, 3, null)],
+    ["celery-sticks", "Celery Sticks", "4 celery sticks", chickenChainPublished(10, 1, 2, 0, 45, 1, null, null)],
+    ["ranch-dip", "Ranch Dip", "1 housemade dip cup", chickenChainPublished(320, 1, 2, 34, 870, 0, 2, null)],
+    ["blue-cheese-dip", "Blue Cheese Dip", "1 dip cup", chickenChainPublished(330, 4, 4, 33, 570, 0, 2, null)],
+    ["honey-mustard-dip", "Honey Mustard Dip", "1 dip cup", chickenChainPublished(390, 0, 18, 33, 660, 0, 18, null)],
+    ["cheddar-cheese-sauce-dip", "Cheddar Cheese Sauce Dip", "1 dip cup", chickenChainPublished(120, 2, 8, 9, 850, 0, 2, null)],
+    ["brownie", "Brownie", "1 brownie", chickenChainPublished(430, 6, 49, 24, 160, 3, 33, null)],
+  ].map(([id, name, description, nutrients]) => wingstopFood(id, name, description, nutrients)),
+  ...[
+    ["coca-cola", "Coca-Cola", [["regular", "Regular fountain serving (20 fl oz / 600 mL)", 250, 68, 5, 68], ["large", "Large fountain serving (32 fl oz / 960 mL)", 400, 108, 10, 108]]],
+    ["diet-coke", "Diet Coke", [["regular", "Regular fountain serving (20 fl oz / 600 mL)", 0, 1, 25, 1], ["large", "Large fountain serving (32 fl oz / 960 mL)", 0, 2, 40, 2]]],
+    ["dr-pepper", "Dr Pepper", [["regular", "Regular fountain serving (20 fl oz / 600 mL)", 230, 65, 75, 65], ["large", "Large fountain serving (32 fl oz / 960 mL)", 360, 104, 120, 104]]],
+    ["sprite", "Sprite", [["regular", "Regular fountain serving (20 fl oz / 600 mL)", 240, 65, 55, 65], ["large", "Large fountain serving (32 fl oz / 960 mL)", 390, 104, 90, 104]]],
+    ["fanta-orange", "Fanta Orange", [["regular", "Regular fountain serving (20 fl oz / 600 mL)", 280, 75, 35, 75], ["large", "Large fountain serving (32 fl oz / 960 mL)", 440, 120, 55, 120]]],
+    ["sweet-tea", "Sweet Tea", [["regular", "Regular fountain serving (20 fl oz / 600 mL)", 180, 45, 0, 45], ["large", "Large fountain serving (32 fl oz / 960 mL)", 280, 72, 0, 72]]],
+    ["unsweetened-tea", "Unsweetened Tea", [["regular", "Regular fountain serving (20 fl oz / 600 mL)", 0, 0, 0, 0], ["large", "Large fountain serving (32 fl oz / 960 mL)", 0, 0, 0, 0]]],
+  ].map(([id, name, sizes]) => wingstopFood(
+    id,
+    name,
+    sizes[0][1],
+    null,
+    sizes.map(([optionId, description, calories, carbohydrates, sodium, totalSugar]) => wingstopOption(
+      `${id}:${optionId}`,
+      description,
+      chickenChainPublished(calories, 0, carbohydrates, 0, sodium, 0, totalSugar, null)
+    )),
+    [`Wingstop ${name}`]
+  )),
+];
+
 const whataburger = { id: "whataburger", name: "Whataburger" };
 const WHATABURGER_REFERENCE = "Whataburger official menu/app; default recipe nutrition displayed for the current national menu";
 const whataburgerFood = (id, name, description, nutrients, servingOptions) => officialFood(whataburger, id, name, description, nutrients, WHATABURGER_SOURCE, WHATABURGER_REFERENCE, servingOptions);
@@ -2637,6 +3036,9 @@ const restaurantFoods = [
   ...subwayFoods,
   ...chipotleFoods,
   ...popeyesFoods,
+  ...kfcFoods,
+  ...canesFoods,
+  ...wingstopFoods,
   ...sonicFoods,
   ...braumsFoods,
   ...tacoBellFoods,

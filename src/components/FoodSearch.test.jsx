@@ -200,6 +200,31 @@ test("preserves click selection and native keyboard button semantics", () => {
   expect(onSelectFood).toHaveBeenCalledWith(expect.objectContaining({ id: "grocery:usda:2646170" }));
 });
 
+test("discovers and selects new chicken-chain foods with ordinary punctuation and flavor queries", () => {
+  const onSelectFood = renderFoodSearch();
+
+  searchFor("raising canes 4 fingers");
+  let result = screen.getByRole("button", { name: /Raising Cane's.*Chicken Finger/i });
+  expect(result).toHaveTextContent("Official restaurant source");
+  expect(result).toHaveTextContent("1 chicken finger");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:raising-canes:chicken-finger",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:raising-canes:chicken-finger:4-piece" }),
+    ]),
+  }));
+
+  searchFor("wingstop lemon pepper bone in");
+  result = screen.getByRole("button", { name: /Wingstop.*Classic Bone-In Wings - Lemon Pepper/i });
+  expect(result).toHaveTextContent("flavor already included");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:wingstop:classic-wings-lemon-pepper",
+    nutrients: expect.objectContaining({ calories: 720, protein: 60, sodium: 1260 }),
+  }));
+});
+
 test("shows branded-drink source, package, caffeine, and unknown nutrient details", () => {
   const onSelectFood = renderFoodSearch();
   searchFor("monster ultra zero");
