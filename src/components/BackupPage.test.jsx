@@ -111,7 +111,7 @@ test("shows an estimate that explicitly includes photos and structured Trace dat
 
   const estimate = screen.getByRole("region", { name: "Backup size estimate" });
   expect(estimate).toHaveTextContent("7340032 bytes");
-  expect(estimate).toHaveTextContent("3 stored photos and all structured Trace data");
+  expect(estimate).toHaveTextContent("3 stored photos, 0 Time Capsule attachments, and all structured Trace data");
 });
 
 function readFileText(file) {
@@ -418,7 +418,7 @@ test("requires explicit browser confirmation before applying a full restore", as
   await screen.findByRole("heading", { name: "Review Backup" });
   fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
   expect(window.confirm).toHaveBeenCalledWith(
-    "Replace all current Trace data with this backup? Any current active workout draft will be replaced by the active draft in this backup. Any current unfinished Memory draft will be replaced by the draft in this backup. 2 unfinished form drafts in this backup will replace the current unfinished form drafts. This cannot be merged."
+    "Replace all current Trace data with this backup? Any current active workout draft will be replaced by the active draft in this backup. Any current unfinished Memory draft will be replaced by the draft in this backup. 2 unfinished form drafts in this backup will replace the current unfinished form drafts. Any current unfinished Time Capsule draft and its attachments will be removed because this backup has none. This cannot be merged."
   );
   expect(restoreTraceBackup).not.toHaveBeenCalled();
 });
@@ -503,7 +503,7 @@ test("preview and confirmation explain that a backup without a draft removes the
   expect(screen.getByText("Other unfinished form drafts: 0")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
   expect(window.confirm).toHaveBeenCalledWith(
-    "Replace all current Trace data with this backup? Any current active workout draft will be removed because this backup has none. Any current unfinished Memory draft will be removed because this backup has none. Any current unfinished form drafts will be removed because this backup has none. This cannot be merged."
+    "Replace all current Trace data with this backup? Any current active workout draft will be removed because this backup has none. Any current unfinished Memory draft will be removed because this backup has none. Any current unfinished form drafts will be removed because this backup has none. Any current unfinished Time Capsule draft and its attachments will be removed because this backup has none. This cannot be merged."
   );
   expect(restoreTraceBackup).not.toHaveBeenCalled();
 });

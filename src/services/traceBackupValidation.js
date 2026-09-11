@@ -1,6 +1,11 @@
 import { normalizePlannedWorkouts } from "./plannedWorkout";
 import { normalizeWorkoutDraft } from "./workoutDraft";
 import { normalizeMemoryDraft } from "./memoryDraft";
+import {
+  normalizeTimeCapsule,
+  normalizeTimeCapsuleDraft,
+  normalizeTimeCapsuleReminder,
+} from "./timeCapsule";
 import { normalizeWorkoutTemplates } from "./workoutTemplate";
 import { normalizeJournalDraft } from "./journalEntry";
 import { normalizeWaterCollection } from "./waterTracker";
@@ -416,6 +421,19 @@ function validateJournalEntries(value) {
 
 export function validateTraceStructuredDomains(data) {
   if (data.memories != null) recordArray(data.memories, "Memory", validateMemory);
+  if (data.timeCapsules != null) {
+    recordArray(data.timeCapsules, "Time Capsule", (record) => {
+      assert(normalizeTimeCapsule(record), "The backup contains invalid Time Capsule data.");
+    });
+  }
+  if (data.timeCapsuleDraft != null) assert(normalizeTimeCapsuleDraft(data.timeCapsuleDraft), "The backup contains invalid unfinished Time Capsule draft data.");
+  if (data.timeCapsuleReminders != null) {
+    recordArray(data.timeCapsuleReminders, "Time Capsule reminder", (record) => {
+      assert(normalizeTimeCapsuleReminder(record), "The backup contains invalid Time Capsule reminder data.");
+    }, { requireIds: false });
+    assert(new Set(data.timeCapsuleReminders.map(({ capsuleId }) => capsuleId)).size === data.timeCapsuleReminders.length,
+      "The backup contains duplicate Time Capsule reminders.");
+  }
   if (data.nutritionGoals != null) {
     assert(object(data.nutritionGoals), "The backup contains invalid nutrition goal data.");
     validateNumbers(data.nutritionGoals, ["calories", "protein", "carbohydrates", "fat", "sodium", "waterGoalMl"], "nutrition goal", { positive: false });

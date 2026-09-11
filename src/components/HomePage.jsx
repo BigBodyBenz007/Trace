@@ -18,6 +18,7 @@ import {
 import LifeCurrent, { LifeCurrentScenery } from "./LifeCurrent";
 import { LIFE_CURRENT_TRAIL_TUNING } from "./LifeCurrent";
 import StoredPhoto, { storedPhotoId } from "./StoredPhoto";
+import TimeCapsuleReadyOverlay from "./TimeCapsuleReadyOverlay";
 import { PHOTO_LOAD_PRIORITY } from "../services/photoUrlLoader";
 import { acquireDocumentScrollLock } from "../services/documentScrollLock";
 import {
@@ -262,6 +263,12 @@ function HomePage({
   onOpenWorkouts,
   onOpenTrophyCase,
   onOpenJournal,
+  onOpenTimeCapsules = () => {},
+  readyTimeCapsules = [],
+  readyTimeCapsuleReminder = null,
+  onViewTimeCapsule = () => {},
+  onAcknowledgeTimeCapsule = () => false,
+  onPostponeTimeCapsule = () => false,
   journalLocked = false,
   deleteMemory,
   editMemory,
@@ -315,6 +322,7 @@ function HomePage({
     workouts: onOpenWorkouts,
     medications: onOpenMedications,
     protocols: onOpenProtocols,
+    timeCapsules: onOpenTimeCapsules,
   };
   const visibleCoreModules = homeModulesInGroup("core")
     .filter(({ id }) => visibleHomeModules[id]);
@@ -893,6 +901,19 @@ function HomePage({
           <p>Your archive</p>
           <h2 id="trace-timeline-heading">Memories Added: {memoryCount}</h2>
         </div>
+
+        {readyTimeCapsules.length > 0 && (
+          <section aria-label="Ready Time Capsules" className="trace-ready-capsules">
+            {readyTimeCapsules.map((capsule) => (
+              <article className="trace-feature-surface trace-ready-capsule-card" key={capsule.id}>
+                <h3>{capsule.name}</h3>
+                <p>Opening date: {formatDateOnly(capsule.openOn)}</p>
+                <strong>Ready to open</strong>
+                <button type="button" onClick={() => onViewTimeCapsule(capsule.id)}>View Time Capsule</button>
+              </article>
+            ))}
+          </section>
+        )}
 
         <div className="trace-timeline-toolbar">
           <div className="trace-timeline-position" aria-label="Timeline position">
@@ -1605,6 +1626,18 @@ function HomePage({
             {isNarrowPhotoViewport && detailMemory.images.length > 1 && <div className="trace-memory-viewer__mobile-navigation"><button className="trace-memory-viewer__step" type="button" aria-label="Previous photo" disabled={selectedImageIndex === 0} onClick={() => setSelectedImageIndex((index) => index - 1)}>Previous</button><p className="trace-memory-viewer__position" aria-live="polite">{selectedImageIndex + 1} of {detailMemory.images.length}</p><button className="trace-memory-viewer__step" type="button" aria-label="Next photo" disabled={selectedImageIndex === detailMemory.images.length - 1} onClick={() => setSelectedImageIndex((index) => index + 1)}>Next</button></div>}
           </div>
         </div>
+      )}
+      {active && readyTimeCapsuleReminder && !detailMemory && selectedImageIndex === null && (
+        <TimeCapsuleReadyOverlay
+          capsule={readyTimeCapsuleReminder}
+          onOpenNow={() => {
+            if (onAcknowledgeTimeCapsule(readyTimeCapsuleReminder.id) !== false) {
+              onViewTimeCapsule(readyTimeCapsuleReminder.id);
+            }
+          }}
+          onDismiss={() => onAcknowledgeTimeCapsule(readyTimeCapsuleReminder.id)}
+          onPostpone={(date) => onPostponeTimeCapsule(readyTimeCapsuleReminder.id, date)}
+        />
       )}
     </div>
   );

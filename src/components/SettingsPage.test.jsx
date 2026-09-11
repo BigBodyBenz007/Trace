@@ -351,7 +351,7 @@ test("offers accessible Home visibility switches and saves reversible choices", 
   expect(screen.getByRole("heading", { name: "Customize Home" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Make Trace yours" })).toBeInTheDocument();
   expect(screen.getByText(/Hiding a tool won't delete your information/)).toBeInTheDocument();
-  expect(screen.getAllByRole("switch")).toHaveLength(8);
+  expect(screen.getAllByRole("switch")).toHaveLength(9);
   const workouts = screen.getByRole("switch", { name: "Show Workouts on Home" });
   expect(workouts).toBeChecked();
   fireEvent.click(workouts);

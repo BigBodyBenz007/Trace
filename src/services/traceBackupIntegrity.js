@@ -54,8 +54,25 @@ export async function sha256CanonicalJson(value, cryptoProvider) {
   return sha256Bytes(new TextEncoder().encode(canonicalJson(value)), cryptoProvider);
 }
 
-export function validateIntegrityManifestShape(integrity, expectedDomains) {
-  if (!hasExactKeys(integrity, ["format", "version", "algorithm", "structured", "photos"]) ||
+function validateBinaryManifest(value, label) {
+  if (!hasExactKeys(value, ["count", "entries"]) ||
+    !Number.isSafeInteger(value.count) || value.count < 0 || !Array.isArray(value.entries)) {
+    throw new Error(`The backup ${label} integrity metadata is malformed.`);
+  }
+  const ids = new Set();
+  value.entries.forEach((entry) => {
+    if (!hasExactKeys(entry, ["id", "size", "digest"]) || typeof entry.id !== "string" || !entry.id || ids.has(entry.id) ||
+      !Number.isSafeInteger(entry.size) || entry.size < 0 || !SHA256_HEX_PATTERN.test(entry.digest)) {
+      throw new Error(`The backup ${label} integrity entries are malformed or duplicated.`);
+    }
+    ids.add(entry.id);
+  });
+  if (value.count !== value.entries.length) throw new Error(`The backup ${label} integrity count does not match its entries.`);
+}
+
+export function validateIntegrityManifestShape(integrity, expectedDomains, { includeMedia = false } = {}) {
+  const keys = ["format", "version", "algorithm", "structured", "photos", ...(includeMedia ? ["media"] : [])];
+  if (!hasExactKeys(integrity, keys) ||
     integrity.format !== TRACE_BACKUP_INTEGRITY_FORMAT ||
     integrity.version !== TRACE_BACKUP_INTEGRITY_VERSION ||
     integrity.algorithm !== TRACE_BACKUP_HASH_ALGORITHM) {
@@ -72,22 +89,6 @@ export function validateIntegrityManifestShape(integrity, expectedDomains) {
     integrity.structured.domains.some((domain, index) => domain !== expectedDomains[index])) {
     throw new Error("The backup structured-domain inventory does not match Trace.");
   }
-  if (!hasExactKeys(integrity.photos, ["count", "entries"]) ||
-    !Number.isSafeInteger(integrity.photos.count) || integrity.photos.count < 0 ||
-    !Array.isArray(integrity.photos.entries)) {
-    throw new Error("The backup photo integrity metadata is malformed.");
-  }
-  const ids = new Set();
-  integrity.photos.entries.forEach((entry) => {
-    if (!hasExactKeys(entry, ["id", "size", "digest"]) ||
-      typeof entry.id !== "string" || !entry.id || ids.has(entry.id) ||
-      !Number.isSafeInteger(entry.size) || entry.size < 0 ||
-      !SHA256_HEX_PATTERN.test(entry.digest)) {
-      throw new Error("The backup photo integrity entries are malformed or duplicated.");
-    }
-    ids.add(entry.id);
-  });
-  if (integrity.photos.count !== integrity.photos.entries.length) {
-    throw new Error("The backup photo integrity count does not match its entries.");
-  }
+  validateBinaryManifest(integrity.photos, "photo");
+  if (includeMedia) validateBinaryManifest(integrity.media, "media");
 }

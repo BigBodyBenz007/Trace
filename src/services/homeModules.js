@@ -5,6 +5,7 @@ export const HOME_MODULES = Object.freeze([
   Object.freeze({ id: "workouts", label: "Workouts", group: "secondary" }),
   Object.freeze({ id: "medications", label: "Medications & Supplements", group: "secondary" }),
   Object.freeze({ id: "protocols", label: "Protocols", group: "secondary" }),
+  Object.freeze({ id: "timeCapsules", label: "Time Capsules", group: "secondary" }),
   Object.freeze({ id: "journal", label: "Journal", group: "utility" }),
   Object.freeze({ id: "trophyCase", label: "Trophy Case", group: "utility" }),
 ]);

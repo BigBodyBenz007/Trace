@@ -15,6 +15,7 @@ import BackupPage from "./components/BackupPage";
 import JournalPage from "./components/JournalPage";
 import JournalUnlockPage from "./components/JournalUnlockPage";
 import TodayPage from "./components/TodayPage";
+import TimeCapsulesPage from "./components/TimeCapsulesPage";
 import ConfirmationMessage from "./components/ConfirmationMessage";
 import { parseDateOnlyLocal } from "./services/dateOnly";
 import { detectMemoryAchievement } from "./services/memoryAchievement";
@@ -44,11 +45,14 @@ import {
   clearCompletedMigrationBackup,
   dataUrlToBlob,
   deletePhotos,
+  deleteMedia,
+  getMedia,
   getPhoto,
   hasLegacyPhotos,
   markLegacyMigrationComplete,
   migrateLegacyPhotos,
   openPhotoDatabase,
+  putMedia,
   putPhotos,
 } from "./storage/photoStorage";
 import {
@@ -141,6 +145,27 @@ import {
   readMemoryDraft,
   writeMemoryDraft,
 } from "./services/memoryDraft";
+import {
+  TIME_CAPSULE_REMINDER_STATE,
+  TIME_CAPSULE_REMINDER_STORAGE_KEY,
+  TIME_CAPSULE_STORAGE_KEY,
+  clearTimeCapsuleDraft,
+  createSealedTimeCapsule,
+  createTimeCapsuleDraft,
+  localDateKey as capsuleLocalDateKey,
+  millisecondsUntilNextLocalMidnight,
+  normalizeCapsuleMediaReference,
+  pendingTimeCapsuleReminder,
+  readTimeCapsuleDraft,
+  readTimeCapsuleReminders,
+  readTimeCapsules,
+  reminderFor,
+  timeCapsuleState,
+  writeTimeCapsuleDraft,
+  writeTimeCapsuleReminders,
+  writeTimeCapsules,
+  TIME_CAPSULE_STATE,
+} from "./services/timeCapsule";
 import {
   APP_LIFECYCLE_PHASE,
   webAppLifecycleAdapter,
@@ -278,6 +303,11 @@ function storageMessage(action) {
   return `Trace couldn't ${action} because browser storage is unavailable or full. Your existing data has not been intentionally removed.`;
 }
 
+function restoreRawStorageValue(storage, key, raw) {
+  if (raw === null) storage.removeItem(key);
+  else storage.setItem(key, raw);
+}
+
 function updatedWorkoutRecord(existingEntry, entry, calorieEstimate, photos) {
   const updated = {
     ...existingEntry,
@@ -395,6 +425,12 @@ function App({
   const [timelineTargetMemoryId, setTimelineTargetMemoryId] = useState(null);
 
   const [memories, setMemories] = useState([]);
+  const [timeCapsuleDraftReport, setTimeCapsuleDraftReport] = useState(() => readTimeCapsuleDraft(localStorage));
+  const [timeCapsuleReport, setTimeCapsuleReport] = useState(() => readTimeCapsules(localStorage));
+  const [timeCapsuleDraft, setTimeCapsuleDraft] = useState(() => timeCapsuleDraftReport.draft);
+  const [timeCapsuleReminderReport, setTimeCapsuleReminderReport] = useState(() => readTimeCapsuleReminders(localStorage));
+  const [timeCapsuleToday, setTimeCapsuleToday] = useState(() => capsuleLocalDateKey());
+  const [timeCapsuleTargetId, setTimeCapsuleTargetId] = useState(null);
   const [memoryCount, setMemoryCount] = useState(0);
   const [nutritionStorageReport, setNutritionStorageReport] = useState(() => readNutritionEntries(localStorage));
   const nutritionEntries = nutritionStorageReport.entries;
@@ -470,6 +506,12 @@ function App({
   const initializationStartedRef = useRef(false);
   const activeObjectUrlsRef = useRef(new Set());
   const photoUrlLoaderRef = useRef(null);
+  const capsuleMediaUrlLoaderRef = useRef(null);
+  const timeCapsuleDraftIdentityRef = useRef(timeCapsuleDraftReport.draft ? {
+    id: timeCapsuleDraftReport.draft.id,
+    capsuleId: timeCapsuleDraftReport.draft.capsuleId,
+    createdAt: timeCapsuleDraftReport.draft.createdAt,
+  } : null);
   const skipNextPageTopScrollRef = useRef(false);
   const legalSettingsReturnRef = useRef(null);
   const normalDocumentTitleRef = useRef(
@@ -581,6 +623,17 @@ function App({
     });
   }
   const photoUrlLoader = photoUrlLoaderRef.current;
+  if (!capsuleMediaUrlLoaderRef.current) {
+    capsuleMediaUrlLoaderRef.current = createPhotoUrlLoader({
+      readPhoto: async (id) => getMedia(await ensurePhotoDatabase(), id),
+      onCreateUrl: (url) => activeObjectUrlsRef.current.add(url),
+      onRevokeUrl: (url) => activeObjectUrlsRef.current.delete(url),
+      onUnavailable: () => setStorageError(
+        "One or more Time Capsule attachments could not be loaded. Trace kept their references and did not delete them."
+      ),
+    });
+  }
+  const capsuleMediaUrlLoader = capsuleMediaUrlLoaderRef.current;
 
   function showConfirmation(message, destinationPage = page) {
     confirmationIdRef.current += 1;
@@ -688,10 +741,44 @@ function App({
 
     return () => {
       photoUrlLoader.dispose();
+      capsuleMediaUrlLoader.dispose();
       activeObjectUrls.forEach((url) => URL.revokeObjectURL(url));
       activeObjectUrls.clear();
     };
-  }, [photoUrlLoader]);
+  }, [photoUrlLoader, capsuleMediaUrlLoader]);
+
+  useEffect(() => {
+    const duplicate = timeCapsuleDraft && timeCapsuleReport.records.some(({ id }) => id === timeCapsuleDraft.capsuleId);
+    if (!duplicate) return;
+    try {
+      clearTimeCapsuleDraft(localStorage);
+      setTimeCapsuleDraft(null);
+      setTimeCapsuleDraftReport({ status: "ok", draft: null, raw: null });
+      timeCapsuleDraftIdentityRef.current = null;
+    } catch (error) {
+      setStorageError("This Time Capsule was sealed, but Trace could not finish clearing its duplicate draft yet.");
+    }
+  }, [timeCapsuleDraft, timeCapsuleReport.records]);
+
+  useEffect(() => {
+    let timer;
+    const refresh = () => {
+      setTimeCapsuleToday(capsuleLocalDateKey());
+      clearTimeout(timer);
+      timer = setTimeout(refresh, millisecondsUntilNextLocalMidnight());
+    };
+    refresh();
+    const unsubscribe = lifecycleAdapter.subscribe(({ phase }) => {
+      if (phase === APP_LIFECYCLE_PHASE.ACTIVE || phase === APP_LIFECYCLE_PHASE.RESUMED) refresh();
+    });
+    return () => { clearTimeout(timer); unsubscribe?.(); };
+  }, [lifecycleAdapter]);
+
+  useEffect(() => {
+    if (page === "home" || page === "time-capsules") {
+      setTimeCapsuleToday(capsuleLocalDateKey());
+    }
+  }, [page]);
 
   useEffect(() => {
     if (skipNextPageTopScrollRef.current) {
@@ -1470,6 +1557,240 @@ function App({
     setPage("home");
   }
 
+  function ensureTimeCapsuleDraftIdentity() {
+    if (timeCapsuleDraftIdentityRef.current) return timeCapsuleDraftIdentityRef.current;
+    const identity = { id: createId(), capsuleId: createId(new Set(timeCapsuleReport.records.map(({ id }) => id))), createdAt: new Date().toISOString() };
+    timeCapsuleDraftIdentityRef.current = identity;
+    return identity;
+  }
+
+  function persistTimeCapsuleDraft(form, media = timeCapsuleDraft?.media || []) {
+    if (timeCapsuleReport.status === "blocked" || timeCapsuleDraftReport.status === "blocked") return false;
+    const identity = ensureTimeCapsuleDraftIdentity();
+    const draft = createTimeCapsuleDraft({ ...identity, form, media });
+    if (!draft) return false;
+    try {
+      writeTimeCapsuleDraft(localStorage, draft);
+      setTimeCapsuleDraft(draft);
+      setTimeCapsuleDraftReport({ status: "ok", draft, raw: localStorage.getItem("timeCapsuleDraft") });
+      setStorageError("");
+      return draft;
+    } catch (error) {
+      setStorageError(storageMessage("save this unfinished Time Capsule draft"));
+      return false;
+    }
+  }
+
+  function beginTimeCapsuleDraft(form) {
+    return persistTimeCapsuleDraft(form, []);
+  }
+
+  async function stageTimeCapsuleMedia(prepared, form, existingMedia) {
+    const combinedBytes = [...existingMedia, ...prepared].reduce((sum, item) => sum + (Number(item.bytes) || 0), 0);
+    if (combinedBytes > 100 * 1024 * 1024) throw new Error("Capsule attachments cannot exceed 100 MiB combined.");
+    const identity = ensureTimeCapsuleDraftIdentity();
+    const records = prepared.map((item) => ({
+      id: createId(), capsuleId: identity.capsuleId, capsuleDraftId: identity.id,
+      kind: item.kind, name: item.name, mimeType: item.mimeType, bytes: item.bytes,
+      ...(item.durationMs === undefined ? {} : { durationMs: item.durationMs }), blob: item.blob,
+    }));
+    await preparePhotoStorage(records.reduce((sum, record) => sum + record.blob.size, 0));
+    const database = await ensurePhotoDatabase();
+    await putMedia(database, records);
+    const references = prepared.map((item, index) => normalizeCapsuleMediaReference({ ...item, id: records[index].id }));
+    const next = [...existingMedia, ...references];
+    if (!persistTimeCapsuleDraft(form, next)) {
+      await deleteMedia(database, records.map(({ id }) => id)).catch(() => {});
+      throw new Error("Trace could not save the updated Time Capsule draft.");
+    }
+    return next;
+  }
+
+  function referencedCapsuleMediaIds() {
+    const storedCapsules = readTimeCapsules(localStorage);
+    const storedDraft = readTimeCapsuleDraft(localStorage);
+    if (storedCapsules.status !== "ok" || storedDraft.status !== "ok") return null;
+    return new Set([
+      ...storedCapsules.records.flatMap((capsule) => capsule.media.map(({ id }) => id)),
+      ...(storedDraft.draft?.media || []).map(({ id }) => id),
+    ]);
+  }
+
+  async function removeTimeCapsuleMedia(item, form, currentMedia) {
+    const next = currentMedia.filter(({ id }) => id !== item.id);
+    const database = await ensurePhotoDatabase();
+    const stored = await getMedia(database, item.id);
+    const referenced = referencedCapsuleMediaIds();
+    if (!referenced) throw new Error("Trace could not verify attachment ownership, so nothing was removed.");
+    const capsuleOwnsItem = readTimeCapsules(localStorage).records.some((capsule) =>
+      capsule.media.some(({ id }) => id === item.id)
+    );
+    if (!referenced.has(item.id) || capsuleOwnsItem) {
+      throw new Error("Trace could not safely remove an attachment that is not owned only by this draft.");
+    }
+    await deleteMedia(database, [item.id]);
+    if (!persistTimeCapsuleDraft(form, next)) {
+      if (stored?.blob) await putMedia(database, [stored]).catch(() => {});
+      throw new Error("Trace could not update the draft; the attachment was restored.");
+    }
+    capsuleMediaUrlLoader.evict(item.id);
+    return next;
+  }
+
+  async function discardTimeCapsuleDraft() {
+    const report = readTimeCapsuleDraft(localStorage);
+    if (report.status !== "ok") throw new Error(report.message);
+    const ids = (report.draft?.media || []).map(({ id }) => id);
+    const database = ids.length ? await ensurePhotoDatabase() : null;
+    const rollback = database
+      ? (await Promise.all(ids.map((id) => getMedia(database, id)))).filter((record) => record?.blob)
+      : [];
+    if (database) await deleteMedia(database, ids);
+    try { clearTimeCapsuleDraft(localStorage); }
+    catch (error) { if (database) await putMedia(database, rollback).catch(() => {}); throw error; }
+    ids.forEach((id) => capsuleMediaUrlLoader.evict(id));
+    setTimeCapsuleDraft(null);
+    setTimeCapsuleDraftReport({ status: "ok", draft: null, raw: null });
+    timeCapsuleDraftIdentityRef.current = null;
+  }
+
+  async function sealTimeCapsule(form, media) {
+    const draft = persistTimeCapsuleDraft(form, media);
+    if (!draft) return { error: "Trace could not persist the latest draft." };
+    const result = createSealedTimeCapsule(draft);
+    if (!result.value) return result;
+    const database = media.length ? await ensurePhotoDatabase() : null;
+    const stored = database ? await Promise.all(media.map(({ id }) => getMedia(database, id))) : [];
+    if (stored.some((record) => !record?.blob)) return { error: "A staged attachment is unavailable. Remove it and choose it again." };
+    const finalized = stored.map((record) => { const next = { ...record }; delete next.capsuleDraftId; return next; });
+    if (database) await putMedia(database, finalized);
+    const current = readTimeCapsules(localStorage);
+    if (current.status !== "ok") { if (database) await putMedia(database, stored).catch(() => {}); return { error: current.message }; }
+    const existing = current.records.find(({ id }) => id === result.value.id);
+    if (existing) {
+      setTimeCapsuleReport(current);
+      try {
+        clearTimeCapsuleDraft(localStorage);
+        setTimeCapsuleDraft(null);
+        setTimeCapsuleDraftReport({ status: "ok", draft: null, raw: null });
+        timeCapsuleDraftIdentityRef.current = null;
+      } catch (error) {
+        setStorageError("This Time Capsule is sealed, but Trace could not finish clearing its duplicate draft yet.");
+      }
+      return { value: existing };
+    }
+    const previousRaw = current.raw;
+    const previousDraftRaw = localStorage.getItem("timeCapsuleDraft");
+    const reminderReport = readTimeCapsuleReminders(localStorage);
+    if (reminderReport.status !== "ok") {
+      if (database) await putMedia(database, stored).catch(() => {});
+      return { error: reminderReport.message };
+    }
+    const previousReminderRaw = reminderReport.raw;
+    try {
+      const records = writeTimeCapsules(localStorage, [...current.records, result.value]);
+      const reminders = writeTimeCapsuleReminders(localStorage, [
+        ...reminderReport.records.filter((item) => item.capsuleId !== result.value.id),
+        reminderFor(result.value.id, TIME_CAPSULE_REMINDER_STATE.PENDING),
+      ]);
+      clearTimeCapsuleDraft(localStorage);
+      setTimeCapsuleReminderReport({ status: "ok", records: reminders, raw: localStorage.getItem(TIME_CAPSULE_REMINDER_STORAGE_KEY) });
+      setTimeCapsuleReport({ status: "ok", records, raw: localStorage.getItem(TIME_CAPSULE_STORAGE_KEY) });
+      setTimeCapsuleDraft(null); setTimeCapsuleDraftReport({ status: "ok", draft: null, raw: null }); timeCapsuleDraftIdentityRef.current = null;
+      return result;
+    } catch (error) {
+      let rollbackFailed = false;
+      try { restoreRawStorageValue(localStorage, TIME_CAPSULE_STORAGE_KEY, previousRaw); } catch (rollbackError) { rollbackFailed = true; }
+      try { restoreRawStorageValue(localStorage, TIME_CAPSULE_REMINDER_STORAGE_KEY, previousReminderRaw); } catch (rollbackError) { rollbackFailed = true; }
+      try { restoreRawStorageValue(localStorage, "timeCapsuleDraft", previousDraftRaw); } catch (rollbackError) { rollbackFailed = true; }
+      if (database) await putMedia(database, stored).catch(() => { rollbackFailed = true; });
+      if (rollbackFailed) throw new Error("Trace could not seal this Time Capsule, and automatic storage recovery could not finish. Reload before retrying.");
+      throw error;
+    }
+  }
+
+  function updateTimeCapsuleReminder(capsuleId, state, remindOn = null) {
+    const current = readTimeCapsuleReminders(localStorage);
+    if (current.status !== "ok") { setStorageError(current.message); return false; }
+    try {
+      const nextReminder = reminderFor(capsuleId, state, remindOn);
+      const records = writeTimeCapsuleReminders(localStorage, [...current.records.filter((item) => item.capsuleId !== capsuleId), nextReminder]);
+      setTimeCapsuleReminderReport({ status: "ok", records, raw: localStorage.getItem(TIME_CAPSULE_REMINDER_STORAGE_KEY) });
+      return true;
+    } catch (error) { setStorageError(storageMessage("save this Time Capsule reminder")); return false; }
+  }
+
+  function openTimeCapsule(id) {
+    const current = readTimeCapsules(localStorage);
+    if (current.status !== "ok") { setStorageError(current.message); return false; }
+    const reminderReport = readTimeCapsuleReminders(localStorage);
+    if (reminderReport.status !== "ok") { setStorageError(reminderReport.message); return false; }
+    const capsule = current.records.find((item) => item.id === id);
+    if (!capsule || timeCapsuleState(capsule, capsuleLocalDateKey()) === TIME_CAPSULE_STATE.SEALED) return false;
+    if (capsule.openedAt) return capsule;
+    const timestamp = new Date().toISOString();
+    const previousCapsuleRaw = current.raw;
+    const previousReminderRaw = reminderReport.raw;
+    try {
+      const records = writeTimeCapsules(localStorage, current.records.map((item) => item.id === id ? { ...item, openedAt: timestamp, updatedAt: timestamp } : item));
+      const reminders = writeTimeCapsuleReminders(localStorage, reminderReport.records.filter((item) => item.capsuleId !== id));
+      setTimeCapsuleReport({ status: "ok", records, raw: localStorage.getItem(TIME_CAPSULE_STORAGE_KEY) });
+      setTimeCapsuleReminderReport({ status: "ok", records: reminders, raw: localStorage.getItem(TIME_CAPSULE_REMINDER_STORAGE_KEY) });
+      return records.find((item) => item.id === id);
+    } catch (error) {
+      let rollbackFailed = false;
+      try {
+        restoreRawStorageValue(localStorage, TIME_CAPSULE_STORAGE_KEY, previousCapsuleRaw);
+      } catch (rollbackError) { rollbackFailed = true; }
+      try {
+        restoreRawStorageValue(localStorage, TIME_CAPSULE_REMINDER_STORAGE_KEY, previousReminderRaw);
+      } catch (rollbackError) { rollbackFailed = true; }
+      if (rollbackFailed) {
+        setStorageError("Trace could not open this Time Capsule, and storage recovery needs attention. Reload before retrying.");
+        return false;
+      }
+      setStorageError(storageMessage("open this Time Capsule"));
+      return false;
+    }
+  }
+
+  async function deleteTimeCapsule(id) {
+    const current = readTimeCapsules(localStorage);
+    if (current.status !== "ok") { setStorageError(current.message); return false; }
+    const reminderReport = readTimeCapsuleReminders(localStorage);
+    if (reminderReport.status !== "ok") { setStorageError(reminderReport.message); return false; }
+    const capsule = current.records.find((item) => item.id === id);
+    if (!capsule) return false;
+    const previousCapsuleRaw = current.raw;
+    const previousReminderRaw = reminderReport.raw;
+    try {
+      const records = writeTimeCapsules(localStorage, current.records.filter((item) => item.id !== id));
+      const reminders = writeTimeCapsuleReminders(localStorage, reminderReport.records.filter((item) => item.capsuleId !== id));
+      setTimeCapsuleReport({ status: "ok", records, raw: localStorage.getItem(TIME_CAPSULE_STORAGE_KEY) });
+      setTimeCapsuleReminderReport({ status: "ok", records: reminders, raw: localStorage.getItem(TIME_CAPSULE_REMINDER_STORAGE_KEY) });
+      const ids = capsule.media.map(({ id: mediaId }) => mediaId);
+      if (ids.length) {
+        await deleteMedia(await ensurePhotoDatabase(), ids).catch(() => setStorageError("The capsule was deleted, but Trace could not finish cleaning up its attachments."));
+      }
+      ids.forEach((mediaId) => capsuleMediaUrlLoader.evict(mediaId));
+      return true;
+    } catch (error) {
+      let rollbackFailed = false;
+      try {
+        restoreRawStorageValue(localStorage, TIME_CAPSULE_STORAGE_KEY, previousCapsuleRaw);
+      } catch (rollbackError) { rollbackFailed = true; }
+      try {
+        restoreRawStorageValue(localStorage, TIME_CAPSULE_REMINDER_STORAGE_KEY, previousReminderRaw);
+      } catch (rollbackError) { rollbackFailed = true; }
+      if (rollbackFailed) {
+        setStorageError("Trace could not delete this Time Capsule, and storage recovery needs attention. Reload before retrying.");
+        return false;
+      }
+      setStorageError(storageMessage("delete this Time Capsule"));
+      return false;
+    }
+  }
+
   function saveNutritionEntry(entry) {
     const result = appendNutritionEntry(localStorage, entry, {
       createId: (existingIds) => createId(existingIds),
@@ -1668,6 +1989,13 @@ function App({
         getDatabase: ensurePhotoDatabase,
         onCreateObjectUrl: (url) => activeObjectUrlsRef.current.add(url),
       }))) || [];
+      const restoredTimeCapsules = readTimeCapsules(localStorage);
+      const restoredTimeCapsuleDraft = readTimeCapsuleDraft(localStorage);
+      const restoredTimeCapsuleReminders = readTimeCapsuleReminders(localStorage);
+      if ([restoredTimeCapsules, restoredTimeCapsuleDraft, restoredTimeCapsuleReminders]
+        .some(({ status }) => status !== "ok")) {
+        throw new Error("Invalid restored Time Capsule data.");
+      }
       setAppSettings(restoredAppSettings);
       setWaterEntries(restoredWaterEntries);
       setNutritionGoals(restoredNutritionGoals);
@@ -1693,6 +2021,17 @@ function App({
       setInjectionSiteSettings(restoredInjectionSiteSettings);
       setActiveWorkoutDraft(restoredWorkoutDraft);
       setWorkoutEntries(restoredWorkoutEntries);
+      setTimeCapsuleReport(restoredTimeCapsules);
+      setTimeCapsuleDraft(restoredTimeCapsuleDraft.draft);
+      setTimeCapsuleDraftReport(restoredTimeCapsuleDraft);
+      setTimeCapsuleReminderReport(restoredTimeCapsuleReminders);
+      setTimeCapsuleToday(capsuleLocalDateKey());
+      timeCapsuleDraftIdentityRef.current = restoredTimeCapsuleDraft.draft ? {
+        id: restoredTimeCapsuleDraft.draft.id,
+        capsuleId: restoredTimeCapsuleDraft.draft.capsuleId,
+        createdAt: restoredTimeCapsuleDraft.draft.createdAt,
+      } : null;
+      capsuleMediaUrlLoader.dispose();
       setStorageError("");
     } catch (error) {
       setStorageError(storageMessage("refresh restored data"));
@@ -3507,6 +3846,15 @@ function App({
     setPage("trophy-case");
   }
 
+  const timeCapsules = timeCapsuleReport.status === "ok" ? timeCapsuleReport.records : [];
+  const timeCapsuleReminders = timeCapsuleReminderReport.status === "ok" ? timeCapsuleReminderReport.records : [];
+  const readyTimeCapsules = timeCapsules.filter((capsule) => timeCapsuleState(capsule, timeCapsuleToday) === TIME_CAPSULE_STATE.AVAILABLE);
+  const readyTimeCapsuleReminder = page === "home" && !ceremonyEntry
+    ? pendingTimeCapsuleReminder(timeCapsules, timeCapsuleReminders, timeCapsuleToday)
+    : null;
+  const timeCapsuleBlockedMessage = [timeCapsuleReport, timeCapsuleDraftReport, timeCapsuleReminderReport]
+    .find(({ status }) => status === "blocked")?.message || "";
+
   return (
     <div
       aria-hidden={ceremonyEntry ? "true" : undefined}
@@ -3578,6 +3926,12 @@ function App({
           }}
           onOpenTrophyCase={() => setPage("trophy-case")}
           onOpenJournal={() => setPage("journal")}
+          onOpenTimeCapsules={() => { setTimeCapsuleTargetId(null); setPage("time-capsules"); }}
+          readyTimeCapsules={readyTimeCapsules}
+          readyTimeCapsuleReminder={readyTimeCapsuleReminder}
+          onViewTimeCapsule={(id) => { setTimeCapsuleTargetId(id); setPage("time-capsules"); }}
+          onAcknowledgeTimeCapsule={(id) => updateTimeCapsuleReminder(id, TIME_CAPSULE_REMINDER_STATE.ACKNOWLEDGED)}
+          onPostponeTimeCapsule={(id, remindOn) => updateTimeCapsuleReminder(id, TIME_CAPSULE_REMINDER_STATE.POSTPONED, remindOn)}
           journalLocked={journalPrivacy.enabled && !journalPrivacy.unlocked}
           deleteMemory={deleteMemory}
           editMemory={editMemory}
@@ -3605,6 +3959,25 @@ function App({
         <PrivacyPolicyPage onBackToSettings={returnToSettingsFromLegal} />
       ) : page === "terms" ? (
         <TermsOfServicePage onBackToSettings={returnToSettingsFromLegal} />
+      ) : page === "time-capsules" ? (
+        <TimeCapsulesPage
+          capsules={timeCapsules}
+          draft={timeCapsuleDraft}
+          blockedMessage={timeCapsuleBlockedMessage}
+          initialCapsuleId={timeCapsuleTargetId}
+          mediaLoader={capsuleMediaUrlLoader}
+          reducedMotion={reducedMotion}
+          onBack={() => { setTimeCapsuleTargetId(null); setPage("home"); }}
+          onBeginDraft={beginTimeCapsuleDraft}
+          onPersistDraft={persistTimeCapsuleDraft}
+          onStageMedia={stageTimeCapsuleMedia}
+          onRemoveMedia={removeTimeCapsuleMedia}
+          onDiscardDraft={discardTimeCapsuleDraft}
+          onSeal={sealTimeCapsule}
+          onOpen={openTimeCapsule}
+          onDelete={deleteTimeCapsule}
+          today={timeCapsuleToday}
+        />
       ) : page === "nutrition" ? (
         <NutritionPage
           onBack={() => setPage("home")}

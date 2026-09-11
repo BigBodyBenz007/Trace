@@ -127,8 +127,61 @@ function emptyStructured(overrides = {}) {
         ? defaultInjectionSiteSettings()
       : key === "formDrafts"
         ? emptyFormDraftCollection()
-      : ["nutritionGoals", "appSettings", "memoryDraft", "workoutDraft", "journalDraft", "journalVault"].includes(key) ? null : [],
+      : ["nutritionGoals", "appSettings", "memoryDraft", "timeCapsuleDraft", "workoutDraft", "journalDraft", "journalVault"].includes(key) ? null : [],
   ]).concat(Object.entries(overrides)));
+}
+
+function makeDatabaseWithMedia(initialPhotos = [], initialMedia = [], { failMediaWriteCount = 0 } = {}) {
+  const stores = {
+    photos: initialPhotos.map((record) => ({ ...record })),
+    media: initialMedia.map((record) => ({ ...record })),
+  };
+  return {
+    supportsMediaStore: true,
+    records: (storeName) => stores[storeName].map((record) => ({ ...record })),
+    transaction(storeName, mode) {
+      let next = stores[storeName].map((record) => ({ ...record }));
+      const transaction = {
+        objectStore() {
+          return {
+            getAll() {
+              const request = {};
+              setTimeout(() => { request.result = stores[storeName].map((record) => ({ ...record })); request.onsuccess?.(); }, 0);
+              return request;
+            },
+            clear() { next = []; },
+            put(record) { next = next.filter(({ id }) => id !== record.id); next.push(record); },
+          };
+        },
+      };
+      if (mode === "readwrite") setTimeout(() => {
+        if (storeName === "media" && failMediaWriteCount > 0) {
+          failMediaWriteCount -= 1;
+          transaction.error = new Error("media write failed");
+          transaction.onabort?.();
+          return;
+        }
+        stores[storeName] = next;
+        transaction.oncomplete?.();
+      }, 0);
+      return transaction;
+    },
+  };
+}
+
+function timeCapsuleFixture() {
+  return {
+    schemaVersion: 1,
+    id: "capsule-1",
+    name: "Twenty thirty",
+    text: "Private future message",
+    openOn: "2030-09-11",
+    media: [{ id: "capsule-audio", kind: "audio", name: "voice.m4a", mimeType: "audio/mp4", bytes: 5, durationMs: 1200 }],
+    createdAt: "2026-09-11T12:00:00.000Z",
+    updatedAt: "2026-09-11T12:01:00.000Z",
+    sealedAt: "2026-09-11T12:01:00.000Z",
+    openedAt: null,
+  };
 }
 
 test("backup estimate includes structured bytes as well as stored photo bytes", async () => {
@@ -524,7 +577,99 @@ test("new exports include the complete versioned integrity manifest", async () =
       domains: [...TRACE_STORAGE_KEYS],
     },
     photos: { count: 0, entries: [] },
+    media: { count: 0, entries: [] },
   });
+});
+
+test("schema 9 round-trips capsules, a complete media draft, reminders, and media bytes", async () => {
+  const capsule = timeCapsuleFixture();
+  const capsuleDraft = {
+    schemaVersion: 1,
+    id: "capsule-draft-1",
+    capsuleId: "capsule-2",
+    form: { name: "Unfinished", text: "Draft text", openOn: "2031-09-11" },
+    media: [
+      { id: "draft-photo", kind: "photo", name: "future.jpg", mimeType: "image/jpeg", bytes: 5 },
+      { id: "draft-video", kind: "video", name: "future.mp4", mimeType: "video/mp4", bytes: 5, durationMs: 2200 },
+    ],
+    createdAt: "2026-09-11T12:02:00.000Z",
+    updatedAt: "2026-09-11T12:03:00.000Z",
+  };
+  const media = [
+    { id: "capsule-audio", capsuleId: capsule.id, kind: "audio", name: "voice.m4a", mimeType: "audio/mp4", bytes: 5, durationMs: 1200, blob: new Blob(["voice"], { type: "audio/mp4" }) },
+    { id: "draft-photo", capsuleId: capsuleDraft.capsuleId, capsuleDraftId: capsuleDraft.id, kind: "photo", name: "future.jpg", mimeType: "image/jpeg", bytes: 5, blob: new Blob(["photo"], { type: "image/jpeg" }) },
+    { id: "draft-video", capsuleId: capsuleDraft.capsuleId, capsuleDraftId: capsuleDraft.id, kind: "video", name: "future.mp4", mimeType: "video/mp4", bytes: 5, durationMs: 2200, blob: new Blob(["video"], { type: "video/mp4" }) },
+  ];
+  const storage = makeStorage({
+    timeCapsules: JSON.stringify([capsule]),
+    timeCapsuleDraft: JSON.stringify(capsuleDraft),
+    timeCapsuleReminders: JSON.stringify([{ schemaVersion: 1, capsuleId: capsule.id, state: "postponed", remindOn: "2030-09-12", updatedAt: "2026-09-11T12:04:00.000Z" }]),
+  });
+  const sourceDatabase = makeDatabaseWithMedia([], media);
+  const created = await createTraceBackup({ storage, openDatabase: async () => sourceDatabase });
+  const validated = await validateTraceBackup(created);
+
+  expect(validated.summary).toMatchObject({ timeCapsules: 1, capsuleMedia: 3, activeTimeCapsuleDraft: true });
+  expect(created.integrity.media).toMatchObject({ count: 3, entries: expect.any(Array) });
+  const destination = makeStorage({ timeCapsules: JSON.stringify([]) });
+  const destinationDatabase = makeDatabaseWithMedia([], [{ id: "old", blob: new Blob(["old"]) }]);
+  await restoreTraceBackup(created, { confirmed: true, storage: destination, openDatabase: async () => destinationDatabase });
+  expect(JSON.parse(destination.value("timeCapsules"))).toEqual([capsule]);
+  expect(JSON.parse(destination.value("timeCapsuleDraft"))).toEqual(capsuleDraft);
+  expect(JSON.parse(destination.value("timeCapsuleReminders"))).toHaveLength(1);
+  expect(destinationDatabase.records("media").map(({ id }) => id).sort()).toEqual(["capsule-audio", "draft-photo", "draft-video"]);
+
+  const missingMedia = { ...created, data: { ...created.data, media: created.data.media.slice(1) } };
+  await expect(validateTraceBackup(missingMedia)).rejects.toThrow(/integrity check/i);
+  const wrongOwner = cloneJsonForTest(created);
+  wrongOwner.data.media[0].capsuleId = "some-other-capsule";
+  await expect(validateTraceBackup(wrongOwner)).rejects.toThrow(/ownership metadata/i);
+});
+
+test("schema 8 validates with its historical manifest and restores empty capsule domains", async () => {
+  const current = await createTraceBackup({ storage: makeStorage(), openDatabase: async () => makeDatabaseWithMedia() });
+  const structured = cloneJsonForTest(current.data.structured);
+  ["timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].forEach((key) => delete structured[key]);
+  const domains = TRACE_STORAGE_KEYS.filter((key) => !["timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key));
+  const schemaEight = {
+    ...current,
+    schemaVersion: 8,
+    data: { structured, photos: current.data.photos },
+    integrity: {
+      format: current.integrity.format,
+      version: current.integrity.version,
+      algorithm: current.integrity.algorithm,
+      structured: { digest: await sha256CanonicalJson(structured), domainCount: domains.length, domains },
+      photos: current.integrity.photos,
+    },
+  };
+  const destination = makeStorage({
+    timeCapsules: JSON.stringify([timeCapsuleFixture()]),
+    timeCapsuleDraft: JSON.stringify({ stale: true }),
+    timeCapsuleReminders: JSON.stringify([{ stale: true }]),
+  });
+  await restoreTraceBackup(schemaEight, { confirmed: true, storage: destination, openDatabase: async () => makeDatabaseWithMedia() });
+  expect(destination.value("timeCapsules")).toBeNull();
+  expect(destination.value("timeCapsuleDraft")).toBeNull();
+  expect(destination.value("timeCapsuleReminders")).toBeNull();
+});
+
+test("a capsule-media transaction failure restores structured data and prior media", async () => {
+  const capsule = timeCapsuleFixture();
+  const source = makeDatabaseWithMedia([], [
+    { id: "capsule-audio", capsuleId: capsule.id, kind: "audio", name: "voice.m4a", mimeType: "audio/mp4", bytes: 5, durationMs: 1200, blob: new Blob(["voice"], { type: "audio/mp4" }) },
+  ]);
+  const created = await createTraceBackup({
+    storage: makeStorage({ timeCapsules: JSON.stringify([capsule]) }),
+    openDatabase: async () => source,
+  });
+  const oldCapsuleRaw = JSON.stringify([]);
+  const destination = makeStorage({ timeCapsules: oldCapsuleRaw });
+  const target = makeDatabaseWithMedia([], [{ id: "old-media", blob: new Blob(["old"]) }], { failMediaWriteCount: 1 });
+  await expect(restoreTraceBackup(created, { confirmed: true, storage: destination, openDatabase: async () => target }))
+    .rejects.toThrow(/previous data was restored/i);
+  expect(destination.value("timeCapsules")).toBe(oldCapsuleRaw);
+  expect(target.records("media").map(({ id }) => id)).toEqual(["old-media"]);
 });
 
 test("canonical structured hashing ignores object-key order but preserves array order", async () => {
@@ -1385,16 +1530,22 @@ test("imports and restores an integrity-protected schema-5 backup without workou
   delete structured.workoutTemplates;
   delete structured.memoryDraft;
   delete structured.formDrafts;
+  delete structured.timeCapsules;
+  delete structured.timeCapsuleDraft;
+  delete structured.timeCapsuleReminders;
   structured.nutritionEntries[0].portion.amount = "0.5";
   const schemaFiveKeys = TRACE_STORAGE_KEYS.filter((key) =>
-    key !== "workoutTemplates" && key !== "memoryDraft" && key !== "formDrafts"
+    !["workoutTemplates", "memoryDraft", "formDrafts", "timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key)
   );
   const schemaFive = {
     ...current,
     schemaVersion: 5,
-    data: { ...current.data, structured },
+    data: { structured, photos: current.data.photos },
     integrity: {
-      ...current.integrity,
+      format: current.integrity.format,
+      version: current.integrity.version,
+      algorithm: current.integrity.algorithm,
+      photos: current.integrity.photos,
       structured: {
         digest: await sha256CanonicalJson(structured),
         domainCount: schemaFiveKeys.length,
@@ -1427,13 +1578,19 @@ test("imports schema 6 without an unfinished Memory draft and clears any current
   const structured = cloneJsonForTest(current.data.structured);
   delete structured.memoryDraft;
   delete structured.formDrafts;
-  const schemaSixKeys = TRACE_STORAGE_KEYS.filter((key) => key !== "memoryDraft" && key !== "formDrafts");
+  delete structured.timeCapsules;
+  delete structured.timeCapsuleDraft;
+  delete structured.timeCapsuleReminders;
+  const schemaSixKeys = TRACE_STORAGE_KEYS.filter((key) => !["memoryDraft", "formDrafts", "timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key));
   const schemaSix = {
     ...current,
     schemaVersion: 6,
-    data: { ...current.data, structured },
+    data: { structured, photos: current.data.photos },
     integrity: {
-      ...current.integrity,
+      format: current.integrity.format,
+      version: current.integrity.version,
+      algorithm: current.integrity.algorithm,
+      photos: current.integrity.photos,
       structured: {
         digest: await sha256CanonicalJson(structured),
         domainCount: schemaSixKeys.length,
@@ -1467,13 +1624,19 @@ test("imports schema 7 without unfinished form drafts and clears current drafts"
   const current = await createTraceBackup({ storage: makeStorage(), openDatabase: async () => makePhotoDatabase() });
   const structured = cloneJsonForTest(current.data.structured);
   delete structured.formDrafts;
-  const schemaSevenKeys = TRACE_STORAGE_KEYS.filter((key) => key !== "formDrafts");
+  delete structured.timeCapsules;
+  delete structured.timeCapsuleDraft;
+  delete structured.timeCapsuleReminders;
+  const schemaSevenKeys = TRACE_STORAGE_KEYS.filter((key) => !["formDrafts", "timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key));
   const schemaSeven = {
     ...current,
     schemaVersion: 7,
-    data: { ...current.data, structured },
+    data: { structured, photos: current.data.photos },
     integrity: {
-      ...current.integrity,
+      format: current.integrity.format,
+      version: current.integrity.version,
+      algorithm: current.integrity.algorithm,
+      photos: current.integrity.photos,
       structured: {
         digest: await sha256CanonicalJson(structured),
         domainCount: schemaSevenKeys.length,

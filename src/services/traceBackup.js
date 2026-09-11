@@ -1,6 +1,8 @@
 import {
   getAllPhotos,
+  getAllMedia,
   openPhotoDatabase,
+  replaceAllMedia,
   replaceAllPhotos,
 } from "../storage/photoStorage";
 import packageMetadata from "../../package.json";
@@ -8,6 +10,7 @@ import { normalizeAppSettings } from "./appSettings";
 import { normalizePlannedWorkouts } from "./plannedWorkout";
 import { normalizeWorkoutDraft } from "./workoutDraft";
 import { normalizeMemoryDraft } from "./memoryDraft";
+import { normalizeTimeCapsuleDraft } from "./timeCapsule";
 import { emptyFormDraftCollection, normalizeFormDraftCollection } from "./formDrafts";
 import { normalizeWorkoutTemplates } from "./workoutTemplate";
 import { normalizeJournalDraft } from "./journalEntry";
@@ -74,20 +77,21 @@ import {
 } from "./traceBackupIntegrity";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
-export const TRACE_BACKUP_SCHEMA_VERSION = 8;
+export const TRACE_BACKUP_SCHEMA_VERSION = 9;
 export const TRACE_STORAGE_KEYS = TRACE_BACKUP_STORAGE_KEYS;
 export const TRACE_BACKUP_LARGE_WARNING_BYTES = 128 * 1024 * 1024;
 const TRACE_BACKUP_MEMORY_RESERVE_BYTES = 16 * 1024 * 1024;
-const TRACE_STORAGE_KEYS_V7 = TRACE_STORAGE_KEYS.filter((key) => key !== "formDrafts");
+const TRACE_STORAGE_KEYS_V8 = TRACE_STORAGE_KEYS.filter((key) => !["timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key));
+const TRACE_STORAGE_KEYS_V7 = TRACE_STORAGE_KEYS_V8.filter((key) => key !== "formDrafts");
 const TRACE_STORAGE_KEYS_V6 = TRACE_STORAGE_KEYS_V7.filter((key) => key !== "memoryDraft");
 const TRACE_STORAGE_KEYS_V5 = TRACE_STORAGE_KEYS_V6.filter((key) => key !== "workoutTemplates");
 
 const OBJECT_KEYS = new Set(["nutritionGoals", "appSettings"]);
-const SPECIAL_KEYS = new Set(["waterEntries", "formDrafts", "memoryDraft", "workoutDraft", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "journalDraft", JOURNAL_VAULT_STORAGE_KEY]);
+const SPECIAL_KEYS = new Set(["waterEntries", "formDrafts", "memoryDraft", "timeCapsuleDraft", "workoutDraft", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "journalDraft", JOURNAL_VAULT_STORAGE_KEY]);
 const ARRAY_KEYS = new Set(TRACE_STORAGE_KEYS.filter(
   (key) => !OBJECT_KEYS.has(key) && !SPECIAL_KEYS.has(key)
 ));
-const LEGACY_OPTIONAL_KEYS = new Set(["healthMeasurementEntries", "appSettings", "journalEntries", "journalDraft", JOURNAL_VAULT_STORAGE_KEY, "plannedWorkouts", "workoutTemplates", "waterEntries", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "formDrafts", "memoryDraft", "workoutDraft"]);
+const LEGACY_OPTIONAL_KEYS = new Set(["healthMeasurementEntries", "appSettings", "journalEntries", "journalDraft", JOURNAL_VAULT_STORAGE_KEY, "plannedWorkouts", "workoutTemplates", "waterEntries", "dailyActions", "protocolOccurrences", "protocolCompoundOutcomes", "injectionSiteEntries", "injectionSiteSettings", "medicationDoseSchedules", "medicationDoseOccurrences", "formDrafts", "memoryDraft", "timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders", "workoutDraft"]);
 const RECOVERABLE_BACKUP_TRANSACTIONS = Object.freeze([
   {
     key: JOURNAL_VAULT_TRANSACTION_KEY,
@@ -192,33 +196,34 @@ function encodedBase64Length(byteLength) {
   return 4 * Math.ceil(byteLength / 3);
 }
 
-function estimateBackupFromSource(structured, photos) {
-  const structuredBytes = utf8ByteLength(JSON.stringify(structured));
-  let photoBytes = 0;
-  let encodedPhotoBytes = 0;
-  let largestPhotoBytes = 0;
-  photos.forEach((record) => {
-    if (!record?.id || !(record.blob instanceof Blob)) {
-      throw new Error("A stored Trace photo is malformed.");
-    }
+function estimateBinaryRecords(records, label) {
+  let bytes = 0; let encodedBytes = 0; let largestBytes = 0;
+  records.forEach((record) => {
+    if (!record?.id || !(record.blob instanceof Blob)) throw new Error(`A stored Trace ${label} is malformed.`);
     const { blob, ...metadata } = record;
-    photoBytes += blob.size;
-    largestPhotoBytes = Math.max(largestPhotoBytes, blob.size);
-    const shell = JSON.stringify({
-      ...cloneJson(metadata),
-      blob: { type: blob.type || "application/octet-stream", size: blob.size, base64: "" },
-    });
-    encodedPhotoBytes += utf8ByteLength(shell) + encodedBase64Length(blob.size);
+    bytes += blob.size; largestBytes = Math.max(largestBytes, blob.size);
+    encodedBytes += utf8ByteLength(JSON.stringify({ ...cloneJson(metadata), blob: { type: blob.type || "application/octet-stream", size: blob.size, base64: "" } })) + encodedBase64Length(blob.size);
   });
-  const manifestAndEnvelopeBytes = 2048 + photos.length * 180;
-  const estimatedBytes = structuredBytes + encodedPhotoBytes + manifestAndEnvelopeBytes;
+  return { bytes, encodedBytes, largestBytes };
+}
+
+function estimateBackupFromSource(structured, photos, media = []) {
+  const structuredBytes = utf8ByteLength(JSON.stringify(structured));
+  const photoEstimate = estimateBinaryRecords(photos, "photo");
+  const mediaEstimate = estimateBinaryRecords(media, "media attachment");
+  const manifestAndEnvelopeBytes = 2048 + (photos.length + media.length) * 180;
+  const estimatedBytes = structuredBytes + photoEstimate.encodedBytes + mediaEstimate.encodedBytes + manifestAndEnvelopeBytes;
   return {
     estimatedBytes,
     structuredBytes,
-    photoBytes,
-    encodedPhotoBytes,
-    largestPhotoBytes,
+    photoBytes: photoEstimate.bytes,
+    mediaBytes: mediaEstimate.bytes,
+    encodedPhotoBytes: photoEstimate.encodedBytes,
+    encodedMediaBytes: mediaEstimate.encodedBytes,
+    largestPhotoBytes: photoEstimate.largestBytes,
+    largestMediaBytes: mediaEstimate.largestBytes,
     photoCount: photos.length,
+    mediaCount: media.length,
     isLarge: estimatedBytes >= TRACE_BACKUP_LARGE_WARNING_BYTES,
   };
 }
@@ -234,7 +239,7 @@ function assertBackupMemorySafety(estimate, performanceObject = defaultPerforman
   if (!Number.isFinite(limit) || !Number.isFinite(used) || limit <= used) return;
   const available = limit - used;
   const required = estimate.estimatedBytes +
-    estimate.largestPhotoBytes * 3 +
+    Math.max(estimate.largestPhotoBytes, estimate.largestMediaBytes || 0) * 3 +
     estimate.structuredBytes * 2 +
     TRACE_BACKUP_MEMORY_RESERVE_BYTES;
   if (available < required) {
@@ -248,13 +253,14 @@ async function readBackupSource(storage, openDatabase) {
   recoverPendingBackupTransactions(storage);
   const database = await openDatabase();
   const photos = await getAllPhotos(database);
+  const media = await getAllMedia(database);
   assertNoPendingBackupTransactions(storage);
   const structured = readStructuredData(storage);
   if (Array.isArray(structured.nutritionEntries)) {
     structured.nutritionEntries = normalizeNutritionEntryPortions(structured.nutritionEntries);
   }
   assertNoPendingBackupTransactions(storage);
-  return { structured, photos };
+  return { structured, photos, media };
 }
 
 export function formatTraceBackupSize(bytes) {
@@ -269,12 +275,13 @@ export async function estimateTraceBackupSize({
   storage = localStorage,
   openDatabase = openPhotoDatabase,
 } = {}) {
-  const { structured, photos } = await readBackupSource(storage, openDatabase);
-  return estimateBackupFromSource(structured, photos);
+  const { structured, photos, media } = await readBackupSource(storage, openDatabase);
+  return estimateBackupFromSource(structured, photos, media);
 }
 
 function storageKeysForSchema(schemaVersion) {
-  if (schemaVersion >= 8) return TRACE_STORAGE_KEYS;
+  if (schemaVersion >= 9) return TRACE_STORAGE_KEYS;
+  if (schemaVersion === 8) return TRACE_STORAGE_KEYS_V8;
   if (schemaVersion === 7) return TRACE_STORAGE_KEYS_V7;
   if (schemaVersion === 6) return TRACE_STORAGE_KEYS_V6;
   return TRACE_STORAGE_KEYS_V5;
@@ -357,6 +364,12 @@ function readStructuredData(storage) {
       if (key === "memoryDraft") {
         const normalized = normalizeMemoryDraft(parsed);
         if (!normalized) throw new Error("Invalid unfinished Memory draft data.");
+        return [key, normalized];
+      }
+      if (key === "timeCapsuleDraft") {
+        if (parsed === null) return [key, null];
+        const normalized = normalizeTimeCapsuleDraft(parsed);
+        if (!normalized) throw new Error("Invalid unfinished Time Capsule draft data.");
         return [key, normalized];
       }
       if (key === "formDrafts") {
@@ -579,11 +592,35 @@ function photoReferenceIds(structuredData) {
   return ids;
 }
 
+function capsuleMediaOwners(structuredData) {
+  const owners = new Map();
+  let duplicateId = null;
+  (structuredData.timeCapsules || []).forEach((capsule) => capsule.media.forEach((reference) => {
+    const { id, kind } = reference;
+    if (owners.has(id)) duplicateId = id;
+    owners.set(id, { capsuleId: capsule.id, kind, reference });
+  }));
+  (structuredData.timeCapsuleDraft?.media || []).forEach((reference) => {
+    const { id, kind } = reference;
+    if (owners.has(id)) duplicateId = id;
+    owners.set(id, {
+      capsuleId: structuredData.timeCapsuleDraft.capsuleId,
+      capsuleDraftId: structuredData.timeCapsuleDraft.id,
+      kind,
+      reference,
+    });
+  });
+  return { owners, duplicateId };
+}
+
 export function summarizeTraceBackup(backup) {
   const data = backup.data.structured;
   return {
     memories: data.memories?.length || 0,
     photos: backup.data.photos.length,
+    timeCapsules: data.timeCapsules?.length || 0,
+    capsuleMedia: backup.data.media?.length || 0,
+    activeTimeCapsuleDraft: Boolean(data.timeCapsuleDraft),
     nutritionEntries: data.nutritionEntries?.length || 0,
     waterEntries: data.waterEntries?.entries?.length || 0,
     healthMeasurementEntries: data.healthMeasurementEntries?.length || 0,
@@ -624,7 +661,8 @@ function integrityFailure(error) {
 async function verifyBackupIntegrity(value, cryptoProvider) {
   try {
     const expectedStorageKeys = storageKeysForSchema(value.schemaVersion);
-    validateIntegrityManifestShape(value.integrity, expectedStorageKeys);
+    const includeMedia = value.schemaVersion >= 9;
+    validateIntegrityManifestShape(value.integrity, expectedStorageKeys, { includeMedia });
     if (!value.data?.structured || typeof value.data.structured !== "object" || Array.isArray(value.data.structured)) {
       throw new Error("The backup is missing its structured Trace data.");
     }
@@ -635,6 +673,7 @@ async function verifyBackupIntegrity(value, cryptoProvider) {
       throw new Error("The backup structured payload does not match its domain inventory.");
     }
     if (!Array.isArray(value.data?.photos)) throw new Error("The backup is missing its photo collection.");
+    if (includeMedia && !Array.isArray(value.data?.media)) throw new Error("The backup is missing its media collection.");
     if (value.integrity.photos.count !== value.data.photos.length) {
       throw new Error("The backup photo count does not match its integrity manifest.");
     }
@@ -657,6 +696,18 @@ async function verifyBackupIntegrity(value, cryptoProvider) {
         throw new Error(`Backup photo ${photo.id} does not match its integrity digest.`);
       }
     }
+    if (includeMedia) {
+      if (value.integrity.media.count !== value.data.media.length) throw new Error("The backup media count does not match its integrity manifest.");
+      for (let index = 0; index < value.data.media.length; index += 1) {
+        const media = value.data.media[index];
+        const expected = value.integrity.media.entries[index];
+        if (!media?.id || media.id !== expected?.id) throw new Error("The backup media order or identity does not match its integrity manifest.");
+        const decoded = decodePhotoBytes(media);
+        if (decoded.bytes.byteLength !== expected.size || await sha256Bytes(decoded.bytes, cryptoProvider) !== expected.digest) {
+          throw new Error(`Backup media ${media.id} does not match its integrity data.`);
+        }
+      }
+    }
   } catch (error) {
     throw integrityFailure(error);
   }
@@ -664,6 +715,7 @@ async function verifyBackupIntegrity(value, cryptoProvider) {
 
 function validateAndNormalizeBackup(value) {
   const normalizedBackup = cloneJson(value);
+  if (value.schemaVersion < 9) normalizedBackup.data.media = [];
   if (Array.isArray(normalizedBackup.data?.structured?.nutritionEntries)) {
     normalizedBackup.data.structured.nutritionEntries = normalizeNutritionEntryPortions(
       normalizedBackup.data.structured.nutritionEntries
@@ -706,6 +758,11 @@ function validateAndNormalizeBackup(value) {
       normalizedBackup.data.structured.memoryDraft
     );
   }
+  if (normalizedBackup.data.structured.timeCapsuleDraft != null) {
+    normalizedBackup.data.structured.timeCapsuleDraft = normalizeTimeCapsuleDraft(
+      normalizedBackup.data.structured.timeCapsuleDraft
+    );
+  }
   if (
     Object.prototype.hasOwnProperty.call(normalizedBackup.data.structured, "formDrafts") ||
     storageKeysForSchema(value.schemaVersion).includes("formDrafts")
@@ -745,6 +802,27 @@ function validateAndNormalizeBackup(value) {
   });
   const missingReference = photoReferenceIds(normalizedBackup.data.structured).find((id) => !photoIds.has(id));
   if (missingReference) throw new Error(`The backup is missing referenced photo ${missingReference}.`);
+  if (!Array.isArray(normalizedBackup.data.media)) throw new Error("The backup is missing its media collection.");
+  const { owners, duplicateId } = capsuleMediaOwners(normalizedBackup.data.structured);
+  if (duplicateId) throw new Error(`Backup media ${duplicateId} is referenced by more than one capsule owner.`);
+  const mediaIds = new Set();
+  normalizedBackup.data.media.forEach((media) => {
+    if (!media?.id || mediaIds.has(media.id)) throw new Error("The backup contains duplicate or missing media IDs.");
+    mediaIds.add(media.id);
+    const owner = owners.get(media.id);
+    if (!owner || media.capsuleId !== owner.capsuleId || media.kind !== owner.kind ||
+      (owner.capsuleDraftId && media.capsuleDraftId !== owner.capsuleDraftId) ||
+      media.name !== owner.reference.name || media.mimeType !== owner.reference.mimeType ||
+      media.bytes !== owner.reference.bytes || media.blob?.size !== owner.reference.bytes) {
+      throw new Error(`Backup media ${media.id} has invalid ownership metadata.`);
+    }
+  });
+  const missingMedia = [...owners.keys()].find((id) => !mediaIds.has(id));
+  if (missingMedia) throw new Error(`The backup is missing referenced media ${missingMedia}.`);
+  const capsuleIds = new Set((normalizedBackup.data.structured.timeCapsules || []).map(({ id }) => id));
+  const orphanReminder = (normalizedBackup.data.structured.timeCapsuleReminders || [])
+    .find(({ capsuleId }) => !capsuleIds.has(capsuleId));
+  if (orphanReminder) throw new Error(`The backup contains a reminder for missing Time Capsule ${orphanReminder.capsuleId}.`);
   return { backup: normalizedBackup, summary: summarizeTraceBackup(normalizedBackup) };
 }
 
@@ -754,7 +832,7 @@ export function validateTraceBackup(value, { cryptoProvider } = {}) {
   if (value.schemaVersion > TRACE_BACKUP_SCHEMA_VERSION) {
     throw new Error("This Trace backup was created by a newer, unsupported backup version.");
   }
-  if (![1, 2, 3, 4, 5, 6, 7, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
+  if (![1, 2, 3, 4, 5, 6, 7, 8, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
   if (!value.createdAt || Number.isNaN(Date.parse(value.createdAt))) throw new Error("The Trace backup timestamp is invalid.");
   if (value.schemaVersion < 5) return validateAndNormalizeBackup(value);
   return verifyBackupIntegrity(value, cryptoProvider).then(async () => {
@@ -774,13 +852,16 @@ export async function createTraceBackup({
   appVersion = packageMetadata.version,
   cryptoProvider,
 } = {}) {
-  const { structured, photos } = await readBackupSource(storage, openDatabase);
+  const { structured, photos, media } = await readBackupSource(storage, openDatabase);
   const encodedPhotoResults = [];
   for (const photo of photos) {
     encodedPhotoResults.push(await encodePhoto(photo, cryptoProvider));
   }
+  const encodedMediaResults = [];
+  for (const item of media) encodedMediaResults.push(await encodePhoto(item, cryptoProvider));
   assertNoPendingBackupTransactions(storage);
   const encodedPhotos = encodedPhotoResults.map(({ photo }) => photo);
+  const encodedMedia = encodedMediaResults.map(({ photo }) => photo);
   const structuredDigest = await sha256CanonicalJson(structured, cryptoProvider);
   assertNoPendingBackupTransactions(storage);
   const backup = {
@@ -791,6 +872,7 @@ export async function createTraceBackup({
     data: {
       structured,
       photos: encodedPhotos,
+      media: encodedMedia,
     },
     integrity: {
       format: TRACE_BACKUP_INTEGRITY_FORMAT,
@@ -804,6 +886,10 @@ export async function createTraceBackup({
       photos: {
         count: encodedPhotos.length,
         entries: encodedPhotoResults.map(({ integrity }) => integrity),
+      },
+      media: {
+        count: encodedMedia.length,
+        entries: encodedMediaResults.map(({ integrity }) => integrity),
       },
     },
   };
@@ -821,8 +907,8 @@ export async function createTraceBackupArchive({
   performanceObject = defaultPerformance(),
   BlobConstructor = typeof Blob === "undefined" ? null : Blob,
 } = {}) {
-  const { structured, photos } = await readBackupSource(storage, openDatabase);
-  const estimate = estimateBackupFromSource(structured, photos);
+  const { structured, photos, media } = await readBackupSource(storage, openDatabase);
+  const estimate = estimateBackupFromSource(structured, photos, media);
   assertBackupMemorySafety(estimate, performanceObject);
   if (typeof BlobConstructor !== "function") {
     throw new Error("This browser cannot assemble a Trace backup file.");
@@ -847,6 +933,15 @@ export async function createTraceBackupArchive({
     photoIntegrity.push(encoded.integrity);
     assertNoPendingBackupTransactions(storage);
   }
+  parts.push(`],"media":[`);
+  const mediaIntegrity = [];
+  for (let index = 0; index < media.length; index += 1) {
+    const encoded = await encodePhoto(media[index], cryptoProvider);
+    if (index > 0) parts.push(",");
+    parts.push(JSON.stringify(encoded.photo));
+    mediaIntegrity.push(encoded.integrity);
+    assertNoPendingBackupTransactions(storage);
+  }
   const integrity = {
     format: TRACE_BACKUP_INTEGRITY_FORMAT,
     version: TRACE_BACKUP_INTEGRITY_VERSION,
@@ -857,8 +952,9 @@ export async function createTraceBackupArchive({
       domains: [...TRACE_STORAGE_KEYS],
     },
     photos: { count: photoIntegrity.length, entries: photoIntegrity },
+    media: { count: mediaIntegrity.length, entries: mediaIntegrity },
   };
-  validateIntegrityManifestShape(integrity, TRACE_STORAGE_KEYS);
+  validateIntegrityManifestShape(integrity, TRACE_STORAGE_KEYS, { includeMedia: true });
   parts.push(`]},"integrity":${JSON.stringify(integrity)}}`);
   const contents = new BlobConstructor(parts, { type: "application/json" });
   assertNoPendingBackupTransactions(storage);
@@ -920,7 +1016,9 @@ export async function restoreTraceBackup(value, {
   const database = await openDatabase();
   const previousStructured = Object.fromEntries(TRACE_STORAGE_KEYS.map((key) => [key, storage.getItem(key)]));
   const previousPhotos = await getAllPhotos(database);
+  const previousMedia = await getAllMedia(database);
   const restoredPhotos = backup.data.photos.map(decodePhoto);
+  const restoredMedia = (backup.data.media || []).map(decodePhoto);
   try {
     preserveNutritionRecoveryBeforeReplacement(storage);
   } catch (error) {
@@ -935,10 +1033,12 @@ export async function restoreTraceBackup(value, {
         : JSON.stringify(backup.data.structured[key])])
     ));
     await replaceAllPhotos(database, restoredPhotos);
+    await replaceAllMedia(database, restoredMedia);
   } catch (error) {
     let rollbackFailed = false;
     try { restoreStructuredSnapshot(storage, previousStructured); } catch (rollbackError) { rollbackFailed = true; }
     try { await replaceAllPhotos(database, previousPhotos); } catch (rollbackError) { rollbackFailed = true; }
+    try { await replaceAllMedia(database, previousMedia); } catch (rollbackError) { rollbackFailed = true; }
     if (rollbackFailed) {
       throw new Error("Trace restore failed and its automatic rollback could not be completed. Do not close this page.");
     }

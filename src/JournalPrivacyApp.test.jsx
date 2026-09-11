@@ -377,7 +377,9 @@ test("plaintext Journal remains available across normalized lifecycle events", (
 
   expect(screen.getByRole("heading", { name: "Journal" })).toBeInTheDocument();
   expect(screen.getByText(secretTitle)).toBeInTheDocument();
-  expect(lifecycle.adapter.subscribe).not.toHaveBeenCalled();
+  // Time Capsule availability also observes lifecycle events; plaintext Journal
+  // content must remain unaffected by that shared app-level subscription.
+  expect(lifecycle.adapter.subscribe).toHaveBeenCalledTimes(1);
 });
 
 test("Turn Off Journal Lock from Journal preserves exact entries and draft and stays usable", async () => {

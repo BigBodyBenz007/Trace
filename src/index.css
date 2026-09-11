@@ -4140,6 +4140,135 @@ code {
   }
 }
 
+/* Time Capsules */
+.trace-capsule-archive,
+.trace-ready-capsules {
+  display: grid;
+  gap: var(--trace-space-4, 16px);
+  margin-top: var(--trace-space-5, 20px);
+}
+
+.trace-capsule-card,
+.trace-ready-capsule-card,
+.trace-capsule-detail,
+.trace-capsule-editor {
+  border: 1px solid var(--trace-border);
+  border-radius: 18px;
+  padding: clamp(16px, 4vw, 28px);
+}
+
+.trace-ready-capsule-card {
+  background: linear-gradient(135deg, var(--trace-surface), color-mix(in srgb, var(--trace-accent) 14%, var(--trace-surface)));
+}
+
+.trace-capsule-editor label,
+.trace-capsule-editor fieldset {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 18px;
+}
+
+.trace-capsule-editor textarea {
+  min-height: 180px;
+  resize: vertical;
+}
+
+.trace-capsule-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.trace-capsule-actions label {
+  background: var(--trace-surface-raised, var(--trace-surface));
+  border: 1px solid var(--trace-border);
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.trace-capsule-media {
+  display: grid;
+  gap: 18px;
+  margin-top: 20px;
+}
+
+.trace-capsule-media img,
+.trace-capsule-media video,
+.trace-capsule-media audio {
+  display: block;
+  height: auto;
+  max-width: 100%;
+  width: 100%;
+}
+
+.trace-capsule-media img,
+.trace-capsule-media video {
+  border-radius: 14px;
+}
+
+.trace-capsule-private-text {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.trace-capsule-overlay {
+  align-items: center;
+  background: var(--trace-overlay, rgba(3, 9, 13, 0.88));
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: max(20px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(20px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left));
+  position: fixed;
+  z-index: 1200;
+}
+
+.trace-capsule-overlay__dialog {
+  background: var(--trace-surface, #101820);
+  border: 1px solid var(--trace-accent, #c8a96b);
+  border-radius: 24px;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.45);
+  max-height: min(720px, 90dvh);
+  max-width: 620px;
+  overflow: auto;
+  padding: clamp(24px, 6vw, 48px);
+  width: 100%;
+}
+
+.trace-capsule-ceremony {
+  align-items: center;
+  animation: trace-capsule-reveal 900ms ease both;
+  background: radial-gradient(circle, color-mix(in srgb, var(--trace-accent) 30%, transparent), transparent 68%);
+  display: flex;
+  justify-content: center;
+  min-height: 220px;
+  text-align: center;
+}
+
+@keyframes trace-capsule-reveal {
+  from { opacity: 0; transform: scale(0.94); }
+  45% { opacity: 1; transform: scale(1.03); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.trace-app-shell[data-motion="reduced"] .trace-capsule-ceremony {
+  animation: none;
+}
+
+@media (max-width: 520px) {
+  .trace-capsule-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trace-capsule-actions > *,
+  .trace-capsule-actions button,
+  .trace-capsule-actions label {
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
 .trace-data-card,
 .trace-search-result {
   background: var(--trace-card-background) !important;

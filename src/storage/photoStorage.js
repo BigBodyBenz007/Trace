@@ -1,6 +1,7 @@
 const DATABASE_NAME = "tracePhotoStorage";
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 const PHOTO_STORE = "photos";
+const MEDIA_STORE = "media";
 const MIGRATION_STORE = "migrations";
 const LEGACY_MIGRATION_KEY = "legacy-memory-photos";
 
@@ -35,6 +36,10 @@ export function openPhotoDatabase() {
 
       if (!database.objectStoreNames.contains(PHOTO_STORE)) {
         database.createObjectStore(PHOTO_STORE, { keyPath: "id" });
+      }
+
+      if (!database.objectStoreNames.contains(MEDIA_STORE)) {
+        database.createObjectStore(MEDIA_STORE, { keyPath: "id" });
       }
 
       if (!database.objectStoreNames.contains(MIGRATION_STORE)) {
@@ -179,6 +184,44 @@ export async function deletePhotos(database, ids) {
   if (ids.length === 0) return;
   const transaction = database.transaction(PHOTO_STORE, "readwrite");
   const store = transaction.objectStore(PHOTO_STORE);
+  ids.forEach((id) => store.delete(id));
+  await transactionComplete(transaction);
+}
+
+export async function putMedia(database, media) {
+  if (media.length === 0) return;
+  const transaction = database.transaction(MEDIA_STORE, "readwrite");
+  const store = transaction.objectStore(MEDIA_STORE);
+  media.forEach((record) => store.put(record));
+  await transactionComplete(transaction);
+}
+
+export async function getMedia(database, id) {
+  const transaction = database.transaction(MEDIA_STORE, "readonly");
+  return requestResult(transaction.objectStore(MEDIA_STORE).get(id));
+}
+
+export async function getAllMedia(database) {
+  if (database.objectStoreNames && !database.objectStoreNames.contains(MEDIA_STORE)) return [];
+  if (!database.objectStoreNames && database.supportsMediaStore !== true) return [];
+  const transaction = database.transaction(MEDIA_STORE, "readonly");
+  return requestResult(transaction.objectStore(MEDIA_STORE).getAll());
+}
+
+export async function replaceAllMedia(database, media) {
+  if (database.objectStoreNames && !database.objectStoreNames.contains(MEDIA_STORE)) return;
+  if (!database.objectStoreNames && database.supportsMediaStore !== true) return;
+  const transaction = database.transaction(MEDIA_STORE, "readwrite");
+  const store = transaction.objectStore(MEDIA_STORE);
+  store.clear();
+  media.forEach((record) => store.put(record));
+  await transactionComplete(transaction);
+}
+
+export async function deleteMedia(database, ids) {
+  if (ids.length === 0) return;
+  const transaction = database.transaction(MEDIA_STORE, "readwrite");
+  const store = transaction.objectStore(MEDIA_STORE);
   ids.forEach((id) => store.delete(id));
   await transactionComplete(transaction);
 }

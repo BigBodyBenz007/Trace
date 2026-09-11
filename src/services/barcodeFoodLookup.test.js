@@ -69,14 +69,16 @@ test("beverage normalization preserves identifiers and legacy records remain ide
     .not.toHaveProperty("identifiers");
 });
 
-test("existing food search ranking is unchanged and structured identifiers survive results", () => {
+test("dedicated packaged Pepsi stays ahead of restaurant matches and structured identifiers survive results", () => {
   const results = searchFoodCatalog("pepsi", [], 20);
-  expect(results.map(({ id }) => id)).toEqual([
+  expect(results[0].id).toBe("beverage:pepsi:pepsi-20oz");
+  expect(new Set(results.slice(0, 4).map(({ id }) => id))).toEqual(new Set([
     "beverage:pepsi:pepsi-20oz",
     "beverage:pepsi:wild-cherry-20oz",
     "beverage:pepsi:zero-sugar-20oz",
     "beverage:pepsi:diet-pepsi-20oz",
-  ]);
+  ]));
+  expect(results.slice(0, 4).every(({ id }) => id.startsWith("beverage:pepsi:"))).toBe(true);
   expect(results[0].identifiers).toEqual([
     { scheme: "gtin", value: "00012000001291" },
   ]);

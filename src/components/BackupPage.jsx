@@ -160,10 +160,13 @@ export default function BackupPage({
     const formDraftEffect = preview.summary.activeFormDrafts
       ? ` ${preview.summary.activeFormDrafts} unfinished form draft${preview.summary.activeFormDrafts === 1 ? "" : "s"} in this backup will replace the current unfinished form drafts.`
       : " Any current unfinished form drafts will be removed because this backup has none.";
+    const capsuleDraftEffect = preview.summary.activeTimeCapsuleDraft
+      ? " The unfinished Time Capsule draft and its attachments in this backup will replace the current capsule draft."
+      : " Any current unfinished Time Capsule draft and its attachments will be removed because this backup has none.";
     const journalEffect = preview.summary.encryptedJournal
       ? ` The encrypted Journal in the backup will replace the current Journal and will require that backup's Journal password or ${backupRecoveryLabel}.`
       : "";
-    if (!window.confirm(`Replace all current Trace data with this backup? ${draftEffect}${memoryDraftEffect}${formDraftEffect}${journalEffect} This cannot be merged.`)) {
+    if (!window.confirm(`Replace all current Trace data with this backup? ${draftEffect}${memoryDraftEffect}${formDraftEffect}${capsuleDraftEffect}${journalEffect} This cannot be merged.`)) {
       setBackupCredentialValue("");
       return;
     }
@@ -195,7 +198,7 @@ export default function BackupPage({
       <p className="trace-feature-page__kicker">Private archive</p>
       <h1>Backup & Restore</h1>
       <p className="trace-feature-page__lede" style={{ color: "#bbb", maxWidth: "700px" }}>
-        Download a private copy of your Trace data, including photos, or fully restore a previously created Trace backup.
+        Download a private copy of your Trace data, including photos and Time Capsule media, or fully restore a previously created Trace backup.
       </p>
       </header>
       <nav aria-label="Backup navigation" className="trace-backup-navigation">
@@ -213,7 +216,7 @@ export default function BackupPage({
         <h2>Estimated backup size</h2>
         {backupEstimate ? (
           <>
-            <p><strong>{formatTraceBackupSize(backupEstimate.estimatedBytes)}</strong> for {backupEstimate.photoCount} stored photo{backupEstimate.photoCount === 1 ? "" : "s"} and all structured Trace data.</p>
+            <p><strong>{formatTraceBackupSize(backupEstimate.estimatedBytes)}</strong> for {backupEstimate.photoCount} stored photo{backupEstimate.photoCount === 1 ? "" : "s"}, {backupEstimate.mediaCount || 0} Time Capsule attachment{backupEstimate.mediaCount === 1 ? "" : "s"}, and all structured Trace data.</p>
             <p>This is checked again before export. The final file can vary slightly.</p>
             {backupEstimate.isLarge && <p className="trace-backup-estimate__warning">Large archive: close other apps or tabs before exporting.</p>}
           </>
@@ -236,6 +239,8 @@ export default function BackupPage({
           <p>No Trace data has been changed yet.</p>
           <ul>
             <li>Memories: {summary.memories}</li><li>Photos: {summary.photos}</li>
+            <li>Time Capsules: {summary.timeCapsules || 0}</li><li>Time Capsule attachments: {summary.capsuleMedia || 0}</li>
+            <li>Unfinished Time Capsule draft: {summary.activeTimeCapsuleDraft ? "Included — it will replace any current capsule draft" : "None — any current capsule draft will be removed"}</li>
             <li>Nutrition entries: {summary.nutritionEntries}</li><li>Water entries: {summary.waterEntries || 0}</li><li>Health measurements: {summary.healthMeasurementEntries || 0}</li><li>Planned workouts: {summary.plannedWorkouts || 0}</li><li>Workout templates: {summary.workoutTemplates || 0}</li><li>Daily actions: {summary.dailyActions || 0}</li><li>Workouts: {summary.workouts}</li>
             <li>Unfinished Memory draft: {summary.activeMemoryDraft ? "Included — it will replace any current unfinished Memory draft" : "None — any current unfinished Memory draft will be removed"}</li>
             <li>Other unfinished form drafts: {summary.activeFormDrafts || 0}</li>

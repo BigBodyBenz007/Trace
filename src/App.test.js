@@ -35,6 +35,9 @@ jest.mock("./storage/photoStorage", () => ({
   clearCompletedMigrationBackup: jest.fn(),
   dataUrlToBlob: jest.fn(),
   deletePhotos: jest.fn(),
+  deleteMedia: jest.fn(),
+  getMedia: jest.fn(),
+  getAllMedia: jest.fn(),
   getPhoto: jest.fn(),
   getAllPhotos: jest.fn(),
   hasLegacyPhotos: jest.fn(() => false),
@@ -42,6 +45,8 @@ jest.mock("./storage/photoStorage", () => ({
   migrateLegacyPhotos: jest.fn(),
   openPhotoDatabase: jest.fn(() => new Promise(() => {})),
   putPhotos: jest.fn(),
+  putMedia: jest.fn(),
+  replaceAllMedia: jest.fn(),
   replaceAllPhotos: jest.fn(),
 }));
 
@@ -1537,6 +1542,7 @@ test("Settings opens and global unit preferences survive remount into a fresh He
       workouts: true,
       medications: true,
       protocols: true,
+      timeCapsules: true,
       journal: true,
       trophyCase: true,
     },
@@ -6479,4 +6485,79 @@ test("same-tab restore refreshes medication entries, compounds, dose schedules, 
   const protocolCard = document.querySelector('[data-schedule-item-type="protocol"]');
   expect(protocolCard).toHaveTextContent("Restored peptide");
   expect(protocolCard).toHaveTextContent("Taken 0 · Skipped 1");
+});
+
+test("Home reminder navigates without revealing a capsule until the explicit durable opening", async () => {
+  const today = localCalendarDateKey();
+  const capsule = {
+    schemaVersion: 1,
+    id: "capsule-ready",
+    name: "Ready for today",
+    text: "Private capsule message",
+    openOn: today,
+    media: [],
+    createdAt: "2025-09-11T12:00:00.000Z",
+    updatedAt: "2025-09-11T12:01:00.000Z",
+    sealedAt: "2025-09-11T12:01:00.000Z",
+    openedAt: null,
+  };
+  localStorage.setItem("appSettings", JSON.stringify({ motionPreference: "reduced" }));
+  localStorage.setItem("timeCapsules", JSON.stringify([capsule]));
+  localStorage.setItem("timeCapsuleReminders", JSON.stringify([{
+    schemaVersion: 1,
+    capsuleId: capsule.id,
+    state: "pending",
+    remindOn: null,
+    updatedAt: "2026-09-11T00:00:00.000Z",
+  }]));
+
+  render(<App />);
+  expect(screen.getByRole("dialog", { name: "Your Time Capsule is ready" })).toHaveTextContent("Ready for today");
+  expect(screen.queryByText("Private capsule message")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Open now" }));
+  expect(screen.getByRole("button", { name: "Open Capsule" })).toBeInTheDocument();
+  expect(screen.queryByText("Private capsule message")).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("timeCapsuleReminders"))[0].state).toBe("acknowledged");
+
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Open Capsule" })); });
+  expect(screen.getByText("Private capsule message")).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("timeCapsules"))[0].openedAt).toEqual(expect.any(String));
+  expect(JSON.parse(localStorage.getItem("timeCapsuleReminders"))).toEqual([]);
+});
+
+test("a reminder-write failure rolls back first opening and keeps capsule contents hidden", async () => {
+  const today = localCalendarDateKey();
+  const capsule = {
+    schemaVersion: 1,
+    id: "capsule-retry",
+    name: "Retry opening",
+    text: "Still private after failure",
+    openOn: today,
+    media: [],
+    createdAt: "2025-09-11T12:00:00.000Z",
+    updatedAt: "2025-09-11T12:01:00.000Z",
+    sealedAt: "2025-09-11T12:01:00.000Z",
+    openedAt: null,
+  };
+  const reminder = { schemaVersion: 1, capsuleId: capsule.id, state: "pending", remindOn: null, updatedAt: "2026-09-11T00:00:00.000Z" };
+  localStorage.setItem("appSettings", JSON.stringify({ motionPreference: "reduced" }));
+  localStorage.setItem("timeCapsules", JSON.stringify([capsule]));
+  localStorage.setItem("timeCapsuleReminders", JSON.stringify([reminder]));
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Open now" }));
+
+  const storedAcknowledgment = localStorage.getItem("timeCapsuleReminders");
+  const nativeSetItem = Storage.prototype.setItem;
+  let failed = false;
+  const setItem = jest.spyOn(Storage.prototype, "setItem").mockImplementation(function (key, value) {
+    if (key === "timeCapsuleReminders" && !failed) { failed = true; throw new Error("quota full"); }
+    return nativeSetItem.call(this, key, value);
+  });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Open Capsule" })); });
+  setItem.mockRestore();
+
+  expect(screen.getByText(/contents remain sealed/)).toBeInTheDocument();
+  expect(screen.queryByText("Still private after failure")).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("timeCapsules"))[0].openedAt).toBeNull();
+  expect(localStorage.getItem("timeCapsuleReminders")).toBe(storedAcknowledgment);
 });

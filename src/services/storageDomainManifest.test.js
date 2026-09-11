@@ -92,6 +92,7 @@ function discoveredPersistentKeys() {
   const photoStorage = fs.readFileSync(path.join(SOURCE_ROOT, "storage", "photoStorage.js"), "utf8");
   const database = assignedString(photoStorage, "DATABASE_NAME");
   keys.add(`${database}/${assignedString(photoStorage, "PHOTO_STORE")}/*`);
+  keys.add(`${database}/${assignedString(photoStorage, "MEDIA_STORE")}/*`);
   keys.add(`${database}/${assignedString(photoStorage, "MIGRATION_STORE")}/${assignedString(photoStorage, "LEGACY_MIGRATION_KEY")}`);
   const serviceWorker = fs.readFileSync(path.join(REPOSITORY_ROOT, "public", "service-worker.js"), "utf8");
   keys.add(`${assignedString(serviceWorker, "CACHE_PREFIX")}*`);
@@ -124,7 +125,7 @@ test("derives backup and recovery lists from manifest classifications", () => {
   expect(TRACE_BACKUP_STORAGE_KEYS).toEqual(durableLocalStorage);
   expect(TRACE_RECOVERABLE_TRANSACTION_KEYS).toEqual(recoveryLocalStorage);
   expect(TRACE_STORAGE_DOMAIN_MANIFEST.filter(({ backupLocation }) => backupLocation))
-    .toHaveLength(TRACE_BACKUP_STORAGE_KEYS.length + 1);
+    .toHaveLength(TRACE_BACKUP_STORAGE_KEYS.length + 2);
   expect(TRACE_STORAGE_DOMAIN_MANIFEST.filter(({ classification }) =>
     classification !== STORAGE_DOMAIN_CLASSIFICATION.DURABLE_BACKUP
   ).every(({ backupLocation }) => backupLocation === null)).toBe(true);

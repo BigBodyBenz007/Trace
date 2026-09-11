@@ -90,7 +90,7 @@ test("fills the secondary action row without the former Backup gap", () => {
   render(<HomePage {...baseProps} memories={[]} trophyEntries={[]} />);
   const secondary = document.querySelector(".trace-feature-navigation__secondary");
   expect(within(secondary).getAllByRole("button").map((button) => button.textContent.trim()))
-    .toEqual(["Workouts", "Medications & Supplements", "Protocols"]);
+    .toEqual(["Workouts", "Medications & Supplements", "Protocols", "Time Capsules"]);
   expect(readFileSync(require.resolve("../index.css"), "utf8"))
     .toMatch(/\.trace-feature-navigation__secondary\s*\{[^}]*grid-template-columns:\s*repeat\(auto-fit, minmax\(220px, 1fr\)\)/s);
 });
@@ -138,6 +138,7 @@ test("multiple hidden modules remove empty groups and let remaining buttons refl
         health: false,
         workouts: false,
         protocols: false,
+        timeCapsules: false,
         journal: false,
         trophyCase: false,
       }}
