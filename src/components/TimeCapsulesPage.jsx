@@ -20,10 +20,13 @@ function CapsuleMedia({ item, loader }) {
     elementRef.current?.pause?.();
     loader?.evict?.(item.id);
   }, [item.id, loader]);
+  const retainMediaElement = (element) => {
+    if (element) elementRef.current = element;
+  };
   if (!loaded.url) return <p>Attachment unavailable.</p>;
   if (item.kind === "photo") return <img alt={item.name} src={loaded.url} className="trace-capsule-media__photo" />;
-  if (item.kind === "audio") return <audio aria-label={item.name} controls preload="metadata" ref={elementRef} src={loaded.url} />;
-  return <video aria-label={item.name} controls playsInline preload="metadata" ref={elementRef} src={loaded.url} />;
+  if (item.kind === "audio") return <audio aria-label={item.name} controls preload="metadata" ref={retainMediaElement} src={loaded.url} />;
+  return <video aria-label={item.name} controls playsInline preload="metadata" ref={retainMediaElement} src={loaded.url} />;
 }
 
 function visibleState(capsule, today) {
@@ -187,7 +190,10 @@ export default function TimeCapsulesPage({
     const opened = state === TIME_CAPSULE_STATE.OPENED;
     return (
       <main className="trace-feature-page trace-feature-page--capsules">
-        <button type="button" onClick={() => { setMode("archive"); setSelectedId(null); }}>Back to Time Capsules</button>
+        <nav aria-label="Time Capsule detail navigation" className="trace-capsule-detail-navigation">
+          <button type="button" onClick={() => { setMode("archive"); setSelectedId(null); }}>Back to Time Capsules</button>
+          <button type="button" onClick={onBack}>Back to Timeline</button>
+        </nav>
         <article className="trace-feature-surface trace-capsule-detail">
           <p className="trace-feature-page__kicker">{visibleState(selected, today)}</p><h1>{selected.name}</h1><p>Opening date: {formatDateOnly(selected.openOn)}</p>
           {error && <p role="alert">{error}</p>}{status && <p role="status">{status}</p>}

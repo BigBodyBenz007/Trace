@@ -3848,7 +3848,6 @@ function App({
 
   const timeCapsules = timeCapsuleReport.status === "ok" ? timeCapsuleReport.records : [];
   const timeCapsuleReminders = timeCapsuleReminderReport.status === "ok" ? timeCapsuleReminderReport.records : [];
-  const readyTimeCapsules = timeCapsules.filter((capsule) => timeCapsuleState(capsule, timeCapsuleToday) === TIME_CAPSULE_STATE.AVAILABLE);
   const readyTimeCapsuleReminder = page === "home" && !ceremonyEntry
     ? pendingTimeCapsuleReminder(timeCapsules, timeCapsuleReminders, timeCapsuleToday)
     : null;
@@ -3927,7 +3926,8 @@ function App({
           onOpenTrophyCase={() => setPage("trophy-case")}
           onOpenJournal={() => setPage("journal")}
           onOpenTimeCapsules={() => { setTimeCapsuleTargetId(null); setPage("time-capsules"); }}
-          readyTimeCapsules={readyTimeCapsules}
+          timeCapsules={timeCapsules}
+          timeCapsuleToday={timeCapsuleToday}
           readyTimeCapsuleReminder={readyTimeCapsuleReminder}
           onViewTimeCapsule={(id) => { setTimeCapsuleTargetId(id); setPage("time-capsules"); }}
           onAcknowledgeTimeCapsule={(id) => updateTimeCapsuleReminder(id, TIME_CAPSULE_REMINDER_STATE.ACKNOWLEDGED)}

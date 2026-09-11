@@ -25,6 +25,11 @@ import {
   homeModulesInGroup,
   normalizeHomeVisibility,
 } from "../services/homeModules";
+import {
+  localDateKey,
+  timeCapsuleState,
+  TIME_CAPSULE_STATE,
+} from "../services/timeCapsule";
 
 const CATEGORY_FILTER_OPTIONS = [
   "All",
@@ -64,14 +69,18 @@ function useDocumentScrollLock(
 }
 
 function getTimelineDate(memory, currentDay) {
+  if (memory.timelineType === "time-capsule") {
+    const sealedAt = new Date(memory.capsule.sealedAt);
+    return Number.isNaN(sealedAt.getTime()) ? currentDay : sealedAt;
+  }
   if (!memory.date) return currentDay;
 
   return parseDateOnlyLocal(memory.date) || currentDay;
 }
 
-function groupMemoriesByDate(memories, currentDay) {
-  return memories.reduce((yearGroups, memory) => {
-    const date = getTimelineDate(memory, currentDay);
+function groupTimelineItemsByDate(items, currentDay) {
+  return items.reduce((yearGroups, item) => {
+    const date = getTimelineDate(item, currentDay);
     const year = date.getFullYear();
     const monthIndex = date.getMonth();
     const month = date.toLocaleDateString("en-US", { month: "long" });
@@ -85,13 +94,75 @@ function groupMemoriesByDate(memories, currentDay) {
     let monthGroup = yearGroup.months[yearGroup.months.length - 1];
 
     if (!monthGroup || monthGroup.monthIndex !== monthIndex) {
-      monthGroup = { month, monthIndex, memories: [] };
+      monthGroup = { month, monthIndex, items: [] };
       yearGroup.months.push(monthGroup);
     }
 
-    monthGroup.memories.push(memory);
+    monthGroup.items.push(item);
     return yearGroups;
   }, []);
+}
+
+function capsuleTimelineLabel(capsule, today) {
+  const state = timeCapsuleState(capsule, today);
+  if (state === TIME_CAPSULE_STATE.AVAILABLE) return "Ready to open";
+  if (state === TIME_CAPSULE_STATE.OPENED) return "Opened";
+  return "Sealed";
+}
+
+function CapsuleTimelineCard({ capsule, colors, onView, today, registerCard }) {
+  const sealedDate = getTimelineDate({ timelineType: "time-capsule", capsule }, new Date());
+  const sealedDateKey = localDateKey(sealedDate);
+  return (
+    <button
+      aria-label={`View Time Capsule ${capsule.name}`}
+      className="trace-timeline-card-position trace-timeline-capsule-card"
+      data-capsule-id={capsule.id}
+      data-memory-date={sealedDateKey}
+      data-timeline-card-position="true"
+      data-testid={`timeline-time-capsule-${capsule.id}`}
+      onClick={() => onView(capsule.id)}
+      ref={registerCard}
+      type="button"
+      style={{
+        contain: "layout style",
+        flexShrink: 0,
+        marginLeft: `-${TIMELINE_FOCUS_CONTAINMENT_GUTTER}px`,
+        marginRight: `-${TIMELINE_FOCUS_CONTAINMENT_GUTTER}px`,
+        marginTop: "var(--life-current-card-lowering)",
+        minHeight: "var(--life-current-card-space)",
+        overflow: "visible",
+        position: "relative",
+        width: TIMELINE_FOCUS_CONTAINMENT_WIDTH,
+      }}
+    >
+      <span
+        className="trace-timeline-card-visual trace-timeline-capsule-card__visual"
+        data-timeline-card-visual="true"
+        style={{
+          background: colors.card,
+          borderRadius: "14px",
+          boxSizing: "border-box",
+          display: "block",
+          margin: "0 auto",
+          minHeight: "164px",
+          overflowWrap: "anywhere",
+          padding: "12px",
+          textAlign: "left",
+          transform: `scale(var(--timeline-focus-scale, ${TIMELINE_FOCUS_TUNING.minimumScale}))`,
+          transformOrigin: "center top",
+          transition: `transform ${TIMELINE_FOCUS_TUNING.transitionMilliseconds}ms ease-out, box-shadow 160ms ease`,
+          width: TIMELINE_FOCUS_TUNING.baseCardWidth,
+        }}
+      >
+        <span className="trace-timeline-capsule-card__type">Time Capsule</span>
+        <strong className="trace-timeline-capsule-card__name">{capsule.name}</strong>
+        <span>Opening date: {formatDateOnly(capsule.openOn)}</span>
+        <strong>{capsuleTimelineLabel(capsule, today)}</strong>
+        <span className="trace-timeline-capsule-card__action">View Time Capsule</span>
+      </span>
+    </button>
+  );
 }
 
 function getMemorySelectionKey(memory) {
@@ -264,7 +335,8 @@ function HomePage({
   onOpenTrophyCase,
   onOpenJournal,
   onOpenTimeCapsules = () => {},
-  readyTimeCapsules = [],
+  timeCapsules = [],
+  timeCapsuleToday = localDateKey(),
   readyTimeCapsuleReminder = null,
   onViewTimeCapsule = () => {},
   onAcknowledgeTimeCapsule = () => false,
@@ -365,6 +437,16 @@ function HomePage({
   const sortedMemories = useMemo(() => [...memories].sort(
     (a, b) => getTimelineDate(a, currentDay) - getTimelineDate(b, currentDay)
   ), [currentDay, memories]);
+  const timelineCapsules = useMemo(() => {
+    const seen = new Set();
+    return timeCapsules
+      .filter((capsule) => {
+        if (!capsule?.id || seen.has(capsule.id)) return false;
+        seen.add(capsule.id);
+        return true;
+      })
+      .map((capsule) => ({ id: `time-capsule:${capsule.id}`, timelineType: "time-capsule", capsule }));
+  }, [timeCapsules]);
   const filteredMemories = useMemo(() => sortedMemories
     .filter((memory) => {
       const matchesSearch = matchesMemorySearch(memory, search);
@@ -410,12 +492,21 @@ function HomePage({
       windowDays: LIFE_CURRENT_WINDOW_TUNING.cameraWindowDays,
     });
   }, [filteredCameraDate, filteredLifeCurrentRange, isMemoryFilterActive, lifeCurrentLayout]);
+  const timelineItems = useMemo(() => {
+    const memoryItems = isMemoryFilterActive ? filteredMemories : sortedMemories;
+    if (isMemoryFilterActive) return memoryItems;
+    return [...memoryItems, ...timelineCapsules].sort((a, b) => {
+      const difference = getTimelineDate(a, currentDay) - getTimelineDate(b, currentDay);
+      if (difference !== 0) return difference;
+      if (a.timelineType === "time-capsule" && b.timelineType === "time-capsule") {
+        return a.capsule.sealedAt.localeCompare(b.capsule.sealedAt) || a.capsule.id.localeCompare(b.capsule.id);
+      }
+      return 0;
+    });
+  }, [currentDay, filteredMemories, isMemoryFilterActive, sortedMemories, timelineCapsules]);
   const timelineGroups = useMemo(
-    () => groupMemoriesByDate(
-      isMemoryFilterActive ? filteredMemories : sortedMemories,
-      currentDay
-    ),
-    [currentDay, filteredMemories, isMemoryFilterActive, sortedMemories]
+    () => groupTimelineItemsByDate(timelineItems, currentDay),
+    [currentDay, timelineItems]
   );
   const timelineMemories = isMemoryFilterActive ? filteredMemories : sortedMemories;
   const timelineMemoryIndexById = useMemo(
@@ -428,7 +519,7 @@ function HomePage({
       : timelineMemories[timelinePosition === "past" ? 0 : timelineMemories.length - 1]?.id
   );
   const photoPriorityAnchorIndex = timelineMemoryIndexById.get(photoPriorityAnchorId);
-  const timelineFocusKey = filteredMemories.map(({ id }) => id).join("|");
+  const timelineFocusKey = timelineItems.map(({ id }) => id).join("|");
   const detailMemory =
     detailMemoryId === null
       ? null
@@ -728,16 +819,16 @@ function HomePage({
   }, [active, memories, reducedMotion, trophySourceTarget]);
 
   useEffect(() => {
-    if (!active || !timelinePositionRequestRef.current || isMemoryFilterActive || sortedMemories.length === 0) return undefined;
-    const targetMemory = timelinePosition === "past"
-      ? sortedMemories[0]
-      : sortedMemories[sortedMemories.length - 1];
+    if (!active || !timelinePositionRequestRef.current || isMemoryFilterActive || timelineItems.length === 0) return undefined;
+    const targetItem = timelinePosition === "past"
+      ? timelineItems[0]
+      : timelineItems[timelineItems.length - 1];
     let frame = null;
     const positionTimeline = () => {
       const viewport = timelineRef.current;
       if (!viewport) return false;
-      const targetCard = targetMemory
-        ? memoryCardRefs.current.get(getMemorySelectionKey(targetMemory))
+      const targetCard = targetItem
+        ? memoryCardRefs.current.get(targetItem.id)
         : null;
       const viewportBounds = viewport.getBoundingClientRect();
       const cardBounds = targetCard?.getBoundingClientRect();
@@ -766,7 +857,7 @@ function HomePage({
       window.removeEventListener("scroll", schedulePosition);
       if (frame !== null) window.cancelAnimationFrame(frame);
     };
-  }, [active, isMemoryFilterActive, sortedMemories, timelinePosition]);
+  }, [active, isMemoryFilterActive, timelineItems, timelinePosition]);
 
   useEffect(() => {
     if (!active || !timelineTargetMemoryId) return undefined;
@@ -902,19 +993,6 @@ function HomePage({
           <h2 id="trace-timeline-heading">Memories Added: {memoryCount}</h2>
         </div>
 
-        {readyTimeCapsules.length > 0 && (
-          <section aria-label="Ready Time Capsules" className="trace-ready-capsules">
-            {readyTimeCapsules.map((capsule) => (
-              <article className="trace-feature-surface trace-ready-capsule-card" key={capsule.id}>
-                <h3>{capsule.name}</h3>
-                <p>Opening date: {formatDateOnly(capsule.openOn)}</p>
-                <strong>Ready to open</strong>
-                <button type="button" onClick={() => onViewTimeCapsule(capsule.id)}>View Time Capsule</button>
-              </article>
-            ))}
-          </section>
-        )}
-
         <div className="trace-timeline-toolbar">
           <div className="trace-timeline-position" aria-label="Timeline position">
             <button className="trace-position-button" type="button" aria-pressed={timelinePosition === "past"} onClick={() => { timelinePositionRequestRef.current = true; setTimelinePosition("past"); }}>Past</button>
@@ -1010,13 +1088,13 @@ function HomePage({
                 ? "8px 32px 16px"
                 : `8px ${timelineEdgeGutter + LIFE_CURRENT_TRAIL_TUNING.extentPixels}px 16px ${timelineEdgeGutter}px`,
               position: "relative",
-              width: sortedMemories.length === 0 ? "auto" : "max-content",
+              width: timelineItems.length === 0 ? "auto" : "max-content",
             }}
           >
             {!isMemoryFilterActive && (
               <LifeCurrent layout={lifeCurrentLayout} showQuietTrail themeId={lifeCurrentTheme.id} />
             )}
-            {lifeCurrentLayout.points.length === 0 && filteredMemories.length > 0 && <div
+            {lifeCurrentLayout.points.length === 0 && timelineItems.length > 0 && <div
               aria-hidden="true"
               style={{
                 background: lifeCurrentColors.fallback,
@@ -1028,10 +1106,12 @@ function HomePage({
               }}
             />}
 
-            {filteredMemories.length === 0 && (
-              <p style={{ left: "32px", position: "absolute", zIndex: 1 }}>No memories found.</p>
+            {timelineItems.length === 0 && (
+              <p style={{ left: "32px", position: "absolute", zIndex: 1 }}>
+                {isMemoryFilterActive ? "No memories found." : "No Timeline items yet."}
+              </p>
             )}
-            {sortedMemories.length > 0 && (
+            {timelineItems.length > 0 && (
               <>
 
             {timelineGroups.map((yearGroup, yearIndex) => (
@@ -1100,7 +1180,21 @@ function HomePage({
                           paddingTop: "var(--life-current-card-top-gap)",
                         }}
                       >
-                        {monthGroup.memories.map((memory) => {
+                        {monthGroup.items.map((timelineItem) => {
+                          if (timelineItem.timelineType === "time-capsule") {
+                            return <CapsuleTimelineCard
+                              capsule={timelineItem.capsule}
+                              colors={lifeCurrentColors}
+                              key={timelineItem.id}
+                              onView={onViewTimeCapsule}
+                              registerCard={(element) => {
+                                if (element) memoryCardRefs.current.set(timelineItem.id, element);
+                                else memoryCardRefs.current.delete(timelineItem.id);
+                              }}
+                              today={timeCapsuleToday}
+                            />;
+                          }
+                          const memory = timelineItem;
                           const selectionKey = getMemorySelectionKey(memory);
                           const isSelected = isMemorySelected(memory);
                           const photoCount = Array.isArray(memory.images)

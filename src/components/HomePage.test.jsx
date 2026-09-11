@@ -25,6 +25,22 @@ const baseProps = {
   containerStyle: {},
 };
 
+function timeCapsule(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    id: "capsule-1",
+    name: "Future note",
+    text: "Private capsule words",
+    openOn: "2027-09-11",
+    media: [{ id: "private-photo", kind: "photo", name: "private-name.jpg", mimeType: "image/jpeg", bytes: 5 }],
+    createdAt: "2026-06-01T14:00:00.000Z",
+    updatedAt: "2026-06-01T14:00:00.000Z",
+    sealedAt: "2026-06-01T14:00:00.000Z",
+    openedAt: null,
+    ...overrides,
+  };
+}
+
 test("renders primary Timeline actions in the intended order", () => {
   render(<HomePage {...baseProps} memories={[]} trophyEntries={[]} />);
   const featureNavigation = screen.getByRole("navigation", { name: "Trace features" });
@@ -485,6 +501,52 @@ test.each([
 ])("renders date-only Memory %s on its entered calendar day", (date, label) => {
   render(<HomePage {...baseProps} memories={[{ ...memories[0], date }]} trophyEntries={[]} />);
   expect(screen.getByText(label)).toBeInTheDocument();
+});
+
+test("places sealed, ready, and opened capsules on the Timeline without exposing private content", () => {
+  const onViewTimeCapsule = jest.fn();
+  const onAcknowledgeTimeCapsule = jest.fn();
+  const capsules = [
+    timeCapsule({ id: "opened", name: "Opened keepsake", sealedAt: "2026-08-03T14:00:00.000Z", openedAt: "2026-09-01T14:00:00.000Z" }),
+    timeCapsule({ id: "sealed", name: "Sealed keepsake", sealedAt: "2026-06-01T14:00:00.000Z" }),
+    timeCapsule({ id: "ready", name: "Ready keepsake", openOn: "2026-09-11", sealedAt: "2026-07-02T14:00:00.000Z" }),
+  ];
+  render(<HomePage
+    {...baseProps}
+    memories={[]}
+    onAcknowledgeTimeCapsule={onAcknowledgeTimeCapsule}
+    onViewTimeCapsule={onViewTimeCapsule}
+    timeCapsules={capsules}
+    timeCapsuleToday="2026-09-11"
+    trophyEntries={[]}
+  />);
+
+  expect(screen.getAllByTestId(/^timeline-time-capsule-/).map((card) => card.dataset.capsuleId))
+    .toEqual(["sealed", "ready", "opened"]);
+  expect(screen.getByTestId("timeline-time-capsule-sealed")).toHaveTextContent("Sealed");
+  expect(screen.getByTestId("timeline-time-capsule-ready")).toHaveTextContent("Ready to open");
+  expect(screen.getByTestId("timeline-time-capsule-opened")).toHaveTextContent("Opened");
+  expect(screen.getByTestId("timeline-time-capsule-sealed")).toHaveTextContent("Opening date: September 11, 2027");
+  expect(screen.queryByText("Private capsule words")).not.toBeInTheDocument();
+  expect(screen.queryByText("private-name.jpg")).not.toBeInTheDocument();
+  expect(document.querySelector(".trace-timeline-capsule-card img, .trace-timeline-capsule-card audio, .trace-timeline-capsule-card video")).toBeNull();
+
+  fireEvent.click(screen.getByTestId("timeline-time-capsule-ready"));
+  expect(onViewTimeCapsule).toHaveBeenCalledWith("ready");
+  expect(onAcknowledgeTimeCapsule).not.toHaveBeenCalled();
+});
+
+test("derives one Timeline card per capsule and follows deleted and restored collections", () => {
+  const saved = timeCapsule({ id: "sync", name: "Synchronized capsule" });
+  const props = { ...baseProps, memories: [], timeCapsuleToday: "2026-09-11", trophyEntries: [] };
+  const { rerender } = render(<HomePage {...props} timeCapsules={[saved, { ...saved }]} />);
+  expect(screen.getAllByTestId("timeline-time-capsule-sync")).toHaveLength(1);
+
+  rerender(<HomePage {...props} timeCapsules={[]} />);
+  expect(screen.queryByTestId("timeline-time-capsule-sync")).not.toBeInTheDocument();
+
+  rerender(<HomePage {...props} timeCapsules={[saved]} />);
+  expect(screen.getAllByTestId("timeline-time-capsule-sync")).toHaveLength(1);
 });
 
 beforeEach(() => jest.clearAllMocks());

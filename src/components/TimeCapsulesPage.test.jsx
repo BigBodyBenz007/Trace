@@ -1,4 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
+import { readFileSync } from "fs";
 import { useState } from "react";
 import { prepareCapsuleMediaFiles } from "../services/capsuleMedia";
 import TimeCapsuleReadyOverlay from "./TimeCapsuleReadyOverlay";
@@ -8,6 +9,14 @@ jest.mock("../services/capsuleMedia", () => ({
   ...jest.requireActual("../services/capsuleMedia"),
   prepareCapsuleMediaFiles: jest.fn(),
 }));
+
+let pauseMedia;
+
+beforeEach(() => {
+  pauseMedia = jest.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
+});
+
+afterEach(() => pauseMedia.mockRestore());
 
 function capsule(overrides = {}) {
   return {
@@ -90,6 +99,56 @@ test("an opening write failure keeps private content hidden and offers a retry",
   expect(screen.getByRole("alert")).toHaveTextContent("contents remain sealed");
   expect(screen.queryByText("Private words for the future")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Open Capsule" })).toBeEnabled();
+});
+
+test.each([
+  ["sealed", { openOn: "2027-09-11" }],
+  ["available", {}],
+  ["opened", { openedAt: "2026-09-11T12:00:00.000Z", media: [] }],
+])("returns from %s capsule details to the Timeline without opening or changing the capsule", (state, overrides) => {
+  const onBack = jest.fn();
+  const onOpen = jest.fn();
+  const record = capsule(overrides);
+  render(<TimeCapsulesPage {...baseProps} capsules={[record]} initialCapsuleId="capsule-1" onBack={onBack} onOpen={onOpen} />);
+  const navigation = screen.getByRole("navigation", { name: "Time Capsule detail navigation" });
+  expect(navigation).toHaveTextContent("Back to Time Capsules");
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(onBack).toHaveBeenCalledTimes(1);
+  expect(onOpen).not.toHaveBeenCalled();
+  expect(record.openedAt).toBe(overrides.openedAt || null);
+});
+
+test("keeps both capsule detail destinations touch-safe in the 390px mobile layout", () => {
+  render(<TimeCapsulesPage {...baseProps} capsules={[capsule({ openOn: "2027-09-11" })]} initialCapsuleId="capsule-1" />);
+  const navigation = screen.getByRole("navigation", { name: "Time Capsule detail navigation" });
+  expect(navigation.querySelectorAll("button")).toHaveLength(2);
+  const css = readFileSync(require.resolve("../index.css"), "utf8");
+  expect(css).toMatch(/\.trace-capsule-detail-navigation button\s*\{[^}]*min-height:\s*44px/s);
+  expect(css).toMatch(/@media \(max-width: 520px\)[\s\S]*\.trace-capsule-detail-navigation button\s*\{[^}]*width:\s*100%/s);
+});
+
+test("pauses opened capsule playback and releases its transient URL when returning to the Timeline", async () => {
+  const loader = {
+    load: jest.fn().mockResolvedValue({ id: "private-audio", unavailable: false, url: "blob:voice" }),
+    evict: jest.fn(),
+  };
+  function Harness() {
+    const [visible, setVisible] = useState(true);
+    return visible ? <TimeCapsulesPage
+      {...baseProps}
+      capsules={[capsule({ openedAt: "2026-09-11T12:00:00.000Z" })]}
+      initialCapsuleId="capsule-1"
+      mediaLoader={loader}
+      onBack={() => setVisible(false)}
+    /> : <p>Timeline restored</p>;
+  }
+  render(<Harness />);
+  const audio = await screen.findByLabelText("secret-name.m4a");
+  audio.pause = jest.fn();
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(screen.getByText("Timeline restored")).toBeInTheDocument();
+  expect(audio.pause).toHaveBeenCalledTimes(1);
+  expect(loader.evict).toHaveBeenCalledWith("private-audio");
 });
 
 test("restores every draft field and attachment reference and preserves it on Back to Timeline", () => {

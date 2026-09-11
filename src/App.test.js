@@ -6487,6 +6487,34 @@ test("same-tab restore refreshes medication entries, compounds, dose schedules, 
   expect(protocolCard).toHaveTextContent("Taken 0 · Skipped 1");
 });
 
+test("shows a sealed capsule on the Timeline and navigates to and from details without changing it", () => {
+  const capsule = {
+    schemaVersion: 1,
+    id: "capsule-timeline",
+    name: "Timeline capsule",
+    text: "Private Timeline capsule message",
+    openOn: "2099-12-31",
+    media: [{ id: "private-timeline-photo", kind: "photo", name: "private-timeline.jpg", mimeType: "image/jpeg", bytes: 5 }],
+    createdAt: "2026-09-11T12:00:00.000Z",
+    updatedAt: "2026-09-11T12:01:00.000Z",
+    sealedAt: "2026-09-11T12:01:00.000Z",
+    openedAt: null,
+  };
+  localStorage.setItem("timeCapsules", JSON.stringify([capsule]));
+
+  render(<App />);
+  const timelineCard = screen.getByTestId("timeline-time-capsule-capsule-timeline");
+  expect(timelineCard).toHaveTextContent("Sealed");
+  expect(screen.queryByText("Private Timeline capsule message")).not.toBeInTheDocument();
+  expect(screen.queryByText("private-timeline.jpg")).not.toBeInTheDocument();
+  fireEvent.click(timelineCard);
+  expect(screen.getByRole("heading", { name: "Timeline capsule" })).toBeInTheDocument();
+  expect(screen.getByText("This capsule remains sealed. Its private contents are hidden.")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(screen.getByTestId("timeline-time-capsule-capsule-timeline")).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("timeCapsules"))).toEqual([capsule]);
+});
+
 test("Home reminder navigates without revealing a capsule until the explicit durable opening", async () => {
   const today = localCalendarDateKey();
   const capsule = {
