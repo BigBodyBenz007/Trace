@@ -1431,6 +1431,72 @@ test("saves Applebee's Riblets with the selected included-side label", () => {
   });
 });
 
+test("selects and saves Olive Garden's published dinner portion with excluded accompaniments", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "olive garden chicken parmigiana" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Olive Garden.*Chicken Parmigiana/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  expect(sizeSelect).toHaveDisplayValue("Lunch or lighter portion; soup, salad, and breadsticks excluded");
+  fireEvent.change(sizeSelect, {
+    target: { value: "restaurant:olive-garden:chicken-parmigiana:dinner" },
+  });
+  expect(sizeSelect).toHaveDisplayValue("Dinner portion; soup, salad, and breadsticks excluded");
+  expect(form.getByLabelText("Calories")).toHaveValue(1020);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(64);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Chicken Parmigiana",
+    calories: 1020,
+    protein: 64,
+    carbohydrates: 80,
+    fat: 51,
+    sodium: 3300,
+    portion: { amount: 1, basis: { description: "Dinner portion; soup, salad, and breadsticks excluded" } },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "olive-garden",
+      restaurantName: "Olive Garden",
+      sourceId: "olive-garden:chicken-parmigiana:dinner",
+    },
+  });
+});
+
+test("logs a fractional Outback Bloomin' Onion against the published platter", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "outback bloomin onion" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Outback Steakhouse.*Bloomin' Onion/i }));
+
+  const form = entryForm();
+  expect(form.getByText(/One serving: 1 full appetizer order/)).toBeInTheDocument();
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "0.25" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(480);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(1217.5);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Bloomin' Onion",
+    calories: 480,
+    protein: 4.25,
+    carbohydrates: 32.75,
+    fat: 38,
+    sodium: 1217.5,
+    portion: { amount: 0.25, basis: { description: expect.stringContaining("full appetizer order") } },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "outback-steakhouse",
+      restaurantName: "Outback Steakhouse",
+      sourceId: "outback-steakhouse:bloomin-onion",
+    },
+  });
+});
+
 test("normal Sonic and Braum's items log with chain identity and known sodium", () => {
   const props = renderNutritionPage();
 

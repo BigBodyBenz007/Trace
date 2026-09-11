@@ -364,6 +364,45 @@ test("discovers and selects Chili's, Applebee's, and Texas Roadhouse records", (
   }));
 });
 
+test("discovers and selects Olive Garden, LongHorn, and Outback records", () => {
+  const onSelectFood = renderFoodSearch();
+
+  searchFor("olive garden chicken parmigiana");
+  let result = screen.getByRole("button", { name: /Olive Garden.*Chicken Parmigiana/i });
+  expect(result).toHaveTextContent("Lunch or lighter portion");
+  expect(result).toHaveTextContent("breadsticks excluded");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:olive-garden:chicken-parmigiana",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:olive-garden:chicken-parmigiana:dinner" }),
+    ]),
+  }));
+
+  searchFor("long horn flos filet");
+  result = screen.getByRole("button", { name: /LongHorn Steakhouse.*Flo's Filet/i });
+  expect(result).toHaveTextContent("6 oz menu-listed filet");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:longhorn-steakhouse:flos-filet",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:longhorn-steakhouse:flos-filet:9oz" }),
+    ]),
+  }));
+
+  searchFor("outback center cut sirloin");
+  result = screen.getByRole("button", { name: /Outback Steakhouse.*Center-Cut Sirloin/i });
+  expect(result).toHaveTextContent("5 oz menu-listed sirloin");
+  expect(result).toHaveTextContent("sides excluded");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:outback-steakhouse:center-cut-sirloin",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:outback-steakhouse:center-cut-sirloin:12oz" }),
+    ]),
+  }));
+});
+
 test("shows branded-drink source, package, caffeine, and unknown nutrient details", () => {
   const onSelectFood = renderFoodSearch();
   searchFor("monster ultra zero");

@@ -382,16 +382,19 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     chilis: /^https:\/\/(?:(?:cdn\.builder\.io\/o\/assets)|(?:www\.chilis\.com\/menu))/,
     applebees: /^https:\/\/www\.nutritionix\.com\/applebees\/menu\/premium$/,
     "texas-roadhouse": /^https:\/\/www\.nutritionix\.com\/texas-roadhouse\/menu\/premium$/,
+    "olive-garden": /^https:\/\/media\.olivegarden\.com\/en_us\/pdf\/olive_garden_nutrition\.pdf$/,
+    "longhorn-steakhouse": /^https:\/\/media\.longhornsteakhouse\.com\/en_us\/pdf\/nutrition_allergen_guide\.pdf$/,
+    "outback-steakhouse": /^https:\/\/edge\.sitecorecloud\.io\/osirestaurantpartners-piq24hos\/media\/Project\/BBI\/outback\/files\/obs-full-nutrition-information\.pdf$/,
     "taco-bell": /^https:\/\/www\.tacobell\.com\/food\//,
     "chick-fil-a": /^https:\/\/www\.chick-fil-a\.com\/nutrition-allergens$/,
     whataburger: /^https:\/\/wbimageserver\.whataburger\.com\/Nutrition\.pdf$/,
   };
-  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "dairy-queen", "arbys", "jack-in-the-box", "dominos", "pizza-hut", "papa-johns", "little-caesars", "hideaway-pizza", "marcos-pizza", "chilis", "applebees", "texas-roadhouse", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
+  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "dairy-queen", "arbys", "jack-in-the-box", "dominos", "pizza-hut", "papa-johns", "little-caesars", "hideaway-pizza", "marcos-pizza", "chilis", "applebees", "texas-roadhouse", "olive-garden", "longhorn-steakhouse", "outback-steakhouse", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
     chainId,
     expansion.filter((food) => food.restaurant.id === chainId).length,
   ]));
 
-  expect(expansion).toHaveLength(2132);
+  expect(expansion).toHaveLength(2412);
   expect(countByChain).toEqual({
     mcdonalds: 100,
     sonic: 102,
@@ -416,6 +419,9 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     chilis: 59,
     applebees: 109,
     "texas-roadhouse": 112,
+    "olive-garden": 96,
+    "longhorn-steakhouse": 82,
+    "outback-steakhouse": 102,
     "taco-bell": 95,
     "chick-fil-a": 60,
     whataburger: 112,
@@ -804,6 +810,72 @@ test("preserves sit-down portions, included components, and unknown nutrients wh
     ...applebeesRiblets.servingOptions,
     ...texasSirloin.servingOptions,
   ].forEach((option) => expect(option.provenance.verification).toMatchObject({
+    sourceType: "official-restaurant",
+    accessedAt: "2026-09-10",
+    sourceUrl: expect.stringMatching(/^https:\/\//),
+    sourceReference: expect.any(String),
+  }));
+});
+
+test("finds Olive Garden, LongHorn, and Outback foods across standard menu categories", () => {
+  expect(searchFoodCatalog("Olive Garden", [], restaurantFoods.length)).toHaveLength(96);
+  expect(searchFoodCatalog("LongHorn Steakhouse", [], restaurantFoods.length)).toHaveLength(82);
+  expect(searchFoodCatalog("Outback Steakhouse", [], restaurantFoods.length)).toHaveLength(102);
+
+  const expectedFirstResults = [
+    ["olive garden calamari", "restaurant:olive-garden:calamari"],
+    ["olive garden chicken parmigiana dinner", "restaurant:olive-garden:chicken-parmigiana"],
+    ["olive garden pasta fagioli", "restaurant:olive-garden:pasta-fagioli-soup"],
+    ["olive garden black tie mousse cake", "restaurant:olive-garden:black-tie-mousse-cake"],
+    ["longhorn texas tonion", "restaurant:longhorn-steakhouse:texas-tonion"],
+    ["long horn flos filet 9 oz", "restaurant:longhorn-steakhouse:flos-filet"],
+    ["longhorn seasoned french fries", "restaurant:longhorn-steakhouse:seasoned-french-fries"],
+    ["longhorn molten lava cake", "restaurant:longhorn-steakhouse:molten-lava-cake"],
+    ["outback bloomin onion", "restaurant:outback-steakhouse:bloomin-onion"],
+    ["outback center cut sirloin 8 oz", "restaurant:outback-steakhouse:center-cut-sirloin"],
+    ["outback alice springs chicken", "restaurant:outback-steakhouse:alice-springs-chicken"],
+    ["outback kids mac a roo cheese", "restaurant:outback-steakhouse:kids-mac-cheese"],
+  ];
+
+  expect(expectedFirstResults.map(([query]) => [query, searchFoodCatalog(query)[0]?.id])).toEqual(expectedFirstResults);
+  expect(searchFoodCatalog("olive garden coke zero")[0].id).toBe("restaurant:olive-garden:coke-zero");
+  expect(searchFoodCatalog("longhorn dr. pepper")[0].id).toBe("restaurant:longhorn-steakhouse:dr-pepper");
+  expect(searchFoodCatalog("outback coke zero")[0].id).toBe("restaurant:outback-steakhouse:coke-zero");
+  expect(searchFoodCatalog("coke zero")[0].id).toBe("beverage:coca-cola:zero-sugar-12oz");
+});
+
+test("preserves restaurant portions, excluded components, fractional sharing, and unknown nutrients", () => {
+  const chickenParm = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:olive-garden:chicken-parmigiana"));
+  const longHornFilet = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:longhorn-steakhouse:flos-filet"));
+  const outbackSirloin = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:outback-steakhouse:center-cut-sirloin"));
+  const bloominOnion = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:outback-steakhouse:bloomin-onion"));
+  const longHornRanch = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:longhorn-steakhouse:ranch-dressing"));
+
+  expect(chickenParm.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Lunch or lighter portion; soup, salad, and breadsticks excluded", 630],
+    ["Dinner portion; soup, salad, and breadsticks excluded", 1020],
+  ]);
+  expect(longHornFilet.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["6 oz menu-listed filet; sides excluded", 330],
+    ["9 oz menu-listed filet; sides excluded", 450],
+  ]);
+  expect(outbackSirloin.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["5 oz menu-listed sirloin; sides excluded", 260],
+    ["6 oz menu-listed sirloin; sides excluded", 330],
+    ["8 oz menu-listed sirloin; sides excluded", 400],
+    ["9 oz menu-listed sirloin; sides excluded", 420],
+    ["12 oz menu-listed sirloin; sides excluded", 500],
+  ]);
+  expect(scaleNutrition(bloominOnion.nutrients, 0.25)).toMatchObject({
+    calories: 480,
+    protein: 4.25,
+    carbohydrates: 32.75,
+    fat: 38,
+    sodium: 1217.5,
+  });
+  expect(scaleNutrition(longHornRanch.servingOptions[0].nutrients, 2).protein).toBeNull();
+
+  [...chickenParm.servingOptions, ...longHornFilet.servingOptions, ...outbackSirloin.servingOptions].forEach((option) => expect(option.provenance.verification).toMatchObject({
     sourceType: "official-restaurant",
     accessedAt: "2026-09-10",
     sourceUrl: expect.stringMatching(/^https:\/\//),

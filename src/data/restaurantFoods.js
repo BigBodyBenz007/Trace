@@ -4621,6 +4621,423 @@ const texasRoadhouseFoods = [
   ...texasRoadhouseDessertDrinkFoods,
 ];
 
+const sitDownNutrients = ([calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => menuPublished(
+  calories, protein, carbohydrates, fat, sodium, fiber, totalSugar
+);
+const sitDownFood = (chain, sourceUrl, sourceReference, aliases, id, name, description, values, servingOptions) => menuFood(
+  chain,
+  sourceUrl,
+  sourceReference,
+  id,
+  name,
+  description,
+  values ? sitDownNutrients(values) : null,
+  servingOptions?.map(([optionId, optionDescription, optionValues, amount = 1]) => expansionMenuOption(
+    chain, sourceUrl, sourceReference, `${id}:${optionId}`, optionDescription, sitDownNutrients(optionValues), amount
+  )),
+  aliases.flatMap((alias) => [
+    `${alias} ${name}`,
+    ...(servingOptions || []).map((option) => `${alias} ${name} ${option[1]}`),
+  ])
+);
+const sitDownRows = (foodFactory, rows, description) => rows.map(([id, name, values, itemDescription]) => foodFactory(
+  id, name, itemDescription || description, values
+));
+
+const oliveGarden = { id: "olive-garden", name: "Olive Garden" };
+const OLIVE_GARDEN_SOURCE = "https://media.olivegarden.com/en_us/pdf/olive_garden_nutrition.pdf";
+const OLIVE_GARDEN_REFERENCE = "Olive Garden official U.S. Nutrition Information, effective August 31, 2026 (U.S. restaurants excluding Hawaii). Values are for the named item as served; breadsticks, soup, and salad are excluded unless named.";
+const oliveGardenFood = (id, name, description, values, options) => sitDownFood(
+  oliveGarden, OLIVE_GARDEN_SOURCE, OLIVE_GARDEN_REFERENCE, ["Olive Garden"], id, name, description, values, options
+);
+const oliveGardenFoods = [
+  ...sitDownRows(oliveGardenFood, [
+    ["calamari", "Calamari", [670,24,48,42,1600,2,3]],
+    ["fried-mozzarella", "Fried Mozzarella", [800,33,57,49,1990,4,3]],
+    ["lasagna-fritta", "Lasagna Fritta", [1130,39,75,76,1800,5,6]],
+    ["meatballs-parmigiana", "Meatballs Parmigiana", [1040,51,27,83,2800,6,5]],
+    ["shrimp-fritto-misto", "Shrimp Fritto Misto", [1280,41,101,79,5010,9,9]],
+    ["spinach-artichoke-dip", "Spinach-Artichoke Dip with Flatbread Crisps", [1160,33,75,81,2440,7,8]],
+    ["stuffed-ziti-fritta", "Stuffed Ziti Fritta", [500,27,40,26,1040,3,null]],
+    ["toasted-ravioli", "Toasted Ravioli", [650,25,69,31,1330,4,5]],
+  ], "1 full appetizer order; separately published dipping sauce is excluded"),
+  ...sitDownRows(oliveGardenFood, [
+    ["breadstick-garlic-topping", "Breadstick with Garlic Topping", [140,4,25,2.5,460,null,1]],
+    ["breadstick-plain", "Plain Breadstick", [130,4,25,1,280,1,2]],
+  ], "1 breadstick; entree, soup, salad, and additional breadsticks are excluded"),
+  ...sitDownRows(oliveGardenFood, [
+    ["chicken-gnocchi-soup", "Chicken & Gnocchi Soup", [230,11,22,12,1290,1,4]],
+    ["minestrone-soup", "Minestrone Soup", [110,5,17,1,810,4,4]],
+    ["pasta-fagioli-soup", "Pasta Fagioli Soup", [150,8,16,5,710,3,4]],
+    ["zuppa-toscana-soup", "Zuppa Toscana Soup", [220,7,15,15,790,2,2]],
+  ], "1 published 8 fl oz soup serving; unlimited refills are logged one serving at a time"),
+  ...sitDownRows(oliveGardenFood, [
+    ["house-salad-signature-dressing", "Famous House Salad with Signature Italian Dressing", [150,3,13,10,770,2,4]],
+    ["house-salad-no-dressing", "Famous House Salad without Dressing", [70,2,11,2,250,2,2]],
+  ], "1 approximately 5 oz salad serving; breadsticks and additional unlimited servings are excluded"),
+  ...sitDownRows(oliveGardenFood, [
+    ["spicy-alfredo-dipping-sauce", "Spicy Alfredo Dipping Sauce", [490,9,7,48,700,0,3]],
+    ["alfredo-dipping-sauce", "Alfredo Dipping Sauce", [440,8,5,43,600,0,1]],
+    ["five-cheese-marinara-dipping-sauce", "Five Cheese Marinara Dipping Sauce", [200,5,9,17,650,1,5]],
+    ["marinara-dipping-sauce", "Marinara Dipping Sauce", [70,2,8,4.5,640,2,5]],
+    ["signature-italian-dressing", "Signature Italian Dressing", [80,0,2,8,520,0,2], "1 fl oz dressing; salad is excluded"],
+    ["low-fat-italian-dressing", "Low-Fat Italian Dressing", [30,0,2,2,410,0,2], "1 fl oz dressing; salad is excluded"],
+  ], "1 separately published dipping sauce serving; food for dipping is excluded"),
+  ...sitDownRows(oliveGardenFood, [
+    ["fettuccine-pasta", "Fettuccine Pasta", [350,12,67,2.5,10,3,2]],
+    ["angel-hair-pasta", "Angel Hair Pasta", [350,12,67,2.5,10,3,2]],
+    ["bucatini-pasta", "Bucatini Pasta", [410,15,81,3,0,3,3]],
+    ["gluten-free-rotini", "Gluten-Free Rotini", [380,9,77,3.5,260,5,0]],
+    ["rigatoni-pasta", "Rigatoni Pasta", [440,14,83,6,10,3,5]],
+    ["spaghetti-pasta", "Spaghetti Pasta", [340,12,67,3.5,10,3,4]],
+  ], "1 Create Your Own Pasta noodle serving; sauce, toppings, soup, salad, and breadsticks are excluded"),
+  ...sitDownRows(oliveGardenFood, [
+    ["spicy-alfredo-sauce", "Spicy Alfredo Sauce", [980,18,15,97,1400,0,7]],
+    ["alfredo-sauce", "Alfredo Sauce", [870,15,11,87,1200,0,2]],
+    ["creamy-mushroom-sauce", "Creamy Mushroom Sauce", [860,10,13,87,1090,0,7]],
+    ["five-cheese-marinara-sauce", "Five Cheese Marinara Sauce", [400,11,17,33,1300,3,10]],
+    ["marinara-sauce", "Marinara Sauce", [150,4,17,9,1280,4,10]],
+    ["meat-sauce", "Meat Sauce", [300,14,19,19,1040,2,13]],
+  ], "1 Create Your Own Pasta sauce serving; pasta and toppings are excluded"),
+  ...sitDownRows(oliveGardenFood, [
+    ["crispy-shrimp-fritta-topping", "Crispy Shrimp Fritta Topping", [220,11,17,12,810,1,3]],
+    ["crispy-chicken-fritta-topping", "Crispy Chicken Fritta Topping", [240,20,14,12,730,1,null]],
+    ["grilled-chicken-topping", "Grilled Chicken Topping", [130,26,null,2.5,540,0,0]],
+    ["italian-sausage-topping", "Italian Sausage Topping", [470,27,2,39,1140,null,2], "2 links; pasta and sauce are excluded"],
+    ["meatballs-topping", "Meatballs", [480,23,7,40,1060,3,0], "3 meatballs; pasta and sauce are excluded"],
+    ["sauteed-shrimp-topping", "Sauteed Shrimp Topping", [170,33,1,3.5,410,null,0]],
+    ["broccoli-topping", "Broccoli Topping", [150,4,8,13,220,3,2]],
+  ], "1 separately published Create Your Own Pasta topping; pasta and sauce are excluded"),
+  ...[
+    ["spicy-alfredo-fettuccine", "Spicy Alfredo Fettuccine", [1000,22,62,74,1060,2,7], [1330,30,82,99,1410,3,9]],
+    ["cheese-ravioli-marinara", "Cheese Ravioli with Marinara Sauce", [440,25,38,22,1330,3,4], [750,41,63,38,2370,5,8]],
+    ["cheese-ravioli-meat-sauce", "Cheese Ravioli with Meat Sauce", [500,29,39,26,1240,2,6], [860,50,65,46,2190,4,11]],
+    ["chicken-parmigiana", "Chicken Parmigiana", [630,36,61,29,1970,5,10], [1020,64,80,51,3300,7,13]],
+    ["eggplant-parmigiana", "Eggplant Parmigiana", [660,21,75,32,1540,7,13], [1070,35,108,58,2440,11,20]],
+    ["fettuccine-alfredo", "Fettuccine Alfredo", [920,20,58,67,910,2,3], [1220,27,78,89,1210,3,5]],
+    ["five-cheese-ziti-al-forno", "Five Cheese Ziti al Forno", [630,24,57,35,1220,4,9], [1170,46,98,69,2440,6,16]],
+    ["lasagna-classico", "Lasagna Classico", [500,29,33,30,1290,3,7], [940,54,61,55,2260,6,11]],
+    ["shrimp-scampi", "Shrimp Scampi", [460,20,52,18,1020,4,5], [490,29,52,18,1120,4,5]],
+    ["spaghetti-marinara", "Spaghetti with Marinara", [370,11,63,9,970,5,10], [490,15,83,12,1290,6,13]],
+    ["spaghetti-meat-sauce", "Spaghetti with Meat Sauce", [480,19,64,17,790,3,13], [640,26,85,22,1050,4,17]],
+  ].map(([id, name, lunch, dinner]) => oliveGardenFood(id, name, "Choose a published lunch/lighter or dinner portion; soup, salad, and breadsticks are excluded", null, [
+    ["lunch", "Lunch or lighter portion; soup, salad, and breadsticks excluded", lunch],
+    ["dinner", "Dinner portion; soup, salad, and breadsticks excluded", dinner],
+  ])),
+  ...sitDownRows(oliveGardenFood, [
+    ["calabrian-steak-shrimp-bucatini", "Calabrian Steak & Shrimp Bucatini", [1220,78,82,65,2960,6,11]],
+    ["chicken-shrimp-carbonara", "Chicken & Shrimp Carbonara", [1370,64,75,91,2050,3,10]],
+    ["chicken-alfredo-crispy", "Chicken Alfredo with Crispy Chicken Fritta", [1710,67,106,113,2670,5,6]],
+    ["chicken-alfredo-grilled", "Chicken Alfredo with Grilled Chicken", [1480,79,79,95,2290,4,5]],
+    ["chicken-scampi", "Chicken Scampi", [1050,49,106,45,2470,5,8]],
+    ["chicken-tortelloni-alfredo", "Chicken Tortelloni Alfredo", [1980,112,95,131,3720,5,9]],
+    ["grilled-chicken-margherita", "Grilled Chicken Margherita", [650,65,15,39,2120,5,5]],
+    ["herb-grilled-salmon", "Herb-Grilled Salmon", [610,45,9,45,1360,4,3]],
+    ["ravioli-carbonara", "Ravioli Carbonara", [1390,53,63,104,2660,3,6]],
+    ["seafood-alfredo", "Seafood Alfredo", [1370,53,81,93,1690,3,5]],
+    ["shrimp-alfredo", "Shrimp Alfredo", [1390,60,79,93,1620,4,5]],
+    ["shrimp-carbonara", "Shrimp Carbonara", [1200,58,63,81,1710,4,10]],
+    ["steak-gorgonzola-alfredo", "Steak Gorgonzola Alfredo", [1580,74,85,105,2750,5,8]],
+    ["stuffed-chicken-marsala", "Stuffed Chicken Marsala", [1170,70,94,58,3020,8,10]],
+    ["tour-of-italy", "Tour of Italy", [1550,72,99,97,3220,7,12]],
+    ["six-ounce-sirloin", "6 oz Sirloin", [980,57,49,62,1840,2,3]],
+  ], "1 dinner entree; soup, salad, and breadsticks are excluded"),
+  ...sitDownRows(oliveGardenFood, [
+    ["mashed-potatoes", "Mashed Potatoes", [200,4,27,8,580,3,1]],
+    ["parmesan-garlic-broccoli", "Parmesan Garlic Broccoli", [150,5,8,13,450,3,2]],
+  ], "1 separately published side order"),
+  ...sitDownRows(oliveGardenFood, [
+    ["black-tie-mousse-cake", "Black Tie Mousse Cake", [750,9,76,50,290,4,59]],
+    ["chocolate-lasagna", "Chocolate Lasagna", [980,13,116,58,630,6,86]],
+    ["sicilian-cheesecake-strawberry", "Sicilian Cheesecake with Strawberry Topping", [730,12,78,42,450,2,63]],
+    ["strawberry-cream-cake", "Strawberry Cream Cake", [540,9,69,26,370,2,47]],
+    ["tiramisu", "Tiramisu", [470,6,54,27,125,0,35]],
+    ["warm-italian-doughnuts", "Warm Italian Doughnuts", [810,20,119,28,510,6,25]],
+  ], "1 complete dessert order; optional sauce is excluded"),
+  ...sitDownRows(oliveGardenFood, [
+    ["kids-cheese-ravioli", "Kids Cheese Ravioli", [340,17,33,16,980,3,6]],
+    ["kids-cheese-pizza", "Kids Cheese Pizza", [400,17,54,13,720,3,4]],
+    ["kids-chicken-fingers", "Kids Chicken Fingers", [300,25,15,15,580,0,0]],
+    ["kids-macaroni-cheese", "Kids Macaroni & Cheese", [360,16,45,14,870,2,6]],
+    ["kids-spaghetti-tomato-sauce", "Kids Spaghetti with Tomato Sauce", [180,5,30,4.5,290,2,5]],
+  ], "1 kids' entree; side and beverage are excluded"),
+  ...sitDownRows(oliveGardenFood, [
+    ["coffee", "Coffee", [0,0,0,0,0,0,0]],
+    ["tea", "Tea", [0,null,0,0,5,0,0]],
+    ["cappuccino", "Cappuccino", [150,null,13,6,70,null,10]],
+    ["iced-coffee-caramel", "Caramel Iced Coffee", [250,7,40,7,90,0,31]],
+    ["iced-coffee-traditional", "Traditional Iced Coffee", [210,7,29,7,90,0,21]],
+    ["bellini-peach-raspberry-iced-tea", "Bellini Peach-Raspberry Iced Tea", [80,0,18,0,10,0,17]],
+    ["mango-passion-fruit-iced-tea", "Mango-Passion Fruit Iced Tea", [100,0,26,0,15,0,24]],
+    ["classic-lemonade", "Classic Lemonade", [170,0,43,0,20,0,42]],
+    ["raspberry-lemonade", "Raspberry Lemonade", [160,0,45,0,15,0,42]],
+    ["sweet-pear-limonata", "Sweet Pear Limonata", [240,0,60,0,20,0,57]],
+    ["coca-cola", "Coca-Cola", [140,0,39,0,45,0,39]],
+    ["coke-zero", "Coke Zero", [0,0,0,0,40,0,0]],
+    ["diet-coke", "Diet Coke", [0,0,0,0,40,0,0]],
+    ["dr-pepper", "Dr Pepper", [150,0,41,0,55,0,41]],
+    ["sprite", "Sprite", [140,0,38,0,65,0,38]],
+  ], "1 published restaurant beverage serving; fluid-ounce volume is not stated"),
+];
+
+const longHorn = { id: "longhorn-steakhouse", name: "LongHorn Steakhouse" };
+const LONGHORN_SOURCE = "https://media.longhornsteakhouse.com/en_us/pdf/nutrition_allergen_guide.pdf";
+const LONGHORN_REFERENCE = "LongHorn Steakhouse official U.S. Nutrition & Allergen Guide, valid as of August 10, 2026. Entree proteins exclude separately listed sides and sauces unless the description states otherwise; menu steak weights are not treated as cooked weights.";
+const longHornFood = (id, name, description, values, options) => sitDownFood(
+  longHorn, LONGHORN_SOURCE, LONGHORN_REFERENCE, ["Longhorn", "Long Horn"], id, name, description, values, options
+);
+const longHornFoods = [
+  ...sitDownRows(longHornFood, [
+    ["spicy-chicken-bites", "Spicy Chicken Bites", [740,43,53,39,1420,0,17]],
+    ["parmesan-crusted-fries", "Parmesan Crusted Fries", [2070,72,155,130,5650,2,4]],
+    ["texas-tonion", "Texas Tonion", [1180,15,126,69,2720,9,9]],
+    ["white-cheddar-stuffed-mushrooms", "White Cheddar Stuffed Mushrooms", [730,33,14,60,1570,1,4]],
+    ["firecracker-chicken-wraps", "Firecracker Chicken Wraps", [720,28,62,42,2120,0,0]],
+    ["wild-west-shrimp", "Wild West Shrimp", [970,39,65,62,3740,6,2]],
+    ["seasoned-steakhouse-wings", "Seasoned Steakhouse Wings", [460,53,0,28,1030,null,0]],
+  ], "1 full appetizer order; separately published dipping sauce is excluded"),
+  ...[
+    ["loaded-potato-soup", "Loaded Potato Soup", [270,10,16,19,670,2,2], [380,15,21,27,970,2,2]],
+    ["shrimp-lobster-chowder", "Shrimp & Lobster Chowder", [190,8,17,11,570,2,4], [250,10,23,15,760,3,5]],
+    ["french-onion-soup", "French Onion Soup", [170,8,13,10,880,1,4], [480,30,20,31,1830,0,7]],
+  ].map(([id, name, cup, bowl]) => longHornFood(id, name, "Choose the published cup or bowl serving", null, [
+    ["cup", `1 cup of ${name}`, cup], ["bowl", `1 bowl of ${name}`, bowl],
+  ])),
+  ...sitDownRows(longHornFood, [
+    ["mixed-greens-side-salad", "Mixed Greens Side Salad", [140,6,13,8,270,3,3]],
+    ["caesar-side-salad", "Caesar Side Salad with Caesar Dressing", [250,6,12,19,600,2,1]],
+    ["strawberry-pecan-side-salad", "Strawberry & Pecan Side Salad with Dressing", [190,4,28,8,300,4,22]],
+    ["grilled-chicken-strawberry-salad", "Grilled Chicken & Strawberry Salad with Vinaigrette", [530,43,52,19,1310,7,41]],
+    ["field-greens-crispy-chicken", "Farm Fresh Field Greens with Crispy Chicken Tenders", [650,46,41,35,1090,7,6]],
+    ["field-greens-salmon", "Farm Fresh Field Greens with Salmon", [530,43,23,29,710,5,7]],
+    ["seven-pepper-sirloin-salad", "7-Pepper Sirloin Salad", [490,45,22,26,1120,5,5]],
+  ], "1 salad with the named dressing included; no additional dressing included"),
+  ...[
+    ["blue-cheese-dressing", "Blue Cheese Dressing", [180,2,3,17,390,0,2], [350,4,6,34,770,0,3]],
+    ["honey-mustard-dressing", "Honey Mustard Dressing", [240,0,8,23,200,0,6], [480,0,15,45,410,0,12]],
+    ["ranch-dressing", "Ranch Dressing", [230,null,2,25,380,0,1], [460,2,4,49,750,0,3]],
+    ["raspberry-vinaigrette", "Raspberry Vinaigrette", [60,0,14,0.5,220,0,12], [120,0,27,1,440,0,25]],
+    ["thousand-island-dressing", "Thousand Island Dressing", [190,0,5,19,300,0,4], [390,null,11,39,610,0,9]],
+    ["white-balsamic-vinaigrette", "White Balsamic Vinaigrette", [200,0,6,20,240,0,5], [390,0,12,39,480,0,9]],
+  ].map(([id, name, small, large]) => longHornFood(id, name, "Choose the guide's published dressing portion; salad is excluded", null, [
+    ["1.5oz", "1.5 oz dipping or side-salad portion", small], ["3oz", "3 oz steakhouse-salad portion", large],
+  ])),
+  ...[
+    ["hand-breaded-chicken-tenders", "Hand-Breaded Chicken Tenders", [["6-piece", "6 tenders; sauce and sides excluded", [420,36,19,22,680,2,null], 6], ["9-piece", "9 tenders; sauce and sides excluded", [620,53,28,33,1030,4,null], 9]]],
+    ["parmesan-crusted-chicken", "Parmesan Crusted Chicken", [["6oz", "6 oz menu-listed chicken; sides excluded", [560,51,12,34,1580,2,2]], ["9oz", "9 oz menu-listed chicken; sides excluded", [650,68,12,36,1860,2,2]], ["12oz", "12 oz menu-listed chicken; sides excluded", [1120,102,24,69,3160,4,3]]]],
+    ["baby-back-ribs", "Baby Back Ribs", [["half-rack", "Half rack; BBQ sauce and sides excluded", [820,62,16,56,740,1,15]], ["full-rack", "Full rack; BBQ sauce and sides excluded", [1270,96,25,87,1150,2,24]]]],
+    ["longhorn-salmon", "LongHorn Salmon", [["7oz", "7 oz menu-listed salmon; rice and sides excluded", [300,33,2,16,310,0,1]], ["10oz", "10 oz menu-listed salmon; rice and sides excluded", [430,47,3,23,440,0,2]]]],
+    ["lemon-garlic-chicken", "Lemon Garlic Chicken", [["6oz", "6 oz menu-listed chicken; sides excluded", [240,36,2,10,840,0,null]], ["9oz", "9 oz menu-listed chicken; sides excluded", [330,53,2,12,1120,0,null]], ["12oz", "12 oz menu-listed chicken; sides excluded", [420,70,2,15,1400,0,null]]]],
+    ["flos-filet", "Flo's Filet", [["6oz", "6 oz menu-listed filet; sides excluded", [330,37,2,15,330,0,null]], ["9oz", "9 oz menu-listed filet; sides excluded", [450,56,3,19,480,0,1]]]],
+    ["renegade-sirloin", "Renegade Sirloin", [["6oz", "6 oz menu-listed sirloin; sides excluded", [320,36,2,15,530,0,0]], ["8oz", "8 oz menu-listed sirloin; sides excluded", [390,51,2,16,670,0,0]]]],
+  ].map(([id, name, options]) => longHornFood(id, name, "Choose the published piece count or menu-listed weight; cooked weight is not inferred, and sauce and sides are excluded", null, options)),
+  ...sitDownRows(longHornFood, [
+    ["grilled-lamb-chops", "Grilled Lamb Chops", [1120,63,42,79,1670,6,3]],
+    ["redrock-grilled-shrimp", "Redrock Grilled Shrimp", [160,30,2,3,960,null,null], "8 grilled shrimp; rice, garlic butter, and sides excluded"],
+    ["chop-steak", "Chop Steak", [640,44,13,46,1240,3,6]],
+    ["outlaw-ribeye", "Outlaw Ribeye 20 oz", [1250,94,2,87,1670,0,0]],
+    ["ribeye", "Ribeye 12 oz", [810,66,4,54,670,0,0]],
+    ["new-york-strip", "New York Strip 12 oz", [630,72,1,33,1740,1,null]],
+    ["fire-grilled-t-bone", "Fire-Grilled T-Bone 18 oz", [1130,123,1,62,2030,2,1]],
+    ["the-longhorn", "The LongHorn 22 oz", [1280,150,1,67,2450,2,1]],
+    ["half-pound-steakhouse-cheeseburger", "Half-Pound Steakhouse Cheeseburger", [850,48,45,51,1150,3,5]],
+    ["crispy-buttermilk-chicken-sandwich", "Crispy Buttermilk Chicken Sandwich", [1080,44,67,72,2325,5,9]],
+  ], "1 entree protein or sandwich; separately listed fries, rice, sauce, and sides are excluded; listed weights are not cooked weights"),
+  ...sitDownRows(longHornFood, [
+    ["parmesan-cheese-crust", "Parmesan Cheese Crust", [390,17,12,30,1020,2,2]],
+    ["grilled-mushrooms", "Grilled Mushrooms", [150,6,9,12,480,3,6]],
+    ["lobster-tail", "Lobster Tail", [90,14,0,3,590,0,0]],
+    ["bbq-sauce", "BBQ Sauce", [110,0,26,0,470,0,23]],
+    ["buffalo-sauce", "Buffalo Sauce", [90,0,3,8,1280,0,0]],
+  ], "1 separately published steak addition or sauce; entree and sides are excluded"),
+  ...sitDownRows(longHornFood, [
+    ["fire-grilled-corn", "Fire-Grilled Corn on the Cob", [200,7,28,9,240,3,10]],
+    ["fresh-steamed-asparagus", "Fresh Steamed Asparagus", [130,8,9,7,15,5,3]],
+    ["steakhouse-mac-cheese", "Steakhouse Mac & Cheese", [610,26,43,37,1210,5,3]],
+    ["crispy-brussels-sprouts", "Crispy Brussels Sprouts", [310,5,27,23,590,5,17]],
+    ["plain-baked-potato", "Plain Idaho Baked Potato", [290,8,64,2,2370,6,3]],
+    ["loaded-baked-potato", "Loaded Idaho Baked Potato", [470,11,65,20,2570,6,4]],
+    ["plain-sweet-potato", "Plain Sweet Potato", [240,5,55,0,95,9,17]],
+    ["loaded-sweet-potato", "Sweet Potato with Cinnamon Sugar & Butter", [380,5,62,14,170,9,24]],
+    ["mashed-potatoes", "Mashed Potatoes", [340,5,37,19,790,4,2]],
+    ["seasoned-rice-pilaf", "Seasoned Rice Pilaf", [230,3,41,6,1120,null,4]],
+    ["fresh-steamed-broccoli", "Fresh Steamed Broccoli", [90,4,7,4,125,4,3]],
+    ["seasoned-french-fries", "Seasoned French Fries", [500,6,67,23,1280,0,1]],
+    ["honey-wheat-bread-loaf", "Honey Wheat Bread", [480,16,88,7,920,2,8], "1 full loaf; butter is excluded"],
+    ["butter", "Butter", [120,0,0,13,80,0,0]],
+  ], "1 separately published side; entree is excluded"),
+  ...sitDownRows(longHornFood, [
+    ["chocolate-stampede", "Chocolate Stampede", [2460,28,289,132,1040,12,191]],
+    ["molten-lava-cake", "Molten Lava Cake", [1150,15,157,53,690,0,111]],
+    ["strawberries-cream-shortcake", "Strawberries & Cream Shortcake", [640,7,74,37,630,2,49]],
+    ["cheesecake-pecans", "The Cheesecake with Pecans", [1370,18,117,82,970,4,79]],
+    ["cheesecake-strawberry", "The Cheesecake with Strawberry", [1090,18,94,70,860,2,72]],
+  ], "1 complete dessert order"),
+  ...sitDownRows(longHornFood, [
+    ["kids-grilled-chicken-tenders", "Kids Grilled Chicken Tenders", [140,26,0,3.5,440,0,0]],
+    ["kids-sirloin-steak", "Kids Sirloin Steak", [240,24,1,16,390,null,0]],
+    ["kids-macaroni-cheese", "Kids Kraft Macaroni & Cheese", [310,11,45,9,550,2,8]],
+    ["kids-cheeseburger", "Kids Cheeseburger", [490,29,41,24,780,0,3]],
+    ["kids-chicken-tenders", "Kids Chicken Tenders", [270,23,12,14,450,2,0]],
+  ], "1 kids' entree; side and beverage are excluded"),
+  ...sitDownRows(longHornFood, [
+    ["raspberry-iced-tea", "Raspberry Iced Tea", [50,0,13,0,10,0,12]],
+    ["peach-iced-tea", "Peach Iced Tea", [50,0,14,0,10,0,12]],
+    ["sweet-tea", "Sweet Tea", [130,0,33,0,10,0,32]],
+    ["unsweetened-tea", "Unsweetened Tea", [0,0,0,0,10,0,0]],
+    ["strawberry-lemonade", "Strawberry Lemonade", [200,0,55,0,15,null,46]],
+    ["raspberry-lemonade", "Raspberry Lemonade", [170,0,41,0,0,null,39]],
+    ["mango-lemonade", "Mango Lemonade", [240,0,60,0,0,null,59]],
+    ["coca-cola", "Coca-Cola", [140,null,39,0,45,null,39]],
+    ["coke-zero", "Coke Zero Sugar", [0,0,0,0,45,0,0]],
+    ["diet-coke", "Diet Coke", [0,0,0,0,45,0,0]],
+    ["sprite", "Sprite", [140,null,38,0,65,null,38]],
+    ["dr-pepper", "Dr Pepper", [100,0,27,0,35,0,27]],
+    ["coffee", "Coffee", [0,0,0,0,5,0,0]],
+  ], "1 bottomless beverage serving; refills are logged separately and fluid-ounce volume is not stated"),
+];
+
+const outback = { id: "outback-steakhouse", name: "Outback Steakhouse" };
+const OUTBACK_SOURCE = "https://edge.sitecorecloud.io/osirestaurantpartners-piq24hos/media/Project/BBI/outback/files/obs-full-nutrition-information.pdf";
+const OUTBACK_REFERENCE = "Outback Steakhouse official U.S. Nutrition Information, created August 2026. Values use standard recipes and the PDF's named serving; entree proteins exclude separately listed sides and sauces unless named, and menu steak weights are not treated as cooked weights.";
+const outbackFood = (id, name, description, values, options) => sitDownFood(
+  outback, OUTBACK_SOURCE, OUTBACK_REFERENCE, ["Outback", "Outback Steakhouse"], id, name, description, values, options
+);
+const outbackFoods = [
+  ...sitDownRows(outbackFood, [
+    ["bloomin-onion", "Bloomin' Onion", [1920,17,131,152,4870,17,24]],
+    ["three-cheese-spinach-dip", "Three Cheese Spinach Dip", [680,21,60,41,1950,5,3]],
+    ["aussie-cheese-fries", "Aussie Cheese Fries", [2860,80,208,200,9330,22,3]],
+    ["alice-springs-chicken-quesadilla", "Alice Springs Chicken Quesadilla", [1140,47,56,85,1910,2,16]],
+    ["sydney-shrooms", "Sydney 'Shrooms", [1480,16,62,129,2600,10,4], "1 full 10 oz appetizer; dip is excluded"],
+    ["kookaburra-wings-mild", "Kookaburra Wings - Mild", [1820,88,25,155,3100,5,4], "10 wings with Mild flavor included; dipping sauce is excluded"],
+    ["kookaburra-wings-medium", "Kookaburra Wings - Medium", [1870,89,26,161,3510,5,4], "10 wings with Medium flavor included; dipping sauce is excluded"],
+    ["kookaburra-wings-hot", "Kookaburra Wings - Hot", [2380,89,54,209,4470,6,5], "10 wings with Hot flavor included; dipping sauce is excluded"],
+    ["buffalo-ranch-wings", "Buffalo Ranch Wings", [2270,91,41,202,3910,8,8], "10 wings with Buffalo Ranch flavor included; dipping sauce is excluded"],
+    ["sweet-bbq-wings", "Sweet BBQ Wings", [2200,106,89,184,5170,11,39], "10 wings with Sweet BBQ flavor included; dipping sauce is excluded"],
+    ["mozzarella-bloomerangs", "Mozzarella Bloomerangs", [920,35,68,56,3010,5,8]],
+    ["gold-coast-coconut-shrimp", "Gold Coast Coconut Shrimp", [970,34,59,66,570,1,41], "6 shrimp; dipping sauce is excluded"],
+    ["table-bread-butter", "Table Bread with Butter", [360,10,51,13,420,4,10]],
+  ], "1 full appetizer order; separately selected dipping sauce is excluded"),
+  ...[
+    ["tasmanian-chili", "Tasmanian Chili", [200,12,7,14,830,2,3], [370,23,14,25,1630,3,7], "crock"],
+    ["baked-potato-soup", "Baked Potato Soup", [250,6,17,18,1450,1,2], [450,9,33,32,2760,2,4], "bowl"],
+  ].map(([id, name, small, large, largeName]) => outbackFood(id, name, "Choose the separately published soup portion", null, [
+    ["cup", `1 cup of ${name}`, small], [largeName, `1 ${largeName} of ${name}`, large],
+  ])),
+  ...sitDownRows(outbackFood, [
+    ["french-onion-soup", "French Onion Soup", [410,16,27,25,2520,2,11]],
+    ["blue-cheese-pecan-side-salad", "Blue Cheese Pecan Chopped Side Salad", [440,12,23,34,700,4,7]],
+    ["house-side-salad-no-dressing", "House Side Salad without Dressing", [180,8,16,10,340,2,4]],
+    ["caesar-side-salad", "Caesar Side Salad with Dressing", [240,5,13,19,570,3,2]],
+    ["wedge-side-salad", "Wedge Salad with Dressing", [560,13,19,48,1360,4,13]],
+    ["fresh-sydney-salad", "Fresh Sydney Salad", [330,21,21,18,1040,7,8]],
+  ], "1 soup or salad serving; dressing is included only when named"),
+  ...sitDownRows(outbackFood, [
+    ["ranch-side-salad-dressing", "Ranch Dressing for Side Salad", [210,1,1,24,240,0,1]],
+    ["caesar-side-salad-dressing", "Caesar Dressing for Side Salad", [200,2,2,21,500,0,0]],
+    ["honey-mustard-side-salad-dressing", "Honey Mustard Dressing for Side Salad", [220,0,12,21,290,0,11]],
+    ["tangy-tomato-side-salad-dressing", "Tangy Tomato Dressing for Side Salad", [60,1,14,0,230,0,13]],
+    ["blue-cheese-vinaigrette-side", "Blue Cheese Vinaigrette for Side Salad", [150,1,1,16,170,0,1]],
+    ["creamy-blue-cheese-side", "Creamy Blue Cheese Dressing for Side Salad", [200,2,2,21,500,0,0]],
+    ["light-balsamic-vinaigrette-side", "Light Balsamic Vinaigrette for Side Salad", [70,0,7,4.5,300,0,7]],
+    ["mustard-vinaigrette-side", "Mustard Vinaigrette for Side Salad", [230,0,4,24,120,0,4]],
+  ], "1 separately published side-salad dressing portion; salad is excluded"),
+  ...[
+    ["victorias-filet-mignon", "Victoria's Filet Mignon", [["6oz", "6 oz menu-listed filet; sides excluded", [470,47,1,29,550,0,0]], ["8oz", "8 oz menu-listed filet; sides excluded", [570,62,1,34,580,0,0]]]],
+    ["center-cut-sirloin", "Outback Center-Cut Sirloin", [["5oz", "5 oz menu-listed sirloin; sides excluded", [260,29,2,15,370,1,0]], ["6oz", "6 oz menu-listed sirloin; sides excluded", [330,35,2,20,590,2,0]], ["8oz", "8 oz menu-listed sirloin; sides excluded", [400,47,3,22,630,2,0]], ["9oz", "9 oz menu-listed sirloin; sides excluded", [420,53,4,21,1320,3,0]], ["12oz", "12 oz menu-listed sirloin; sides excluded", [500,70,6,21,2030,4,0]]]],
+    ["classic-prime-rib", "Classic Prime Rib", [["10oz", "10 oz menu-listed prime rib; sides excluded", [950,47,2,82,820,1,0]], ["12oz", "12 oz menu-listed prime rib; sides excluded", [1140,57,3,98,920,1,0]], ["16oz", "16 oz menu-listed prime rib; sides excluded", [1520,76,4,131,1130,1,0]]]],
+  ].map(([id, name, options]) => outbackFood(id, name, "Choose the published menu-listed steak weight; cooked weight is not inferred, and sides are excluded", null, options)),
+  ...sitDownRows(outbackFood, [
+    ["new-york-strip", "New York Strip 12 oz", [880,61,2,68,1620,1,0]],
+    ["delmonico", "Delmonico 15 oz", [1000,65,3,79,1600,1,0]],
+    ["bone-in-ribeye", "Bone-In Ribeye 20 oz", [1300,87,3,102,1650,1,0]],
+    ["ribeye", "Ribeye 13 oz", [1030,63,3,83,1970,1,0]],
+    ["canberra-chopped-steak", "Canberra Chopped Steak 10 oz", [930,74,4,67,1000,0,1]],
+    ["ahi-tuna", "Ahi Tuna", [660,31,48,11,1960,3,19]],
+    ["grilled-salmon-remoulade", "Grilled Salmon with Remoulade", [730,45,2,58,650,1,1]],
+    ["toowoomba-salmon", "Toowoomba Salmon", [970,66,9,74,1220,1,4]],
+    ["lobster-tails-entree", "Lobster Tails Entree", [490,60,0,25,1120,0,0]],
+  ], "1 entree protein with named sauce included; separately selected sides are excluded and listed steak weight is not a cooked weight"),
+  ...sitDownRows(outbackFood, [
+    ["sauteed-shrooms", "Sauteed Shrooms", [70,2,4,5,230,1,2]],
+    ["grilled-onions", "Grilled Onions", [100,2,15,4,450,3,7]],
+    ["grilled-shrimp-add-on", "Grilled Shrimp Add-On", [640,23,16,53,1400,1,1]],
+    ["lobster-tail-add-on", "4 oz Lobster Tail Add-On", [360,30,3,24,650,1,1]],
+    ["chimichurri-sauce", "Chimichurri Sauce", [190,0,2,20,240,0,0]],
+    ["roasted-garlic-butter", "Roasted Garlic Butter Topping", [80,0,1,8,110,0,0]],
+    ["creamy-horseradish-sauce", "Creamy Horseradish Sauce", [45,2,4,3,150,1,2]],
+    ["bacon-blue-cheese-butter", "Bacon Blue Cheese Butter", [80,2,0,9,140,0,0]],
+  ], "1 separately published steak addition or sauce; steak and sides are excluded"),
+  ...sitDownRows(outbackFood, [
+    ["aussie-fries", "Aussie Fries", [500,7,67,23,1940,7,0]],
+    ["aussie-cheese-fries-side", "Aussie Cheese Fries - Side", [880,24,61,62,2390,6,1]],
+    ["loaded-baked-potato", "Loaded Baked Potato", [340,9,47,14,160,3,3]],
+    ["loaded-sweet-potato", "Loaded Sweet Potato", [250,4,45,7,115,6,20]],
+    ["broccoli", "Broccoli", [140,4,7,11,230,3,2]],
+    ["green-beans", "Green Beans", [140,2,10,11,350,4,4]],
+    ["seasoned-rice", "Seasoned Rice", [250,4,37,8,710,1,1]],
+    ["homestyle-mashed-potatoes", "Homestyle Mashed Potatoes", [250,3,20,18,560,2,2]],
+    ["loaded-mashed-potatoes", "Loaded Mashed Potatoes", [330,6,21,24,690,2,3]],
+    ["asparagus", "Asparagus", [50,3,6,2.5,390,3,3]],
+    ["parmesan-creamed-corn", "Parmesan Creamed Corn", [360,9,28,26,45,3,7]],
+    ["bacon-mac-cheese", "Bacon Mac & Cheese", [870,30,74,51,1450,3,10]],
+  ], "1 separately published side; entree is excluded"),
+  ...sitDownRows(outbackFood, [
+    ["kingsland-pasta", "Kingsland Pasta", [1790,82,116,108,2410,6,13]],
+    ["queensland-pasta-chicken-shrimp", "Queensland Pasta with Chicken & Shrimp", [1660,96,116,87,2060,5,13]],
+    ["outback-ribs-full-rack", "Outback Ribs - Full Rack", [1440,94,60,119,2000,3,39]],
+    ["outback-ribs-half-rack", "Outback Ribs - Half Rack", [720,47,30,60,1000,2,20]],
+    ["bloomin-fried-chicken", "Bloomin' Fried Chicken", [990,53,32,76,2110,6,2]],
+    ["grilled-chicken-barbie", "Grilled Chicken on the Barbie 8 oz", [500,62,26,30,740,2,17]],
+    ["alice-springs-chicken", "Alice Springs Chicken", [890,79,17,61,1550,1,12]],
+  ], "1 entree as published; separately selected sides are excluded"),
+  ...sitDownRows(outbackFood, [
+    ["bloomin-burger", "The Bloomin' Burger", [1440,61,63,108,3140,5,11]],
+    ["outbacker-burger-american", "The Outbacker Burger with American Cheese", [870,58,45,49,2200,2,8]],
+    ["aussie-steak-sammie", "Aussie Steak Sammie", [1150,63,85,64,2300,7,19]],
+    ["bloomin-chicken-sammie", "Bloomin' Chicken Sammie", [1020,38,60,73,1850,5,9]],
+    ["grilled-chicken-sammie", "Grilled Chicken Sammie", [910,45,46,63,1650,3,9]],
+  ], "1 burger or sandwich; fries and other sides are excluded"),
+  ...sitDownRows(outbackFood, [
+    ["chocolate-thunder", "Chocolate Thunder from Down Under", [870,9,82,60,220,4,71]],
+    ["cheesecake-raspberry", "Cheesecake with Raspberry Sauce", [1040,16,98,64,690,2,83]],
+    ["cheesecake-chocolate", "Cheesecake with Chocolate Sauce", [1090,17,88,75,730,3,71]],
+    ["triple-layer-carrot-cake", "Triple Layer Carrot Cake", [1100,7,134,62,660,2,101]],
+    ["chocolate-chip-cookie-skillet", "Chocolate Chip Cookie Skillet", [820,9,109,42,640,3,77]],
+  ], "1 complete dessert order"),
+  ...sitDownRows(outbackFood, [
+    ["kids-grilled-cheese", "Kids Grilled Cheese-A-Roo", [540,13,47,32,1140,0,7]],
+    ["kids-chicken-tenders", "Kids Chicken Tenders", [430,21,33,24,1450,1,1]],
+    ["kids-boomerang-cheeseburger", "Kids Boomerang Cheeseburger", [590,26,40,36,920,1,6]],
+    ["kids-mac-cheese", "Kids Mac-A-Roo 'N Cheese", [540,21,72,19,990,3,10]],
+    ["kids-grilled-chicken", "Kids Grilled Chicken on the Barbie", [260,27,0,16,160,0,0]],
+    ["kids-joey-sirloin", "Kids Joey Sirloin", [270,29,2,16,370,1,0]],
+    ["kids-fries", "Kids Fries", [300,4,40,14,930,4,0]],
+  ], "1 kids' entree or side; other side and beverage are excluded"),
+  ...sitDownRows(outbackFood, [
+    ["airport-outback-breakfast", "Outback Breakfast", [570,27,78,16,1180,2,7]],
+    ["airport-alice-springs-omelet", "Alice Springs Omelet", [720,52,37,43,1570,3,5]],
+    ["airport-egg-bacon-cheese-sandwich", "Egg, Bacon & Cheese Sandwich", [630,26,83,22,1740,6,11]],
+    ["airport-egg-bacon-cheese-wrap", "Egg, Bacon & Cheese Wrap", [750,34,64,39,2430,3,32]],
+    ["airport-aussie-breakfast-wrap", "Aussie Breakfast Wrap", [800,31,76,43,2070,4,4]],
+  ], "1 published airport breakfast item; availability is limited to participating airport menus"),
+  ...sitDownRows(outbackFood, [
+    ["coke-zero", "Coke Zero", [0,0,0,0,5,0,0]],
+    ["coca-cola", "Coca-Cola", [170,0,47,0,0,0,47]],
+    ["diet-coke", "Diet Coke", [0,0,0,0,15,0,0]],
+    ["dr-pepper", "Dr Pepper", [100,0,28,0,25,0,28]],
+    ["coffee", "Gold Peak Coffee", [0,0,0,0,5,0,0]],
+    ["sweet-tea", "Gold Peak Sweet Tea", [70,0,17,0,10,0,17]],
+    ["unsweet-tea", "Gold Peak Unsweet Tea", [0,0,0,0,10,0,0]],
+    ["minute-maid-lemonade", "Minute Maid Country Style Lemonade", [140,0,35,0,10,0,34]],
+    ["sprite", "Sprite", [110,0,29,0,25,0,29]],
+    ["aussie-palmer", "Aussie Palmer", [60,0,17,0,5,0,15]],
+    ["fresh-strawberry-lemonade", "Fresh Strawberry Lemonade", [130,null,33,0,5,2,30]],
+    ["kiwi-strawberry-lemonade", "Kiwi Strawberry Lemonade", [200,null,50,0,5,2,46]],
+  ], "1 published soft drink or spirit-free beverage serving with ice; fluid-ounce volume is not stated"),
+];
+
 const whataburger = { id: "whataburger", name: "Whataburger" };
 const WHATABURGER_REFERENCE = "Whataburger official menu/app; default recipe nutrition displayed for the current national menu";
 const whataburgerFood = (id, name, description, nutrients, servingOptions) => officialFood(whataburger, id, name, description, nutrients, WHATABURGER_SOURCE, WHATABURGER_REFERENCE, servingOptions);
@@ -5033,6 +5450,9 @@ const restaurantFoods = [
   ...chilisFoods,
   ...applebeesFoods,
   ...texasRoadhouseFoods,
+  ...oliveGardenFoods,
+  ...longHornFoods,
+  ...outbackFoods,
   ...sonicFoods,
   ...braumsFoods,
   ...tacoBellFoods,
