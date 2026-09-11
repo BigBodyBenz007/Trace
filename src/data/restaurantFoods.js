@@ -2639,6 +2639,618 @@ const wingstopFoods = [
   )),
 ];
 
+const NEXT_MENU_EXPANSION_ACCESSED_AT = "2026-09-10";
+const menuPublished = (calories, protein, carbohydrates, fat, sodium, fiber = null, totalSugar = null, addedSugar = null) => ({
+  calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar,
+});
+const expansionMenuOption = (chain, sourceUrl, sourceReference, id, description, nutrients, amount = 1) => {
+  const option = officialOption(chain.id, id, description, nutrients, amount, sourceUrl, sourceReference);
+  option.provenance.verification.accessedAt = NEXT_MENU_EXPANSION_ACCESSED_AT;
+  return option;
+};
+const menuFood = (chain, sourceUrl, sourceReference, id, name, description, nutrients, servingOptions, searchAliases) => {
+  const food = officialFood(
+    chain,
+    id,
+    name,
+    description,
+    nutrients,
+    sourceUrl,
+    sourceReference,
+    servingOptions,
+    { accessedAt: NEXT_MENU_EXPANSION_ACCESSED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+};
+const sumPublished = (left, right) => Object.fromEntries(Object.keys(left).map((key) => [
+  key,
+  left[key] === null || right[key] === null ? null : left[key] + right[key],
+]));
+
+const dairyQueen = { id: "dairy-queen", name: "Dairy Queen" };
+const DAIRY_QUEEN_SOURCE = "https://www.dairyqueen.com/en-us/nutrition/food-treats/";
+const DAIRY_QUEEN_REFERENCE = "Dairy Queen official U.S. Food & Treats Nutrition table, current as of August 26, 2024. Grill & Chill, treat-only, regional, and limited-time availability varies by location.";
+const dqFood = (id, name, description, nutrients, servingOptions, searchAliases, sourceReference = DAIRY_QUEEN_REFERENCE) => menuFood(
+  dairyQueen,
+  DAIRY_QUEEN_SOURCE,
+  sourceReference,
+  id,
+  name,
+  description,
+  nutrients,
+  servingOptions,
+  [`DQ ${name}`, ...(servingOptions || []).map((option) => `DQ ${option.serving.description} ${name}`), ...(searchAliases || [])]
+);
+const dqOption = (id, description, nutrients, amount = 1, sourceReference = DAIRY_QUEEN_REFERENCE) => expansionMenuOption(
+  dairyQueen, DAIRY_QUEEN_SOURCE, sourceReference, id, description, nutrients, amount
+);
+const dqSizedFood = (id, name, category, sizes, searchAliases) => dqFood(
+  id,
+  name,
+  sizes[0][1],
+  null,
+  sizes.map(([sizeId, description, nutrients]) => dqOption(`${id}:${sizeId}`, description, nutrients)),
+  searchAliases,
+  `${DAIRY_QUEEN_REFERENCE} Each option is a separately published ${category} size.`
+);
+
+const dqBurgerFoods = [
+  ["bbq-smokehouse-cheddar-stackburger", "BBQ Smokehouse Cheddar Signature Stackburger", [["double", "Double Stackburger", menuPublished(760, 38, 55, 43, 1880, 2, 15)], ["triple", "Triple Stackburger", menuPublished(960, 49, 56, 59, 2280, 2, 16)]]],
+  ["backyard-bacon-ranch-burger", "Backyard Bacon Ranch Burger", [["double", "Double burger", menuPublished(820, 38, 53, 51, 1900, 2, 15)], ["triple", "Triple burger", menuPublished(1020, 50, 54, 67, 2310, 2, 15)]]],
+  ["bacon-two-cheese-deluxe-burger", "Bacon Two Cheese Deluxe Burger", [["double", "Double burger", menuPublished(720, 37, 39, 47, 1890, 2, 9)], ["triple", "Triple burger", menuPublished(920, 49, 40, 63, 2300, 2, 9)]]],
+  ["flamethrower-burger", "FlameThrower Burger", [["double", "Double burger", menuPublished(720, 34, 37, 49, 1430, 2, 7)], ["triple", "Triple burger", menuPublished(910, 46, 38, 65, 1820, 2, 7)]]],
+  ["hamburger", "Hamburger", [["single", "Single hamburger", menuPublished(320, 15, 36, 13, 870, 1, 7)], ["double", "Double hamburger", menuPublished(460, 24, 36, 25, 1030, 1, 7)], ["triple", "Triple hamburger", menuPublished(610, 33, 36, 37, 1190, 1, 7)]]],
+  ["original-cheeseburger", "Original Cheeseburger", [["single", "Single cheeseburger", menuPublished(370, 17, 37, 18, 1120, 1, 8)], ["double", "Double cheeseburger", menuPublished(570, 29, 38, 34, 1530, 1, 8)], ["triple", "Triple cheeseburger", menuPublished(760, 40, 39, 50, 1940, 1, 9)]]],
+  ["two-cheese-deluxe-burger", "Two Cheese Deluxe Burger", [["double", "Double burger", menuPublished(620, 29, 39, 39, 1510, 2, 9)], ["triple", "Triple burger", menuPublished(820, 41, 40, 55, 1930, 2, 9)]]],
+].map(([id, name, sizes]) => dqSizedFood(id, name, "burger", sizes, [`DQ ${name}`]));
+
+const dqFlatFoods = [
+  ["chicken-strips", "Chicken Strips", "Plain chicken strips; basket sides, toast, sauce, and drink excluded", menuPublished(280, 13, 28, 13, 640, 1, 1), [["2-piece", "2 chicken strips", menuPublished(280, 13, 28, 13, 640, 1, 1), 2], ["3-piece", "3 chicken strips", menuPublished(430, 19, 41, 20, 950, 2, 2), 3]], ["DQ chicken tenders", "Dairy Queen 2 piece chicken strips", "Dairy Queen 3 piece chicken strips"]],
+  ["original-chicken-strip-sandwich", "Original Chicken Strip Sandwich", "1 sandwich; side and drink excluded", menuPublished(550, 18, 62, 26, 990, 3, 6)],
+  ["spicy-chicken-strip-sandwich", "Spicy Chicken Strip Sandwich", "1 sandwich; side and drink excluded", menuPublished(530, 18, 63, 23, 1060, 3, 8)],
+  ["flamethrower-chicken-sandwich", "FlameThrower Chicken Sandwich", "1 limited-time sandwich; side and drink excluded", menuPublished(530, 18, 63, 23, 1060, 3, 8)],
+  ["side-salad", "Side Salad", "1 salad; dressing and crunchy toppings excluded", menuPublished(20, 1, 4, 0, 10, 1, 3)],
+  ["classic-hot-dog", "Classic Hot Dog", "1 plain hot dog in bun", menuPublished(330, 12, 25, 19, 820, 1, 3), undefined, ["Dairy Queen hot dog", "DQ hot dog"]],
+  ["cheese-dog", "Cheese Dog", "1 hot dog with cheese", menuPublished(390, 16, 27, 24, 1000, 1, 3)],
+  ["chili-dog", "Chili Dog", "1 hot dog with chili", menuPublished(390, 16, 29, 23, 1060, 1, 4)],
+  ["chili-cheese-dog", "Chili Cheese Dog", "1 hot dog with chili and cheese", menuPublished(420, 18, 28, 26, 1070, 1, 4), [["1-dog", "1 chili cheese dog", menuPublished(420, 18, 28, 26, 1070, 1, 4)], ["2-dogs", "2 chili cheese dogs", menuPublished(850, 36, 56, 53, 2140, 2, 7), 2]]],
+  ["bbq-sandwich", "BBQ Sandwich", "1 regional sandwich", menuPublished(280, 14, 39, 7, 750, 2, 12)],
+  ["corn-dog", "Corn Dog", "1 corn dog", menuPublished(240, 6, 25, 13, 390, 2, 7)],
+  ["mega-chili-cheese-dog", "Mega Chili Cheese Dog", "1 regional large chili cheese dog", menuPublished(760, 32, 49, 49, 1910, 2, 6)],
+  ["pork-tenderloin-sandwich", "Pork Tenderloin Sandwich", "1 regional sandwich", menuPublished(600, 21, 52, 34, 990, 3, 7)],
+  ["steakfinger-basket", "Steakfinger Basket", "1 regional published basket configuration", menuPublished(940, 23, 97, 51, 2120, 5, 3)],
+  ["wild-alaskan-fish-sandwich", "Wild Alaskan Fish Sandwich", "1 seasonal sandwich", menuPublished(420, 17, 50, 16, 960, 1, 7)],
+  ["kids-applesauce", "Kids' Applesauce", "1 kids' side", menuPublished(45, 0, 11, 0, 0, 2, 7)],
+  ["kids-banana", "Kids' Banana", "1 banana", menuPublished(110, 1, 27, 0, 0, 3, 14)],
+  ["kids-milk", "Kids' Milk", "1 published kids' milk container", menuPublished(110, 8, 12, 2.5, 130, 0, 12)],
+  ["doritos-nacho-cheese-chips", "Doritos Nacho Cheese Tortilla Chips", "1 bag", menuPublished(240, 3, 28, 14, 360, 2, 0)],
+  ["fry-rings", "Fry-Rings", "1 à la carte regional order", menuPublished(400, 7, 53, 18, 890, 3, 2)],
+  ["lays-bbq-chips", "Lay's BBQ Potato Chips", "1 bag", menuPublished(230, 3, 23, 15, 230, 2, 3)],
+  ["lays-original-chips", "Lay's Original Potato Chips", "1 bag", menuPublished(240, 3, 23, 16, 250, 2, 1)],
+  ["baked-lays-original-crisps", "Oven Baked Lay's Original Potato Crisps", "1 bag", menuPublished(130, 2, 26, 2, 150, 2, 2)],
+  ["soft-pretzel-sticks-zesty-queso", "Soft Pretzel Sticks with Zesty Queso", "1 published order with queso included", menuPublished(340, 10, 53, 10, 2130, 2, 7)],
+  ["bbq-dipping-sauce", "BBQ Dipping Sauce", "1 sauce cup", menuPublished(90, 1, 21, 0, 430, 1, 16)],
+  ["country-gravy-dipping-sauce", "Country Gravy Dipping Sauce", "1 sauce cup", menuPublished(70, 0, 6, 4.5, 360, 0, 1)],
+  ["honey-mustard-dipping-sauce", "Honey Mustard Dipping Sauce", "1 sauce cup", menuPublished(240, 1, 15, 20, 450, 0, 14)],
+  ["hidden-valley-ranch-dipping-sauce", "House Made Hidden Valley Ranch Dipping Sauce", "1 sauce cup", menuPublished(220, 1, 3, 22, 370, 0, 2), undefined, ["DQ ranch", "Dairy Queen ranch dip"]],
+  ["kraft-fat-free-italian-dressing", "Kraft Fat Free Italian Dressing", "1 dressing packet; unpublished fiber remains unknown", menuPublished(25, 0, 4, 0, 380, null, 3)],
+  ["kraft-honey-mustard-dressing", "Kraft Honey Mustard Dressing", "1 dressing packet; unpublished sugar remains unknown", menuPublished(130, 0, 12, 9, 330, 0, null)],
+  ["banana-split", "Banana Split", "1 complete treat", menuPublished(520, 9, 94, 14, 150, 4, 74)],
+  ["brownie-oreo-cupfection", "Brownie and OREO Cupfection", "1 complete treat", menuPublished(720, 10, 122, 23, 330, 2, 96)],
+  ["peanut-buster-parfait", "Peanut Buster Parfait", "1 complete treat", menuPublished(710, 17, 95, 31, 340, 3, 68)],
+  ["buster-bar-six-pack", "Buster Bar - 6 Pack", "1 published six-pack; manufacturing method varies", null, [["manufactured", "Manufactured 6-pack", menuPublished(2850, 61, 274, 177, 1090, 18, 223), 6], ["store-made", "Store-made 6-pack", menuPublished(2650, 63, 255, 161, 1160, 18, 201), 6]]],
+  ["dilly-bar-six-pack", "Dilly Bar - 6 Pack", "1 published six-pack; manufacturing method varies", null, [["manufactured", "Manufactured 6-pack", menuPublished(1340, 20, 153, 74, 340, 4, 127), 6], ["store-made", "Store-made 6-pack", menuPublished(1210, 19, 128, 71, 300, 3, 108), 6]]],
+  ["dq-sandwich-six-pack", "DQ Sandwich - 6 Pack", "1 published six-pack", menuPublished(1100, 23, 182, 31, 780, 3, 104)],
+].map(([id, name, description, nutrients, options, aliases]) => dqFood(
+  id,
+  name,
+  description,
+  nutrients,
+  options?.map(([optionId, optionDescription, optionNutrients, amount = 1]) => dqOption(`${id}:${optionId}`, optionDescription, optionNutrients, amount)),
+  aliases
+));
+
+const dqSideFoods = [
+  ["cheese-curds", "Cheese Curds", [["regular", "Regular order", menuPublished(500, 24, 26, 34, 990, 0, 1)], ["large", "Large order", menuPublished(1000, 49, 52, 67, 1960, 0, 3)]]],
+  ["fries", "French Fries", [["kids", "Kids' fries", menuPublished(170, 3, 23, 8, 370, 2, 0)], ["regular", "Regular fries", menuPublished(280, 5, 36, 13, 590, 3, 0)], ["large", "Large fries", menuPublished(450, 8, 59, 21, 950, 4, 0)]]],
+  ["onion-rings", "Onion Rings", [["regular", "Regular onion rings", menuPublished(290, 5, 39, 13, 680, 2, 3)], ["large", "Large onion rings", menuPublished(450, 7, 60, 20, 1050, 3, 4)]]],
+].map(([id, name, sizes]) => dqSizedFood(id, name, "side", sizes, [`DQ ${name}`]));
+
+const dqBlizzardRows = [
+  ["butterfinger-blizzard", "Butterfinger Blizzard", [[350, 9, 52, 12, 150, 1, 41], [590, 15, 87, 21, 270, 1, 68], [800, 20, 118, 28, 360, 2, 91], [1060, 27, 155, 37, 480, 2, 119]]],
+  ["choco-brownie-extreme-blizzard", "Choco Brownie Extreme Blizzard", [[420, 9, 58, 18, 190, 2, 46], [740, 15, 103, 33, 340, 4, 81], [980, 20, 137, 43, 460, 5, 106], [1330, 26, 184, 60, 620, 7, 142]]],
+  ["chocolate-chip-cookie-dough-blizzard", "Chocolate Chip Cookie Dough Blizzard", [[410, 8, 60, 16, 210, 1, 46], [710, 13, 104, 27, 380, 1, 78], [1030, 18, 151, 40, 550, 2, 113], [1370, 23, 201, 54, 740, 3, 151]]],
+  ["heath-blizzard", "Heath Blizzard", [[360, 8, 52, 14, 170, 0, 45], [640, 13, 91, 26, 310, 1, 79], [880, 17, 124, 37, 430, 1, 110], [1190, 23, 168, 49, 590, 2, 148]]],
+  ["mms-chocolate-candy-blizzard", "M&M's Chocolate Candy Blizzard", [[370, 8, 58, 12, 125, 1, 50], [660, 14, 103, 21, 220, 1, 89], [880, 18, 135, 29, 290, 2, 117], [1160, 23, 183, 38, 380, 3, 159]]],
+  ["oreo-cookie-blizzard", "OREO Cookie Blizzard", [[330, 7, 48, 12, 150, 0, 39], [600, 13, 89, 22, 280, 1, 70], [820, 17, 121, 30, 390, 1, 94], [1050, 22, 156, 39, 500, 1, 121]]],
+  ["reeses-peanut-butter-cups-blizzard", "Reese's Peanut Butter Cups Blizzard", [[360, 9, 50, 14, 170, 1, 43], [610, 16, 84, 24, 300, 1, 72], [820, 21, 113, 34, 410, 2, 97], [1080, 28, 148, 45, 550, 3, 128]]],
+  ["royal-new-york-cheesecake-blizzard", "Royal New York Cheesecake Blizzard Filled with Strawberry", [[450, 8, 65, 18, 220, 1, 53], [750, 14, 102, 32, 380, 2, 82], [1040, 19, 140, 46, 530, 2, 112], [1320, 25, 171, 60, 690, 2, 135]]],
+  ["royal-ultimate-choco-brownie-blizzard", "Royal Ultimate Choco Brownie Blizzard Filled with Fudge", [[480, 9, 68, 21, 220, 2, 55], [770, 14, 107, 34, 350, 4, 86], [1040, 19, 146, 45, 480, 5, 117], [1340, 25, 186, 60, 620, 8, 148]]],
+  ["snickers-blizzard", "Snickers Blizzard", [[350, 8, 53, 12, 150, 0, 45], [610, 14, 92, 20, 260, 1, 78], [800, 19, 120, 28, 340, 1, 102], [1060, 24, 162, 36, 450, 2, 138]]],
+  ["turtle-pecan-cluster-blizzard", "Turtle Pecan Cluster Blizzard", [[430, 8, 51, 22, 160, 1, 42], [680, 14, 84, 34, 270, 2, 68], [1020, 18, 123, 52, 390, 3, 99], [1370, 24, 165, 71, 510, 4, 132]]],
+];
+const dqBlizzardFoods = dqBlizzardRows.map(([id, name, values]) => dqSizedFood(
+  id,
+  name,
+  "Blizzard",
+  ["mini", "small", "medium", "large"].map((size, index) => [size, `${size[0].toUpperCase()}${size.slice(1)} ${name}`, menuPublished(...values[index])]),
+  [`DQ ${name}`, `Dairy Queen ${name}`]
+));
+
+const dqShakeRows = [
+  ["banana", "Banana", [[470, 13, 64, 19, 190, 1, 53], [590, 16, 83, 22, 240, 1, 68], [750, 21, 109, 27, 310, 2, 88]]],
+  ["caramel", "Caramel", [[550, 13, 79, 20, 240, 0, 65], [750, 17, 115, 25, 330, 0, 93], [980, 22, 154, 31, 450, 0, 124]]],
+  ["chocolate", "Chocolate", [[530, 13, 77, 19, 220, 1, 67], [710, 16, 110, 23, 290, 1, 96], [920, 21, 147, 28, 390, 2, 128]]],
+  ["hot-fudge", "Hot Fudge", [[550, 13, 75, 22, 240, 0, 61], [750, 17, 105, 30, 330, 1, 85], [990, 23, 140, 38, 440, 1, 112]]],
+  ["peanut-butter", "Peanut Butter", [[640, 16, 67, 34, 370, 1, 54], [930, 22, 91, 53, 590, 3, 69], [1250, 30, 119, 72, 830, 4, 89]]],
+  ["strawberry", "Strawberry", [[490, 13, 68, 19, 200, 0, 59], [630, 16, 92, 23, 260, 1, 80], [800, 21, 120, 27, 340, 1, 105]]],
+  ["vanilla", "Vanilla", [[520, 13, 73, 19, 200, 0, 65], [660, 16, 97, 23, 260, 0, 85], [860, 22, 127, 29, 340, 0, 112]]],
+];
+const dqMaltAdds = [menuPublished(60, 1, 12, 0.5, 50, 0, 8), menuPublished(80, 1, 18, 1, 80, 1, 12), menuPublished(110, 2, 23, 1, 105, 1, 16)];
+const dqShakeFoods = dqShakeRows.flatMap(([id, flavor, values]) => {
+  const shakeSizes = ["small", "medium", "large"].map((size, index) => [size, `${size[0].toUpperCase()}${size.slice(1)} ${flavor} Shake`, menuPublished(...values[index])]);
+  const maltSizes = shakeSizes.map(([size, , nutrients], index) => [
+    size,
+    `${size[0].toUpperCase()}${size.slice(1)} ${flavor} Malt; calculated from the published ${flavor} Shake plus published malt add-on for this size`,
+    sumPublished(nutrients, dqMaltAdds[index]),
+  ]);
+  return [
+    dqSizedFood(`${id}-shake`, `${flavor} Shake`, "shake", shakeSizes, [`DQ ${flavor} shake`]),
+    dqSizedFood(`${id}-malt`, `${flavor} Malt`, "calculated malt configuration", maltSizes, [`DQ ${flavor} malt`, `Dairy Queen ${flavor} malt`]),
+  ];
+});
+
+const dqTreatSizedFoods = [
+  ["caramel-moolatte", "Caramel MooLatté", "frozen beverage", [["small", "Small Caramel MooLatté", menuPublished(490, 8, 81, 15, 190, 0, 69)], ["medium", "Medium Caramel MooLatté", menuPublished(620, 10, 103, 18, 240, 0, 87)], ["large", "Large Caramel MooLatté", menuPublished(780, 13, 135, 21, 320, 0, 113)]]],
+  ["mocha-moolatte", "Mocha MooLatté", "frozen beverage", [["small", "Small Mocha MooLatté", menuPublished(500, 9, 76, 18, 180, 1, 67)], ["medium", "Medium Mocha MooLatté", menuPublished(620, 11, 94, 23, 240, 2, 82)], ["large", "Large Mocha MooLatté", menuPublished(780, 14, 121, 29, 310, 2, 106)]]],
+  ["vanilla-moolatte", "Vanilla MooLatté", "frozen beverage", [["small", "Small Vanilla MooLatté", menuPublished(450, 7, 74, 14, 150, 0, 67)], ["medium", "Medium Vanilla MooLatté", menuPublished(560, 9, 93, 17, 190, 0, 84)], ["large", "Large Vanilla MooLatté", menuPublished(700, 12, 121, 19, 240, 0, 109)]]],
+  ["misty-freeze", "Misty Freeze", "frozen beverage", [["small", "Small Misty Freeze", menuPublished(360, 8, 62, 10, 130, 0, 55)], ["medium", "Medium Misty Freeze", menuPublished(450, 10, 77, 12, 160, 0, 68)], ["large", "Large Misty Freeze", menuPublished(590, 12, 102, 15, 210, 0, 90)]]],
+  ["misty-slush", "Misty Slush", "frozen beverage", [["small", "Small Misty Slush", menuPublished(200, 0, 50, 0, 35, 0, 50)], ["medium", "Medium Misty Slush", menuPublished(260, 0, 65, 0, 40, 0, 64)], ["large", "Large Misty Slush", menuPublished(340, 0, 86, 0, 55, 0, 85)]]],
+  ["caramel-sundae", "Caramel Sundae", "sundae", [["small", "Small Caramel Sundae", menuPublished(300, 6, 50, 8, 130, 0, 40)], ["medium", "Medium Caramel Sundae", menuPublished(430, 9, 73, 11, 190, 0, 58)], ["large", "Large Caramel Sundae", menuPublished(600, 12, 102, 16, 260, 0, 81)]]],
+  ["cherry-sundae", "Cherry Sundae", "sundae", [["small", "Small Cherry Sundae", menuPublished(250, 6, 42, 7, 95, 0, 36)], ["medium", "Medium Cherry Sundae", menuPublished(360, 8, 61, 9, 135, 0, 52)], ["large", "Large Cherry Sundae", menuPublished(510, 12, 86, 14, 200, 1, 73)]]],
+  ["chocolate-sundae", "Chocolate Sundae", "sundae", [["small", "Small Chocolate Sundae", menuPublished(270, 6, 48, 7, 110, 1, 41)], ["medium", "Medium Chocolate Sundae", menuPublished(400, 8, 70, 10, 160, 1, 60)], ["large", "Large Chocolate Sundae", menuPublished(560, 12, 97, 14, 220, 1, 84)]]],
+  ["hot-fudge-sundae", "Hot Fudge Sundae", "sundae", [["small", "Small Hot Fudge Sundae", menuPublished(300, 6, 46, 10, 125, 0, 36)], ["medium", "Medium Hot Fudge Sundae", menuPublished(430, 9, 66, 15, 190, 1, 52)], ["large", "Large Hot Fudge Sundae", menuPublished(610, 13, 93, 21, 260, 1, 73)]]],
+  ["peanut-butter-sundae", "Peanut Butter Sundae", "sundae", [["small", "Small Peanut Butter Sundae", menuPublished(380, 9, 39, 22, 260, 1, 28)], ["medium", "Medium Peanut Butter Sundae", menuPublished(560, 13, 56, 32, 380, 2, 40)], ["large", "Large Peanut Butter Sundae", menuPublished(780, 18, 79, 44, 520, 3, 58)]]],
+  ["pineapple-sundae", "Pineapple Sundae", "sundae", [["small", "Small Pineapple Sundae", menuPublished(230, 6, 38, 7, 85, 0, 33)], ["medium", "Medium Pineapple Sundae", menuPublished(330, 8, 54, 10, 120, 1, 47)], ["large", "Large Pineapple Sundae", menuPublished(480, 12, 77, 14, 170, 1, 67)]]],
+  ["strawberry-sundae", "Strawberry Sundae", "sundae", [["small", "Small Strawberry Sundae", menuPublished(240, 6, 39, 7, 95, 0, 34)], ["medium", "Medium Strawberry Sundae", menuPublished(340, 8, 56, 10, 135, 1, 49)], ["large", "Large Strawberry Sundae", menuPublished(490, 12, 80, 14, 190, 1, 69)]]],
+  ["vanilla-cone", "Vanilla Cone", "cone", [["kids", "Kids' Vanilla Cone", menuPublished(160, 4, 25, 4.5, 65, 0, 18)], ["small", "Small Vanilla Cone", menuPublished(220, 6, 34, 7, 90, 0, 26)], ["medium", "Medium Vanilla Cone", menuPublished(320, 8, 50, 10, 130, 0, 36)], ["large", "Large Vanilla Cone", menuPublished(450, 12, 71, 14, 180, 0, 52)]]],
+  ["chocolate-cone", "Chocolate Cone", "cone", [["kids", "Kids' Chocolate Cone", menuPublished(160, 4, 25, 5, 60, 0, 17)], ["small", "Small Chocolate Cone", menuPublished(240, 6, 36, 7, 90, 0, 25)], ["medium", "Medium Chocolate Cone", menuPublished(340, 8, 52, 10, 130, 0, 35)], ["large", "Large Chocolate Cone", menuPublished(480, 12, 73, 15, 190, 0, 50)]]],
+  ["cherry-dipped-cone", "Cherry Dipped Cone", "cone", [["kids", "Kids' Cherry Dipped Cone", menuPublished(210, 4, 28, 9, 65, 0, 20)], ["small", "Small Cherry Dipped Cone", menuPublished(320, 6, 40, 15, 95, 0, 31)], ["medium", "Medium Cherry Dipped Cone", menuPublished(460, 8, 58, 22, 140, 0, 44)], ["large", "Large Cherry Dipped Cone", menuPublished(550, 12, 76, 22, 190, 0, 57)]]],
+  ["chocolate-dipped-cone", "Chocolate Dipped Cone", "cone", [["kids", "Kids' Chocolate Dipped Cone", menuPublished(200, 4, 28, 9, 65, 0, 20)], ["small", "Small Chocolate Dipped Cone", menuPublished(320, 6, 40, 15, 95, 1, 30)], ["medium", "Medium Chocolate Dipped Cone", menuPublished(460, 9, 58, 22, 140, 1, 43)], ["large", "Large Chocolate Dipped Cone", menuPublished(640, 13, 81, 30, 200, 1, 60)]]],
+  ["mango-pineapple-smoothie", "Mango Pineapple Smoothie", "smoothie", [["small", "Small Mango Pineapple Smoothie", menuPublished(250, 4, 59, 0, 90, 1, 56)], ["medium", "Medium Mango Pineapple Smoothie", menuPublished(330, 6, 77, 0, 135, 1, 74)], ["large", "Large Mango Pineapple Smoothie", menuPublished(420, 8, 96, 0, 180, 1, 92)], ["extra-large", "Extra Large Mango Pineapple Smoothie", menuPublished(590, 10, 136, 0, 230, 1, 130)]]],
+  ["strawberry-banana-smoothie", "Strawberry Banana Smoothie", "smoothie", [["small", "Small Strawberry Banana Smoothie", menuPublished(260, 4, 62, 0, 100, 2, 56)], ["medium", "Medium Strawberry Banana Smoothie", menuPublished(350, 6, 83, 0, 140, 3, 75)], ["large", "Large Strawberry Banana Smoothie", menuPublished(440, 8, 103, 0, 190, 3, 93)], ["extra-large", "Extra Large Strawberry Banana Smoothie", menuPublished(620, 11, 144, 0.5, 240, 5, 131)]]],
+  ["tripleberry-smoothie", "Tripleberry Smoothie", "smoothie", [["small", "Small Tripleberry Smoothie", menuPublished(280, 4, 66, 0, 90, 1, 65)], ["medium", "Medium Tripleberry Smoothie", menuPublished(370, 6, 87, 0, 135, 2, 84)], ["large", "Large Tripleberry Smoothie", menuPublished(460, 8, 107, 0, 180, 2, 104)], ["extra-large", "Extra Large Tripleberry Smoothie", menuPublished(660, 10, 153, 0, 220, 3, 149)]]],
+  ["orange-julius", "Orange Julius", "frozen beverage", [["medium", "Medium Orange Julius", menuPublished(260, 1, 65, 0, 45, 0, 62)], ["large", "Large Orange Julius", menuPublished(400, 2, 99, 0, 70, 0, 95)]]],
+].map(([id, name, category, sizes]) => dqSizedFood(id, name, category, sizes, [`DQ ${name}`, `Dairy Queen ${name}`]));
+
+const dairyQueenFoods = [
+  ...dqBurgerFoods,
+  ...dqFlatFoods,
+  ...dqSideFoods,
+  ...dqBlizzardFoods,
+  ...dqShakeFoods,
+  ...dqTreatSizedFoods,
+];
+
+const arbys = { id: "arbys", name: "Arby's" };
+const ARBYS_SOURCE = "https://assets.ctfassets.net/o19mhvm9a2cm/3IMsOIRdaTuvoMTrhk6QcK/2b251ee91b6d44b13f95e457519371e4/Arbys_Nutritional_and_Allergen_FEB_2025.pdf";
+const ARBYS_REFERENCE = "Arby's official U.S. Nutrition & Allergen Information guide, February 2025 edition; information effective January 2025. Availability varies and breakfast is regional.";
+const arbysFood = (id, name, description, nutrients, servingOptions, searchAliases, sourceReference = ARBYS_REFERENCE) => menuFood(
+  arbys,
+  ARBYS_SOURCE,
+  sourceReference,
+  id,
+  name,
+  description,
+  nutrients,
+  servingOptions,
+  [`Arbys ${name}`, ...(servingOptions || []).map((option) => `Arbys ${option.serving.description} ${name}`), ...(searchAliases || [])]
+);
+const arbysOption = (id, description, nutrients, amount = 1, sourceReference = ARBYS_REFERENCE) => expansionMenuOption(
+  arbys, ARBYS_SOURCE, sourceReference, id, description, nutrients, amount
+);
+const arbysSizedFood = (id, name, category, options, aliases) => arbysFood(
+  id,
+  name,
+  options[0][1],
+  null,
+  options.map(([optionId, description, nutrients, amount = 1]) => arbysOption(`${id}:${optionId}`, description, nutrients, amount)),
+  aliases,
+  `${ARBYS_REFERENCE} Each option is a separately published ${category} portion.`
+);
+
+const arbysMainFoods = [
+  ["beef-n-cheddar", "Beef 'n Cheddar", "Roast beef with cheddar sauce and red ranch on an onion roll", [["classic", "Classic Beef 'n Cheddar", menuPublished(450, 23, 45, 20, 1280, 2, 9)], ["double", "Double Beef 'n Cheddar", menuPublished(630, 39, 48, 32, 2100, 2, 9)], ["half-pound", "Half Pound Beef 'n Cheddar", menuPublished(740, 49, 48, 39, 2530, 2, 9)]]],
+  ["roast-beef", "Roast Beef Sandwich", "Roast beef on a sesame seed bun; sauce not included", [["classic", "Classic Roast Beef", menuPublished(360, 23, 37, 14, 970, 2, 5)], ["double", "Double Roast Beef", menuPublished(510, 38, 38, 24, 1610, 2, 5)], ["half-pound", "Half Pound Roast Beef", menuPublished(610, 48, 38, 30, 2040, 2, 5)]]],
+].map(([id, name, description, options]) => arbysFood(
+  id,
+  name,
+  description,
+  null,
+  options.map(([optionId, optionDescription, nutrients]) => arbysOption(`${id}:${optionId}`, optionDescription, nutrients)),
+  [`Arbys ${name}`, `Arby's ${name}`]
+));
+
+const arbysFlatFoods = [
+  ["classic-french-dip-and-swiss", "Classic French Dip & Swiss", "1 sandwich with Swiss cheese and published au jus included", menuPublished(530, 34, 50, 21, 2540, 2, 3)],
+  ["deluxe-burger", "Deluxe Burger", "1 standard burger", menuPublished(600, 31, 45, 33, 1370, 3, 13)],
+  ["bbq-bacon-burger", "BBQ Bacon Burger", "1 standard burger", menuPublished(710, 40, 45, 41, 1880, 1, 14)],
+  ["big-cheesy-bacon-burger", "Big Cheesy Bacon Burger", "1 standard burger", menuPublished(710, 37, 50, 41, 1820, 0, 14)],
+  ["crispy-chicken-sandwich", "Crispy Chicken Sandwich", "1 sandwich", menuPublished(530, 24, 59, 22, 1410, 4, 13)],
+  ["buffalo-chicken-sandwich", "Buffalo Chicken Sandwich", "1 sandwich with Buffalo sauce included", menuPublished(530, 24, 59, 22, 2100, 4, 12)],
+  ["chicken-bacon-swiss", "Chicken Bacon Swiss Sandwich", "1 sandwich", menuPublished(650, 35, 61, 30, 1760, 4, 14)],
+  ["crispy-chicken-club-wrap", "Crispy Chicken Club Wrap", "1 complete wrap", menuPublished(880, 48, 64, 49, 1870, 5, 12)],
+  ["buffalo-chicken-wrap", "Buffalo Chicken Wrap", "1 complete wrap with Buffalo sauce included", menuPublished(790, 39, 61, 45, 2490, 5, 7)],
+  ["greek-gyro", "Greek Gyro", "1 complete gyro", menuPublished(700, 23, 55, 44, 1370, 4, 6)],
+  ["roast-beef-gyro", "Roast Beef Gyro", "1 complete gyro", menuPublished(540, 24, 48, 29, 1300, 3, 5)],
+  ["reuben", "Reuben", "1 complete sandwich", menuPublished(680, 37, 62, 31, 2420, 4, 5)],
+  ["turkey-ranch-bacon-sandwich", "Turkey, Ranch & Bacon Sandwich", "1 complete sandwich", menuPublished(800, 43, 79, 35, 2430, 5, 16)],
+  ["smokehouse-brisket", "Smokehouse Brisket", "1 complete sandwich", menuPublished(590, 35, 47, 29, 1200, 3, 12)],
+  ["crispy-fish-sandwich", "Crispy Fish Sandwich", "1 seasonal sandwich", menuPublished(570, 20, 65, 25, 990, 3, 9)],
+  ["fish-n-cheddar-sandwich", "Fish 'n Cheddar Sandwich", "1 seasonal sandwich", menuPublished(540, 20, 65, 22, 1030, 3, 7)],
+  ["kings-hawaiian-fish-deluxe", "King's Hawaiian Fish Deluxe Sandwich", "1 seasonal sandwich", menuPublished(690, 25, 74, 34, 1000, 2, 19)],
+  ["salted-caramel-chocolate-cookie", "Salted Caramel & Chocolate Cookie", "1 cookie", menuPublished(430, 4, 63, 18, 360, 1, 33)],
+  ["apple-turnover", "Apple Turnover", "1 turnover", menuPublished(430, 4, 65, 18, 210, 2, 39)],
+  ["cherry-turnover", "Cherry Turnover", "1 turnover", menuPublished(390, 4, 65, 13, 200, 2, 40)],
+  ["roast-beef-slider", "Roast Beef Slider", "1 slider", menuPublished(180, 11, 18, 7, 520, 1, 4)],
+  ["chicken-slider", "Chicken Slider", "1 slider", menuPublished(230, 11, 25, 9, 620, 1, 2)],
+  ["buffalo-chicken-slider", "Buffalo Chicken Slider", "1 slider with Buffalo sauce included", menuPublished(260, 10, 26, 12, 910, 1, 3)],
+  ["jalapeno-roast-beef-slider", "Jalapeño Roast Beef Slider", "1 slider", menuPublished(180, 10, 16, 7, 490, 1, 2), undefined, ["Arbys jalapeno roast beef slider", "Arby's jalapeño slider"]],
+  ["value-ranch-chicken-wrap", "Value Ranch Chicken Wrap", "1 value-menu wrap", menuPublished(400, 16, 32, 23, 1000, 1, 1)],
+  ["value-bbq-chicken-wrap", "Value BBQ Chicken Wrap", "1 value-menu wrap", menuPublished(350, 16, 36, 16, 980, 1, 5)],
+  ["value-honey-mustard-chicken-wrap", "Value Honey Mustard Chicken Wrap", "1 value-menu wrap", menuPublished(390, 16, 33, 22, 930, 1, 3)],
+  ["kids-applesauce", "Kids' Tree Top Applesauce", "1 pouch", menuPublished(45, 0, 13, 0, 0, 2, 11)],
+  ["kids-apple-juice", "Kids' Honest Kids Apple Juice Drink", "1 pouch", menuPublished(45, 1, 12, 0, 0, 3, 8)],
+  ["kids-lowfat-white-milk", "Kids' Lowfat White Milk", "1 carton", menuPublished(90, 7, 10, 2, 105, 0, 10)],
+  ["kids-lowfat-chocolate-milk", "Kids' Lowfat Chocolate Milk", "1 carton", menuPublished(150, 7, 26, 2.5, 170, 1, 23)],
+].map(([id, name, description, nutrients, options, aliases]) => arbysFood(id, name, description, nutrients, options, aliases));
+
+const arbysPortionFoods = [
+  ["premium-nuggets", "Premium Nuggets", "Plain nuggets; dipping sauce excluded", [["4-piece", "4-piece nuggets", menuPublished(210, 17, 12, 10, 600, 1, 1), 4], ["6-piece", "6-piece nuggets", menuPublished(310, 25, 18, 15, 910, 1, 1), 6], ["9-piece", "9-piece nuggets", menuPublished(470, 38, 28, 23, 1360, 2, 2), 9]]],
+  ["chicken-tenders", "Chicken Tenders", "Plain tenders; dipping sauce excluded", [["3-piece", "3-piece chicken tenders", menuPublished(370, 23, 28, 18, 1190, 2, 0), 3], ["5-piece", "5-piece chicken tenders", menuPublished(610, 39, 47, 30, 1990, 3, 0), 5]]],
+  ["curly-fries", "Curly Fries", "Seasoned curly fries", [["small", "Small Curly Fries", menuPublished(250, 3, 29, 13, 570, 3, 0)], ["medium", "Medium Curly Fries", menuPublished(410, 5, 49, 22, 940, 5, 0)], ["large", "Large Curly Fries", menuPublished(550, 6, 65, 29, 1250, 6, 0)]]],
+  ["crinkle-fries", "Crinkle Fries", "Crinkle-cut fries", [["small", "Small Crinkle Fries", menuPublished(250, 3, 32, 12, 300, 0, 0)], ["medium", "Medium Crinkle Fries", menuPublished(390, 5, 49, 19, 460, 0, 0)], ["large", "Large Crinkle Fries", menuPublished(530, 7, 68, 26, 630, 0, 0)]]],
+  ["mozzarella-sticks", "Mozzarella Sticks", "Fried mozzarella sticks; marinara excluded", [["4-piece", "4-piece mozzarella sticks", menuPublished(440, 19, 37, 23, 1410, 2, 3), 4], ["6-piece", "6-piece mozzarella sticks", menuPublished(650, 29, 56, 35, 2110, 3, 4), 6]]],
+  ["jalapeno-bites", "Jalapeño Bites", "Fried jalapeño bites; Bronco Berry Sauce excluded", [["5-piece", "5-piece Jalapeño Bites", menuPublished(290, 5, 31, 17, 660, 2, 3), 5], ["8-piece", "8-piece Jalapeño Bites", menuPublished(470, 8, 50, 27, 1060, 3, 4), 8]], ["Arbys jalapeno bites", "Arby's jalapeño poppers"]],
+  ["potato-cakes", "Potato Cakes", "Regional breakfast/side item", [["2-piece", "2 potato cakes", menuPublished(250, 2, 23, 14, 430, 2, 0), 2], ["3-piece", "3 potato cakes", menuPublished(370, 3, 35, 21, 650, 4, 0), 3], ["4-piece", "4 potato cakes", menuPublished(490, 4, 46, 28, 860, 5, 0), 4]]],
+].map(([id, name, description, options, aliases]) => arbysFood(
+  id,
+  name,
+  description,
+  null,
+  options.map(([optionId, optionDescription, nutrients, amount = 1]) => arbysOption(`${id}:${optionId}`, optionDescription, nutrients, amount)),
+  aliases
+));
+
+const arbysShakeFoods = [
+  ["jamocha-shake", "Jamocha Shake", [["regular", "Regular Jamocha Shake", menuPublished(530, 12, 85, 16, 320, 0, 71)], ["large", "Large Jamocha Shake", menuPublished(690, 15, 112, 20, 420, 0, 94)]]],
+  ["chocolate-shake", "Chocolate Shake", [["regular", "Regular Chocolate Shake", menuPublished(520, 12, 83, 17, 320, 1, 72)], ["large", "Large Chocolate Shake", menuPublished(680, 16, 110, 21, 420, 1, 96)]]],
+  ["vanilla-shake", "Vanilla Shake", [["regular", "Regular Vanilla Shake", menuPublished(480, 12, 70, 17, 300, 0, 64)], ["large", "Large Vanilla Shake", menuPublished(620, 16, 93, 21, 400, 0, 85)]]],
+  ["mint-chocolate-shake", "Mint Chocolate Shake", [["regular", "Regular seasonal Mint Chocolate Shake", menuPublished(610, 12, 95, 21, 290, 1, 85)], ["large", "Large seasonal Mint Chocolate Shake", menuPublished(770, 16, 123, 25, 380, 1, 111)]]],
+].map(([id, name, options]) => arbysSizedFood(id, name, "shake", options, [`Arbys ${name}`, `Arby's ${name}`]));
+
+const arbysBreakfastFoods = [
+  ["sausage-biscuit", "Sausage Biscuit", 500, 12, 36, 33, 1450, 1, 3],
+  ["bacon-biscuit", "Bacon Biscuit", 340, 10, 36, 17, 1180, 1, 3],
+  ["ham-biscuit", "Ham Biscuit", 340, 13, 37, 16, 1420, 1, 4],
+  ["chicken-biscuit", "Chicken Biscuit", 390, 13, 44, 18, 1330, 2, 2],
+  ["bacon-egg-cheese-sourdough", "Bacon, Egg & Cheese Sourdough", 470, 23, 46, 22, 1260, 2, 5],
+  ["bacon-egg-cheese-croissant", "Bacon, Egg & Cheese Croissant", 430, 18, 29, 26, 1010, 1, 4],
+  ["bacon-egg-cheese-biscuit", "Bacon, Egg & Cheese Biscuit", 470, 18, 37, 28, 1720, 1, 4],
+  ["bacon-egg-cheese-wrap", "Bacon, Egg & Cheese Wrap", 410, 18, 29, 24, 1330, 1, 2],
+  ["sausage-egg-cheese-sourdough", "Sausage, Egg & Cheese Sourdough", 630, 24, 47, 38, 1450, 2, 5],
+  ["sausage-egg-cheese-croissant", "Sausage, Egg & Cheese Croissant", 580, 19, 30, 43, 1200, 1, 4],
+  ["sausage-egg-cheese-biscuit", "Sausage, Egg & Cheese Biscuit", 630, 19, 39, 44, 1910, 1, 4],
+  ["sausage-egg-cheese-wrap", "Sausage, Egg & Cheese Wrap", 550, 17, 30, 39, 1420, 1, 3],
+  ["ham-egg-cheese-sourdough", "Ham, Egg & Cheese Sourdough", 460, 26, 47, 18, 1290, 2, 4],
+  ["ham-egg-cheese-croissant", "Ham, Egg & Cheese Croissant", 410, 21, 30, 23, 1040, 1, 3],
+  ["ham-egg-cheese-biscuit", "Ham, Egg & Cheese Biscuit", 460, 21, 38, 24, 1750, 1, 3],
+  ["ham-egg-cheese-wrap", "Ham, Egg & Cheese Wrap", 400, 20, 31, 21, 1390, 1, 2],
+  ["ham-swiss-croissant", "Ham & Swiss Croissant", 340, 17, 29, 17, 910, 1, 2],
+  ["bacon-cheese-croissant", "Bacon & Cheese Croissant", 330, 14, 27, 19, 740, 1, 2],
+  ["sausage-cheese-croissant", "Sausage & Cheese Croissant", 490, 15, 28, 35, 940, 1, 3],
+  ["french-toast-sticks", "French Toast Sticks", 590, 8, 82, 25, 540, 3, 36],
+  ["sausage-gravy-biscuit", "Sausage Gravy Biscuit", 480, 9, 48, 28, 1770, 1, 3],
+  ["double-sausage-gravy-biscuit", "Double Sausage Gravy Biscuit", 960, 18, 95, 56, 3490, 3, 6],
+  ["coffee-12oz", "Coffee", 0, 0, 0, 0, 5, 0, 0],
+  ["simply-orange-juice", "Simply Orange Juice", 140, 2, 33, 0, 0, 1, 26],
+].map(([id, name, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => arbysFood(
+  id,
+  name,
+  id === "coffee-12oz" ? "12 fl oz black coffee" : `1 regional breakfast-menu ${name.toLowerCase()}`,
+  menuPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar),
+  undefined,
+  [`Arbys ${name}`, `Arby's ${name}`],
+  `${ARBYS_REFERENCE} This item is listed in the guide's regional breakfast section.`
+));
+
+const arbysSauceFoods = [
+  ["arbys-sauce", "Arby's Sauce", "1 packet (14 g)", 15, 0, 3, 0, 180, 0, 2],
+  ["horsey-sauce", "Horsey Sauce", "1 packet (14 g)", 60, 0, 3, 5, 150, 0, 2],
+  ["tangy-barbeque-dipping-sauce", "Tangy Barbeque Dipping Sauce", "1 cup (28 g)", 45, 0, 10, 0, 360, 0, 8],
+  ["buffalo-dipping-sauce", "Buffalo Dipping Sauce", "1 cup (28 g)", 10, 0, 2, 1, 720, 0, 0],
+  ["honey-mustard-dipping-sauce", "Honey Mustard Dipping Sauce", "1 cup (28 g)", 130, 0, 5, 13, 160, 0, 4],
+  ["ranch-dipping-sauce", "Ranch Dipping Sauce", "1 cup (28 g)", 100, 1, 1, 10, 135, 0, 1],
+  ["ketchup", "Ketchup", "1 packet (9 g)", 10, 0, 3, 0, 85, 0, 2],
+  ["cheddar-cheese-sauce", "Cheddar Cheese Sauce", "1 cup (43 g)", 50, 1, 4, 3.5, 370, 0, 0],
+  ["marinara-sauce", "Marinara Sauce", "1 cup (28 g)", 20, 1, 4, 0, 170, 1, 3],
+  ["bronco-berry-sauce", "Bronco Berry Sauce", "1 cup (28 g)", 60, 0, 15, 0, 25, 0, 15],
+  ["red-ranch-sauce", "Red Ranch Sauce", "0.5 oz portion", 70, 0, 5, 6, 105, 0, 4],
+].map(([id, name, description, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => arbysFood(
+  id, name, description, menuPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar), undefined, [`Arbys ${name}`, `Arby's ${name}`]
+));
+
+const arbysDrinkRows = [
+  ["barqs-root-beer", "Barq's Root Beer", [170, 0, 44, 0, 75, 0, 44], [240, 0, 62, 0, 105, 0, 62]],
+  ["coca-cola", "Coca-Cola", [180, 0, 44, 0, 45, 0, 44], [250, 0, 62, 0, 60, 0, 62]],
+  ["coca-cola-zero-sugar", "Coca-Cola Zero Sugar", [0, 0, 0, 0, 45, 0, 0], [0, 0, 0, 0, 60, 0, 0]],
+  ["diet-coke", "Diet Coke", [0, 0, 0, 0, 50, 0, 0], [0, 0, 0, 0, 75, 0, 0]],
+  ["fanta-orange", "Fanta Orange", [170, 0, 43, 0, 45, 0, 43], [240, 0, 61, 0, 60, 0, 61]],
+  ["hi-c-fruit-punch", "Hi-C Flashin' Fruit Punch", [180, 0, 46, 0, 80, 0, 45], [250, 0, 65, 0, 110, 0, 63]],
+  ["mello-yello", "Mello Yello", [180, 0, 47, 0, 55, 0, 47], [250, 0, 67, 0, 75, 0, 67]],
+  ["minute-maid-zero-sugar-lemonade", "Minute Maid Zero Sugar Lemonade", [5, 0, 2, 0, 45, 0, 0], [10, 0, 3, 0, 65, 0, 0]],
+  ["powerade-mountain-berry-blast", "POWERADE Mountain Berry Blast", [90, 0, 24, 0, 120, 0, 24], [130, 0, 34, 0, 170, 0, 34]],
+  ["sprite", "Sprite", [160, 0, 41, 0, 75, 0, 41], [220, 0, 57, 0, 110, 0, 57]],
+  ["dr-pepper", "Dr Pepper", [160, 0, 42, 0, 50, 0, 42], [220, 0, 60, 0, 65, 0, 59]],
+  ["diet-dr-pepper", "Diet Dr Pepper", [0, 0, 0, 0, 80, 0, 0], [0, 0, 0, 0, 110, 0, 0]],
+].map(([id, name, withIce, noIce]) => arbysFood(
+  id,
+  name,
+  "Medium fountain serving; ice fill changes the published quantity",
+  null,
+  [
+    arbysOption(`${id}:medium-with-ice`, "Medium fountain serving with 50% ice fill", menuPublished(...withIce)),
+    arbysOption(`${id}:medium-no-ice`, "Medium fountain serving with no ice", menuPublished(...noIce)),
+  ],
+  [
+    `Arbys ${name}`,
+    `Arby's ${name}`,
+    ...(id === "coca-cola-zero-sugar" ? ["Arbys Coke Zero", "Arby's Coke Zero"] : []),
+  ],
+  `${ARBYS_REFERENCE} The guide publishes medium fountain values with 50% ice and with no ice; small and large are only described by approximate multipliers and are not represented as exact options.`
+));
+const arbysOtherDrinks = [
+  ["classic-lemonade", "Classic Lemonade", "Regular serving with 50% ice", menuPublished(150, 0, 38, 0, 10, 0, 35)],
+  ["strawberry-lemonade", "Strawberry Lemonade", "Regular serving with 50% ice", menuPublished(110, 0, 29, 0, 10, 0, 27)],
+  ["brewed-iced-tea", "Brewed Iced Tea", "Medium cup (358 g); sodium varies with local water", menuPublished(5, 0, 1, 0, null, 0, 0)],
+  ["bottled-water", "Nestlé Pure Life Bottled Water", "479 g bottle; sodium varies with local water", menuPublished(0, 0, 0, 0, null, 0, 0)],
+].map(([id, name, description, nutrients]) => arbysFood(id, name, description, nutrients, undefined, [`Arbys ${name}`, `Arby's ${name}`]));
+
+const arbysFoods = [
+  ...arbysMainFoods,
+  ...arbysFlatFoods,
+  ...arbysPortionFoods,
+  ...arbysShakeFoods,
+  ...arbysBreakfastFoods,
+  ...arbysSauceFoods,
+  ...arbysDrinkRows,
+  ...arbysOtherDrinks,
+];
+
+const jackInTheBox = { id: "jack-in-the-box", name: "Jack in the Box" };
+const JACK_IN_THE_BOX_SOURCE = "https://assets.ctfassets.net/5hs630wuugof/5YPXJN6p8U0Esf31agJxUK/26a003f0ab50ca9eb38d0e6a3f7f2bf5/Nutrition_Facts_2025.PDF";
+const JACK_IN_THE_BOX_REFERENCE = "Jack in the Box official 2025 Nutrition Facts sheet; nutrient information effective November 2024. Regional availability and bun sesame formulation vary.";
+const jackFood = (id, name, description, nutrients, servingOptions, searchAliases, sourceReference = JACK_IN_THE_BOX_REFERENCE) => menuFood(
+  jackInTheBox,
+  JACK_IN_THE_BOX_SOURCE,
+  sourceReference,
+  id,
+  name,
+  description,
+  nutrients,
+  servingOptions,
+  [
+    `Jackinthebox ${name}`,
+    ...(servingOptions || []).map((option) => `Jackinthebox ${option.serving.description} ${name}`),
+    ...(searchAliases || []),
+  ]
+);
+const jackOption = (id, description, nutrients, amount = 1, sourceReference = JACK_IN_THE_BOX_REFERENCE) => expansionMenuOption(
+  jackInTheBox, JACK_IN_THE_BOX_SOURCE, sourceReference, id, description, nutrients, amount
+);
+const jackSizedFood = (id, name, category, options, aliases) => jackFood(
+  id,
+  name,
+  options[0][1],
+  null,
+  options.map(([optionId, description, nutrients, amount = 1]) => jackOption(`${id}:${optionId}`, description, nutrients, amount)),
+  aliases,
+  `${JACK_IN_THE_BOX_REFERENCE} Each option is a separately published ${category} portion.`
+);
+
+const jackBurgerFoods = [
+  ["bacon-double-smashed-jack", "Bacon Double Smashed Jack", 1120, 45, 49, 83, 2070, 2, 9],
+  ["bacon-swiss-buttery-jack", "Bacon & Swiss Buttery Jack", 800, 34, 48, 53, 1210, 3, 11],
+  ["bacon-ultimate-cheeseburger", "Bacon Ultimate Cheeseburger", 930, 55, 32, 65, 1960, 1, 6],
+  ["cheeseburger", "Cheeseburger", 370, 16, 30, 21, 880, 1, 4],
+  ["classic-smashed-jack", "Classic Smashed Jack", 720, 26, 46, 48, 1380, 2, 7],
+  ["classic-buttery-jack", "Classic Buttery Jack", 780, 31, 51, 51, 1030, 4, 13],
+  ["double-jack", "Double Jack", 830, 46, 33, 58, 1430, 2, 7],
+  ["hamburger", "Hamburger", 330, 13, 30, 18, 680, 1, 4],
+  ["jr-bacon-cheeseburger", "Jr. Bacon Cheeseburger", 470, 18, 30, 31, 1000, 1, 5],
+  ["jr-jumbo-jack", "Jr. Jumbo Jack", 400, 14, 31, 25, 700, 1, 5],
+  ["jr-jumbo-jack-cheeseburger", "Jr. Jumbo Jack Cheeseburger", 440, 16, 31, 29, 900, 1, 5],
+  ["jumbo-jack", "Jumbo Jack", 520, 23, 32, 33, 700, 2, 6],
+  ["jumbo-jack-cheeseburger", "Jumbo Jack Cheeseburger", 600, 28, 33, 40, 1110, 2, 6],
+  ["sourdough-jack", "Sourdough Jack", 690, 33, 39, 44, 1300, 3, 7],
+  ["ultimate-cheeseburger", "Ultimate Cheeseburger", 840, 47, 31, 59, 1550, 1, 5],
+].map(([id, name, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => jackFood(
+  id,
+  name,
+  "1 standard burger; fries and drink excluded",
+  menuPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar),
+  undefined,
+  [`Jack in the Box ${name}`, `Jackinthebox ${name}`]
+));
+
+const jackChickenFoods = [
+  ["chicken-sandwich", "Chicken Sandwich", "1 sandwich", 560, 15, 40, 38, 940, 2, 4],
+  ["chicken-sandwich-with-bacon", "Chicken Sandwich with Bacon", "1 sandwich", 610, 19, 40, 42, 1150, 2, 4],
+  ["fish-sandwich", "Fish Sandwich", "1 seasonal sandwich", 450, 16, 47, 23, 1000, 2, 6],
+  ["homestyle-ranch-chicken-club", "Homestyle Ranch Chicken Club", "1 sandwich", 790, 35, 69, 42, 1930, 5, 6],
+  ["jacks-spicy-chicken-sandwich", "Jack's Spicy Chicken Sandwich", "1 sandwich", 690, 27, 51, 42, 1360, 3, 4],
+  ["jacks-spicy-chicken-sandwich-with-cheese", "Jack's Spicy Chicken Sandwich with Cheese", "1 sandwich", 720, 29, 51, 45, 1510, 3, 5],
+  ["sourdough-grilled-chicken-club", "Sourdough Grilled Chicken Club", "1 sandwich", 500, 33, 40, 23, 1440, 3, 7],
+  ["cluck-chicken-sandwich", "The Cluck Chicken Sandwich", "1 sandwich", 710, 28, 68, 37, 1610, 4, 5],
+].map(([id, name, description, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => jackFood(
+  id, name, description, menuPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar), undefined, [`Jack in the Box ${name}`]
+));
+const jackChickenPortions = [
+  ["chicken-nuggets", "Chicken Nuggets", "Plain nuggets; dipping sauce excluded", [["4-piece", "4 chicken nuggets", menuPublished(190, 8, 10, 13, 480, 1, 0), 4], ["8-piece", "8 chicken nuggets", menuPublished(380, 15, 20, 27, 970, 2, 0), 8]]],
+  ["crispy-chicken-strips", "Crispy Chicken Strips", "Plain strips; dipping sauce excluded", [["2-piece", "2 crispy chicken strips", menuPublished(310, 22, 21, 15, 1170, 2, 1), 2], ["3-piece", "3 crispy chicken strips", menuPublished(470, 33, 32, 23, 1760, 3, 2), 3], ["5-piece", "5 crispy chicken strips", menuPublished(780, 54, 53, 38, 2940, 5, 3), 5]]],
+].map(([id, name, description, options]) => jackFood(
+  id,
+  name,
+  description,
+  null,
+  options.map(([optionId, optionDescription, nutrients, amount]) => jackOption(`${id}:${optionId}`, optionDescription, nutrients, amount)),
+  [`Jack in the Box ${name}`]
+));
+
+const jackSaladFoods = [
+  ["garden-salad-crispy-chicken", "Garden Salad with Crispy Chicken Strips", 410, 28, 28, 21, 1330, 4, 3],
+  ["garden-salad-grilled-chicken", "Garden Salad with Grilled Chicken", 200, 25, 9, 7, 810, 3, 2],
+  ["side-salad", "Side Salad", 50, 3, 3, 3.5, 90, 1, 1],
+  ["southwest-salad-crispy-chicken", "Southwest Salad with Crispy Chicken Strips", 500, 32, 44, 22, 1340, 9, 6],
+  ["southwest-salad-grilled-chicken", "Southwest Salad with Grilled Chicken", 280, 30, 25, 8, 810, 7, 5],
+].map(([id, name, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => jackFood(
+  id,
+  name,
+  "1 salad; dressing and crunchy toppings excluded",
+  menuPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar)
+));
+
+const jackSideFoods = [
+  ["egg-rolls", "Egg Rolls", "Egg rolls; dipping sauce excluded", [["1-piece", "1 egg roll", menuPublished(210, 7, 20, 12, 490, 2, 3), 1], ["3-piece", "3 egg rolls", menuPublished(570, 21, 60, 30, 1470, 6, 9), 3]]],
+  ["french-fries", "French Fries", "Straight-cut fries", [["kids", "Kids' French Fries", menuPublished(220, 2, 30, 10, 410, 2, 0)], ["small", "Small French Fries", menuPublished(300, 3, 40, 14, 540, 3, 0)], ["medium", "Medium French Fries", menuPublished(430, 5, 58, 20, 780, 4, 0)], ["large", "Large French Fries", menuPublished(550, 6, 75, 25, 1010, 5, 1)]]],
+  ["seasoned-curly-fries", "Seasoned Curly Fries", "Seasoned curly fries", [["kids", "Kids' Seasoned Curly Fries", menuPublished(200, 2, 21, 11, 440, 2, 0)], ["small", "Small Seasoned Curly Fries", menuPublished(280, 3, 30, 16, 610, 3, 0)], ["medium", "Medium Seasoned Curly Fries", menuPublished(430, 5, 46, 25, 940, 4, 0)], ["large", "Large Seasoned Curly Fries", menuPublished(480, 6, 52, 28, 1060, 4, 0)]]],
+  ["stuffed-jalapenos", "Stuffed Jalapeños", "Cheese-filled jalapeños; dipping sauce excluded", [["3-piece", "3 stuffed jalapeños", menuPublished(220, 6, 21, 12, 730, 1, 2), 3], ["7-piece", "7 stuffed jalapeños", menuPublished(510, 14, 49, 29, 1690, 3, 5), 7]], ["Jack in the Box stuffed jalapenos"]],
+].map(([id, name, description, options, aliases]) => jackFood(
+  id,
+  name,
+  description,
+  null,
+  options.map(([optionId, optionDescription, nutrients, amount = 1]) => jackOption(`${id}:${optionId}`, optionDescription, nutrients, amount)),
+  aliases
+));
+const jackFlatSides = [
+  ["panko-onion-rings", "Panko Onion Rings", "1 order", 440, 6, 52, 24, 620, 3, 5],
+  ["tiny-tacos", "Tiny Tacos", "13-piece order; sauce excluded", 460, 14, 53, 21, 670, 5, 2],
+  ["sauced-loaded-tiny-tacos", "Sauced & Loaded Tiny Tacos", "1 complete published order", 600, 19, 59, 33, 1230, 6, 4],
+  ["grilled-cheese-sandwich", "Grilled Cheese Sandwich", "1 sandwich", 330, 11, 34, 16, 800, 2, 3],
+].map(([id, name, description, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => jackFood(
+  id, name, description, menuPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar)
+));
+const jackTacos = jackFood(
+  "regular-tacos",
+  "Regular Tacos",
+  "Standard tacos with filling, cheese, lettuce, and taco sauce",
+  null,
+  [
+    jackOption("regular-tacos:1-piece", "1 regular taco", menuPublished(170, 6, 16, 9, 360, 2, 1), 1),
+    jackOption("regular-tacos:2-piece", "2 regular tacos", menuPublished(350, 12, 33, 19, 770, 5, 2), 2),
+  ],
+  ["Jack in the Box taco", "Jack in the Box two tacos"]
+);
+
+const jackBreakfastFoods = [
+  ["bacon-breakfast-jack", "Bacon Breakfast Jack", "1 breakfast sandwich", menuPublished(380, 17, 30, 21, 850, 1, 4)],
+  ["breakfast-jack", "Breakfast Jack", "1 breakfast sandwich", menuPublished(410, 16, 26, 25, 1180, 2, 3)],
+  ["hash-brown", "Hash Brown", "1 hash brown patty", menuPublished(190, 2, 17, 13, 350, 2, 0)],
+  ["loaded-breakfast-sandwich", "Loaded Breakfast Sandwich", "1 breakfast sandwich", menuPublished(690, 35, 36, 46, 1620, 2, 4)],
+  ["ultimate-breakfast-sandwich", "Ultimate Breakfast Sandwich", "1 breakfast sandwich", menuPublished(510, 29, 30, 30, 1470, 1, 4)],
+].map(([id, name, description, nutrients]) => jackFood(id, name, description, nutrients, undefined, [`Jack in the Box ${name}`]));
+const jackFrenchToastFoods = [
+  ["classic-french-toast-sticks", "Classic French Toast Sticks", [["3-piece", "3 French toast sticks; syrup excluded", menuPublished(230, 4, 26, 12, 240, 1, 6), 3], ["6-piece", "6 French toast sticks; syrup excluded", menuPublished(460, 9, 52, 24, 490, 3, 12), 6]]],
+  ["classic-french-toast-platter", "Classic French Toast Sticks Platter", [["bacon", "Platter with bacon", menuPublished(620, 23, 44, 39, 1260, 3, 7)], ["sausage", "Platter with sausage", menuPublished(700, 21, 44, 48, 1110, 3, 7)], ["bacon-sausage", "Platter with bacon and sausage", menuPublished(780, 29, 45, 54, 1530, 3, 7)]]],
+].map(([id, name, options]) => jackSizedFood(id, name, "breakfast", options, [`Jack in the Box ${name}`]));
+
+const jackDessertFoods = [
+  ["chocolate-overload-cake", "Chocolate Overload Cake", "1 slice", menuPublished(300, 4, 57, 7, 350, 2, 34)],
+  ["mini-churros", "Mini Churros", "5-piece order", menuPublished(350, 4, 42, 18, 280, 2, 12)],
+  ["new-york-style-cheesecake", "New York Style Cheesecake", "1 slice", menuPublished(310, 7, 32, 17, 260, 1, 22)],
+].map(([id, name, description, nutrients]) => jackFood(id, name, description, nutrients));
+const jackShakeFoods = [
+  ["chocolate-shake", "Chocolate Shake with Whipped Topping", [["16oz", "16 fl oz Chocolate Shake with whipped topping", menuPublished(680, 13, 107, 23, 390, 0, 88)], ["24oz", "24 fl oz Chocolate Shake with whipped topping", menuPublished(970, 19, 155, 32, 570, 0, 128)]]],
+  ["oreo-cookie-shake", "OREO Cookie Shake with Whipped Topping", [["16oz", "16 fl oz OREO Cookie Shake with whipped topping", menuPublished(690, 13, 100, 28, 470, 1, 78)], ["24oz", "24 fl oz OREO Cookie Shake with whipped topping", menuPublished(990, 19, 145, 39, 680, 1, 113)]]],
+  ["strawberry-shake", "Strawberry Shake with Whipped Topping", [["16oz", "16 fl oz Strawberry Shake with whipped topping", menuPublished(650, 12, 100, 23, 340, 0, 85)], ["24oz", "24 fl oz Strawberry Shake with whipped topping", menuPublished(930, 17, 145, 32, 490, 0, 123)]]],
+  ["vanilla-shake", "Vanilla Shake with Whipped Topping", [["16oz", "16 fl oz Vanilla Shake with whipped topping", menuPublished(580, 12, 83, 23, 340, 0, 68)], ["24oz", "24 fl oz Vanilla Shake with whipped topping", menuPublished(830, 17, 149, 32, 490, 0, 98)]]],
+].map(([id, name, options]) => jackSizedFood(id, name, "shake", options, [`Jack in the Box ${name}`]));
+const jackBobaShake = jackFood(
+  "vanilla-boba-shake",
+  "Vanilla Shake with Boba & Whipped Topping",
+  "16 fl oz published serving",
+  menuPublished(710, 13, 117, 22, 350, 0, 88)
+);
+
+const jackSauceFoods = [
+  ["buttermilk-ranch-dressing", "Buttermilk Ranch Dressing", "1 packet (50 g)", 250, 1, 4, 26, 380, 0, 1],
+  ["balsamic-vinaigrette-dressing", "Hidden Valley Balsamic Vinaigrette Dressing", "1 packet (43 g)", 150, 0, 4, 15, 250, 0, 4],
+  ["creamy-southwest-dressing", "Creamy Southwest Dressing", "1 packet (50 g)", 190, 1, 3, 19, 740, 0, 1],
+  ["bbq-sauce-dip-cup", "BBQ Sauce Dip Cup", "1 dip cup (21 g)", 40, 0, 9, 0, 140, 0, 8],
+  ["buttermilk-house-dipping-sauce", "Buttermilk House Dipping Sauce", "1 dip cup (21 g)", 110, 0, 2, 11, 160, 0, 0],
+  ["creamy-avocado-lime-dipping-sauce", "Creamy Avocado Lime Dipping Sauce", "1 dip cup (21 g)", 110, 0, 1, 12, 280, 0, 0],
+  ["jacks-good-good-dipping-cup", "Jack's Good Good Dipping Cup", "1 dip cup (21 g)", 110, 0, 3, 11, 190, 0, 2, ["Jack in the Box Good Good Sauce", "Jackinthebox Good Good Sauce"]],
+  ["honey-garlic-sriracha-dip-cup", "Honey Garlic Sriracha Dip Cup", "1 dip cup (21 g)", 35, 0, 7, 0, 180, 0, 6],
+  ["honey-mustard-dip-cup", "Honey Mustard Dip Cup", "1 dip cup (21 g)", 45, 0, 8, 1.5, 180, 0, 7],
+  ["pancake-syrup", "Pancake Syrup", "1 cup (28 g)", 80, 0, 21, 0, 15, 0, 14],
+  ["sweet-n-sour-sauce", "Sweet 'N Sour Sauce", "1 cup (21 g)", 35, 0, 8, 0, 120, 0, 7],
+  ["teriyaki-dipping-sauce", "Teriyaki Dipping Sauce", "1 cup (28 g)", 50, 1, 11, 1, 490, 0, 9],
+  ["creamy-bacon-mayo", "Creamy Bacon Mayo", "0.68 oz portion", 120, 1, 1, 13, 190, 0, 0],
+  ["creamy-ranch-sauce", "Creamy Ranch Sauce", "0.61 oz portion", 90, 0, 1, 10, 180, 0, 1],
+  ["garlic-herb-butter", "Garlic Herb Butter", "0.50 oz portion", 90, 0, 1, 10, 70, 0, 0],
+  ["ketchup-portion", "Ketchup", "0.57 oz portion", 20, 0, 5, 0, 160, 0, 3],
+  ["mayonnaise", "Mayonnaise", "0.25 oz portion", 80, 0, 0, 8, 55, 0, 0],
+  ["mustard", "Mustard", "0.19 oz portion", 5, 0, 0, 0, 65, 0, 0],
+  ["tartar-sauce", "Tartar Sauce", "0.78 oz seasonal portion", 80, 0, 4, 7, 200, 0, 3],
+  ["fire-roasted-salsa", "Fire Roasted Salsa", "1 fl oz cup", 10, 0, 2, 0, 120, 0, 1],
+].map(([id, name, description, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, aliases]) => jackFood(
+  id, name, description, menuPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar), undefined, [`Jack in the Box ${name}`, ...(aliases || [])]
+));
+
+const jackDrinkFoods = [
+  ["gold-peak-unsweet-iced-tea", "Gold Peak Fresh Brewed Iced Tea", [["16oz", "16 fl oz", menuPublished(5, 0, 1, 0, 15, 0, 0)], ["24oz", "24 fl oz", menuPublished(5, 0, 2, 0, 20, 0, 0)], ["32oz", "32 fl oz", menuPublished(10, 0, 3, 0, 25, 0, 0)], ["42oz", "42 fl oz", menuPublished(10, 0, 4, 0, 35, 0, 0)]]],
+  ["high-mountain-arabica-coffee", "High Mountain Arabica Coffee", [["regular", "Regular black coffee", menuPublished(5, 0, 0, 0, 5, 0, 0)], ["large", "Large black coffee", menuPublished(5, 1, 0, 0, 10, 0, 0)]]],
+  ["iced-black-coffee", "Iced Black Coffee", [["regular", "Regular iced black coffee", menuPublished(0, 0, 0, 0, 0, 0, 0)], ["large", "Large iced black coffee", menuPublished(5, 0, 0, 0, 10, 0, 0)]]],
+  ["caramel-sweet-cream-iced-coffee", "Caramel Sweet Cream Iced Coffee", [["regular", "Regular Caramel Sweet Cream Iced Coffee", menuPublished(200, 4, 35, 5, 100, 0, 30)], ["large", "Large Caramel Sweet Cream Iced Coffee", menuPublished(300, 6, 52, 7, 150, 0, 46)]]],
+  ["mocha-sweet-cream-iced-coffee", "Mocha Sweet Cream Iced Coffee", [["regular", "Regular Mocha Sweet Cream Iced Coffee", menuPublished(160, 3, 32, 3, 105, 0, 26)], ["large", "Large Mocha Sweet Cream Iced Coffee", menuPublished(280, 5, 54, 5, 180, 0, 44)]]],
+  ["vanilla-sweet-cream-iced-coffee", "Vanilla Sweet Cream Iced Coffee", [["regular", "Regular Vanilla Sweet Cream Iced Coffee", menuPublished(150, 4, 23, 5, 100, 0, 19)], ["large", "Large Vanilla Sweet Cream Iced Coffee", menuPublished(220, 6, 34, 7, 150, 0, 28)]]],
+].map(([id, name, options]) => jackSizedFood(id, name, "drink", options, [`Jack in the Box ${name}`]));
+const jackFlatDrinks = [
+  ["berry-purple-daze-red-bull", "Berry Purple Daze Red Bull Infusion", "1 published infusion with regular Red Bull", 160, 0, 41, 0, 110, 0, 38],
+  ["berry-purple-daze-red-bull-sugarfree", "Berry Purple Daze Red Bull Sugarfree Infusion", "1 published infusion with sugarfree Red Bull", 60, 0, 15, 0, 110, 0, 12],
+  ["strawberry-red-daze-red-bull", "Strawberry Red Daze Red Bull Infusion", "1 published infusion with regular Red Bull", 160, 0, 41, 0, 110, 0, 39],
+  ["strawberry-red-daze-red-bull-sugarfree", "Strawberry Red Daze Red Bull Sugarfree Infusion", "1 published infusion with sugarfree Red Bull", 60, 0, 15, 0, 115, 0, 12],
+  ["red-bull-energy-can", "Red Bull Energy Can", "1 can", 110, 0, 29, 0, 105, 0, 26],
+  ["red-bull-sugarfree-can", "Red Bull Sugarfree Can", "1 can", 10, 0, 3, 0, 105, 0, 0],
+  ["sweet-cream-iced-coffee-boba", "Sweet Cream Iced Coffee with Boba", "Regular published serving", 280, 4, 57, 5, 105, 0, 38],
+  ["milk-tea-boba", "Milk Tea with Boba", "Regular published serving", 280, 3, 58, 5, 150, 0, 38],
+  ["minute-maid-apple-juice", "Minute Maid Apple Juice", "1 bottle", 80, 0, 21, 0, 15, 0, 19],
+  ["simply-orange-juice", "Simply Orange Juice", "1 bottle", 160, 2, 37, 0, 0, 0, 33],
+  ["dasani-water", "Dasani Water Bottle", "500 g bottle", 0, 0, 0, 0, 0, 0, 0],
+  ["milk", "Milk", "1 carton", 110, 9, 12, 2, 130, 0, 12],
+].map(([id, name, description, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => jackFood(
+  id, name, description, menuPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar), undefined, [`Jack in the Box ${name}`]
+));
+
+const jackInTheBoxFoods = [
+  ...jackBurgerFoods,
+  ...jackChickenFoods,
+  ...jackChickenPortions,
+  ...jackSaladFoods,
+  ...jackSideFoods,
+  ...jackFlatSides,
+  jackTacos,
+  ...jackBreakfastFoods,
+  ...jackFrenchToastFoods,
+  ...jackDessertFoods,
+  ...jackShakeFoods,
+  jackBobaShake,
+  ...jackSauceFoods,
+  ...jackDrinkFoods,
+  ...jackFlatDrinks,
+];
+
 const whataburger = { id: "whataburger", name: "Whataburger" };
 const WHATABURGER_REFERENCE = "Whataburger official menu/app; default recipe nutrition displayed for the current national menu";
 const whataburgerFood = (id, name, description, nutrients, servingOptions) => officialFood(whataburger, id, name, description, nutrients, WHATABURGER_SOURCE, WHATABURGER_REFERENCE, servingOptions);
@@ -3039,6 +3651,9 @@ const restaurantFoods = [
   ...kfcFoods,
   ...canesFoods,
   ...wingstopFoods,
+  ...dairyQueenFoods,
+  ...arbysFoods,
+  ...jackInTheBoxFoods,
   ...sonicFoods,
   ...braumsFoods,
   ...tacoBellFoods,

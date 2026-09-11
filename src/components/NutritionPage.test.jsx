@@ -1172,6 +1172,44 @@ test("selects a flavored Wingstop count, scales it, and saves the flavor-inclusi
   expect(props.saveNutritionEntry.mock.calls[0][0].addedSugar).toBeNull();
 });
 
+test("selects, scales, and saves a published Dairy Queen Blizzard size", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "dairy queen oreo blizzard" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Dairy Queen.*OREO Cookie Blizzard/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  expect(sizeSelect).toHaveDisplayValue("Mini OREO Cookie Blizzard");
+  fireEvent.change(sizeSelect, { target: { value: "restaurant:dairy-queen:oreo-cookie-blizzard:large" } });
+  expect(sizeSelect).toHaveDisplayValue("Large OREO Cookie Blizzard");
+  expect(form.getByLabelText("Calories")).toHaveValue(1050);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(500);
+
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "0.5" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(525);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "OREO Cookie Blizzard",
+    calories: 525,
+    protein: 11,
+    carbohydrates: 78,
+    fat: 19.5,
+    sodium: 250,
+    fiber: 0.5,
+    portion: { amount: 0.5 },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "dairy-queen",
+      restaurantName: "Dairy Queen",
+      sourceId: "dairy-queen:oreo-cookie-blizzard:large",
+    },
+  });
+  expect(props.saveNutritionEntry.mock.calls[0][0].addedSugar).toBeNull();
+});
+
 test("normal Sonic and Braum's items log with chain identity and known sodium", () => {
   const props = renderNutritionPage();
 

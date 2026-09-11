@@ -370,16 +370,19 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     kfc: /^https:\/\/www\.kfc\.com\/full-nutrition-guide$/,
     "raising-canes": /^https:\/\/raisingcanes\.cdn\.prismic\.io\/raisingcanes\//,
     wingstop: /^https:\/\/www\.wingstop\.com\/nutrition$/,
+    "dairy-queen": /^https:\/\/www\.dairyqueen\.com\/en-us\/nutrition\/food-treats\/$/,
+    arbys: /^https:\/\/assets\.ctfassets\.net\/o19mhvm9a2cm\/.+\/Arbys_Nutritional_and_Allergen_FEB_2025\.pdf$/,
+    "jack-in-the-box": /^https:\/\/assets\.ctfassets\.net\/5hs630wuugof\/.+\/Nutrition_Facts_2025\.PDF$/,
     "taco-bell": /^https:\/\/www\.tacobell\.com\/food\//,
     "chick-fil-a": /^https:\/\/www\.chick-fil-a\.com\/nutrition-allergens$/,
     whataburger: /^https:\/\/wbimageserver\.whataburger\.com\/Nutrition\.pdf$/,
   };
-  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
+  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "dairy-queen", "arbys", "jack-in-the-box", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
     chainId,
     expansion.filter((food) => food.restaurant.id === chainId).length,
   ]));
 
-  expect(expansion).toHaveLength(1191);
+  expect(expansion).toHaveLength(1469);
   expect(countByChain).toEqual({
     mcdonalds: 100,
     sonic: 102,
@@ -392,6 +395,9 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     kfc: 86,
     "raising-canes": 12,
     wingstop: 70,
+    "dairy-queen": 91,
+    arbys: 95,
+    "jack-in-the-box": 92,
     "taco-bell": 95,
     "chick-fil-a": 60,
     whataburger: 112,
@@ -548,6 +554,86 @@ test("preserves chicken-chain size and piece-count options with flavor-safe scal
     sourceUrl: expect.stringMatching(/^https:\/\//),
     sourceReference: expect.any(String),
   }));
+});
+
+test("finds Dairy Queen, Arby's, and Jack in the Box foods across standard menu categories", () => {
+  const expectedFirstResults = [
+    ["dairy queen flamethrower burger", "restaurant:dairy-queen:flamethrower-burger"],
+    ["dq 3 piece chicken strips", "restaurant:dairy-queen:chicken-strips"],
+    ["dairy queen fries", "restaurant:dairy-queen:fries"],
+    ["dairy queen oreo blizzard", "restaurant:dairy-queen:oreo-cookie-blizzard"],
+    ["dairy queen chocolate dipped cone", "restaurant:dairy-queen:chocolate-dipped-cone"],
+    ["dq vanilla malt", "restaurant:dairy-queen:vanilla-malt"],
+    ["arbys classic roast beef", "restaurant:arbys:roast-beef"],
+    ["arby's 5 piece chicken tenders", "restaurant:arbys:chicken-tenders"],
+    ["arbys curly fries", "restaurant:arbys:curly-fries"],
+    ["arby's jamocha shake", "restaurant:arbys:jamocha-shake"],
+    ["arbys jalapeno bites", "restaurant:arbys:jalapeno-bites"],
+    ["arby's jalapeño bites", "restaurant:arbys:jalapeno-bites"],
+    ["jack in the box jumbo jack", "restaurant:jack-in-the-box:jumbo-jack"],
+    ["jackinthebox spicy chicken", "restaurant:jack-in-the-box:jacks-spicy-chicken-sandwich"],
+    ["jack in the box two tacos", "restaurant:jack-in-the-box:regular-tacos"],
+    ["jack in the box breakfast jack", "restaurant:jack-in-the-box:breakfast-jack"],
+    ["jack in the box curly fries", "restaurant:jack-in-the-box:seasoned-curly-fries"],
+    ["jack in the box oreo shake", "restaurant:jack-in-the-box:oreo-cookie-shake"],
+    ["jack in the box good good sauce", "restaurant:jack-in-the-box:jacks-good-good-dipping-cup"],
+  ];
+
+  expect(expectedFirstResults.map(([query]) => [query, searchFoodCatalog(query)[0]?.id]))
+    .toEqual(expectedFirstResults);
+  expect(searchFoodCatalog("dairy queen vanilla shake")[0].id).toBe("restaurant:dairy-queen:vanilla-shake");
+  expect(searchFoodCatalog("dairy queen chocolate shake")[0].id).toBe("restaurant:dairy-queen:chocolate-shake");
+  expect(searchFoodCatalog("arbys coke zero")[0].id).toBe("restaurant:arbys:coca-cola-zero-sugar");
+  expect(searchFoodCatalog("coke zero")[0].id).toBe("beverage:coca-cola:zero-sugar-12oz");
+});
+
+test("preserves published sizes and unknown nutrients across the three-chain expansion", () => {
+  const dqOreo = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:dairy-queen:oreo-cookie-blizzard"));
+  const dqVanillaMalt = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:dairy-queen:vanilla-malt"));
+  const arbysCurlyFries = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:arbys:curly-fries"));
+  const arbysTea = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:arbys:brewed-iced-tea"));
+  const jackNuggets = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:jack-in-the-box:chicken-nuggets"));
+  const jackFries = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:jack-in-the-box:french-fries"));
+
+  expect(dqOreo.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Mini OREO Cookie Blizzard", 330],
+    ["Small OREO Cookie Blizzard", 600],
+    ["Medium OREO Cookie Blizzard", 820],
+    ["Large OREO Cookie Blizzard", 1050],
+  ]);
+  expect(dqVanillaMalt.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    [expect.stringContaining("Small Vanilla Malt; calculated"), 580],
+    [expect.stringContaining("Medium Vanilla Malt; calculated"), 740],
+    [expect.stringContaining("Large Vanilla Malt; calculated"), 970],
+  ]);
+  expect(arbysCurlyFries.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Small Curly Fries", 250], ["Medium Curly Fries", 410], ["Large Curly Fries", 550],
+  ]);
+  expect(jackNuggets.servingOptions.map(({ serving, nutrients }) => [serving.amount, nutrients.calories])).toEqual([
+    [4, 190], [8, 380],
+  ]);
+  expect(jackFries.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Kids' French Fries", 220], ["Small French Fries", 300], ["Medium French Fries", 430], ["Large French Fries", 550],
+  ]);
+  expect(scaleNutrition(dqOreo.servingOptions[1].nutrients, 0.5)).toEqual({
+    calories: 300,
+    protein: 6.5,
+    carbohydrates: 44.5,
+    fat: 11,
+    sodium: 140,
+    fiber: 0.5,
+    totalSugar: 35,
+    addedSugar: null,
+  });
+  expect(scaleNutrition(arbysTea.nutrients, 2).sodium).toBeNull();
+  [dqOreo, dqVanillaMalt, arbysCurlyFries, arbysTea, jackNuggets, jackFries].forEach((food) => {
+    expect(food.provenance.verification).toMatchObject({
+      sourceType: "official-restaurant",
+      accessedAt: "2026-09-10",
+      sourceUrl: expect.stringMatching(/^https:\/\//),
+      sourceReference: expect.any(String),
+    });
+  });
 });
 
 test("preserves published options and scales unknown restaurant nutrients without inventing zero", () => {

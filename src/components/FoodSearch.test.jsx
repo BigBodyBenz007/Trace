@@ -225,6 +225,38 @@ test("discovers and selects new chicken-chain foods with ordinary punctuation an
   }));
 });
 
+test("discovers and selects Dairy Queen, Arby's, and Jack in the Box records", () => {
+  const onSelectFood = renderFoodSearch();
+
+  searchFor("dairy queen oreo blizzard");
+  let result = screen.getByRole("button", { name: /Dairy Queen.*OREO Cookie Blizzard/i });
+  expect(result).toHaveTextContent("Mini OREO Cookie Blizzard");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:dairy-queen:oreo-cookie-blizzard",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:dairy-queen:oreo-cookie-blizzard:large" }),
+    ]),
+  }));
+
+  searchFor("arby's curly fries");
+  result = screen.getByRole("button", { name: /Arby's.*Curly Fries/i });
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:arbys:curly-fries",
+  }));
+
+  searchFor("jackinthebox two tacos");
+  result = screen.getByRole("button", { name: /Jack in the Box.*Regular Tacos/i });
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:jack-in-the-box:regular-tacos",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:jack-in-the-box:regular-tacos:2-piece" }),
+    ]),
+  }));
+});
+
 test("shows branded-drink source, package, caffeine, and unknown nutrient details", () => {
   const onSelectFood = renderFoodSearch();
   searchFor("monster ultra zero");
