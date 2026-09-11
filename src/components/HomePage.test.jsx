@@ -529,7 +529,12 @@ test("places sealed, ready, and opened capsules on the Timeline without exposing
   expect(screen.getByTestId("timeline-time-capsule-sealed")).toHaveTextContent("Opening date: September 11, 2027");
   expect(screen.queryByText("Private capsule words")).not.toBeInTheDocument();
   expect(screen.queryByText("private-name.jpg")).not.toBeInTheDocument();
-  expect(document.querySelector(".trace-timeline-capsule-card img, .trace-timeline-capsule-card audio, .trace-timeline-capsule-card video")).toBeNull();
+  expect(document.querySelector(".trace-timeline-capsule-card audio, .trace-timeline-capsule-card video")).toBeNull();
+  expect([...document.querySelectorAll(".trace-timeline-capsule-card .trace-capsule-vault img")]
+    .every((image) => image.getAttribute("alt") === "")).toBe(true);
+  expect(screen.getByTestId("timeline-time-capsule-sealed")).toContainElement(screen.getByRole("img", { name: "Sealed Time Capsule vault" }));
+  expect(screen.getByTestId("timeline-time-capsule-ready")).toContainElement(screen.getByRole("img", { name: "Time Capsule vault ready to open" }));
+  expect(screen.getByTestId("timeline-time-capsule-opened")).toContainElement(screen.getByRole("img", { name: "Opened Time Capsule vault" }));
 
   fireEvent.click(screen.getByTestId("timeline-time-capsule-ready"));
   expect(onViewTimeCapsule).toHaveBeenCalledWith("ready");

@@ -258,6 +258,23 @@ export default function SettingsPage({
           );
         })}
       </div>
+      <label className="trace-capsule-sound-setting">
+        <span className="trace-capsule-sound-setting__copy">
+          <strong>Capsule sounds</strong>
+          <span>Play mechanical opening and sealing effects. Attachment audio never starts automatically.</span>
+        </span>
+        <span className="trace-home-visibility-option__control">
+          <input
+            aria-label="Capsule sounds"
+            checked={settings?.capsuleSounds !== false}
+            onChange={(event) => saveSettings({ ...settings, capsuleSounds: event.target.checked })}
+            role="switch"
+            type="checkbox"
+          />
+          <span aria-hidden="true" className="trace-home-visibility-option__track" />
+          <span className="trace-home-visibility-option__state">{settings?.capsuleSounds === false ? "Off" : "On"}</span>
+        </span>
+      </label>
     </section>
     <section className="trace-feature-section trace-settings-units" aria-labelledby="units-heading" style={{ marginTop: "32px", maxWidth: "620px", textAlign: "left", width: "100%" }}>
       <h2 id="units-heading">Units</h2>

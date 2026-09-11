@@ -23,6 +23,7 @@ export const DEFAULT_APP_SETTINGS = Object.freeze({
   themeId: DEFAULT_APP_THEME_ID,
   homeVisibility: DEFAULT_HOME_VISIBILITY,
   motionPreference: MOTION_PREFERENCES.STANDARD,
+  capsuleSounds: true,
   journalPrivacy: Object.freeze({ autoLockMinutes: 5 }),
   personalDetails: Object.freeze({ dateOfBirth: "" }),
 });
@@ -60,6 +61,7 @@ export function normalizeAppSettings(value) {
     themeId: resolveThemeId(value),
     homeVisibility: normalizeHomeVisibility(value?.homeVisibility),
     motionPreference: normalizeMotionPreference(value?.motionPreference),
+    capsuleSounds: typeof value?.capsuleSounds === "boolean" ? value.capsuleSounds : true,
     journalPrivacy: normalizeJournalPrivacy(value?.journalPrivacy),
     personalDetails: normalizePersonalDetails(value?.personalDetails),
   };

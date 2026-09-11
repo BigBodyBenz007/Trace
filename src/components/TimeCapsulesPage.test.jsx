@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "fs";
 import { useState } from "react";
 import { prepareCapsuleMediaFiles } from "../services/capsuleMedia";
+import { playCapsuleCeremonySound, prepareCapsuleCeremonyAudio } from "../services/capsuleCeremonySound";
 import TimeCapsuleReadyOverlay from "./TimeCapsuleReadyOverlay";
 import TimeCapsulesPage from "./TimeCapsulesPage";
 
@@ -10,9 +11,18 @@ jest.mock("../services/capsuleMedia", () => ({
   prepareCapsuleMediaFiles: jest.fn(),
 }));
 
+jest.mock("../services/capsuleCeremonySound", () => ({
+  prepareCapsuleCeremonyAudio: jest.fn(() => ({ prepared: true })),
+  playCapsuleCeremonySound: jest.fn(() => Promise.resolve({ stop: jest.fn() })),
+}));
+
 let pauseMedia;
 
 beforeEach(() => {
+  jest.clearAllMocks();
+  baseProps.mediaLoader.load.mockImplementation(() => new Promise(() => {}));
+  prepareCapsuleCeremonyAudio.mockReturnValue({ prepared: true });
+  playCapsuleCeremonySound.mockResolvedValue({ stop: jest.fn() });
   pauseMedia = jest.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
 });
 
@@ -47,7 +57,7 @@ const baseProps = {
   capsules: [],
   draft: null,
   blockedMessage: "",
-  mediaLoader: { load: jest.fn(), evict: jest.fn() },
+  mediaLoader: { load: jest.fn(() => new Promise(() => {})), evict: jest.fn() },
   reducedMotion: true,
   onBack: jest.fn(),
   onBeginDraft: jest.fn(() => true),
@@ -97,8 +107,14 @@ test("reveals content only after the final opening write succeeds", async () => 
   render(<Harness />);
   expect(screen.queryByText(/Private words/)).not.toBeInTheDocument();
   await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Open Capsule" })); });
+  expect(screen.getByText("Your moment is opening…")).toBeInTheDocument();
+  expect(screen.queryByText("Private words for the future")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Seal again for later" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Delete Time Capsule" })).toBeDisabled();
+  expect(playCapsuleCeremonySound).toHaveBeenCalledWith("opening", { prepared: true });
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
   expect(screen.getByText("Private words for the future")).toBeInTheDocument();
-  expect(await screen.findByLabelText("secret-name.m4a")).toHaveAttribute("controls");
+  expect(await screen.findByLabelText("Play Audio recording 1: secret-name.m4a")).toHaveAttribute("controls");
 });
 
 test("an opening write failure keeps private content hidden and offers a retry", async () => {
@@ -108,6 +124,8 @@ test("an opening write failure keeps private content hidden and offers a retry",
   expect(screen.getByRole("alert")).toHaveTextContent("contents remain sealed");
   expect(screen.queryByText("Private words for the future")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Open Capsule" })).toBeEnabled();
+  expect(prepareCapsuleCeremonyAudio).toHaveBeenCalledTimes(1);
+  expect(playCapsuleCeremonySound).not.toHaveBeenCalled();
 });
 
 test.each([
@@ -152,11 +170,11 @@ test("pauses opened capsule playback and releases its transient URL when returni
     /> : <p>Timeline restored</p>;
   }
   render(<Harness />);
-  const audio = await screen.findByLabelText("secret-name.m4a");
+  const audio = await screen.findByLabelText("Play Audio recording 1: secret-name.m4a");
   audio.pause = jest.fn();
   fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
   expect(screen.getByText("Timeline restored")).toBeInTheDocument();
-  expect(audio.pause).toHaveBeenCalledTimes(1);
+  expect(audio.pause).toHaveBeenCalled();
   expect(loader.evict).toHaveBeenCalledWith("private-audio");
 });
 
@@ -196,6 +214,121 @@ test("allows today in the initial opening-date picker and explains immediate rea
   expect(screen.getByText(/Choose today to make the capsule ready immediately/)).toBeInTheDocument();
 });
 
+test("starts sealing visuals and sound only after the durable seal succeeds and ignores a double tap", async () => {
+  let finishSeal;
+  let updateRecords;
+  const sealed = capsule({ name: "Ceremony capsule", text: "Persist first", media: [] });
+  const onSeal = jest.fn(() => new Promise((resolve) => { finishSeal = () => { updateRecords([sealed]); resolve({ value: sealed }); }; }));
+  function Harness() {
+    const [records, setRecords] = useState([]);
+    updateRecords = setRecords;
+    return <TimeCapsulesPage {...baseProps} capsules={records} onSeal={onSeal} reducedMotion={false} />;
+  }
+  window.confirm = jest.fn(() => true);
+  render(<Harness />);
+  fireEvent.click(screen.getByRole("button", { name: "Create Time Capsule" }));
+  fireEvent.change(screen.getByLabelText("Visible capsule name"), { target: { value: "Ceremony capsule" } });
+  fireEvent.change(screen.getByLabelText("Private message"), { target: { value: "Persist first" } });
+  const sealButton = screen.getByRole("button", { name: "Seal Time Capsule" });
+  fireEvent.click(sealButton);
+  fireEvent.click(sealButton);
+  expect(onSeal).toHaveBeenCalledTimes(1);
+  expect(prepareCapsuleCeremonyAudio).toHaveBeenCalledWith(true);
+  expect(playCapsuleCeremonySound).not.toHaveBeenCalled();
+
+  await act(async () => finishSeal());
+  expect(playCapsuleCeremonySound).toHaveBeenCalledWith("sealing", { prepared: true });
+  expect(screen.getByText("Your memories are being sealed…")).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "Time Capsule vault sealing" })).toHaveAttribute("data-capsule-vault-state", "sealing");
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
+  expect(screen.getByRole("img", { name: "Time Capsule vault ready to open" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Open Capsule" })).toBeInTheDocument();
+});
+
+test("a failed seal never plays the success ceremony or sound", async () => {
+  const onSeal = jest.fn().mockResolvedValue({ error: "storage denied" });
+  window.confirm = jest.fn(() => true);
+  render(<TimeCapsulesPage {...baseProps} onSeal={onSeal} />);
+  fireEvent.click(screen.getByRole("button", { name: "Create Time Capsule" }));
+  fireEvent.change(screen.getByLabelText("Visible capsule name"), { target: { value: "Remain a draft" } });
+  fireEvent.change(screen.getByLabelText("Private message"), { target: { value: "Not sealed" } });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Seal Time Capsule" })); });
+  expect(screen.getByRole("alert")).toHaveTextContent("storage denied");
+  expect(screen.queryByRole("button", { name: "Skip animation" })).not.toBeInTheDocument();
+  expect(playCapsuleCeremonySound).not.toHaveBeenCalled();
+  expect(screen.getByLabelText("Private message")).toHaveValue("Not sealed");
+});
+
+test("navigation interrupts an opening ceremony, stops its sound, and cannot undo the saved opening", async () => {
+  const controller = { stop: jest.fn() };
+  playCapsuleCeremonySound.mockResolvedValueOnce(controller);
+  const openedAt = "2026-09-11T12:00:00.000Z";
+  const opened = capsule({ openedAt, updatedAt: openedAt, media: [] });
+  let updateRecords;
+  function Harness() {
+    const [visible, setVisible] = useState(true);
+    const [records, setRecords] = useState([capsule({ media: [] })]);
+    updateRecords = setRecords;
+    return visible ? <TimeCapsulesPage
+      {...baseProps}
+      capsules={records}
+      initialCapsuleId="capsule-1"
+      onBack={() => setVisible(false)}
+      onOpen={() => { updateRecords([opened]); return opened; }}
+      reducedMotion={false}
+    /> : <p>Timeline restored after saved opening</p>;
+  }
+  render(<Harness />);
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Open Capsule" })); });
+  await act(async () => {});
+  expect(screen.getByText("Your moment is opening…")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(screen.getByText("Timeline restored after saved opening")).toBeInTheDocument();
+  expect(controller.stop).toHaveBeenCalled();
+  expect(opened.openedAt).toBe(openedAt);
+});
+
+test("uses the restrained reduced-motion vault and leaves blocked or disabled sound silent", async () => {
+  const openedAt = "2026-09-11T12:00:00.000Z";
+  const opened = capsule({ openedAt, updatedAt: openedAt, media: [] });
+  let updateRecords;
+  prepareCapsuleCeremonyAudio.mockReturnValueOnce(null);
+  function Harness() {
+    const [records, setRecords] = useState([capsule({ media: [] })]);
+    updateRecords = setRecords;
+    return <TimeCapsulesPage
+      {...baseProps}
+      capsuleSounds={false}
+      capsules={records}
+      initialCapsuleId="capsule-1"
+      onOpen={() => { updateRecords([opened]); return opened; }}
+      reducedMotion
+    />;
+  }
+  render(<Harness />);
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Open Capsule" })); });
+  expect(prepareCapsuleCeremonyAudio).toHaveBeenCalledWith(false);
+  expect(playCapsuleCeremonySound).not.toHaveBeenCalled();
+  expect(screen.getByRole("img", { name: "Time Capsule vault opening" })).toHaveClass("trace-capsule-vault--reduced");
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
+  expect(screen.getByText("Private words for the future")).toBeInTheDocument();
+});
+
+test("labels multiple audio attachments as separate cards with reliable durations", async () => {
+  const media = [
+    { id: "audio-a", kind: "audio", name: "First memo.m4a", mimeType: "audio/mp4", bytes: 5, durationMs: 65000 },
+    { id: "audio-b", kind: "audio", name: "Second memo.m4a", mimeType: "audio/mp4", bytes: 6 },
+  ];
+  const loader = { load: jest.fn(({ id } = {}) => Promise.resolve({ id, unavailable: false, url: `blob:${id}` })), evict: jest.fn() };
+  loader.load.mockImplementation((id) => Promise.resolve({ id, unavailable: false, url: `blob:${id}` }));
+  render(<TimeCapsulesPage {...baseProps} capsules={[openedLifecycleCapsule({ media })]} initialCapsuleId="capsule-1" mediaLoader={loader} />);
+  expect(screen.getByText("Audio recording 1")).toBeInTheDocument();
+  expect(screen.getByText("Audio recording 2")).toBeInTheDocument();
+  expect(screen.getByText("Duration: 1:05")).toBeInTheDocument();
+  expect(await screen.findByLabelText("Play Audio recording 1: First memo.m4a")).toHaveAttribute("controls");
+  expect(await screen.findByLabelText("Play Audio recording 2: Second memo.m4a")).toHaveAttribute("controls");
+});
+
 test("reseals opened content for a future cycle while preserving identity and cleaning up playback", async () => {
   const original = openedLifecycleCapsule();
   const loader = {
@@ -221,7 +354,7 @@ test("reseals opened content for a future cycle while preserving identity and cl
   }
   window.confirm = jest.fn(() => true);
   render(<Harness />);
-  const audio = await screen.findByLabelText("secret-name.m4a");
+  const audio = await screen.findByLabelText("Play Audio recording 1: secret-name.m4a");
   audio.pause = jest.fn();
   fireEvent.click(screen.getByRole("button", { name: "Seal again for later" }));
   expect(screen.getByRole("button", { name: "1 year" })).toBeInTheDocument();
@@ -232,9 +365,11 @@ test("reseals opened content for a future cycle while preserving identity and cl
   await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Confirm seal again" })); });
 
   expect(onReseal).toHaveBeenCalledWith("capsule-1", "2028-04-17", 1);
+  expect(screen.getByText("Your memories are being sealed…")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
   expect(screen.getByText("This capsule remains sealed. Its private contents are hidden.")).toBeInTheDocument();
   expect(screen.queryByText("Private words for the future")).not.toBeInTheDocument();
-  expect(audio.pause).toHaveBeenCalledTimes(1);
+  expect(audio.pause).toHaveBeenCalled();
   expect(loader.evict).toHaveBeenCalledWith("private-audio");
   expect(original).toMatchObject({ id: "capsule-1", sealedAt: "2025-09-11T12:01:00.000Z", openedAt: "2026-09-11T12:00:00.000Z" });
 });
@@ -270,6 +405,7 @@ test("chooses audio files without exposing a capture control or affecting photo 
     mimeType: "audio/mp4",
     bytes: 4,
     blob: new Blob(["memo"], { type: "audio/mp4" }),
+    url: "blob:voice-memo",
   };
   const onStageMedia = jest.fn().mockResolvedValue([preparedAudio]);
   prepareCapsuleMediaFiles.mockResolvedValueOnce([preparedAudio]);
@@ -302,6 +438,8 @@ test("chooses audio files without exposing a capture control or affecting photo 
   }, []);
   expect(screen.getByRole("status")).toHaveTextContent("1 audio added.");
   expect(screen.getByRole("list", { name: "Draft attachments" })).toHaveTextContent("Voice Memo.m4a");
+  expect(screen.getByText("Audio recording 1")).toBeInTheDocument();
+  expect(await screen.findByLabelText("Play Audio recording 1: Voice Memo.m4a")).toHaveAttribute("controls");
 });
 
 test("paginates the capsule archive in batches of ten", () => {

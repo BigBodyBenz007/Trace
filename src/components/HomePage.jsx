@@ -19,6 +19,7 @@ import LifeCurrent, { LifeCurrentScenery } from "./LifeCurrent";
 import { LIFE_CURRENT_TRAIL_TUNING } from "./LifeCurrent";
 import StoredPhoto, { storedPhotoId } from "./StoredPhoto";
 import TimeCapsuleReadyOverlay from "./TimeCapsuleReadyOverlay";
+import TimeCapsuleVault from "./TimeCapsuleVault";
 import { PHOTO_LOAD_PRIORITY } from "../services/photoUrlLoader";
 import { acquireDocumentScrollLock } from "../services/documentScrollLock";
 import {
@@ -110,9 +111,11 @@ function capsuleTimelineLabel(capsule, today) {
   return "Sealed";
 }
 
-function CapsuleTimelineCard({ capsule, colors, onView, today, registerCard }) {
+function CapsuleTimelineCard({ capsule, colors, onView, today, registerCard, reducedMotion }) {
   const sealedDate = getTimelineDate({ timelineType: "time-capsule", capsule }, new Date());
   const sealedDateKey = localDateKey(sealedDate);
+  const state = timeCapsuleState(capsule, today);
+  const visualState = state === TIME_CAPSULE_STATE.AVAILABLE ? "ready" : state === TIME_CAPSULE_STATE.OPENED ? "opened" : "sealed";
   return (
     <button
       aria-label={`View Time Capsule ${capsule.name}`}
@@ -156,6 +159,7 @@ function CapsuleTimelineCard({ capsule, colors, onView, today, registerCard }) {
         }}
       >
         <span className="trace-timeline-capsule-card__type">Time Capsule</span>
+        <TimeCapsuleVault state={visualState} variant="timeline" reducedMotion={reducedMotion} />
         <strong className="trace-timeline-capsule-card__name">{capsule.name}</strong>
         <span>Opening date: {formatDateOnly(capsule.openOn)}</span>
         <strong>{capsuleTimelineLabel(capsule, today)}</strong>
@@ -1191,6 +1195,7 @@ function HomePage({
                                 if (element) memoryCardRefs.current.set(timelineItem.id, element);
                                 else memoryCardRefs.current.delete(timelineItem.id);
                               }}
+                              reducedMotion={reducedMotion}
                               today={timeCapsuleToday}
                             />;
                           }

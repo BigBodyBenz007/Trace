@@ -54,7 +54,7 @@ export const TRACE_STORAGE_DOMAIN_MANIFEST = Object.freeze([
   ),
   durableLocalStorage("waterEntries", "waterTracker", "Versioned water history."),
   durableLocalStorage("healthMeasurementEntries", "healthMeasurements", "Health measurement history."),
-  durableLocalStorage("appSettings", "appSettings", "Settings, Home visibility, theme, units, and motion preference."),
+  durableLocalStorage("appSettings", "appSettings", "Settings, Home visibility, theme, units, motion preference, and Time Capsule sound preference."),
   durableLocalStorage("medicationEntries", "App / medicationDoseSchedule / protocolCompoundOutcome", "Medication and supplement history."),
   durableLocalStorage("medicationCompounds", "compoundCatalog", "Saved medication and supplement compounds."),
   durableLocalStorage("medicationDoseSchedules", "medicationDoseSchedule", "Versioned dose schedules."),

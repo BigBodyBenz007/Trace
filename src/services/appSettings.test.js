@@ -13,6 +13,7 @@ test("defaults new and missing settings to Modern Heirloom schema v7", () => {
     themeId: "modern-heirloom",
     homeVisibility: DEFAULT_HOME_VISIBILITY,
     motionPreference: "standard",
+    capsuleSounds: true,
     journalPrivacy: { autoLockMinutes: 5 },
     personalDetails: { dateOfBirth: "" },
   });
@@ -31,6 +32,7 @@ test("persists normalized current settings with only themeId", () => {
     lifeCurrentThemeId: "haunted-forest",
     homeVisibility: { ...DEFAULT_HOME_VISIBILITY, workouts: false },
     motionPreference: "reduced",
+    capsuleSounds: true,
   });
 
   expect(saved).toEqual({
@@ -39,6 +41,7 @@ test("persists normalized current settings with only themeId", () => {
     themeId: "haunted-forest",
     homeVisibility: { ...DEFAULT_HOME_VISIBILITY, workouts: false },
     motionPreference: "reduced",
+    capsuleSounds: true,
     journalPrivacy: { autoLockMinutes: 5 },
     personalDetails: { dateOfBirth: "" },
   });
@@ -61,6 +64,7 @@ test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-
       themeId: lifeCurrentThemeId,
       homeVisibility: { ...DEFAULT_HOME_VISIBILITY, journal: false },
       motionPreference: "reduced",
+      capsuleSounds: true,
       journalPrivacy: { autoLockMinutes: 5 },
       personalDetails: { dateOfBirth: "" },
     });
@@ -113,6 +117,7 @@ test("schema-v3 migration preserves units, Home visibility, and Motion & Effects
     themeId: "river",
     homeVisibility,
     motionPreference: "reduced",
+    capsuleSounds: true,
     journalPrivacy: { autoLockMinutes: 5 },
     personalDetails: { dateOfBirth: "" },
   });
@@ -132,6 +137,13 @@ test("missing or invalid theme and motion values use safe defaults", () => {
   expect(normalizeAppSettings({}).themeId).toBe("modern-heirloom");
   expect(normalizeAppSettings({ themeId: "lost-world" }).themeId).toBe("modern-heirloom");
   expect(normalizeAppSettings({ motionPreference: "excessive" }).motionPreference).toBe("standard");
+});
+
+test("preserves the Capsule sounds switch and safely enables it for older settings", () => {
+  expect(normalizeAppSettings({ capsuleSounds: false }).capsuleSounds).toBe(false);
+  expect(normalizeAppSettings({ capsuleSounds: true }).capsuleSounds).toBe(true);
+  expect(normalizeAppSettings({}).capsuleSounds).toBe(true);
+  expect(normalizeAppSettings({ capsuleSounds: "off" }).capsuleSounds).toBe(true);
 });
 
 test("persists the supported water display unit and defaults invalid values", () => {

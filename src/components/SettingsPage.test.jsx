@@ -87,6 +87,25 @@ test("Motion & Effects offers exactly two accessible keyboard-operated choices",
   expect(screen.getByText("Selected").closest("label")).toHaveAttribute("data-selected", "true");
 });
 
+test("Capsule sounds is an accessible persistent switch that preserves other settings", () => {
+  const updateSettings = jest.fn(() => true);
+  const { rerender } = render(
+    <SettingsPage settings={DEFAULT_APP_SETTINGS} updateSettings={updateSettings} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />
+  );
+  const sounds = screen.getByRole("switch", { name: "Capsule sounds" });
+  expect(sounds).toBeChecked();
+  expect(sounds.closest("label")).toHaveTextContent("Attachment audio never starts automatically");
+  fireEvent.click(sounds);
+  expect(updateSettings).toHaveBeenLastCalledWith({ ...DEFAULT_APP_SETTINGS, capsuleSounds: false });
+
+  rerender(
+    <SettingsPage settings={{ ...DEFAULT_APP_SETTINGS, capsuleSounds: false }} updateSettings={updateSettings} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />
+  );
+  const disabledSounds = screen.getByRole("switch", { name: "Capsule sounds" });
+  expect(disabledSounds).not.toBeChecked();
+  expect(disabledSounds.closest("label")).toHaveTextContent("Off");
+});
+
 test("theme controls expose accessible checked states and preserve unrelated settings on save", () => {
   const updateSettings = jest.fn(() => true);
   const { rerender } = render(
@@ -351,7 +370,7 @@ test("offers accessible Home visibility switches and saves reversible choices", 
   expect(screen.getByRole("heading", { name: "Customize Home" })).toBeInTheDocument();
   expect(screen.getByRole("heading", { name: "Make Trace yours" })).toBeInTheDocument();
   expect(screen.getByText(/Hiding a tool won't delete your information/)).toBeInTheDocument();
-  expect(screen.getAllByRole("switch")).toHaveLength(9);
+  expect(screen.getAllByRole("switch")).toHaveLength(10);
   const workouts = screen.getByRole("switch", { name: "Show Workouts on Home" });
   expect(workouts).toBeChecked();
   fireEvent.click(workouts);

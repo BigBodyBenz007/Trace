@@ -4004,6 +4004,7 @@ function App({
           initialCapsuleId={timeCapsuleTargetId}
           mediaLoader={capsuleMediaUrlLoader}
           reducedMotion={reducedMotion}
+          capsuleSounds={appSettings.capsuleSounds}
           onBack={() => { setTimeCapsuleTargetId(null); setPage("home"); }}
           onBeginDraft={beginTimeCapsuleDraft}
           onPersistDraft={persistTimeCapsuleDraft}

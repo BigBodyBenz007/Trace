@@ -1547,6 +1547,7 @@ test("Settings opens and global unit preferences survive remount into a fresh He
       trophyCase: true,
     },
     motionPreference: "standard",
+    capsuleSounds: true,
     journalPrivacy: { autoLockMinutes: 5 },
     personalDetails: { dateOfBirth: "" },
   });
@@ -1603,6 +1604,21 @@ test("Motion preference applies immediately and persists after remount", () => {
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   fireEvent.click(screen.getByRole("button", { name: "Settings" }));
   expect(screen.getByRole("radio", { name: /Reduced motion/ })).toBeChecked();
+});
+
+test("Capsule sounds preference persists through Settings without changing motion", () => {
+  const first = render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  fireEvent.click(screen.getByRole("switch", { name: "Capsule sounds" }));
+  expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
+    capsuleSounds: false,
+    motionPreference: "standard",
+  });
+  first.unmount();
+
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  expect(screen.getByRole("switch", { name: "Capsule sounds" })).not.toBeChecked();
 });
 
 test("device Reduced overrides saved Standard and updates the active root state", () => {
@@ -6526,6 +6542,9 @@ test("seals for today as immediately ready while keeping contents hidden until e
   fireEvent.change(screen.getByLabelText("Custom date"), { target: { value: today } });
   await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Seal Time Capsule" })); });
 
+  expect(screen.getByText("Your memories are being sealed…")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Open Capsule" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
   expect(screen.getByText("This capsule is ready. Its contents stay hidden until you choose to open it.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Open Capsule" })).toBeInTheDocument();
   expect(screen.queryByText("Same-day private words")).not.toBeInTheDocument();
@@ -6587,6 +6606,8 @@ test("reseals an opened capsule in place, preserves opening history, and resets 
   expect(JSON.parse(localStorage.getItem("timeCapsuleReminders"))).toEqual([
     expect.objectContaining({ capsuleId: capsule.id, state: "pending", remindOn: null }),
   ]);
+  expect(screen.getByText("Your memories are being sealed…")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
   expect(screen.getByText("This capsule remains sealed. Its private contents are hidden.")).toBeInTheDocument();
   expect(screen.queryByText("Keep this private again")).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
@@ -6663,6 +6684,9 @@ test("Home reminder navigates without revealing a capsule until the explicit dur
   expect(JSON.parse(localStorage.getItem("timeCapsuleReminders"))[0].state).toBe("acknowledged");
 
   await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Open Capsule" })); });
+  expect(screen.getByText("Your moment is opening…")).toBeInTheDocument();
+  expect(screen.queryByText("Private capsule message")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
   expect(screen.getByText("Private capsule message")).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("timeCapsules"))[0].openedAt).toEqual(expect.any(String));
   expect(JSON.parse(localStorage.getItem("timeCapsuleReminders"))).toEqual([]);

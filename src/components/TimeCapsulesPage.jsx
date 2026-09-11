@@ -3,6 +3,11 @@ import { formatDateOnly } from "../services/dateOnly";
 import { ingestPhotoFiles } from "../services/photoIngestion";
 import { prepareCapsuleMediaFiles } from "../services/capsuleMedia";
 import { useStoredPhoto } from "./StoredPhoto";
+import TimeCapsuleVault from "./TimeCapsuleVault";
+import {
+  playCapsuleCeremonySound,
+  prepareCapsuleCeremonyAudio,
+} from "../services/capsuleCeremonySound";
 import {
   TIME_CAPSULE_STATE,
   addCalendarDays,
@@ -13,7 +18,18 @@ import {
 
 const AUDIO_FILE_ACCEPT = ".mp3,.m4a,.aac,.wav,.oga,.ogg,.weba,audio/mpeg,audio/mp4,audio/aac,audio/wav,audio/ogg,audio/webm";
 
-function CapsuleMedia({ item, loader }) {
+function formatDuration(durationMs) {
+  if (!Number.isFinite(durationMs) || durationMs < 0) return "";
+  const totalSeconds = Math.round(durationMs / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  return `${minutes}:${String(totalSeconds % 60).padStart(2, "0")}`;
+}
+
+function AudioIcon() {
+  return <svg aria-hidden="true" className="trace-capsule-audio-card__icon" viewBox="0 0 32 32"><path d="M12 7v15.2a4.7 4.7 0 1 1-2-3.84V10l13-3v12.2a4.7 4.7 0 1 1-2-3.84V4.5L12 7Z" fill="currentColor" /></svg>;
+}
+
+function CapsuleMedia({ item, loader, audioNumber = 1, registerPlayback }) {
   const loaded = useStoredPhoto(item, { loader });
   const elementRef = useRef(null);
   useEffect(() => () => {
@@ -21,12 +37,38 @@ function CapsuleMedia({ item, loader }) {
     loader?.evict?.(item.id);
   }, [item.id, loader]);
   const retainMediaElement = (element) => {
-    if (element) elementRef.current = element;
+    if (element) {
+      elementRef.current = element;
+      registerPlayback?.(element);
+    }
   };
+  if (item.kind === "audio") {
+    const duration = formatDuration(item.durationMs);
+    const heading = `Audio recording ${audioNumber}`;
+    return (
+      <article className="trace-capsule-audio-card">
+        <header className="trace-capsule-audio-card__header"><AudioIcon /><span><strong>{heading}</strong><span>{item.name}</span></span></header>
+        {duration && <p>Duration: {duration}</p>}
+        {loaded.url
+          ? <audio aria-label={`Play ${heading}: ${item.name}`} controls preload="metadata" ref={retainMediaElement} src={loaded.url} />
+          : <p>{loaded.unavailable ? "Audio unavailable." : "Loading audio…"}</p>}
+      </article>
+    );
+  }
   if (!loaded.url) return <p>Attachment unavailable.</p>;
   if (item.kind === "photo") return <img alt={item.name} src={loaded.url} className="trace-capsule-media__photo" />;
-  if (item.kind === "audio") return <audio aria-label={item.name} controls preload="metadata" ref={retainMediaElement} src={loaded.url} />;
   return <video aria-label={item.name} controls playsInline preload="metadata" ref={retainMediaElement} src={loaded.url} />;
+}
+
+function vaultState(capsule, today) {
+  const state = timeCapsuleState(capsule, today);
+  if (state === TIME_CAPSULE_STATE.AVAILABLE) return "ready";
+  if (state === TIME_CAPSULE_STATE.OPENED) return "opened";
+  return "sealed";
+}
+
+function audioNumberAt(items, index) {
+  return items.slice(0, index + 1).filter(({ kind }) => kind === "audio").length;
 }
 
 function visibleState(capsule, today) {
@@ -41,6 +83,7 @@ export default function TimeCapsulesPage({
   initialCapsuleId,
   mediaLoader,
   reducedMotion,
+  capsuleSounds = true,
   onBack,
   onBeginDraft,
   onPersistDraft,
@@ -61,10 +104,14 @@ export default function TimeCapsulesPage({
   const [status, setStatus] = useState(draft ? "Your unfinished Time Capsule draft was restored." : "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [ceremony, setCeremony] = useState(false);
+  const [ceremony, setCeremony] = useState(null);
   const [resealOpen, setResealOpen] = useState(false);
   const [resealOn, setResealOn] = useState(() => addCalendarYears(today, 1));
   const ceremonyTimerRef = useRef(null);
+  const ceremonySoundRef = useRef(null);
+  const ceremonyTokenRef = useRef(0);
+  const actionInFlightRef = useRef(false);
+  const playbackElementsRef = useRef(new Set());
   const selected = capsules.find(({ id }) => id === selectedId) || null;
   const sorted = useMemo(() => [...capsules].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [capsules]);
 
@@ -72,7 +119,62 @@ export default function TimeCapsulesPage({
     if (initialCapsuleId) { setSelectedId(initialCapsuleId); setMode("detail"); }
   }, [initialCapsuleId]);
 
-  useEffect(() => () => clearTimeout(ceremonyTimerRef.current), []);
+  function stopUserMediaPlayback() {
+    playbackElementsRef.current.forEach((element) => { try { element.pause?.(); } catch (error) {} });
+  }
+
+  function finishCeremony(token = ceremonyTokenRef.current) {
+    if (token !== ceremonyTokenRef.current) return;
+    ceremonyTokenRef.current += 1;
+    clearTimeout(ceremonyTimerRef.current);
+    ceremonySoundRef.current?.stop?.();
+    ceremonySoundRef.current = null;
+    setCeremony(null);
+  }
+
+  function cancelTransientEffects() {
+    ceremonyTokenRef.current += 1;
+    clearTimeout(ceremonyTimerRef.current);
+    ceremonySoundRef.current?.stop?.();
+    ceremonySoundRef.current = null;
+    stopUserMediaPlayback();
+    setCeremony(null);
+  }
+
+  function startCeremony(kind, preparedAudio) {
+    const token = ++ceremonyTokenRef.current;
+    const duration = reducedMotion ? 500 : kind === "opening" ? 3600 : 2600;
+    setCeremony({ kind, token });
+    clearTimeout(ceremonyTimerRef.current);
+    ceremonyTimerRef.current = setTimeout(() => finishCeremony(token), duration);
+    if (preparedAudio) {
+      playCapsuleCeremonySound(kind, preparedAudio).then((controller) => {
+        if (token !== ceremonyTokenRef.current) controller?.stop?.();
+        else ceremonySoundRef.current = controller;
+      }).catch(() => {});
+    }
+  }
+
+  useEffect(() => () => {
+    ceremonyTokenRef.current += 1;
+    clearTimeout(ceremonyTimerRef.current);
+    ceremonySoundRef.current?.stop?.();
+    playbackElementsRef.current.forEach((element) => { try { element.pause?.(); } catch (error) {} });
+  }, []);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState !== "hidden") return;
+      ceremonyTokenRef.current += 1;
+      clearTimeout(ceremonyTimerRef.current);
+      ceremonySoundRef.current?.stop?.();
+      ceremonySoundRef.current = null;
+      playbackElementsRef.current.forEach((element) => { try { element.pause?.(); } catch (error) {} });
+      setCeremony(null);
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, []);
 
   useEffect(() => {
     setResealOpen(false);
@@ -91,6 +193,7 @@ export default function TimeCapsulesPage({
       setError("Trace could not save the latest draft. Retry before leaving so your changes are not lost.");
       return;
     }
+    cancelTransientEffects();
     onBack();
   }
 
@@ -140,43 +243,54 @@ export default function TimeCapsulesPage({
   }
 
   async function seal() {
+    if (actionInFlightRef.current) return;
     if (!window.confirm("Seal this Time Capsule? Its contents cannot be edited afterward. Trace hides sealed contents in the app, but this is not encryption or a tamper-proof time lock. Device-date changes can affect availability, and backups are not encrypted by this feature.")) return;
+    const preparedAudio = prepareCapsuleCeremonyAudio(capsuleSounds);
+    actionInFlightRef.current = true;
     setBusy(true); setError("");
     try {
       const result = await onSeal(form, media);
       if (!result?.value) { setError(result?.error || "This capsule could not be sealed."); return; }
+      stopUserMediaPlayback();
       setSelectedId(result.value.id); setMode("detail"); setMedia([]); setStatus("Time Capsule sealed.");
+      startCeremony("sealing", preparedAudio);
     } catch (reason) { setError(reason.message || "Trace could not seal this capsule. Your draft remains available."); }
-    finally { setBusy(false); }
+    finally { actionInFlightRef.current = false; setBusy(false); }
   }
 
   async function openSelected() {
+    if (actionInFlightRef.current || ceremony) return;
+    const preparedAudio = prepareCapsuleCeremonyAudio(capsuleSounds);
+    actionInFlightRef.current = true;
     setBusy(true); setError("");
     try {
       const opened = await onOpen(selected.id);
       if (!opened) { setError("Trace could not save the opening. The contents remain sealed; try again."); return; }
-      if (!reducedMotion) {
-        setCeremony(true);
-        ceremonyTimerRef.current = setTimeout(() => setCeremony(false), 900);
-      }
+      startCeremony("opening", preparedAudio);
     } catch (reason) {
       setError("Trace could not save the opening. The contents remain sealed; try again.");
     } finally {
+      actionInFlightRef.current = false;
       setBusy(false);
     }
   }
 
   async function resealSelected() {
+    if (actionInFlightRef.current || ceremony) return;
     if (!window.confirm(`Seal ${selected.name} again until ${formatDateOnly(resealOn)}? Its contents will be hidden in Trace, but this does not revoke copies exported earlier.`)) return;
+    const preparedAudio = prepareCapsuleCeremonyAudio(capsuleSounds);
+    actionInFlightRef.current = true;
     setBusy(true); setError("");
     try {
       const result = await onReseal(selected.id, resealOn, selected.sealCycle?.number || 1);
       if (!result?.value) { setError(result?.error || "This capsule could not be sealed again."); return; }
+      stopUserMediaPlayback();
       setResealOpen(false);
       setStatus("Time Capsule sealed again for a future opening.");
+      startCeremony("sealing", preparedAudio);
     } catch (reason) {
       setError(reason.message || "This capsule could not be sealed again. Its opened state is unchanged.");
-    } finally { setBusy(false); }
+    } finally { actionInFlightRef.current = false; setBusy(false); }
   }
 
   if (mode === "edit") return (
@@ -201,7 +315,12 @@ export default function TimeCapsulesPage({
           <label>Record video<input type="file" accept="video/*" capture="environment" disabled={busy} onChange={(event) => selectFiles("video", event)} /></label>
         </div>
         <p>On iPhone, save or share a Voice Memo to Files first, then choose it here.</p>
-        {media.length > 0 && <ul aria-label="Draft attachments">{media.map((item) => <li key={item.id}>{item.kind}: {item.name} ({Math.ceil(item.bytes / 1024)} KiB) <button type="button" disabled={busy} onClick={() => remove(item)}>Remove</button></li>)}</ul>}
+        {media.length > 0 && <ul aria-label="Draft attachments" className="trace-capsule-draft-attachments">{media.map((item, index) => <li key={item.id}>
+          {item.kind === "audio"
+            ? <CapsuleMedia item={item} loader={mediaLoader} audioNumber={audioNumberAt(media, index)} registerPlayback={(element) => playbackElementsRef.current.add(element)} />
+            : <span>{item.kind}: {item.name} ({Math.ceil(item.bytes / 1024)} KiB)</span>}
+          <button type="button" disabled={busy} onClick={() => remove(item)}>Remove</button>
+        </li>)}</ul>}
         <div className="trace-capsule-actions"><button type="button" disabled={busy} onClick={seal}>Seal Time Capsule</button><button type="button" disabled={busy} onClick={discard}>Discard draft</button></div>
       </section>
     </main>
@@ -213,18 +332,26 @@ export default function TimeCapsulesPage({
     return (
       <main className="trace-feature-page trace-feature-page--capsules">
         <nav aria-label="Time Capsule detail navigation" className="trace-capsule-detail-navigation">
-          <button type="button" onClick={() => { setMode("archive"); setSelectedId(null); }}>Back to Time Capsules</button>
-          <button type="button" onClick={onBack}>Back to Timeline</button>
+          <button type="button" onClick={() => { cancelTransientEffects(); setMode("archive"); setSelectedId(null); }}>Back to Time Capsules</button>
+          <button type="button" onClick={() => { cancelTransientEffects(); onBack(); }}>Back to Timeline</button>
         </nav>
         <article className="trace-feature-surface trace-capsule-detail">
           <p className="trace-feature-page__kicker">{visibleState(selected, today)}</p><h1>{selected.name}</h1><p>Opening date: {formatDateOnly(selected.openOn)}</p>
           {error && <p role="alert">{error}</p>}{status && <p role="status">{status}</p>}
-          {!opened && state === TIME_CAPSULE_STATE.SEALED && <p>This capsule remains sealed. Its private contents are hidden.</p>}
-          {!opened && state === TIME_CAPSULE_STATE.AVAILABLE && <><p>This capsule is ready. Its contents stay hidden until you choose to open it.</p><button type="button" disabled={busy} onClick={openSelected}>Open Capsule</button></>}
-          {ceremony && <div className="trace-capsule-ceremony" role="status"><strong>Your moment is opening…</strong></div>}
-          {opened && !ceremony && <section aria-label="Opened capsule contents"><p className="trace-capsule-private-text">{selected.text}</p><div className="trace-capsule-media">{selected.media.map((item) => <CapsuleMedia item={item} key={item.id} loader={mediaLoader} />)}</div></section>}
-          {opened && !resealOpen && <button type="button" disabled={busy} onClick={() => setResealOpen(true)}>Seal again for later</button>}
-          {opened && resealOpen && (
+          <TimeCapsuleVault
+            reducedMotion={reducedMotion}
+            state={ceremony?.kind || vaultState(selected, today)}
+            statusText={ceremony?.kind === "opening" ? "Unlocking your memory vault" : ceremony?.kind === "sealing" ? "Securing your memory vault" : ""}
+          />
+          {!ceremony && !opened && state === TIME_CAPSULE_STATE.SEALED && <p>This capsule remains sealed. Its private contents are hidden.</p>}
+          {!ceremony && !opened && state === TIME_CAPSULE_STATE.AVAILABLE && <><p>This capsule is ready. Its contents stay hidden until you choose to open it.</p><button type="button" disabled={busy} onClick={openSelected}>Open Capsule</button></>}
+          {ceremony && <section aria-live="polite" className={`trace-capsule-ceremony trace-capsule-ceremony--${ceremony.kind}`} role="status">
+            <strong>{ceremony.kind === "opening" ? "Your moment is opening…" : "Your memories are being sealed…"}</strong>
+            <button type="button" onClick={() => finishCeremony(ceremony.token)}>Skip animation</button>
+          </section>}
+          {opened && !ceremony && <section aria-label="Opened capsule contents"><p className="trace-capsule-private-text">{selected.text}</p><div className="trace-capsule-media">{selected.media.map((item, index) => <CapsuleMedia item={item} key={item.id} loader={mediaLoader} audioNumber={audioNumberAt(selected.media, index)} registerPlayback={(element) => playbackElementsRef.current.add(element)} />)}</div></section>}
+          {opened && !ceremony && !resealOpen && <button type="button" disabled={busy} onClick={() => setResealOpen(true)}>Seal again for later</button>}
+          {opened && !ceremony && resealOpen && (
             <section aria-label="Seal again for later" className="trace-capsule-reseal">
               <h2>Seal again for later</h2>
               <p>Choose a strictly future local date. Capsule content cannot be edited here, and previously exported copies are not revoked.</p>
@@ -238,7 +365,7 @@ export default function TimeCapsulesPage({
               </div>
             </section>
           )}
-          <button type="button" onClick={async () => { if (window.confirm(`Delete ${selected.name}? This permanently removes the capsule and its attachments.`) && await onDelete(selected.id)) { setMode("archive"); setSelectedId(null); } }}>Delete Time Capsule</button>
+          <button type="button" disabled={Boolean(ceremony) || busy} onClick={async () => { if (window.confirm(`Delete ${selected.name}? This permanently removes the capsule and its attachments.`) && await onDelete(selected.id)) { setMode("archive"); setSelectedId(null); } }}>Delete Time Capsule</button>
         </article>
       </main>
     );
@@ -252,6 +379,7 @@ export default function TimeCapsulesPage({
       <section aria-label="Time Capsule archive" className="trace-capsule-archive">
         {sorted.length === 0 ? <p>No Time Capsules yet.</p> : sorted.slice(0, visibleCount).map((capsule) => (
           <article className="trace-feature-surface trace-capsule-card" key={capsule.id}>
+            <TimeCapsuleVault state={vaultState(capsule, today)} variant="compact" reducedMotion={reducedMotion} />
             <h2>{capsule.name}</h2><p>{formatDateOnly(capsule.openOn)}</p><strong>{visibleState(capsule, today)}</strong>
             <button type="button" onClick={() => { setSelectedId(capsule.id); setMode("detail"); }}>View Time Capsule</button>
           </article>
