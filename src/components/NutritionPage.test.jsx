@@ -1251,6 +1251,81 @@ test("selects a square-cut pizza slice, logs two slices, and preserves unknown n
   });
 });
 
+test("logs two Little Caesars slices against the selected slice serving", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "little caesars classic pepperoni" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Little Caesars.*Classic Pepperoni Pizza/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  expect(sizeSelect).toHaveDisplayValue(/1 slice.*8 slices per pizza/i);
+  expect(form.getByLabelText("Calories")).toHaveValue(287.5);
+
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "2" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(575);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Classic Pepperoni Pizza",
+    calories: 575,
+    protein: 27.25,
+    carbohydrates: 62.5,
+    fat: 24.25,
+    sodium: 1262.5,
+    fiber: 3.25,
+    portion: {
+      amount: 2,
+      basis: { description: expect.stringContaining("8 slices per pizza") },
+    },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "little-caesars",
+      restaurantName: "Little Caesars",
+      sourceId: "little-caesars:classic-pepperoni-pizza:slice",
+    },
+  });
+});
+
+test("saves a calculated Marco's whole-pizza option without filling unknown nutrients", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "marcos cheese pizza" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Marco's Pizza.*Cheese Pizza/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  fireEvent.change(sizeSelect, {
+    target: { value: "restaurant:marcos-pizza:cheese-pizza:small-original:whole" },
+  });
+  expect(sizeSelect).toHaveDisplayValue(/Whole.*10-inch Small Original Crust.*6 slices/i);
+  expect(form.getByLabelText("Calories")).toHaveValue(1260);
+  expect(form.getByLabelText("Fiber (g)")).toHaveValue(null);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Cheese Pizza",
+    calories: 1260,
+    protein: 48,
+    carbohydrates: 144,
+    fat: 48,
+    sodium: 2520,
+    fiber: null,
+    portion: {
+      amount: 1,
+      basis: { description: expect.stringContaining("6 slices") },
+    },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "marcos-pizza",
+      restaurantName: "Marco's Pizza",
+      sourceId: "marcos-pizza:cheese-pizza:small-original:whole",
+    },
+  });
+});
+
 test("normal Sonic and Braum's items log with chain identity and known sodium", () => {
   const props = renderNutritionPage();
 

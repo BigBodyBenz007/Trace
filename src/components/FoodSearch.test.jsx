@@ -290,6 +290,42 @@ test("discovers and selects pizza-chain records with ordinary brand spellings", 
   }));
 });
 
+test("discovers and selects Little Caesars, Hideaway, and Marco's pizza records", () => {
+  const onSelectFood = renderFoodSearch();
+
+  searchFor("little caesars classic pepperoni");
+  let result = screen.getByRole("button", { name: /Little Caesars.*Classic Pepperoni Pizza/i });
+  expect(result).toHaveTextContent("1 slice");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:little-caesars:classic-pepperoni-pizza",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:little-caesars:classic-pepperoni-pizza:whole" }),
+    ]),
+  }));
+
+  searchFor("hideaway pepperonipalooza");
+  result = screen.getByRole("button", { name: /Hideaway Pizza.*Pepperonipalooza/i });
+  expect(result).toHaveTextContent("10-inch Small hand-tossed");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:hideaway-pizza:pepperonipalooza",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:hideaway-pizza:pepperonipalooza:thin-large-16" }),
+    ]),
+  }));
+
+  searchFor("marcos pepperoni magnifico");
+  result = screen.getByRole("button", { name: /Marco's Pizza · Pepperoni Magnifico Pizza\s+Restaurant/i });
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:marcos-pizza:pepperoni-magnifico-pizza",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:marcos-pizza:pepperoni-magnifico-pizza:extra-large-original:whole" }),
+    ]),
+  }));
+});
+
 test("shows branded-drink source, package, caffeine, and unknown nutrient details", () => {
   const onSelectFood = renderFoodSearch();
   searchFor("monster ultra zero");

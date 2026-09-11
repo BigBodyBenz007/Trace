@@ -3726,6 +3726,309 @@ const papaJohnsFoods = [
   ], [`Papa Johns ${flavor} boneless wings`, `Papa Johns ${flavor} bone in wings`])),
 ];
 
+const littleCaesars = { id: "little-caesars", name: "Little Caesars" };
+const LITTLE_CAESARS_SOURCE = "https://littlecaesars.com/static/usnutritionguide.pdf";
+const LITTLE_CAESARS_REFERENCE = "Little Caesars official U.S. Nutrition Guide, ©2026 LCE; values are for the named whole product or published order. Large round, thin-crust, and Detroit-style pizzas use the standard published 8-slice cut; accessed September 10, 2026.";
+const littleCaesarsFood = (id, name, description, nutrients, servingOptions, aliases, sourceReference = LITTLE_CAESARS_REFERENCE) => menuFood(
+  littleCaesars, LITTLE_CAESARS_SOURCE, sourceReference, id, name, description, nutrients, servingOptions,
+  [`Little Caesar's ${name}`, `Little Caesars ${name}`, ...(aliases || [])]
+);
+const littleCaesarsOption = (id, description, nutrients, amount = 1, sourceReference = LITTLE_CAESARS_REFERENCE) => expansionMenuOption(
+  littleCaesars, LITTLE_CAESARS_SOURCE, sourceReference, id, description, nutrients, amount
+);
+const littleCaesarsPizzaRows = [
+  ["classic-cheese-pizza", "Classic Cheese Pizza", "14-inch large round classic", [1950, 95, 248, 65, 3740, 12, 17]],
+  ["classic-pepperoni-pizza", "Classic Pepperoni Pizza", "14-inch large round classic", [2300, 109, 250, 97, 5050, 13, 19]],
+  ["classic-italian-sausage-pizza", "Classic Italian Sausage Pizza", "14-inch large round classic", [2270, 111, 255, 91, 4480, 13, 17]],
+  ["extramostbestest-cheese-pizza", "ExtraMostBestest Cheese Pizza", "14-inch large round", [2220, 117, 252, 84, 4430, 13, 17]],
+  ["extramostbestest-pepperoni-pizza", "ExtraMostBestest Pepperoni Pizza", "14-inch large round", [2500, 122, 252, 113, 5640, 13, 19]],
+  ["extramostbestest-italian-sausage-pizza", "ExtraMostBestest Italian Sausage Pizza", "14-inch large round", [2660, 129, 252, 128, 5680, 13, 19]],
+  ["five-meat-feast-pizza", "5 Meat Feast Pizza", "14-inch large round specialty", [2830, 139, 252, 142, 7120, 13, 20]],
+  ["ultimate-supreme-pizza", "Ultimate Supreme Pizza", "14-inch large round specialty", [2500, 118, 259, 112, 5780, 15, 23]],
+  ["three-meat-treat-pizza", "3 Meat Treat Pizza", "14-inch large round specialty", [2860, 135, 252, 147, 6590, 13, 20]],
+  ["hula-hawaiian-pizza", "Hula Hawaiian Pizza", "14-inch large round specialty", [2180, 121, 272, 70, 5570, 13, 35]],
+  ["veggie-pizza", "Veggie Pizza", "14-inch large round specialty", [2240, 100, 266, 84, 5430, 20, 25]],
+  ["stuffed-crust-pepperoni-pizza", "Stuffed Crust Pepperoni Pizza", "14-inch large stuffed crust", [2980, 144, 259, 153, 7040, 13, 20]],
+  ["pretzel-crust-pepperoni-pizza-pizza-sauce", "Pretzel Crust Pepperoni Pizza with Pizza Sauce", "14-inch large pretzel crust with pizza sauce", [2080, 91, 240, 85, 10500, 11, 14]],
+  ["pretzel-crust-cheese-pizza-cheese-sauce", "Pretzel Crust Cheese Pizza with Cheese Sauce", "14-inch large pretzel crust with cheese sauce", [1940, 85, 243, 71, 10080, 9, 12]],
+  ["pretzel-crust-pepperoni-pizza-cheese-sauce", "Pretzel Crust Pepperoni Pizza with Cheese Sauce", "14-inch large pretzel crust with cheese sauce", [2190, 94, 244, 93, 10980, 9, 13]],
+  ["detroit-style-deep-dish-cheese-pizza", "Detroit-Style Deep Dish Cheese Pizza", "large Detroit-style deep dish", [2500, 118, 317, 85, 4230, 16, 19]],
+  ["detroit-style-deep-dish-pepperoni-pizza", "Detroit-Style Deep Dish Pepperoni Pizza", "large Detroit-style deep dish", [2770, 129, 319, 111, 5280, 16, 20]],
+  ["detroit-style-deep-dish-italian-sausage-pizza", "Detroit-Style Deep Dish Italian Sausage Pizza", "large Detroit-style deep dish", [2820, 133, 319, 114, 5130, 16, 20]],
+  ["detroit-style-deep-dish-ultimate-supreme-pizza", "Detroit-Style Deep Dish Ultimate Supreme Pizza", "large Detroit-style deep dish specialty", [3050, 141, 332, 130, 6270, 20, 27]],
+  ["detroit-style-deep-dish-three-meat-treat-pizza", "Detroit-Style Deep Dish 3 Meat Treat Pizza", "large Detroit-style deep dish specialty", [3480, 159, 321, 175, 7240, 16, 22]],
+  ["detroit-style-deep-dish-hula-hawaiian-pizza", "Detroit-Style Deep Dish Hula Hawaiian Pizza", "large Detroit-style deep dish specialty", [2690, 137, 341, 88, 5610, 17, 37]],
+  ["detroit-style-deep-dish-veggie-pizza", "Detroit-Style Deep Dish Veggie Pizza", "large Detroit-style deep dish specialty", [2730, 123, 333, 99, 5760, 22, 26]],
+  ["detroit-style-deep-dish-five-meat-feast-pizza", "Detroit-Style Deep Dish 5 Meat Feast Pizza", "large Detroit-style deep dish specialty", [3500, 171, 322, 172, 8140, 16, 23]],
+  ["thin-crust-cheese-pizza", "Thin Crust Cheese Pizza", "14-inch large thin crust", [1980, 99, 150, 109, 3390, 10, 3]],
+  ["thin-crust-pepperoni-pizza", "Thin Crust Pepperoni Pizza", "14-inch large thin crust", [2130, 94, 148, 128, 4270, 9, 5]],
+];
+const littleCaesarsPizzaFoods = littleCaesarsPizzaRows.map(([id, name, configuration, values]) => {
+  const whole = menuPublished(...values);
+  const slice = scalePublished(whole, 1 / 8);
+  return littleCaesarsFood(id, name, `Choose a calculated slice or the published whole ${configuration} pizza`, null, [
+    littleCaesarsOption(`${id}:slice`, `1 slice — ${configuration} ${name} (8 slices per pizza; calculated from published whole-pizza nutrition)`, slice),
+    littleCaesarsOption(`${id}:whole`, `Whole ${configuration} ${name} (8 slices; nutrition published for the whole pizza)`, whole),
+  ]);
+});
+const littleCaesarsFlatRows = [
+  ["slices-n-stix", "Slices-N-Stix", "1 complete hybrid pizza-and-cheese-sticks product; published whole-item nutrition", [2300,107,253,97,5220,13,20]],
+  ["slices-n-stix-bacon", "Slices-N-Stix Bacon", "1 complete hybrid pizza-and-bacon-cheese-sticks product; published whole-item nutrition", [2980,116,252,115,5560,13,19]],
+  ["slices-n-stix-jalapeno", "Slices-N-Stix Jalapeño", "1 complete hybrid pizza-and-jalapeño-cheese-sticks product; published whole-item nutrition", [2330,107,255,99,6000,15,20]],
+  ["crazy-bread", "Crazy Bread", "Complete 8-piece order; dipping sauce excluded", [800, 25, 128, 22, 1290, 5, 6]],
+  ["crazy-combo", "Crazy Combo", "8 Crazy Bread pieces with 1 Crazy Sauce cup included", [840, 26, 135, 22, 1860, 6, 10]],
+  ["crazy-sauce", "Crazy Sauce", "1 separately listed sauce cup", [30, 1, 7, 0, 570, 2, 4]],
+  ["italian-cheese-bread", "Italian Cheese Bread", "Complete 10-piece order; dipping sauce excluded", [1340, 59, 156, 54, 2250, 7, 8]],
+  ["pepperoni-cheese-bread", "Pepperoni Cheese Bread", "Complete 10-piece order; dipping sauce excluded", [1520, 66, 155, 71, 2840, 7, 7]],
+  ["zesty-cheese-bread", "Zesty Cheese Bread", "Complete 10-piece participating-location order; dipping sauce excluded", [1490, 55, 158, 71, 2540, 7, 10]],
+  ["stuffed-crazy-bread-combo", "Stuffed Crazy Bread Combo", "3 Stuffed Crazy Bread pieces with 1 Crazy Sauce cup included", [980, 36, 126, 38, 2200, 6, 10]],
+  ["pepperoni-crazy-puffs", "Pepperoni Crazy Puffs", "Complete 4-piece order", [680, 34, 56, 36, 1520, 3, 4]],
+  ["four-cheese-crazy-puffs", "4 Cheese Crazy Puffs", "Complete 4-piece order", [580, 30, 56, 26, 1230, 3, 3]],
+  ["cookie-dough-brownie-mms", "Cookie Dough Brownie with M&M's Minis", "1 complete package", [840, 12, 96, 44, 300, 4, 68]],
+  ["cheezy-jalapeno-caesar-dip", "Cheezy Jalapeño Caesar Dip", "1 dip cup", [210, 1, 3, 21, 460, 0, 2]],
+  ["ranch-caesar-dip", "Ranch Caesar Dip", "1 dip cup", [230, 2, 4, 23, 480, 0, 3]],
+  ["buffalo-ranch-caesar-dip", "Buffalo Ranch Caesar Dip", "1 dip cup", [230, 1, 4, 23, 580, 0, 3]],
+  ["butter-garlic-caesar-dip", "Butter Garlic Caesar Dip", "1 dip cup", [370, 0, 0, 42, 330, 0, 0]],
+  ["cheddar-cheese-sauce", "Cheddar Cheese Sauce", "1 sauce cup", [110, 4, 7, 8, 770, 0, 2]],
+];
+const littleCaesarsWingRows = [
+  ["oven-roasted-caesar-wings", "Oven Roasted Caesar Wings", [510, 47, 3, 35, 1740, null, 0]],
+  ["buffalo-caesar-wings", "Buffalo Caesar Wings", [520, 47, 7, 35, 3330, null, 0]],
+  ["bbq-caesar-wings", "BBQ Caesar Wings", [620, 48, 32, 35, 2300, 0, 24]],
+  ["garlic-parmesan-caesar-wings", "Garlic Parmesan Caesar Wings", [670, 49, 5, 51, 2510, 0, 0]],
+];
+const littleCaesarsFoods = [
+  ...littleCaesarsPizzaFoods,
+  ...littleCaesarsFlatRows.map(([id, name, description, values]) => littleCaesarsFood(id, name, description, menuPublished(...values))),
+  ...littleCaesarsWingRows.map(([id, name, values]) => littleCaesarsFood(id, name, "8 wings with named preparation or sauce included; separate dip excluded", menuPublished(...values), undefined, ["Little Caesars wings"])),
+];
+
+const hideaway = { id: "hideaway-pizza", name: "Hideaway Pizza" };
+const HIDEAWAY_SOURCE = "https://www.hideawaypizza.com/s/Hideaway-Pizza-Nutrition-Information.pdf";
+const HIDEAWAY_REFERENCE = "Hideaway Pizza official Nutrition Information guide, still published and linked from the U.S. menu; nutrients are for the named item and serving, accessed September 10, 2026. Menu and supplier availability can vary by location.";
+const hideawayFood = (id, name, description, nutrients, servingOptions, aliases, sourceReference = HIDEAWAY_REFERENCE) => menuFood(
+  hideaway, HIDEAWAY_SOURCE, sourceReference, id, name, description, nutrients, servingOptions,
+  [`Hideaway ${name}`, ...(aliases || [])]
+);
+const hideawayOption = (id, description, nutrients, amount = 1, sourceReference = HIDEAWAY_REFERENCE) => expansionMenuOption(
+  hideaway, HIDEAWAY_SOURCE, sourceReference, id, description, nutrients, amount
+);
+const hideawayPizzaRows = [
+  ["third-street-special", "3rd Street Special", [[287,15,22,15,738,1,2],[345,18,28,17,844,1,3],[403,21,34,20,948,1,3]], [[368,15,33,20,862,1,4],[416,17,38,22,966,1,4],[457,18,40,24,1060,1,4]]],
+  ["big-country", "Big Country", [[270,14,20,14,660,null,2],[330,18,26,17,780,null,3],[390,21,32,20,900,null,3]], [[310,13,25,18,740,null,3],[350,15,26,20,840,null,3],[420,18,33,24,970,null,4]]],
+  ["chicken-florentine", "Chicken Florentine", [[220,10,19,11,400,null,1],[280,13,25,14,490,null,2],[350,16,30,17,590,null,2]], [[260,9,24,14,480,null,2],[290,11,25,17,550,null,2],[370,13,32,21,670,null,3]]],
+  ["cimarron", "Cimarron", [[330,19,20,20,860,null,1],[400,22,27,23,1000,null,2],[490,27,33,28,1180,null,2]], [[380,17,26,23,940,null,2],[420,20,26,26,1060,null,2],[510,24,34,32,1250,null,3]]],
+  ["da-bomb", "Da Bomb", [[220,11,21,10,500,null,3],[290,15,28,13,650,null,4],[350,18,33,16,750,null,4]], [[270,10,26,13,580,null,4],[300,12,28,16,700,null,5],[380,15,35,20,830,null,5]]],
+  ["dermers-bbq-chicken", "Dermer's BBQ Chicken", [[180,10,24,5,430,null,6],[250,14,31,7,560,null,7],[300,17,36,9,640,null,7]], [[230,9,29,9,510,null,7],[260,12,31,10,620,null,8],[320,14,37,13,720,null,8]]],
+  ["hideaway-special", "Hideaway Special", [[250,12,21,13,640,null,3],[310,15,28,15,750,1,3],[400,20,34,21,960,1,4]], [[300,11,26,17,720,null,3],[330,13,28,18,810,1,4],[430,17,35,25,1040,1,5]]],
+  ["hurricane", "Hurricane", [[210,12,21,9,540,null,3],[270,15,27,11,660,null,3],[320,17,33,13,730,null,4]], [[260,10,26,12,620,null,4],[280,12,27,14,720,null,4],[350,14,34,17,810,null,5]]],
+  ["maui-magic", "Maui Magic", [[170,9,22,5,360,null,5],[230,12,28,7,450,null,5],[290,16,34,9,580,null,6]], [[220,8,27,9,440,null,6],[240,10,28,10,500,null,6],[310,13,36,13,650,null,7]]],
+  ["paradise-pie", "Paradise Pie", [[240,13,19,12,470,null,2],[300,16,25,14,570,null,2],[350,19,30,17,660,null,2]], [[280,12,24,15,550,null,3],[310,14,25,17,620,null,3],[380,16,32,21,740,null,4]]],
+  ["pepperonipalooza", "Pepperonipalooza", [[220,11,19,11,500,null,2],[320,16,25,16,730,null,2],[400,20,31,21,910,null,2]], [[270,10,24,14,580,null,3],[330,13,25,19,780,null,3],[420,17,32,25,990,null,4]]],
+  ["pollinator", "Pollinator", [[243,11,21,12,525,null,5],[313,14,28,16,617,null,6],[374,16,34,18,734,null,6]], [[327,10,33,17,650,null,6],[384,12,37,21,739,null,7],[429,14,40,23,846,null,8]]],
+  ["sicilian", "Sicilian", [[330,16,21,21,840,null,2],[410,20,27,25,990,null,2],[480,24,33,28,1140,1,3]], [[380,15,26,24,920,null,3],[430,18,27,28,1050,null,3],[510,21,35,32,1220,1,4]]],
+  ["the-atw", "The ATW", [[230,10,21,12,520,null,2],[290,13,27,14,630,null,3],[350,16,33,17,740,null,3]], [[280,9,26,15,600,null,3],[300,10,27,17,690,null,4],[380,13,34,21,820,null,4]]],
+  ["the-boz", "The Boz", [[270,13,20,15,690,null,2],[330,16,27,17,820,null,3],[390,19,33,20,920,null,3]], [[310,11,26,18,770,null,3],[340,13,27,20,870,null,4],[410,16,34,24,990,null,4]]],
+  ["the-capone", "The Capone", [[290,14,21,17,740,null,2],[360,17,28,20,860,null,3],[430,20,33,23,980,null,3]], [[340,12,26,20,820,null,3],[370,14,28,23,920,null,3],[450,17,35,27,1050,null,4]]],
+  ["the-xtreme", "The Xtreme", [[320,14,22,19,1120,null,2],[380,18,29,21,1270,null,3],[450,21,35,25,1410,1,3]], [[360,13,27,22,1200,null,3],[390,15,29,24,1320,null,4],[470,18,36,29,1490,1,4]]],
+];
+const hideawayCalculatedPizzaRows = [
+  ["cheese-pizza", "Cheese Pizza", [[155,8,18,4.5,260,null,null],[210,10,26,6.5,360,null,null],[260,13,31,8,430,null,null]], [[195,6,23,8,340,null,null],[220,7,25,9.5,415,null,null],[280,10,32,12,510,null,null]]],
+  ["pepperoni-pizza", "Pepperoni Pizza", [[190,10,18,8,390,null,null],[255,12,26,10.5,520,null,null],[310,15,31,13,620,null,null]], [[230,8,23,11.5,470,null,null],[265,9,25,13.5,575,null,null],[330,12,32,17,700,null,null]]],
+];
+const HIDEAWAY_CALCULATED_PIZZA_REFERENCE = `${HIDEAWAY_REFERENCE} Cheese and pepperoni configurations are calculated per slice from the guide's matching crust, Hideaway Red Sauce, mozzarella, and (for pepperoni) pepperoni component rows; unpublished component nutrients remain unknown.`;
+const hideawayCalculatedPizzaFoods = hideawayCalculatedPizzaRows.map(([id, name, handTossed, thin]) => hideawayFood(
+  id,
+  name,
+  `Calculated standard build with Hideaway Red Sauce and mozzarella${id === "pepperoni-pizza" ? " plus pepperoni" : ""}; choose a size and crust. No whole-pizza option is offered because the source does not publish slice counts.`,
+  null,
+  [
+    ...[["small-10", "10-inch Small"], ["medium-13", "13-inch Medium"], ["large-16", "16-inch Large"]].map(([size, label], index) => hideawayOption(`${id}:hand-tossed-${size}`, `1 slice — ${label} hand-tossed ${name}; calculated standard component configuration`, menuPublished(...handTossed[index]), 1, HIDEAWAY_CALCULATED_PIZZA_REFERENCE)),
+    ...[["small-10", "10-inch Small"], ["medium-13", "13-inch Medium"], ["large-16", "16-inch Large"]].map(([size, label], index) => hideawayOption(`${id}:thin-${size}`, `1 slice — ${label} thin-crust ${name}; calculated standard component configuration`, menuPublished(...thin[index]), 1, HIDEAWAY_CALCULATED_PIZZA_REFERENCE)),
+  ],
+  undefined,
+  HIDEAWAY_CALCULATED_PIZZA_REFERENCE
+));
+const hideawayPizzaFoods = hideawayPizzaRows.map(([id, name, handTossed, thin]) => hideawayFood(
+  id,
+  name,
+  `Standard specialty recipe; choose a published per-slice size and crust. Hideaway publishes no dependable slice count, so no whole-pizza calculation is offered.`,
+  null,
+  [
+    ...[["small-10", "10-inch Small"], ["medium-13", "13-inch Medium"], ["large-16", "16-inch Large"]].map(([size, label], index) => hideawayOption(`${id}:hand-tossed-${size}`, `1 slice — ${label} hand-tossed ${name}`, menuPublished(...handTossed[index]))),
+    ...[["small-10", "10-inch Small"], ["medium-13", "13-inch Medium"], ["large-16", "16-inch Large"]].map(([size, label], index) => hideawayOption(`${id}:thin-${size}`, `1 slice — ${label} thin-crust ${name}`, menuPublished(...thin[index]))),
+  ]
+));
+const hideawayFlatRows = [
+  ["fifty-fifty", "50/50", "Complete starter with fried mushrooms, 5 mozzarella sticks, Hideaway Red Sauce, and Hideaway Ranch included", [1430,38,85,111,2040,5,14]],
+  ["baked-cheesy-shrooms", "Baked Cheesy Shrooms", "1 complete order", [410,27,12,31,770,3,7]],
+  ["fried-mozzarella-sticks", "Fried Mozzarella Sticks", "Complete order with marinara and ranch included", [1380,41,70,109,2720,1,12]],
+  ["fried-mushrooms", "Famous Fried Mushrooms", "Choose a published half or full order; marinara and ranch included", null, [["half", "Half order with dips included", [430,9,29,33,320,3,5]],["full", "Full order with dips included", [860,17,57,66,650,6,11]]]],
+  ["fried-pickles", "Fried Pickles", "Complete order with published dipping sauce included", [1170,12,77,90,3690,6,11]],
+  ["fried-ravioli", "Fried Ravioli", "Complete order with marinara and ranch included", [950,27,84,57,2410,7,17]],
+  ["garlic-cheesy-bread", "Garlic Cheesy Bread", "Complete order with Hideaway Red Sauce included", [1220,48,80,81,2690,5,9]],
+  ["garlic-bread", "Garlic Bread", "Complete order with Hideaway Red Sauce included", [890,23,77,56,1870,5,8]],
+  ["garlic-knots", "Garlic Knots", "Complete order with marinara included", [1000,30,115,49,2340,10,21]],
+  ["meatballs", "Meatballs", "8 meatballs over marinara", [900,59,33,63,2700,8,11]],
+  ["traditional-wings", "Traditional Wings", "No sauce or dressing; add separately", null, [["6-piece", "6 traditional wings; no sauce or dressing", [750,42,6,61,910,null,null],6],["12-piece", "12 traditional wings; no sauce or dressing", [1510,84,13,121,1820,null,null],12],["18-piece", "18 traditional wings; no sauce or dressing", [2270,127,21,182,2770,1,2],18]]],
+  ["boneless-wings", "Boneless Wings", "No sauce or dressing; add separately", null, [["10-piece", "10 boneless wings; no sauce or dressing", [1830,97,97,120,4530,7,null],10],["20-piece", "20 boneless wings; no sauce or dressing", [3660,193,193,239,9060,15,null],20]]],
+  ["blue-cheese-wedge", "Blue Cheese Wedge", "1 salad with named toppings and dressing included", [690,24,12,62,1820,3,7]],
+  ["caesar-salad", "Caesar Salad", "Dressing included; chicken excluded", null, [["small", "Small Caesar Salad with dressing", [230,7,10,19,520,3,2]],["large", "Large Caesar Salad with dressing", [590,15,21,51,1310,4,5]]]],
+  ["greek-salad", "Greek Salad", "Dressing included", null, [["small", "Small Greek Salad with dressing", [490,6,12,48,1910,4,5]],["large", "Large Greek Salad with dressing", [660,11,22,62,3060,8,9]]]],
+  ["club-salad", "Club Salad", "1 complete salad with dressing", [560,44,15,36,1740,5,9]],
+  ["cobb-salad", "Cobb Salad", "1 complete salad with dressing", [790,48,31,54,1870,7,8]],
+  ["in-betweener-salad", "In-Betweener Salad", "1 complete salad with dressing", [520,23,25,33,2810,7,6]],
+  ["just-a-beginner-salad", "Just-a-Beginner Salad", "1 salad; mozzarella and bacon add-on excluded", [130,2,12,7,750,4,3]],
+  ["chicken-bacon-honey-mustard-sandwich", "Chicken Bacon Honey Mustard Sandwich", "1 sandwich with potato chips included", [1190,67,96,61,2480,4,40]],
+  ["chicken-bacon-ranch-sandwich", "Chicken Bacon Ranch Sandwich", "1 sandwich with potato chips included", [1200,68,82,68,2210,4,26]],
+  ["chicken-parmesan-sandwich", "Chicken Parmesan Sandwich", "1 sandwich with potato chips included", [1040,53,97,51,2190,6,31]],
+  ["dagwood-sandwich", "Dagwood Sandwich", "1 white-bread sandwich with potato chips included", [980,51,45,67,3570,4,8]],
+  ["ham-and-cheese-sandwich", "Ham 'n Cheese Sandwich", "1 white-bread sandwich with potato chips included", [1150,43,45,89,3620,4,8]],
+  ["italian-sub", "Italian Sub", "1 white-bread sandwich with potato chips included", [1340,53,46,103,4670,5,7]],
+  ["meatball-hero", "Meatball Hero", "1 white-bread sandwich with potato chips included", [920,44,61,58,2480,7,12]],
+  ["turkey-bacon-club", "Turkey Bacon Club", "1 white-bread sandwich with potato chips included", [930,61,33,62,3840,2,8]],
+  ["turkey-melt", "Turkey Melt", "1 white-bread sandwich with potato chips included", [910,41,45,64,2870,4,7]],
+  ["alfredo-deluxe", "Alfredo Deluxe", "1 pasta order with garlic bread included", [1780,76,120,112,3920,3,10]],
+  ["bacn-chickn-mac-and-cheese", "Bac'n Chick'n Mac 'n' Cheese", "1 pasta order with garlic bread included", [3300,138,482,100,7650,15,26]],
+  ["big-kid-mac-and-cheese", "Big Kid Mac 'N' Cheese", "1 pasta order with garlic bread included", [1820,90,139,105,5460,1,14]],
+  ["chicken-parmesan-pasta", "Chicken Parmesan Pasta", "1 pasta order with garlic bread included", [1510,69,155,69,3190,10,33]],
+  ["homemade-lasagna", "Homemade Lasagna", "1 pasta order with garlic bread included", [840,27,75,49,1890,5,18]],
+  ["meatball-marinara-pasta", "Meatball Marinara Pasta", "1 pasta order with garlic bread included", [1360,51,140,68,2630,9,26]],
+  ["pasta-paradise", "Pasta Paradise", "1 pasta order with garlic bread included", [1730,72,121,107,3450,4,10]],
+  ["pesto-chicken-florentine-pasta", "Pesto Chicken Florentine Pasta", "1 pasta order with garlic bread included", [1670,54,115,104,3240,6,6]],
+  ["plain-alfredo-pasta", "Plain Alfredo Pasta", "1 pasta order with garlic bread included", [1390,35,116,87,2140,3,8]],
+  ["plain-marinara-pasta", "Plain Marinara Pasta", "1 pasta order with garlic bread included", [1100,33,133,49,1960,7,26]],
+  ["bowl-of-ice-cream", "Bowl of Ice Cream", "1 bowl; syrup excluded", [220,5,25,14,70,null,21]],
+  ["brownie", "Brownie", "1 brownie", [490,5,88,14,200,4,47]],
+  ["chocolate-chunk-cookie", "Chocolate Chunk Hideaway Cookie", "1 complete 6-inch pan cookie", [980,13,123,49,790,4,76]],
+  ["salted-caramel-crunch-cookie", "Salted Caramel Crunch Hideaway Cookie", "1 complete 6-inch pan cookie", [930,11,133,42,1190,null,85]],
+  ["lemonade-pie", "Lemonade Pie", "Choose a published slice or whole pie", null, [["slice", "1 slice of Lemonade Pie", [320,2,37,17,170,null,23]],["whole", "Whole Lemonade Pie; published whole-pie nutrition", [4960,32,560,272,2720,null,368]]]],
+  ["mudslide", "Mudslide", "1 complete dessert", [750,13,106,34,230,7,58]],
+  ["root-beer-float", "Root Beer Float", "1 complete float", [260,5,35,14,75,null,31]],
+  ["kids-chicken-bites", "Kids' Chicken Bites", "Kids' standalone food; no side", [1550,77,97,96,4530,6,16]],
+  ["kids-corn-dog", "Kids' Corn Dog", "1 kids' corn dog; no side", [510,9,53,29,1630,null,26]],
+  ["kids-cheese-pizza", "Kids' Cheese Pizza", "1 kids' pizza; no side", [560,20,63,25,1060,1,7]],
+  ["kids-mac-and-cheese", "Kids' Mac-n-Cheese", "1 kids' portion; no side", [470,22,31,28,1680,null,2]],
+  ["kids-alfredo-pasta", "Kids' Alfredo Pasta", "1 kids' portion; no side", [540,18,38,35,980,1,3]],
+  ["kids-meatball-pasta", "Kids' Meatball Pasta", "1 kids' portion; no side", [390,18,43,17,750,3,8]],
+];
+const hideawayDressingRows = [
+  ["balsamic-vinaigrette", "Balsamic Vinaigrette", [240,null,4,24,460,null,4]],
+  ["blue-cheese-dressing", "Blue Cheese Dressing", [320,2,2,34,540,null,2]],
+  ["caesar-dressing", "Caesar Dressing", [380,2,2,40,700,null,0]],
+  ["creamy-italian-dressing", "Creamy Italian Dressing", [280,null,2,30,740,null,2]],
+  ["greek-vinaigrette", "Greek Vinaigrette", [190,null,1,21,470,null,0]],
+  ["hideaway-ranch", "Hideaway Ranch", [190,1,1,19,200,null,0]],
+  ["honey-mustard-dressing", "Honey Mustard Dressing", [180,null,20,10,560,null,20]],
+  ["house-italian-vinaigrette", "House Italian Vinaigrette", [220,0,1,24,80,null,0]],
+  ["parmesan-peppercorn-dressing", "Parmesan Peppercorn Dressing", [300,2,4,32,500,null,4]],
+  ["thousand-island-dressing", "Thousand Island Dressing", [280,null,8,26,500,null,8]],
+];
+const hideawayDrinkRows = [
+  ["coffee", "Coffee", [0,0,null,0,5,null,null]],
+  ["diet-pepsi", "Diet Pepsi", [0,null,null,null,70,null,null]],
+  ["dr-pepper", "Dr Pepper", [270,null,73,null,110,null,70]],
+  ["iced-tea", "Iced Tea", [5,null,2,null,20,null,null]],
+  ["lemonade", "Lemonade", [280,null,74,null,290,null,74]],
+  ["mountain-dew", "Mountain Dew", [300,null,80,null,95,null,80]],
+  ["mug-root-beer", "Mug Root Beer", [280,null,72,null,40,null,72]],
+  ["pepsi", "Pepsi", [280,null,77,null,55,null,77]],
+  ["sweet-iced-tea", "Sweet Iced Tea", [130,null,33,null,20,null,31]],
+  ["whole-milk", "Whole Milk", [220,12,17,12,160,null,19]],
+];
+const hideawayFoods = [
+  ...hideawayCalculatedPizzaFoods,
+  ...hideawayPizzaFoods,
+  ...hideawayFlatRows.map(([id, name, description, values, options]) => hideawayFood(id, name, description, values ? menuPublished(...values) : null, options?.map(([optionId, optionDescription, optionValues, amount = 1]) => hideawayOption(`${id}:${optionId}`, optionDescription, menuPublished(...optionValues), amount)))),
+  ...hideawayDressingRows.map(([id, name, values]) => hideawayFood(id, name, "2 fl oz separately listed dressing", menuPublished(...values))),
+  ...hideawayDrinkRows.map(([id, name, values]) => hideawayFood(id, name, "1 published fountain or container serving; exact vessel size is not stated in the guide", menuPublished(...values), undefined, [`Hideaway Pizza ${name}`])),
+];
+
+const marcos = { id: "marcos-pizza", name: "Marco's Pizza" };
+const MARCOS_SOURCE = "https://www.nutritionix.com/marcos-pizza/menu/premium";
+const MARCOS_REFERENCE = "Marco's Pizza official-linked Nutritionix U.S. nutrition portal, last updated August 13, 2026; serving fractions and nutrients are for the named product, accessed September 10, 2026.";
+const marcosFood = (id, name, description, nutrients, servingOptions, aliases, sourceReference = MARCOS_REFERENCE) => menuFood(
+  marcos, MARCOS_SOURCE, sourceReference, id, name, description, nutrients, servingOptions,
+  [`Marcos ${name}`, `Marco's ${name}`, ...(aliases || [])]
+);
+const marcosOption = (id, description, nutrients, amount = 1, sourceReference = MARCOS_REFERENCE) => expansionMenuOption(
+  marcos, MARCOS_SOURCE, sourceReference, id, description, nutrients, amount
+);
+const marcosPizzaRows = [
+  ["all-meat-pizza", "All Meat Pizza", [[320,14,25,16,870,null,2],[340,16,27,16,960,1,2],[450,21,36,21,1250,1,2],[390,18,32,18,1080,1,2]]],
+  ["cheese-pizza", "Cheese Pizza", [[210,8,24,8,420,null,1],[220,8,26,8,440,null,2],[290,11,35,10,580,1,2],[250,9,31,9,500,1,2]]],
+  ["chicken-fresco-pizza", "Chicken Fresco Pizza", [[260,12,26,11,570,1,2],[270,13,27,11,610,1,2],[370,17,37,15,820,2,3],[320,15,32,12,710,1,3]]],
+  ["deluxe-pizza", "Deluxe Pizza", [[280,11,26,14,650,1,2],[300,11,27,14,700,1,2],[400,15,37,19,930,2,3],[340,13,33,16,800,1,2]]],
+  ["garden-pizza", "Garden Pizza", [[230,9,26,9,490,1,2],[250,10,27,10,560,1,2],[340,13,37,12,760,2,3],[290,11,33,11,660,1,2]]],
+  ["hawaiian-chicken-pizza", "Hawaiian Chicken Pizza", [[270,14,26,10,750,null,2],[290,15,28,11,830,1,3],[390,20,38,14,1090,1,4],[330,17,33,12,940,1,4]]],
+  ["pepperoni-magnifico-pizza", "Pepperoni Magnifico Pizza", [[240,9,24,11,530,null,1],[260,9,26,12,590,null,2],[350,13,35,16,800,1,2],[310,11,31,14,720,1,2]]],
+  ["sausage-magnifico-pizza", "Sausage Magnifico Pizza", [[280,11,25,15,550,null,1],[290,11,26,15,570,1,2],[390,14,36,20,760,1,2],[350,13,31,18,670,1,2]]],
+  ["buffalo-chicken-pizza", "Buffalo Chicken Pizza", [[240,11,24,11,610,null,null],[260,13,26,12,680,null,null],[350,17,35,16,950,1,1],[300,15,31,13,830,1,null]]],
+  ["the-philly-pizza", "The Philly Pizza", [[220,10,24,8,490,null,1],[230,11,26,9,540,null,1],[310,15,35,11,740,1,2],[270,13,31,9,620,1,1]]],
+  ["triple-pepperoni-magnifico-pizza", "Triple Pepperoni Magnifico Pizza", [[290,10,24,15,680,null,1],[310,11,26,17,740,null,2],[430,15,35,23,1030,1,2],[380,14,31,21,930,1,2]]],
+  ["ultimate-magnifico-pizza", "Ultimate Magnifico Pizza", [[310,11,25,17,640,null,1],[330,12,26,18,720,1,2],[450,16,36,25,970,1,2],[410,14,31,23,880,1,2]]],
+  ["white-cheezy-pizza", "White Cheezy Pizza", [[250,10,25,12,540,null,1],[270,12,26,13,600,null,1],[360,15,36,17,800,1,2],[320,13,31,14,700,1,2]]],
+];
+const marcosPizzaConfigs = [["small-original", "10-inch Small Original Crust", 6],["medium-original", "12-inch Medium Original Crust", 8],["large-original", "14-inch Large Original Crust", 8],["extra-large-original", "16-inch XLarge Original Crust", 12]];
+const marcosPizzaFoods = marcosPizzaRows.map(([id, name, rows]) => marcosFood(
+  id, name, `Standard ${name}; choose a published original-crust slice or calculated whole pizza`, null,
+  pizzaServingOptions(marcos, MARCOS_SOURCE, MARCOS_REFERENCE, id, marcosPizzaConfigs.map(([configId, description, slices], index) => [configId, `${description} ${name}`, slices, menuPublished(...rows[index])]))
+));
+const marcosFlatRows = [
+  ["deluxe-pizza-bowl", "Deluxe Pizza Bowl", "1 published crustless pizza bowl", [560,25,14,39,1860,2,7]],
+  ["garden-pizza-bowl", "Garden Pizza Bowl", "1 published crustless pizza bowl", [430,19,15,27,1440,2,7]],
+  ["buffalo-chicken-pizza-bowl", "Buffalo Chicken Pizza Bowl", "1 published crustless pizza bowl", [460,32,7,33,1890,null,1]],
+  ["philly-pizza-bowl", "Philly Pizza Bowl", "1 published crustless pizza bowl", [340,24,8,21,1380,null,3]],
+  ["ultimate-magnifico-pizza-bowl", "Ultimate Magnifico Pizza Bowl", "1 published crustless pizza bowl", [850,40,13,61,2810,1,6]],
+  ["ham-and-cheese-sub", "Ham & Cheese Sub", "Choose a published complete sub size", null, [["6-inch", "6-inch Ham & Cheese Sub", [710,42,37,28,2590,null,3]],["12-inch", "12-inch Ham & Cheese Sub", [1410,87,91,57,5280,1,7]]]],
+  ["italiano-sub", "Italiano Sub", "Choose a published complete sub size", null, [["6-inch", "6-inch Italiano Sub", [740,38,36,36,2590,1,3]],["12-inch", "12-inch Italiano Sub", [1470,80,89,73,5270,2,5]]]],
+  ["meatball-sub", "Meatball Sub", "Choose a published complete sub size", null, [["6-inch", "6-inch Meatball Sub", [700,35,37,17,1580,1,3]],["12-inch", "12-inch Meatball Sub", [1390,74,91,35,3260,2,7]]]],
+  ["steak-and-cheese-sub", "Steak & Cheese Sub", "Choose a published complete sub size", null, [["6-inch", "6-inch Steak & Cheese Sub", [580,28,35,26,1560,0,2]],["12-inch", "12-inch Steak & Cheese Sub", [1150,58,87,53,3220,0,4]]]],
+  ["turkey-club-sub", "Turkey Club Sub", "Choose a published complete sub size", null, [["6-inch", "6-inch Turkey Club Sub", [650,36,35,30,1800,0,2]],["12-inch", "12-inch Turkey Club Sub", [1310,74,86,61,3700,null,4]]]],
+  ["veggie-sub", "Veggie Sub", "Choose a published complete sub size", null, [["6-inch", "6-inch Veggie Sub", [490,16,39,23,750,1,3]],["12-inch", "12-inch Veggie Sub", [970,36,95,46,1600,3,6]]]],
+  ["chicken-classico-calzone", "Chicken Classico Calzone", "1 complete calzone", [1020,55,100,40,2630,4,4]],
+  ["deluxe-calzone", "Deluxe Calzone", "1 complete calzone", [1080,43,99,54,2430,4,4]],
+  ["pepperoni-calzone", "Pepperoni Calzone", "1 complete calzone", [950,36,95,42,2070,3,3]],
+  ["chicken-bacon-ranch-pizzoli", "Chicken Bacon Ranch Pizzoli", "1 complete Pizzoli", [810,44,73,35,2070,3,2]],
+  ["pepperoni-and-sausage-pizzoli", "Pepperoni & Sausage Pizzoli", "1 complete Pizzoli", [930,34,71,52,2100,2,2]],
+  ["pepperoni-pizzoli", "Pepperoni Pizzoli", "1 complete Pizzoli", [810,29,70,42,1770,2,2]],
+  ["cheezybread", "CheezyBread", "1 published piece; separately selected dipping sauce excluded", [80,3,12,3,130,0,0]],
+  ["cheezybread-extra-cheese", "CheezyBread with Extra Cheese", "1 published piece; separately selected dipping sauce excluded", [90,3,12,3.5,160,0,0]],
+  ["pepperoni-bread", "Pepperoni Bread", "1 published piece; separately selected dipping sauce excluded", [90,3,12,3.5,160,0,0]],
+  ["chicken-dippers", "Chicken Dippers", "1 published chicken dipper; sauce excluded", [60,5,5,0,190,0,0]],
+  ["cinnasquares", "CinnaSquares", "1 published square; icing excluded and loggable separately", [80,1,12,3,60,0,4]],
+  ["meatball-bake", "Meatball Bake", "1 complete bake", [800,43,13,44,2450,2,6]],
+  ["double-chocolate-brownie", "Double Chocolate Brownie", "1 published brownie serving", [340,5,53,14,180,2,34]],
+];
+const marcosSaladRows = [
+  ["chicken-caesar-salad", "Chicken Caesar Salad", [["family", "Family Chicken Caesar Salad with published dressing included", [350,11,12,29,720,1,1]],["regular", "Regular Chicken Caesar Salad with published dressing included", [370,14,14,29,850,2,1]]]],
+  ["garden-salad", "Garden Salad", [["family", "Family Garden Salad with published dressing included", [370,7,15,23,680,2,3]],["regular", "Regular Garden Salad with published dressing included", [390,8,17,24,740,2,4]]]],
+  ["greek-salad", "Greek Salad", [["family", "Family Greek Salad with published dressing included", [320,5,6,29,980,2,3]],["regular", "Regular Greek Salad with published dressing included", [340,6,7,31,1110,2,3]]]],
+  ["italian-chef-salad", "Italian Chef Salad", [["family", "Family Italian Chef Salad with published dressing included", [220,13,15,11,780,2,2]],["regular", "Regular Italian Chef Salad with published dressing included", [270,16,15,13,960,2,3]]]],
+];
+const marcosWingRows = [
+  ["hot-wings", "Hot Wings", [[6,[440,23,10,38,1820,0,0]],[8,[580,30,13,49,2330,0,0]],[10,[720,38,16,62,2920,0,null]],[15,[1080,57,25,93,4370,0,null]]]],
+  ["plain-wings", "Plain Wings", [[6,[370,23,10,28,920,0,0]],[8,[490,30,13,37,1230,0,0]],[10,[610,38,16,46,1530,0,null]],[15,[920,57,25,69,2300,0,null]]]],
+  ["sweet-chili-wings", "Sweet Chili Wings", [[6,[440,23,28,28,920,0,16]],[8,[580,30,36,37,1230,0,20]],[10,[730,38,45,46,1530,0,25]],[15,[1090,57,67,69,2300,0,38]]]],
+  ["tangy-bbq-wings", "Tangy BBQ Wings", [[6,[460,23,33,28,1300,0,21]],[8,[600,30,42,37,1690,0,26]],[10,[750,38,52,46,2110,0,32]],[15,[1180,57,92,69,3390,0,61]]]],
+  ["garlic-parmesan-wings", "Garlic Parmesan Wings", [[8,[700,32,18,57,2070,0,2]],[10,[870,40,22,72,2590,0,2]],[15,[1300,59,33,107,3890,0,3]]]],
+];
+const marcosDipRows = [
+  ["garlic-parmesan-dip", "Garlic Parmesan Dip", [260,2,5,26,1060,0,2]],
+  ["jalapeno-ranch-dip", "Jalapeño Ranch Dip", [200,1,3,21,550,0,1], ["Marcos jalapeno ranch", "Marco's jalapeno ranch"]],
+  ["hot-dip", "Hot Dip", [110,0,0,16,1380,0,0]],
+  ["ranch-dip", "Ranch Dip", [200,0,2,22,320,0,0]],
+  ["sweet-chili-dip", "Sweet Chili Dip", [110,0,28,0,0,0,24]],
+  ["tangy-bbq-dip", "Tangy BBQ Dip", [110,0,28,0,440,0,25]],
+];
+const marcosFoods = [
+  ...marcosPizzaFoods,
+  ...marcosFlatRows.map(([id, name, description, values, options]) => marcosFood(id, name, description, values ? menuPublished(...values) : null, options?.map(([optionId, optionDescription, optionValues]) => marcosOption(`${id}:${optionId}`, optionDescription, menuPublished(...optionValues))))),
+  ...marcosSaladRows.map(([id, name, sizes]) => marcosFood(id, name, "Choose a published salad size; the portal's named dressing is included", null, sizes.map(([sizeId, description, values]) => marcosOption(`${id}:${sizeId}`, description, menuPublished(...values))))),
+  ...marcosWingRows.map(([id, name, sizes]) => marcosFood(id, name, "Named wing sauce is included; separate dipping cup is excluded", null, sizes.map(([count, values]) => marcosOption(`${id}:${count}-piece`, `${count} wings with named sauce included`, menuPublished(...values), count)))),
+  ...marcosDipRows.map(([id, name, values, aliases]) => marcosFood(id, name, "1 separately listed dipping cup", menuPublished(...values), undefined, aliases)),
+];
+
 const whataburger = { id: "whataburger", name: "Whataburger" };
 const WHATABURGER_REFERENCE = "Whataburger official menu/app; default recipe nutrition displayed for the current national menu";
 const whataburgerFood = (id, name, description, nutrients, servingOptions) => officialFood(whataburger, id, name, description, nutrients, WHATABURGER_SOURCE, WHATABURGER_REFERENCE, servingOptions);
@@ -4132,6 +4435,9 @@ const restaurantFoods = [
   ...dominosFoods,
   ...pizzaHutFoods,
   ...papaJohnsFoods,
+  ...littleCaesarsFoods,
+  ...hideawayFoods,
+  ...marcosFoods,
   ...sonicFoods,
   ...braumsFoods,
   ...tacoBellFoods,

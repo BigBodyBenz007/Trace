@@ -376,16 +376,19 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     dominos: /^https:\/\/www\.dominos\.com\/cms\/assets\/7d2e19df-e360-41eb-a367-5ab794ab2ebc$/,
     "pizza-hut": /^https:\/\/www\.nutritionix\.com\/pizza-hut\/menu\/premium$/,
     "papa-johns": /^https:\/\/www\.papajohns\.com\/company\/nutritional-details\//,
+    "little-caesars": /^https:\/\/littlecaesars\.com\/static\/usnutritionguide\.pdf$/,
+    "hideaway-pizza": /^https:\/\/www\.hideawaypizza\.com\/s\/Hideaway-Pizza-Nutrition-Information\.pdf$/,
+    "marcos-pizza": /^https:\/\/www\.nutritionix\.com\/marcos-pizza\/menu\/premium$/,
     "taco-bell": /^https:\/\/www\.tacobell\.com\/food\//,
     "chick-fil-a": /^https:\/\/www\.chick-fil-a\.com\/nutrition-allergens$/,
     whataburger: /^https:\/\/wbimageserver\.whataburger\.com\/Nutrition\.pdf$/,
   };
-  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "dairy-queen", "arbys", "jack-in-the-box", "dominos", "pizza-hut", "papa-johns", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
+  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "dairy-queen", "arbys", "jack-in-the-box", "dominos", "pizza-hut", "papa-johns", "little-caesars", "hideaway-pizza", "marcos-pizza", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
     chainId,
     expansion.filter((food) => food.restaurant.id === chainId).length,
   ]));
 
-  expect(expansion).toHaveLength(1641);
+  expect(expansion).toHaveLength(1830);
   expect(countByChain).toEqual({
     mcdonalds: 100,
     sonic: 102,
@@ -404,6 +407,9 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     dominos: 54,
     "pizza-hut": 59,
     "papa-johns": 59,
+    "little-caesars": 47,
+    "hideaway-pizza": 90,
+    "marcos-pizza": 52,
     "taco-bell": 95,
     "chick-fil-a": 60,
     whataburger: 112,
@@ -652,6 +658,67 @@ test("keeps pizza slice, square-cut, and whole-pizza servings explicit and indep
       sourceReference: expect.any(String),
     });
   });
+});
+
+test("finds Little Caesars, Hideaway Pizza, and Marco's foods across standard menu categories", () => {
+  expect(searchFoodCatalog("Little Caesars", [], restaurantFoods.length)).toHaveLength(47);
+  expect(searchFoodCatalog("Hideaway Pizza", [], restaurantFoods.length)).toHaveLength(90);
+  expect(searchFoodCatalog("Marco's Pizza", [], restaurantFoods.length)).toHaveLength(52);
+
+  const expectedFirstResults = [
+    ["little caesars classic pepperoni", "restaurant:little-caesars:classic-pepperoni-pizza"],
+    ["little caesars detroit deep dish cheese", "restaurant:little-caesars:detroit-style-deep-dish-cheese-pizza"],
+    ["little caesars crazy bread", "restaurant:little-caesars:crazy-bread"],
+    ["little caesars garlic parmesan wings", "restaurant:little-caesars:garlic-parmesan-caesar-wings"],
+    ["hideaway cheese pizza", "restaurant:hideaway-pizza:cheese-pizza"],
+    ["hideaway pepperonipalooza", "restaurant:hideaway-pizza:pepperonipalooza"],
+    ["hideaway fried mushrooms", "restaurant:hideaway-pizza:fried-mushrooms"],
+    ["hideaway meatball hero", "restaurant:hideaway-pizza:meatball-hero"],
+    ["hideaway lemonade pie", "restaurant:hideaway-pizza:lemonade-pie"],
+    ["marcos pepperoni magnifico", "restaurant:marcos-pizza:pepperoni-magnifico-pizza"],
+    ["marco's deluxe pizza bowl", "restaurant:marcos-pizza:deluxe-pizza-bowl"],
+    ["marcos cheezybread", "restaurant:marcos-pizza:cheezybread"],
+    ["marcos garlic parmesan wings", "restaurant:marcos-pizza:garlic-parmesan-wings"],
+    ["marcos jalapeno ranch", "restaurant:marcos-pizza:jalapeno-ranch-dip"],
+    ["marcos jalapeño ranch", "restaurant:marcos-pizza:jalapeno-ranch-dip"],
+  ];
+
+  expect(expectedFirstResults.map(([query]) => [query, searchFoodCatalog(query)[0]?.id])).toEqual(expectedFirstResults);
+  expect(searchFoodCatalog("hideaway pepsi")[0].id).toBe("restaurant:hideaway-pizza:pepsi");
+  expect(searchFoodCatalog("pepsi")[0].id).toBe("beverage:pepsi:pepsi-20oz");
+});
+
+test("keeps new pizza slice, whole-pizza, size, and unknown-nutrient servings explicit", () => {
+  const littleCaesarsPepperoni = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:little-caesars:classic-pepperoni-pizza"));
+  const hideawayPepperoni = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:hideaway-pizza:pepperoni-pizza"));
+  const marcosCheese = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:marcos-pizza:cheese-pizza"));
+
+  const littleSlice = littleCaesarsPepperoni.servingOptions.find((option) => option.id.endsWith(":slice"));
+  const littleWhole = littleCaesarsPepperoni.servingOptions.find((option) => option.id.endsWith(":whole"));
+  expect(littleSlice.serving.description).toContain("8 slices per pizza");
+  expect(littleSlice.nutrients.calories).toBe(287.5);
+  expect(scaleNutrition(littleSlice.nutrients, 2).calories).toBe(575);
+  expect(littleWhole.nutrients).toMatchObject({ calories: 2300, protein: 109, carbohydrates: 250, fat: 97, sodium: 5050 });
+
+  const hideawayThinMedium = hideawayPepperoni.servingOptions.find((option) => option.id.endsWith("thin-medium-13"));
+  expect(hideawayThinMedium).toMatchObject({
+    serving: { amount: 1, description: expect.stringContaining("13-inch Medium thin-crust") },
+    nutrients: { calories: 265, protein: 9, carbohydrates: 25, fat: 13.5, sodium: 575, fiber: null, totalSugar: null },
+  });
+  expect(scaleNutrition(hideawayThinMedium.nutrients, 0.5).fiber).toBeNull();
+
+  const marcosSmallSlice = marcosCheese.servingOptions.find((option) => option.id.endsWith("small-original:slice"));
+  const marcosSmallWhole = marcosCheese.servingOptions.find((option) => option.id.endsWith("small-original:whole"));
+  expect(marcosSmallSlice.serving.description).toContain("6 slices per pizza");
+  expect(marcosSmallWhole.nutrients).toMatchObject({ calories: 1260, protein: 48, carbohydrates: 144, fat: 48, sodium: 2520, fiber: null });
+  expect(scaleNutrition(marcosSmallSlice.nutrients, 2)).toMatchObject({ calories: 420, fiber: null });
+
+  [littleSlice, littleWhole, hideawayThinMedium, marcosSmallSlice, marcosSmallWhole].forEach((option) => expect(option.provenance.verification).toMatchObject({
+    sourceType: "official-restaurant",
+    accessedAt: "2026-09-10",
+    sourceUrl: expect.stringMatching(/^https:\/\//),
+    sourceReference: expect.any(String),
+  }));
 });
 
 test("preserves published sizes and unknown nutrients across the three-chain expansion", () => {
