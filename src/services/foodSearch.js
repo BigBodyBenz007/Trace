@@ -95,8 +95,8 @@ export function searchFoods(
         if (food.provenance?.source === "user-added" || food.dataType === "user-entered") return 0;
         if (food.sourceType === "grocery") return 1;
         if (food.sourceType === "packaged-food") return 2;
-        if (food.sourceType === "restaurant") return 2;
-        if (food.sourceType === "beverage") return 3;
+        if (food.sourceType === "beverage") return 2;
+        if (food.sourceType === "restaurant") return 3;
         return 2;
       };
       const priorityDifference = sourcePriority(firstFood) - sourcePriority(secondFood);

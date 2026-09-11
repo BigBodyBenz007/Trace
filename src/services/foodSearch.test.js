@@ -388,7 +388,7 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     expansion.filter((food) => food.restaurant.id === chainId).length,
   ]));
 
-  expect(expansion).toHaveLength(1830);
+  expect(expansion).toHaveLength(1852);
   expect(countByChain).toEqual({
     mcdonalds: 100,
     sonic: 102,
@@ -409,7 +409,7 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     "papa-johns": 59,
     "little-caesars": 47,
     "hideaway-pizza": 90,
-    "marcos-pizza": 52,
+    "marcos-pizza": 74,
     "taco-bell": 95,
     "chick-fil-a": 60,
     whataburger: 112,
@@ -663,7 +663,7 @@ test("keeps pizza slice, square-cut, and whole-pizza servings explicit and indep
 test("finds Little Caesars, Hideaway Pizza, and Marco's foods across standard menu categories", () => {
   expect(searchFoodCatalog("Little Caesars", [], restaurantFoods.length)).toHaveLength(47);
   expect(searchFoodCatalog("Hideaway Pizza", [], restaurantFoods.length)).toHaveLength(90);
-  expect(searchFoodCatalog("Marco's Pizza", [], restaurantFoods.length)).toHaveLength(52);
+  expect(searchFoodCatalog("Marco's Pizza", [], restaurantFoods.length)).toHaveLength(74);
 
   const expectedFirstResults = [
     ["little caesars classic pepperoni", "restaurant:little-caesars:classic-pepperoni-pizza"],
@@ -685,6 +685,7 @@ test("finds Little Caesars, Hideaway Pizza, and Marco's foods across standard me
 
   expect(expectedFirstResults.map(([query]) => [query, searchFoodCatalog(query)[0]?.id])).toEqual(expectedFirstResults);
   expect(searchFoodCatalog("hideaway pepsi")[0].id).toBe("restaurant:hideaway-pizza:pepsi");
+  expect(searchFoodCatalog("marcos pepsi")[0].id).toBe("restaurant:marcos-pizza:pepsi");
   expect(searchFoodCatalog("pepsi")[0].id).toBe("beverage:pepsi:pepsi-20oz");
 });
 

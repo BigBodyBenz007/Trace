@@ -4021,12 +4021,37 @@ const marcosDipRows = [
   ["sweet-chili-dip", "Sweet Chili Dip", [110,0,28,0,0,0,24]],
   ["tangy-bbq-dip", "Tangy BBQ Dip", [110,0,28,0,440,0,25]],
 ];
+const marcosDrinkRows = [
+  ["brisk-raspberry-iced-tea", "Brisk Raspberry Iced Tea", "20 fl oz bottle", [120,0,31,0,135,0,31]],
+  ["diet-dr-pepper", "Diet Dr Pepper", "20 fl oz bottle", [0,0,0,0,100,0,0]],
+  ["diet-mtn-dew", "Diet Mtn Dew", "20 fl oz bottle; carbohydrate and sugar are published as less than 1 g and remain unknown", [10,0,null,0,85,0,null]],
+  ["diet-pepsi", "Diet Pepsi", "20 fl oz bottle", [0,0,0,0,60,0,0]],
+  ["dole-lemonade", "Dole Lemonade", "20 fl oz bottle", [270,0,70,0,390,0,69]],
+  ["dole-strawberry-lemonade", "Dole Strawberry Lemonade", "20 fl oz bottle", [280,0,70,0,390,0,69]],
+  ["dr-pepper", "Dr Pepper", "20 fl oz bottle", [250,0,66,0,100,0,64]],
+  ["gatorade-cool-blue", "Gatorade Cool Blue", "20 fl oz bottle", [140,0,36,0,270,0,34]],
+  ["gatorade-fruit-punch", "Gatorade Fruit Punch", "20 fl oz bottle", [140,0,36,0,270,0,34]],
+  ["gatorade-glacier-freeze", "Gatorade Glacier Freeze", "20 fl oz bottle", [140,0,36,0,270,0,34]],
+  ["lipton-iced-tea-lemon", "Lipton Iced Tea with Lemon", "20 fl oz bottle", [120,0,32,0,260,0,31]],
+  ["mtn-dew", "Mtn Dew", "20 fl oz bottle", [290,0,77,0,105,0,77]],
+  ["mtn-dew-code-red", "Mtn Dew Code Red", "20 fl oz bottle", [280,0,77,0,170,0,77]],
+  ["mtn-dew-voltage", "Mtn Dew Voltage", "20 fl oz bottle", [290,0,76,0,105,0,76]],
+  ["mug-root-beer", "Mug Root Beer", "20 fl oz bottle", [260,0,71,0,105,0,71]],
+  ["ocean-spray-apple-juice", "Ocean Spray Apple Juice", "15.2 fl oz bottle", [210,1,51,0,20,0,48]],
+  ["ocean-spray-orange-juice", "Ocean Spray Orange Juice", "15.2 fl oz bottle", [210,4,51,0,30,0,42]],
+  ["orange-crush", "Orange Crush", "20 fl oz bottle", [270,0,72,0,120,0,71]],
+  ["pepsi", "Pepsi", "20 fl oz bottle", [250,0,69,0,55,0,69]],
+  ["pepsi-zero-sugar", "Pepsi Zero Sugar", "20 fl oz bottle", [0,0,0,0,65,0,0]],
+  ["pepsi-wild-cherry", "Pepsi Wild Cherry", "20 fl oz bottle", [260,0,70,0,55,0,70]],
+  ["sierra-mist", "Sierra Mist", "20 fl oz bottle", [240,0,65,0,55,0,65]],
+];
 const marcosFoods = [
   ...marcosPizzaFoods,
   ...marcosFlatRows.map(([id, name, description, values, options]) => marcosFood(id, name, description, values ? menuPublished(...values) : null, options?.map(([optionId, optionDescription, optionValues]) => marcosOption(`${id}:${optionId}`, optionDescription, menuPublished(...optionValues))))),
   ...marcosSaladRows.map(([id, name, sizes]) => marcosFood(id, name, "Choose a published salad size; the portal's named dressing is included", null, sizes.map(([sizeId, description, values]) => marcosOption(`${id}:${sizeId}`, description, menuPublished(...values))))),
   ...marcosWingRows.map(([id, name, sizes]) => marcosFood(id, name, "Named wing sauce is included; separate dipping cup is excluded", null, sizes.map(([count, values]) => marcosOption(`${id}:${count}-piece`, `${count} wings with named sauce included`, menuPublished(...values), count)))),
   ...marcosDipRows.map(([id, name, values, aliases]) => marcosFood(id, name, "1 separately listed dipping cup", menuPublished(...values), undefined, aliases)),
+  ...marcosDrinkRows.map(([id, name, description, values]) => marcosFood(id, name, description, menuPublished(...values), undefined, [`Marco's Pizza ${name}`])),
 ];
 
 const whataburger = { id: "whataburger", name: "Whataburger" };
