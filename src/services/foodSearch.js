@@ -65,6 +65,10 @@ export function searchFoods(
     if (directNameMatch && !preparationOnlyMatch) return 1;
     if (fieldMatches(`${food.restaurant?.name || ""} ${food.name}`)) return preparationOnlyMatch ? 2 : 1;
     if (fieldMatches(food.brand)) return 1;
+    if (
+      (food.provenance?.source === "user-added" || food.dataType === "user-entered")
+      && fieldMatches(`${food.category || ""} ${food.categoryLabel || ""}`)
+    ) return 1;
     if (fieldMatches(`${food.category || ""} ${food.categoryLabel || ""}`)) return 2;
     return 3;
   };

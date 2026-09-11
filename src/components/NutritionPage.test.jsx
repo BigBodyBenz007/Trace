@@ -999,7 +999,7 @@ test("restaurant food uses the existing serving flow and logs scaled macros", ()
   fireEvent.change(screen.getByLabelText("Food search"), {
     target: { value: "McNuggets" },
   });
-  const result = screen.getByRole("button", { name: /McDonald's.*Chicken McNuggets/i });
+  const result = screen.getByRole("button", { name: /^McDonald's \u00b7 Chicken McNuggets\b/i });
   expect(result).toHaveTextContent("McDonald's · Chicken McNuggets");
   expect(result).toHaveTextContent("Official restaurant source");
   expect(result).toHaveTextContent("Protein 9 g");
@@ -1037,7 +1037,7 @@ test("food search continues to show Unknown sodium explicitly when a catalog val
 test("creates a scaled Taco Bell entry from its exact official serving", () => {
   const props = renderNutritionPage();
   fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "tacobell crunchy taco" } });
-  fireEvent.click(screen.getByRole("button", { name: /Taco Bell.*Crunchy Taco/i }));
+  fireEvent.click(screen.getByRole("button", { name: /^Taco Bell \u00b7 Crunchy Taco(?! Supreme)/i }));
 
   const form = entryForm();
   expect(form.getByText("One serving: 1 taco")).toBeInTheDocument();
@@ -1108,7 +1108,7 @@ test("uses exact Whataburger fry sizes before serving scaling", () => {
 test("McNuggets exposes verified official menu sizes without deriving nutrition", () => {
   renderNutritionPage();
   fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "McNuggets" } });
-  fireEvent.click(screen.getByRole("button", { name: /McDonald's.*Chicken McNuggets/i }));
+  fireEvent.click(screen.getByRole("button", { name: /^McDonald's \u00b7 Chicken McNuggets\b/i }));
 
   const sizeSelect = screen.getByLabelText("Menu serving size");
   const form = entryForm();
@@ -1125,7 +1125,7 @@ test("McNuggets exposes verified official menu sizes without deriving nutrition"
 test("number of servings scales the selected official McNuggets menu size", () => {
   const props = renderNutritionPage();
   fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "McNuggets" } });
-  fireEvent.click(screen.getByRole("button", { name: /McDonald's.*Chicken McNuggets/i }));
+  fireEvent.click(screen.getByRole("button", { name: /^McDonald's \u00b7 Chicken McNuggets\b/i }));
   fireEvent.change(screen.getByLabelText("Menu serving size"), { target: { value: "restaurant:mcdonalds:chicken-mcnuggets:10-piece" } });
   fireEvent.change(entryForm().getByLabelText("Number of servings"), { target: { value: "2" } });
   expect(entryForm().getByLabelText("Calories")).toHaveValue(820);

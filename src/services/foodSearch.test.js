@@ -366,24 +366,26 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     "burger-king": /^https:\/\/origin\.bk\.com\/pdfs\/nutrition\.pdf$/,
     subway: /^https:\/\/media\.subway\.com\/dam\//,
     chipotle: /^https:\/\/www\.chipotle\.com\/content\/dam\/chipotle\/menu\/nutrition\//,
+    popeyes: /^https:\/\/plk-use1-prod\.sites\.rbictg\.com\/nutrition\/PLK_Nutrition\.pdf$/,
     "taco-bell": /^https:\/\/www\.tacobell\.com\/food\//,
     "chick-fil-a": /^https:\/\/www\.chick-fil-a\.com\/nutrition-allergens$/,
     whataburger: /^https:\/\/wbimageserver\.whataburger\.com\/Nutrition\.pdf$/,
   };
-  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
+  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
     chainId,
     expansion.filter((food) => food.restaurant.id === chainId).length,
   ]));
 
-  expect(expansion).toHaveLength(735);
+  expect(expansion).toHaveLength(1023);
   expect(countByChain).toEqual({
     mcdonalds: 100,
     sonic: 102,
     braums: 49,
     wendys: 109,
     "burger-king": 88,
-    subway: 10,
-    chipotle: 10,
+    subway: 193,
+    chipotle: 54,
+    popeyes: 61,
     "taco-bell": 95,
     "chick-fil-a": 60,
     whataburger: 112,
@@ -406,24 +408,14 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
       expect(["partial", "complete"]).toContain(food.provenance.completeness);
       expect(food.nutrients.calories).toEqual(expect.any(Number));
       Object.values(food.nutrients).forEach((value) => expect(value === null || (typeof value === "number" && value >= 0)).toBe(true));
-    } else if (["chick-fil-a", "whataburger"].includes(food.restaurant.id)) {
+    } else {
       expect(food.provenance).toMatchObject({ completeness: "complete", verification: { status: "complete" } });
       ["calories", "protein", "carbohydrates", "fat"].forEach((key) => (
         expect(typeof food.nutrients[key] === "number" && food.nutrients[key] >= 0).toBe(true)
       ));
-      ["sodium", "fiber", "totalSugar"].forEach((key) => (
-        expect(food.nutrients[key] === null || (typeof food.nutrients[key] === "number" && food.nutrients[key] >= 0)).toBe(true)
+      ["sodium", "fiber", "totalSugar", "addedSugar"].forEach((key) => (
+        expect(food.nutrients[key] === null || food.nutrients[key] === undefined || (typeof food.nutrients[key] === "number" && food.nutrients[key] >= 0)).toBe(true)
       ));
-      expect(food.nutrients.addedSugar).toBeNull();
-    } else if (["burger-king", "chipotle"].includes(food.restaurant.id)) {
-      expect(food.provenance).toMatchObject({ completeness: "complete", verification: { status: "complete" } });
-      expect(food.nutrients.addedSugar).toBeNull();
-      Object.entries(food.nutrients).filter(([key]) => key !== "addedSugar").forEach(([, value]) => (
-        expect(typeof value === "number" && value >= 0).toBe(true)
-      ));
-    } else {
-      expect(food.provenance).toMatchObject({ completeness: "complete", verification: { status: "complete" } });
-      Object.values(food.nutrients).forEach((value) => expect(typeof value === "number" && value >= 0).toBe(true));
     }
   });
 });
@@ -437,6 +429,72 @@ test("finds representative items from every chain added in the next restaurant e
   expect(searchFoodCatalog("subway steak philly")[0].id).toBe("restaurant:subway:steak-philly-6-inch");
   expect(searchFoodCatalog("subway bmt")[0].id).toBe("restaurant:subway:bmt-6-inch");
   expect(searchFoodCatalog("chipotle cilantro lime white rice")[0].id).toBe("restaurant:chipotle:cilantro-lime-white-rice-4oz");
+});
+
+test("finds Subway, Chipotle, and Popeyes items across the completed menu categories", () => {
+  const expectedFirstResults = [
+    ["subway footlong roast beef", "restaurant:subway:roast-beef-6-inch"],
+    ["subway baja chicken protein pocket", "restaurant:subway:baja-chicken-protein-pocket"],
+    ["subway spicy italian salad", "restaurant:subway:spicy-italian-salad"],
+    ["subway meatball protein bowl", "restaurant:subway:meatball-marinara-protein-bowl"],
+    ["subway bacon egg cheese breakfast", "restaurant:subway:bacon-egg-cheese-breakfast"],
+    ["subway footlong chocolate chip cookie", "restaurant:subway:footlong-chocolate-chip-cookie"],
+    ["subway jalapeno cheddar bread", "restaurant:subway:jalapeno-cheddar-bread"],
+    ["subway jalape\u00f1o cheddar bread", "restaurant:subway:jalapeno-cheddar-bread"],
+    ["chipotle pinto beans", "restaurant:chipotle:pinto-beans-4oz"],
+    ["chipotle queso blanco", "restaurant:chipotle:queso-blanco"],
+    ["chipotle tractor watermelon limeade", "restaurant:chipotle:tractor-watermelon-limeade"],
+    ["chipotle chicken bowl white rice black beans salsa cheese", "restaurant:chipotle:calculated-chicken-bowl-white-rice-black-beans-salsa-cheese"],
+    ["popeyes classic chicken sandwich", "restaurant:popeyes:classic-chicken-sandwich"],
+    ["popeyes blackened tenders", "restaurant:popeyes:blackened-tenders"],
+    ["popeyes ghost pepper wings", "restaurant:popeyes:ghost-pepper-bone-in-wings-6-piece"],
+    ["popeyes cajun fries", "restaurant:popeyes:cajun-fries"],
+    ["popeyes chicken biscuit", "restaurant:popeyes:chicken-biscuit"],
+    ["popeyes kids classic leg", "restaurant:popeyes:kids-classic-leg"],
+    ["popeyes frozen premium lemonade", "restaurant:popeyes:frozen-premium-lemonade"],
+    ["popeyes blackened ranch sauce", "restaurant:popeyes:blackened-ranch-sauce"],
+    ["popeyes jalapeno", "restaurant:popeyes:jalapeno"],
+    ["popeyes jalape\u00f1o", "restaurant:popeyes:jalapeno"],
+  ];
+
+  expect(expectedFirstResults.map(([query]) => [query, searchFoodCatalog(query)[0]?.id]))
+    .toEqual(expectedFirstResults);
+  expect(searchFoodCatalog("popeyes pepsi")[0].id).toBe("restaurant:popeyes:pepsi");
+  expect(searchFoodCatalog("pepsi")[0].id).toBe("beverage:pepsi:pepsi-20oz");
+});
+
+test("preserves published options and scales unknown restaurant nutrients without inventing zero", () => {
+  const subwaySteak = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:subway:steak-philly-6-inch"));
+  const subwayPocketWrap = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:subway:protein-pocket-wrap-9-inch"));
+  const chipotleQueso = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:chipotle:queso-blanco"));
+  const popeyesTenders = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:popeyes:tenders-classic-or-spicy"));
+
+  expect(subwaySteak.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    [expect.stringContaining("1 6-inch sandwich (192 g)"), 510],
+    [expect.stringContaining("1 footlong sandwich"), 1020],
+  ]);
+  expect(chipotleQueso.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["1 entr\u00e9e portion (2 oz)", 120],
+    ["1 side (4 oz)", 240],
+    ["1 large side (8 oz)", 480],
+  ]);
+  expect(popeyesTenders.servingOptions.map(({ serving, nutrients }) => [serving.amount, nutrients.calories])).toEqual([
+    [3, 390], [5, 650],
+  ]);
+  expect(scaleNutrition(subwayPocketWrap.nutrients, 2)).toMatchObject({
+    calories: 300,
+    protein: 8,
+    fiber: null,
+  });
+
+  [...subwaySteak.servingOptions, ...chipotleQueso.servingOptions, ...popeyesTenders.servingOptions].forEach((option) => {
+    expect(option.provenance.verification).toMatchObject({
+      sourceType: "official-restaurant",
+      accessedAt: "2026-09-10",
+      sourceUrl: expect.stringMatching(/^https:\/\//),
+      sourceReference: expect.any(String),
+    });
+  });
 });
 
 test("finds McDonald's, Sonic, and Braum's items across the expanded menu categories", () => {

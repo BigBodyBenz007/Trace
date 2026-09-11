@@ -1603,17 +1603,76 @@ const burgerKingFoods = [
 
 const subway = { id: "subway", name: "Subway" };
 const SUBWAY_SOURCE = "https://media.subway.com/dam/urn:aaid:aem:2278372c-147b-42f2-8edc-7d8d94d1f07e/original/as/us-nutrition-en.pdf";
-const subwayFood = (id, name, description, nutrients, menuUrl, discrepancy) => officialFood(
-  subway,
-  id,
-  name,
-  description,
-  nutrients,
-  SUBWAY_SOURCE,
-  `Subway January 2026 U.S. Nutrition Information; standard 6-inch recipe checked against the current US menu at ${menuUrl}${discrepancy ? `; ${discrepancy}` : ""}`,
-  undefined,
-  { accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+const SUBWAY_REFERENCE = "Subway January 2026 U.S. Nutrition Information";
+const SUBWAY_MENU_URL = "https://www.subway.com/en-us/menu";
+const subwayPublished = (calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar) => ({
+  calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar,
+});
+const subwayOption = (id, description, nutrients) => {
+  const option = officialOption(subway.id, id, description, nutrients, 1, SUBWAY_SOURCE, SUBWAY_REFERENCE);
+  option.provenance.verification.accessedAt = CURRENT_EXPANSION_CHECKED_AT;
+  return option;
+};
+const doubleSubwayPublished = (nutrients) => Object.fromEntries(
+  Object.entries(nutrients).map(([key, value]) => [key, typeof value === "number" ? value * 2 : value])
 );
+const subwayFood = (id, name, description, nutrients, menuUrl = SUBWAY_MENU_URL, discrepancy) => {
+  const reference = `${SUBWAY_REFERENCE}; standard 6-inch recipe checked against the current US menu at ${menuUrl}${discrepancy ? `; ${discrepancy}` : ""}`;
+  const baseFood = officialFood(
+    subway,
+    id,
+    name,
+    description,
+    nutrients,
+    SUBWAY_SOURCE,
+    reference,
+    undefined,
+    { accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+  );
+  const gramMatch = description.match(/\((\d+) g\)/);
+  const itemName = name.replace(/ \(6"\)$/, "");
+  return {
+    ...baseFood,
+    servingOptions: [
+      subwayOption(`${id}:6-inch`, description, nutrients),
+      subwayOption(
+        `${id}:footlong`,
+        `1 footlong sandwich (published as two 6-inch servings${gramMatch ? `; ${Number(gramMatch[1]) * 2} g total` : ""}): standard ${itemName} recipe; no add-ons`,
+        doubleSubwayPublished(nutrients)
+      ),
+    ],
+    searchAliases: [`Subway ${itemName}`, `Subway footlong ${itemName}`],
+  };
+};
+const subwayFormatFood = (id, name, description, nutrients, searchAliases) => {
+  const food = officialFood(
+    subway,
+    id,
+    name,
+    description,
+    nutrients,
+    SUBWAY_SOURCE,
+    `${SUBWAY_REFERENCE}; published standard configuration for the named menu format`,
+    undefined,
+    { accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+};
+const subwaySizedFood = (id, name, options, searchAliases) => {
+  const servingOptions = options.map(([optionId, description, nutrients]) => subwayOption(`${id}:${optionId}`, description, nutrients));
+  const food = officialFood(
+    subway,
+    id,
+    name,
+    servingOptions[0].serving.description,
+    null,
+    SUBWAY_SOURCE,
+    `${SUBWAY_REFERENCE}; published size-specific options`,
+    servingOptions,
+    { accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+};
 const subwayFoods = [
   subwayFood("steak-philly-6-inch", "Steak Philly (6\")", "1 6-inch sandwich (192 g): steak, American cheese, mayo, green peppers and onions on toasted Artisan Italian bread; no add-ons", { calories: 510, protein: 28, carbohydrates: 43, fat: 25, sodium: 1320, fiber: 2, totalSugar: 5, addedSugar: 3 }, "https://www.subway.com/en-us/restaurant/12822-0/customizer/productsummary/13075/category/sandwiches"),
   subwayFood("grilled-chicken-6-inch", "Grilled Chicken (6\")", "1 6-inch sandwich (247 g): grilled chicken, Monterey cheddar, lettuce, tomatoes, onions and mayo on toasted Artisan Italian bread; no add-ons", { calories: 510, protein: 31, carbohydrates: 43, fat: 24, sodium: 830, fiber: 3, totalSugar: 5, addedSugar: 3 }, "https://www.subway.com/en-us/restaurant/42048-0/customizer/productsummary/12983/category/sandwiches"),
@@ -1625,12 +1684,296 @@ const subwayFoods = [
   subwayFood("meatball-marinara-6-inch", "Meatball Marinara (6\")", "1 6-inch sandwich (239 g): meatballs, marinara sauce, provolone and Parmesan on Artisan Italian bread; no add-ons", { calories: 570, protein: 27, carbohydrates: 53, fat: 28, sodium: 1370, fiber: 4, totalSugar: 7, addedSugar: 4 }, "https://www.subway.com/en-us/restaurant/10635-0/customizer/productsummary/12984/category/6-99-meal-of-the-day", "current menu page displayed 550 calories versus the PDF's 570; this record retains the complete PDF value set"),
   subwayFood("tuna-6-inch", "Tuna (6\")", "1 6-inch sandwich (236 g): wild-caught tuna salad, provolone, lettuce, tomatoes and onions on Artisan Italian bread; no add-ons or added sauce", { calories: 570, protein: 27, carbohydrates: 42, fat: 33, sodium: 950, fiber: 2, totalSugar: 4, addedSugar: 3 }, "https://www.subway.com/en-us/restaurant/32893-0/customizer/productsummary/13066/category/sandwiches", "current menu page displayed 560 calories versus the PDF's 570; this record retains the complete PDF value set"),
   subwayFood("veggie-delite-6-inch", "Veggie Delite\u00ae (6\")", "1 6-inch sandwich (191 g): provolone, spinach, cucumbers, green peppers, lettuce, tomatoes and onions on Hearty Multigrain bread; no add-ons or sauce", { calories: 320, protein: 17, carbohydrates: 41, fat: 10, sodium: 600, fiber: 4, totalSugar: 6, addedSugar: 4 }, "https://www.subway.com/en-us/restaurant/27667-0/customizer/productsummary/13064/category/sandwiches", "current menu page displayed 310 calories versus the PDF's 320; this record retains the complete PDF value set"),
+  ...[
+    ["chipotle-philly-6-inch", "Chipotle Philly (6\")", 198, 490, 22, 1440, 44, 2, 5, 4, 30],
+    ["cheesy-garlic-steak-6-inch", "Cheesy Garlic Steak (6\")", 199, 510, 23, 1190, 49, 3, 5, 4, 26],
+    ["spicy-nacho-chicken-6-inch", "Spicy Nacho Chicken (6\")", 203, 440, 17, 1280, 49, 3, 5, 3, 24],
+    ["honey-mustard-bbq-chicken-6-inch", "Honey Mustard BBQ Chicken (6\")", 273, 510, 20, 1350, 53, 3, 13, 11, 30],
+    ["sweet-onion-teriyaki-chicken-6-inch", "Sweet Onion Teriyaki Chicken\u00ae (6\")", 256, 430, 11, 1250, 55, 4, 20, 16, 29],
+    ["five-meat-italian-6-inch", "5 Meat Italian (6\")", 303, 680, 37, 1940, 46, 3, 6, 4, 40],
+    ["meatball-pepperoni-6-inch", "Meatball Pepperoni (6\")", 268, 690, 38, 1860, 56, 4, 7, 5, 33],
+    ["oven-roasted-turkey-6-inch", "Oven-Roasted Turkey (6\")", 233, 480, 23, 1150, 42, 3, 5, 3, 26],
+    ["black-forest-ham-6-inch", "Black Forest Ham (6\")", 233, 490, 23, 1190, 44, 2, 5, 4, 25],
+    ["roast-beef-6-inch", "Roast Beef (6\")", 247, 500, 23, 1120, 44, 2, 6, 4, 31],
+    ["cold-cut-combo-6-inch", "Cold Cut Combo\u00ae (6\")", 240, 530, 29, 1320, 43, 2, 5, 3, 25],
+    ["big-hot-pastrami-6-inch", "Big Hot Pastrami (6\")", 232, 550, 30, 2070, 44, 2, 5, 2, 30],
+    ["blt-6-inch", "B.L.T. (6\")", 171, 480, 26, 800, 42, 2, 5, 4, 18],
+    ["buffalo-chicken-6-inch", "Buffalo Chicken (6\")", 288, 510, 19, 1780, 55, 3, 7, 3, 31],
+    ["oven-roasted-turkey-ham-6-inch", "Oven-Roasted Turkey & Ham (6\")", 233, 480, 23, 1140, 41, 4, 6, 4, 27],
+    ["pizza-sub-6-inch", "Pizza Sub (6\")", 177, 490, 25, 1340, 45, 2, 5, 3, 22],
+    ["veggie-patty-6-inch", "Veggie Patty (6\")", 263, 470, 19, 1100, 58, 12, 9, 4, 19],
+    ["grilled-chicken-smashed-avocado-6-inch", "Grilled Chicken & Smashed Avocado (6\")", 311, 470, 19, 930, 44, 6, 8, 4, 35],
+    ["grilled-chicken-fresh-avocado-6-inch", "Grilled Chicken & Fresh Avocado (6\")", 304, 450, 16, 800, 44, 6, 7, 4, 35],
+    ["ham-turkey-stacker-6-inch", "Ham & Turkey Stacker (6\")", 226, 290, 5, 1000, 42, 4, 6, 4, 20],
+    ["turkey-ranch-delite-6-inch", "Turkey & Ranch Delite (6\")", 254, 380, 13, 1140, 41, 5, 7, 5, 26],
+    ["seasoned-steak-smashed-avocado-6-inch", "Seasoned Steak & Smashed Avocado (6\")", 297, 460, 16, 1170, 45, 6, 7, 5, 35],
+    ["seasoned-steak-fresh-avocado-6-inch", "Seasoned Steak & Fresh Avocado (6\")", 290, 430, 14, 1040, 45, 6, 7, 5, 35],
+  ].map(([id, name, grams, calories, fat, sodium, carbohydrates, fiber, totalSugar, addedSugar, protein]) => subwayFood(
+    id,
+    name,
+    `1 6-inch sandwich (${grams} g), standard published recipe; item-specific bread, protein, cheese, vegetables and sauce are included as assembled by Subway; no add-ons`,
+    subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar)
+  )),
+  ...[
+    ["kids-veggie-delite-mini-sub", "Kids' Veggie Delite\u00ae Mini Sub", 108, 140, 2, 240, 27, 3, 4, 2, 6],
+    ["kids-black-forest-ham-mini-sub", "Kids' Black Forest Ham Mini Sub", 137, 180, 3, 480, 28, 3, 4, 3, 11],
+    ["kids-oven-roasted-turkey-mini-sub", "Kids' Oven-Roasted Turkey Mini Sub", 137, 170, 3, 470, 27, 3, 4, 3, 12],
+  ].map(([id, name, grams, calories, fat, sodium, carbohydrates, fiber, totalSugar, addedSugar, protein]) => subwayFormatFood(
+    id,
+    name,
+    `1 kids' mini sub (${grams} g) on mini multigrain bread with all published fresh vegetables`,
+    subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar)
+  )),
+  ...[
+    ["steak-philly-wrap", "Steak Philly Wrap", 295, 710, 35, 1970, 56, 3, 5, 3, 46],
+    ["chipotle-philly-wrap", "Chipotle Philly Wrap", 300, 700, 32, 2090, 56, 3, 5, 3, 47],
+    ["cheesy-garlic-steak-wrap", "Cheesy Garlic Steak Wrap", 302, 710, 33, 1840, 62, 3, 5, 3, 43],
+    ["grilled-chicken-wrap", "Grilled Chicken Wrap", 349, 680, 31, 1240, 55, 3, 5, 1, 48],
+    ["chicken-bacon-ranch-wrap", "Chicken & Bacon Ranch Wrap", 367, 830, 42, 1850, 56, 3, 7, 4, 56],
+    ["spicy-nacho-chicken-wrap", "Spicy Nacho Chicken Wrap", 294, 610, 24, 1730, 59, 3, 6, 3, 40],
+    ["honey-mustard-bbq-chicken-wrap", "Honey Mustard BBQ Chicken Wrap", 363, 680, 27, 1800, 63, 4, 14, 11, 46],
+    ["sweet-onion-teriyaki-chicken-wrap", "Sweet Onion Teriyaki Chicken\u00ae Wrap", 360, 620, 16, 1690, 76, 3, 27, 22, 45],
+    ["bmt-wrap", "B.M.T.\u00ae Wrap", 240, 610, 36, 1500, 44, 2, 5, 3, 27],
+    ["spicy-italian-wrap", "Spicy Italian Wrap", 318, 1010, 69, 2670, 57, 3, 6, 3, 39],
+    ["five-meat-italian-wrap", "5 Meat Italian Wrap", 450, 1000, 56, 3230, 60, 3, 8, 6, 66],
+    ["meatball-marinara-wrap", "Meatball Marinara Wrap", 397, 890, 49, 2140, 76, 7, 12, 7, 40],
+    ["meatball-pepperoni-wrap", "Meatball Pepperoni Wrap", 433, 1050, 63, 2730, 77, 7, 12, 7, 47],
+    ["oven-roasted-turkey-wrap", "Oven-Roasted Turkey Wrap", 309, 610, 27, 1660, 53, 3, 6, 3, 38],
+    ["black-forest-ham-wrap", "Black Forest Ham Wrap", 309, 630, 28, 1740, 57, 3, 7, 5, 36],
+    ["roast-beef-wrap", "Roast Beef Wrap", 337, 660, 27, 1600, 57, 3, 8, 6, 48],
+    ["cold-cut-combo-wrap", "Cold Cut Combo\u00ae Wrap", 323, 720, 40, 1990, 54, 3, 6, 3, 35],
+    ["tuna-wrap", "Tuna Wrap", 330, 900, 59, 1310, 52, 3, 5, 3, 41],
+    ["veggie-delite-wrap", "Veggie Delite\u00ae Wrap", 210, 400, 13, 690, 53, 3, 5, 2, 17],
+    ["all-american-club-wrap", "All American Club\u00ae Wrap", 333, 760, 39, 2220, 57, 3, 9, 5, 44],
+    ["subway-club-wrap", "Subway Club\u00ae Wrap", 374, 690, 30, 2300, 58, 3, 9, 6, 48],
+    ["big-hot-pastrami-wrap", "Big Hot Pastrami Wrap", 365, 890, 54, 3050, 56, 3, 7, 2, 49],
+    ["blt-wrap", "B.L.T. Wrap", 220, 710, 42, 1200, 53, 3, 7, 5, 30],
+    ["turkey-ham-wrap", "Turkey & Ham Wrap", 309, 620, 28, 1700, 55, 3, 7, 4, 37],
+    ["pizza-sub-wrap", "Pizza Sub Wrap", 232, 730, 42, 1980, 56, 3, 6, 3, 30],
+    ["veggie-patty-wrap", "Veggie Patty Wrap", 367, 720, 30, 870, 87, 19, 10, 4, 25],
+  ].map(([id, name, grams, calories, fat, sodium, carbohydrates, fiber, totalSugar, addedSugar, protein]) => subwayFormatFood(
+    id,
+    name,
+    `1 published wrap (${grams} g): 12-inch wrap, cheese, select fresh vegetables and a footlong meat portion; no extra add-ons`,
+    subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar),
+    [name.replace("Wrap", "12-inch wrap")]
+  )),
+  ...[
+    ["baja-chicken-protein-pocket", "Baja Chicken Protein Pocket", 184, 330, 13, 750, 30, 2, 2, 0, 24],
+    ["italian-trio-protein-pocket", "Italian Trio Protein Pocket", 192, 480, 29, 1580, 32, 2, 2, 1, 22],
+    ["peppercorn-ranch-chicken-protein-pocket", "Peppercorn Ranch Chicken Protein Pocket", 190, 330, 13, 800, 30, 2, 2, 0, 24],
+    ["turkey-ham-protein-pocket", "Turkey & Ham Protein Pocket", 193, 320, 11, 1260, 32, 2, 4, 3, 21],
+  ].map(([id, name, grams, calories, fat, sodium, carbohydrates, fiber, totalSugar, addedSugar, protein]) => subwayFormatFood(
+    id,
+    name,
+    `1 protein pocket (${grams} g): 9-inch wrap, cheese, select fresh vegetables and the suggested sauce`,
+    subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar)
+  )),
+  ...[
+    ["steak-philly-salad", "Steak Philly Salad", 409, 450, 35, 1080, 13, 4, 6, 1, 24],
+    ["chipotle-philly-salad", "Chipotle Philly Salad", 415, 400, 28, 1260, 15, 5, 7, 2, 25],
+    ["cheesy-garlic-steak-salad", "Cheesy Garlic Steak Salad", 434, 460, 32, 1180, 21, 5, 8, 2, 23],
+    ["grilled-chicken-salad", "Grilled Chicken Salad", 415, 440, 34, 590, 12, 4, 6, 0, 26],
+    ["chicken-bacon-ranch-salad", "Chicken & Bacon Ranch Salad", 430, 490, 36, 1020, 14, 5, 7, 2, 30],
+    ["spicy-nacho-chicken-salad", "Spicy Nacho Chicken Salad", 420, 320, 19, 1220, 20, 5, 8, 0, 20],
+    ["honey-mustard-bbq-chicken-salad", "Honey Mustard BBQ Chicken Salad", 454, 420, 24, 1280, 31, 5, 22, 17, 25],
+    ["sweet-onion-teriyaki-chicken-salad", "Sweet Onion Teriyaki Chicken\u00ae Salad", 423, 300, 10, 1100, 33, 4, 25, 19, 23],
+    ["bmt-salad", "B.M.T.\u00ae Salad", 407, 540, 46, 1250, 13, 4, 6, 1, 22],
+    ["spicy-italian-salad", "Spicy Italian Salad", 407, 610, 54, 1450, 13, 4, 5, 0, 22],
+    ["five-meat-italian-salad", "5 Meat Italian Salad", 471, 610, 47, 1690, 14, 4, 7, 2, 35],
+    ["meatball-marinara-salad", "Meatball Marinara Salad with MVP Parmesan Vinaigrette\u00ae", 484, 530, 39, 1360, 25, 7, 11, 4, 23],
+    ["meatball-pepperoni-salad", "Meatball Pepperoni Salad with MVP Parmesan Vinaigrette\u00ae", 502, 610, 47, 1650, 26, 7, 11, 4, 26],
+    ["oven-roasted-turkey-salad", "Oven-Roasted Turkey Salad", 400, 410, 33, 910, 11, 4, 5, 1, 21],
+    ["black-forest-ham-salad", "Black Forest Ham Salad", 400, 420, 33, 950, 13, 4, 6, 1, 20],
+    ["roast-beef-salad", "Roast Beef Salad", 415, 440, 33, 880, 13, 4, 6, 2, 26],
+    ["cold-cut-combo-salad", "Cold Cut Combo\u00ae Salad", 408, 470, 39, 1080, 11, 4, 5, 0, 20],
+    ["tuna-salad", "Tuna Salad", 390, 410, 32, 640, 10, 4, 5, 0, 22],
+    ["veggie-delite-salad", "Veggie Delite\u00ae Salad", 316, 150, 9, 320, 10, 4, 5, 0, 10],
+    ["all-american-club-salad", "All American Club\u00ae Salad", 410, 480, 39, 1270, 13, 4, 7, 2, 22],
+    ["subway-club-salad", "Subway Club\u00ae Salad", 430, 440, 34, 1310, 14, 4, 7, 2, 24],
+    ["big-hot-pastrami-salad", "Big Hot Pastrami Salad", 463, 410, 30, 1930, 15, 5, 7, 0, 26],
+    ["blt-salad", "B.L.T. Salad", 345, 420, 36, 550, 11, 4, 6, 1, 13],
+    ["turkey-ham-salad", "Turkey & Ham Salad", 400, 420, 33, 930, 12, 4, 6, 1, 21],
+    ["pizza-sub-salad", "Pizza Sub Salad", 380, 330, 24, 1030, 15, 5, 7, 1, 17],
+    ["veggie-patty-salad", "Veggie Patty Salad", 395, 300, 17, 820, 28, 12, 8, 0, 13],
+  ].map(([id, name, grams, calories, fat, sodium, carbohydrates, fiber, totalSugar, addedSugar, protein]) => subwayFormatFood(
+    id,
+    name,
+    `1 salad (${grams} g): lettuce, spinach, tomatoes, onions, green peppers, cucumbers, olives, named protein and cheese; dressing excluded unless named`,
+    subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar)
+  )),
+  ...[
+    ["steak-philly-protein-bowl", "Steak Philly Protein Bowl", 403, 630, 46, 1950, 14, 3, 7, 2, 43],
+    ["chipotle-philly-protein-bowl", "Chipotle Philly Protein Bowl", 415, 600, 41, 2180, 16, 4, 7, 3, 46],
+    ["cheesy-garlic-steak-protein-bowl", "Cheesy Garlic Steak Protein Bowl", 417, 630, 42, 1670, 27, 4, 8, 3, 39],
+    ["grilled-chicken-protein-bowl", "Grilled Chicken Protein Bowl", 415, 620, 44, 960, 12, 3, 6, 0, 48],
+    ["chicken-bacon-ranch-protein-bowl", "Chicken & Bacon Ranch Protein Bowl", 445, 760, 55, 1750, 14, 4, 7, 2, 55],
+    ["spicy-nacho-chicken-protein-bowl", "Spicy Nacho Chicken Protein Bowl", 425, 510, 30, 1870, 26, 5, 9, 1, 35],
+    ["honey-mustard-bbq-chicken-protein-bowl", "Honey Mustard BBQ Chicken Protein Bowl", 466, 620, 36, 2010, 31, 4, 22, 17, 45],
+    ["sweet-onion-teriyaki-chicken-protein-bowl", "Sweet Onion Teriyaki Chicken\u00ae Protein Bowl", 432, 470, 18, 1860, 41, 3, 33, 26, 42],
+    ["bmt-protein-bowl", "B.M.T.\u00ae Protein Bowl", 401, 820, 68, 2290, 14, 3, 6, 2, 40],
+    ["spicy-italian-protein-bowl", "Spicy Italian Protein Bowl", 396, 960, 84, 2610, 14, 3, 5, 1, 39],
+    ["five-meat-italian-protein-bowl", "5 Meat Italian Protein Bowl", 528, 960, 70, 3170, 17, 3, 8, 4, 66],
+    ["meatball-marinara-protein-bowl", "Meatball Marinara Protein Bowl with MVP Parmesan Vinaigrette\u00ae", 553, 880, 65, 2340, 37, 8, 14, 6, 42],
+    ["meatball-pepperoni-protein-bowl", "Meatball Pepperoni Protein Bowl with MVP Parmesan Vinaigrette\u00ae", 589, 1040, 79, 2930, 38, 8, 14, 6, 48],
+    ["oven-roasted-turkey-protein-bowl", "Oven-Roasted Turkey Protein Bowl", 386, 560, 42, 1600, 10, 3, 5, 1, 38],
+    ["black-forest-ham-protein-bowl", "Black Forest Ham Protein Bowl", 386, 580, 43, 1680, 14, 3, 7, 3, 36],
+    ["roast-beef-protein-bowl", "Roast Beef Protein Bowl", 415, 610, 42, 1540, 14, 3, 7, 3, 48],
+    ["cold-cut-combo-protein-bowl", "Cold Cut Combo\u00ae Protein Bowl", 401, 670, 55, 1930, 11, 3, 5, 1, 35],
+    ["tuna-protein-bowl", "Tuna Protein Bowl", 394, 750, 62, 1190, 9, 3, 4, 0, 41],
+    ["all-american-club-protein-bowl", "All American Club\u00ae Protein Bowl", 405, 690, 53, 2330, 15, 3, 9, 3, 40],
+    ["subway-club-protein-bowl", "Subway Club\u00ae Protein Bowl", 418, 410, 21, 2280, 16, 3, 9, 3, 44],
+    ["big-hot-pastrami-protein-bowl", "Big Hot Pastrami Protein Bowl", 512, 740, 57, 3430, 17, 4, 9, 0, 46],
+    ["blt-protein-bowl", "B.L.T. Protein Bowl", 276, 560, 49, 890, 10, 3, 7, 3, 22],
+    ["turkey-ham-protein-bowl", "Turkey & Ham Protein Bowl", 386, 570, 42, 1640, 12, 3, 6, 2, 37],
+    ["pizza-sub-protein-bowl", "Pizza Sub Protein Bowl", 372, 600, 46, 1980, 18, 4, 8, 2, 31],
+    ["veggie-patty-protein-bowl", "Veggie Patty Protein Bowl", 404, 540, 33, 1550, 44, 19, 10, 0, 22],
+  ].map(([id, name, grams, calories, fat, sodium, carbohydrates, fiber, totalSugar, addedSugar, protein]) => subwayFormatFood(
+    id,
+    name,
+    `1 protein bowl (${grams} g): footlong meat portion, lettuce, spinach, tomatoes, onions, green peppers, cucumbers and olives; dressing and cheese excluded unless named`,
+    subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar),
+    [name.replace("Protein Bowl", "No Bready Bowl")]
+  )),
+  ...[
+    ["bacon-egg-cheese-breakfast", "Bacon, Egg & Cheese Breakfast Sandwich", 193, 550, 30, 1200, 43, 2, 4, 3, 26],
+    ["black-forest-ham-egg-cheese-breakfast", "Black Forest Ham, Egg & Cheese Breakfast Sandwich", 207, 500, 25, 1270, 43, 2, 4, 3, 26],
+    ["egg-cheese-breakfast", "Egg & Cheese Breakfast Sandwich", 178, 470, 24, 1020, 42, 2, 4, 2, 21],
+    ["steak-egg-cheese-breakfast", "Steak, Egg & Cheese Breakfast Sandwich", 221, 540, 26, 1300, 43, 2, 4, 3, 31],
+  ].map(([id, name, grams, calories, fat, sodium, carbohydrates, fiber, totalSugar, addedSugar, protein]) => subwayFood(
+    id,
+    `${name} (6")`,
+    `1 6-inch sandwich (${grams} g): egg patty and American cheese on Artisan Italian bread with the named protein`,
+    subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar)
+  )),
+  ...[
+    ["bacon-egg-cheese-breakfast-wrap", "Bacon, Egg & Cheese Breakfast Wrap", 325, 900, 56, 1790, 57, 2, 5, 2, 42],
+    ["black-forest-ham-egg-cheese-breakfast-wrap", "Black Forest Ham, Egg & Cheese Breakfast Wrap", 351, 810, 46, 1930, 58, 2, 5, 2, 42],
+    ["egg-cheese-breakfast-wrap", "Egg & Cheese Breakfast Wrap", 295, 740, 44, 1440, 55, 2, 3, 1, 32],
+    ["steak-egg-cheese-breakfast-wrap", "Steak, Egg & Cheese Breakfast Wrap", 366, 860, 48, 1890, 57, 2, 4, 2, 48],
+  ].map(([id, name, grams, calories, fat, sodium, carbohydrates, fiber, totalSugar, addedSugar, protein]) => subwayFormatFood(
+    id,
+    name,
+    `1 12-inch breakfast wrap (${grams} g): egg patty, American cheese and the named protein`,
+    subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar)
+  )),
+  ...[
+    ["cheese-pizza-8-inch", "Cheese Pizza (8\")", 293, 700, 22, 1370, 95, 4, 8, 3, 29],
+    ["bacon-pizza-8-inch", "Bacon Pizza (8\")", 308, 780, 28, 1540, 96, 4, 9, 3, 34],
+    ["meatball-pizza-8-inch", "Meatball Pizza (8\")", 330, 810, 31, 1590, 98, 5, 8, 3, 35],
+    ["pepperoni-pizza-8-inch", "Pepperoni Pizza (8\")", 311, 780, 29, 1660, 96, 5, 8, 3, 33],
+  ].map(([id, name, grams, calories, fat, sodium, carbohydrates, fiber, totalSugar, addedSugar, protein]) => subwayFormatFood(
+    id, name, `1 published 8-inch pizza (${grams} g)`, subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar)
+  )),
+  ...[
+    ["ham-jack-slider", "Ham & Jack Slider", "1 slider (71 g) with ham and Pepper Jack cheese", 160, 10, 21, 4, 550, null, 2, 2],
+    ["italian-spice-slider", "Italian Spice Slider", "1 slider (72 g) with American cheese and MVP Parmesan Vinaigrette\u00ae", 250, 9, 21, 15, 740, null, 2, 2],
+    ["little-cheesesteak-slider", "Little Cheesesteak Slider", "1 slider (71 g) with American cheese and Baja Chipotle sauce", 180, 8, 21, 7, 450, 1, 2, 2],
+    ["turkey-slider", "Turkey Slider", "1 slider (88 g) with Pepper Jack cheese and mayonnaise", 230, 12, 20, 12, 690, 1, 2, 0],
+  ].map(([id, name, description, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar]) => subwayFormatFood(
+    id, name, description, subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar)
+  )),
+  ...[
+    ["artisan-italian-bread", "Artisan Italian Bread", 71, subwayPublished(210, 8, 39, 2, 380, 1, 3, 2)],
+    ["hearty-multigrain-bread", "Hearty Multigrain Bread", 71, subwayPublished(200, 9, 36, 3, 350, 3, 4, 4)],
+    ["jalapeno-cheddar-bread", "Jalape\u00f1o Cheddar Bread", 82, subwayPublished(240, 9, 39, 5, 500, 2, 3, 2)],
+    ["artisan-flatbread", "Artisan Flatbread", 78, subwayPublished(220, 7, 40, 4, 360, 1, 2, 2)],
+  ].map(([id, name, grams, nutrients]) => subwaySizedFood(id, name, [
+    ["6-inch", `1 6-inch bread serving (${grams} g)`, nutrients],
+    ["footlong", `1 footlong bread serving (published as two 6-inch servings; ${grams * 2} g total)`, doubleSubwayPublished(nutrients)],
+  ], [`Subway 6 inch ${name}`, `Subway footlong ${name}`, name.replace("Jalape\u00f1o", "Jalapeno")])),
+  ...[
+    ["wrap-12-inch", "12-Inch Wrap", "1 wrap (102 g)", subwayPublished(300, 8, 50, 8, 580, 2, 2, 1)],
+    ["protein-pocket-wrap-9-inch", "9-Inch Protein Pocket Wrap", "1 wrap (52 g)", subwayPublished(150, 4, 26, 3, 340, null, 0, 0)],
+    ["mini-artisan-italian-bread", "Mini Artisan Italian Bread", "1 mini bread serving (47 g)", subwayPublished(140, 5, 26, 2, 250, null, 2, 2)],
+    ["mini-hearty-multigrain-bread", "Mini Hearty Multigrain Bread", "1 mini bread serving (47 g)", subwayPublished(130, 6, 24, 2, 230, 2, 2, 2)],
+  ].map(([id, name, description, nutrients]) => subwayFormatFood(id, name, description, nutrients)),
+  ...[
+    ["baja-chipotle-sauce", "Baja Chipotle Sauce", 14, 70, 0, 1, 7, 125, 0, 1, 0],
+    ["bbq-sauce", "BBQ Sauce", 14, 25, 0, 6, 0, 115, 0, 5, 5],
+    ["cheddar-cheese-sauce", "Cheddar Cheese Sauce", 18, 30, 1, 1, 3, 150, 0, 1, 0],
+    ["creamy-sriracha", "Creamy Sriracha", 14, 40, 0, 2, 4, 240, 0, 1, 0],
+    ["buffalo-sauce", "Buffalo Sauce", 14, 0, 0, 0, 0, 390, 0, 0, 0],
+    ["giardiniera", "Giardiniera", 28, 80, 0, 1, 9, 340, 0, 1, 0],
+    ["honey-mustard", "Honey Mustard", 14, 60, 0, 3, 5, 125, 0, 3, 3],
+    ["hot-honey-sauce", "Hot Honey Sauce", 14, 30, 0, 8, 0, 120, 0, 8, 8],
+    ["mayonnaise", "Mayonnaise", 14, 100, 0, 0, 11, 65, 0, 0, 0],
+    ["yellow-mustard", "Yellow Mustard", 14, 10, 0, 1, 1, 170, 0, 0, 0],
+    ["olive-oil-blend", "Olive Oil Blend", 5, 45, 0, 0, 5, 0, 0, 0, 0],
+    ["olive-oil-vinegar", "Olive Oil Blend & Vinegar", 9, 45, 0, 0, 5, 0, 0, 0, 0],
+    ["mvp-parmesan-vinaigrette", "MVP Parmesan Vinaigrette\u00ae", 14, 60, 0, 1, 6, 140, 0, 1, 1],
+    ["peppercorn-ranch", "Peppercorn Ranch", 14, 80, 0, 1, 8, 100, 0, 1, 0],
+    ["red-wine-vinegar", "Red Wine Vinegar", 4, 0, 0, 0, 0, 0, 0, 0, 0],
+    ["roasted-garlic-aioli", "Roasted Garlic Aioli", 14, 80, 0, 1, 9, 150, 0, 1, 0],
+    ["subkrunch", "Subkrunch\u2122", 11, 70, 1, 6, 5, 45, 0, 0, 0],
+    ["sweet-onion-teriyaki-sauce", "Sweet Onion Teriyaki Sauce", 14, 30, 0, 7, 0, 130, 0, 6, 6],
+  ].map(([id, name, grams, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar]) => subwayFormatFood(
+    id,
+    name,
+    `1 published sandwich sauce portion (${grams} g); use two portions for the published salad-dressing amount`,
+    subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar)
+  )),
+  ...[
+    ["american-cheese", "American Cheese", 23, 80, 4, 1, 7, 420, 0, 1, 0],
+    ["monterey-cheddar-cheese", "Shredded Monterey Cheddar", 28, 110, 7, 1, 9, 170, 0, 0, 0],
+    ["grated-parmesan", "Grated Parmesan", 1, 5, 0, 0, 0, 25, 0, 0, 0],
+    ["pepper-jack-cheese", "Pepper Jack Cheese", 28, 100, 5, 1, 8, 480, 0, 0, 0],
+    ["provolone-cheese", "Provolone Cheese", 25, 90, 6, 1, 7, 220, 0, 0, 0],
+  ].map(([id, name, grams, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar]) => subwayFormatFood(
+    id, name, `1 published cheese portion (${grams} g)`, subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar)
+  )),
+  ...[
+    ["all-american-club-meats", "All-American Club Meats", 72, 140, 15, 2, 8, 650, 0, 1, 1],
+    ["bacon", "Bacon", 15, 80, 5, 1, 6, 170, 0, 1, 1],
+    ["black-forest-ham-protein", "Black Forest Ham Protein", 57, 70, 10, 2, 2, 490, 0, 1, 1],
+    ["cold-cut-combo-meats", "Cold Cut Combo\u00ae Meats", 64, 110, 9, 1, 8, 620, 0, 1, 0],
+    ["egg-patty", "Egg Patty", 85, 180, 10, 2, 15, 220, 0, 0, 0],
+    ["genoa-salami", "Genoa Salami", 18, 70, 3, 1, 6, 260, 0, 0, 0],
+    ["grilled-chicken-protein", "Grilled Chicken Protein", 71, 80, 16, 1, 2, 210, 0, 1, 0],
+    ["sweet-onion-teriyaki-chicken-protein", "Sweet Onion Teriyaki Glazed Chicken Protein", 85, 110, 16, 9, 2, 350, 0, 8, 7],
+    ["meatballs-protein", "Meatballs", 139, 250, 12, 13, 18, 720, 2, 5, 2],
+    ["oven-roasted-turkey-protein", "Oven-Roasted Turkey Protein", 57, 60, 11, 0, 2, 450, 0, 0, 0],
+    ["pastrami-protein", "Pastrami Protein", 57, 130, 9, 1, 10, 470, 0, 1, 0],
+    ["pepperoni", "Pepperoni", 18, 80, 3, 1, 7, 290, 0, 0, 0],
+    ["roast-beef-protein", "Roast Beef Protein", 71, 80, 15, 2, 2, 420, 0, 2, 2],
+    ["rotisserie-style-chicken-protein", "Rotisserie-Style Chicken Protein", 71, 90, 15, 0, 4, 400, 0, 0, 0],
+    ["steak-protein", "Steak Protein", 71, 110, 17, 2, 5, 450, 0, 1, 1],
+    ["subway-club-meats", "Subway Club\u00ae Meats", 92, 110, 17, 3, 3, 690, 0, 2, 2],
+    ["tuna-protein", "Tuna Protein", 74, 250, 12, 0, 23, 310, 0, 0, 0],
+    ["veggie-patty-protein", "Veggie Patty Protein", 85, 170, 6, 17, 9, 320, 8, 2, 0],
+  ].map(([id, name, grams, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar]) => subwayFormatFood(
+    id, name, `1 published 6-inch sandwich or salad protein portion (${grams} g); footlongs and wraps use two portions`, subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar)
+  )),
+  ...[
+    ["chocolate-chip-cookie", "Chocolate Chip Cookie", "1 cookie (45 g)", 210, 2, 30, 10, 120, null, 18, 18],
+    ["double-chocolate-cookie", "Double Chocolate Cookie", "1 cookie (45 g)", 210, 2, 29, 9, 125, 1, 20, 19],
+    ["oatmeal-raisin-cookie", "Oatmeal Raisin Cookie", "1 cookie (45 g)", 200, 3, 30, 8, 110, 1, 16, 10],
+    ["raspberry-cheesecake-cookie", "Naturally Flavored Raspberry Cheesecake Cookie", "1 cookie (45 g)", 210, 2, 29, 9, 115, 0, 16, 15],
+    ["white-chip-macadamia-nut-cookie", "White Chip Macadamia Nut Cookie", "1 cookie (45 g)", 210, 2, 28, 10, 125, null, 17, 17],
+    ["applesauce", "Applesauce", "1 side (90 g)", 70, 0, 16, 0, 0, 3, 13, 0],
+    ["hash-browns", "Hash Browns", "1 side (108 g)", 190, 3, 24, 9, 600, 3, 1, 0],
+    ["footlong-chocolate-chip-cookie", "Footlong Chocolate Chip Cookie", "1 footlong cookie (285 g)", 1330, 14, 181, 61, 690, 8, 101, 100],
+    ["broccoli-cheddar-soup", "Broccoli Cheddar Soup", "1 8 oz bowl (227 g)", 200, 9, 16, 13, 960, null, 7, 0],
+    ["chicken-noodle-soup", "Chicken Noodle Soup", "1 8 oz bowl (227 g)", 70, 7, 6, 3, 1160, null, 1, 0],
+    ["loaded-baked-potato-soup", "Loaded Baked Potato with Bacon Soup", "1 8 oz bowl (227 g)", 200, 9, 17, 14, 910, 1, 4, 0],
+  ].map(([id, name, description, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar]) => subwayFormatFood(
+    id, name, description, subwayPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar)
+  )),
 ];
 
 const chipotle = { id: "chipotle", name: "Chipotle" };
 const CHIPOTLE_SOURCE = "https://www.chipotle.com/content/dam/chipotle/menu/nutrition/US-Nutrition-Facts-Paper-Menu-3-2025.pdf";
 const CHIPOTLE_REFERENCE = "Chipotle official US Nutrition Facts paper menu currently served from its nutrition site; exact standalone component portion (OCT-2024-US-PPS chart)";
-const chipotleFood = (id, name, description, nutrients) => officialFood(
+const chipotlePublished = (calories, protein, carbohydrates, fat, sodium, fiber, totalSugar) => ({
+  calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar: null,
+});
+const chipotleOption = (id, description, nutrients) => {
+  const option = officialOption(chipotle.id, id, description, { ...nutrients, addedSugar: null }, 1, CHIPOTLE_SOURCE, CHIPOTLE_REFERENCE);
+  option.provenance.verification.accessedAt = CURRENT_EXPANSION_CHECKED_AT;
+  return option;
+};
+const chipotleFood = (id, name, description, nutrients, searchAliases) => {
+  const food = officialFood(
   chipotle,
   id,
   name,
@@ -1638,6 +1981,34 @@ const chipotleFood = (id, name, description, nutrients) => officialFood(
   { ...nutrients, addedSugar: null },
   CHIPOTLE_SOURCE,
   CHIPOTLE_REFERENCE,
+  undefined,
+  { accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+};
+const chipotleSizedFood = (id, name, options, searchAliases) => {
+  const servingOptions = options.map(([optionId, description, nutrients]) => chipotleOption(`${id}:${optionId}`, description, nutrients));
+  const food = officialFood(
+    chipotle,
+    id,
+    name,
+    servingOptions[0].serving.description,
+    null,
+    CHIPOTLE_SOURCE,
+    `${CHIPOTLE_REFERENCE}; each option uses its separately published portion`,
+    servingOptions,
+    { accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+};
+const chipotleCalculatedFood = (id, name, description, nutrients) => officialFood(
+  chipotle,
+  id,
+  name,
+  description,
+  { ...nutrients, addedSugar: null },
+  CHIPOTLE_SOURCE,
+  "Calculated configuration: exact named portions summed from the compatible adult component rows in Chipotle's OCT-2024-US-PPS official chart; not a universal bowl or burrito value",
   undefined,
   { accessedAt: CURRENT_EXPANSION_CHECKED_AT }
 );
@@ -1650,8 +2021,223 @@ const chipotleFoods = [
   chipotleFood("cilantro-lime-white-rice-4oz", "Cilantro-Lime White Rice", "1 standalone 4 oz serving", { calories: 210, protein: 4, carbohydrates: 40, fat: 4, sodium: 350, fiber: 1, totalSugar: 0 }),
   chipotleFood("black-beans-4oz", "Black Beans", "1 standalone 4 oz serving", { calories: 130, protein: 8, carbohydrates: 22, fat: 1.5, sodium: 210, fiber: 7, totalSugar: 2 }),
   chipotleFood("fajita-vegetables-2oz", "Fajita Vegetables", "1 standalone 2 oz serving", { calories: 20, protein: 1, carbohydrates: 5, fat: 0, sodium: 150, fiber: 1, totalSugar: 2 }),
-  chipotleFood("guacamole-4oz", "Guacamole (Topping or Side)", "1 standalone 4 oz topping or side serving", { calories: 230, protein: 2, carbohydrates: 8, fat: 22, sodium: 370, fiber: 6, totalSugar: 1 }),
-  chipotleFood("chips-regular-4oz", "Chips (Regular)", "1 regular 4 oz serving", { calories: 540, protein: 7, carbohydrates: 73, fat: 25, sodium: 390, fiber: 7, totalSugar: 1 }),
+  chipotleSizedFood("guacamole-4oz", "Guacamole", [
+    ["topping-side-4oz", "1 topping or side (4 oz)", chipotlePublished(230, 2, 8, 22, 370, 6, 1)],
+    ["large-8oz", "1 large side (8 oz)", chipotlePublished(460, 4, 16, 44, 740, 12, 2)],
+  ]),
+  chipotleSizedFood("chips-regular-4oz", "Chips", [
+    ["regular-4oz", "1 regular serving (4 oz)", chipotlePublished(540, 7, 73, 25, 390, 7, 1)],
+    ["large-6oz", "1 large serving (6 oz)", chipotlePublished(810, 11, 110, 38, 590, 11, 2)],
+    ["kids-1oz", "1 kids' serving (1 oz)", chipotlePublished(140, 2, 18, 6, 95, 2, 0)],
+  ]),
+  chipotleFood("flour-tortilla-burrito", "Flour Tortilla (Burrito)", "1 standalone burrito-size flour tortilla", chipotlePublished(320, 8, 50, 9, 600, 3, 0)),
+  chipotleFood("flour-tortilla-taco", "Flour Tortilla (Taco)", "1 standalone taco-size flour tortilla", chipotlePublished(80, 2, 13, 2.5, 160, null, 0)),
+  chipotleFood("crispy-corn-tortilla", "Crispy Corn Tortilla", "1 standalone crispy corn tortilla", chipotlePublished(70, 1, 10, 3, 0, 1, 0)),
+  chipotleFood("cilantro-lime-brown-rice-4oz", "Cilantro-Lime Brown Rice", "1 standalone 4 oz serving", chipotlePublished(210, 4, 36, 6, 190, 2, 0)),
+  chipotleFood("pinto-beans-4oz", "Pinto Beans", "1 standalone 4 oz serving", chipotlePublished(130, 8, 21, 1.5, 210, 8, 1)),
+  chipotleFood("fresh-tomato-salsa-4oz", "Fresh Tomato Salsa", "1 standalone 4 oz serving", chipotlePublished(25, 0, 4, 0, 550, 1, 1)),
+  chipotleFood("roasted-chili-corn-salsa-4oz", "Roasted Chili-Corn Salsa", "1 standalone 4 oz serving", chipotlePublished(80, 3, 16, 1.5, 330, 3, 4), ["Chipotle corn salsa"]),
+  chipotleFood("tomatillo-green-chili-salsa-2floz", "Tomatillo-Green Chili Salsa", "1 standalone 2 fl oz serving", chipotlePublished(15, 0, 4, 0, 260, 0, 2)),
+  chipotleFood("tomatillo-red-chili-salsa-2floz", "Tomatillo-Red Chili Salsa", "1 standalone 2 fl oz serving", chipotlePublished(30, 0, 4, 0, 500, 1, 0)),
+  chipotleFood("cheese-1oz", "Cheese", "1 standalone 1 oz serving", chipotlePublished(110, 6, 1, 8, 190, 0, 0)),
+  chipotleFood("sour-cream-2oz", "Sour Cream", "1 standalone 2 oz adult serving", chipotlePublished(110, 2, 2, 9, 30, 0, 2)),
+  chipotleSizedFood("queso-blanco", "Queso Blanco", [
+    ["entree-2oz", "1 entr\u00e9e portion (2 oz)", chipotlePublished(120, 5, 4, 9, 250, 0, 1)],
+    ["side-4oz", "1 side (4 oz)", chipotlePublished(240, 10, 7, 18, 490, 0, 2)],
+    ["large-8oz", "1 large side (8 oz)", chipotlePublished(480, 20, 14, 37, 980, null, 5)],
+  ]),
+  chipotleFood("supergreens-salad-mix-3oz", "Supergreens Salad Mix", "1 standalone 3 oz serving", chipotlePublished(15, 1, 3, 0, 15, 2, 1)),
+  chipotleFood("romaine-lettuce-tacos-1oz", "Romaine Lettuce (Tacos)", "1 standalone 1 oz serving", chipotlePublished(5, 0, 1, 0, 0, 1, 0)),
+  chipotleFood("chipotle-honey-vinaigrette-2floz", "Chipotle-Honey Vinaigrette", "1 standalone 2 fl oz serving", chipotlePublished(220, 1, 18, 16, 850, 1, 12)),
+  ...[
+    ["barqs-root-beer", "Barq's Root Beer", [[280, 0, 85, 0, 130, 0, 85], [430, 0, 120, 0, 180, 0, 120]]],
+    ["coca-cola-classic", "Coca-Cola Classic", [[260, 0, 70, 0, 85, 0, 70], [380, 0, 105, 0, 120, 0, 105]]],
+    ["coca-cola-life", "Coca-Cola Life", [[170, 0, 44, 0, 70, 0, 44], [250, 0, 64, 0, 105, 0, 64]]],
+    ["coca-cola-zero", "Coca-Cola Zero", [[0, 0, 0, 0, 75, 0, 0], [0, 0, 0, 0, 115, 0, 0]]],
+    ["diet-coke", "Diet Coke", [[0, 0, 0, 0, 75, 0, 0], [0, 0, 0, 0, 115, 0, 0]]],
+    ["caffeine-free-diet-coke", "Caffeine-Free Diet Coke", [[0, 0, 0, 0, 90, 0, 0], [0, 0, null, 0, 130, 0, 0]]],
+    ["pibb-xtra", "Pibb Xtra", [[260, 0, 70, 0, 75, 0, 70], [380, 0, 105, 0, 115, 0, 105]]],
+    ["sprite", "Sprite", [[260, 0, 70, 0, 120, 0, 70], [380, 0, 105, 0, 180, 0, 105]]],
+    ["fanta-orange", "Fanta Orange", [[290, 0, 80, 0, 80, 0, 80], [430, 0, 120, 0, 140, 0, 120]]],
+    ["minute-maid-lemonade", "Minute Maid Lemonade", [[280, 0, 75, 0, 95, 0, 75], [400, 0, 110, 0, 140, 0, 110]]],
+    ["powerade-mountain-berry-blast", "Powerade Mountain Berry Blast", [[280, 0, 75, 0, 95, 0, 75], [400, 0, 110, 0, 140, 0, 110]]],
+    ["mello-yello", "Mello Yello", [[290, 0, 80, 0, 100, 0, 100], [420, 0, 116, 0, 140, 0, 140]]],
+    ["blue-sky-lemonade", "Blue Sky Lemonade", [[300, 0, 78, 0, 95, 0, 74], [440, 0, 113, 0, 135, 0, 108]]],
+    ["blue-sky-mango-orange", "Blue Sky Mango Orange", [[300, 0, 75, 0, 80, 0, 74], [430, 0, 109, 0, 120, 0, 108]]],
+    ["maine-root-root-beer", "Maine Root Root Beer", [[170, 0, 62, 0, 45, 0, 62], [240, 0, 90, 0, 65, 0, 90]]],
+    ["iced-tea", "Chipotle Iced Tea", [[10, 0, 3, 0, 0, 0, 0], [15, 0, 4, 0, 0, 0, 0]]],
+    ["sweet-iced-tea", "Chipotle Sweet Iced Tea", [[150, 0, 45, 0, 0, 0, 45], [220, 0, 65, 0, 0, 0, 65]]],
+    ["tractor-berry-agua-fresca", "Tractor Berry Agua Fresca", [[200, 0, 50, 0, 10, 0, 49], [290, 0, 72, 0, 15, 0, 72]]],
+    ["tractor-watermelon-limeade", "Tractor Watermelon Limeade", [[230, 0, 56, 0, 5, 0, 50], [330, 0, 82, 0, 10, 0, 72]]],
+    ["tractor-lemonade", "Tractor Lemonade", [[170, 0, 43, 0, 10, 0, 37], [250, 0, 62, 0, 15, 0, 53]]],
+    ["tractor-mandarin-agua-fresca", "Tractor Mandarin Agua Fresca", [[190, 0, 47, 0, 0, 0, 47], [280, 0, 69, 0, 5, 0, 69]]],
+  ].map(([id, name, sizes]) => chipotleSizedFood(id, name, sizes.map((nutrients, index) => [
+    index === 0 ? "22floz" : "32floz",
+    `${index === 0 ? 22 : 32} fl oz fountain serving`,
+    chipotlePublished(...nutrients),
+  ]), [`Chipotle ${name}`])),
+  ...[
+    ["kids-mandarins", "Kids' Mandarins", "1 published kids' side", 35, 1, 9, 0, 0, 1, 7],
+    ["kids-blueberries", "Kids' Blueberries", "1 published kids' side", 20, 1, 5, 0, 0, null, 3],
+    ["kids-organic-milk", "Kids' Organic Milk", "1 carton (8 oz)", 110, 8, 12, 2.5, 125, 0, 12],
+    ["kids-organic-chocolate-milk", "Kids' Organic Chocolate Milk", "1 carton (8 oz)", 160, 9, 24, 3, 220, 1, 22],
+    ["kids-organic-apple-juice", "Kids' Organic Apple Juice", "1 container (6.75 oz)", 100, 0, 25, 0, 10, 0, 22],
+  ].map(([id, name, description, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => chipotleFood(
+    id, name, description, chipotlePublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar)
+  )),
+  chipotleCalculatedFood(
+    "calculated-chicken-burrito-white-rice-black-beans-salsa-cheese",
+    "Chicken Burrito with White Rice, Black Beans, Fresh Tomato Salsa & Cheese (Calculated)",
+    "Calculated exact configuration: 1 burrito flour tortilla + 4 oz white rice + 4 oz black beans + 4 oz chicken + 4 oz fresh tomato salsa + 1 oz cheese; no other toppings or sides",
+    chipotlePublished(975, 58, 117, 29.5, 2210, 12, 3)
+  ),
+  chipotleCalculatedFood(
+    "calculated-chicken-bowl-white-rice-black-beans-salsa-cheese",
+    "Chicken Bowl with White Rice, Black Beans, Fresh Tomato Salsa & Cheese (Calculated)",
+    "Calculated exact configuration: 4 oz white rice + 4 oz black beans + 4 oz chicken + 4 oz fresh tomato salsa + 1 oz cheese; no tortilla, other toppings or sides",
+    chipotlePublished(655, 50, 67, 20.5, 1610, 9, 3)
+  ),
+  chipotleCalculatedFood(
+    "calculated-sofritas-salad-black-beans-corn-salsa-guacamole",
+    "Sofritas Salad with Black Beans, Corn Salsa & Guacamole (Calculated)",
+    "Calculated exact configuration: 3 oz Supergreens + 4 oz sofritas + 4 oz black beans + 2 oz fajita vegetables + 4 oz roasted chili-corn salsa + 4 oz guacamole; no dressing or other toppings",
+    chipotlePublished(625, 23, 63, 35, 1635, 22, 15)
+  ),
+];
+
+const popeyes = { id: "popeyes", name: "Popeyes" };
+const POPEYES_SOURCE = "https://plk-use1-prod.sites.rbictg.com/nutrition/PLK_Nutrition.pdf";
+const POPEYES_REFERENCE = "Popeyes USA Nutrition Guide, August 2026; standard domestic menu item and published portion";
+const popeyesPublished = (calories, protein, carbohydrates, fat, sodium, fiber, totalSugar) => ({
+  calories, protein, carbohydrates, fat, sodium, fiber, totalSugar, addedSugar: null,
+});
+const popeyesOption = (id, description, nutrients, amount = 1) => {
+  const option = officialOption(popeyes.id, id, description, nutrients, amount, POPEYES_SOURCE, POPEYES_REFERENCE);
+  option.provenance.verification.accessedAt = CURRENT_EXPANSION_CHECKED_AT;
+  return option;
+};
+const popeyesFood = (id, name, description, nutrients, searchAliases) => {
+  const food = officialFood(
+    popeyes,
+    id,
+    name,
+    description,
+    nutrients,
+    POPEYES_SOURCE,
+    POPEYES_REFERENCE,
+    undefined,
+    { accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+};
+const popeyesSizedFood = (id, name, options, searchAliases) => {
+  const servingOptions = options.map(([optionId, description, nutrients, amount = 1]) => popeyesOption(`${id}:${optionId}`, description, nutrients, amount));
+  const food = officialFood(
+    popeyes,
+    id,
+    name,
+    servingOptions[0].serving.description,
+    null,
+    POPEYES_SOURCE,
+    `${POPEYES_REFERENCE}; each option uses its separately published size or piece count`,
+    servingOptions,
+    { accessedAt: CURRENT_EXPANSION_CHECKED_AT }
+  );
+  return searchAliases ? { ...food, searchAliases } : food;
+};
+const popeyesFoods = [
+  popeyesSizedFood("signature-chicken-classic-or-spicy", "Signature Chicken (Classic or Spicy)", [
+    ["wing", "1 bone-in wing", popeyesPublished(220, 14, 11, 15, 630, 1, 0)],
+    ["leg", "1 bone-in leg", popeyesPublished(200, 15, 9, 12, 540, 1, 0)],
+    ["thigh", "1 bone-in thigh", popeyesPublished(490, 25, 18, 34, 1120, 1, 0)],
+    ["breast", "1 bone-in breast", popeyesPublished(620, 52, 17, 30, 1780, 2, 1)],
+  ], ["Popeyes fried chicken", "Popeyes classic chicken", "Popeyes spicy chicken"]),
+  popeyesSizedFood("tenders-classic-or-spicy", "Tenders (Classic or Spicy)", [
+    ["3-piece", "3 tenders; sauce excluded", popeyesPublished(390, 35, 25, 19, 1700, 1, 0), 3],
+    ["5-piece", "5 tenders; sauce excluded", popeyesPublished(650, 58, 41, 32, 2840, 2, 1), 5],
+  ]),
+  popeyesSizedFood("blackened-tenders", "Blackened Tenders", [
+    ["3-piece", "3 blackened tenders; sauce excluded", popeyesPublished(170, 28, 2, 6, 860, 1, 0), 3],
+    ["5-piece", "5 blackened tenders; sauce excluded", popeyesPublished(280, 47, 4, 9, 1430, 1, 0), 5],
+  ]),
+  ...[
+    ["classic-bone-in-wings-6-piece", "Classic Bone-In Wings", 640, 35, 40, 38, 2430, 3, 1],
+    ["buffalo-rub-bone-in-wings-6-piece", "Buffalo Rub Bone-In Wings", 670, 38, 31, 44, 2520, 3, 1],
+    ["garlic-parmesan-rub-bone-in-wings-6-piece", "Garlic Parmesan Rub Bone-In Wings", 670, 38, 29, 44, 2020, 3, 1],
+    ["lemon-pepper-rub-bone-in-wings-6-piece", "Lemon Pepper Rub Bone-In Wings", 670, 38, 30, 44, 2300, 2, 3],
+    ["signature-hot-bone-in-wings-6-piece", "Signature Hot Bone-In Wings", 1150, 39, 48, 89, 2610, 4, 11],
+    ["ghost-pepper-bone-in-wings-6-piece", "Ghost Pepper Bone-In Wings", 650, 35, 42, 38, 2930, 3, 1],
+    ["honey-bbq-bone-in-wings-6-piece", "Honey BBQ Bone-In Wings", 850, 36, 90, 38, 3510, 3, 48],
+    ["sweet-spicy-bone-in-wings-6-piece", "Sweet & Spicy Bone-In Wings", 870, 36, 96, 38, 3810, 3, 50],
+  ].map(([id, name, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => popeyesFood(
+    id, name, "6 bone-in wings in the named published preparation; dipping sauce excluded", popeyesPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar)
+  )),
+  popeyesFood("butterfly-shrimp-8-piece", "Butterfly Shrimp", "8 breaded butterfly shrimp; sauce and side excluded", popeyesPublished(360, 14, 30, 21, 1140, 2, 1)),
+  popeyesFood("classic-chicken-sandwich", "Classic Chicken Sandwich", "1 standard sandwich", popeyesPublished(700, 28, 50, 42, 1440, 2, 8)),
+  popeyesFood("spicy-chicken-sandwich", "Spicy Chicken Sandwich", "1 standard sandwich", popeyesPublished(700, 28, 50, 42, 1470, 2, 8)),
+  popeyesFood("classic-tender-wrap", "Classic Tender Wrap", "1 standard wrap", popeyesPublished(480, 19, 31, 32, 1260, 2, 2)),
+  popeyesFood("spicy-tender-wrap", "Spicy Tender Wrap", "1 standard wrap", popeyesPublished(480, 19, 32, 31, 1320, 2, 2)),
+  popeyesFood("classic-tender-blackened-ranch-wrap", "Classic Tender Blackened Ranch Wrap", "1 standard wrap with Blackened Ranch", popeyesPublished(430, 19, 32, 25, 1340, 2, 3)),
+  popeyesFood("biscuit", "Biscuit", "1 biscuit", popeyesPublished(230, 3, 24, 14, 520, 1, 2)),
+  ...[
+    ["cajun-fries", "Cajun Fries", [["regular", "Regular Cajun Fries", 270, 3, 31, 15, 620, 3, 0], ["large", "Large Cajun Fries", 740, 9, 86, 41, 1720, 8, 1]]],
+    ["homestyle-mac-cheese", "Homestyle Mac & Cheese", [["regular", "Regular Homestyle Mac & Cheese", 280, 11, 16, 20, 510, 0, 3], ["large", "Large Homestyle Mac & Cheese", 850, 33, 48, 63, 1540, 1, 9]]],
+    ["mashed-potatoes-cajun-gravy", "Mashed Potatoes with Cajun Gravy", [["regular", "Regular Mashed Potatoes with Cajun Gravy", 110, 3, 13, 6, 750, 0, 0], ["large", "Large Mashed Potatoes with Cajun Gravy", 310, 7, 39, 14, 2190, 4, 2]]],
+    ["red-beans-rice", "Red Beans & Rice", [["regular", "Regular Red Beans & Rice", 260, 7, 29, 16, 580, 6, 1], ["large", "Large Red Beans & Rice", 640, 18, 73, 40, 1420, 13, 2]]],
+    ["coleslaw", "Coleslaw", [["regular", "Regular Coleslaw", 160, 1, 12, 12, 210, 2, 10], ["large", "Large Coleslaw", 480, 3, 37, 37, 620, 6, 30]]],
+    ["cajun-rice", "Cajun Rice", [["regular", "Regular Cajun Rice", 230, 9, 27, 10, 560, 1, 0], ["large", "Large Cajun Rice", 780, 31, 107, 26, 1650, 4, 1]]],
+  ].map(([id, name, options]) => popeyesSizedFood(id, name, options.map(([optionId, description, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => [
+    optionId, description, popeyesPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar),
+  ]))),
+  popeyesFood("cajun-gravy", "Cajun Gravy", "1 regular serving", popeyesPublished(160, 10, 2, 12, 820, 1, 1)),
+  popeyesFood("jalapeno", "Jalape\u00f1o", "1 whole jalape\u00f1o", popeyesPublished(5, 0, 1, 0, 370, 1, 1), ["Popeyes Jalapeno"]),
+  ...[
+    ["bayou-buffalo-sauce", "Bayou Buffalo\u2122 Sauce", 50, 0, 2, 5, 400, 0, 0],
+    ["boldbq-sauce", "BoldBQ\u2122 Sauce", 60, 0, 14, 0, 400, 0, 11],
+    ["blackened-ranch-sauce", "Blackened Ranch Sauce", 110, 0, 2, 11, 230, 0, 1],
+    ["buttermilk-ranch-sauce", "Buttermilk Ranch Sauce", 130, 0, 2, 14, 200, 0, 1],
+    ["mardi-gras-mustard-sauce", "Mardi Gras Mustard\u2122 Sauce", 90, 1, 4, 8, 210, 1, 3],
+    ["sweet-heat-sauce", "Sweet Heat\u00ae Sauce", 70, 0, 19, 0, 290, 0, 16],
+    ["wild-honey-mustard-sauce", "Wild Honey Mustard Sauce", 110, 0, 5, 11, 140, 0, 4],
+    ["cocktail-sauce", "Cocktail Sauce", 35, 1, 9, 0, 370, 1, 6],
+  ].map(([id, name, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => popeyesFood(
+    id, name, "1 separately published dipping-sauce container; no food included", popeyesPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar)
+  )),
+  ...[
+    ["chicken-biscuit", "Chicken Biscuit", 490, 17, 47, 26, 1280, 1, 2],
+    ["sausage-biscuit", "Sausage Biscuit", 540, 13, 41, 36, 1100, 1, 2],
+    ["egg-biscuit", "Egg Biscuit", 510, 13, 41, 29, 1160, 1, 2],
+    ["egg-sausage-biscuit", "Egg & Sausage Biscuit", 690, 20, 43, 45, 1520, 1, 2],
+    ["bacon-biscuit", "Bacon Biscuit", 400, 8, 37, 25, 780, 3, 2],
+    ["sausage-gravy-biscuit", "Sausage & Gravy Biscuit", 510, 10, 42, 33, 1090, 3, 3],
+    ["hash-rounds", "Hash Rounds", 360, 3, 41, 20, 450, 4, 0],
+    ["coffee", "Coffee", 0, 0, 0, 0, 0, 0, 0],
+    ["orange-juice", "Orange Juice", 140, 2, 33, 0, 20, 0, 30],
+  ].map(([id, name, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => popeyesFood(
+    id, name, "1 published breakfast serving; breakfast is not available at all locations", popeyesPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar)
+  )),
+  ...[
+    ["coke", "Coke", 240, 0, 65, 0, 60, 0, 65],
+    ["diet-coke", "Diet Coke", 0, 0, 0, 0, 80, 0, 0],
+    ["sprite", "Sprite", 230, 0, 61, 0, 115, 0, 61],
+    ["fanta-strawberry", "Fanta Strawberry", 260, 0, 72, 0, 140, 0, 71],
+    ["fanta-orange", "Fanta Orange", 250, 0, 66, 0, 65, 0, 66],
+    ["mountain-dew", "Mountain Dew", 280, 0, 73, 0, 85, 0, 73],
+    ["pepsi", "Pepsi", 250, 0, 69, 0, 55, 0, 69],
+    ["diet-pepsi", "Diet Pepsi", 0, 0, 0, 0, 95, 0, 0],
+    ["dr-pepper", "Dr Pepper", 240, 0, 65, 0, 75, 0, 64],
+    ["minute-maid-lemonade", "Minute Maid Lemonade", 270, 0, 71, 0, 190, 0, 68],
+    ["unsweetened-tea", "Unsweetened Tea", 0, 0, 0, 0, 10, 0, 0],
+    ["sweet-tea", "Sweet Tea", 180, 0, 45, 0, 10, 0, 45],
+    ["chilled-premium-lemonade", "Chilled Premium Lemonade", 300, 0, 79, 0, 5, 0, 75],
+    ["frozen-premium-lemonade", "Frozen Premium Lemonade", 430, 0, 111, 0, 5, 0, 105],
+  ].map(([id, name, calories, protein, carbohydrates, fat, sodium, fiber, totalSugar]) => popeyesFood(
+    id, name, "1 regular fountain beverage", popeyesPublished(calories, protein, carbohydrates, fat, sodium, fiber, totalSugar), [`Popeyes ${name}`]
+  )),
+  popeyesFood("cinnamon-apple-pie", "Cinnamon Apple Pie", "1 pie", popeyesPublished(280, 3, 35, 14, 260, 2, 14)),
+  popeyesFood("strawberry-cream-cheese-pie", "Strawberry & Cream Cheese Pie", "1 pie", popeyesPublished(300, 4, 34, 17, 290, 1, 11)),
+  popeyesFood("kids-classic-tender", "Kids' Classic Tender", "1 classic tender; kids' side, beverage and sauce excluded", popeyesPublished(130, 12, 8, 6, 570, 0, 0)),
+  popeyesFood("kids-classic-leg", "Kids' Classic Chicken Leg", "1 classic bone-in leg; kids' side, beverage and sauce excluded", popeyesPublished(190, 12, 9, 11, 350, 0, 0)),
 ];
 
 const whataburger = { id: "whataburger", name: "Whataburger" };
@@ -2050,6 +2636,7 @@ const restaurantFoods = [
   ...burgerKingFoods,
   ...subwayFoods,
   ...chipotleFoods,
+  ...popeyesFoods,
   ...sonicFoods,
   ...braumsFoods,
   ...tacoBellFoods,
