@@ -225,6 +225,43 @@ test("discovers and selects new chicken-chain foods with ordinary punctuation an
   }));
 });
 
+test("discovers and selects final-batch coffee, breakfast, bowl, and sub records", () => {
+  const onSelectFood = renderFoodSearch();
+
+  searchFor("starbucks hot caffe latte");
+  let result = screen.getByRole("button", { name: /^Starbucks · Caffè Latte\b/i });
+  expect(result).toHaveTextContent("Short 8 fl oz");
+  expect(result).toHaveTextContent("Official restaurant source");
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:starbucks:caffe-latte-hot",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:starbucks:caffe-latte-hot:grande-16-fl-oz" }),
+    ]),
+  }));
+
+  searchFor("panera broccoli cheddar soup");
+  result = screen.getByRole("button", { name: /Panera Bread.*Broccoli Cheddar Soup/i });
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:panera:broccoli-cheddar-soup",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:panera:broccoli-cheddar-soup:bowl" }),
+    ]),
+  }));
+
+  searchFor("jersey mikes original italian");
+  result = screen.getByRole("button", { name: /Jersey Mike's.*Original Italian/i });
+  expect(result).toHaveTextContent(/Mini; official standard configuration/i);
+  fireEvent.click(result);
+  expect(onSelectFood).toHaveBeenLastCalledWith(expect.objectContaining({
+    id: "restaurant:jersey-mikes:the-original-italian",
+    servingOptions: expect.arrayContaining([
+      expect.objectContaining({ id: "restaurant:jersey-mikes:the-original-italian:bowl" }),
+    ]),
+  }));
+});
+
 test("discovers and selects Dairy Queen, Arby's, and Jack in the Box records", () => {
   const onSelectFood = renderFoodSearch();
 

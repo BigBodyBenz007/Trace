@@ -392,16 +392,22 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     "cheesecake-factory": /^https:\/\/www\.thecheesecakefactory\.com\/nutrition$/,
     "red-lobster": /^https:\/\/img-ecomm-rl-prod-fye5gqbxdtbghqer\.a03\.azurefd\.net\/brandsite\/documents\/US_Nutrition_8-17-26\.pdf$/,
     "red-robin": /^https:\/\/www\.redrobin\.com\/sites\/default\/files\/2023-12\/0124_NS_US-ALL\.pdf$/,
+    starbucks: /^https:\/\/www\.starbucks\.com\/menu/,
+    dunkin: /^https:\/\/assets\.ctfassets\.net\/ubkcphxhphh0\/.+\/DD_W6_nutrition_guide\.pdf$/,
+    ihop: /^https:\/\/www\.ihop\.com\/en\/menu/,
+    panera: /^https:\/\/www\.panerabread\.com\/content\/dam\/panerabread\/documents\/c6-26-nutrition-guide\.pdf$/,
+    "panda-express": /^https:\/\/www\.pandaexpress\.com\/nutritioninformation$/,
+    "jersey-mikes": /^https:\/\/www\.jerseymikes\.com\/menu\/nutrition$/,
     "taco-bell": /^https:\/\/www\.tacobell\.com\/food\//,
     "chick-fil-a": /^https:\/\/www\.chick-fil-a\.com\/nutrition-allergens$/,
     whataburger: /^https:\/\/wbimageserver\.whataburger\.com\/Nutrition\.pdf$/,
   };
-  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "dairy-queen", "arbys", "jack-in-the-box", "dominos", "pizza-hut", "papa-johns", "little-caesars", "hideaway-pizza", "marcos-pizza", "chilis", "applebees", "texas-roadhouse", "olive-garden", "longhorn-steakhouse", "outback-steakhouse", "cheesecake-factory", "red-lobster", "red-robin", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
+  const countByChain = Object.fromEntries(["mcdonalds", "sonic", "braums", "wendys", "burger-king", "subway", "chipotle", "popeyes", "kfc", "raising-canes", "wingstop", "dairy-queen", "arbys", "jack-in-the-box", "dominos", "pizza-hut", "papa-johns", "little-caesars", "hideaway-pizza", "marcos-pizza", "chilis", "applebees", "texas-roadhouse", "olive-garden", "longhorn-steakhouse", "outback-steakhouse", "cheesecake-factory", "red-lobster", "red-robin", "starbucks", "dunkin", "ihop", "panera", "panda-express", "jersey-mikes", "taco-bell", "chick-fil-a", "whataburger"].map((chainId) => [
     chainId,
     expansion.filter((food) => food.restaurant.id === chainId).length,
   ]));
 
-  expect(expansion).toHaveLength(2881);
+  expect(expansion).toHaveLength(3475);
   expect(countByChain).toEqual({
     mcdonalds: 100,
     sonic: 102,
@@ -432,6 +438,12 @@ test("keeps the current restaurant records valid, dated, and source-specific", (
     "cheesecake-factory": 227,
     "red-lobster": 112,
     "red-robin": 130,
+    starbucks: 58,
+    dunkin: 367,
+    ihop: 44,
+    panera: 29,
+    "panda-express": 28,
+    "jersey-mikes": 68,
     "taco-bell": 95,
     "chick-fil-a": 60,
     whataburger: 112,
@@ -1767,4 +1779,56 @@ test("searches Phase 1B cereal and oatmeal by brand, product style, and aliases"
     "packaged-food:premier-protein-apple-cinnamon-oatmeal-6ct",
     "packaged-food:premier-protein-maple-brown-sugar-oatmeal-6ct",
   ]));
+});
+
+test("finds all six final restaurant chains across drinks, breakfast, meals, sides, and subs", () => {
+  const expectedFirstResults = [
+    ["starbucks hot caffe latte", "restaurant:starbucks:caffe-latte-hot"],
+    ["starbucks iced pumpkin spice latte", "restaurant:starbucks:iced-pumpkin-spice-latte-iced"],
+    ["dunkin bacon egg cheese croissant", "restaurant:dunkin:bacon-egg-and-cheese-on-croissant"],
+    ["dunkin iced coffee cream sugar", "restaurant:dunkin:iced-coffee-with-cream-and-sugar"],
+    ["ihop belgian waffle", "restaurant:ihop:belgian-waffle"],
+    ["ihop veggie egg white omelette", "restaurant:ihop:veggie-egg-white-omelette"],
+    ["panera broccoli cheddar soup", "restaurant:panera:broccoli-cheddar-soup"],
+    ["panera bacon turkey bravo", "restaurant:panera:bacon-turkey-bravo"],
+    ["panda express orange chicken", "restaurant:panda-express:orange-chicken"],
+    ["panda express cream cheese rangoon", "restaurant:panda-express:cream-cheese-rangoon"],
+    ["jersey mikes original italian", "restaurant:jersey-mikes:the-original-italian"],
+    ["jersey mikes 16 chicken philly", "restaurant:jersey-mikes:mike-s-chicken-philly"],
+  ];
+
+  expect(expectedFirstResults.map(([query]) => [query, searchFoodCatalog(query)[0]?.id]))
+    .toEqual(expectedFirstResults);
+});
+
+test("keeps final-batch serving options exact and preserves unknown nutrients while scaling", () => {
+  const latte = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:starbucks:caffe-latte-hot"));
+  const paneraSoup = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:panera:broccoli-cheddar-soup"));
+  const jerseyItalian = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:jersey-mikes:the-original-italian"));
+  const ihopPancakes = normalizeRestaurantFood(restaurantFoods.find((food) => food.id === "restaurant:ihop:original-buttermilk-pancakes-full"));
+
+  expect(latte.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Short 8 fl oz; hot; 2% milk, signature espresso, and milk foam", 100],
+    ["Tall 12 fl oz; hot; 2% milk, signature espresso, and milk foam", 150],
+    ["Grande 16 fl oz; hot; 2% milk, signature espresso, and milk foam", 190],
+    ["Venti 20 fl oz; hot; 2% milk, signature espresso, and milk foam", 250],
+  ]);
+  expect(paneraSoup.servingOptions.map(({ serving, nutrients }) => [serving.description, nutrients.calories])).toEqual([
+    ["Cup (1 cup)", 280], ["Bowl (1.5 cups)", 420], ["Bread bowl with soup", 930],
+  ]);
+  const jerseyDescriptions = jerseyItalian.servingOptions.map(({ serving }) => serving.description);
+  ["Mini", "Regular", "Giant"].forEach((size) => {
+    const description = jerseyDescriptions.find((candidate) => candidate.startsWith(`${size};`));
+    expect(description).toEqual(expect.stringContaining("White Bread"));
+    expect(description).toEqual(expect.stringContaining("Olive Oil Blend"));
+    expect(description).toEqual(expect.stringContaining("Red Wine Vinegar"));
+  });
+  expect(jerseyDescriptions).toEqual(expect.arrayContaining([expect.stringMatching(/^Bowl;/i)]));
+  expect(scaleNutrition(ihopPancakes.nutrients, 0.5)).toMatchObject({
+    calories: 360,
+    protein: null,
+    carbohydrates: null,
+    fat: null,
+    sodium: null,
+  });
 });

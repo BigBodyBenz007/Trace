@@ -1210,6 +1210,48 @@ test("selects, scales, and saves a published Dairy Queen Blizzard size", () => {
   expect(props.saveNutritionEntry.mock.calls[0][0].addedSugar).toBeNull();
 });
 
+test("selects a Starbucks recipe size, scales quantity, and saves the selected serving", () => {
+  const props = renderNutritionPage();
+  fireEvent.change(screen.getByLabelText("Food search"), {
+    target: { value: "starbucks hot caffe latte" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /^Starbucks · Caffè Latte\b/i }));
+
+  const form = entryForm();
+  const sizeSelect = screen.getByLabelText("Menu serving size");
+  expect(sizeSelect).toHaveDisplayValue(/Short 8 fl oz.*2% milk.*espresso.*foam/i);
+  fireEvent.change(sizeSelect, {
+    target: { value: "restaurant:starbucks:caffe-latte-hot:venti-20-fl-oz" },
+  });
+  expect(sizeSelect).toHaveDisplayValue(/Venti 20 fl oz.*2% milk.*espresso.*foam/i);
+  expect(form.getByLabelText("Calories")).toHaveValue(250);
+  expect(form.getByLabelText("Protein (g)")).toHaveValue(17);
+
+  fireEvent.change(form.getByLabelText("Number of servings"), { target: { value: "2" } });
+  expect(form.getByLabelText("Calories")).toHaveValue(500);
+  expect(form.getByLabelText("Sodium (mg)")).toHaveValue(440);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+
+  expect(props.saveNutritionEntry.mock.calls[0][0]).toMatchObject({
+    name: "Caffè Latte",
+    calories: 500,
+    protein: 34,
+    carbohydrates: 48,
+    fat: 18,
+    sodium: 440,
+    fiber: 0,
+    totalSugar: 44,
+    portion: { amount: 2 },
+    foodReference: {
+      sourceType: "restaurant",
+      restaurantId: "starbucks",
+      restaurantName: "Starbucks",
+      sourceId: "starbucks:caffe-latte-hot:venti-20-fl-oz",
+    },
+  });
+  expect(props.saveNutritionEntry.mock.calls[0][0].addedSugar).toBeNull();
+});
+
 test("selects a square-cut pizza slice, logs two slices, and preserves unknown nutrients", () => {
   const props = renderNutritionPage();
   fireEvent.change(screen.getByLabelText("Food search"), {

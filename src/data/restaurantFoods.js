@@ -1,3 +1,5 @@
+import sixChainMenuData from "./sixChainMenuData";
+
 const MCD_SOURCE = "https://www.mcdonalds.com/us/en-us/mcdonalds-app/nutrition.html";
 
 function foodRecord(id, name, slug, calories, nutrients = {}, serving = "1 sandwich", verification = {}) {
@@ -6004,6 +6006,31 @@ const redRobinFoods = [
   searchAliases: [...food.searchAliases, "Red Robin Coke Zero"],
 } : food);
 
+const sixChainFoods = sixChainMenuData.map((row) => {
+  const chain = { id: row.chainId, name: row.chainName };
+  const nutrients = row.nutrients ? menuPublished(...row.nutrients) : null;
+  const options = row.options?.map((option) => expansionMenuOption(
+    chain,
+    row.sourceUrl,
+    row.sourceReference,
+    option.id,
+    option.description,
+    menuPublished(...option.nutrients),
+    option.amount || 1
+  ));
+  return menuFood(
+    chain,
+    row.sourceUrl,
+    row.sourceReference,
+    row.id,
+    row.name,
+    row.description,
+    nutrients,
+    options,
+    row.aliases
+  );
+});
+
 const restaurantFoods = [
   mcnuggets,
   foodRecord("big-mac", "Big Mac", "big-mac", 580, { protein: 25, carbohydrates: 45, fat: 34, sodium: 1060 }, "1 sandwich", { status: "complete", sourceType: "official-restaurant" }),
@@ -6057,6 +6084,7 @@ const restaurantFoods = [
   ...cheesecakeFactoryFoods,
   ...redLobsterFoods,
   ...redRobinFoods,
+  ...sixChainFoods,
   ...sonicFoods,
   ...braumsFoods,
   ...tacoBellFoods,
