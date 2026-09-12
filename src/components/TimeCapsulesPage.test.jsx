@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "fs";
 import { StrictMode, useState } from "react";
 import { prepareCapsuleMediaFiles } from "../services/capsuleMedia";
-import { playCapsuleCeremonySound, prepareCapsuleCeremonyAudio } from "../services/capsuleCeremonySound";
+import { prepareCapsuleCeremonyAudio } from "../services/capsuleCeremonySound";
 import TimeCapsuleReadyOverlay from "./TimeCapsuleReadyOverlay";
 import TimeCapsulesPage from "./TimeCapsulesPage";
 
@@ -12,21 +12,22 @@ jest.mock("../services/capsuleMedia", () => ({
 }));
 
 jest.mock("../services/capsuleCeremonySound", () => ({
-  prepareCapsuleCeremonyAudio: jest.fn(() => ({ prepared: true })),
-  playCapsuleCeremonySound: jest.fn(() => Promise.resolve({ stop: jest.fn() })),
+  ...jest.requireActual("../services/capsuleCeremonySound"),
+  prepareCapsuleCeremonyAudio: jest.fn(() => null),
 }));
 
 let pauseMedia;
+let playMedia;
 
 beforeEach(() => {
   jest.clearAllMocks();
   baseProps.mediaLoader.load.mockImplementation(() => new Promise(() => {}));
-  prepareCapsuleCeremonyAudio.mockReturnValue({ prepared: true });
-  playCapsuleCeremonySound.mockResolvedValue({ stop: jest.fn() });
+  prepareCapsuleCeremonyAudio.mockReturnValue(null);
+  playMedia = jest.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
   pauseMedia = jest.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
 });
 
-afterEach(() => pauseMedia.mockRestore());
+afterEach(() => { pauseMedia.mockRestore(); playMedia.mockRestore(); });
 
 function capsule(overrides = {}) {
   return {
@@ -88,12 +89,12 @@ test("keeps sealed and available private content and media metadata out of the D
   expect(loader.load).not.toHaveBeenCalled();
 });
 
-test("uses a true closed-vault layer for sealed and ready states and open layers for opened state", () => {
+test("uses approved film endpoints for sealed, ready, and opened states", () => {
   const { rerender } = render(
     <TimeCapsulesPage {...baseProps} capsules={[capsule({ openOn: "2027-09-11", media: [] })]} initialCapsuleId="capsule-1" />
   );
   const sealedVault = screen.getByRole("img", { name: "Sealed Time Capsule vault" });
-  expect(sealedVault.querySelector(".trace-capsule-vault__closed")).toHaveAttribute("src", expect.stringContaining("vault-closed.png"));
+  expect(sealedVault.querySelector(".trace-capsule-vault__endpoint")).toHaveAttribute("src", expect.stringContaining("vault-sealed.png"));
 
   rerender(<TimeCapsulesPage {...baseProps} capsules={[capsule({ media: [] })]} initialCapsuleId="capsule-1" />);
   expect(screen.getByRole("img", { name: "Time Capsule vault ready to open" })).toHaveClass("trace-capsule-vault--ready");
@@ -101,8 +102,7 @@ test("uses a true closed-vault layer for sealed and ready states and open layers
   rerender(<TimeCapsulesPage {...baseProps} capsules={[capsule({ media: [], openedAt: "2026-09-11T12:00:00.000Z" })]} initialCapsuleId="capsule-1" />);
   const openedVault = screen.getByRole("img", { name: "Opened Time Capsule vault" });
   expect(openedVault).toHaveClass("trace-capsule-vault--opened");
-  expect(openedVault.querySelector(".trace-capsule-vault__lid")).toBeInTheDocument();
-  expect(openedVault.querySelector(".trace-capsule-vault__body")).toBeInTheDocument();
+  expect(openedVault.querySelector("img")).toHaveAttribute("src", expect.stringContaining("vault-opened.png"));
 });
 
 test("reveals content only after the final opening write succeeds", async () => {
@@ -128,7 +128,7 @@ test("reveals content only after the final opening write succeeds", async () => 
   expect(screen.queryByText("Private words for the future")).not.toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Seal again for later" })).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Delete Time Capsule" })).toBeDisabled();
-  expect(playCapsuleCeremonySound).toHaveBeenCalledWith("opening", { prepared: true });
+  expect(playMedia).not.toHaveBeenCalled(); // Reduced Motion uses a silent endpoint.
   fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
   expect(screen.getByText("Private words for the future")).toBeInTheDocument();
   expect(await screen.findByLabelText("Play Audio recording 1: secret-name.m4a")).toHaveAttribute("controls");
@@ -142,7 +142,55 @@ test("an opening write failure keeps private content hidden and offers a retry",
   expect(screen.queryByText("Private words for the future")).not.toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Open Capsule" })).toBeEnabled();
   expect(prepareCapsuleCeremonyAudio).toHaveBeenCalledTimes(1);
-  expect(playCapsuleCeremonySound).not.toHaveBeenCalled();
+  expect(playMedia).not.toHaveBeenCalled();
+});
+
+test("keeps the endpoint closed and contents private while the opening promise is pending", async () => {
+  let resolveOpening;
+  const loader = { load: jest.fn().mockResolvedValue({ unavailable: true }), evict: jest.fn() };
+  const onOpen = jest.fn();
+  function Harness() {
+    const [records, setRecords] = useState([capsule()]);
+    onOpen.mockImplementation(() => {
+      setRecords([openedLifecycleCapsule()]);
+      return new Promise(resolve => { resolveOpening = resolve; });
+    });
+    return <TimeCapsulesPage {...baseProps} reducedMotion={false} capsules={records} initialCapsuleId="capsule-1" onOpen={onOpen} mediaLoader={loader} />;
+  }
+  render(<Harness />);
+  const open = screen.getByRole("button", { name: "Open Capsule" });
+  fireEvent.click(open);
+  fireEvent.click(open);
+  expect(onOpen).toHaveBeenCalledTimes(1);
+  expect(loader.load).not.toHaveBeenCalled();
+  expect(screen.queryByText("Private words for the future")).not.toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "Sealed Time Capsule vault" })).toBeInTheDocument();
+  expect(playMedia).not.toHaveBeenCalled();
+  await act(async () => resolveOpening(openedLifecycleCapsule()));
+  expect(playMedia).toHaveBeenCalledTimes(1);
+  expect(loader.load).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
+  expect(screen.getByText("Private words for the future")).toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Future birthday" })).toHaveFocus();
+});
+
+test("navigation during persistence cannot start a late ceremony and revisiting does not replay", async () => {
+  let resolveOpening;
+  function Harness() {
+    const [records, setRecords] = useState([capsule({ media: [] })]);
+    return <TimeCapsulesPage {...baseProps} reducedMotion={false} capsules={records} initialCapsuleId="capsule-1" onOpen={() => new Promise(resolve => {
+      resolveOpening = () => { const opened = openedLifecycleCapsule({ media: [] }); setRecords([opened]); resolve(opened); };
+    })} />;
+  }
+  render(<Harness />);
+  fireEvent.click(screen.getByRole("button", { name: "Open Capsule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Back to Time Capsules" }));
+  await act(async () => resolveOpening());
+  expect(playMedia).not.toHaveBeenCalled();
+  expect(screen.queryByRole("button", { name: "Skip animation" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "View Time Capsule" }));
+  expect(screen.getByText("Private words for the future")).toBeInTheDocument();
+  expect(playMedia).not.toHaveBeenCalled();
 });
 
 test.each([
@@ -379,12 +427,13 @@ test("starts sealing visuals and sound only after the durable seal succeeds and 
   fireEvent.click(sealButton);
   expect(onSeal).toHaveBeenCalledTimes(1);
   expect(prepareCapsuleCeremonyAudio).toHaveBeenCalledWith(true);
-  expect(playCapsuleCeremonySound).not.toHaveBeenCalled();
+  expect(playMedia).not.toHaveBeenCalled();
 
   await act(async () => finishSeal());
-  expect(playCapsuleCeremonySound).toHaveBeenCalledWith("sealing", { prepared: true });
+  expect(playMedia).toHaveBeenCalledTimes(1);
+  expect(document.querySelector("video")).toHaveAttribute("src", expect.stringContaining("ceremony-close.mp4"));
   expect(screen.getByText("Your memories are being sealed…")).toBeInTheDocument();
-  expect(screen.getByRole("img", { name: "Time Capsule vault sealing" })).toHaveAttribute("data-capsule-vault-state", "sealing");
+  expect(document.querySelector("[data-capsule-ceremony]")).toHaveAttribute("data-capsule-ceremony", "sealing");
   fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
   expect(screen.getByRole("img", { name: "Time Capsule vault ready to open" })).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Open Capsule" })).toBeInTheDocument();
@@ -400,13 +449,40 @@ test("a failed seal never plays the success ceremony or sound", async () => {
   await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Seal Time Capsule" })); });
   expect(screen.getByRole("alert")).toHaveTextContent("storage denied");
   expect(screen.queryByRole("button", { name: "Skip animation" })).not.toBeInTheDocument();
-  expect(playCapsuleCeremonySound).not.toHaveBeenCalled();
+  expect(playMedia).not.toHaveBeenCalled();
   expect(screen.getByLabelText("Private message")).toHaveValue("Not sealed");
 });
 
+test("a seal completed in the background leaves the saved editor and never replays on return", async () => {
+  let finishSeal;
+  const sealed = capsule({ media: [] });
+  function Harness() {
+    const [records, setRecords] = useState([]);
+    return <TimeCapsulesPage {...baseProps} reducedMotion={false} capsules={records} onSeal={() => new Promise(resolve => {
+      finishSeal = () => { setRecords([sealed]); resolve({ value: sealed }); };
+    })} />;
+  }
+  window.confirm = jest.fn(() => true);
+  render(<Harness />);
+  fireEvent.click(screen.getByRole("button", { name: "Create Time Capsule" }));
+  fireEvent.click(screen.getByRole("button", { name: "Seal Time Capsule" }));
+  const visibility = jest.spyOn(document, "visibilityState", "get");
+  visibility.mockReturnValue("hidden");
+  fireEvent(document, new Event("visibilitychange"));
+  await act(async () => finishSeal());
+  expect(screen.queryByLabelText("Private message")).not.toBeInTheDocument();
+  expect(screen.getByRole("heading", { name: "Future birthday" })).toBeInTheDocument();
+  expect(playMedia).not.toHaveBeenCalled();
+  visibility.mockReturnValue("visible");
+  fireEvent(document, new Event("visibilitychange"));
+  expect(screen.getByRole("button", { name: "Open Capsule" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Seal Time Capsule" })).not.toBeInTheDocument();
+  expect(playMedia).not.toHaveBeenCalled();
+  visibility.mockRestore();
+});
+
 test("navigation interrupts an opening ceremony, stops its sound, and cannot undo the saved opening", async () => {
-  const controller = { stop: jest.fn() };
-  playCapsuleCeremonySound.mockResolvedValueOnce(controller);
+
   const openedAt = "2026-09-11T12:00:00.000Z";
   const opened = capsule({ openedAt, updatedAt: openedAt, media: [] });
   let updateRecords;
@@ -429,7 +505,8 @@ test("navigation interrupts an opening ceremony, stops its sound, and cannot und
   expect(screen.getByText("Your moment is opening…")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
   expect(screen.getByText("Timeline restored after saved opening")).toBeInTheDocument();
-  expect(controller.stop).toHaveBeenCalled();
+  expect(pauseMedia).toHaveBeenCalled();
+  expect(document.querySelector("video")).toBeNull();
   expect(opened.openedAt).toBe(openedAt);
 });
 
@@ -453,8 +530,9 @@ test("uses the restrained reduced-motion vault and leaves blocked or disabled so
   render(<Harness />);
   await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Open Capsule" })); });
   expect(prepareCapsuleCeremonyAudio).toHaveBeenCalledWith(false);
-  expect(playCapsuleCeremonySound).not.toHaveBeenCalled();
-  expect(screen.getByRole("img", { name: "Time Capsule vault opening" })).toHaveClass("trace-capsule-vault--reduced");
+  expect(playMedia).not.toHaveBeenCalled();
+  expect(screen.getByRole("img", { name: "Opened Time Capsule vault" })).toHaveAttribute("src", expect.stringContaining("vault-opened.png"));
+  expect(document.querySelector("video")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
   expect(screen.getByText("Private words for the future")).toBeInTheDocument();
 });

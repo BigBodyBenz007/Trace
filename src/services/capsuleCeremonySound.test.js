@@ -1,85 +1,82 @@
-import {
-  playCapsuleCeremonySound,
-  prepareCapsuleCeremonyAudio,
-  resetCapsuleCeremonyAudioForTests,
-} from "./capsuleCeremonySound";
+import { attachCapsuleCeremonyAudio, prepareCapsuleCeremonyAudio, resetCapsuleCeremonyAudioForTests } from "./capsuleCeremonySound";
 
-function audioNode(extra = {}) {
-  return {
-    connect: jest.fn(),
-    disconnect: jest.fn(),
-    start: jest.fn(),
-    stop: jest.fn(),
-    ...extra,
-  };
-}
-
-function context({ state = "running" } = {}) {
-  const oscillators = [];
-  const sources = [];
-  const gains = [];
+const node = extra => ({ connect: jest.fn(), disconnect: jest.fn(), ...extra });
+function context(state = "running") {
+  const source = node();
+  const gain = node({ gain: { value: 0 } });
   const value = {
-    state,
-    currentTime: 10,
-    sampleRate: 20,
-    destination: audioNode(),
+    state, destination: {},
     resume: jest.fn(() => { value.state = "running"; return Promise.resolve(); }),
-    createGain: jest.fn(() => {
-      const node = audioNode({ gain: {
-        value: 0,
-        setValueAtTime: jest.fn(),
-        exponentialRampToValueAtTime: jest.fn(),
-      } });
-      gains.push(node); return node;
-    }),
-    createOscillator: jest.fn(() => {
-      const node = audioNode({
-        frequency: { setValueAtTime: jest.fn(), exponentialRampToValueAtTime: jest.fn() },
-        type: "sine",
-      });
-      oscillators.push(node); return node;
-    }),
-    createBiquadFilter: jest.fn(() => audioNode({ frequency: { value: 0 }, type: "lowpass" })),
-    createBuffer: jest.fn((channels, length) => ({ getChannelData: () => new Float32Array(length) })),
-    createBufferSource: jest.fn(() => { const node = audioNode({ buffer: null }); sources.push(node); return node; }),
+    createMediaElementSource: jest.fn(() => source),
+    createGain: jest.fn(() => gain),
   };
-  return { value, oscillators, sources, gains };
+  return { value, source, gain };
 }
 
-beforeEach(() => resetCapsuleCeremonyAudioForTests());
+beforeEach(resetCapsuleCeremonyAudioForTests);
 
-test("prepares audio silently from a user gesture and safely handles disabled or unsupported sound", async () => {
+test("gesture preparation resumes audio silently and preserves disabled/unsupported preferences", async () => {
+  const audio = context("suspended");
+  const Context = jest.fn(() => audio.value);
+  expect(prepareCapsuleCeremonyAudio(false, { AudioContext: Context })).toBeNull();
+  expect(Context).not.toHaveBeenCalled();
   expect(prepareCapsuleCeremonyAudio(true, {})).toBeNull();
-  const suspended = context({ state: "suspended" });
-  const prepared = prepareCapsuleCeremonyAudio(true, { AudioContext: jest.fn(() => suspended.value) });
-  expect(suspended.value.resume).toHaveBeenCalledTimes(1);
-  expect(suspended.value.createOscillator).not.toHaveBeenCalled();
+  const prepared = prepareCapsuleCeremonyAudio(true, { webkitAudioContext: Context });
+  expect(audio.value.resume).toHaveBeenCalledTimes(1);
+  expect(audio.value.createMediaElementSource).not.toHaveBeenCalled();
   await expect(prepared.ready).resolves.toBe(true);
-  expect(prepareCapsuleCeremonyAudio(false, { AudioContext: jest.fn() })).toBeNull();
 });
 
-test("opening and sealing use distinct layered schedules only after successful playback is requested", async () => {
-  const opening = context();
-  const openingController = await playCapsuleCeremonySound("opening", { context: opening.value, ready: Promise.resolve(true) });
-  expect(opening.oscillators).toHaveLength(5);
-  expect(opening.sources).toHaveLength(1);
-
-  const sealing = context();
-  const sealingController = await playCapsuleCeremonySound("sealing", { context: sealing.value, ready: Promise.resolve(true) });
-  expect(sealing.oscillators).toHaveLength(4);
-  expect(sealing.sources).toHaveLength(2);
-  expect(opening.oscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(62, expect.any(Number));
-  expect(sealing.oscillators[0].frequency.setValueAtTime).toHaveBeenCalledWith(126, expect.any(Number));
-
-  openingController.stop();
-  sealingController.stop();
-  expect(opening.oscillators.every(({ stop }) => stop.mock.calls.length > 0)).toBe(true);
-  expect(sealing.oscillators.every(({ stop }) => stop.mock.calls.length > 0)).toBe(true);
+test("video audio uses one source with a gain node, including StrictMode reconnect", () => {
+  const audio = context();
+  const media = { volume: 1 };
+  const first = attachCapsuleCeremonyAudio(media, { context: audio.value });
+  first.setVolume(0.65);
+  expect(audio.gain.gain.value).toBe(0.65);
+  expect(media.volume).toBe(1);
+  expect(audio.source.connect).toHaveBeenCalledWith(audio.gain);
+  expect(audio.gain.connect).toHaveBeenCalledWith(audio.value.destination);
+  first.stop();
+  const second = attachCapsuleCeremonyAudio(media, { context: audio.value });
+  second.setVolume(0.2);
+  first.stop();
+  expect(audio.value.createMediaElementSource).toHaveBeenCalledTimes(1);
+  expect(audio.gain.gain.value).toBe(0.2);
+  second.stop();
+  expect(audio.gain.gain.value).toBe(0);
+  expect(audio.source.disconnect).toHaveBeenCalledTimes(2);
 });
 
-test("blocked playback remains silent without surfacing an error", async () => {
-  const blocked = context({ state: "suspended" });
-  const controller = await playCapsuleCeremonySound("opening", { context: blocked.value, ready: Promise.resolve(false) });
-  expect(blocked.value.createGain).not.toHaveBeenCalled();
+test("native volume remains available without WebAudio and clamps input", () => {
+  const media = { volume: 1 };
+  const controller = attachCapsuleCeremonyAudio(media, null);
+  controller.setVolume(0.4);
+  expect(media.volume).toBe(0.4);
+  controller.setVolume(10);
+  expect(media.volume).toBe(1);
+  controller.setVolume(-1);
+  expect(media.volume).toBe(0);
+  controller.stop();
+  controller.setVolume(0.5);
+  expect(media.volume).toBe(0);
+});
+
+test("blocked or interrupted contexts can be resumed by a new sound gesture", async () => {
+  const audio = context("interrupted");
+  audio.value.resume.mockRejectedValueOnce(Error("Audio blocked"));
+  const prepared = prepareCapsuleCeremonyAudio(true, { AudioContext: jest.fn(() => audio.value) });
+  await expect(prepared.ready).resolves.toBe(false);
+  const controller = attachCapsuleCeremonyAudio({}, prepared);
+  expect(controller.isReady()).toBe(false);
+  await expect(controller.resumeFromGesture()).resolves.toBe(true);
+  expect(controller.isReady()).toBe(true);
+});
+
+test("an unavailable audio output reports muted recovery without throwing away the video", async () => {
+  const audio = context();
+  audio.source.connect.mockImplementation(() => { throw Error("Output unavailable"); });
+  const controller = attachCapsuleCeremonyAudio({}, { context: audio.value });
+  expect(controller.isReady()).toBe(false);
+  await expect(controller.resumeFromGesture()).resolves.toBe(false);
   expect(() => controller.stop()).not.toThrow();
 });
