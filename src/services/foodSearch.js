@@ -5,6 +5,7 @@ import groceryFoods from "./groceryFoodCatalog";
 import brandedPackagedFoods from "./brandedPackagedFoodCatalog";
 import { normalizeRestaurantFoods } from "./restaurantFoodModel";
 import { normalizeBeverageFoods } from "./beverageFoodModel";
+import foodSearchFamilies from "../data/foodSearchFamilies";
 
 export const DEFAULT_RESULT_LIMIT = 6;
 
@@ -16,6 +17,48 @@ export function normalizeFoodQuery(query) {
     .replace(/\btacobell\b/g, "taco bell")
     .replace(/\bchickfila\b/g, "chick fil a")
     .trim();
+}
+
+export function orderBasicFoodFamilies(rankedFoods, query, families = foodSearchFamilies) {
+  const queryTokens = normalizeFoodQuery(query).split(" ").filter(Boolean);
+  const orderedFoods = [...rankedFoods];
+
+  families.forEach(({ terms, qualifiers = [], defaultIds, memberIds }) => {
+    const familyTerms = terms.map((term) => normalizeFoodQuery(term).split(" "));
+    const allowedTokens = new Set([
+      ...familyTerms.flat(),
+      ...qualifiers.flatMap((term) => normalizeFoodQuery(term).split(" ")),
+    ]);
+    if (
+      !familyTerms.some((tokens) => tokens.every((token) => queryTokens.includes(token)))
+      || !queryTokens.every((token) => allowedTokens.has(token))
+    ) return;
+
+    const members = new Set(memberIds);
+    const defaults = new Set(defaultIds);
+    const groups = new Map();
+    orderedFoods.forEach((food, index) => {
+      // Preserve every saved-food and unrelated result's position. Source groups
+      // also prevent a restaurant default from displacing a packaged beverage.
+      if (
+        !members.has(food.id)
+        || food.provenance?.source === "user-added"
+        || food.dataType === "user-entered"
+      ) return;
+      const source = food.sourceType || "other";
+      if (!groups.has(source)) groups.set(source, []);
+      groups.get(source).push(index);
+    });
+    groups.forEach((positions) => {
+      const foods = positions.map((index) => orderedFoods[index]);
+      const basicFirst = [
+        ...foods.filter((food) => defaults.has(food.id)),
+        ...foods.filter((food) => !defaults.has(food.id)),
+      ];
+      positions.forEach((index, offset) => { orderedFoods[index] = basicFirst[offset]; });
+    });
+  });
+  return orderedFoods;
 }
 
 export function searchFoods(
@@ -73,7 +116,7 @@ export function searchFoods(
     return 3;
   };
 
-  return foods
+  const rankedFoods = foods
     .filter((food) => {
       const searchableFood = normalizeFoodQuery([
         food.name,
@@ -102,7 +145,8 @@ export function searchFoods(
       const priorityDifference = sourcePriority(firstFood) - sourcePriority(secondFood);
       if (priorityDifference !== 0) return priorityDifference;
       return firstName.localeCompare(secondName);
-    })
+    });
+  return orderBasicFoodFamilies(rankedFoods, normalizedQuery)
     .slice(0, Math.max(0, limit));
 }
 

@@ -1658,7 +1658,7 @@ test("normal Sonic and Braum's items log with chain identity and known sodium", 
   });
 
   fireEvent.change(screen.getByLabelText("Food search"), { target: { value: "Breakfast Burrito" } });
-  fireEvent.click(screen.getByRole("button", { name: /Braum's.*Breakfast Burrito/i }));
+  fireEvent.click(screen.getByRole("button", { name: /^Braum's \u00b7 Breakfast Burrito\b/i }));
   fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
 
   expect(props.saveNutritionEntry.mock.calls[1][0]).toMatchObject({

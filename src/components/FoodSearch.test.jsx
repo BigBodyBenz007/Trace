@@ -19,6 +19,138 @@ function searchFor(query) {
   fireEvent.change(screen.getByLabelText("Food search"), { target: { value: query } });
 }
 
+function paginationFoods(count = 23) {
+  return Array.from({ length: count }, (_, index) => createUserFood(
+    `Pagination fixture ${String(index + 1).padStart(2, "0")}`,
+    { calories: 100 + index, protein: 8, carbohydrates: 10, fat: 4, sodium: 120 },
+    { amount: 1, unit: "serving", description: "1 fixture serving" }
+  ));
+}
+
+function foodResultButtons() {
+  return within(screen.getByLabelText("Food search results")).getAllByRole("button");
+}
+
+test("reveals all ranked matches in batches of ten, including a final partial batch", () => {
+  const foods = paginationFoods();
+  const onSelectFood = renderFoodSearch({ userFoods: [...foods].reverse() });
+  searchFor("pagination fixture");
+
+  const visibleNames = () => foodResultButtons().map(
+    (button) => button.querySelector(".trace-food-result__name").textContent
+  );
+  expect(visibleNames()).toEqual(foods.slice(0, 10).map((food) => food.name));
+  const showMore = screen.getByRole("button", { name: "Show more" });
+  expect(showMore).toHaveAttribute("type", "button");
+  expect(showMore).toHaveClass("trace-food-search__show-more");
+  showMore.focus();
+  expect(showMore).toHaveFocus();
+
+  fireEvent.click(showMore);
+  expect(visibleNames()).toEqual(foods.slice(0, 20).map((food) => food.name));
+  fireEvent.click(foodResultButtons()[16]);
+  expect(onSelectFood).toHaveBeenLastCalledWith(foods[16]);
+  expect(foodResultButtons()).toHaveLength(20);
+
+  fireEvent.click(screen.getByRole("button", { name: "Show more" }));
+  expect(visibleNames()).toEqual(foods.map((food) => food.name));
+  expect(screen.queryByRole("button", { name: "Show more" })).not.toBeInTheDocument();
+  fireEvent.click(foodResultButtons()[22]);
+  expect(onSelectFood).toHaveBeenLastCalledWith(foods[22]);
+  expect(onSelectFood.mock.calls[1][0].nutrients.fiber).toBeNull();
+  expect(onSelectFood.mock.calls[1][0].serving).toEqual(foods[22].serving);
+});
+
+test("resets the revealed count on query changes, even when the matching foods stay the same", () => {
+  renderFoodSearch({ userFoods: paginationFoods() });
+  searchFor("pagination fixture");
+  fireEvent.click(screen.getByRole("button", { name: "Show more" }));
+  expect(foodResultButtons()).toHaveLength(20);
+
+  searchFor("pagination");
+  expect(foodResultButtons()).toHaveLength(10);
+  fireEvent.click(screen.getByRole("button", { name: "Show more" }));
+  expect(foodResultButtons()).toHaveLength(20);
+
+  searchFor("missingfixture");
+  expect(screen.getByText(/No catalog foods found/i)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Show more" })).not.toBeInTheDocument();
+  searchFor("!!!");
+  expect(screen.queryByLabelText("Food search results")).not.toBeInTheDocument();
+  expect(screen.queryByText(/No catalog foods found/i)).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Show more" })).not.toBeInTheDocument();
+
+  searchFor("pagination fixture");
+  expect(foodResultButtons()).toHaveLength(10);
+});
+
+test("preserves expanded results through selection and equivalent saved-food parent renders", () => {
+  const foods = paginationFoods();
+  const onSelectFood = jest.fn();
+  const { rerender } = render(<FoodSearch onSelectFood={onSelectFood} userFoods={foods} />);
+  searchFor("pagination fixture");
+  fireEvent.click(screen.getByRole("button", { name: "Show more" }));
+  fireEvent.click(foodResultButtons()[16]);
+  expect(onSelectFood).toHaveBeenCalledWith(foods[16]);
+
+  rerender(
+    <FoodSearch
+      inputStyle={{ color: "white" }}
+      onSelectFood={jest.fn()}
+      userFoods={JSON.parse(JSON.stringify(foods))}
+    />
+  );
+  expect(foodResultButtons()).toHaveLength(20);
+  expect(screen.getByRole("button", { name: /Pagination fixture 17/i })).toBeInTheDocument();
+
+  const unrelatedFood = createUserFood("Unrelated saved meal", { calories: 80 });
+  rerender(<FoodSearch onSelectFood={onSelectFood} userFoods={[...foods, unrelatedFood]} />);
+  expect(foodResultButtons()).toHaveLength(20);
+});
+
+test("resets expanded results when matching saved foods are added, removed, or edited", () => {
+  const foods = paginationFoods();
+  const onSelectFood = jest.fn();
+  const { rerender } = render(<FoodSearch onSelectFood={onSelectFood} userFoods={foods} />);
+  searchFor("pagination fixture");
+  fireEvent.click(screen.getByRole("button", { name: "Show more" }));
+
+  const expandedFoods = paginationFoods(24);
+  rerender(<FoodSearch onSelectFood={onSelectFood} userFoods={expandedFoods} />);
+  expect(foodResultButtons()).toHaveLength(10);
+  fireEvent.click(screen.getByRole("button", { name: "Show more" }));
+
+  rerender(<FoodSearch onSelectFood={onSelectFood} userFoods={foods} />);
+  expect(foodResultButtons()).toHaveLength(10);
+  fireEvent.click(screen.getByRole("button", { name: "Show more" }));
+
+  const editedFoods = foods.map((food, index) => index === 0
+    ? { ...food, nutrients: { ...food.nutrients, calories: 155 } }
+    : food);
+  rerender(<FoodSearch onSelectFood={onSelectFood} userFoods={editedFoods} />);
+  expect(foodResultButtons()).toHaveLength(10);
+  expect(foodResultButtons()[0]).toHaveTextContent("Calories 155");
+});
+
+test("hides Show more for ten or fewer results and resets after a completed selection", () => {
+  const foods = paginationFoods();
+  const onSelectFood = jest.fn();
+  const { rerender } = render(<FoodSearch onSelectFood={onSelectFood} userFoods={foods} resetKey={0} />);
+  expect(screen.queryByRole("button", { name: "Show more" })).not.toBeInTheDocument();
+  searchFor("pagination fixture");
+  fireEvent.click(screen.getByRole("button", { name: "Show more" }));
+
+  rerender(<FoodSearch onSelectFood={onSelectFood} userFoods={foods} resetKey={1} />);
+  expect(screen.getByLabelText("Food search")).toHaveValue("");
+  expect(screen.queryByRole("button", { name: "Show more" })).not.toBeInTheDocument();
+  searchFor("pagination fixture");
+  expect(foodResultButtons()).toHaveLength(10);
+
+  rerender(<FoodSearch onSelectFood={onSelectFood} userFoods={foods.slice(0, 10)} resetKey={1} />);
+  expect(foodResultButtons()).toHaveLength(10);
+  expect(screen.queryByRole("button", { name: "Show more" })).not.toBeInTheDocument();
+});
+
 test("renders content-driven compact cards with a six-nutrient summary", () => {
   renderFoodSearch();
   searchFor("raw chicken breast strips");

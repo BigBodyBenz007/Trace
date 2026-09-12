@@ -1,12 +1,14 @@
 import starterFoods from "../data/starterFoods";
 import restaurantFoods from "../data/restaurantFoods";
 import restaurantFoodFixtures from "../data/restaurantFoodFixtures";
+import foodSearchFamilies from "../data/foodSearchFamilies";
 import { normalizeRestaurantFood } from "./restaurantFoodModel";
 import { scaleNutrition } from "./nutritionCalculation";
 import { createUserFood } from "./userFoodCatalog";
 import {
   DEFAULT_RESULT_LIMIT,
   normalizeFoodQuery,
+  orderBasicFoodFamilies,
   searchFoodCatalog,
   searchFoods,
 } from "./foodSearch";
@@ -36,6 +38,144 @@ test("matches primarily by name and limits visible results", () => {
   expect(searchFoods("banana", foods)).toHaveLength(DEFAULT_RESULT_LIMIT);
   expect(searchFoods("banana", foods, 2)).toHaveLength(2);
   expect(searchFoods("118", starterFoods)).toEqual([]);
+});
+
+test("orders reviewed basic family members before variants before applying a caller's limit", () => {
+  const pancake = (id, name) => ({
+    id, name, sourceType: "restaurant", restaurant: { id: "ihop", name: "IHOP" },
+  });
+  const blueberry = pancake("restaurant:ihop:double-blueberry-pancakes", "Blueberry Pancakes");
+  const original = pancake("restaurant:ihop:original-buttermilk-pancakes-full", "Original Buttermilk Pancakes");
+  const chocolate = pancake("restaurant:ihop:chocolate-chocolate-chip-pancakes", "Chocolate Pancakes");
+  const foods = [chocolate, original, blueberry];
+
+  expect(searchFoods("ihop pancakes", foods, 1)).toEqual([original]);
+  expect(searchFoods("pancakes ihop", foods, Infinity)).toEqual([original, blueberry, chocolate]);
+  expect(searchFoods("ihop blueberry pancakes", foods)).toEqual([blueberry]);
+  expect(searchFoods("ihop chocolate pancakes", foods)).toEqual([chocolate]);
+  expect(foods).toEqual([chocolate, original, blueberry]);
+});
+
+const fixtureFamily = [{
+  id: "fixture-porridge",
+  terms: ["porridge"],
+  qualifiers: ["fixture"],
+  defaultIds: ["fixture:basic"],
+  memberIds: ["fixture:basic", "fixture:variant"],
+}];
+const fixtureVariant = Object.freeze({ id: "fixture:variant", name: "Apple Porridge", sourceType: "grocery" });
+const fixtureBasic = Object.freeze({ id: "fixture:basic", name: "Plain Porridge", sourceType: "grocery" });
+
+test("new family metadata supplies ordering without a query-specific ranking rule", () => {
+  const ranked = Object.freeze([fixtureVariant, fixtureBasic]);
+
+  expect(orderBasicFoodFamilies(ranked, "fixture porridge", fixtureFamily)).toEqual([fixtureBasic, fixtureVariant]);
+  expect(orderBasicFoodFamilies(ranked, "fixture", fixtureFamily)).toEqual(ranked);
+  expect(orderBasicFoodFamilies(ranked, "porridge", [])).toEqual(ranked);
+  expect(ranked).toEqual([fixtureVariant, fixtureBasic]);
+});
+
+test.each([
+  "blueberry", "vanilla", "raw", "cooked", "gluten free", "nut free", "decaf", "diet", "zero", "unreviewed attribute",
+])("does not override an explicit %s match with a broader family default", (attribute) => {
+  const ranked = [fixtureVariant, fixtureBasic];
+  expect(orderBasicFoodFamilies(ranked, `fixture ${attribute} porridge`, fixtureFamily)).toEqual(ranked);
+});
+
+test("family ordering preserves saved and unrelated positions and separates source types", () => {
+  const saved = { ...fixtureVariant, id: "fixture:saved", provenance: { source: "user-added" } };
+  const unrelated = { id: "fixture:other", name: "Original Other Porridge", sourceType: "grocery" };
+  const restaurant = { id: "fixture:restaurant", name: "Apple Porridge", sourceType: "restaurant" };
+  const ranked = [saved, restaurant, fixtureVariant, unrelated, fixtureBasic];
+  const families = [{ ...fixtureFamily[0], memberIds: [...fixtureFamily[0].memberIds, saved.id, restaurant.id] }];
+
+  expect(orderBasicFoodFamilies(ranked, "porridge", families)).toEqual([
+    saved, restaurant, fixtureBasic, unrelated, fixtureVariant,
+  ]);
+});
+
+test("does not infer defaults from plain, original, or classic in an unreviewed family", () => {
+  const foods = [
+    { id: "fixture:classic", name: "Classic Porridge" },
+    { id: "fixture:apple", name: "Apple Porridge" },
+    { id: "fixture:plain", name: "Plain Porridge" },
+    { id: "fixture:original", name: "Original Porridge" },
+  ];
+  expect(searchFoods("porridge", foods, Infinity).map(({ id }) => id)).toEqual([
+    "fixture:apple", "fixture:classic", "fixture:original", "fixture:plain",
+  ]);
+});
+
+test.each([
+  ["ihop pancakes", "restaurant:ihop:original-buttermilk-pancakes-full"],
+  ["ihop blueberry pancakes", "restaurant:ihop:double-blueberry-pancakes"],
+  ["ihop pancakes short", "restaurant:ihop:original-buttermilk-pancakes-short"],
+  ["wendys frosty", "restaurant:wendys:classic-chocolate-frosty"],
+  ["wendys vanilla frosty", "restaurant:wendys:vanilla-frosty"],
+  ["wendys chocolate frosty", "restaurant:wendys:classic-chocolate-frosty"],
+  ["wendys apple crumble frosty", "restaurant:wendys:apple-crumble-frosty-fusion-vanilla"],
+  ["braums limeade", "restaurant:braums:limeade"],
+  ["braums cherry limeade", "restaurant:braums:cherry-limeade"],
+  ["sonic limeade", "restaurant:sonic:limeade"],
+  ["sonic diet limeade", "restaurant:sonic:diet-limeade"],
+  ["pepsi", "beverage:pepsi:pepsi-20oz"],
+  ["diet pepsi", "beverage:pepsi:diet-pepsi-20oz"],
+  ["pepsi zero", "beverage:pepsi:zero-sugar-20oz"],
+  ["pepsi wild cherry", "beverage:pepsi:wild-cherry-20oz"],
+  ["taco bell pepsi", "restaurant:taco-bell:large-pepsi"],
+  ["taco bell cherry pepsi", "restaurant:taco-bell:large-cherry-pepsi"],
+  ["kfc pepsi", "restaurant:kfc:pepsi"],
+  ["cheerios", "packaged-food:cheerios-original-8-9oz"],
+  ["honey nut cheerios", "packaged-food:cheerios-honey-nut-10-8oz"],
+  ["quaker instant oatmeal", "packaged-food:quaker-instant-original-10ct"],
+])("finds the intended basic or explicit real-catalog match for %s", (query, id) => {
+  expect(searchFoodCatalog(query, [], Infinity)[0].id).toBe(id);
+});
+
+test("keeps the requested oatmeal flavor ahead of the plain family default", () => {
+  const results = searchFoodCatalog("quaker instant oatmeal apples cinnamon", [], Infinity);
+  // Both standard and added-fiber products match this flavor; their existing
+  // relevance need not be changed merely to choose one of those formulations.
+  expect(results[0].name).toMatch(/apples.*cinnamon/i);
+  expect(results.map(({ id }) => id)).toContain("packaged-food:quaker-instant-apples-cinnamon-8ct");
+  expect(results.map(({ id }) => id)).not.toContain("packaged-food:quaker-instant-original-10ct");
+});
+
+test("family metadata references searchable catalog records without assigning ambiguous defaults", () => {
+  foodSearchFamilies.forEach(({ terms, defaultIds, memberIds }) => {
+    const ids = searchFoodCatalog(terms[0], [], Infinity).map(({ id }) => id);
+    expect(memberIds).toEqual(expect.arrayContaining(defaultIds));
+    expect(ids).toEqual(expect.arrayContaining(memberIds));
+  });
+  // No arbitrary milk-fat, raw/cooked, Chex grain, or Gatorade flavor default.
+  expect(foodSearchFamilies.flatMap(({ memberIds }) => memberIds).some((id) => (
+    id.startsWith("grocery:usda:") || id.includes("gatorade:") || id.includes("chex-") || id.includes("yogurt")
+  ))).toBe(false);
+});
+
+test("returns the complete ranked catalog on request while preserving finite limits and saved records", () => {
+  const saved = createUserFood(
+    "Pepsi",
+    { calories: 240, protein: 0, carbohydrates: 65, fat: 0 },
+    { amount: 1, unit: "bottle", description: "My bottle" },
+    { category: "other", brand: "Pepsi" }
+  );
+  const allResults = searchFoodCatalog("pepsi", [saved], Infinity);
+  expect(allResults.length).toBeGreaterThan(20);
+  expect(allResults[0]).toBe(saved);
+  expect(searchFoodCatalog("pepsi", [saved])).toEqual(allResults.slice(0, DEFAULT_RESULT_LIMIT));
+  expect(searchFoodCatalog("pepsi", [saved], 23)).toEqual(allResults.slice(0, 23));
+  expect(searchFoodCatalog("pepsi", [saved], 0)).toEqual([]);
+  expect(searchFoodCatalog("pepsi", [saved], -1)).toEqual([]);
+});
+
+test("search ordering leaves published serving data, unknown nutrients, and scaling unchanged", () => {
+  const source = normalizeRestaurantFood(restaurantFoods.find(({ id }) => id === "restaurant:ihop:original-buttermilk-pancakes-full"));
+  const result = searchFoodCatalog("ihop pancakes")[0];
+  expect(result).toEqual(source);
+  expect(result.nutrients.calories).toBe(720);
+  expect(result.nutrients.protein).toBeNull();
+  expect(scaleNutrition(result.nutrients, 0.5)).toMatchObject({ calories: 360, protein: null });
 });
 
 test("starter foods use the normalized source and confidence fields", () => {

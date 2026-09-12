@@ -9,6 +9,7 @@ const CONFIDENCE_LABELS = {
   "user-added": "User-entered",
   "official-source": "Official restaurant source",
 };
+const RESULT_PAGE_SIZE = 10;
 const NUTRIENT_SUMMARY = [
   ["calories", "Calories", ""],
   ["protein", "Protein", " g"],
@@ -68,9 +69,15 @@ function FoodSearch({
   scanButtonRef,
 }) {
   const [query, setQuery] = useState("");
-  const results = useMemo(() => searchFoodCatalog(query, userFoods), [query, userFoods]);
+  const [visibleCount, setVisibleCount] = useState(RESULT_PAGE_SIZE);
+  const results = useMemo(() => searchFoodCatalog(query, userFoods, Infinity), [query, userFoods]);
+  // Compare result values so equivalent saved-food arrays from parent renders
+  // preserve pagination, while changed matches, ordering, or food data reset it.
+  const resultsSignature = useMemo(() => JSON.stringify(results), [results]);
+  const visibleResults = results.slice(0, visibleCount);
   const hasMeaningfulQuery = /[a-z0-9]/i.test(query);
   useEffect(() => setQuery(""), [resetKey]);
+  useEffect(() => setVisibleCount(RESULT_PAGE_SIZE), [query, resultsSignature]);
 
   return (
     <section className="trace-feature-surface trace-food-search" style={{ background: "#1f2937", borderRadius: "16px", boxSizing: "border-box", marginTop: "24px", maxWidth: "700px", minWidth: 0, padding: "24px", textAlign: "left", width: "100%" }}>
@@ -100,7 +107,7 @@ function FoodSearch({
       )}
       {results.length > 0 && (
         <div aria-label="Food search results" className="trace-food-search__results">
-          {results.map((food) => (
+          {visibleResults.map((food) => (
             <button className="trace-search-result trace-food-result" data-food-source={food.sourceType} data-layout="compact" key={food.id} type="button" onClick={() => onSelectFood(food)} style={{ boxSizing: "border-box", maxWidth: "100%", minWidth: 0, width: "100%" }}>
               <span className="trace-food-result__content">
                 <span className="trace-food-result__heading" style={{ minWidth: 0 }}>
@@ -138,6 +145,15 @@ function FoodSearch({
             </button>
           ))}
         </div>
+      )}
+      {visibleCount < results.length && (
+        <button
+          className="trace-action trace-action--secondary trace-food-search__show-more"
+          onClick={() => setVisibleCount((count) => count + RESULT_PAGE_SIZE)}
+          type="button"
+        >
+          Show more
+        </button>
       )}
       {hasMeaningfulQuery && results.length === 0 && <p style={{ color: "#9ca3af", marginBottom: 0 }}>No catalog foods found. Create a grocery food or enter this meal manually below.</p>}
     </section>

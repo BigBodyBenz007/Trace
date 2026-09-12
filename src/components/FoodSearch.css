@@ -17,6 +17,20 @@
   margin-top: 16px;
 }
 
+.trace-food-search__show-more {
+  box-sizing: border-box;
+  margin-top: 12px;
+  max-width: 100%;
+  min-height: 44px;
+  min-width: 0;
+  width: 100%;
+}
+
+.trace-food-search__show-more:focus-visible {
+  outline: 2px solid var(--trace-teal-soft, #75b7aa);
+  outline-offset: 3px;
+}
+
 .trace-food-search__scanner-action {
   align-items: center;
   background: rgba(13, 23, 34, 0.6);
