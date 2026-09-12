@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "fs";
 import { StrictMode, useState } from "react";
 import { prepareCapsuleMediaFiles } from "../services/capsuleMedia";
+import { createCapsuleAudioRecorder, getCapsuleAudioRecordingSupport } from "../services/capsuleAudioRecorder";
 import { prepareCapsuleCeremony } from "../services/capsuleCeremonySound";
 import TimeCapsuleReadyOverlay from "./TimeCapsuleReadyOverlay";
 import TimeCapsulesPage from "./TimeCapsulesPage";
@@ -9,6 +10,12 @@ import TimeCapsulesPage from "./TimeCapsulesPage";
 jest.mock("../services/capsuleMedia", () => ({
   ...jest.requireActual("../services/capsuleMedia"),
   prepareCapsuleMediaFiles: jest.fn(),
+}));
+
+jest.mock("../services/capsuleAudioRecorder", () => ({
+  ...jest.requireActual("../services/capsuleAudioRecorder"),
+  createCapsuleAudioRecorder: jest.fn(),
+  getCapsuleAudioRecordingSupport: jest.fn(),
 }));
 
 jest.mock("../services/capsuleCeremonySound", () => ({
@@ -22,6 +29,7 @@ const startCeremonyMedia = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
+  getCapsuleAudioRecordingSupport.mockReturnValue({ supported: false, error: new Error("Audio recording is unavailable here. Choose an audio file.") });
   baseProps.mediaLoader.load.mockImplementation(() => new Promise(() => {}));
   prepareCapsuleCeremony.mockImplementation((...args) => {
     const prepared = jest.requireActual("../services/capsuleCeremonySound").prepareCapsuleCeremony(...args);
@@ -680,7 +688,9 @@ test("chooses audio files without exposing a capture control or affecting photo 
   expect(audioInput).toHaveAttribute("multiple");
   expect(audioInput.getAttribute("accept")).toContain(".m4a");
   expect(audioInput.getAttribute("accept")).toContain("audio/mp4");
-  expect(screen.queryByLabelText(/record audio/i)).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Record audio" })).toBeDisabled();
+  expect(audioInput).toBeEnabled();
+  expect(screen.queryByText(/save or share a Voice Memo to Files first/)).not.toBeInTheDocument();
 
   expect(screen.getByLabelText("Choose photos")).not.toHaveAttribute("capture");
   expect(screen.getByLabelText("Take photo")).toHaveAttribute("capture", "environment");
@@ -712,6 +722,209 @@ test("paginates the capsule archive in batches of ten", () => {
   expect(screen.getAllByRole("button", { name: "View Time Capsule" })).toHaveLength(11);
 });
 
+const recordedTakeReference = { id: "recorded-take", kind: "audio", name: "Voice message.m4a", mimeType: "audio/mp4", bytes: 123, durationMs: 2100 };
+
+function recordingDraft(overrides = {}) {
+  return {
+    schemaVersion: 1,
+    id: "recording-draft",
+    capsuleId: "recorded-capsule",
+    form: { name: "A recorded message", text: "Keep these private words", openOn: "2026-09-11" },
+    media: [],
+    pendingRecording: recordedTakeReference,
+    createdAt: "2026-09-11T12:00:00.000Z",
+    updatedAt: "2026-09-11T12:00:00.000Z",
+    ...overrides,
+  };
+}
+
+test("a restored pending take blocks sealing and attachment changes while draft text stays editable", async () => {
+  const photo = { id: "existing-photo", kind: "photo", name: "Keep photo.jpg", mimeType: "image/jpeg", bytes: 45 };
+  const draft = recordingDraft({ media: [photo] });
+  const onPersistDraft = jest.fn(() => true);
+  const loader = { load: jest.fn(async (id) => ({ id, url: `blob:${id}` })) };
+  render(<TimeCapsulesPage {...baseProps} draft={draft} mediaLoader={loader} onPersistDraft={onPersistDraft} />);
+  fireEvent.click(screen.getByRole("button", { name: "Continue draft" }));
+  expect(await screen.findByLabelText("Preview your recording")).toHaveAttribute("controls");
+  expect(screen.getByLabelText("Preview your recording")).not.toHaveAttribute("autoplay");
+  expect(screen.getByRole("button", { name: "Seal Time Capsule" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Discard draft" })).toBeDisabled();
+  expect(screen.getByRole("button", { name: "Remove", exact: true })).toBeDisabled();
+  expect(screen.getByLabelText("Choose audio file")).toBeDisabled();
+  expect(screen.getByLabelText("Choose photos")).toBeDisabled();
+  expect(screen.getByText(/Finish your recording, then keep or discard the take/)).toBeInTheDocument();
+  expect(screen.getByLabelText("Private message")).toBeEnabled();
+  fireEvent.change(screen.getByLabelText("Private message"), { target: { value: "Still editable during review" } });
+  expect(onPersistDraft).toHaveBeenLastCalledWith({ ...draft.form, text: "Still editable during review" }, [photo]);
+  fireEvent.change(screen.getByLabelText("Choose audio file"), { target: { files: [new File(["other"], "other.m4a", { type: "audio/mp4" })] } });
+  expect(prepareCapsuleMediaFiles).not.toHaveBeenCalled();
+  expect(baseProps.onStageMedia).not.toHaveBeenCalled();
+  expect(baseProps.onSeal).not.toHaveBeenCalled();
+  expect(draft.pendingRecording).toBe(recordedTakeReference);
+});
+
+test("Keeping a restored recording adds its existing reference to an audio card and allows sealing and opening", async () => {
+  const onKeepRecording = jest.fn();
+  const onPersistRecording = jest.fn();
+  const loader = { load: jest.fn(async (id) => ({ id, url: `blob:${id}` })) };
+  function Harness() {
+    const [draft, setDraft] = useState(recordingDraft());
+    const [capsules, setCapsules] = useState([]);
+    onKeepRecording.mockImplementation(async (id) => {
+      const media = [draft.pendingRecording];
+      setDraft({ ...draft, media, pendingRecording: null });
+      return { ok: true, media };
+    });
+    return <TimeCapsulesPage {...baseProps} draft={draft} capsules={capsules} mediaLoader={loader}
+      onKeepRecording={onKeepRecording} onPersistRecording={onPersistRecording}
+      onSeal={async (form, media) => {
+        const value = capsule({ id: "recorded-capsule", ...form, media });
+        setCapsules([value]); setDraft(null);
+        return { value };
+      }}
+      onOpen={async () => {
+        const value = { ...capsules[0], openedAt: "2026-09-11T12:10:00.000Z" };
+        setCapsules([value]);
+        return value;
+      }} />;
+  }
+  render(<Harness />);
+  fireEvent.click(screen.getByRole("button", { name: "Continue draft" }));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Keep recording" })));
+  expect(onKeepRecording).toHaveBeenCalledWith("recorded-take");
+  expect(onPersistRecording).not.toHaveBeenCalled();
+  expect(screen.getByText("Audio recording 1")).toBeInTheDocument();
+  expect(screen.getByRole("list", { name: "Draft attachments" }).querySelectorAll("li")).toHaveLength(1);
+  expect(screen.getByRole("button", { name: "Seal Time Capsule" })).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "Seal Time Capsule" }));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirm seal Time Capsule" })));
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Open Capsule" })));
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
+  expect(await screen.findByLabelText("Play Audio recording 1: Voice message.m4a")).toHaveAttribute("src", "blob:recorded-take");
+  expect(screen.getByText("Keep these private words")).toBeInTheDocument();
+});
+
+test("leaving a safely persisted pending take preserves the draft and permits later review", async () => {
+  const draft = recordingDraft();
+  const onBack = jest.fn();
+  const onPersistDraft = jest.fn(() => true);
+  render(<TimeCapsulesPage {...baseProps} draft={draft} onBack={onBack} onPersistDraft={onPersistDraft} />);
+  fireEvent.click(screen.getByRole("button", { name: "Continue draft" }));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" })));
+  expect(onBack).toHaveBeenCalledTimes(1);
+  expect(onPersistDraft).toHaveBeenLastCalledWith(draft.form, draft.media);
+  expect(draft.pendingRecording).toBe(recordedTakeReference);
+});
+
+test("Back waits for a pending Keep action before saving the editor's attachment list", async () => {
+  let finishKeep;
+  const keepResult = new Promise((resolve) => { finishKeep = resolve; });
+  const onBack = jest.fn();
+  const onPersistDraft = jest.fn(() => true);
+  function Harness() {
+    const [draft, setDraft] = useState(recordingDraft());
+    return <TimeCapsulesPage {...baseProps} draft={draft} onBack={onBack} onPersistDraft={onPersistDraft}
+      onKeepRecording={() => {
+        // Durable persistence can finish before its asynchronous writer returns
+        // the new media list to the editor wrapper.
+        setDraft((current) => ({ ...current, pendingRecording: null, media: [recordedTakeReference] }));
+        return keepResult;
+      }} />;
+  }
+  render(<Harness />);
+  fireEvent.click(screen.getByRole("button", { name: "Continue draft" }));
+  fireEvent.click(screen.getByRole("button", { name: "Keep recording" }));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" })));
+  expect(onBack).not.toHaveBeenCalled();
+  expect(onPersistDraft).not.toHaveBeenCalled();
+  expect(screen.getByText("Finish saving or reviewing your recording before leaving. Wait for any ongoing action, or retry saving the take.")).toBeInTheDocument();
+  await act(async () => finishKeep({ ok: true, media: [recordedTakeReference] }));
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(onBack).toHaveBeenCalledTimes(1);
+  expect(onPersistDraft).toHaveBeenLastCalledWith(recordingDraft().form, [recordedTakeReference]);
+});
+
+test("an unsaved session take blocks leaving until retry succeeds or confirmed discard clears it", async () => {
+  const draft = recordingDraft({ pendingRecording: null });
+  const onBack = jest.fn();
+  const onDiscardRecording = jest.fn();
+  function Harness() {
+    const [retryTake, setRetryTake] = useState({ id: "failed-take", draftId: draft.id, file: new File(["voice"], "Voice.m4a", { type: "audio/mp4" }), durationMs: 2100 });
+    onDiscardRecording.mockImplementation(async () => { setRetryTake(null); return { ok: true }; });
+    return <TimeCapsulesPage {...baseProps} draft={draft} recordingRetryTake={retryTake} onBack={onBack} onDiscardRecording={onDiscardRecording} />;
+  }
+  render(<Harness />);
+  fireEvent.click(screen.getByRole("button", { name: "Continue draft" }));
+  expect(screen.getByRole("button", { name: "Seal Time Capsule" })).toBeDisabled();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" })));
+  expect(onBack).not.toHaveBeenCalled();
+  expect(screen.getByText("Finish saving or reviewing your recording before leaving. Wait for any ongoing action, or retry saving the take.")).toBeInTheDocument();
+  expect(screen.getByLabelText("Private message")).toHaveValue(draft.form.text);
+  fireEvent.click(screen.getByRole("button", { name: "Discard recording", exact: true }));
+  expect(onDiscardRecording).not.toHaveBeenCalled();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirm discard recording" })));
+  expect(onDiscardRecording).toHaveBeenCalledWith("failed-take");
+  expect(screen.getByRole("button", { name: "Seal Time Capsule" })).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(onBack).toHaveBeenCalledTimes(1);
+});
+
+test("Back stops active recording and waits for storage while preserving text typed during finalization", async () => {
+  getCapsuleAudioRecordingSupport.mockReturnValue({ supported: true, mimeType: "audio/mp4" });
+  let resolveSave;
+  const save = new Promise((resolve) => { resolveSave = resolve; });
+  const file = new File(["encoded voice"], "Voice message.m4a", { type: "audio/mp4" });
+  const stop = jest.fn();
+  const onBack = jest.fn();
+  const onPersistDraft = jest.fn(() => true);
+  const lifecycleAdapter = { subscribe: jest.fn() };
+  createCapsuleAudioRecorder.mockImplementation((options) => {
+    let state = { status: "idle", elapsedMs: 0 };
+    stop.mockImplementation(async (stopReason) => {
+      state = { ...state, status: "validating", stopReason };
+      options.onState(state);
+      await options.onComplete({ file, durationMs: 2100, stopReason });
+      state = { ...state, status: "ready" };
+      options.onState(state);
+    });
+    return {
+      getState: () => state,
+      start: async () => { options.stopPlayback?.(); state = { ...state, status: "recording" }; options.onState(state); },
+      stop,
+      dispose: jest.fn(),
+      cancel: jest.fn(),
+    };
+  });
+  function Harness() {
+    const [draft, setDraft] = useState(recordingDraft({ pendingRecording: null, media: [
+      { id: "large-video", kind: "video", name: "Clip.mp4", mimeType: "video/mp4", bytes: 75 * 1024 * 1024 },
+      { id: "existing-voice-1", kind: "audio", name: "First.m4a", mimeType: "audio/mp4", bytes: 10 * 1024 * 1024 },
+      { id: "existing-voice-2", kind: "audio", name: "Second.m4a", mimeType: "audio/mp4", bytes: 10 * 1024 * 1024 },
+    ] }));
+    return <TimeCapsulesPage {...baseProps} draft={draft} lifecycleAdapter={lifecycleAdapter} onBack={onBack} onPersistDraft={onPersistDraft}
+      onPersistRecording={async (recordedFile) => {
+        expect(recordedFile).toBe(file);
+        await save;
+        setDraft((current) => ({ ...current, pendingRecording: recordedTakeReference }));
+        return { pendingRecording: recordedTakeReference };
+      }} />;
+  }
+  render(<Harness />);
+  fireEvent.click(screen.getByRole("button", { name: "Continue draft" }));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Record audio" })));
+  expect(createCapsuleAudioRecorder.mock.calls[0][0]).toEqual(expect.objectContaining({ maxBytes: 5 * 1024 * 1024, lifecycleAdapter }));
+  expect(screen.getByRole("button", { name: "Seal Time Capsule" })).toBeDisabled();
+  expect(screen.getByLabelText("Choose audio file")).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(stop).toHaveBeenCalledWith("navigation");
+  expect(onBack).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByLabelText("Private message"), { target: { value: "Words added while the take saves" } });
+  await act(async () => resolveSave());
+  expect(onBack).toHaveBeenCalledTimes(1);
+  expect(onPersistDraft).toHaveBeenLastCalledWith(expect.objectContaining({ text: "Words added while the take saves" }), expect.arrayContaining([expect.objectContaining({ id: "large-video" })]));
+});
+
 test("ready overlay navigates without opening and keeps failed postpone choices retryable", async () => {
   const onOpenNow = jest.fn();
   const onPostpone = jest.fn().mockResolvedValue(false);
@@ -723,9 +936,10 @@ test("ready overlay navigates without opening and keeps failed postpone choices 
   expect(screen.queryByRole("button", { name: "Open Capsule" })).not.toBeInTheDocument();
 
   fireEvent.click(screen.getByRole("button", { name: "Postpone" }));
-  fireEvent.change(screen.getByLabelText("Reminder date"), { target: { value: "2026-09-12" } });
+  const futureReminder = screen.getByLabelText("Reminder date").min;
+  fireEvent.change(screen.getByLabelText("Reminder date"), { target: { value: futureReminder } });
   await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Confirm" })); });
-  expect(onPostpone).toHaveBeenCalledWith("2026-09-12");
+  expect(onPostpone).toHaveBeenCalledWith(futureReminder);
   expect(screen.getByRole("alert")).toHaveTextContent("previous reminder is unchanged");
-  expect(screen.getByLabelText("Reminder date")).toHaveValue("2026-09-12");
+  expect(screen.getByLabelText("Reminder date")).toHaveValue(futureReminder);
 });

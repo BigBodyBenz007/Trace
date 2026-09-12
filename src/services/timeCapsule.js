@@ -159,18 +159,25 @@ export function normalizeTimeCapsuleDraft(value) {
     (value.form.openOn !== "" && !isLocalDate(value.form.openOn)) || !timestamp(value.createdAt) || !timestamp(value.updatedAt)) return null;
   const media = normalizeMediaList(value.media);
   if (!media) return null;
+  const pendingRecording = value.pendingRecording == null
+    ? null : normalizeCapsuleMediaReference(value.pendingRecording);
+  if (value.pendingRecording != null && (!pendingRecording || pendingRecording.kind !== "audio" ||
+    pendingRecording.bytes <= 0 || !Number.isFinite(pendingRecording.durationMs) || pendingRecording.durationMs <= 0 ||
+    !normalizeMediaList([...media, pendingRecording]))) return null;
   return {
     schemaVersion: TIME_CAPSULE_SCHEMA_VERSION,
     id: value.id.trim(),
     capsuleId: value.capsuleId.trim(),
     form: { name: value.form.name, text: value.form.text, openOn: value.form.openOn },
     media,
+    // Omit absent pending takes so existing draft/backup payloads stay unchanged.
+    ...(pendingRecording ? { pendingRecording } : {}),
     createdAt: value.createdAt,
     updatedAt: value.updatedAt,
   };
 }
 
-export function createTimeCapsuleDraft({ id, capsuleId, form, media = [], createdAt }, now = new Date()) {
+export function createTimeCapsuleDraft({ id, capsuleId, form, media = [], pendingRecording, createdAt }, now = new Date()) {
   const updatedAt = now.toISOString();
   return normalizeTimeCapsuleDraft({
     schemaVersion: TIME_CAPSULE_SCHEMA_VERSION,
@@ -178,19 +185,25 @@ export function createTimeCapsuleDraft({ id, capsuleId, form, media = [], create
     capsuleId,
     form,
     media,
+    pendingRecording,
     createdAt: createdAt || updatedAt,
     updatedAt,
   });
 }
 
+export function timeCapsuleDraftMedia(draft) {
+  return [...(draft?.media || []), ...(draft?.pendingRecording ? [draft.pendingRecording] : [])];
+}
+
 export function timeCapsuleDraftHasMeaningfulWork(value) {
   const draft = normalizeTimeCapsuleDraft(value);
-  return Boolean(draft && (draft.form.name.trim() || draft.form.text.trim() || draft.media.length));
+  return Boolean(draft && (draft.form.name.trim() || draft.form.text.trim() || timeCapsuleDraftMedia(draft).length));
 }
 
 export function createSealedTimeCapsule(draft, now = new Date()) {
   const normalized = normalizeTimeCapsuleDraft(draft);
   if (!normalized) return { error: "This Time Capsule draft is invalid." };
+  if (normalized.pendingRecording) return { error: "Keep or discard the pending recording before sealing this Time Capsule." };
   if (!normalized.form.name.trim()) return { error: "Give this Time Capsule a visible name." };
   if (!normalized.form.text.trim() && normalized.media.length === 0) return { error: "Add private text or at least one attachment before sealing." };
   if (!isLocalDate(normalized.form.openOn) || normalized.form.openOn < localDateKey(now)) {

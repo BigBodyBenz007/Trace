@@ -17,6 +17,7 @@ import JournalPage from "./components/JournalPage";
 import JournalUnlockPage from "./components/JournalUnlockPage";
 import TodayPage from "./components/TodayPage";
 import TimeCapsulesPage from "./components/TimeCapsulesPage";
+import { createCapsuleRecordingDraftStore } from "./services/capsuleRecordingDraftStore";
 import ConfirmationMessage from "./components/ConfirmationMessage";
 import { parseDateOnlyLocal } from "./services/dateOnly";
 import { detectMemoryAchievement } from "./services/memoryAchievement";
@@ -164,6 +165,7 @@ import {
   reminderFor,
   resealOpenedTimeCapsule,
   timeCapsuleState,
+  timeCapsuleDraftMedia,
   writeTimeCapsuleDraft,
   writeTimeCapsuleReminders,
   writeTimeCapsules,
@@ -432,6 +434,8 @@ function App({
   const [timeCapsuleDraftReport, setTimeCapsuleDraftReport] = useState(() => readTimeCapsuleDraft(localStorage));
   const [timeCapsuleReport, setTimeCapsuleReport] = useState(() => readTimeCapsules(localStorage));
   const [timeCapsuleDraft, setTimeCapsuleDraft] = useState(() => timeCapsuleDraftReport.draft);
+  const [capsuleRecordingRetryTake, setCapsuleRecordingRetryTake] = useState(null);
+  const capsuleRecordingStoreRef = useRef(null);
   const [timeCapsuleReminderReport, setTimeCapsuleReminderReport] = useState(() => readTimeCapsuleReminders(localStorage));
   const [timeCapsuleToday, setTimeCapsuleToday] = useState(() => capsuleLocalDateKey());
   const [timeCapsuleTargetId, setTimeCapsuleTargetId] = useState(null);
@@ -642,6 +646,32 @@ function App({
     });
   }
   const capsuleMediaUrlLoader = capsuleMediaUrlLoaderRef.current;
+  if (!capsuleRecordingStoreRef.current) {
+    capsuleRecordingStoreRef.current = createCapsuleRecordingDraftStore({
+      storage: localStorage,
+      ensureDatabase: ensurePhotoDatabase,
+      prepareStorage: async (bytes) => {
+        try { return await preparePhotoStorage(bytes); }
+        catch (error) {
+          if (error?.code === "insufficient-photo-storage" || error?.name === "QuotaExceededError") {
+            throw new Error("There is not enough browser storage to save this recording. Free device or browser space and retry saving. Your other draft content is unchanged.");
+          }
+          throw error;
+        }
+      },
+      getMedia, putMedia, deleteMedia,
+      createId: () => createId(),
+      onDraftChange: (draft) => {
+        setTimeCapsuleDraft(draft);
+        setTimeCapsuleDraftReport({ status: "ok", draft, raw: localStorage.getItem("timeCapsuleDraft") });
+      },
+      onRetryTakeChange: setCapsuleRecordingRetryTake,
+      onEvict: (id) => capsuleMediaUrlLoader.evict(id),
+    });
+  }
+  // A recorder can finish decoding after leaving the editor. Bind its writer
+  // now so restoring even the same draft identity invalidates that old take.
+  const persistCapsuleRecording = capsuleRecordingStoreRef.current.createTakeWriter(timeCapsuleDraft?.id);
 
   function showConfirmation(message, destinationPage = page) {
     confirmationIdRef.current += 1;
@@ -1572,10 +1602,19 @@ function App({
     return identity;
   }
 
-  function persistTimeCapsuleDraft(form, media = timeCapsuleDraft?.media || []) {
+  function persistTimeCapsuleDraft(form, media = timeCapsuleDraft?.media || [], { replaceMedia = false } = {}) {
     if (timeCapsuleReport.status === "blocked" || timeCapsuleDraftReport.status === "blocked") return false;
+    const stored = readTimeCapsuleDraft(localStorage);
+    if (stored.status !== "ok") return false;
     const identity = ensureTimeCapsuleDraftIdentity();
-    const draft = createTimeCapsuleDraft({ ...identity, form, media });
+    if (stored.draft && stored.draft.id !== identity.id) return false;
+    // Recorder completion may update media while a parent render is pending.
+    // Field saves must retain the latest durable references, not an older UI list.
+    const draft = createTimeCapsuleDraft({
+      ...identity, form,
+      media: !replaceMedia && stored.draft ? stored.draft.media : media,
+      pendingRecording: stored.draft?.pendingRecording,
+    });
     if (!draft) return false;
     try {
       writeTimeCapsuleDraft(localStorage, draft);
@@ -1594,7 +1633,8 @@ function App({
   }
 
   async function stageTimeCapsuleMedia(prepared, form, existingMedia) {
-    const combinedBytes = [...existingMedia, ...prepared].reduce((sum, item) => sum + (Number(item.bytes) || 0), 0);
+    const pending = readTimeCapsuleDraft(localStorage).draft?.pendingRecording;
+    const combinedBytes = [...existingMedia, ...(pending ? [pending] : []), ...prepared].reduce((sum, item) => sum + (Number(item.bytes) || 0), 0);
     if (combinedBytes > 100 * 1024 * 1024) throw new Error("Capsule attachments cannot exceed 100 MiB combined.");
     const identity = ensureTimeCapsuleDraftIdentity();
     const records = prepared.map((item) => ({
@@ -1607,7 +1647,7 @@ function App({
     await putMedia(database, records);
     const references = prepared.map((item, index) => normalizeCapsuleMediaReference({ ...item, id: records[index].id }));
     const next = [...existingMedia, ...references];
-    if (!persistTimeCapsuleDraft(form, next)) {
+    if (!persistTimeCapsuleDraft(form, next, { replaceMedia: true })) {
       await deleteMedia(database, records.map(({ id }) => id)).catch(() => {});
       throw new Error("Trace could not save the updated Time Capsule draft.");
     }
@@ -1620,7 +1660,7 @@ function App({
     if (storedCapsules.status !== "ok" || storedDraft.status !== "ok") return null;
     return new Set([
       ...storedCapsules.records.flatMap((capsule) => capsule.media.map(({ id }) => id)),
-      ...(storedDraft.draft?.media || []).map(({ id }) => id),
+      ...timeCapsuleDraftMedia(storedDraft.draft).map(({ id }) => id),
     ]);
   }
 
@@ -1637,7 +1677,7 @@ function App({
       throw new Error("Trace could not safely remove an attachment that is not owned only by this draft.");
     }
     await deleteMedia(database, [item.id]);
-    if (!persistTimeCapsuleDraft(form, next)) {
+    if (!persistTimeCapsuleDraft(form, next, { replaceMedia: true })) {
       if (stored?.blob) await putMedia(database, [stored]).catch(() => {});
       throw new Error("Trace could not update the draft; the attachment was restored.");
     }
@@ -1648,11 +1688,20 @@ function App({
   async function discardTimeCapsuleDraft() {
     const report = readTimeCapsuleDraft(localStorage);
     if (report.status !== "ok") throw new Error(report.message);
-    const ids = (report.draft?.media || []).map(({ id }) => id);
+    if (capsuleRecordingRetryTake?.draftId === report.draft?.id) {
+      await capsuleRecordingStoreRef.current.discardTake(capsuleRecordingRetryTake.id, report.draft.id);
+    }
+    const capsules = readTimeCapsules(localStorage);
+    if (capsules.status !== "ok") throw new Error("Trace could not verify attachment ownership. The draft was kept.");
+    const retainedIds = new Set(capsules.records.flatMap((capsule) => capsule.media.map(({ id }) => id)));
+    const ids = timeCapsuleDraftMedia(report.draft).map(({ id }) => id).filter((id) => !retainedIds.has(id));
     const database = ids.length ? await ensurePhotoDatabase() : null;
     const rollback = database
       ? (await Promise.all(ids.map((id) => getMedia(database, id)))).filter((record) => record?.blob)
       : [];
+    if (rollback.some((record) => record.capsuleDraftId !== report.draft.id || record.capsuleId !== report.draft.capsuleId)) {
+      throw new Error("Trace could not verify that this draft owns its attachments. Nothing was removed.");
+    }
     if (database) await deleteMedia(database, ids);
     try { clearTimeCapsuleDraft(localStorage); }
     catch (error) { if (database) await putMedia(database, rollback).catch(() => {}); throw error; }
@@ -1660,11 +1709,16 @@ function App({
     setTimeCapsuleDraft(null);
     setTimeCapsuleDraftReport({ status: "ok", draft: null, raw: null });
     timeCapsuleDraftIdentityRef.current = null;
+    capsuleRecordingStoreRef.current.clearSessionTake();
   }
 
   async function sealTimeCapsule(form, media) {
+    if (capsuleRecordingRetryTake?.draftId === timeCapsuleDraft?.id) {
+      return { error: "Retry saving or discard the unfinished recording before sealing this capsule." };
+    }
     const draft = persistTimeCapsuleDraft(form, media);
     if (!draft) return { error: "Trace could not persist the latest draft." };
+    media = draft.media;
     const result = createSealedTimeCapsule(draft);
     if (!result.value) return result;
     const database = media.length ? await ensurePhotoDatabase() : null;
@@ -2039,6 +2093,7 @@ function App({
         .some(({ status }) => status !== "ok")) {
         throw new Error("Invalid restored Time Capsule data.");
       }
+      capsuleRecordingStoreRef.current.clearSessionTake();
       setAppSettings(restoredAppSettings);
       setWaterEntries(restoredWaterEntries);
       setNutritionGoals(restoredNutritionGoals);
@@ -3767,6 +3822,11 @@ function App({
     setJournalPrivacy((current) => ({ ...current, unlocked: false }));
   }
 
+  async function prepareForBackupRestore() {
+    invalidateJournalForRestore();
+    await capsuleRecordingStoreRef.current.prepareForRestore();
+  }
+
   function saveJournalEntry(draft, editingJournalId = null) {
     const existingEntry = editingJournalId
       ? journalEntries.find((entry) => entry.id === editingJournalId)
@@ -4009,6 +4069,11 @@ function App({
           blockedMessage={timeCapsuleBlockedMessage}
           initialCapsuleId={timeCapsuleTargetId}
           mediaLoader={capsuleMediaUrlLoader}
+          lifecycleAdapter={lifecycleAdapter}
+          recordingRetryTake={capsuleRecordingRetryTake?.draftId === timeCapsuleDraft?.id ? capsuleRecordingRetryTake : null}
+          onPersistRecording={persistCapsuleRecording}
+          onKeepRecording={(id) => capsuleRecordingStoreRef.current.keepTake(id, timeCapsuleDraft?.id)}
+          onDiscardRecording={(id) => capsuleRecordingStoreRef.current.discardTake(id, timeCapsuleDraft?.id)}
           reducedMotion={reducedMotion}
           capsuleSounds={appSettings.capsuleSounds}
           capsuleVolume={appSettings.capsuleVolume}
@@ -4254,7 +4319,8 @@ function App({
           onBack={() => setPage("home")}
           journalLockEnabled={journalPrivacy.enabled}
           journalVaultSession={journalSessionContextRef.current?.session || null}
-          onRestoreStarting={invalidateJournalForRestore}
+          onRestoreStarting={prepareForBackupRestore}
+          onRestoreFinished={() => capsuleRecordingStoreRef.current.finishRestore()}
           onRestoreComplete={async (summary) => {
             await synchronizeRestoredAppState(summary);
             broadcastJournalPrivacy("backup-restored");

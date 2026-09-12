@@ -19,6 +19,7 @@ export default function BackupPage({
   onBack,
   onRestoreComplete = () => {},
   onRestoreStarting = () => {},
+  onRestoreFinished = () => {},
   journalLockEnabled = false,
   journalVaultSession = null,
   buttonStyle,
@@ -30,6 +31,8 @@ export default function BackupPage({
   const [preview, setPreview] = useState(null);
   const [shareBackupFile, setShareBackupFile] = useState(null);
   const [restoreComplete, setRestoreComplete] = useState(false);
+  const [restoring, setRestoring] = useState(false);
+  const restoreInFlightRef = useRef(false);
   const [backupCredentialType, setBackupCredentialType] = useState("passphrase");
   const [backupCredentialValue, setBackupCredentialValue] = useState("");
   const [backupEstimate, setBackupEstimate] = useState(null);
@@ -139,6 +142,7 @@ export default function BackupPage({
   }
 
   async function confirmRestore() {
+    if (restoreInFlightRef.current) return;
     if (!preview) return;
     const backupJournalCredential = preview.summary.encryptedJournal
       ? { type: backupCredentialType, value: backupCredentialValue }
@@ -172,10 +176,12 @@ export default function BackupPage({
     }
     setError("");
     setStatus("Restoring Trace…");
+    restoreInFlightRef.current = true;
+    setRestoring(true);
     try {
       const activeSession = journalVaultSession;
       setBackupCredentialValue("");
-      onRestoreStarting();
+      await onRestoreStarting();
       const restoredSummary = await restoreTraceBackup(preview.backup, {
         confirmed: true,
         journalVaultSession: activeSession,
@@ -189,6 +195,10 @@ export default function BackupPage({
       setStatus("");
       setRestoreComplete(false);
       setError(`Trace restore could not be completed. ${restoreError.message}`);
+    } finally {
+      onRestoreFinished();
+      restoreInFlightRef.current = false;
+      setRestoring(false);
     }
   }
 
@@ -202,7 +212,7 @@ export default function BackupPage({
       </p>
       </header>
       <nav aria-label="Backup navigation" className="trace-backup-navigation">
-        <button className="trace-action trace-action--secondary" type="button" style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>Back to Timeline</button>
+        <button className="trace-action trace-action--secondary" type="button" disabled={restoring} style={{ ...buttonStyle, backgroundColor: "#374151" }} onClick={onBack}>Back to Timeline</button>
       </nav>
       <section aria-label="Archive actions" className="trace-backup-actions">
         <button className="trace-action trace-action--primary" type="button" style={buttonStyle} onClick={exportBackup}>Download Trace Backup</button>
@@ -303,7 +313,7 @@ export default function BackupPage({
               </fieldset>
             </>
           )}
-          <button className="trace-action trace-action--danger" type="button" style={{ ...buttonStyle, backgroundColor: "#b91c1c" }} onClick={confirmRestore}>Confirm Full Restore</button>
+          <button className="trace-action trace-action--danger" type="button" disabled={restoring} style={{ ...buttonStyle, backgroundColor: "#b91c1c" }} onClick={confirmRestore}>Confirm Full Restore</button>
           <button className="trace-action trace-action--secondary" type="button" style={{ ...buttonStyle, backgroundColor: "#4b5563" }} onClick={() => {
             setBackupCredentialValue("");
             setPreview(null);

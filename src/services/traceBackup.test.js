@@ -654,6 +654,71 @@ test("verifies an existing schema 9 capsule payload before adding legacy lifecyc
     .toBe(await sha256CanonicalJson(validated.backup.data.structured));
 });
 
+test("schema 9 backs up and restores a pending recording with its draft ownership and exact audio bytes", async () => {
+  const reference = { id: "pending-voice", kind: "audio", name: "Recording.m4a", mimeType: "audio/mp4", bytes: 5, durationMs: 1200 };
+  const draft = {
+    schemaVersion: 1, id: "pending-draft", capsuleId: "future-capsule",
+    form: { name: "Draft", text: "Unchanged words", openOn: "2030-09-12" }, media: [], pendingRecording: reference,
+    createdAt: "2026-09-12T12:00:00.000Z", updatedAt: "2026-09-12T12:00:00.000Z",
+  };
+  const media = { ...reference, capsuleId: draft.capsuleId, capsuleDraftId: draft.id, blob: new Blob(["voice"], { type: "audio/mp4" }) };
+  const created = await createTraceBackup({
+    storage: makeStorage({ timeCapsuleDraft: JSON.stringify(draft) }),
+    openDatabase: async () => makeDatabaseWithMedia([], [media]),
+  });
+  expect(created.schemaVersion).toBe(9);
+  expect(created.data.structured.timeCapsuleDraft).toEqual(draft);
+  expect(created.integrity.media.count).toBe(1);
+  const destination = makeStorage();
+  const database = makeDatabaseWithMedia();
+  await restoreTraceBackup(created, { confirmed: true, storage: destination, openDatabase: async () => database });
+  expect(JSON.parse(destination.value("timeCapsuleDraft"))).toEqual(draft);
+  expect(database.records("media")).toMatchObject([{ ...reference, capsuleDraftId: draft.id }]);
+  expect(await readBlobText(database.records("media")[0].blob)).toBe("voice");
+
+  const tampered = cloneJsonForTest(created);
+  tampered.data.structured.timeCapsuleDraft.pendingRecording.durationMs = 0;
+  await expect(validateTraceBackup(tampered)).rejects.toThrow(/integrity check/i);
+  tampered.integrity.structured.digest = await sha256CanonicalJson(tampered.data.structured);
+  await expect(validateTraceBackup(tampered)).rejects.toThrow(/invalid unfinished Time Capsule draft/i);
+
+  const missing = cloneJsonForTest(created);
+  missing.data.media = [];
+  missing.integrity.media = { count: 0, entries: [] };
+  await expect(validateTraceBackup(missing)).rejects.toThrow(/missing referenced media pending-voice/i);
+  const foreign = cloneJsonForTest(created);
+  foreign.data.media[0].capsuleDraftId = "other-draft";
+  await expect(validateTraceBackup(foreign)).rejects.toThrow(/ownership metadata/i);
+
+  const priorRaw = JSON.stringify({ ...draft, form: { ...draft.form, text: "Previous draft" } });
+  const rollbackStorage = makeStorage({ timeCapsuleDraft: priorRaw });
+  const rollbackDatabase = makeDatabaseWithMedia([], [media], { failMediaWriteCount: 1 });
+  await expect(restoreTraceBackup(created, { confirmed: true, storage: rollbackStorage, openDatabase: async () => rollbackDatabase }))
+    .rejects.toThrow(/previous data was restored/i);
+  expect(rollbackStorage.value("timeCapsuleDraft")).toBe(priorRaw);
+  expect(rollbackDatabase.records("media")).toMatchObject([{ ...reference, capsuleDraftId: draft.id }]);
+});
+
+test("legacy schema 9 drafts remain absent of pending state, with integrity checked before optional-field normalization", async () => {
+  const draft = {
+    schemaVersion: 1, id: "legacy-draft", capsuleId: "legacy-capsule", media: [],
+    form: { name: "Legacy", text: "Saved words", openOn: "2030-09-12" },
+    createdAt: "2026-09-12T12:00:00.000Z", updatedAt: "2026-09-12T12:00:00.000Z",
+  };
+  const created = await createTraceBackup({
+    storage: makeStorage({ timeCapsuleDraft: JSON.stringify(draft) }),
+    openDatabase: async () => makeDatabaseWithMedia(),
+  });
+  const validated = await validateTraceBackup(created);
+  expect(validated.backup.data.structured.timeCapsuleDraft).toEqual(draft);
+  expect(validated.backup.data.structured.timeCapsuleDraft).not.toHaveProperty("pendingRecording");
+  const optionalNull = cloneJsonForTest(created);
+  optionalNull.data.structured.timeCapsuleDraft.pendingRecording = null;
+  await expect(validateTraceBackup(optionalNull)).rejects.toThrow(/integrity check/i);
+  optionalNull.integrity.structured.digest = await sha256CanonicalJson(optionalNull.data.structured);
+  expect((await validateTraceBackup(optionalNull)).backup.data.structured.timeCapsuleDraft).toEqual(draft);
+});
+
 test("schema 8 validates with its historical manifest and restores empty capsule domains", async () => {
   const current = await createTraceBackup({ storage: makeStorage(), openDatabase: async () => makeDatabaseWithMedia() });
   const structured = cloneJsonForTest(current.data.structured);

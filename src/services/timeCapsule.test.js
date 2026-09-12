@@ -8,13 +8,17 @@ import {
   localDateKey,
   millisecondsUntilNextLocalMidnight,
   normalizeTimeCapsule,
+  normalizeTimeCapsuleDraft,
   pendingTimeCapsuleReminder,
   readTimeCapsules,
+  readTimeCapsuleDraft,
   recordTimeCapsuleOpening,
   reminderFor,
   resealOpenedTimeCapsule,
   timeCapsuleDraftHasMeaningfulWork,
+  timeCapsuleDraftMedia,
   timeCapsuleState,
+  writeTimeCapsuleDraft,
 } from "./timeCapsule";
 
 const draft = (overrides = {}) => createTimeCapsuleDraft({
@@ -114,4 +118,69 @@ test("malformed capsule storage is blocked without overwriting source bytes", ()
   expect(readTimeCapsules(storage)).toMatchObject({ status: "blocked", raw: "{broken" });
   expect(storage.setItem).not.toHaveBeenCalled();
   expect(normalizeTimeCapsule({})).toBeNull();
+});
+
+const pendingRecording = {
+  id: "pending-audio", kind: "audio", name: "Recording.m4a", mimeType: "audio/mp4", bytes: 512, durationMs: 1250,
+};
+
+test("persists and restores one pending audio take, counting it as meaningful draft work", () => {
+  const saved = draft({ form: { name: "", text: "", openOn: "" }, pendingRecording });
+  let raw = null;
+  const storage = { getItem: () => raw, setItem: (key, value) => { raw = value; } };
+  expect(writeTimeCapsuleDraft(storage, saved)).toEqual(saved);
+  const restored = readTimeCapsuleDraft(storage).draft;
+  expect(restored.pendingRecording).toEqual(pendingRecording);
+  expect(timeCapsuleDraftMedia(restored)).toEqual([pendingRecording]);
+  expect(timeCapsuleDraftMedia(null)).toEqual([]);
+  expect(timeCapsuleDraftHasMeaningfulWork(restored)).toBe(true);
+  expect(createSealedTimeCapsule(draft({ pendingRecording }))).toMatchObject({ error: expect.stringMatching(/keep or discard/i) });
+});
+
+test("keeping a pending take preserves its media identity and existing draft contents", () => {
+  const existing = { ...pendingRecording, id: "prior-audio", name: "Previous.m4a" };
+  const current = draft({ media: [existing], pendingRecording });
+  const kept = createTimeCapsuleDraft({
+    ...current, media: [...current.media, current.pendingRecording], pendingRecording: null,
+  });
+  expect(kept.media).toEqual([existing, pendingRecording]);
+  expect(kept.form).toEqual(current.form);
+  expect(kept).not.toHaveProperty("pendingRecording");
+  expect(createSealedTimeCapsule(kept, new Date("2026-09-11T12:00:00"))).toMatchObject({ value: { media: kept.media } });
+  expect(normalizeTimeCapsuleDraft(draft())).not.toHaveProperty("pendingRecording");
+});
+
+test.each([
+  ["wrong kind", { ...pendingRecording, kind: "video", mimeType: "video/mp4" }],
+  ["wrong MIME", { ...pendingRecording, mimeType: "video/mp4" }],
+  ["empty bytes", { ...pendingRecording, bytes: 0 }],
+  ["missing duration", { ...pendingRecording, durationMs: undefined }],
+  ["empty duration", { ...pendingRecording, durationMs: 0 }],
+  ["oversized audio", { ...pendingRecording, bytes: 20 * 1024 * 1024 + 1 }],
+  ["malformed take", []],
+])("blocks a pending take with %s without rewriting saved source", (label, pending) => {
+  const raw = JSON.stringify({ ...draft(), pendingRecording: pending });
+  const storage = { getItem: () => raw, setItem: jest.fn() };
+  expect(readTimeCapsuleDraft(storage)).toMatchObject({ status: "blocked", raw });
+  expect(storage.setItem).not.toHaveBeenCalled();
+});
+
+test("pending takes share attachment-count, total-byte, and unique-ID limits with kept media", () => {
+  const threeAudio = [1, 2, 3].map((index) => ({ ...pendingRecording, id: `audio-${index}` }));
+  expect(draft({ media: threeAudio, pendingRecording })).toBeNull();
+  expect(draft({ media: [pendingRecording], pendingRecording })).toBeNull();
+  const fullMedia = [
+    { id: "video", kind: "video", name: "Video.mp4", mimeType: "video/mp4", bytes: 75 * 1024 * 1024 },
+    ...[1, 2, 3].map((index) => ({ id: `photo-${index}`, kind: "photo", name: "Photo.jpg", mimeType: "image/jpeg", bytes: (index === 3 ? 5 : 10) * 1024 * 1024 })),
+  ];
+  expect(draft({ media: fullMedia })).not.toBeNull();
+  expect(draft({ media: fullMedia, pendingRecording })).toBeNull();
+});
+
+test("failed pending-take persistence leaves existing text and attachments untouched", () => {
+  const original = draft({ media: [{ ...pendingRecording, id: "retained-audio" }] });
+  const raw = JSON.stringify(original);
+  const storage = { getItem: () => raw, setItem: () => { throw new Error("quota full"); } };
+  expect(() => writeTimeCapsuleDraft(storage, draft({ ...original, pendingRecording }))).toThrow("quota full");
+  expect(readTimeCapsuleDraft(storage).draft).toEqual(original);
 });

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateOnly } from "../services/dateOnly";
 import { ingestPhotoFiles } from "../services/photoIngestion";
-import { prepareCapsuleMediaFiles } from "../services/capsuleMedia";
+import { CAPSULE_MEDIA_POLICY, prepareCapsuleMediaFiles } from "../services/capsuleMedia";
 import { useStoredPhoto } from "./StoredPhoto";
 import TimeCapsuleVault, { preloadTimeCapsuleVaultAssets } from "./TimeCapsuleVault";
 import {
@@ -9,6 +9,7 @@ import {
 } from "../services/capsuleCeremonySound";
 import TimeCapsuleCeremony from "./TimeCapsuleCeremony";
 import CapsuleSealConfirmation from "./CapsuleSealConfirmation";
+import CapsuleAudioRecorder from "./CapsuleAudioRecorder";
 import {
   TIME_CAPSULE_STATE,
   addCalendarDays,
@@ -108,6 +109,11 @@ export default function TimeCapsulesPage({
   onPersistDraft,
   onStageMedia,
   onRemoveMedia,
+  onPersistRecording,
+  onKeepRecording,
+  onDiscardRecording,
+  recordingRetryTake = null,
+  lifecycleAdapter,
   onDiscardDraft,
   onSeal,
   onOpen,
@@ -123,6 +129,8 @@ export default function TimeCapsulesPage({
   const [status, setStatus] = useState(draft ? "Your unfinished Time Capsule draft was restored." : "");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [recorderUnresolved, setRecorderUnresolved] = useState(false);
+  const [leavingEditor, setLeavingEditor] = useState(false);
   const [openingPending, setOpeningPending] = useState(false);
   const [ceremony, setCeremony] = useState(null);
   const [sealConfirmation, setSealConfirmation] = useState(false);
@@ -136,6 +144,22 @@ export default function TimeCapsulesPage({
   const viewTokenRef = useRef(0);
   const previousInitialIdRef = useRef(initialCapsuleId);
   const actionInFlightRef = useRef(false);
+  const recorderRef = useRef(null);
+  const recorderUnresolvedRef = useRef(false);
+  const navigationInFlightRef = useRef(false);
+  const editorValuesRef = useRef({ form, media });
+  editorValuesRef.current = { form, media };
+  const onRecordingActivity = useCallback((unresolved) => {
+    recorderUnresolvedRef.current = unresolved;
+    setRecorderUnresolved(unresolved);
+  }, []);
+  const recordingNeedsReview = recorderUnresolved || Boolean(draft?.pendingRecording || recordingRetryTake);
+  const recordingMessage = "Finish your recording, then keep or discard the take before sealing or changing attachments.";
+  const recordingMaxBytes = Math.max(0, Math.min(CAPSULE_MEDIA_POLICY.maxAudioBytes,
+    CAPSULE_MEDIA_POLICY.maxCombinedBytes - media.reduce((sum, item) => sum + (Number(item.bytes) || 0), 0)));
+  const recordingDisabledReason = media.filter((item) => item.kind === "audio").length >= CAPSULE_MEDIA_POLICY.maxAudio
+    ? "This capsule already has 3 audio attachments. Remove one to record another message."
+    : recordingMaxBytes <= 0 ? "This capsule has reached its combined attachment limit. Remove an attachment to record a message." : "";
   const playbackElementsRef = useRef(new Set());
   const registerPlayback = useCallback((element) => playbackElementsRef.current.add(element), []);
   const unregisterPlayback = useCallback((element) => playbackElementsRef.current.delete(element), []);
@@ -260,13 +284,67 @@ export default function TimeCapsulesPage({
     else setError("");
   }
 
-  function backToTimeline() {
-    if (onPersistDraft(form, media) === false) {
+  function saveDraftAndLeave() {
+    const current = editorValuesRef.current;
+    if (onPersistDraft(current.form, current.media) === false) {
       setError("Trace could not save the latest draft. Retry before leaving so your changes are not lost.");
       return;
     }
     cancelTransientEffects();
     onBack();
+  }
+
+  function backToTimeline() {
+    if (navigationInFlightRef.current) return;
+    if (!recorderUnresolvedRef.current && !draft?.pendingRecording && !recordingRetryTake) {
+      saveDraftAndLeave();
+      return;
+    }
+    navigationInFlightRef.current = true;
+    const viewToken = viewTokenRef.current;
+    setLeavingEditor(true);
+    (async () => {
+      try {
+        const safeToLeave = await recorderRef.current?.finishAndPersist();
+        if (!viewIsCurrent(viewToken)) return;
+        if (safeToLeave === false) {
+          setError("Finish saving or reviewing your recording before leaving. Wait for any ongoing action, or retry saving the take.");
+          return;
+        }
+        saveDraftAndLeave();
+      } catch (reason) {
+        if (mountedRef.current) setError("Trace could not finish saving the recording. Retry before leaving.");
+      } finally {
+        navigationInFlightRef.current = false;
+        if (mountedRef.current) setLeavingEditor(false);
+      }
+    })();
+  }
+
+  function attachmentsAreLocked() {
+    if (!recorderUnresolvedRef.current && !draft?.pendingRecording && !recordingRetryTake) return false;
+    setError(recordingMessage);
+    return true;
+  }
+
+  async function keepRecording() {
+    if (!onKeepRecording) throw new Error("Recording storage is unavailable.");
+    const result = await onKeepRecording(draft?.pendingRecording?.id);
+    if (result?.error || result === false) throw new Error(result?.error?.message || result?.error || "Trace could not keep this recording.");
+    if (mountedRef.current && result?.media) {
+      setMedia(result.media);
+      setError("");
+      setStatus("Audio recording added to your capsule.");
+    }
+    return result;
+  }
+
+  async function discardRecording() {
+    if (!onDiscardRecording) throw new Error("Recording storage is unavailable.");
+    const result = await onDiscardRecording(draft?.pendingRecording?.id || recordingRetryTake?.id || null);
+    if (result?.error || result === false) throw new Error(result?.error?.message || result?.error || "Trace could not discard this recording.");
+    if (mountedRef.current) setError("");
+    return result;
   }
 
   function startDraft() {
@@ -280,7 +358,7 @@ export default function TimeCapsulesPage({
     const input = event.currentTarget;
     const files = Array.from(input.files || []);
     input.value = "";
-    if (!files.length) return;
+    if (!files.length || busy || attachmentsAreLocked()) return;
     setBusy(true); setError("");
     try {
       let prepared;
@@ -290,7 +368,7 @@ export default function TimeCapsulesPage({
           existingDraftBytes: media.filter((item) => item.kind === "photo").reduce((sum, item) => sum + item.bytes, 0),
         });
         prepared = photos.photos.map((photo) => ({ ...photo, kind: "photo", mimeType: photo.blob.type, bytes: photo.storedBytes }));
-      } else prepared = await prepareCapsuleMediaFiles(files, media);
+      } else prepared = await prepareCapsuleMediaFiles(files, draft?.pendingRecording ? [...media, draft.pendingRecording] : media);
       const next = await onStageMedia(prepared, form, media);
       setMedia(next); setStatus(`${prepared.length} ${kind}${prepared.length === 1 ? "" : "s"} added.`);
     } catch (reason) {
@@ -299,6 +377,7 @@ export default function TimeCapsulesPage({
   }
 
   async function remove(item) {
+    if (busy || attachmentsAreLocked()) return;
     setBusy(true); setError("");
     try { setMedia(await onRemoveMedia(item, form, media)); }
     catch (reason) { setError(reason.message || "That attachment could not be removed safely."); }
@@ -306,6 +385,7 @@ export default function TimeCapsulesPage({
   }
 
   async function discard() {
+    if (busy || attachmentsAreLocked()) return;
     const meaningful = form.name.trim() || form.text.trim() || media.length;
     if (meaningful && !window.confirm("Discard this unfinished Time Capsule and its attachments?")) return;
     setBusy(true);
@@ -315,7 +395,7 @@ export default function TimeCapsulesPage({
   }
 
   async function seal() {
-    if (actionInFlightRef.current) return;
+    if (actionInFlightRef.current || attachmentsAreLocked()) return;
     setSealConfirmation(false);
     const prepared = preparePresentation("sealing");
     let retained = false;
@@ -380,7 +460,7 @@ export default function TimeCapsulesPage({
   if (mode === "edit") return (
     <main className="trace-feature-page trace-feature-page--capsules">
       <header className="trace-feature-page__identity"><p className="trace-feature-page__kicker">For your future self</p><h1>Create Time Capsule</h1></header>
-      <button type="button" disabled={busy} onClick={backToTimeline}>Back to Timeline</button>
+      <button type="button" disabled={busy || leavingEditor} onClick={backToTimeline}>Back to Timeline</button>
       {status && <p role="status">{status}</p>}{error && <p role="alert">{error}</p>}
       <section className="trace-feature-surface trace-capsule-editor">
         <label>Visible capsule name<input value={form.name} disabled={busy} onChange={(event) => updateForm("name", event.target.value)} /></label>
@@ -391,23 +471,41 @@ export default function TimeCapsulesPage({
           <p>Choose today to make the capsule ready immediately, or choose a future local calendar date.</p>
         </fieldset>
         <p>Up to 12 photos (48 MiB prepared), 3 audio files (20 MiB each), 1 video (75 MiB), and 100 MiB combined.</p>
+        <CapsuleAudioRecorder
+          ref={recorderRef}
+          key={draft?.id || "new-capsule-draft"}
+          pendingRecording={draft?.pendingRecording}
+          retryTake={recordingRetryTake}
+          mediaLoader={mediaLoader}
+          onPersistTake={onPersistRecording}
+          onKeepTake={keepRecording}
+          onDiscardTake={discardRecording}
+          onActivityChange={onRecordingActivity}
+          lifecycleAdapter={lifecycleAdapter}
+          stopPlayback={stopUserMediaPlayback}
+          registerPlayback={registerPlayback}
+          unregisterPlayback={unregisterPlayback}
+          maxBytes={recordingMaxBytes}
+          disabledReason={recordingDisabledReason}
+          disabled={busy || leavingEditor}
+        />
         <div className="trace-capsule-actions">
-          <label>Choose photos<input type="file" accept="image/*" multiple disabled={busy} onChange={(event) => selectFiles("photo", event)} /></label>
-          <label>Take photo<input type="file" accept="image/*" capture="environment" disabled={busy} onChange={(event) => selectFiles("photo", event)} /></label>
-          <label>Choose audio file<input type="file" accept={AUDIO_FILE_ACCEPT} multiple disabled={busy} onChange={(event) => selectFiles("audio", event)} /></label>
-          <label>Choose video<input type="file" accept="video/*" disabled={busy} onChange={(event) => selectFiles("video", event)} /></label>
-          <label>Record video<input type="file" accept="video/*" capture="environment" disabled={busy} onChange={(event) => selectFiles("video", event)} /></label>
+          <label>Choose photos<input type="file" accept="image/*" multiple disabled={busy || recordingNeedsReview} onChange={(event) => selectFiles("photo", event)} /></label>
+          <label>Take photo<input type="file" accept="image/*" capture="environment" disabled={busy || recordingNeedsReview} onChange={(event) => selectFiles("photo", event)} /></label>
+          <label>Choose audio file<input type="file" accept={AUDIO_FILE_ACCEPT} multiple disabled={busy || recordingNeedsReview} onChange={(event) => selectFiles("audio", event)} /></label>
+          <label>Choose video<input type="file" accept="video/*" disabled={busy || recordingNeedsReview} onChange={(event) => selectFiles("video", event)} /></label>
+          <label>Record video<input type="file" accept="video/*" capture="environment" disabled={busy || recordingNeedsReview} onChange={(event) => selectFiles("video", event)} /></label>
         </div>
-        <p>On iPhone, save or share a Voice Memo to Files first, then choose it here.</p>
         {media.length > 0 && <ul aria-label="Draft attachments" className="trace-capsule-draft-attachments">{media.map((item, index) => <li key={item.id}>
           {item.kind === "audio"
             ? <CapsuleMedia item={item} loader={mediaLoader} audioNumber={audioNumberAt(media, index)} registerPlayback={registerPlayback} unregisterPlayback={unregisterPlayback} />
             : item.kind === "photo"
               ? <CapsuleMedia item={item} loader={mediaLoader} registerPlayback={registerPlayback} unregisterPlayback={unregisterPlayback} />
             : <span>{item.kind}: {item.name} ({Math.ceil(item.bytes / 1024)} KiB)</span>}
-          <button type="button" disabled={busy} onClick={() => remove(item)}>Remove</button>
+          <button type="button" disabled={busy || recordingNeedsReview} onClick={() => remove(item)}>Remove</button>
         </li>)}</ul>}
-        <div className="trace-capsule-actions"><button type="button" disabled={busy} onClick={() => setSealConfirmation(true)}>Seal Time Capsule</button><button type="button" disabled={busy} onClick={discard}>Discard draft</button></div>
+        {recordingNeedsReview && <p role="status">{recordingMessage}</p>}
+        <div className="trace-capsule-actions"><button type="button" disabled={busy || recordingNeedsReview} onClick={() => setSealConfirmation(true)}>Seal Time Capsule</button><button type="button" disabled={busy || recordingNeedsReview} onClick={discard}>Discard draft</button></div>
       </section>
       {sealConfirmation && <CapsuleSealConfirmation name={form.name} onConfirm={seal} onCancel={() => setSealConfirmation(false)} />}
     </main>

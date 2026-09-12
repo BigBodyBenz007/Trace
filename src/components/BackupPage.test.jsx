@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import BackupPage from "./BackupPage";
 import {
   createTraceBackup,
@@ -514,13 +514,21 @@ test("confirmed restore shows success only after the complete restore resolves",
   restoreTraceBackup.mockReturnValue(new Promise((resolve) => { finishRestore = resolve; }));
   const onBack = jest.fn();
   const onRestoreComplete = jest.fn();
-  const onRestoreStarting = jest.fn();
-  render(<BackupPage onBack={onBack} onRestoreStarting={onRestoreStarting} onRestoreComplete={onRestoreComplete} buttonStyle={{}} containerStyle={{}} />);
+  let drainPendingWrites;
+  const onRestoreStarting = jest.fn(() => new Promise(resolve => { drainPendingWrites = resolve; }));
+  const onRestoreFinished = jest.fn();
+  render(<BackupPage onBack={onBack} onRestoreStarting={onRestoreStarting} onRestoreFinished={onRestoreFinished} onRestoreComplete={onRestoreComplete} buttonStyle={{}} containerStyle={{}} />);
   fireEvent.change(document.querySelector('input[type="file"]'), {
     target: { files: [new File(["backup"], "trace.json")] },
   });
   await screen.findByRole("heading", { name: "Review Backup" });
   fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  expect(restoreTraceBackup).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Confirm Full Restore" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  expect(onRestoreStarting).toHaveBeenCalledTimes(1);
+  expect(onRestoreFinished).not.toHaveBeenCalled();
+  await act(async () => { drainPendingWrites(); });
   await waitFor(() => expect(restoreTraceBackup).toHaveBeenCalledWith(parsed.backup, { confirmed: true, journalVaultSession: null }));
   expect(onRestoreStarting).toHaveBeenCalledTimes(1);
   expect(screen.queryByRole("heading", { name: "✓ Trace restored successfully" })).not.toBeInTheDocument();
@@ -528,6 +536,7 @@ test("confirmed restore shows success only after the complete restore resolves",
   finishRestore(summary);
   expect(await screen.findByRole("heading", { name: "✓ Trace restored successfully" })).toBeInTheDocument();
   expect(onRestoreComplete).toHaveBeenCalledWith(summary);
+  expect(onRestoreFinished).toHaveBeenCalledTimes(1);
   expect(screen.getByText("Your backup has been completely restored.")).toBeInTheDocument();
   fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" }).at(-1));
   expect(onBack).toHaveBeenCalled();
@@ -536,13 +545,16 @@ test("confirmed restore shows success only after the complete restore resolves",
 test("failed restore shows persistent failure and no success state", async () => {
   parseTraceBackupText.mockReturnValue(parsed);
   restoreTraceBackup.mockRejectedValue(new Error("Trace restore failed and the previous data was restored: photo write failed"));
-  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+  const onRestoreFinished = jest.fn();
+  render(<BackupPage onBack={jest.fn()} onRestoreFinished={onRestoreFinished} buttonStyle={{}} containerStyle={{}} />);
   fireEvent.change(document.querySelector('input[type="file"]'), {
     target: { files: [new File(["backup"], "trace.json")] },
   });
   await screen.findByRole("heading", { name: "Review Backup" });
   fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Trace restore could not be completed. Trace restore failed and the previous data was restored");
+  expect(onRestoreFinished).toHaveBeenCalledTimes(1);
+  expect(screen.getByRole("button", { name: "Confirm Full Restore" })).toBeEnabled();
   expect(screen.queryByRole("heading", { name: "✓ Trace restored successfully" })).not.toBeInTheDocument();
 });
 

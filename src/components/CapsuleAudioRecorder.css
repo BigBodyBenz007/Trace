@@ -1,0 +1,87 @@
+.trace-capsule-recorder {
+  background: var(--trace-surface-raised, var(--trace-surface));
+  border: 1px solid var(--trace-border);
+  border-radius: 14px;
+  display: grid;
+  gap: 12px;
+  margin: 18px 0;
+  min-width: 0;
+  padding: 16px;
+}
+
+.trace-capsule-recorder h3,
+.trace-capsule-recorder h4,
+.trace-capsule-recorder p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.trace-capsule-recorder__hint {
+  color: var(--trace-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.trace-capsule-recorder__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
+}
+
+.trace-capsule-recorder button,
+.trace-capsule-recorder__confirmation button {
+  min-height: 44px;
+  min-width: 44px;
+  white-space: normal;
+}
+
+.trace-capsule-recorder > button {
+  justify-self: start;
+}
+
+.trace-capsule-recorder__take {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.trace-capsule-recorder audio {
+  display: block;
+  max-width: 100%;
+  min-height: 44px;
+  min-width: 0;
+  width: 100%;
+}
+
+.trace-capsule-recorder__recording {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  font-variant-numeric: tabular-nums;
+  gap: 8px;
+}
+
+.trace-capsule-recorder__dot {
+  background: #db4556;
+  border-radius: 50%;
+  height: 10px;
+  width: 10px;
+}
+
+@media (max-width: 520px) {
+  .trace-capsule-recorder__actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .trace-capsule-recorder button,
+  .trace-capsule-recorder__confirmation button {
+    width: 100%;
+  }
+
+  .trace-capsule-recorder > button {
+    justify-self: stretch;
+  }
+}

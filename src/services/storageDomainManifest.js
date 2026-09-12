@@ -70,7 +70,7 @@ export const TRACE_STORAGE_DOMAIN_MANIFEST = Object.freeze([
   durableLocalStorage("formDrafts", "formDrafts", "Versioned unfinished create/edit form drafts, isolated by domain and record context."),
   durableLocalStorage("memoryDraft", "memoryDraft / App", "Unfinished Add Memory fields and IndexedDB staged-photo references."),
   durableLocalStorage("timeCapsules", "timeCapsule / App", "Sealed and opened Time Capsules with IndexedDB media references."),
-  durableLocalStorage("timeCapsuleDraft", "timeCapsule / App", "Unfinished Time Capsule fields and staged-media references."),
+  durableLocalStorage("timeCapsuleDraft", "timeCapsule / App", "Unfinished Time Capsule fields, staged-media references, and a stopped audio take awaiting review."),
   durableLocalStorage("timeCapsuleReminders", "timeCapsule / App", "Time Capsule reminder acknowledgment and postponement state."),
   durableLocalStorage("workoutDraft", "workoutDraft", "Active workout draft, including its persistent start time."),
   durableLocalStorage("workoutEntries", "App", "Workout history and IndexedDB photo references."),

@@ -10,7 +10,7 @@ import { normalizeAppSettings } from "./appSettings";
 import { normalizePlannedWorkouts } from "./plannedWorkout";
 import { normalizeWorkoutDraft } from "./workoutDraft";
 import { normalizeMemoryDraft } from "./memoryDraft";
-import { normalizeTimeCapsule, normalizeTimeCapsuleDraft } from "./timeCapsule";
+import { normalizeTimeCapsule, normalizeTimeCapsuleDraft, timeCapsuleDraftMedia } from "./timeCapsule";
 import { emptyFormDraftCollection, normalizeFormDraftCollection } from "./formDrafts";
 import { normalizeWorkoutTemplates } from "./workoutTemplate";
 import { normalizeJournalDraft } from "./journalEntry";
@@ -608,7 +608,7 @@ function capsuleMediaOwners(structuredData) {
     if (owners.has(id)) duplicateId = id;
     owners.set(id, { capsuleId: capsule.id, kind, reference });
   }));
-  (structuredData.timeCapsuleDraft?.media || []).forEach((reference) => {
+  timeCapsuleDraftMedia(structuredData.timeCapsuleDraft).forEach((reference) => {
     const { id, kind } = reference;
     if (owners.has(id)) duplicateId = id;
     owners.set(id, {
