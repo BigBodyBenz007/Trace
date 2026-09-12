@@ -1,121 +1,190 @@
 import React, { StrictMode } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import TimeCapsuleCeremony from "./TimeCapsuleCeremony";
+import { prepareCapsuleCeremony, resetCapsuleCeremonyAudioForTests } from "../services/capsuleCeremonySound";
+import * as ceremonySound from "../services/capsuleCeremonySound";
 
-jest.mock("../services/capsulePresentation", () => ({
-  CAPSULE_PRESENTATION: {
-    opening: { src: "opening.mp4", poster: "closed.png", end: "opened.png", duration: 6 },
-    sealing: { src: "closing.mp4", poster: "opened.png", end: "closed.png", duration: 5.4 },
-  },
-}));
+jest.mock("../services/capsulePresentation", () => ({ CAPSULE_PRESENTATION: {
+  opening: { src: "opening.mp4", poster: "closed.png", end: "opened.png", duration: 6 },
+  sealing: { src: "closing.mp4", poster: "opened.png", end: "closed.png", duration: 5.4 },
+} }));
 
 let play;
 let pause;
-const flush = async () => { await act(async () => { await Promise.resolve(); }); };
+let controllers;
+const flush = async () => { await act(async () => { for (let i = 0; i < 8; i += 1) await Promise.resolve(); }); };
 const elapsed = milliseconds => act(() => jest.advanceTimersByTime(milliseconds));
+const prepare = (kind = "opening", options = {}) => {
+  const value = prepareCapsuleCeremony(kind, options);
+  controllers.push(value);
+  if (value) Object.defineProperty(value.video, "duration", { configurable: true, value: kind === "opening" ? 6 : 5.4 });
+  return value;
+};
 const video = () => document.querySelector("video");
+const progress = time => { video().currentTime = time; fireEvent.timeUpdate(video()); };
+const end = () => { video().currentTime = video().duration; fireEvent.ended(video()); };
 
 beforeEach(() => {
   jest.useFakeTimers();
-  play = jest.spyOn(HTMLMediaElement.prototype, "play").mockImplementation(() => Promise.resolve());
+  resetCapsuleCeremonyAudioForTests();
+  controllers = [];
+  play = jest.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue();
   pause = jest.spyOn(HTMLMediaElement.prototype, "pause").mockImplementation(() => {});
 });
 afterEach(() => {
-  jest.useRealTimers();
-  play.mockRestore();
-  pause.mockRestore();
+  controllers.forEach(controller => controller?.dispose());
+  play.mockRestore(); pause.mockRestore(); jest.useRealTimers();
 });
 
-test("uses approved opening source inline, focuses Skip, and completes only once", async () => {
+test("adopts the gesture-prepared opening element and holds the full endpoint before finishing once", async () => {
+  const prepared = prepare();
   const onFinish = jest.fn();
-  render(<TimeCapsuleCeremony kind="opening" onFinish={onFinish} />);
+  render(<TimeCapsuleCeremony kind="opening" prepared={prepared} onFinish={onFinish} />);
   await flush();
+  expect(video()).toBe(prepared.video);
   expect(video()).toHaveAttribute("src", "opening.mp4");
   expect(video()).toHaveAttribute("playsinline");
-  expect(video().volume).toBe(0.65);
   expect(screen.getByRole("button", { name: "Skip animation" })).toHaveFocus();
-  fireEvent.ended(video());
+  progress(5.99);
+  expect(onFinish).not.toHaveBeenCalled();
+  const priorPauses = pause.mock.calls.length;
+  end();
+  expect(screen.getByRole("status")).toHaveTextContent("Your capsule is open");
+  expect(pause).toHaveBeenCalledTimes(priorPauses);
+  elapsed(799);
+  expect(onFinish).not.toHaveBeenCalled();
+  elapsed(1);
   fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
-  elapsed(20000);
   expect(onFinish).toHaveBeenCalledTimes(1);
-  expect(video().muted).toBe(true);
 });
 
-test("StrictMode and unrelated rerenders do not duplicate playback", async () => {
+test("StrictMode and unrelated renders reuse the same prepared element without duplicate success playback", async () => {
+  const prepared = prepare("sealing");
   const onFinish = jest.fn();
-  const { rerender } = render(<StrictMode><TimeCapsuleCeremony kind="sealing" onFinish={onFinish} /></StrictMode>);
+  const { rerender } = render(<StrictMode><TimeCapsuleCeremony kind="sealing" prepared={prepared} onFinish={onFinish} /></StrictMode>);
   await flush();
-  expect(play).toHaveBeenCalledTimes(1);
-  rerender(<StrictMode><TimeCapsuleCeremony kind="sealing" onFinish={() => onFinish()} /></StrictMode>);
+  expect(play).toHaveBeenCalledTimes(2); // One silent prime, one success playback.
+  rerender(<StrictMode><TimeCapsuleCeremony kind="sealing" prepared={prepared} onFinish={() => onFinish()} /></StrictMode>);
   await flush();
-  expect(play).toHaveBeenCalledTimes(1);
+  expect(play).toHaveBeenCalledTimes(2);
   expect(video()).toHaveAttribute("src", "closing.mp4");
-  fireEvent.ended(video());
+  end(); elapsed(800);
   expect(onFinish).toHaveBeenCalledTimes(1);
 });
 
-test("muted preference never prevents visuals and changes no saved preference", async () => {
-  render(<TimeCapsuleCeremony kind="opening" sounds={false} onFinish={jest.fn()} />);
+test("fast persistence cannot expose silent priming frames or a rewind", async () => {
+  let primed;
+  play.mockImplementationOnce(() => new Promise(resolve => { primed = resolve; }));
+  const prepared = prepare();
+  render(<TimeCapsuleCeremony kind="opening" prepared={prepared} onFinish={jest.fn()} />);
   await flush();
-  expect(play).toHaveBeenCalledTimes(1);
+  video().currentTime = 0.2;
+  fireEvent.playing(video());
+  expect(video()).not.toBeVisible();
+  expect(document.querySelector(".trace-capsule-film__media").style.backgroundImage).toContain("closed.png");
+  await act(async () => primed());
+  await flush();
+  expect(video().currentTime).toBe(0);
+  expect(video()).toBeVisible();
+});
+
+test("sound-off preference remains silent and all ceremony sound controls are absent", async () => {
+  const prepared = prepare("opening", { sounds: false });
+  render(<TimeCapsuleCeremony kind="opening" prepared={prepared} sounds={false} onFinish={jest.fn()} />);
+  await flush();
   expect(video().muted).toBe(true);
   expect(screen.getByText("Sound off")).toBeInTheDocument();
   expect(screen.queryByRole("slider")).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Enable sound" })).not.toBeInTheDocument();
 });
 
-test("Safari audible autoplay rejection retries muted and offers direct gesture recovery", async () => {
+test("genuinely blocked audio continues muted with an honest passive explanation", async () => {
+  const prepared = prepare();
+  await prepared.ready;
   play.mockRejectedValueOnce(new DOMException("User gesture required", "NotAllowedError"));
-  render(<TimeCapsuleCeremony kind="opening" onFinish={jest.fn()} />);
-  await flush();
-  expect(play).toHaveBeenCalledTimes(2);
-  expect(video().muted).toBe(true);
-  fireEvent.click(screen.getByRole("button", { name: "Enable sound" }));
+  render(<TimeCapsuleCeremony kind="opening" prepared={prepared} onFinish={jest.fn()} />);
   await flush();
   expect(play).toHaveBeenCalledTimes(3);
-  expect(video().muted).toBe(false);
+  expect(video().muted).toBe(true);
+  expect(screen.getByText(/Sound was blocked by this browser/)).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Enable sound" })).not.toBeInTheDocument();
 });
 
-test("decode or playback failure displays the saved endpoint with immediate Continue", async () => {
+test("failed playback offers the saved static endpoint and immediate Continue", async () => {
+  const prepared = prepare("sealing");
+  await prepared.ready;
   play.mockRejectedValueOnce(new DOMException("Decode failed", "NotSupportedError"));
   const onFinish = jest.fn();
-  render(<TimeCapsuleCeremony kind="sealing" onFinish={onFinish} />);
+  render(<TimeCapsuleCeremony kind="sealing" prepared={prepared} onFinish={onFinish} />);
   await flush();
   expect(screen.getByRole("img", { name: "Sealed Time Capsule vault" })).toHaveAttribute("src", "closed.png");
   expect(video()).not.toBeVisible();
-  expect(screen.getByRole("status")).toHaveTextContent("Your capsule is saved");
   fireEvent.click(screen.getByRole("button", { name: "Continue" }));
-  elapsed(5000);
+  elapsed(3000);
   expect(onFinish).toHaveBeenCalledTimes(1);
 });
 
-test("a hung play promise cannot lock controls and late completion remains paused", async () => {
+test("failed local media initialization shows a safe endpoint and releases controls without crashing", () => {
+  const factory = jest.spyOn(ceremonySound, "prepareCapsuleCeremony").mockImplementation(() => { throw Error("Media initialization unavailable"); });
+  const onFinish = jest.fn();
+  try {
+    expect(() => render(<TimeCapsuleCeremony kind="sealing" prepared={null} onFinish={onFinish} />)).not.toThrow();
+    expect(screen.getByRole("img", { name: "Sealed Time Capsule vault" })).toHaveAttribute("src", "closed.png");
+    expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
+    expect(play).not.toHaveBeenCalled();
+    elapsed(2500);
+    expect(onFinish).toHaveBeenCalledTimes(1);
+  } finally { factory.mockRestore(); }
+});
+
+test("delayed startup still receives the complete closing clip and settled pose", async () => {
+  const prepared = prepare("sealing");
+  await prepared.ready;
+  let start;
+  play.mockImplementationOnce(() => new Promise(resolve => { start = resolve; }));
+  const onFinish = jest.fn();
+  render(<TimeCapsuleCeremony kind="sealing" prepared={prepared} onFinish={onFinish} />);
+  await flush();
+  elapsed(10000);
+  expect(screen.queryByRole("button", { name: "Continue" })).not.toBeInTheDocument();
+  await act(async () => start());
+  for (let i = 1; i <= 5; i += 1) { progress(i); elapsed(1000); }
+  progress(5.39);
+  expect(onFinish).not.toHaveBeenCalled();
+  end(); elapsed(800);
+  expect(onFinish).toHaveBeenCalledTimes(1);
+});
+
+test("missing ended event completes only at actual duration plus grace and hold", async () => {
+  const prepared = prepare();
+  const onFinish = jest.fn();
+  render(<TimeCapsuleCeremony kind="opening" prepared={prepared} onFinish={onFinish} />);
+  await flush();
+  progress(5.99); elapsed(200);
+  expect(onFinish).not.toHaveBeenCalled();
+  progress(6); elapsed(1049);
+  expect(onFinish).not.toHaveBeenCalled();
+  elapsed(1);
+  expect(onFinish).toHaveBeenCalledTimes(1);
+});
+
+test("a stalled promise cannot hold controls forever and late completion stays paused", async () => {
+  const prepared = prepare();
+  await prepared.ready;
   let resolve;
   play.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
   const onFinish = jest.fn();
-  render(<TimeCapsuleCeremony kind="opening" onFinish={onFinish} />);
+  render(<TimeCapsuleCeremony kind="opening" prepared={prepared} onFinish={onFinish} />);
   await flush();
-  elapsed(4000);
+  elapsed(12000);
   expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
   elapsed(2500);
   expect(onFinish).toHaveBeenCalledTimes(1);
-  const previousPauses = pause.mock.calls.length;
   await act(async () => resolve());
-  expect(pause.mock.calls.length).toBeGreaterThan(previousPauses);
-  expect(video().muted).toBe(true);
+  expect(prepared.video.muted).toBe(true);
 });
 
-test("hard deadline completes even if a browser reports playing but never ends", async () => {
-  const onFinish = jest.fn();
-  render(<TimeCapsuleCeremony kind="opening" onFinish={onFinish} />);
-  await flush();
-  fireEvent.playing(video());
-  elapsed(10000);
-  expect(screen.getByRole("button", { name: "Continue" })).toBeInTheDocument();
-  elapsed(2500);
-  expect(onFinish).toHaveBeenCalledTimes(1);
-});
-
-test("Reduced Motion shows a silent endpoint and releases without any media playback", async () => {
+test("Reduced Motion uses a silent endpoint with Skip and no priming", async () => {
   const onFinish = jest.fn();
   render(<TimeCapsuleCeremony kind="opening" reducedMotion onFinish={onFinish} />);
   await flush();
@@ -126,41 +195,35 @@ test("Reduced Motion shows a silent endpoint and releases without any media play
   expect(onFinish).toHaveBeenCalledTimes(1);
 });
 
-test("background interruption stops and finishes once; unmount cancels pending playback", async () => {
+test("Skip and background interruption stop immediately without waiting for the settled hold", async () => {
+  const prepared = prepare();
   const onFinish = jest.fn();
-  const { unmount } = render(<TimeCapsuleCeremony kind="opening" onFinish={onFinish} />);
+  const { unmount } = render(<TimeCapsuleCeremony kind="opening" prepared={prepared} onFinish={onFinish} />);
   await flush();
-  act(() => window.dispatchEvent(new Event("pagehide")));
-  expect(video().muted).toBe(true);
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
+  expect(prepared.video.muted).toBe(true);
   expect(onFinish).toHaveBeenCalledTimes(1);
   unmount();
-  elapsed(20000);
-  expect(onFinish).toHaveBeenCalledTimes(1);
 
-  let resolve;
-  play.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+  const second = prepare();
   const nextFinish = jest.fn();
-  const next = render(<TimeCapsuleCeremony kind="opening" onFinish={nextFinish} />);
+  render(<TimeCapsuleCeremony kind="opening" prepared={second} onFinish={nextFinish} />);
   await flush();
-  const element = video();
-  next.unmount();
-  await act(async () => resolve());
-  expect(element.muted).toBe(true);
-  expect(nextFinish).not.toHaveBeenCalled();
+  act(() => window.dispatchEvent(new Event("pagehide")));
+  expect(second.video.muted).toBe(true);
+  expect(nextFinish).toHaveBeenCalledTimes(1);
 });
 
-test("volume control applies to the same video without restarting its clock", async () => {
-  render(<TimeCapsuleCeremony kind="opening" onFinish={jest.fn()} />);
+test("unmount cancels late success playback without calling completion", async () => {
+  const prepared = prepare();
+  await prepared.ready;
+  let resolve;
+  play.mockImplementationOnce(() => new Promise(done => { resolve = done; }));
+  const onFinish = jest.fn();
+  const { unmount } = render(<TimeCapsuleCeremony kind="opening" prepared={prepared} onFinish={onFinish} />);
   await flush();
-  video().currentTime = 2;
-  fireEvent.change(screen.getByRole("slider", { name: "Capsule ceremony volume" }), { target: { value: "20" } });
-  expect(video().volume).toBe(0.2);
-  expect(video().currentTime).toBe(2);
-  expect(play).toHaveBeenCalledTimes(1);
-  fireEvent.change(screen.getByRole("slider", { name: "Capsule ceremony volume" }), { target: { value: "0" } });
-  expect(video().muted).toBe(true);
-  fireEvent.change(screen.getByRole("slider", { name: "Capsule ceremony volume" }), { target: { value: "20" } });
-  await flush();
-  expect(video().muted).toBe(false);
-  expect(video().currentTime).toBe(2);
+  unmount();
+  await act(async () => resolve());
+  expect(prepared.video.muted).toBe(true);
+  expect(onFinish).not.toHaveBeenCalled();
 });

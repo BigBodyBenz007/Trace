@@ -15,7 +15,7 @@ import { parseDateOnlyLocal } from "./dateOnly";
 export { MOTION_PREFERENCES, normalizeMotionPreference } from "./motionPreference";
 
 export const APP_SETTINGS_STORAGE_KEY = "appSettings";
-export const APP_SETTINGS_SCHEMA_VERSION = 7;
+export const APP_SETTINGS_SCHEMA_VERSION = 8;
 export const JOURNAL_AUTO_LOCK_MINUTES = Object.freeze([1, 5, 15, 30]);
 export const DEFAULT_APP_SETTINGS = Object.freeze({
   schemaVersion: APP_SETTINGS_SCHEMA_VERSION,
@@ -24,6 +24,7 @@ export const DEFAULT_APP_SETTINGS = Object.freeze({
   homeVisibility: DEFAULT_HOME_VISIBILITY,
   motionPreference: MOTION_PREFERENCES.STANDARD,
   capsuleSounds: true,
+  capsuleVolume: 0.65,
   journalPrivacy: Object.freeze({ autoLockMinutes: 5 }),
   personalDetails: Object.freeze({ dateOfBirth: "" }),
 });
@@ -62,6 +63,8 @@ export function normalizeAppSettings(value) {
     homeVisibility: normalizeHomeVisibility(value?.homeVisibility),
     motionPreference: normalizeMotionPreference(value?.motionPreference),
     capsuleSounds: typeof value?.capsuleSounds === "boolean" ? value.capsuleSounds : true,
+    capsuleVolume: typeof value?.capsuleVolume === "number" && Number.isFinite(value.capsuleVolume)
+      && value.capsuleVolume >= 0 && value.capsuleVolume <= 1 ? value.capsuleVolume : 0.65,
     journalPrivacy: normalizeJournalPrivacy(value?.journalPrivacy),
     personalDetails: normalizePersonalDetails(value?.personalDetails),
   };

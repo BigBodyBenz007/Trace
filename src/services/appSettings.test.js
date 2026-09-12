@@ -6,14 +6,15 @@ import {
 } from "./appSettings";
 import { DEFAULT_HOME_VISIBILITY } from "./homeModules";
 
-test("defaults new and missing settings to Modern Heirloom schema v7", () => {
+test("defaults new and missing settings to Modern Heirloom schema v8", () => {
   expect(readAppSettings({ getItem: () => null })).toEqual(DEFAULT_APP_SETTINGS);
   expect(DEFAULT_APP_SETTINGS).toMatchObject({
-    schemaVersion: 7,
+    schemaVersion: 8,
     themeId: "modern-heirloom",
     homeVisibility: DEFAULT_HOME_VISIBILITY,
     motionPreference: "standard",
     capsuleSounds: true,
+    capsuleVolume: 0.65,
     journalPrivacy: { autoLockMinutes: 5 },
     personalDetails: { dateOfBirth: "" },
   });
@@ -33,15 +34,17 @@ test("persists normalized current settings with only themeId", () => {
     homeVisibility: { ...DEFAULT_HOME_VISIBILITY, workouts: false },
     motionPreference: "reduced",
     capsuleSounds: true,
+    capsuleVolume: 0.65,
   });
 
   expect(saved).toEqual({
-    schemaVersion: 7,
+    schemaVersion: 8,
     units: { weight: "kg", height: "cm", circumference: "cm", water: "oz" },
     themeId: "haunted-forest",
     homeVisibility: { ...DEFAULT_HOME_VISIBILITY, workouts: false },
     motionPreference: "reduced",
     capsuleSounds: true,
+    capsuleVolume: 0.65,
     journalPrivacy: { autoLockMinutes: 5 },
     personalDetails: { dateOfBirth: "" },
   });
@@ -59,12 +62,13 @@ test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-
       homeVisibility: { ...DEFAULT_HOME_VISIBILITY, journal: false },
       motionPreference: "reduced",
     })).toEqual({
-      schemaVersion: 7,
+      schemaVersion: 8,
       units: { weight: "kg", height: "cm", circumference: "cm", water: "oz" },
       themeId: lifeCurrentThemeId,
       homeVisibility: { ...DEFAULT_HOME_VISIBILITY, journal: false },
       motionPreference: "reduced",
       capsuleSounds: true,
+    capsuleVolume: 0.65,
       journalPrivacy: { autoLockMinutes: 5 },
       personalDetails: { dateOfBirth: "" },
     });
@@ -112,12 +116,13 @@ test("schema-v3 migration preserves units, Home visibility, and Motion & Effects
     homeVisibility,
     motionPreference: "reduced",
   })).toEqual({
-    schemaVersion: 7,
+    schemaVersion: 8,
     units: { weight: "kg", height: "cm", circumference: "cm", water: "oz" },
     themeId: "river",
     homeVisibility,
     motionPreference: "reduced",
     capsuleSounds: true,
+    capsuleVolume: 0.65,
     journalPrivacy: { autoLockMinutes: 5 },
     personalDetails: { dateOfBirth: "" },
   });
@@ -159,4 +164,15 @@ test.each([1, 5, 15, 30])("preserves the supported %s-minute Journal auto-lock c
 test("invalid Journal auto-lock settings use the five-minute default", () => {
   expect(normalizeAppSettings({ journalPrivacy: { autoLockMinutes: 2 } }).journalPrivacy)
     .toEqual({ autoLockMinutes: 5 });
+});
+
+
+test("migrates existing settings with safe volume while preserving an explicit mute", () => {
+  const saved = normalizeAppSettings({schemaVersion: 7, capsuleSounds: false, capsuleVolume: 0.67});
+  expect(saved).toMatchObject({schemaVersion: 8, capsuleSounds: false, capsuleVolume: 0.67});
+  expect(normalizeAppSettings({schemaVersion: 7, capsuleSounds: false}).capsuleVolume).toBe(0.65);
+  expect(normalizeAppSettings({capsuleVolume: 0}).capsuleVolume).toBe(0);
+  for (const capsuleVolume of [null, "0.67", -1, 2, NaN, Infinity]) {
+    expect(normalizeAppSettings({capsuleVolume}).capsuleVolume).toBe(0.65);
+  }
 });

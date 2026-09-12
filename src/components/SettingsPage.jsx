@@ -28,6 +28,7 @@ export default function SettingsPage({
   onOpenBackup,
   onOpenPrivacy = () => {},
   onOpenTerms = () => {},
+  onOpenCredits = () => {},
   legalNavigationReturn = null,
   onLegalNavigationRestored = () => {},
   journalPrivacy = { enabled: false, unlocked: false, malformed: false },
@@ -43,6 +44,7 @@ export default function SettingsPage({
   const statusTimerRef = useRef(null);
   const privacyLinkRef = useRef(null);
   const termsLinkRef = useRef(null);
+  const creditsLinkRef = useRef(null);
   const onLegalNavigationRestoredRef = useRef(onLegalNavigationRestored);
   onLegalNavigationRestoredRef.current = onLegalNavigationRestored;
   useEffect(() => () => clearTimeout(statusTimerRef.current), []);
@@ -55,10 +57,10 @@ export default function SettingsPage({
         left: 0,
         behavior: "auto",
       });
-      const target = legalNavigationReturn.target === "terms"
-        ? termsLinkRef.current
-        : privacyLinkRef.current;
-      target?.focus();
+      const target = legalNavigationReturn.target === "credits"
+        ? creditsLinkRef.current
+        : legalNavigationReturn.target === "terms" ? termsLinkRef.current : privacyLinkRef.current;
+      target?.focus({ preventScroll: true });
       onLegalNavigationRestoredRef.current();
     });
     return () => window.cancelAnimationFrame(frameId);
@@ -138,6 +140,10 @@ export default function SettingsPage({
         </a>
         <a href="mailto:traceappsupporthelp@gmail.com">Contact Trace Support</a>
       </nav>
+    </section>
+    <section className="trace-feature-section trace-settings-about" aria-labelledby="about-settings-heading">
+      <h2 id="about-settings-heading">About</h2>
+      <a href="/#credits" ref={creditsLinkRef} onClick={(event) => { event.preventDefault(); onOpenCredits(); }}>Credits &amp; licenses</a>
     </section>
     <JournalPrivacySettings
       enabled={journalPrivacy.enabled}
@@ -274,6 +280,20 @@ export default function SettingsPage({
           <span aria-hidden="true" className="trace-home-visibility-option__track" />
           <span className="trace-home-visibility-option__state">{settings?.capsuleSounds === false ? "Off" : "On"}</span>
         </span>
+      </label>
+      <label className="trace-capsule-volume-setting" style={{ display: "grid", gap: "8px", marginTop: "16px" }}>
+        <span>Capsule volume: {Math.round((settings?.capsuleVolume ?? 0.65) * 100)}%</span>
+        <input
+          aria-label="Capsule volume"
+          style={{ minHeight: "44px", width: "100%" }}
+          type="range"
+          min="0"
+          max="100"
+          step="1"
+          value={Math.round((settings?.capsuleVolume ?? 0.65) * 100)}
+          disabled={settings?.capsuleSounds === false}
+          onChange={event => saveSettings({ ...settings, capsuleVolume: Number(event.target.value) / 100 })}
+        />
       </label>
     </section>
     <section className="trace-feature-section trace-settings-units" aria-labelledby="units-heading" style={{ marginTop: "32px", maxWidth: "620px", textAlign: "left", width: "100%" }}>

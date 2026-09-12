@@ -134,6 +134,41 @@ test("theme controls expose accessible checked states and preserve unrelated set
   expect(screen.getByText("✓ Selected").closest("label")).toHaveAttribute("data-selected", "true");
 });
 
+test("Capsule volume loads the default or saved level and preserves disabled sound and other settings", () => {
+  const updateSettings = jest.fn(() => true);
+  const { rerender } = render(<SettingsPage settings={DEFAULT_APP_SETTINGS} updateSettings={updateSettings} onBack={jest.fn()} />);
+  expect(screen.getByRole("slider", { name: "Capsule volume" })).toHaveValue("65");
+  fireEvent.change(screen.getByRole("slider", { name: "Capsule volume" }), { target: { value: "37" } });
+  expect(updateSettings).toHaveBeenLastCalledWith({ ...DEFAULT_APP_SETTINGS, capsuleVolume: 0.37 });
+  rerender(<SettingsPage settings={{ ...DEFAULT_APP_SETTINGS, capsuleSounds: false, capsuleVolume: 0.37 }} updateSettings={updateSettings} onBack={jest.fn()} />);
+  expect(screen.getByRole("slider", { name: "Capsule volume" })).toHaveValue("37");
+  expect(screen.getByRole("slider", { name: "Capsule volume" })).toBeDisabled();
+});
+
+test("About opens in-app Credits and restores the entry's focus and Settings scroll", () => {
+  const onOpenCredits = jest.fn();
+  const previousAnimationFrame = window.requestAnimationFrame;
+  const previousCancelFrame = window.cancelAnimationFrame;
+  const previousScrollTo = window.scrollTo;
+  window.requestAnimationFrame = callback => { callback(); return 1; };
+  window.cancelAnimationFrame = jest.fn();
+  window.scrollTo = jest.fn();
+  try {
+    render(<SettingsPage settings={DEFAULT_APP_SETTINGS} updateSettings={jest.fn()} onBack={jest.fn()} onOpenCredits={onOpenCredits} legalNavigationReturn={{ target: "credits", scrollY: 480 }} />);
+    const about = screen.getByRole("heading", { name: "About" }).closest("section");
+    const credits = within(about).getByRole("link", { name: "Credits & licenses" });
+    expect(credits).toHaveAttribute("href", "/#credits");
+    expect(credits).toHaveFocus();
+    expect(window.scrollTo).toHaveBeenCalledWith({ top: 480, left: 0, behavior: "auto" });
+    fireEvent.click(credits);
+    expect(onOpenCredits).toHaveBeenCalledTimes(1);
+  } finally {
+    window.requestAnimationFrame = previousAnimationFrame;
+    window.cancelAnimationFrame = previousCancelFrame;
+    window.scrollTo = previousScrollTo;
+  }
+});
+
 test("Modern Heirloom remains a selectable choice distinct from River", () => {
   const updateSettings = jest.fn(() => true);
   const { rerender } = render(

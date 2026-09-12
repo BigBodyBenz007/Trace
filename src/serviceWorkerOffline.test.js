@@ -116,7 +116,7 @@ test("installation caches imported capsule clips and endpoint art before activat
       : new Response('<script src="/static/js/main.hash.js"></script><link href="/static/css/main.hash.css" />')),
   });
   await dispatchInstall(listeners.install);
-  expect(caches.open).toHaveBeenCalledWith("trace-app-shell-v4");
+  expect(caches.open).toHaveBeenCalledWith("trace-app-shell-v5");
   expect(fetch).toHaveBeenCalledWith("https://trace.test/asset-manifest.json", { cache: "no-cache" });
   expect(cache.addAll).toHaveBeenLastCalledWith([
     "https://trace.test/static/js/main.hash.js",

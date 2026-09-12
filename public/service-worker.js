@@ -1,5 +1,5 @@
 const CACHE_PREFIX = "trace-app-shell-";
-const CACHE_NAME = `${CACHE_PREFIX}v4`;
+const CACHE_NAME = `${CACHE_PREFIX}v5`;
 const scopeUrl = new URL(self.registration.scope);
 const shellUrl = new URL("./", scopeUrl).href;
 const indexUrl = new URL("./index.html", scopeUrl).href;

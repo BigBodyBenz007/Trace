@@ -4,6 +4,7 @@ import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
 import HealthPage from "./components/HealthPage";
 import SettingsPage from "./components/SettingsPage";
+import CreditsPage from "./components/CreditsPage";
 import PrivacyPolicyPage from "./components/PrivacyPolicyPage";
 import TermsOfServicePage from "./components/TermsOfServicePage";
 import MedicationPage from "./components/MedicationPage";
@@ -407,7 +408,8 @@ function App({
   lifecycleAdapter = webAppLifecycleAdapter,
 }) {
   const [page, setPage] = useState(() =>
-    legalPageFromPathname(typeof window === "undefined" ? "/" : window.location.pathname) || "home"
+    legalPageFromPathname(typeof window === "undefined" ? "/" : window.location.pathname)
+      || (typeof window !== "undefined" && window.location.hash === "#credits" ? "credits" : "home")
   );
 
   const [initialMemoryDraft] = useState(() => readMemoryDraft(localStorage));
@@ -541,6 +543,10 @@ function App({
         setPage(legalPage);
         return;
       }
+      if (window.location.hash === "#credits") {
+        setPage("credits");
+        return;
+      }
       if (event.state?.tracePage === "settings") {
         legalSettingsReturnRef.current = {
           target: event.state.traceLegalFocus,
@@ -559,7 +565,7 @@ function App({
 
   useEffect(() => {
     const legalRoute = legalRouteForPage(page);
-    document.title = legalRoute?.documentTitle || normalDocumentTitleRef.current;
+    document.title = legalRoute?.documentTitle || (page === "credits" ? "Trace Credits & licenses" : normalDocumentTitleRef.current);
   }, [page]);
 
   useEffect(() => () => {
@@ -567,7 +573,7 @@ function App({
   }, []);
 
   function openLegalPage(legalPage) {
-    const route = legalRouteForPage(legalPage);
+    const route = legalRouteForPage(legalPage) || (legalPage === "credits" ? { path: "/#credits" } : null);
     if (!route) return;
     const settingsScrollY = window.scrollY || window.pageYOffset || 0;
     window.history.replaceState({
@@ -4005,6 +4011,7 @@ function App({
           mediaLoader={capsuleMediaUrlLoader}
           reducedMotion={reducedMotion}
           capsuleSounds={appSettings.capsuleSounds}
+          capsuleVolume={appSettings.capsuleVolume}
           onBack={() => { setTimeCapsuleTargetId(null); setPage("home"); }}
           onBeginDraft={beginTimeCapsuleDraft}
           onPersistDraft={persistTimeCapsuleDraft}
@@ -4121,7 +4128,8 @@ function App({
           inputStyle={inputStyle}
           containerStyle={containerStyle}
         />
-      ) : page === "settings" ? (
+      ) : page === "settings" || page === "credits" ? (<>
+        <div hidden={page === "credits"} style={page === "credits" ? undefined : { display: "contents" }}>
         <SettingsPage
           settings={appSettings}
           updateSettings={updateAppSettings}
@@ -4129,6 +4137,7 @@ function App({
           onOpenBackup={() => setPage("backup")}
           onOpenPrivacy={() => openLegalPage("privacy")}
           onOpenTerms={() => openLegalPage("terms")}
+          onOpenCredits={() => openLegalPage("credits")}
           legalNavigationReturn={legalSettingsReturnRef.current}
           onLegalNavigationRestored={() => {
             legalSettingsReturnRef.current = null;
@@ -4142,7 +4151,9 @@ function App({
           buttonStyle={buttonStyle}
           containerStyle={containerStyle}
         />
-      ) : page === "medications" ? (
+        </div>
+        {page === "credits" && <CreditsPage onBackToSettings={returnToSettingsFromLegal} />}
+      </>) : page === "medications" ? (
         <MedicationPage
           onBack={() => setPage("home")}
           medicationEntries={medicationEntries}

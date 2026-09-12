@@ -1789,7 +1789,7 @@ test("full restore preserves IDs, dates, all structured domains, photo bytes and
   expect(JSON.parse(storage.value("nutritionEntries"))).toEqual([{ id: "meal-1", sodium: 640 }]);
   expect(JSON.parse(storage.value("nutritionGoals"))).toEqual({ calories: 2000, sodium: 2300 });
   expect(JSON.parse(storage.value("healthMeasurementEntries"))).toEqual([{ id: "health-1", measurements: { height: { unit: "ft-in", feet: 6, inches: 2 }, leftCalf: { value: 16, unit: "in" }, rightCalf: { value: 41, unit: "cm" } } }]);
-  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 7, units: { weight: "kg", height: "cm", circumference: "cm", water: "oz" }, themeId: "modern-heirloom", homeVisibility: DEFAULT_HOME_VISIBILITY, motionPreference: "standard", capsuleSounds: true, journalPrivacy: { autoLockMinutes: 5 }, personalDetails: { dateOfBirth: "1990-08-30" } });
+  expect(JSON.parse(storage.value("appSettings"))).toEqual({ schemaVersion: 8, units: { weight: "kg", height: "cm", circumference: "cm", water: "oz" }, themeId: "modern-heirloom", homeVisibility: DEFAULT_HOME_VISIBILITY, motionPreference: "standard", capsuleSounds: true, capsuleVolume: 0.65, journalPrivacy: { autoLockMinutes: 5 }, personalDetails: { dateOfBirth: "1990-08-30" } });
   expect(JSON.parse(storage.value("workoutEntries"))).toEqual([workoutWithDrops]);
   expect(JSON.parse(storage.value("medicationEntries"))).toEqual([{ id: "dose-1" }]);
   expect(JSON.parse(storage.value("protocols"))).toEqual([{ id: "protocol-1" }]);
@@ -2075,7 +2075,8 @@ test.each(["river", "haunted-forest", "gnome-village", "desert-journey", "outer-
       openDatabase: async () => makePhotoDatabase(),
     });
     expect(value.data.structured.appSettings).toMatchObject({
-      schemaVersion: 7,
+      schemaVersion: 8,
+      capsuleVolume: 0.65,
       themeId: lifeCurrentThemeId,
     });
     expect(value.data.structured.appSettings).not.toHaveProperty("lifeCurrentThemeId");
@@ -2109,9 +2110,10 @@ test("backup export and restore preserve current theme and Capsule sound prefere
     openDatabase: async () => makePhotoDatabase(),
   });
   expect(value.data.structured.appSettings).toMatchObject({
-    schemaVersion: 7,
+    schemaVersion: 8,
     themeId: "modern-heirloom",
     capsuleSounds: false,
+    capsuleVolume: 0.65,
   });
 
   const restored = makeStorage();
@@ -2120,7 +2122,7 @@ test("backup export and restore preserve current theme and Capsule sound prefere
     storage: restored,
     openDatabase: async () => makePhotoDatabase(),
   });
-  expect(readAppSettings(restored)).toMatchObject({ themeId: "modern-heirloom", capsuleSounds: false });
+  expect(readAppSettings(restored)).toMatchObject({ themeId: "modern-heirloom", capsuleSounds: false, capsuleVolume: 0.65 });
 });
 
 test("missing and invalid backup theme values safely default to Modern Heirloom", async () => {
@@ -2142,12 +2144,13 @@ test("missing and invalid backup theme values safely default to Modern Heirloom"
     });
     const validated = validateTraceBackup(value).backup;
     expect(validated.data.structured.appSettings).toEqual({
-      schemaVersion: 7,
+      schemaVersion: 8,
       units: { weight: "kg", height: "cm", circumference: "cm", water: "oz" },
       themeId: "modern-heirloom",
       homeVisibility: DEFAULT_HOME_VISIBILITY,
       motionPreference: "standard",
       capsuleSounds: true,
+      capsuleVolume: 0.65,
       journalPrivacy: { autoLockMinutes: 5 },
       personalDetails: { dateOfBirth: "" },
     });

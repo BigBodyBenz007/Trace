@@ -1533,7 +1533,7 @@ test("Settings opens and global unit preferences survive remount into a fresh He
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="height"]' }));
   fireEvent.click(screen.getByLabelText("Centimeters (cm)", { selector: 'input[name="circumference"]' }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toEqual({
-    schemaVersion: 7,
+    schemaVersion: 8,
     units: { weight: "kg", height: "cm", circumference: "cm", water: "oz" },
     themeId: "modern-heirloom",
     homeVisibility: {
@@ -1549,6 +1549,7 @@ test("Settings opens and global unit preferences survive remount into a fresh He
     },
     motionPreference: "standard",
     capsuleSounds: true,
+    capsuleVolume: 0.65,
     journalPrivacy: { autoLockMinutes: 5 },
     personalDetails: { dateOfBirth: "" },
   });
@@ -1579,7 +1580,8 @@ test("Health Personal Details stores optional date of birth and restores it afte
   });
   fireEvent.click(screen.getByRole("button", { name: "Save Personal Details" }));
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
-    schemaVersion: 7,
+    schemaVersion: 8,
+    capsuleVolume: 0.65,
     personalDetails: { dateOfBirth: "1990-08-30" },
   });
   first.unmount();
@@ -1596,7 +1598,8 @@ test("Motion preference applies immediately and persists after remount", () => {
   fireEvent.click(screen.getByRole("radio", { name: /Reduced motion/ }));
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   expect(JSON.parse(localStorage.getItem("appSettings"))).toMatchObject({
-    schemaVersion: 7,
+    schemaVersion: 8,
+    capsuleVolume: 0.65,
     motionPreference: "reduced",
   });
   first.unmount();
@@ -6572,7 +6575,8 @@ test("seals for today as immediately ready while keeping contents hidden until e
   fireEvent.change(screen.getByLabelText("Visible capsule name"), { target: { value: "Ready immediately" } });
   fireEvent.change(screen.getByLabelText("Private message"), { target: { value: "Same-day private words" } });
   fireEvent.change(screen.getByLabelText("Custom date"), { target: { value: today } });
-  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Seal Time Capsule" })); });
+  fireEvent.click(screen.getByRole("button", { name: "Seal Time Capsule" }));
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Confirm seal Time Capsule" })); });
 
   expect(screen.getByText("Your memories are being sealed…")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Open Capsule" })).not.toBeInTheDocument();

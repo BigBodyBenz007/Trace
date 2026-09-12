@@ -1,0 +1,93 @@
+.trace-credits-page {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  padding-bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+.trace-credits-navigation {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  align-self: stretch;
+  background: var(--trace-surface, #111827);
+  border-bottom: 1px solid var(--trace-border, #374151);
+  padding: calc(10px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) 10px max(12px, env(safe-area-inset-left));
+}
+
+.trace-credits-navigation button {
+  min-height: 44px;
+  max-width: 100%;
+}
+
+.trace-credits-document {
+  box-sizing: border-box;
+  max-width: 850px;
+  min-width: 0;
+  width: 100%;
+  line-height: 1.6;
+  text-align: left;
+  padding: clamp(16px, 4vw, 28px);
+}
+
+.trace-credits-document a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.trace-credits-document a:focus-visible,
+.trace-credits-navigation button:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 4px;
+}
+
+.trace-credits-document pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.85em;
+  padding: 12px;
+  border: 1px solid var(--trace-border, #374151);
+  border-radius: 10px;
+}
+
+.trace-credits-records {
+  display: grid;
+  gap: 14px;
+}
+
+.trace-credits-record {
+  min-width: 0;
+  border: 1px solid var(--trace-border, #374151);
+  border-radius: 12px;
+  padding: 14px;
+}
+
+.trace-credits-record h4 { margin: 0 0 10px; }
+.trace-credits-record dl { display: grid; gap: 10px; margin: 0; }
+.trace-credits-record dt { font-weight: 600; }
+.trace-credits-record dd { margin: 2px 0 0; }
+
+.trace-credits-external {
+  box-sizing: border-box;
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 32px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+  overflow: auto;
+  overflow-wrap: anywhere;
+  border: 1px solid var(--trace-border, #374151);
+  border-radius: 16px;
+  padding: 20px;
+  background: var(--trace-surface, #111827);
+  color: var(--trace-text, #f3f4f6);
+}
+
+.trace-credits-external::backdrop { background: rgb(0 0 0 / 65%); }
+.trace-credits-external textarea { box-sizing: border-box; width: 100%; resize: vertical; }
+.trace-credits-external__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.trace-credits-external button { min-height: 44px; }
+
+@media (max-width: 520px) {
+  .trace-credits-navigation button { width: 100%; }
+}

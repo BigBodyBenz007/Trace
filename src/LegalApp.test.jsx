@@ -21,6 +21,7 @@ let originalCancelAnimationFrame;
 let originalScrollTo;
 let originalTitle;
 let originalScrollY;
+let originalFetch;
 
 beforeEach(() => {
   localStorage.clear();
@@ -30,6 +31,8 @@ beforeEach(() => {
   originalScrollTo = window.scrollTo;
   originalTitle = document.title;
   originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
+  originalFetch = global.fetch;
+  global.fetch = jest.fn().mockResolvedValue({ ok: true, text: () => Promise.resolve("# Time Capsule recording credits\n\nSound recordings by Robert Thomas.") });
   window.requestAnimationFrame = (callback) => {
     callback();
     return 1;
@@ -47,6 +50,7 @@ afterEach(() => {
   window.scrollTo = originalScrollTo;
   document.title = originalTitle;
   if (originalScrollY) Object.defineProperty(window, "scrollY", originalScrollY);
+  global.fetch = originalFetch;
 });
 
 test.each([
@@ -117,4 +121,41 @@ test("a direct legal page retains the saved theme and Reduced Motion shell", () 
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-trace-theme", "haunted-forest");
   expect(screen.getByTestId("trace-app-shell")).toHaveAttribute("data-motion", "reduced");
   expect(screen.getByRole("heading", { level: 1, name: "Trace Terms of Service" })).toBeInTheDocument();
+});
+
+test("Settings Credits retains its mounted settings view, saved controls, scroll and browser Back/Forward", async () => {
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: "Settings" }));
+  const settingsView = screen.getByTestId("settings-page");
+  fireEvent.change(screen.getByRole("slider", { name: "Capsule volume" }), { target: { value: "37" } });
+  Object.defineProperty(window, "scrollY", { configurable: true, value: 720 });
+  fireEvent.click(screen.getByRole("link", { name: "Credits & licenses" }));
+  await screen.findByRole("heading", { name: "Time Capsule recording credits" });
+  expect(window.location.hash).toBe("#credits");
+  expect(screen.getByRole("heading", { level: 1, name: "Credits & licenses" })).toHaveFocus();
+  expect(settingsView).not.toBeVisible();
+  expect(document.title).toBe("Trace Credits & licenses");
+
+  act(() => window.history.back());
+  await screen.findByRole("heading", { level: 1, name: "Settings" });
+  await waitFor(() => expect(screen.getByRole("link", { name: "Credits & licenses" })).toHaveFocus());
+  expect(screen.getByTestId("settings-page")).toBe(settingsView);
+  expect(screen.getByRole("slider", { name: "Capsule volume" })).toHaveValue("37");
+  expect(window.scrollTo).toHaveBeenCalledWith({ top: 720, left: 0, behavior: "auto" });
+
+  act(() => window.history.forward());
+  await screen.findByRole("heading", { level: 1, name: "Credits & licenses" });
+  fireEvent.click(screen.getByRole("button", { name: "Back to Settings" }));
+  await screen.findByRole("heading", { level: 1, name: "Settings" });
+  expect(window.location.hash).toBe("");
+});
+
+test("direct Credits entry has a safe in-app return with no previous Settings history", async () => {
+  window.history.replaceState({}, "", "/#credits");
+  render(<App />);
+  await screen.findByRole("heading", { name: "Time Capsule recording credits" });
+  fireEvent.click(screen.getByRole("button", { name: "Back to Settings" }));
+  await screen.findByRole("heading", { level: 1, name: "Settings" });
+  expect(window.location.hash).toBe("");
+  expect(screen.getByRole("link", { name: "Credits & licenses" })).toHaveFocus();
 });

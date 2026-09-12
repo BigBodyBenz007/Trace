@@ -158,7 +158,7 @@ test("service worker caches only shell assets and never accesses user storage", 
   expect(worker).toContain("cacheApplicationShell");
   expect(worker).toContain("__trace_offline_shell__");
   expect(worker).toContain("if (!response || !response.ok)");
-  expect(worker).toContain('const CACHE_NAME = `${CACHE_PREFIX}v4`');
+  expect(worker).toContain('const CACHE_NAME = `${CACHE_PREFIX}v5`');
   expect(worker).toContain('new URL("./trace-icon-192.png", scopeUrl).href');
   expect(worker).toContain('new URL("./trace-icon-512.png", scopeUrl).href');
   expect(worker).toContain('new URL("./trace-apple-touch-icon.png", scopeUrl).href');
