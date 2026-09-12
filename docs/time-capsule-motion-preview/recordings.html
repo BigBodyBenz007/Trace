@@ -1,20 +1,35 @@
 <!doctype html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="dark"><title>Trace · Rendered capsule review</title><link rel="stylesheet" href="./preview.css"></head>
-<body><main>
-  <header><a class="wordmark" href="./recordings.html">TRACE<span> / MOTION STUDY 01</span></a><span class="badge">Rendered preview · silent</span></header>
-  <div class="intro"><div><p class="eyebrow">THE TIME CAPSULE</p><h1>A moment, kept.</h1></div><p>Two separate ceremonies.<br>Every frame rendered from one 3D vault.</p></div>
-  <section class="viewer" aria-label="Rendered capsule motion preview">
-    <div class="recording-stage">
-      <video id="open-film" src="./recordings/open.webm" preload="auto" playsinline muted aria-label="Opening the Time Capsule"></video>
-      <video id="close-film" src="./recordings/close.webm" preload="auto" playsinline muted aria-label="Closing the Time Capsule" hidden></video>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Trace · Capsule motion and sound review</title>
+  <link rel="stylesheet" href="./preview.css">
+</head>
+<body class="film-review"><main>
+  <header><a class="wordmark" href="./recordings.html">TRACE<span> / TIME CAPSULE</span></a><span class="badge">Development review</span></header>
+  <div class="intro"><div><p class="eyebrow">MOTION + RECORDED SOUND</p><h1>A moment, kept.</h1></div><p>One vault. One fixed camera.<br>Opening and closing, separately choreographed.</p></div>
+  <section class="viewer" aria-label="Capsule motion and sound preview">
+    <div class="recording-stage" id="film-stage">
+      <video id="open-film" src="./recordings/open.mp4" preload="auto" playsinline aria-label="Opening the Time Capsule"></video>
+      <video id="close-film" src="./recordings/close.mp4" preload="metadata" playsinline aria-label="Closing the Time Capsule" hidden></video>
+      <p class="film-loading" aria-hidden="true">Preparing the starting pose…</p>
     </div>
-    <div class="scene-label"><span id="film-state">OPENING STUDY</span><span>960 × 720 / 30 fps / fixed camera</span></div>
-    <div class="transport"><div class="primary"><button id="film-open">Open</button><button id="film-close">Close</button><button id="film-replay">Replay</button><button id="film-skip">Skip</button></div><div class="options"><label><input type="checkbox" id="film-slow"> Slow motion <span>¼×</span></label><label><input type="checkbox" id="film-reduced"> Reduced motion</label></div></div>
-    <div class="timeline"><label for="film-scrub">Inspect frame</label><input id="film-scrub" type="range" min="0" max="8.6" step="0.033333" value="0"><output id="film-time">0.00 s</output></div>
-    <div class="readout"><p id="film-status" aria-live="polite">Ready · select a sequence</p><button id="film-pause">Pause / resume</button></div>
+    <div class="scene-label"><span id="film-state">OPENING STUDY</span><span>Fixed camera · recorded sound</span></div>
+    <div class="transport">
+      <div class="primary"><button id="film-open">Open</button><button id="film-close">Close</button><button id="film-replay">Replay</button><button id="film-stop">Stop</button><button id="film-skip">Skip</button></div>
+      <div class="options"><label><input type="checkbox" id="film-slow"> Slow motion <span>¼×</span></label><label><input type="checkbox" id="film-reduced"> Reduced motion</label></div>
+    </div>
+    <div class="film-audio">
+      <label class="sound-switch"><input type="checkbox" id="film-sound" checked> Sound</label>
+      <label for="film-volume">Volume</label><input id="film-volume" type="range" min="0" max="100" step="1" value="65"><output id="film-volume-value" for="film-volume">65%</output>
+    </div>
+    <p id="film-audio-status" class="audio-status">Sound on · starts only when you play</p>
+    <div class="timeline"><label for="film-scrub">Inspect frame</label><input id="film-scrub" type="range" min="0" max="1" step="0.033333333" value="0"><output id="film-time" for="film-scrub">0.00 s</output></div>
+    <div class="readout"><p id="film-status" role="status" aria-live="polite">Ready · choose Open or Close</p><button id="film-pause">Resume</button></div>
   </section>
-  <footer><p><a href="./">Open the live 3D inspector</a> · <a href="./review.md">Findings &amp; limitations</a></p><p>Development only · synthetic contents · awaiting visual approval</p></footer>
-  <details><summary>About these recordings</summary><p>These are coherent pre-rendered views of the same solid model used by the inspector. Every frame is rendered at its exact timeline position and encoded for 30 fps playback; no frame interpolation or image morphing is used. Each clip includes a half-second hold before and after the ceremony. Open and Close prepare their respective starting poses. The page is silent and starts paused.</p><p>The live WebGL inspector performed poorly on this laptop's Intel UHD 600 GPU. These clips allow motion review without that rendering load; they do not prove real-time mobile performance. The model is a simpler machined interpretation of the original artwork. Its sculpted detail and weathering remain a material-quality gap. Production is unchanged.</p><p>Direct files: <a href="./recordings/open.webm">Opening</a> · <a href="./recordings/close.webm">Closing</a>. Use the inspector to turn off interior light and pressure and inspect the bare geometry.</p></details>
+  <footer><p><a href="./">Live 3D inspector</a> · <a href="./audio-credits.md">Recording credits</a> · <a href="./review.md">Review notes</a></p><p>Synthetic contents · motion approval pending</p></footer>
+  <details><summary>About this preview</summary><p>These pre-rendered clips use one solid 3D vault and a fixed camera. Each MP4 carries its recorded sound on the same playback clock as the picture. Nothing plays automatically. Volume and sound controls apply only to this page session.</p><p>Slow motion and frame inspection are silent. After inspection, choose Open, Close, or Replay at normal speed to hear the sound again. Reduced Motion shows the selected resting endpoint immediately and silently. Skip also goes straight to the endpoint; Stop returns to the starting pose. Leaving this page pauses playback, and returning never resumes it automatically.</p><p>The model is a machined interpretation of the artwork; its sculpted detail and weathering are still limited. These clips demonstrate pre-rendered playback, not live mobile rendering performance. Production remains unchanged.</p><p>Direct clips: <a href="./recordings/open.mp4">Opening with sound</a> · <a href="./recordings/close.mp4">Closing with sound</a>. Source recordings and edit provenance are listed in the <a href="./audio-credits.md">recording credits</a>.</p></details>
 </main><script type="module" src="./recordings.mjs"></script></body>
 </html>

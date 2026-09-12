@@ -1,0 +1,32 @@
+{
+  "approach": "Exact-pose Three.js frames, H264 video and AAC audio in one MP4 clock.",
+  "fps": 30,
+  "width": 960,
+  "height": 840,
+  "sourceHashes": {
+    "vault.mjs": "939102f8d687c706beb8b151e59789c4f31a10f79b902ae755ec36bea1789b4b",
+    "motion.mjs": "3ac83aa877633907a42d006149327e5123f1f789215c7a5f7624e34c46ecda13",
+    "preview.mjs": "71f53956c3c6d90b7b2446b1c1d2de338925541894d5fef6e29076f1457d0dec"
+  },
+  "fingerprint": "4f3bcd01eb60d0c1",
+  "clips": {
+    "open": {
+      "frames": 180,
+      "duration": 6,
+      "audioOffset": 0,
+      "approvedAudioSha256": "5ab98530a4d5826996e306ce70b49112ca9cf8316e3ff0584b322d31e16be423",
+      "file": "open.mp4",
+      "bytes": 719236,
+      "sha256": "fe92072477b430ef5360b50dc8ca2ddd66e78e9333f40545bad16fea94fbdc24"
+    },
+    "close": {
+      "frames": 162,
+      "duration": 5.4,
+      "audioOffset": 2.345,
+      "approvedAudioSha256": "252042d0a4ba75362fe1a04d3d226b5d3299d0b06df1e07c9f63733c3ff05ee2",
+      "file": "close.mp4",
+      "bytes": 539511,
+      "sha256": "a25aad205e5882c1605fb3987c28201e8904e57cb68058e73929441de7f6f8ec"
+    }
+  }
+}

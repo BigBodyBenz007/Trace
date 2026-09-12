@@ -1,0 +1,63 @@
+# Recorded sound credits for the combined preview
+
+The opening and closing films use the recorded sound edits approved by the user from commit [`0eee79f29407eba7e430339f00b49860676f3ebb`](https://github.com/BigBodyBenz007/Trace/commit/0eee79f29407eba7e430339f00b49860676f3ebb). Motion approval remains pending. This development preview does not change production sounds or capsule behavior.
+
+## Original recordings
+
+Robert Thomas (Freesound name **RobertMThomas**) recorded the prison mechanisms at the abandoned Shoreditch Police Station in London in summer 2011 with a Zoom H1. **Flares.fr** recorded the compressor in a garage with a Zoom H1. These are location recordings, not movie or game extracts.
+
+| Recording and original creator page | Creator | License | Use in the approved edits |
+| --- | --- | --- | --- |
+| [Prison Locks and Doors 2 Door slam.wav](https://freesound.org/people/RobertMThomas/sounds/151133/) | Robert Thomas (RobertMThomas) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Closing impact and its recorded decay |
+| [Prison Locks and Doors 5 Lock movement.wav](https://freesound.org/people/RobertMThomas/sounds/151142/) | Robert Thomas (RobertMThomas) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Opening lock movement |
+| [Prison Locks and Doors 19 Latch sliding sound.wav](https://freesound.org/people/RobertMThomas/sounds/151134/) | Robert Thomas (RobertMThomas) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Opening bolts and closing bolt travel |
+| [Prison Locks and Doors 30 Latch sound.wav](https://freesound.org/people/RobertMThomas/sounds/151123/) | Robert Thomas (RobertMThomas) | [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/) | Opening release and closing engagement |
+| [Air pressure from compressor](https://freesound.org/people/Flares.fr/sounds/524260/) | Flares.fr | [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/) | Opening pressure release |
+
+The downloaded references are Freesound's complete public **HQ MP3 previews**, acquired on 2026-09-11 and preserved byte-for-byte. They are not the original WAV masters, which require a Freesound login and were not obtained. Some original titles include “.wav”; the retained reference files are MP3. This lossy source limitation also applies to the finished sounds.
+
+## Attribution and modifications
+
+Sound recordings by **Robert Thomas (RobertMThomas)**, licensed under **Creative Commons Attribution 4.0 International**, and **Flares.fr**, dedicated under **CC0 1.0**. Sources and license links are listed above. Sound edits by **Trace**.
+
+The approved edits in commit `0eee79f` decoded the MP3 references, averaged stereo channels to mono, trimmed recordings, applied fixed equalization and gain, added fades, and arranged/layered the recorded sections. Their recorded pitch and playback speed were retained. No synthesized sound layers were added.
+
+For this combined motion preview, the approved PCM WAV files are unchanged. The MP4 exports encode their audio as AAC at a target bitrate of 192 kbit/s and add silence to align the sounds with the picture. This is a codec transcode and timeline placement only: no new EQ, gain, speed, pitch, fades, or sound layers are applied. AAC is lossy, so its decoded samples are not byte-identical to the source WAVs. The page's default 65% volume is a session playback control, not an edit to the files.
+
+When redistributing the recordings, adapted sounds, or combined films, retain Robert Thomas's credit, all four source links, the CC BY 4.0 license link, and this modifications notice. Do not imply endorsement by the recordists. Flares.fr's attribution is retained for provenance even though CC0 does not require it. These notices accompany the preview and should remain with any later distribution.
+
+## Placement in the films
+
+| Film | Approved sound begins | Relevant cue alignment |
+| --- | --- | --- |
+| Opening | 0.000 s | Lock movement at 0.12 s, bolt travel at 0.57 s, release at 1.43 s, and compressor air at 1.82 s |
+| Closing | 2.345 s | The recorded impact attack at sound time 0.255 s aligns with lid contact at film time 2.600 s; bolt travel begins at 3.615 s and latch layer starts at 3.875 s, with its first clear clunk around 3.89 s |
+
+Each MP4 holds picture and audio on one media clock. The player mutes quarter-speed playback and frame inspection. Reduced Motion and Skip show a silent resting endpoint.
+
+## Preserved files and audit trail
+
+The original audition page remains at `docs/time-capsule-sound-preview.html`. It includes the two finished sounds and five independently playable, unchanged references. Open it directly from the local checkout:
+
+```powershell
+Start-Process 'C:\Users\benma\Documents\Trace\docs\time-capsule-sound-preview.html'
+```
+
+The standalone motion-preview server serves only `docs/time-capsule-motion-preview/`; it does not serve that sibling audition page or its source directory.
+
+The source files, exact download URLs, acquisition metadata, hashes, and previous edit recipe remain under `docs/time-capsule-sound-candidates/`. Permanent repository references:
+
+- [Source manifest and download URLs](https://github.com/BigBodyBenz007/Trace/blob/0eee79f29407eba7e430339f00b49860676f3ebb/docs/time-capsule-sound-candidates/sources.json)
+- [Original source files](https://github.com/BigBodyBenz007/Trace/tree/0eee79f29407eba7e430339f00b49860676f3ebb/docs/time-capsule-sound-candidates/sources)
+- [Approved edit recipe](https://github.com/BigBodyBenz007/Trace/blob/0eee79f29407eba7e430339f00b49860676f3ebb/docs/time-capsule-sound-candidates/edit-recipe.json)
+- [Original sound revision notes](https://github.com/BigBodyBenz007/Trace/blob/0eee79f29407eba7e430339f00b49860676f3ebb/docs/time-capsule-sound-candidates/README.md) (written before the user's later approval)
+
+Unchanged approved WAV SHA-256 hashes:
+
+```text
+opening-candidate.wav
+5ab98530a4d5826996e306ce70b49112ca9cf8316e3ff0584b322d31e16be423
+
+closing-candidate.wav
+252042d0a4ba75362fe1a04d3d226b5d3299d0b06df1e07c9f63733c3ff05ee2
+```

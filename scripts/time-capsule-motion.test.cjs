@@ -24,38 +24,80 @@ test("open and close share exact physical endpoints, including clamped times", a
   }
 });
 
-test("opening unlocks and vents while the lid remains seated", async () => {
-  const { sampleMotion } = await motionModule;
-  assert.ok(sampleMotion("open", 0.8).dial < 1);
-  assert.equal(sampleMotion("open", 0.8).bolts, 1);
-  assert.equal(sampleMotion("open", 1.2).dial, 0);
-  assert.equal(sampleMotion("open", 1.7).bolts, 0);
-  assert.equal(sampleMotion("open", 1.9).pressure, 0);
-  assert.ok(sampleMotion("open", 2.15).pressure > 0);
-  assert.equal(sampleMotion("open", 2.15).angle, 0);
-  assert.equal(sampleMotion("open", 2.55).pressure, 0);
-  assert.equal(sampleMotion("open", 2.65).angle, 0);
-  assert.ok(sampleMotion("open", 2.8).angle > 0);
-  assert.equal(sampleMotion("open", 3.2).valve, 0);
+test("opening retracts the bolts before cracking the seal and venting through its narrow gap", async () => {
+  const { cues, sampleMotion } = await motionModule;
+  const turning = sampleMotion("open", 0.223); // Recorded lock transient.
+  assert.ok(turning.dial > 0 && turning.dial < 1);
+  assert.equal(turning.bolts, 1);
+  assert.equal(turning.angle, 0);
+  const retracting = sampleMotion("open", 1.125); // Strongest recorded bolt transient.
+  assert.equal(retracting.dial, 0);
+  assert.ok(retracting.bolts > 0 && retracting.bolts < 1);
+  assert.equal(retracting.angle, 0);
+  assert.equal(sampleMotion("open", 1.4).bolts, 0);
+  assert.equal(sampleMotion("open", 1.455).angle, 0); // Release latch precedes the seam opening.
+  assert.equal(sampleMotion("open", 1.72).angle, 0);
+
+  const airOnset = sampleMotion("open", cues.air);
+  assert.equal(airOnset.bolts, 0);
+  assert.ok(airOnset.angle > 0 && airOnset.angle < 2 * Math.PI / 180);
+  assert.equal(airOnset.pressure, 0);
+  assert.ok(sampleMotion("open", cues.air + 0.06).pressure > 0);
+  const cracked = sampleMotion("open", 1.96);
+  assert.ok(cracked.angle > 0 && cracked.angle < 2 * Math.PI / 180);
+  near(sampleMotion("open", 2.18).angle, cracked.angle);
+  assert.ok(sampleMotion("open", 3).angle > cracked.angle);
+  assert.equal(sampleMotion("open", 3.22).pressure, 1);
+  assert.ok(sampleMotion("open", 3.7).pressure > 0 && sampleMotion("open", 3.7).pressure < 1);
+  assert.equal(sampleMotion("open", 4.17).pressure, 0);
+  near(sampleMotion("open", 5.35).angle, 102 * Math.PI / 180);
 });
 
-test("closing settles before hardware engages and extinguishes interior light", async () => {
-  const { sampleMotion } = await motionModule;
-  near(sampleMotion("close", 3.4).angle, 7 * Math.PI / 180);
-  assert.ok(sampleMotion("close", 3.8).angle > 0);
-  assert.ok(sampleMotion("close", 3.8).angle < 7 * Math.PI / 180);
-  assert.equal(sampleMotion("close", 4.2).angle, 0);
-  assert.equal(sampleMotion("close", 4.2).light, 0);
-  assert.equal(sampleMotion("close", 4.45).bolts, 0);
-  assert.equal(sampleMotion("close", 5.15).bolts, 1);
-  assert.equal(sampleMotion("close", 5.2).dial, 0);
-  assert.equal(sampleMotion("close", 6.05).dial, 1);
-  for (let time = 0; time <= 6.4; time += 0.01) {
+test("closing makes physical contact before the separate locking engagement, without vapor", async () => {
+  const { cues, durations, sampleMotion } = await motionModule;
+  const initial = sampleMotion("close", 0);
+  near(sampleMotion("close", 0.3).angle, initial.angle);
+  assert.ok(sampleMotion("close", 1).angle < initial.angle);
+  assert.ok(sampleMotion("close", cues.contact - 0.01).angle > 0);
+  assert.equal(sampleMotion("close", cues.contact).angle, 0);
+  assert.equal(sampleMotion("close", cues.contact).light, 0);
+  assert.equal(sampleMotion("close", cues.contact).bolts, 0);
+  assert.equal(sampleMotion("close", cues.contact).dial, 0);
+  assert.equal(sampleMotion("close", cues.boltTravel).bolts, 0);
+  const engaging = sampleMotion("close", 3.8);
+  assert.ok(engaging.bolts > 0 && engaging.bolts < 1);
+  assert.ok(engaging.dial > 0 && engaging.dial < 1);
+  assert.equal(sampleMotion("close", cues.lockContact).bolts, 1);
+  assert.equal(sampleMotion("close", 4.1).dial, 1);
+  for (let time = 0; time <= durations.close; time += 0.01) {
     const pose = sampleMotion("close", time);
     if (pose.bolts > 0) assert.equal(pose.angle, 0);
-    if (pose.dial > 0) assert.equal(pose.bolts, 1);
+    if (pose.dial > 0) assert.equal(pose.angle, 0);
     assert.equal(pose.pressure, 0);
+    assert.equal(pose.valve, 0);
   }
+});
+
+test("mechanical cues align to approved audio and the preview preserves each full recording", async () => {
+  const { audioOffsets, cues, durations, sampleMotion } = await motionModule;
+  const recipe = require("../docs/time-capsule-sound-candidates/edit-recipe.json");
+  assert.equal(audioOffsets.open, 0);
+  assert.equal(audioOffsets.close, 2.345);
+  assert.equal(durations.open, 6);
+  assert.equal(durations.close, 5.4);
+  const air = recipe.opening.layers.find(layer => layer.source === "compressor-air");
+  near(cues.air, audioOffsets.open + air.at);
+  near(cues.contact, audioOffsets.close + 0.255); // Measured door-impact attack, not the layer start.
+  const boltTravel = recipe.closing.layers.find(layer => layer.source === "prison-latch-slide");
+  near(cues.boltTravel, audioOffsets.close + boltTravel.at);
+  near(cues.lockContact, audioOffsets.close + 1.545); // First strong latch attack.
+  assert.ok(cues.boltTravel > cues.contact);
+  assert.ok(cues.lockContact > cues.boltTravel);
+  for (const [kind, recording] of [["open", recipe.opening], ["close", recipe.closing]]) {
+    const recordingEnd = audioOffsets[kind] + recording.duration;
+    assert.ok(recordingEnd <= durations[kind], `${kind} preview would truncate its approved recording`);
+  }
+  assert.equal(sampleMotion("open", audioOffsets.open + air.at + air.to - air.from).pressure, 0);
 });
 
 test("hinge travels monotonically within physical bounds without rebound", async () => {
@@ -81,9 +123,13 @@ test("closing uses distinct choreography rather than reversing opening", async (
   const closing = sampleMotion("close", durations.close * fraction);
   const reversedOpening = sampleMotion("open", durations.open * (1 - fraction));
   assert.ok(Math.abs(closing.angle - reversedOpening.angle) > 0.05);
-  assert.equal(closing.phase, "Lowering lid");
-  assert.equal(reversedOpening.phase, "Lifting lid");
-  assert.ok(sampleMotion("open", 2.15).pressure > sampleMotion("close", durations.close - 2.15).pressure);
+  assert.ok(reversedOpening.pressure > 0);
+  assert.equal(closing.pressure, 0);
+  assert.ok(sampleMotion("open", 0.4).dial < 1);
+  assert.equal(sampleMotion("open", 0.4).angle, 0);
+  assert.ok(sampleMotion("close", 0.4).angle < sampleMotion("close", 0).angle);
+  assert.equal(sampleMotion("close", 0.4).dial, 0);
+  assert.equal(sampleMotion("close", 0.4).bolts, 0);
 });
 
 test("unknown motion kinds fail explicitly", async () => {

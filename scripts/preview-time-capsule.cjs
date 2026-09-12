@@ -16,6 +16,7 @@ const mimeTypes = {
   '.mjs': 'text/javascript; charset=utf-8',
   '.png': 'image/png',
   '.webm': 'video/webm',
+  '.mp4': 'video/mp4',
   '.json': 'application/json; charset=utf-8',
   '.md': 'text/plain; charset=utf-8',
 };
@@ -179,7 +180,8 @@ server.on('error', (error) => {
 });
 
 server.listen(port, host, () => {
-  console.log(`Time Capsule motion preview: http://127.0.0.1:${port}/`);
+  console.log(`Time Capsule motion and sound review: http://127.0.0.1:${port}/recordings.html`);
+  console.log(`Silent live geometry inspector: http://127.0.0.1:${port}/`);
   console.log(`Serving only: ${previewRoot}`);
   if (serveEvidence) console.log(`Evidence: http://127.0.0.1:${port}/evidence/ (only ${evidenceRoot})`);
   if (host === '0.0.0.0') {

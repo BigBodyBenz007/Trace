@@ -1,180 +1,97 @@
-# Time Capsule motion study — awaiting visual approval
+# Time Capsule motion and recorded-sound review
 
-This is an isolated development preview using synthetic content. The replacement
-must receive the user's visual approval before production integration. Functional
-checks establish mechanical and control correctness; they do not establish visual
-quality. Both sequences have now been rendered, played, and inspected at intermediate
-frames. User visual approval is still pending.
+**Visual approval pending. Production integration is not approved.** The recorded sounds from `0eee79f` are approved and unchanged. This development-only preview combines a revised version of the existing 3D model, seam vapor and those recordings. It contains synthetic keepsakes only and does not import application code or read capsule data.
 
-## Recoverable status and scope
+## Open the preview
 
-- Work is saved in this preview directory and the dedicated preview/test scripts.
-  After an interruption, inspect `git status --short` and this document before
-  continuing. A closed laptop lid or lost connection is a pause, not cancellation.
-- The production ceremony, production imports, capsule persistence, opening dates,
-  reminders, resealing history, media, backups, sound preferences, and food search
-  are outside this prototype's scope and remain unchanged.
-- The session-shared media loader's object-URL ownership and cleanup fix remains
-  intact. Future integration must retain persist-before-reveal, duplicate-action
-  protection, playback cleanup, and failure recovery.
-- No replacement sound candidates are integrated. Review motion first; review
-  opening and closing audio against approved motion later.
-- `trace-test-run.log` is unrelated and must remain untouched and unstaged.
-
-## Why the existing image approach cannot work
-
-The source artwork provides the desired gunmetal, brass, and warm interior material
-reference, but the three PNGs are not corresponding parts of one physical vault:
-
-- `src/assets/time-capsule/vault-closed.png` is 1400 × 700. It shows a shallow shell
-  without feet, a broad split front dial, and a different arrangement of mechanisms.
-- `vault-body.png` is 1200 × 800. Its taller body has circular side hubs, brass feet,
-  two large front latch bars, and a smaller inset dial. Crossfading between these
-  images changes the object's silhouette and construction.
-- `vault-lid.png` is 1200 × 800. Its lit underside and perspective are already baked
-  into the artwork, with barrel-like fittings along both top and bottom edges.
-  A flat image cannot reveal correct outer surfaces, changing thickness, or changing
-  lighting as it rotates.
-- In `src/index.css`, the shared 3:2 stage and `object-fit: contain` frame the 2:1
-  closed image differently. The lid uses a canvas-based `50% 70%` transform origin,
-  independent vertical translation, nonuniform scaling, rotation, and opacity.
-  At the open endpoint, its apparent lower hinge sits around 47% of stage height;
-  the body's rear rim sits around 20%. Layer ordering hides the separation.
-- Existing closing keyframes first lift the lid from `translateY(-25%)` to `-42%`,
-  then flatten and fade it into the different closed artwork. Changing duration,
-  smoke, or glow cannot repair this geometry.
-
-No matching source mesh, Blender scene, or layered material artwork was found in
-the repository. The PNGs are therefore references rather than animated parts.
-
-The supplied 6.33-second opening recording was sampled across its timeline: around
-2.46 seconds the closed shell becomes translucent while the different open body
-appears; the lid rises and then drops back toward the rim. The adjacent 7.27-second
-closing recording from the same session shows the lid rising around 2.62-3.43
-seconds, then the body morphing around 4.04-4.44 seconds. These observations agree
-with the asset and CSS audit. Personal recording frames remain local and ignored.
-
-## Rendering approach
-
-The preview uses a consistently modeled browser-rendered 3D vault with vendored
-Three.js 0.180.0 (MIT). It has a fixed camera, stable body, a solid lid with thickness
-and an underside, and a shared physical hinge. The same geometry remains present
-throughout both sequences; there are no endpoint image swaps or fading lids.
-Gunmetal surfaces, brass mechanisms, and restrained warm interior lighting interpret
-the source art. Synthetic contents keep the preview independent of user data.
-
-`motion.mjs` samples the choreography independently of rendering:
-
-- **Open — 7.6 seconds:** dial unlocks, bolts retract, valve releases pressure while
-  the lid is seated, then the lid rises to 102 degrees. Light follows the opening gap.
-- **Close — 6.4 seconds:** a brief hold, controlled descent to seven degrees, slower
-  seating without rebound, bolt engagement after full contact, and a final dial lock.
-  Closing has its own timeline rather than reversed opening keyframes.
-
-The review interface includes separate Open, Close, Replay, and Slow motion controls,
-plus Reduced Motion and Skip. Both resting endpoints can be inspected without motion.
-
-The primary review page is now **coherent pre-rendered playback**. The live WebGL
-inspector was too slow on this laptop's Intel UHD 600 (ANGLE / Direct3D11), so it
-cannot establish smooth mobile rendering. Both review clips render every exact
-1/30-second pose from the same model and encode it with WebCodecs VP9. There is no
-frame interpolation. They use the same fixed 960 x 720 camera framing and include
-half-second endpoint holds. Opening contains 258 frames (about 8.6 seconds), closing
-222 frames (about 7.4 seconds). Both clips are silent.
-
-The source model uses physical metal/roughness shading with procedural surface
-textures and environment lighting; see the official
-[Three.js material documentation](https://threejs.org/docs/pages/MeshStandardMaterial.html).
-Dependencies are vendored and do not change the production dependency tree.
-
-## Run locally
-
-From PowerShell in `C:\Users\benma\Documents\Trace`:
+Run this exact PowerShell command from any directory:
 
 ```powershell
-node scripts/preview-time-capsule.cjs
+node 'C:\Users\benma\Documents\Trace\scripts\preview-time-capsule.cjs'
 ```
 
-Open <http://127.0.0.1:4174/recordings.html> for the rendered review, or
-<http://127.0.0.1:4174/> for the live 3D inspector, including the effects toggle.
-This standalone server does not add the preview to the production app or normal
-navigation. It needs no npm installation or live CDN connection. Stop it with `Ctrl+C`.
+Open **http://127.0.0.1:4174/recordings.html**. Leave Sound checked, leave Slow motion and Reduced Motion unchecked, and select **Open** or **Close**. Each button prepares the corresponding starting pose. Replay restarts the last sequence. Nothing plays automatically. Volume starts at 65% and applies only to this page session.
 
-For optional testing from a phone on the same local network:
+The server needs no npm install or production build. Stop it with Ctrl+C. If it is already running, use its URL. For optional phone review on the same local network, run with `--host 0.0.0.0` and replace `127.0.0.1` in the URL with this computer's local IPv4 address; Windows firewall/network access must allow the connection. Physical iPhone/Safari playback is not yet verified.
+
+The silent live geometry inspector remains at http://127.0.0.1:4174/. Use its Light & pressure checkbox to inspect the geometry without effects. The pre-rendered page is the primary motion-and-sound review.
+
+## What was inspected and changed
+
+The original artwork, the production body/lid/closed PNGs, the rejected recording contact sheets, and the `1b874f4` model were inspected before this revision. The original PNGs have different proportions, front mechanisms and baked perspectives. The rejected opening crossfades two bodies; closing first lifts the detached lid before flattening/fading into another silhouette. Those images remain material references, not moving parts.
+
+The existing model already supplied a stable body, hollow interior, shared rear hinge and separate timelines. Its prior small pressure effect came from a front vent; its material and movement were not approved. This revision retains that model and improves:
+
+- Lid thickness, layered armor and surface variation, with a closer view of the gunmetal/brass construction.
+- Shorter hinge leaves, two telescopic supports with attached ball joints, and actual hollow bolt-guide channels and lid sockets. The same opaque geometry remains present throughout.
+- Warm interior and underside lighting, with synthetic paper keepsakes visible in the cavity.
+- Vapor emitted at the front and side gasket seams. Its irregular alpha particles billow outward/upward and dissipate; the particles are depth-tested against the model and transparent at their texture boundaries.
+- Timing driven by the approved sound cues. Closing accelerates into contact and then engages its locks; it has no vapor and does not reverse opening's lighting/unlock actions.
+
+## Choreography and audio alignment
+
+| Event | Opening time | Closing time |
+| --- | --- | --- |
+| Lock movement | Starts 0.12 s; prominent recording transient 0.223 s | Final dial turns 3.65–4.10 s |
+| Bolt travel | 0.57–1.40 s; clears before lid movement | 3.615–3.89 s, after lid contact |
+| Seal/contact | Narrow hinge crack begins 1.72 s | Physical lid contact 2.60 s |
+| Air/vapor | Approved air begins 1.82 s; visible cloud builds and fades by 4.17 s | None |
+| Main lid travel | 2.18–5.35 s to 102° | Starts 0.30 s, reaches contact at 2.60 s |
+| Lock clunk | Recorded mechanical release at 1.455/1.522 s | First engagement at about 3.89 s |
+| Full clip | 6.00 s | 5.40 s |
+
+The approved opening WAV starts at video time zero. The closing WAV starts at 2.345 s: its impact attack at approximately 0.255 s therefore coincides with physical contact at 2.600 s. The later bolt/latch sounds retain their approved spacing. No pitch, speed, EQ, gain or choreography within either approved WAV was changed.
+
+The MP4s contain H.264 video and an AAC transcode of the approved recording on **one media clock**, with silence around it where needed. This avoids independent sound timers drifting through stalls, seeks or pauses. Full source credits, license requirements, edit provenance and approved WAV hashes are in [audio-credits.md](audio-credits.md). The original audition page and all reference recordings remain unchanged elsewhere in the repository.
+
+## Controls and interruption behavior
+
+Open, Close, Replay, Stop, Skip, Pause/Resume, quarter-speed Slow motion, Reduced Motion, frame scrubbing, Sound and Volume are available. Only one clip can play. Repeated actions cancel stale loading/play requests.
+
+Slow motion and frame inspection are muted, including Resume after scrubbing. Select Open, Close or Replay at normal speed to hear sound again. Reduced Motion immediately selects the relevant resting endpoint silently. Skip goes to the endpoint; Stop returns to the starting pose. Hiding/freezing/leaving the page pauses and mutes playback; returning never automatically resumes it. Back/forward-cache return restores one set of handlers.
+
+Laptop hibernation is a pause, not cancellation. On resuming work, inspect `git status --short`, this document and `artifacts/time-capsule-combined-review/` before rerunning anything. Completed frames and diagnostic files are saved continuously. No personal recording frames are included in the committed preview.
+
+## Render and review evidence
+
+- [Opening MP4 with sound](recordings/open.mp4): 960×840, 30 fps, 180 frames, about 719 KB.
+- [Closing MP4 with sound](recordings/close.mp4): 960×840, 30 fps, 162 frames, about 540 KB.
+- [Opening decoded intermediate frames](recordings/open-frames.png).
+- [Closing decoded intermediate frames](recordings/close-frames.png).
+- [Closed without effects](recordings/closed-no-effects.png) and [open without effects](recordings/open-no-effects.png).
+- `recordings/render-manifest.json`: model/timeline hashes, frame counts, audio offsets, approved-source hashes and clip hashes.
+
+Each frame is rendered at its exact 1/30-second pose using the existing vendored Three.js scene. There is no image interpolation, generated video, endpoint crossfade or moving camera. FFmpeg packages these frames with the approved sound into MP4. The portable authoring tool was downloaded from [Gyan's build page](https://www.gyan.dev/ffmpeg/builds/), linked by [FFmpeg](https://ffmpeg.org/download.html), and verified against its published SHA-256. The executable stays in ignored local tooling and is not needed to play the preview.
+
+For regeneration, run the preview server, then from the repository root:
 
 ```powershell
-node scripts/preview-time-capsule.cjs --host 0.0.0.0
+node scripts/render-time-capsule.cjs both
 ```
 
-Open `http://YOUR-PC-LOCAL-IP:4174/recordings.html` on the phone, replacing `YOUR-PC-LOCAL-IP` with
-the computer's local IPv4 address. Windows network/firewall settings must permit
-that connection. The default command only needs localhost.
+The renderer uses the local portable FFmpeg path when present. Another checkout can set `TRACE_PREVIEW_FFMPEG` to an installed executable, and `TRACE_PREVIEW_CHROME` if Chrome is elsewhere. `TRACE_PREVIEW_URL` can select another localhost preview port. Rendering writes each completed PNG into `artifacts/time-capsule-combined-review/frames-<source-fingerprint>/` before encoding; an interruption resumes saved frames. Complete videos replace prior exports only after successful encoding. The renderer refuses altered approved WAV hashes.
 
-Focused motion checks:
+## Actual findings and limitations
 
-```powershell
-node --test scripts/time-capsule-motion.test.cjs
-```
+The inspected decoded frames show the body and camera staying fixed, lid thickness and interior remaining consistent, and the hinge/support attachments staying connected. Closing reaches the rim before bolt engagement. The seam vapor is visible at 390×844, including during the early narrow opening, without a rectangular boundary. No ghosted lid, detached part or visible body/lid clipping was observed in the reviewed views. Both resting endpoints remain legible with the light/vapor disabled.
 
-## Limitations to review honestly
+The appearance remains a simpler machined model. Its broad surfaces, weathering, brass and sculpted details do not fully match the rich original artwork. The vapor is an authored particle effect, not a fluid simulation; hinge/support movement is kinematic, not a rigid-body simulation. These remain visual-review limitations, not implied approval.
 
-- This is a simpler machined interpretation of the original sculpted, weathered
-  artwork. It does not reproduce that artwork's exact shape or material richness.
-- The live inspector requires WebGL2 and performed below 10 fps in the initial
-  headless capture on this laptop. It is a geometry inspection tool, not an approved
-  real-time mobile implementation. Use the rendered review for motion pacing.
-- The rendered review requires a browser that can decode VP9 WebM. Chrome playback
-  was checked; physical iPhone/Safari compatibility remains untested.
-- Pressure accents are supporting effects, not fluid simulation.
-- Hinge motion uses authored kinematic curves rather than rigid-body simulation.
-- Real phone GPU performance and thermal behavior are not yet verified. Browser
-  viewport emulation cannot establish those results.
-- The motion is silent for this approval round.
+Offline rendering saved the final opening's 180 frames in about 40 seconds and the closing's 162 in 33 seconds, excluding encoding. This is why pre-rendered playback is used. The final Chrome playback test reported all frames displayed with zero drops. This is one desktop-browser observation, not evidence of live mobile rendering, physical iPhone performance, Safari behavior or thermal performance.
 
-## Local visual evidence
+## Validation and scope
 
-The distributable synthetic clips and evidence are in `recordings/`:
+Passed for this revision:
 
-- [Opening clip](recordings/open.webm) and [closing clip](recordings/close.webm).
-- [Opening intermediate frames](recordings/open-frames.png) and
-  [closing intermediate frames](recordings/close-frames.png).
-- [Open without effects](recordings/open-no-effects.png) and
-  [closed without effects](recordings/closed-no-effects.png).
+- Seven focused Node motion tests: endpoints, monotonic hinge bounds, bolt/seal ordering, sound/contact alignment, no closing vapor, separate choreography and invalid/clamped inputs.
+- Full FFmpeg decode of both MP4s; H.264/AAC, dimensions, 30 fps, exact frame counts and durations verified.
+- Approved WAV hashes unchanged. Decoded AAC/source correlation exceeded 0.999 for both clips; recovered closing offset was 2.344989 s, and recovered gain differed by less than 0.3%. These are encoding/timing checks, not a listening review.
+- Both clips played to completion in Chrome: 180/162 frames, zero reported drops, no uncaught browser errors.
+- Repeated Open/Close/Replay/Stop, Skip, pause/resume, sound/volume, slow/scrub muting, manual/system Reduced Motion, hidden-page interruption, back/forward-cache cleanup/rebind, blocked-play recovery and session-only volume reset.
+- Desktop 1200×1000 and mobile 390×844 layout checked. Mobile stage is 364×330 CSS pixels, with no horizontal overflow.
+- Intermediate decoded frames and both effects-disabled endpoints visually inspected.
+- Preview modules, renderer/helper/server syntax and Git whitespace checks. Preview URLs, MP4 byte ranges and repository/evidence isolation passed.
 
-Additional diagnostics and local capture tooling remain under ignored
-`artifacts/time-capsule-motion/`. Personal source recordings and their extracted
-frames are not distributed or staged. Local `record-offline.cjs` can regenerate
-either clip from the inspector's deterministic `capsulePreview.seek()` hook; its
-WebM muxer is a pinned local scratch dependency. Model and timeline source are
-preserved in `vault.mjs` and `motion.mjs`.
+No production or shared app code, dependency, build configuration, approved sound source, capsule persistence, photo-loader ownership, settings, reminders, backups or media was changed. No production build or application-wide tests were needed. Passing checks do not establish visual quality. `trace-test-run.log` remains untouched and unstaged.
 
-## Validation — 2026-09-11
-
-- Six focused Node choreography tests passed; preview modules and server passed
-  syntax checks. No application-wide test/build was run because production and
-  shared application code are unchanged.
-- Live inspector: 142 sampled poses retained the same body matrix, hinge origin,
-  and camera. Open, Close, Replay, Skip, slow motion, manual and system Reduced
-  Motion passed. The resume lifecycle was checked to leave only one animation-frame
-  chain. Hinge bearing and leaf clearances were corrected during review.
-- Rendered player: Open, Close, Replay, Skip, quarter speed, Reduced Motion, rapid
-  sequence changes, scrubbing, and decoding passed browser checks.
-- Normal playback: opening played all 258 frames with zero dropped frames in
-  8.67 seconds; closing played all 222 with zero drops in 7.44 seconds. These are
-  playback observations, not live-rendering or physical-phone performance claims.
-  An initial fixed nine-second wait was too short for startup; the final check
-  waited for the actual media-ended event with a stall timeout.
-- Both rendered sequences and eight encoded intermediate frames per sequence were
-  visually inspected. The body is stable, the lid stays attached, and closing
-  settles before bolt engagement. No ghosted lid, morphing silhouette, or endpoint
-  replacement was observed. The opening vent is deliberately subtle.
-- Both effects-disabled endpoints were rendered and inspected. Geometry remains
-  legible; the material/detail gap to the original artwork is still visible.
-- Both pages fit a 390 x 844 viewport without horizontal overflow. Physical phone
-  playback, GPU performance, and thermal behavior remain unverified.
-- The preview server served only its allowlisted files and rejected repository
-  paths and traversal. Production `src/`, `public/`, package manifests, and lockfile
-  match the starting commit. The shared photo URL ownership fix remains untouched.
-- User visual approval: pending. Stop before production integration.
-
-Do not use passing tests as evidence that the animation looks convincing.
+Stop here for the user's visual approval before any production ceremony integration.

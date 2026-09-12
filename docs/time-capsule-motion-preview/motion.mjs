@@ -1,66 +1,47 @@
-// Pure choreography for the isolated motion study. All poses use one mesh.
-export const durations = Object.freeze({ open: 7.6, close: 6.4 });
-
+﻿// Pure choreography: approved recordings establish the mechanical cue times.
+export const durations = Object.freeze({ open: 6, close: 5.4 });
+export const audioOffsets = Object.freeze({ open: 0, close: 2.345 });
+export const cues = Object.freeze({ air: 1.82, contact: 2.6, boltTravel: 3.615, lockContact: 3.89 });
 const MAX_ANGLE = 102 * Math.PI / 180;
-const SETTLE_ANGLE = 7 * Math.PI / 180;
-const clamp = (value, low = 0, high = 1) => Math.min(high, Math.max(low, value));
-const quintic = (value) => value * value * value * (value * (value * 6 - 15) + 10);
-const progress = (time, start, end) => quintic(clamp((time - start) / (end - start)));
-const interiorLight = (angle) => quintic(clamp(angle / (28 * Math.PI / 180)));
-
-function openPose(time) {
-  const angle = MAX_ANGLE * progress(time, 2.65, 6.8);
-  const valve = progress(time, 1.7, 2.1) * (1 - progress(time, 2.55, 3.2));
-  const pressure = progress(time, 1.95, 2.15) * (1 - progress(time, 2.15, 2.55));
-  let phase = "Sealed";
-  if (time >= 0.3) phase = "Unlocking dial";
-  if (time >= 1.1) phase = "Retracting bolts";
-  if (time >= 1.7) phase = "Opening pressure valve";
-  if (time >= 1.95) phase = "Releasing pressure";
-  if (time >= 2.65) phase = "Lifting lid";
-  if (time >= 6.8) phase = "Open";
-  return {
-    angle,
-    bolts: 1 - progress(time, 1.1, 1.7),
-    dial: 1 - progress(time, 0.3, 1.2),
-    valve,
-    light: interiorLight(angle),
-    pressure,
-    phase,
-  };
+const CRACK = 1.7 * Math.PI / 180;
+const clamp = (v, low = 0, high = 1) => Math.min(high, Math.max(low, v));
+const smooth = v => v*v*v*(v*(v*6-15)+10);
+const progress = (t,a,b) => smooth(clamp((t-a)/(b-a)));
+const interiorLight = a => smooth(clamp(a/(24*Math.PI/180)));
+function openPose(t) {
+  // Retracted bolts first; an actual narrow hinge gap breaks the gasket seal.
+  const angle = t < 2.18 ? CRACK*progress(t,1.72,1.96)
+    : CRACK+(MAX_ANGLE-CRACK)*progress(t,2.18,5.35);
+  let phase='Sealed';
+  if(t>=.12)phase='Turning lock';
+  if(t>=.57)phase='Retracting bolts';
+  if(t>=1.43)phase='Releasing seal';
+  if(t>=1.82)phase='Venting the lid seam';
+  if(t>=2.18)phase='Lifting on damped supports';
+  if(t>=5.35)phase='Open';
+  return {angle,bolts:1-progress(t,.57,1.40),dial:1-progress(t,.12,.57),valve:0,
+    light:interiorLight(angle),pressure:progress(t,1.82,1.94)*(1-progress(t,3.22,4.17)),phase};
 }
-
-function closePose(time) {
-  // The motor brings the lid close, then seats the gasket gently. The final
-  // seven degrees get their own slower interval, with no rebound or lifting.
-  const angle = time <= 3.4
-    ? MAX_ANGLE + (SETTLE_ANGLE - MAX_ANGLE) * progress(time, 0.4, 3.4)
-    : SETTLE_ANGLE * (1 - progress(time, 3.4, 4.2));
-  let phase = "Ready to close";
-  if (time >= 0.4) phase = "Lowering lid";
-  if (time >= 3.4) phase = "Seating lid";
-  if (time >= 4.2) phase = "Lid seated";
-  if (time >= 4.45) phase = "Engaging bolts";
-  if (time >= 5.15) phase = "Bolts engaged";
-  if (time >= 5.2) phase = "Locking dial";
-  if (time >= 6.05) phase = "Sealed";
-  return {
-    angle,
-    bolts: progress(time, 4.45, 5.15),
-    dial: progress(time, 5.2, 6.05),
-    valve: 0,
-    light: interiorLight(angle),
-    pressure: 0,
-    phase,
-  };
+function closePose(t) {
+  // Gravity-like acceleration followed by the supports' resistance. The final
+  // approach retains velocity until contact; no slow hover, bounce or lid reversal.
+  const u=clamp((t-.30)/(2.6-.30));
+  const remaining=1-(1.8*u*u-.8*u*u*u);
+  const angle=MAX_ANGLE*remaining;
+  let phase='Open';
+  if(t>=.30)phase='Lowering the lid';
+  if(t>=2.40)phase='Approaching the gasket';
+  if(t>=2.60)phase='Lid contact';
+  if(t>=3.615)phase='Engaging locking bolts';
+  if(t>=3.89)phase='Lock engagement';
+  if(t>=4.10)phase='Sealed';
+  return {angle,bolts:progress(t,3.615,3.89),dial:progress(t,3.65,4.10),valve:0,
+    // Closing keeps the cavity lit during descent, then powers down at seating.
+    // It does not play the opening's angle-driven warm-up backwards.
+    light:1-progress(t,2.45,2.60),pressure:0,phase};
 }
-
-export function sampleMotion(kind, seconds = 0) {
-  if (kind !== "open" && kind !== "close") {
-    throw new TypeError(`Unknown capsule motion: ${kind}`);
-  }
-  const suppliedTime = Number(seconds);
-  const time = clamp(Number.isNaN(suppliedTime) ? 0 : suppliedTime, 0, durations[kind]);
-  const pose = kind === "open" ? openPose(time) : closePose(time);
-  return { ...pose, done: time >= durations[kind] };
+export function sampleMotion(kind, seconds=0) {
+  if(kind!=='open'&&kind!=='close')throw new TypeError(`Unknown capsule motion: ${kind}`);
+  const supplied=Number(seconds),time=clamp(Number.isNaN(supplied)?0:supplied,0,durations[kind]);
+  return {...(kind==='open'?openPose(time):closePose(time)),done:time>=durations[kind]};
 }
