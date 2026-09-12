@@ -10,6 +10,11 @@
     main { margin: auto; max-width: 680px; }
     section { background: #102739; border: 1px solid #9e7746; border-radius: 18px; margin: 20px 0; padding: 20px; }
     button { background: #1b5960; border: 1px solid #7bd2ca; border-radius: 10px; color: white; cursor: pointer; font: inherit; font-weight: 700; min-height: 44px; padding: 10px 16px; }
+    button:focus-visible, input:focus-visible, audio:focus-visible { outline: 3px solid #f4c782; outline-offset: 4px; }
+    .controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px; }
+    .volume { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    input[type="range"] { accent-color: #7bd2ca; max-width: 100%; min-height: 44px; width: 180px; }
+    #status { color: #d3dedb; min-height: 3em; }
     audio { display: block; margin-top: 16px; width: 100%; }
     small { color: #c7bda9; }
   </style>
@@ -17,32 +22,116 @@
 <body>
   <main>
     <h1>Time Capsule sound candidates</h1>
-    <p>Development preview only. These files are not connected to Trace’s production ceremony yet.</p>
+    <p>Development preview only. These original sound candidates are awaiting listening approval. Trace's production sounds and saved preferences are unchanged.</p>
+    <div class="controls">
+      <button type="button" id="stop">Stop</button>
+      <div class="volume">
+        <label for="volume">Preview volume</label>
+        <input id="volume" type="range" min="0" max="100" step="1" value="65" aria-describedby="volume-note">
+        <output id="volume-value" for="volume">65%</output>
+      </div>
+    </div>
+    <small id="volume-note">Applies to both candidates for this page session only.</small>
+    <p id="status" role="status" aria-live="polite" aria-atomic="true">Ready to audition. Nothing plays automatically.</p>
     <section>
       <h2>Opening candidate</h2>
-      <p>Mechanical releases, a rising drive, and a pressure vent.</p>
+      <p>A rotating mechanism, shifting bolts, and a mechanical release, followed by a pressurized air whoosh as the seal breaks.</p>
       <button type="button" data-play="opening">Play opening</button>
-      <audio controls preload="metadata" src="time-capsule-sound-candidates/opening-candidate.wav"></audio>
+      <audio id="opening" aria-label="Opening candidate playback" controls preload="metadata" src="time-capsule-sound-candidates/opening-candidate.wav"></audio>
     </section>
     <section>
       <h2>Closing candidate</h2>
-      <p>Descending lid movement, a heavy seat, and a separate final lock.</p>
+      <p>A heavy metallic lid clang with a brief natural ringing decay, followed by a distinct locking clunk.</p>
       <button type="button" data-play="closing">Play closing</button>
-      <audio controls preload="metadata" src="time-capsule-sound-candidates/closing-candidate.wav"></audio>
+      <audio id="closing" aria-label="Closing candidate playback" controls preload="metadata" src="time-capsule-sound-candidates/closing-candidate.wav"></audio>
     </section>
-    <small>Listening approval is required before either candidate replaces the current app sounds.</small>
+    <small>Opening and closing were designed separately using original procedural audio, without third-party samples. Use the Play buttons to replay from the start, or the audio controls to pause and scrub. Listening approval is required before production integration.</small>
   </main>
   <script>
-    document.querySelectorAll("button[data-play]").forEach((button) => {
-      button.addEventListener("click", () => {
-        const selected = button.closest("section").querySelector("audio");
-        document.querySelectorAll("audio").forEach((audio) => {
-          if (audio !== selected) { audio.pause(); audio.currentTime = 0; }
-        });
-        selected.currentTime = 0;
-        selected.play();
+    const players = [...document.querySelectorAll("audio")];
+    const status = document.getElementById("status");
+    const volume = document.getElementById("volume");
+    const volumeValue = document.getElementById("volume-value");
+    let activePlayer = null;
+    let playbackVersion = 0;
+
+    function reset(player) {
+      player.pause();
+      // Seeking can fail before metadata is available in some browsers.
+      try { player.currentTime = 0; } catch { /* Already at its initial position. */ }
+    }
+
+    function stop(message = "Stopped. Both candidates are ready to replay.") {
+      playbackVersion += 1;
+      activePlayer = null;
+      players.forEach(reset);
+      status.textContent = message;
+    }
+
+    function updateVolume() {
+      const value = Number(volume.value);
+      players.forEach((player) => { player.volume = value / 100; });
+      volumeValue.value = `${value}%`;
+    }
+
+    updateVolume();
+    volume.addEventListener("input", updateVolume);
+    document.getElementById("stop").addEventListener("click", () => stop());
+
+    players.forEach((player) => {
+      player.addEventListener("play", () => {
+        // Ignore a queued play event if a newer action has already stopped it.
+        if (player.paused) return;
+        if (document.hidden) {
+          stop("Playback stopped while this page is hidden.");
+          return;
+        }
+        // Native audio controls obey the same single-player rule as the buttons.
+        if (activePlayer !== player) playbackVersion += 1;
+        activePlayer = player;
+        players.forEach((other) => { if (other !== player) reset(other); });
+        status.textContent = `Playing ${player.id} candidate.`;
+      });
+      player.addEventListener("pause", () => {
+        if (activePlayer === player && player.paused && !player.ended) {
+          status.textContent = `${player.id === "opening" ? "Opening" : "Closing"} candidate paused.`;
+        }
+      });
+      player.addEventListener("ended", () => {
+        if (activePlayer === player && player.ended) {
+          activePlayer = null;
+          playbackVersion += 1;
+          status.textContent = `${player.id === "opening" ? "Opening" : "Closing"} candidate finished. Ready to replay.`;
+        }
+      });
+      player.addEventListener("error", () => {
+        if (activePlayer === player || !activePlayer) {
+          stop(`Could not load the ${player.id} candidate. Keep this page beside the time-capsule-sound-candidates folder and reload.`);
+        }
       });
     });
+
+    document.querySelectorAll("button[data-play]").forEach((button) => {
+      button.addEventListener("click", async () => {
+        stop();
+        const selected = document.getElementById(button.dataset.play);
+        const requestVersion = playbackVersion;
+        activePlayer = selected;
+        status.textContent = `Loading ${selected.id} candidate.`;
+        try {
+          await selected.play();
+        } catch (error) {
+          // A newer Play/Stop action may intentionally cancel this request.
+          if (requestVersion !== playbackVersion || activePlayer !== selected) return;
+          stop(`Could not play the ${selected.id} candidate. Try its audio controls or reload this page. (${error.name || "Playback error"})`);
+        }
+      });
+    });
+
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) stop("Playback stopped while this page is hidden.");
+    });
+    window.addEventListener("pagehide", () => stop());
   </script>
 </body>
 </html>
