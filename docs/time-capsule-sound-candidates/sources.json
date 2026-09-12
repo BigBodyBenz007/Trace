@@ -1,0 +1,114 @@
+{
+  "sources": [
+    {
+      "id": "prison-door-slam",
+      "title": "Prison Locks and Doors 2 Door slam.wav",
+      "creator": "Robert Thomas (RobertMThomas)",
+      "pageUrl": "https://freesound.org/people/RobertMThomas/sounds/151133/",
+      "downloadUrl": "https://cdn.freesound.org/previews/151/151133_901927-hq.mp3",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "acquired": "2026-09-11",
+      "acquisition": "Unchanged complete public Freesound HQ MP3 preview; not the original WAV master.",
+      "file": "sources/prison-door-slam.mp3",
+      "bytes": 80258,
+      "sha256": "1eb9093f328a5ff3f41096749acdeb3d623ca35be7fea23ae198517d4b2f966d",
+      "decoding": {
+        "method": "Chrome Web Audio decodeAudioData at 44100 Hz; arithmetic mean of the two stereo channels",
+        "sampleRate": 44100,
+        "channels": 1,
+        "samples": 148480,
+        "duration": 3.3668934240362813,
+        "pcmFloat32LeSha256": "eb530740465666d1a56d74114cc76bdb56d08865fea84981330b803d0f95ec2a"
+      }
+    },
+    {
+      "id": "prison-lock-movement",
+      "title": "Prison Locks and Doors 5 Lock movement.wav",
+      "creator": "Robert Thomas (RobertMThomas)",
+      "pageUrl": "https://freesound.org/people/RobertMThomas/sounds/151142/",
+      "downloadUrl": "https://cdn.freesound.org/previews/151/151142_901927-hq.mp3",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "acquired": "2026-09-11",
+      "acquisition": "Unchanged complete public Freesound HQ MP3 preview; not the original WAV master.",
+      "file": "sources/prison-lock-movement.mp3",
+      "bytes": 31414,
+      "sha256": "ad932d61c7a120f248e2443133a4d0f1f533db71d2dd43ef763bbe44e7ae3c1c",
+      "decoding": {
+        "method": "Chrome Web Audio decodeAudioData at 44100 Hz; arithmetic mean of the two stereo channels",
+        "sampleRate": 44100,
+        "channels": 1,
+        "samples": 55949,
+        "duration": 1.2686848072562358,
+        "pcmFloat32LeSha256": "0af5575910c47f91b1b098a18018a5dd5a17e4efddbb6ed6b5dfd55ffc0a7423"
+      }
+    },
+    {
+      "id": "prison-latch-slide",
+      "title": "Prison Locks and Doors 19 Latch sliding sound.wav",
+      "creator": "Robert Thomas (RobertMThomas)",
+      "pageUrl": "https://freesound.org/people/RobertMThomas/sounds/151134/",
+      "downloadUrl": "https://cdn.freesound.org/previews/151/151134_901927-hq.mp3",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "acquired": "2026-09-11",
+      "acquisition": "Unchanged complete public Freesound HQ MP3 preview; not the original WAV master.",
+      "file": "sources/prison-latch-slide.mp3",
+      "bytes": 24474,
+      "sha256": "f3410a6602e81f2c554d8a7b135073f4c16ce8908716404d60760a3497606aba",
+      "decoding": {
+        "method": "Chrome Web Audio decodeAudioData at 44100 Hz; arithmetic mean of the two stereo channels",
+        "sampleRate": 44100,
+        "channels": 1,
+        "samples": 40751,
+        "duration": 0.9240589569160997,
+        "pcmFloat32LeSha256": "9cbdf78a58a7dbc20019c0e08d36cd7b5cc8e570bab9037faacf6471a45317d6"
+      }
+    },
+    {
+      "id": "prison-latch",
+      "title": "Prison Locks and Doors 30 Latch sound.wav",
+      "creator": "Robert Thomas (RobertMThomas)",
+      "pageUrl": "https://freesound.org/people/RobertMThomas/sounds/151123/",
+      "downloadUrl": "https://cdn.freesound.org/previews/151/151123_901927-hq.mp3",
+      "license": "CC-BY-4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "acquired": "2026-09-11",
+      "acquisition": "Unchanged complete public Freesound HQ MP3 preview; not the original WAV master.",
+      "file": "sources/prison-latch.mp3",
+      "bytes": 16281,
+      "sha256": "61c3aa52e78d7033e4e5bbec9b27500597dd5344dbb2c3c3530ad6ce77bf0423",
+      "decoding": {
+        "method": "Chrome Web Audio decodeAudioData at 44100 Hz; arithmetic mean of the two stereo channels",
+        "sampleRate": 44100,
+        "channels": 1,
+        "samples": 25072,
+        "duration": 0.5685260770975057,
+        "pcmFloat32LeSha256": "bfe7683a74b400102b5e8ea45c72234da68d24a755446f83ded19a003cf5122c"
+      }
+    },
+    {
+      "id": "compressor-air",
+      "title": "Air pressure from compressor",
+      "creator": "Flares.fr",
+      "pageUrl": "https://freesound.org/people/Flares.fr/sounds/524260/",
+      "downloadUrl": "https://cdn.freesound.org/previews/524/524260_10293868-hq.mp3",
+      "license": "CC0-1.0",
+      "licenseUrl": "https://creativecommons.org/publicdomain/zero/1.0/",
+      "acquired": "2026-09-11",
+      "acquisition": "Unchanged complete public Freesound HQ MP3 preview; not the original WAV master.",
+      "file": "sources/compressor-air.mp3",
+      "bytes": 240864,
+      "sha256": "c4ac00d05873539a75b680a9d18839313ccc0574b6b8fb9bfaef65f9e1a36a32",
+      "decoding": {
+        "method": "Chrome Web Audio decodeAudioData at 44100 Hz; arithmetic mean of the two stereo channels",
+        "sampleRate": 44100,
+        "channels": 1,
+        "samples": 455699,
+        "duration": 10.333310657596371,
+        "pcmFloat32LeSha256": "087e607fceaad3118999d7a6effd3f3bd5f50173de07abb74c30046bf97d8346"
+      }
+    }
+  ]
+}

@@ -1,0 +1,101 @@
+{
+  "approach": "Only recorded samples: trim, mono downmix, fixed EQ, gain, fades and timeline layering. No generated audio, pitch shift, reversal, compression, reverb or sub-bass layers.",
+  "sampleRate": 44100,
+  "channels": 1,
+  "bitsPerSample": 16,
+  "peakCeilingDbfs": -6,
+  "opening": {
+    "duration": 4.4,
+    "layers": [
+      {
+        "source": "prison-lock-movement",
+        "from": 0.055,
+        "to": 0.56,
+        "at": 0.12,
+        "gainDb": 1,
+        "highpassHz": 100,
+        "lowpassHz": 3200,
+        "fadeIn": 0.008,
+        "fadeOut": 0.1,
+        "role": "Lock movement"
+      },
+      {
+        "source": "prison-latch-slide",
+        "from": 0,
+        "to": 0.924,
+        "at": 0.57,
+        "gainDb": 4,
+        "highpassHz": 90,
+        "lowpassHz": 2800,
+        "fadeIn": 0.015,
+        "fadeOut": 0.055,
+        "role": "Bolt movement"
+      },
+      {
+        "source": "prison-latch",
+        "from": 0.025,
+        "to": 0.53,
+        "at": 1.43,
+        "gainDb": 9,
+        "highpassHz": 90,
+        "lowpassHz": 2600,
+        "fadeIn": 0.008,
+        "fadeOut": 0.09,
+        "role": "Mechanical seal release"
+      },
+      {
+        "source": "compressor-air",
+        "from": 3.9,
+        "to": 6.25,
+        "at": 1.82,
+        "gainDb": 3,
+        "highpassHz": 220,
+        "lowpassHz": 6500,
+        "fadeIn": 0.1,
+        "fadeOut": 0.95,
+        "role": "Continuous compressed-air release; excludes intermittent bursts"
+      }
+    ]
+  },
+  "closing": {
+    "duration": 2.75,
+    "layers": [
+      {
+        "source": "prison-door-slam",
+        "from": 0.265,
+        "to": 1.42,
+        "at": 0.07,
+        "gainDb": -1,
+        "highpassHz": 75,
+        "lowpassHz": 2300,
+        "fadeIn": 0.012,
+        "fadeOut": 0.22,
+        "role": "Prison door impact and its own metal/room decay"
+      },
+      {
+        "source": "prison-latch-slide",
+        "from": 0.08,
+        "to": 0.38,
+        "at": 1.27,
+        "gainDb": 1,
+        "highpassHz": 90,
+        "lowpassHz": 2300,
+        "fadeIn": 0.012,
+        "fadeOut": 0.035,
+        "role": "Locking bolt travel, after the main door decay"
+      },
+      {
+        "source": "prison-latch",
+        "from": 0.025,
+        "to": 0.54,
+        "at": 1.53,
+        "gainDb": 13,
+        "highpassHz": 80,
+        "lowpassHz": 2100,
+        "fadeIn": 0.008,
+        "fadeOut": 0.095,
+        "role": "Separate locking engagement"
+      }
+    ]
+  }
+}

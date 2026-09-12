@@ -16,13 +16,18 @@
     input[type="range"] { accent-color: #7bd2ca; max-width: 100%; min-height: 44px; width: 180px; }
     #status { color: #d3dedb; min-height: 3em; }
     audio { display: block; margin-top: 16px; width: 100%; }
+    a { color: #a6e3db; overflow-wrap: anywhere; }
+    a:focus-visible { outline: 3px solid #f4c782; outline-offset: 4px; }
+    .source { border-top: 1px solid #466071; margin-top: 24px; padding-top: 16px; }
+    .source h3 { font-size: 1.05rem; }
+    .source small { display: block; margin-bottom: 14px; }
     small { color: #c7bda9; }
   </style>
 </head>
 <body>
   <main>
     <h1>Time Capsule sound candidates</h1>
-    <p>Development preview only. These original sound candidates are awaiting listening approval. Trace's production sounds and saved preferences are unchanged.</p>
+    <p>Development preview only. These candidates use recordings of physical doors, locks, and compressed air. They are awaiting listening approval. Trace's production sounds and saved preferences are unchanged.</p>
     <div class="controls">
       <button type="button" id="stop">Stop</button>
       <div class="volume">
@@ -31,21 +36,57 @@
         <output id="volume-value" for="volume">65%</output>
       </div>
     </div>
-    <small id="volume-note">Applies to both candidates for this page session only.</small>
+    <small id="volume-note">Applies to both candidates and all source recordings for this page session only.</small>
     <p id="status" role="status" aria-live="polite" aria-atomic="true">Ready to audition. Nothing plays automatically.</p>
     <section>
       <h2>Opening candidate</h2>
-      <p>A rotating mechanism, shifting bolts, and a mechanical release, followed by a pressurized air whoosh as the seal breaks.</p>
+      <p>Recorded lock movement, shifting bolts, and a mechanical release, followed by compressed air as the seal breaks.</p>
       <button type="button" data-play="opening">Play opening</button>
-      <audio id="opening" aria-label="Opening candidate playback" controls preload="metadata" src="time-capsule-sound-candidates/opening-candidate.wav"></audio>
+      <audio id="opening" data-label="Opening candidate" aria-label="Opening candidate playback" controls preload="metadata" src="time-capsule-sound-candidates/opening-candidate.wav"></audio>
     </section>
     <section>
       <h2>Closing candidate</h2>
-      <p>A heavy metallic lid clang with a brief natural ringing decay, followed by a distinct locking clunk.</p>
+      <p>A recorded heavy door slam supplies the lid clang and natural decay, followed by a separate recorded bolt clunk.</p>
       <button type="button" data-play="closing">Play closing</button>
-      <audio id="closing" aria-label="Closing candidate playback" controls preload="metadata" src="time-capsule-sound-candidates/closing-candidate.wav"></audio>
+      <audio id="closing" data-label="Closing candidate" aria-label="Closing candidate playback" controls preload="metadata" src="time-capsule-sound-candidates/closing-candidate.wav"></audio>
     </section>
-    <small>Opening and closing were designed separately using original procedural audio, without third-party samples. Use the Play buttons to replay from the start, or the audio controls to pause and scrub. Listening approval is required before production integration.</small>
+    <p>Opening and closing were designed separately. Trace trimmed, layered, equalized, and faded the recordings to make these candidates. See the <a href="time-capsule-sound-candidates/README.md">source credits and edit notes</a>.</p>
+    <section aria-labelledby="sources-heading">
+      <h2 id="sources-heading">Unedited source recordings</h2>
+      <p>Audition the source material separately below. These are Freesound's full, unchanged high-quality MP3 previews, not the original WAV masters. Source levels are unaltered, so their loudness can differ from the edited candidates.</p>
+      <p>RobertMThomas recorded the door and lock sounds at the abandoned Shoreditch Police Station in 2011 using a Zoom H1. Flares.fr recorded the air release from a garage compressor.</p>
+      <article class="source">
+        <h3>Door slam</h3>
+        <small><a href="https://freesound.org/people/RobertMThomas/sounds/151133/">Prison Locks and Doors 2 Door slam.wav</a> by <a href="https://freesound.org/people/RobertMThomas/">RobertMThomas</a> &middot; <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></small>
+        <button type="button" data-play="source-door-slam">Play door slam source</button>
+        <audio id="source-door-slam" data-label="Door slam source recording" aria-label="Door slam source playback" controls preload="metadata" src="time-capsule-sound-candidates/sources/prison-door-slam.mp3"></audio>
+      </article>
+      <article class="source">
+        <h3>Lock movement</h3>
+        <small><a href="https://freesound.org/people/RobertMThomas/sounds/151142/">Prison Locks and Doors 5 Lock movement.wav</a> by <a href="https://freesound.org/people/RobertMThomas/">RobertMThomas</a> &middot; <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></small>
+        <button type="button" data-play="source-lock-movement">Play lock movement source</button>
+        <audio id="source-lock-movement" data-label="Lock movement source recording" aria-label="Lock movement source playback" controls preload="metadata" src="time-capsule-sound-candidates/sources/prison-lock-movement.mp3"></audio>
+      </article>
+      <article class="source">
+        <h3>Latch sliding</h3>
+        <small><a href="https://freesound.org/people/RobertMThomas/sounds/151134/">Prison Locks and Doors 19 Latch sliding sound.wav</a> by <a href="https://freesound.org/people/RobertMThomas/">RobertMThomas</a> &middot; <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></small>
+        <button type="button" data-play="source-latch-slide">Play latch sliding source</button>
+        <audio id="source-latch-slide" data-label="Latch sliding source recording" aria-label="Latch sliding source playback" controls preload="metadata" src="time-capsule-sound-candidates/sources/prison-latch-slide.mp3"></audio>
+      </article>
+      <article class="source">
+        <h3>Latch engagement</h3>
+        <small><a href="https://freesound.org/people/RobertMThomas/sounds/151123/">Prison Locks and Doors 30 Latch sound.wav</a> by <a href="https://freesound.org/people/RobertMThomas/">RobertMThomas</a> &middot; <a href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</a></small>
+        <button type="button" data-play="source-latch">Play latch source</button>
+        <audio id="source-latch" data-label="Latch engagement source recording" aria-label="Latch engagement source playback" controls preload="metadata" src="time-capsule-sound-candidates/sources/prison-latch.mp3"></audio>
+      </article>
+      <article class="source">
+        <h3>Compressor air</h3>
+        <small><a href="https://freesound.org/people/Flares.fr/sounds/524260/">Air pressure from compressor</a> by <a href="https://freesound.org/people/Flares.fr/">Flares.fr</a> &middot; <a href="https://creativecommons.org/publicdomain/zero/1.0/">CC0 1.0</a></small>
+        <button type="button" data-play="source-compressor-air">Play compressor air source</button>
+        <audio id="source-compressor-air" data-label="Compressor air source recording" aria-label="Compressor air source playback" controls preload="metadata" src="time-capsule-sound-candidates/sources/compressor-air.mp3"></audio>
+      </article>
+    </section>
+    <small>Use the Play buttons to replay from the start, or the audio controls to pause and scrub. Listening approval is required before production integration.</small>
   </main>
   <script>
     const players = [...document.querySelectorAll("audio")];
@@ -61,7 +102,7 @@
       try { player.currentTime = 0; } catch { /* Already at its initial position. */ }
     }
 
-    function stop(message = "Stopped. Both candidates are ready to replay.") {
+    function stop(message = "Stopped. All recordings are ready to replay.") {
       playbackVersion += 1;
       activePlayer = null;
       players.forEach(reset);
@@ -90,23 +131,23 @@
         if (activePlayer !== player) playbackVersion += 1;
         activePlayer = player;
         players.forEach((other) => { if (other !== player) reset(other); });
-        status.textContent = `Playing ${player.id} candidate.`;
+        status.textContent = `Playing: ${player.dataset.label}.`;
       });
       player.addEventListener("pause", () => {
         if (activePlayer === player && player.paused && !player.ended) {
-          status.textContent = `${player.id === "opening" ? "Opening" : "Closing"} candidate paused.`;
+          status.textContent = `${player.dataset.label} paused.`;
         }
       });
       player.addEventListener("ended", () => {
         if (activePlayer === player && player.ended) {
           activePlayer = null;
           playbackVersion += 1;
-          status.textContent = `${player.id === "opening" ? "Opening" : "Closing"} candidate finished. Ready to replay.`;
+          status.textContent = `${player.dataset.label} finished. Ready to replay.`;
         }
       });
       player.addEventListener("error", () => {
         if (activePlayer === player || !activePlayer) {
-          stop(`Could not load the ${player.id} candidate. Keep this page beside the time-capsule-sound-candidates folder and reload.`);
+          stop(`Could not load: ${player.dataset.label}. Keep this page beside the time-capsule-sound-candidates folder and reload.`);
         }
       });
     });
@@ -117,13 +158,13 @@
         const selected = document.getElementById(button.dataset.play);
         const requestVersion = playbackVersion;
         activePlayer = selected;
-        status.textContent = `Loading ${selected.id} candidate.`;
+        status.textContent = `Loading: ${selected.dataset.label}.`;
         try {
           await selected.play();
         } catch (error) {
           // A newer Play/Stop action may intentionally cancel this request.
           if (requestVersion !== playbackVersion || activePlayer !== selected) return;
-          stop(`Could not play the ${selected.id} candidate. Try its audio controls or reload this page. (${error.name || "Playback error"})`);
+          stop(`Could not play: ${selected.dataset.label}. Try its audio controls or reload this page. (${error.name || "Playback error"})`);
         }
       });
     });

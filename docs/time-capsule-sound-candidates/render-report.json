@@ -1,0 +1,24 @@
+{
+  "opening": {
+    "duration": 4.4,
+    "sampleRate": 44100,
+    "channels": 1,
+    "bitsPerSample": 16,
+    "peakDbfs": -6,
+    "rmsDbfs": -31.2,
+    "dcOffset": 0.0000022937341505262304,
+    "attenuationDb": -0.69,
+    "sha256": "5ab98530a4d5826996e306ce70b49112ca9cf8316e3ff0584b322d31e16be423"
+  },
+  "closing": {
+    "duration": 2.75,
+    "sampleRate": 44100,
+    "channels": 1,
+    "bitsPerSample": 16,
+    "peakDbfs": -6,
+    "rmsDbfs": -31.14,
+    "dcOffset": 0.0000038146423656298657,
+    "attenuationDb": -2.05,
+    "sha256": "252042d0a4ba75362fe1a04d3d226b5d3299d0b06df1e07c9f63733c3ff05ee2"
+  }
+}
