@@ -6507,7 +6507,7 @@ test("same-tab restore refreshes medication entries, compounds, dose schedules, 
   expect(protocolCard).toHaveTextContent("Taken 0 · Skipped 1");
 });
 
-test("shows a sealed capsule on the Timeline and navigates to and from details without changing it", () => {
+test("shows a sealed capsule on the Timeline and navigates to and from details without changing it", async () => {
   const capsule = {
     schemaVersion: 1,
     id: "capsule-timeline",
@@ -6531,7 +6531,7 @@ test("shows a sealed capsule on the Timeline and navigates to and from details w
   expect(screen.getByRole("heading", { name: "Timeline capsule" })).toBeInTheDocument();
   expect(screen.getByText("This capsule remains sealed. Its private contents are hidden.")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
-  expect(screen.getByTestId("timeline-time-capsule-capsule-timeline")).toBeInTheDocument();
+  await waitFor(() => expect(screen.getByTestId("timeline-time-capsule-capsule-timeline")).toBeVisible());
   expect(JSON.parse(localStorage.getItem("timeCapsules"))).toEqual([capsule]);
 });
 
@@ -6559,6 +6559,7 @@ test("keeps an opened capsule photo URL valid when leaving and returning to its 
   expect(firstUrl).toBe("blob:5:image/jpeg");
 
   fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  await waitFor(() => expect(screen.getByTestId("timeline-time-capsule-capsule-photo-route")).toBeVisible());
   expect(URL.revokeObjectURL).not.toHaveBeenCalledWith(firstUrl);
   fireEvent.click(screen.getByTestId("timeline-time-capsule-capsule-photo-route"));
   expect(await screen.findByRole("img", { name: "route-photo.jpg" })).toHaveAttribute("src", firstUrl);
@@ -6683,7 +6684,7 @@ test("a failed reminder reset rolls resealing back and leaves the capsule opened
 
   expect(localStorage.getItem("timeCapsules")).toBe(originalRaw);
   expect(screen.getByText("Still visible after failure")).toBeInTheDocument();
-  expect(screen.getByText("Opened")).toBeInTheDocument();
+  expect(screen.getAllByText("Opened").filter((element) => !element.closest("[hidden]"))).toHaveLength(1);
   expect(screen.getAllByRole("alert").every((alert) => /couldn't seal/i.test(alert.textContent))).toBe(true);
 });
 

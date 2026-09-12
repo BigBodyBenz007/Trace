@@ -3,6 +3,7 @@ import { readFileSync } from "fs";
 import HomePage from "./HomePage";
 import { getAppTheme } from "../services/appThemes";
 import { TIMELINE_FOCUS_TUNING } from "../services/timelineFocus";
+import * as capsuleTimelineNavigation from "../services/capsuleTimelineReturn";
 
 const baseProps = {
   memoryCount: 2,
@@ -537,7 +538,11 @@ test("places sealed, ready, and opened capsules on the Timeline without exposing
   expect(screen.getByTestId("timeline-time-capsule-opened")).toContainElement(screen.getByRole("img", { name: "Opened Time Capsule vault" }));
 
   fireEvent.click(screen.getByTestId("timeline-time-capsule-ready"));
-  expect(onViewTimeCapsule).toHaveBeenCalledWith("ready");
+  expect(onViewTimeCapsule).toHaveBeenCalledWith("ready", expect.objectContaining({
+    sourceItemId: "time-capsule:ready",
+    sourceIndex: 1,
+    filters: { search: "", selectedCategory: "All", favoriteFilter: "all", timelinePosition: "present" },
+  }));
   expect(onAcknowledgeTimeCapsule).not.toHaveBeenCalled();
 });
 
@@ -552,6 +557,71 @@ test("derives one Timeline card per capsule and follows deleted and restored col
 
   rerender(<HomePage {...props} timeCapsules={[saved]} />);
   expect(screen.getAllByTestId("timeline-time-capsule-sync")).toHaveLength(1);
+});
+
+test("capsule card navigation captures the current axes and Past mode while reminder entry has no card origin", () => {
+  const onViewTimeCapsule = jest.fn();
+  const originalScrollY = Object.getOwnPropertyDescriptor(window, "scrollY");
+  Object.defineProperty(window, "scrollY", { configurable: true, value: 925 });
+  const props = { ...baseProps, memories: [], timeCapsules: [timeCapsule()], onViewTimeCapsule };
+  const { rerender, unmount } = render(<HomePage {...props} />);
+  try {
+    fireEvent.click(screen.getByRole("button", { name: "Past", exact: true }));
+    const viewport = screen.getByTestId("memory-timeline-viewport");
+    viewport.scrollLeft = 1234;
+    viewport.getBoundingClientRect = () => ({ left: 16, top: 200, width: 358, height: 575 });
+    const card = screen.getByTestId("timeline-time-capsule-capsule-1");
+    card.getBoundingClientRect = () => ({ left: 75, top: 450, width: 240, height: 310 });
+    fireEvent.click(card);
+    expect(onViewTimeCapsule).toHaveBeenLastCalledWith("capsule-1", expect.objectContaining({
+      sourceItemId: "time-capsule:capsule-1",
+      documentScrollY: 925, timelineScrollLeft: 1234,
+      viewportTop: 200, sourceCardLeft: 59, sourceCardTop: 450,
+      filters: { search: "", selectedCategory: "All", favoriteFilter: "all", timelinePosition: "past" },
+    }));
+    onViewTimeCapsule.mockClear();
+    rerender(<HomePage {...props} readyTimeCapsuleReminder={timeCapsule()} onAcknowledgeTimeCapsule={() => true} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open now" }));
+    expect(onViewTimeCapsule).toHaveBeenCalledWith("capsule-1");
+  } finally {
+    unmount();
+    Object.defineProperty(window, "scrollY", originalScrollY);
+  }
+});
+
+test("a Timeline return restores view settings without a later automatic Past or Present scroll", () => {
+  const frames = [];
+  const originalRaf = window.requestAnimationFrame;
+  const originalCancel = window.cancelAnimationFrame;
+  window.requestAnimationFrame = callback => { frames.push(callback); return frames.length; };
+  window.cancelAnimationFrame = jest.fn();
+  const restore = jest.spyOn(capsuleTimelineNavigation, "restoreCapsuleTimelineReturn").mockReturnValue(jest.fn());
+  const onReturned = jest.fn();
+  const origin = {
+    sourceItemId: "time-capsule:capsule-1",
+    filters: { search: "", selectedCategory: "All", favoriteFilter: "all", timelinePosition: "past" },
+    documentScrollY: 925, timelineScrollLeft: 1234,
+  };
+  const props = { ...baseProps, memories: [], timeCapsules: [timeCapsule()], onCapsuleTimelineReturned: onReturned };
+  const { rerender, unmount } = render(<HomePage {...props} active={false} />);
+  try {
+    rerender(<HomePage {...props} capsuleTimelineReturn={origin} />);
+    expect(restore).toHaveBeenCalledWith(expect.objectContaining({ origin, viewport: screen.getByTestId("memory-timeline-viewport") }));
+    expect(screen.getByRole("button", { name: "Past", exact: true })).toHaveAttribute("aria-pressed", "true");
+    const viewport = screen.getByTestId("memory-timeline-viewport");
+    viewport.scrollLeft = 1234;
+    const returnOptions = restore.mock.calls.at(-1)[0];
+    act(() => returnOptions.onRestored());
+    expect(onReturned).toHaveBeenCalledWith(origin);
+    rerender(<HomePage {...props} />);
+    act(() => { while (frames.length) frames.shift()(); });
+    expect(viewport.scrollLeft).toBe(1234);
+  } finally {
+    unmount();
+    restore.mockRestore();
+    window.requestAnimationFrame = originalRaf;
+    window.cancelAnimationFrame = originalCancel;
+  }
 });
 
 beforeEach(() => jest.clearAllMocks());

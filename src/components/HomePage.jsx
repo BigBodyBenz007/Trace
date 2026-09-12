@@ -19,7 +19,8 @@ import LifeCurrent, { LifeCurrentScenery } from "./LifeCurrent";
 import { LIFE_CURRENT_TRAIL_TUNING } from "./LifeCurrent";
 import StoredPhoto, { storedPhotoId } from "./StoredPhoto";
 import TimeCapsuleReadyOverlay from "./TimeCapsuleReadyOverlay";
-import TimeCapsuleVault from "./TimeCapsuleVault";
+import CapsuleTimelineCard from "./TimeCapsuleTimelineCard";
+import { captureCapsuleTimelineReturn, restoreCapsuleTimelineReturn } from "../services/capsuleTimelineReturn";
 import { PHOTO_LOAD_PRIORITY } from "../services/photoUrlLoader";
 import { acquireDocumentScrollLock } from "../services/documentScrollLock";
 import {
@@ -28,8 +29,6 @@ import {
 } from "../services/homeModules";
 import {
   localDateKey,
-  timeCapsuleState,
-  TIME_CAPSULE_STATE,
 } from "../services/timeCapsule";
 
 const CATEGORY_FILTER_OPTIONS = [
@@ -102,71 +101,6 @@ function groupTimelineItemsByDate(items, currentDay) {
     monthGroup.items.push(item);
     return yearGroups;
   }, []);
-}
-
-function capsuleTimelineLabel(capsule, today) {
-  const state = timeCapsuleState(capsule, today);
-  if (state === TIME_CAPSULE_STATE.AVAILABLE) return "Ready to open";
-  if (state === TIME_CAPSULE_STATE.OPENED) return "Opened";
-  return "Sealed";
-}
-
-function CapsuleTimelineCard({ capsule, colors, onView, today, registerCard, reducedMotion }) {
-  const sealedDate = getTimelineDate({ timelineType: "time-capsule", capsule }, new Date());
-  const sealedDateKey = localDateKey(sealedDate);
-  const state = timeCapsuleState(capsule, today);
-  const visualState = state === TIME_CAPSULE_STATE.AVAILABLE ? "ready" : state === TIME_CAPSULE_STATE.OPENED ? "opened" : "sealed";
-  return (
-    <button
-      aria-label={`View Time Capsule ${capsule.name}`}
-      className="trace-timeline-card-position trace-timeline-capsule-card"
-      data-capsule-id={capsule.id}
-      data-memory-date={sealedDateKey}
-      data-timeline-card-position="true"
-      data-testid={`timeline-time-capsule-${capsule.id}`}
-      onClick={() => onView(capsule.id)}
-      ref={registerCard}
-      type="button"
-      style={{
-        contain: "layout style",
-        flexShrink: 0,
-        marginLeft: `-${TIMELINE_FOCUS_CONTAINMENT_GUTTER}px`,
-        marginRight: `-${TIMELINE_FOCUS_CONTAINMENT_GUTTER}px`,
-        marginTop: "var(--life-current-card-lowering)",
-        minHeight: "var(--life-current-card-space)",
-        overflow: "visible",
-        position: "relative",
-        width: TIMELINE_FOCUS_CONTAINMENT_WIDTH,
-      }}
-    >
-      <span
-        className="trace-timeline-card-visual trace-timeline-capsule-card__visual"
-        data-timeline-card-visual="true"
-        style={{
-          background: colors.card,
-          borderRadius: "14px",
-          boxSizing: "border-box",
-          display: "block",
-          margin: "0 auto",
-          minHeight: "164px",
-          overflowWrap: "anywhere",
-          padding: "12px",
-          textAlign: "left",
-          transform: `scale(var(--timeline-focus-scale, ${TIMELINE_FOCUS_TUNING.minimumScale}))`,
-          transformOrigin: "center top",
-          transition: `transform ${TIMELINE_FOCUS_TUNING.transitionMilliseconds}ms ease-out, box-shadow 160ms ease`,
-          width: TIMELINE_FOCUS_TUNING.baseCardWidth,
-        }}
-      >
-        <span className="trace-timeline-capsule-card__type">Time Capsule</span>
-        <TimeCapsuleVault state={visualState} variant="timeline" reducedMotion={reducedMotion} />
-        <strong className="trace-timeline-capsule-card__name">{capsule.name}</strong>
-        <span>Opening date: {formatDateOnly(capsule.openOn)}</span>
-        <strong>{capsuleTimelineLabel(capsule, today)}</strong>
-        <span className="trace-timeline-capsule-card__action">View Time Capsule</span>
-      </span>
-    </button>
-  );
 }
 
 function getMemorySelectionKey(memory) {
@@ -322,6 +256,8 @@ function TimelinePhotoGallery({
 function HomePage({
   active = true,
   inactiveScrollTargetRef = null,
+  capsuleTimelineReturn = null,
+  onCapsuleTimelineReturned = () => {},
   memoryCount,
   memories,
   photoLoader,
@@ -369,10 +305,10 @@ function HomePage({
   const [isNarrowPhotoViewport, setIsNarrowPhotoViewport] = useState(
     () => window.innerWidth <= 600 && window.innerHeight >= window.innerWidth
   );
-  const [search, setSearch] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [favoriteFilter, setFavoriteFilter] = useState("all");
-  const [timelinePosition, setTimelinePosition] = useState("present");
+  const [search, setSearch] = useState(() => capsuleTimelineReturn?.filters.search || "");
+  const [selectedCategory, setSelectedCategory] = useState(() => capsuleTimelineReturn?.filters.selectedCategory || "All");
+  const [favoriteFilter, setFavoriteFilter] = useState(() => capsuleTimelineReturn?.filters.favoriteFilter || "all");
+  const [timelinePosition, setTimelinePosition] = useState(() => capsuleTimelineReturn?.filters.timelinePosition || "present");
   const [selectedMemory, setSelectedMemory] = useState(null);
   const [detailMemoryId, setDetailMemoryId] = useState(null);
   const [activeDetailPhotoIndex, setActiveDetailPhotoIndex] = useState(0);
@@ -390,6 +326,10 @@ function HomePage({
   const filteredCameraDateRef = useRef(null);
   const timelinePositionRequestRef = useRef(true);
   const memoryCardRefs = useRef(new Map());
+  const capsuleTimelineRestoringRef = useRef(false);
+  capsuleTimelineRestoringRef.current = Boolean(capsuleTimelineReturn);
+  const capsuleTimelineReturnedRef = useRef(onCapsuleTimelineReturned);
+  capsuleTimelineReturnedRef.current = onCapsuleTimelineReturned;
   const detailPanelRef = useRef(null);
   const homeModuleHandlers = {
     schedule: onOpenToday,
@@ -635,6 +575,38 @@ function HomePage({
     setDetailMemoryId(memory.id);
   }
 
+  function openTimelineCapsule(id) {
+    const origin = captureCapsuleTimelineReturn({
+      capsuleId: id,
+      viewport: timelineRef.current,
+      card: memoryCardRefs.current.get(`time-capsule:${id}`),
+      orderedItemIds: timelineItems.map((item) => item.id),
+      filters: { search, selectedCategory, favoriteFilter, timelinePosition },
+    });
+    onViewTimeCapsule(id, origin);
+  }
+
+  useEffect(() => {
+    if (!active || !capsuleTimelineReturn) return undefined;
+    timelinePositionRequestRef.current = false;
+    restoreFilterOriginRef.current = false;
+    const filters = capsuleTimelineReturn.filters;
+    if (search !== filters.search || selectedCategory !== filters.selectedCategory ||
+      favoriteFilter !== filters.favoriteFilter || timelinePosition !== filters.timelinePosition) {
+      setSearch(filters.search);
+      setSelectedCategory(filters.selectedCategory);
+      setFavoriteFilter(filters.favoriteFilter);
+      setTimelinePosition(filters.timelinePosition);
+      return undefined;
+    }
+    return restoreCapsuleTimelineReturn({
+      origin: capsuleTimelineReturn,
+      viewport: timelineRef.current,
+      cards: memoryCardRefs.current,
+      onRestored: () => capsuleTimelineReturnedRef.current(capsuleTimelineReturn),
+    });
+  }, [active, capsuleTimelineReturn, search, selectedCategory, favoriteFilter, timelinePosition, timelineFocusKey]);
+
   function closeMemoryDetail() {
     setDetailMemoryId(null);
     if (!trophySourceTarget && detailOriginScrollRef.current) {
@@ -763,7 +735,7 @@ function HomePage({
   }, [active, filteredMemories, isMemoryFilterActive]);
 
   useEffect(() => {
-    if (!active || isMemoryFilterActive || !restoreFilterOriginRef.current) return undefined;
+    if (!active || capsuleTimelineRestoringRef.current || isMemoryFilterActive || !restoreFilterOriginRef.current) return undefined;
     restoreFilterOriginRef.current = false;
     const origin = filterOriginRef.current;
     filterOriginRef.current = null;
@@ -790,7 +762,7 @@ function HomePage({
   }, [active, isMemoryFilterActive, timelineFocusKey]);
 
   useEffect(() => {
-    if (!active || !/^\d{4}$/.test(search.trim())) return undefined;
+    if (!active || capsuleTimelineRestoringRef.current || !/^\d{4}$/.test(search.trim())) return undefined;
     const year = search.trim();
     const earliest = filteredMemories.find((memory) =>
       String(memory.date || "").startsWith(year + "-")
@@ -823,7 +795,7 @@ function HomePage({
   }, [active, memories, reducedMotion, trophySourceTarget]);
 
   useEffect(() => {
-    if (!active || !timelinePositionRequestRef.current || isMemoryFilterActive || timelineItems.length === 0) return undefined;
+    if (!active || capsuleTimelineRestoringRef.current || !timelinePositionRequestRef.current || isMemoryFilterActive || timelineItems.length === 0) return undefined;
     const targetItem = timelinePosition === "past"
       ? timelineItems[0]
       : timelineItems[timelineItems.length - 1];
@@ -864,7 +836,7 @@ function HomePage({
   }, [active, isMemoryFilterActive, timelineItems, timelinePosition]);
 
   useEffect(() => {
-    if (!active || !timelineTargetMemoryId) return undefined;
+    if (!active || capsuleTimelineRestoringRef.current || !timelineTargetMemoryId) return undefined;
     const targetMemory = memories.find(({ id }) => id === timelineTargetMemoryId);
     if (!targetMemory) return undefined;
     const frame = window.requestAnimationFrame(() => {
@@ -1040,6 +1012,8 @@ function HomePage({
         data-life-current-card-layout="lowered-responsive"
         data-life-current-theme={lifeCurrentTheme.id}
         data-testid="memory-timeline-viewport"
+        aria-label="Life Current Timeline"
+        tabIndex={-1}
         ref={timelineRef}
         style={{
           width: "100%",
@@ -1190,7 +1164,7 @@ function HomePage({
                               capsule={timelineItem.capsule}
                               colors={lifeCurrentColors}
                               key={timelineItem.id}
-                              onView={onViewTimeCapsule}
+                              onView={openTimelineCapsule}
                               registerCard={(element) => {
                                 if (element) memoryCardRefs.current.set(timelineItem.id, element);
                                 else memoryCardRefs.current.delete(timelineItem.id);

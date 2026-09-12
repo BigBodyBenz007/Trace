@@ -1,0 +1,53 @@
+/* Compact only the Timeline capsule. Vault detail, ceremony, and Memory card
+   sizes continue to use their existing presentation rules. */
+.trace-timeline-capsule-card {
+  align-items: flex-start;
+  display: flex;
+  justify-content: center;
+}
+
+/* Haunted Forest already outlines the focused visual. Its separate outer
+   highlight would paint the empty height reserved for focus scaling. */
+.trace-timeline-capsule-card.trace-timeline-card-position[data-timeline-focused="true"]::before {
+  content: none;
+}
+
+.trace-timeline-capsule-card .trace-timeline-capsule-card__visual {
+  align-content: start;
+  display: grid;
+  gap: 8px;
+  overflow: visible;
+}
+
+.trace-timeline-capsule-card__header {
+  align-items: center;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 72px minmax(0, 1fr);
+  min-width: 0;
+}
+
+.trace-timeline-capsule-card__summary {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.trace-timeline-capsule-card .trace-capsule-vault--timeline {
+  border-radius: 8px;
+  margin: 0;
+  max-width: 72px;
+  width: 100%;
+}
+
+.trace-timeline-capsule-card__name,
+.trace-timeline-capsule-card__date,
+.trace-timeline-capsule-card__action {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.trace-timeline-capsule-card__date {
+  line-height: 1.4;
+}

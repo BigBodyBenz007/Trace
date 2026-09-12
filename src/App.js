@@ -1,4 +1,4 @@
-import { useState, useEffect, useLayoutEffect, useRef } from "react";
+import { useState, useEffect, useLayoutEffect, useRef, useCallback } from "react";
 import HomePage from "./components/HomePage";
 import NewMemoryPage from "./components/NewMemoryPage";
 import NutritionPage from "./components/NutritionPage";
@@ -439,6 +439,12 @@ function App({
   const [timeCapsuleReminderReport, setTimeCapsuleReminderReport] = useState(() => readTimeCapsuleReminders(localStorage));
   const [timeCapsuleToday, setTimeCapsuleToday] = useState(() => capsuleLocalDateKey());
   const [timeCapsuleTargetId, setTimeCapsuleTargetId] = useState(null);
+  const [capsuleTimelineOrigin, setCapsuleTimelineOrigin] = useState(null);
+  const [capsuleTimelineReturn, setCapsuleTimelineReturn] = useState(null);
+  const capsuleTimelineOriginRef = useRef(null);
+  const capsuleTimelineSequenceRef = useRef(0);
+  const capsuleTimelineBackPendingRef = useRef(false);
+  const capsuleHistoryScrollModeRef = useRef(null);
   const [memoryCount, setMemoryCount] = useState(0);
   const [nutritionStorageReport, setNutritionStorageReport] = useState(() => readNutritionEntries(localStorage));
   const nutritionEntries = nutritionStorageReport.entries;
@@ -540,18 +546,30 @@ function App({
   const journalPrivacyChannelRef = useRef(null);
   const journalLockRef = useRef(null);
 
+  const clearCapsuleTimelineNavigation = useCallback(() => {
+    capsuleTimelineBackPendingRef.current = false;
+    capsuleTimelineOriginRef.current = null;
+    setCapsuleTimelineOrigin(null);
+    setCapsuleTimelineReturn(null);
+    releaseCapsuleHistoryScrollMode();
+  }, []);
+
   useEffect(() => {
     function synchronizePublicRoute(event) {
+      capsuleTimelineBackPendingRef.current = false;
       const legalPage = legalPageFromPathname(window.location.pathname);
       if (legalPage) {
+        clearCapsuleTimelineNavigation();
         setPage(legalPage);
         return;
       }
       if (window.location.hash === "#credits") {
+        clearCapsuleTimelineNavigation();
         setPage("credits");
         return;
       }
       if (event.state?.tracePage === "settings") {
+        clearCapsuleTimelineNavigation();
         legalSettingsReturnRef.current = {
           target: event.state.traceLegalFocus,
           scrollY: event.state.traceSettingsScrollY,
@@ -560,12 +578,100 @@ function App({
         setPage("settings");
         return;
       }
+      const historyOrigin = event.state?.traceCapsuleTimelineReturn;
+      if (event.state?.tracePage === "time-capsules" && historyOrigin?.token) {
+        capsuleTimelineOriginRef.current = historyOrigin;
+        setCapsuleTimelineOrigin(historyOrigin);
+        setCapsuleTimelineReturn(null);
+        retainCapsuleHistoryScrollMode();
+        setTimeCapsuleTargetId(event.state.traceCapsuleId || null);
+        setPage("time-capsules");
+        return;
+      }
+      const origin = capsuleTimelineOriginRef.current;
+      if (origin && historyOrigin?.token === origin.token) {
+        skipNextPageTopScrollRef.current = true;
+        setTimeCapsuleTargetId(null);
+        setCapsuleTimelineReturn(origin);
+        setPage("home");
+        return;
+      }
+      clearCapsuleTimelineNavigation();
       setPage("home");
     }
 
     window.addEventListener("popstate", synchronizePublicRoute);
     return () => window.removeEventListener("popstate", synchronizePublicRoute);
+  }, [clearCapsuleTimelineNavigation]);
+
+  function retainCapsuleHistoryScrollMode() {
+    if (capsuleHistoryScrollModeRef.current !== null) return;
+    capsuleHistoryScrollModeRef.current = window.history.scrollRestoration || "auto";
+    window.history.scrollRestoration = "manual";
+  }
+
+  function releaseCapsuleHistoryScrollMode() {
+    if (capsuleHistoryScrollModeRef.current === null) return;
+    window.history.scrollRestoration = capsuleHistoryScrollModeRef.current;
+    capsuleHistoryScrollModeRef.current = null;
+  }
+
+  const finishCapsuleTimelineReturn = useCallback((origin) => {
+    if (capsuleTimelineOriginRef.current?.token !== origin.token) return;
+    capsuleTimelineBackPendingRef.current = false;
+    capsuleTimelineOriginRef.current = null;
+    setCapsuleTimelineOrigin(null);
+    setCapsuleTimelineReturn(null);
+    releaseCapsuleHistoryScrollMode();
   }, []);
+
+  useEffect(() => () => releaseCapsuleHistoryScrollMode(), []);
+
+  function viewTimeCapsule(id = null, source = null) {
+    capsuleTimelineBackPendingRef.current = false;
+    setTimelineTargetMemoryId(null);
+    if (source?.sourceItemId === `time-capsule:${id}`) {
+      const origin = { ...source, token: `capsule-timeline-${++capsuleTimelineSequenceRef.current}` };
+      capsuleTimelineOriginRef.current = origin;
+      setCapsuleTimelineOrigin(origin);
+      setCapsuleTimelineReturn(null);
+      retainCapsuleHistoryScrollMode();
+      window.history.replaceState({
+        ...(window.history.state || {}), tracePage: "home", traceCapsuleTimelineReturn: origin,
+      }, "");
+      window.history.pushState({
+        tracePage: "time-capsules", traceCapsuleId: id, traceCapsuleTimelineReturn: origin,
+      }, "");
+    } else {
+      // Module navigation and reminders start a fresh visit, without a card origin.
+      clearCapsuleTimelineNavigation();
+      if (window.history.state?.traceCapsuleTimelineReturn) {
+        const state = { ...window.history.state };
+        delete state.traceCapsuleTimelineReturn;
+        delete state.traceCapsuleId;
+        window.history.replaceState({ ...state, tracePage: "home" }, "");
+      }
+    }
+    setTimeCapsuleTargetId(id);
+    setPage("time-capsules");
+  }
+
+  function returnFromTimeCapsules() {
+    if (capsuleTimelineBackPendingRef.current) return;
+    const origin = capsuleTimelineOriginRef.current;
+    if (origin && window.history.state?.tracePage === "time-capsules" &&
+      window.history.state.traceCapsuleTimelineReturn?.token === origin.token) {
+      capsuleTimelineBackPendingRef.current = true;
+      window.history.back();
+      return;
+    }
+    if (origin) {
+      skipNextPageTopScrollRef.current = true;
+      setCapsuleTimelineReturn(origin);
+    }
+    setTimeCapsuleTargetId(null);
+    setPage("home");
+  }
 
   useEffect(() => {
     const legalRoute = legalRouteForPage(page);
@@ -3999,10 +4105,12 @@ function App({
       )}
       {(page === "home" || (
         page === "new" && editingId !== null && retainHomeDuringMemoryEdit
-      )) && (
+      ) || (page === "time-capsules" && capsuleTimelineOrigin)) && (
         <HomePage
           key={`home-${homePageGeneration}`}
           active={page === "home"}
+          capsuleTimelineReturn={capsuleTimelineReturn}
+          onCapsuleTimelineReturned={finishCapsuleTimelineReturn}
           inactiveScrollTargetRef={
             retainHomeDuringMemoryEdit ? memoryEditorFolioRef : null
           }
@@ -4028,11 +4136,11 @@ function App({
           }}
           onOpenTrophyCase={() => setPage("trophy-case")}
           onOpenJournal={() => setPage("journal")}
-          onOpenTimeCapsules={() => { setTimeCapsuleTargetId(null); setPage("time-capsules"); }}
+          onOpenTimeCapsules={() => viewTimeCapsule()}
           timeCapsules={timeCapsules}
           timeCapsuleToday={timeCapsuleToday}
           readyTimeCapsuleReminder={readyTimeCapsuleReminder}
-          onViewTimeCapsule={(id) => { setTimeCapsuleTargetId(id); setPage("time-capsules"); }}
+          onViewTimeCapsule={viewTimeCapsule}
           onAcknowledgeTimeCapsule={(id) => updateTimeCapsuleReminder(id, TIME_CAPSULE_REMINDER_STATE.ACKNOWLEDGED)}
           onPostponeTimeCapsule={(id, remindOn) => updateTimeCapsuleReminder(id, TIME_CAPSULE_REMINDER_STATE.POSTPONED, remindOn)}
           journalLocked={journalPrivacy.enabled && !journalPrivacy.unlocked}
@@ -4077,7 +4185,7 @@ function App({
           reducedMotion={reducedMotion}
           capsuleSounds={appSettings.capsuleSounds}
           capsuleVolume={appSettings.capsuleVolume}
-          onBack={() => { setTimeCapsuleTargetId(null); setPage("home"); }}
+          onBack={returnFromTimeCapsules}
           onBeginDraft={beginTimeCapsuleDraft}
           onPersistDraft={persistTimeCapsuleDraft}
           onStageMedia={stageTimeCapsuleMedia}
