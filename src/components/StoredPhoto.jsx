@@ -13,6 +13,7 @@ export function useStoredPhoto(photo, {
   enabled = true,
   loader = null,
   priority = PHOTO_LOAD_PRIORITY.visible,
+  reloadKey = 0,
 } = {}) {
   const id = storedPhotoId(photo);
   const immediateUrl = storedPhotoUrl(photo);
@@ -35,7 +36,7 @@ export function useStoredPhoto(photo, {
       if (active) setResult(loaded);
     });
     return () => { active = false; };
-  }, [enabled, id, immediateUrl, loader, priority]);
+  }, [enabled, id, immediateUrl, loader, priority, reloadKey]);
 
   return result;
 }

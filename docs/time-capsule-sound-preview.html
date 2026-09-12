@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trace Time Capsule sound candidates</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+    body { background: #07131f; color: #f5ead5; margin: 0; padding: 32px 18px; }
+    main { margin: auto; max-width: 680px; }
+    section { background: #102739; border: 1px solid #9e7746; border-radius: 18px; margin: 20px 0; padding: 20px; }
+    button { background: #1b5960; border: 1px solid #7bd2ca; border-radius: 10px; color: white; cursor: pointer; font: inherit; font-weight: 700; min-height: 44px; padding: 10px 16px; }
+    audio { display: block; margin-top: 16px; width: 100%; }
+    small { color: #c7bda9; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Time Capsule sound candidates</h1>
+    <p>Development preview only. These files are not connected to Trace’s production ceremony yet.</p>
+    <section>
+      <h2>Opening candidate</h2>
+      <p>Mechanical releases, a rising drive, and a pressure vent.</p>
+      <button type="button" data-play="opening">Play opening</button>
+      <audio controls preload="metadata" src="time-capsule-sound-candidates/opening-candidate.wav"></audio>
+    </section>
+    <section>
+      <h2>Closing candidate</h2>
+      <p>Descending lid movement, a heavy seat, and a separate final lock.</p>
+      <button type="button" data-play="closing">Play closing</button>
+      <audio controls preload="metadata" src="time-capsule-sound-candidates/closing-candidate.wav"></audio>
+    </section>
+    <small>Listening approval is required before either candidate replaces the current app sounds.</small>
+  </main>
+  <script>
+    document.querySelectorAll("button[data-play]").forEach((button) => {
+      button.addEventListener("click", () => {
+        const selected = button.closest("section").querySelector("audio");
+        document.querySelectorAll("audio").forEach((audio) => {
+          if (audio !== selected) { audio.pause(); audio.currentTime = 0; }
+        });
+        selected.currentTime = 0;
+        selected.play();
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import React from "react";
 import BODY_ASSET from "../assets/time-capsule/vault-body.png";
+import CLOSED_ASSET from "../assets/time-capsule/vault-closed.png";
 import LID_ASSET from "../assets/time-capsule/vault-lid.png";
 
 const LABELS = {
@@ -9,6 +10,19 @@ const LABELS = {
   opening: "Time Capsule vault opening",
   sealing: "Time Capsule vault sealing",
 };
+
+let preloadedVaultImages = null;
+
+export function preloadTimeCapsuleVaultAssets() {
+  if (preloadedVaultImages || typeof Image === "undefined") return preloadedVaultImages || [];
+  preloadedVaultImages = [BODY_ASSET, CLOSED_ASSET, LID_ASSET].map((source) => {
+    const image = new Image();
+    image.decoding = "async";
+    image.src = source;
+    return image;
+  });
+  return preloadedVaultImages;
+}
 
 export default function TimeCapsuleVault({
   state = "sealed",
@@ -25,6 +39,7 @@ export default function TimeCapsuleVault({
     >
       <span aria-hidden="true" className="trace-capsule-vault__stage">
         <span className="trace-capsule-vault__aura" />
+        <img alt="" className="trace-capsule-vault__closed" draggable="false" src={CLOSED_ASSET} />
         <img alt="" className="trace-capsule-vault__lid" draggable="false" src={LID_ASSET} />
         <span className="trace-capsule-vault__vapor trace-capsule-vault__vapor--one" />
         <span className="trace-capsule-vault__vapor trace-capsule-vault__vapor--two" />

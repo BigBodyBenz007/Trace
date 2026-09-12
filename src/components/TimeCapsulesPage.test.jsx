@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { readFileSync } from "fs";
-import { useState } from "react";
+import { StrictMode, useState } from "react";
 import { prepareCapsuleMediaFiles } from "../services/capsuleMedia";
 import { playCapsuleCeremonySound, prepareCapsuleCeremonyAudio } from "../services/capsuleCeremonySound";
 import TimeCapsuleReadyOverlay from "./TimeCapsuleReadyOverlay";
@@ -88,6 +88,23 @@ test("keeps sealed and available private content and media metadata out of the D
   expect(loader.load).not.toHaveBeenCalled();
 });
 
+test("uses a true closed-vault layer for sealed and ready states and open layers for opened state", () => {
+  const { rerender } = render(
+    <TimeCapsulesPage {...baseProps} capsules={[capsule({ openOn: "2027-09-11", media: [] })]} initialCapsuleId="capsule-1" />
+  );
+  const sealedVault = screen.getByRole("img", { name: "Sealed Time Capsule vault" });
+  expect(sealedVault.querySelector(".trace-capsule-vault__closed")).toHaveAttribute("src", expect.stringContaining("vault-closed.png"));
+
+  rerender(<TimeCapsulesPage {...baseProps} capsules={[capsule({ media: [] })]} initialCapsuleId="capsule-1" />);
+  expect(screen.getByRole("img", { name: "Time Capsule vault ready to open" })).toHaveClass("trace-capsule-vault--ready");
+
+  rerender(<TimeCapsulesPage {...baseProps} capsules={[capsule({ media: [], openedAt: "2026-09-11T12:00:00.000Z" })]} initialCapsuleId="capsule-1" />);
+  const openedVault = screen.getByRole("img", { name: "Opened Time Capsule vault" });
+  expect(openedVault).toHaveClass("trace-capsule-vault--opened");
+  expect(openedVault.querySelector(".trace-capsule-vault__lid")).toBeInTheDocument();
+  expect(openedVault.querySelector(".trace-capsule-vault__body")).toBeInTheDocument();
+});
+
 test("reveals content only after the final opening write succeeds", async () => {
   const mediaLoader = { load: jest.fn().mockResolvedValue({ id: "private-audio", unavailable: false, url: "blob:voice" }), evict: jest.fn() };
   function Harness() {
@@ -154,7 +171,7 @@ test("keeps both capsule detail destinations touch-safe in the 390px mobile layo
   expect(css).toMatch(/@media \(max-width: 520px\)[\s\S]*\.trace-capsule-detail-navigation button\s*\{[^}]*width:\s*100%/s);
 });
 
-test("pauses opened capsule playback and releases its transient URL when returning to the Timeline", async () => {
+test("pauses opened capsule playback without revoking a shared loader URL on navigation", async () => {
   const loader = {
     load: jest.fn().mockResolvedValue({ id: "private-audio", unavailable: false, url: "blob:voice" }),
     evict: jest.fn(),
@@ -175,7 +192,135 @@ test("pauses opened capsule playback and releases its transient URL when returni
   fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
   expect(screen.getByText("Timeline restored")).toBeInTheDocument();
   expect(audio.pause).toHaveBeenCalled();
-  expect(loader.evict).toHaveBeenCalledWith("private-audio");
+  expect(loader.evict).not.toHaveBeenCalled();
+});
+
+test("keeps a stored photo URL alive through Strict Mode remount cleanup", async () => {
+  const photo = { id: "photo-strict", kind: "photo", name: "strict.jpg", mimeType: "image/jpeg", bytes: 42 };
+  const loader = {
+    load: jest.fn().mockResolvedValue({ id: photo.id, unavailable: false, url: "blob:strict-photo" }),
+    evict: jest.fn(),
+  };
+  const view = render(
+    <StrictMode>
+      <TimeCapsulesPage {...baseProps} capsules={[openedLifecycleCapsule({ media: [photo] })]} initialCapsuleId="capsule-1" mediaLoader={loader} />
+    </StrictMode>
+  );
+
+  expect(await screen.findByRole("img", { name: "strict.jpg" })).toHaveAttribute("src", "blob:strict-photo");
+  view.unmount();
+  expect(loader.evict).not.toHaveBeenCalled();
+});
+
+test("replaces a failed photo element with a bounded retry state and reloads a fresh URL", async () => {
+  const photo = { id: "photo-retry", kind: "photo", name: "retry.jpg", mimeType: "image/jpeg", bytes: 42 };
+  const loader = {
+    load: jest.fn()
+      .mockResolvedValueOnce({ id: photo.id, unavailable: false, url: "blob:failed-photo" })
+      .mockResolvedValueOnce({ id: photo.id, unavailable: false, url: "blob:retry-photo" }),
+    evict: jest.fn(),
+  };
+  render(<TimeCapsulesPage {...baseProps} capsules={[openedLifecycleCapsule({ media: [photo] })]} initialCapsuleId="capsule-1" mediaLoader={loader} />);
+
+  fireEvent.error(await screen.findByRole("img", { name: "retry.jpg" }));
+  expect(screen.queryByRole("img", { name: "retry.jpg" })).not.toBeInTheDocument();
+  expect(screen.getByRole("status", { name: "Photo could not be loaded: retry.jpg" })).toHaveTextContent("Photo could not be loaded");
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Retry photo retry.jpg" })); });
+  expect(loader.evict).toHaveBeenCalledWith(photo.id);
+  expect(await screen.findByRole("img", { name: "retry.jpg" })).toHaveAttribute("src", "blob:retry-photo");
+});
+
+test("keeps a draft photo loadable through seal, open, navigation, reseal, and reopening", async () => {
+  const photo = { id: "photo-lifecycle", kind: "photo", name: "lifecycle.jpg", mimeType: "image/jpeg", bytes: 42 };
+  const draft = {
+    schemaVersion: 1,
+    id: "draft-photo",
+    capsuleId: "capsule-1",
+    form: { name: "Photo lifecycle", text: "Keep the original media", openOn: "2026-09-11" },
+    media: [photo],
+    createdAt: "2026-09-11T10:00:00.000Z",
+    updatedAt: "2026-09-11T10:01:00.000Z",
+  };
+  const loader = {
+    load: jest.fn().mockResolvedValue({ id: photo.id, unavailable: false, url: "blob:lifecycle-photo" }),
+    evict: jest.fn(),
+  };
+  let setTodayForTest;
+
+  function Harness() {
+    const [today, setToday] = useState("2026-09-11");
+    const [records, setRecords] = useState([]);
+    setTodayForTest = setToday;
+    const seal = () => {
+      const value = capsule({
+        name: draft.form.name,
+        text: draft.form.text,
+        media: draft.media,
+        sealedAt: "2026-09-11T10:02:00.000Z",
+        sealCycle: { number: 1, sealedAt: "2026-09-11T10:02:00.000Z" },
+        openingHistory: [],
+      });
+      setRecords([value]);
+      return { value };
+    };
+    const open = () => {
+      const current = records[0];
+      const cycle = current.sealCycle.number;
+      const openedAt = cycle === 1 ? "2026-09-11T10:03:00.000Z" : "2027-09-11T10:03:00.000Z";
+      const value = {
+        ...current,
+        openedAt,
+        openingHistory: [...current.openingHistory, { cycle, openOn: current.openOn, openedAt }],
+      };
+      setRecords([value]);
+      return value;
+    };
+    const reseal = (id, openOn) => {
+      const current = records[0];
+      const value = { ...current, openOn, openedAt: null, sealCycle: { number: 2, sealedAt: "2026-09-11T10:04:00.000Z" } };
+      setRecords([value]);
+      return { value };
+    };
+    return <TimeCapsulesPage
+      {...baseProps}
+      capsules={records}
+      draft={draft}
+      mediaLoader={loader}
+      onOpen={open}
+      onReseal={reseal}
+      onSeal={seal}
+      reducedMotion={false}
+      today={today}
+    />;
+  }
+
+  window.confirm = jest.fn(() => true);
+  render(<Harness />);
+  fireEvent.click(screen.getByRole("button", { name: "Continue draft" }));
+  expect(await screen.findByRole("img", { name: "lifecycle.jpg" })).toHaveAttribute("src", "blob:lifecycle-photo");
+
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Seal Time Capsule" })); });
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Open Capsule" })); });
+  expect(screen.queryByText("Time Capsule sealed.")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
+  expect(await screen.findByRole("img", { name: "lifecycle.jpg" })).toHaveAttribute("src", "blob:lifecycle-photo");
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to Time Capsules" }));
+  fireEvent.click(screen.getByRole("button", { name: "View Time Capsule" }));
+  expect(await screen.findByRole("img", { name: "lifecycle.jpg" })).toBeInTheDocument();
+
+  fireEvent.click(screen.getByRole("button", { name: "Seal again for later" }));
+  fireEvent.change(screen.getByLabelText("New opening date"), { target: { value: "2027-09-11" } });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Confirm seal again" })); });
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
+  expect(screen.queryByRole("img", { name: "lifecycle.jpg" })).not.toBeInTheDocument();
+
+  act(() => setTodayForTest("2027-09-11"));
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Open Capsule" })); });
+  fireEvent.click(screen.getByRole("button", { name: "Skip animation" }));
+  expect(await screen.findByRole("img", { name: "lifecycle.jpg" })).toHaveAttribute("src", "blob:lifecycle-photo");
+  expect(loader.evict).not.toHaveBeenCalled();
 });
 
 test("restores every draft field and attachment reference and preserves it on Back to Timeline", () => {
@@ -370,7 +515,7 @@ test("reseals opened content for a future cycle while preserving identity and cl
   expect(screen.getByText("This capsule remains sealed. Its private contents are hidden.")).toBeInTheDocument();
   expect(screen.queryByText("Private words for the future")).not.toBeInTheDocument();
   expect(audio.pause).toHaveBeenCalled();
-  expect(loader.evict).toHaveBeenCalledWith("private-audio");
+  expect(loader.evict).not.toHaveBeenCalled();
   expect(original).toMatchObject({ id: "capsule-1", sealedAt: "2025-09-11T12:01:00.000Z", openedAt: "2026-09-11T12:00:00.000Z" });
 });
 

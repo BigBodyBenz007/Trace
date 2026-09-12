@@ -9,7 +9,7 @@ import {
 } from "./services/workoutDraft";
 import { PHOTO_SELECTION_RESULT_STATUS } from "./services/photoSelectionAdapter";
 import { APP_LIFECYCLE_PHASE } from "./services/appLifecycleAdapter";
-import { deletePhotos, getPhoto, openPhotoDatabase, putPhotos } from "./storage/photoStorage";
+import { deletePhotos, getMedia, getPhoto, openPhotoDatabase, putPhotos } from "./storage/photoStorage";
 import {
   createTraceBackup,
   createTraceBackupArchive,
@@ -116,6 +116,7 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = jest.fn();
   URL.createObjectURL = jest.fn((blob) => `blob:${blob.size}:${blob.type}`);
   URL.revokeObjectURL = jest.fn();
+  getMedia.mockReset();
   global.createImageBitmap = jest.fn(async () => ({ width: 1200, height: 900, close: jest.fn() }));
 });
 
@@ -6529,6 +6530,37 @@ test("shows a sealed capsule on the Timeline and navigates to and from details w
   fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
   expect(screen.getByTestId("timeline-time-capsule-capsule-timeline")).toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("timeCapsules"))).toEqual([capsule]);
+});
+
+test("keeps an opened capsule photo URL valid when leaving and returning to its detail", async () => {
+  const capsule = {
+    schemaVersion: 1,
+    id: "capsule-photo-route",
+    name: "Photo route capsule",
+    text: "Photo stays available",
+    openOn: "2026-09-11",
+    media: [{ id: "capsule-route-photo", kind: "photo", name: "route-photo.jpg", mimeType: "image/jpeg", bytes: 8 }],
+    createdAt: "2025-09-11T12:00:00.000Z",
+    updatedAt: "2026-09-11T12:00:00.000Z",
+    sealedAt: "2025-09-11T12:01:00.000Z",
+    openedAt: "2026-09-11T12:00:00.000Z",
+  };
+  openPhotoDatabase.mockResolvedValue({ name: "capsule-photo-route-db" });
+  getMedia.mockResolvedValue({ id: "capsule-route-photo", blob: new Blob(["photo"], { type: "image/jpeg" }) });
+  localStorage.setItem("timeCapsules", JSON.stringify([capsule]));
+
+  render(<App />);
+  fireEvent.click(screen.getByTestId("timeline-time-capsule-capsule-photo-route"));
+  const firstPhoto = await screen.findByRole("img", { name: "route-photo.jpg" });
+  const firstUrl = firstPhoto.getAttribute("src");
+  expect(firstUrl).toBe("blob:5:image/jpeg");
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to Timeline" }));
+  expect(URL.revokeObjectURL).not.toHaveBeenCalledWith(firstUrl);
+  fireEvent.click(screen.getByTestId("timeline-time-capsule-capsule-photo-route"));
+  expect(await screen.findByRole("img", { name: "route-photo.jpg" })).toHaveAttribute("src", firstUrl);
+  expect(getMedia).toHaveBeenCalledTimes(1);
+  expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
 });
 
 test("seals for today as immediately ready while keeping contents hidden until explicit opening", async () => {

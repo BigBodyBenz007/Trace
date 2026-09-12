@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatDateOnly } from "../services/dateOnly";
 import { ingestPhotoFiles } from "../services/photoIngestion";
 import { prepareCapsuleMediaFiles } from "../services/capsuleMedia";
 import { useStoredPhoto } from "./StoredPhoto";
-import TimeCapsuleVault from "./TimeCapsuleVault";
+import TimeCapsuleVault, { preloadTimeCapsuleVaultAssets } from "./TimeCapsuleVault";
 import {
   playCapsuleCeremonySound,
   prepareCapsuleCeremonyAudio,
@@ -29,16 +29,22 @@ function AudioIcon() {
   return <svg aria-hidden="true" className="trace-capsule-audio-card__icon" viewBox="0 0 32 32"><path d="M12 7v15.2a4.7 4.7 0 1 1-2-3.84V10l13-3v12.2a4.7 4.7 0 1 1-2-3.84V4.5L12 7Z" fill="currentColor" /></svg>;
 }
 
-function CapsuleMedia({ item, loader, audioNumber = 1, registerPlayback }) {
-  const loaded = useStoredPhoto(item, { loader });
+function CapsuleMedia({ item, loader, audioNumber = 1, registerPlayback, unregisterPlayback }) {
+  const [reloadKey, setReloadKey] = useState(0);
+  const [failedPhotoUrl, setFailedPhotoUrl] = useState("");
+  const loaded = useStoredPhoto(item, { loader, reloadKey });
   const elementRef = useRef(null);
   useEffect(() => () => {
     elementRef.current?.pause?.();
-    loader?.evict?.(item.id);
-  }, [item.id, loader]);
+    if (elementRef.current) unregisterPlayback?.(elementRef.current);
+  }, [unregisterPlayback]);
   const retainMediaElement = (element) => {
+    if (elementRef.current && elementRef.current !== element) {
+      elementRef.current.pause?.();
+      unregisterPlayback?.(elementRef.current);
+    }
+    elementRef.current = element;
     if (element) {
-      elementRef.current = element;
       registerPlayback?.(element);
     }
   };
@@ -55,8 +61,19 @@ function CapsuleMedia({ item, loader, audioNumber = 1, registerPlayback }) {
       </article>
     );
   }
-  if (!loaded.url) return <p>Attachment unavailable.</p>;
-  if (item.kind === "photo") return <img alt={item.name} src={loaded.url} className="trace-capsule-media__photo" />;
+  if (item.kind === "photo") {
+    const failed = loaded.unavailable || Boolean(loaded.url && loaded.url === failedPhotoUrl);
+    if (failed) return (
+      <section aria-label={`Photo could not be loaded: ${item.name}`} className="trace-capsule-photo-fallback" role="status">
+        <strong>Photo could not be loaded</strong>
+        <span>{item.name}</span>
+        <button aria-label={`Retry photo ${item.name}`} type="button" onClick={() => { loader?.evict?.(item.id); setReloadKey((value) => value + 1); }}>Retry photo</button>
+      </section>
+    );
+    if (!loaded.url) return <p role="status">Loading photo: {item.name}…</p>;
+    return <img alt={item.name} src={loaded.url} className="trace-capsule-media__photo" onError={() => setFailedPhotoUrl(loaded.url)} onLoad={() => setFailedPhotoUrl("")} />;
+  }
+  if (!loaded.url) return <p>{loaded.unavailable ? "Attachment unavailable." : "Loading attachment…"}</p>;
   return <video aria-label={item.name} controls playsInline preload="metadata" ref={retainMediaElement} src={loaded.url} />;
 }
 
@@ -112,8 +129,14 @@ export default function TimeCapsulesPage({
   const ceremonyTokenRef = useRef(0);
   const actionInFlightRef = useRef(false);
   const playbackElementsRef = useRef(new Set());
+  const registerPlayback = useCallback((element) => playbackElementsRef.current.add(element), []);
+  const unregisterPlayback = useCallback((element) => playbackElementsRef.current.delete(element), []);
   const selected = capsules.find(({ id }) => id === selectedId) || null;
   const sorted = useMemo(() => [...capsules].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [capsules]);
+
+  useEffect(() => {
+    preloadTimeCapsuleVaultAssets();
+  }, []);
 
   useEffect(() => {
     if (initialCapsuleId) { setSelectedId(initialCapsuleId); setMode("detail"); }
@@ -262,7 +285,7 @@ export default function TimeCapsulesPage({
     if (actionInFlightRef.current || ceremony) return;
     const preparedAudio = prepareCapsuleCeremonyAudio(capsuleSounds);
     actionInFlightRef.current = true;
-    setBusy(true); setError("");
+    setBusy(true); setError(""); setStatus("");
     try {
       const opened = await onOpen(selected.id);
       if (!opened) { setError("Trace could not save the opening. The contents remain sealed; try again."); return; }
@@ -317,7 +340,9 @@ export default function TimeCapsulesPage({
         <p>On iPhone, save or share a Voice Memo to Files first, then choose it here.</p>
         {media.length > 0 && <ul aria-label="Draft attachments" className="trace-capsule-draft-attachments">{media.map((item, index) => <li key={item.id}>
           {item.kind === "audio"
-            ? <CapsuleMedia item={item} loader={mediaLoader} audioNumber={audioNumberAt(media, index)} registerPlayback={(element) => playbackElementsRef.current.add(element)} />
+            ? <CapsuleMedia item={item} loader={mediaLoader} audioNumber={audioNumberAt(media, index)} registerPlayback={registerPlayback} unregisterPlayback={unregisterPlayback} />
+            : item.kind === "photo"
+              ? <CapsuleMedia item={item} loader={mediaLoader} registerPlayback={registerPlayback} unregisterPlayback={unregisterPlayback} />
             : <span>{item.kind}: {item.name} ({Math.ceil(item.bytes / 1024)} KiB)</span>}
           <button type="button" disabled={busy} onClick={() => remove(item)}>Remove</button>
         </li>)}</ul>}
@@ -338,18 +363,20 @@ export default function TimeCapsulesPage({
         <article className="trace-feature-surface trace-capsule-detail">
           <p className="trace-feature-page__kicker">{visibleState(selected, today)}</p><h1>{selected.name}</h1><p>Opening date: {formatDateOnly(selected.openOn)}</p>
           {error && <p role="alert">{error}</p>}{status && <p role="status">{status}</p>}
-          <TimeCapsuleVault
-            reducedMotion={reducedMotion}
-            state={ceremony?.kind || vaultState(selected, today)}
-            statusText={ceremony?.kind === "opening" ? "Unlocking your memory vault" : ceremony?.kind === "sealing" ? "Securing your memory vault" : ""}
-          />
+          <div className={`trace-capsule-presentation${ceremony ? " trace-capsule-presentation--ceremony" : ""}`}>
+            <TimeCapsuleVault
+              reducedMotion={reducedMotion}
+              state={ceremony?.kind || vaultState(selected, today)}
+              statusText={ceremony?.kind === "opening" ? "Unlocking your memory vault" : ceremony?.kind === "sealing" ? "Securing your memory vault" : ""}
+            />
+            {ceremony && <section aria-live="polite" className={`trace-capsule-ceremony trace-capsule-ceremony--${ceremony.kind}`} role="status">
+              <strong>{ceremony.kind === "opening" ? "Your moment is opening…" : "Your memories are being sealed…"}</strong>
+              <button type="button" onClick={() => finishCeremony(ceremony.token)}>Skip animation</button>
+            </section>}
+          </div>
           {!ceremony && !opened && state === TIME_CAPSULE_STATE.SEALED && <p>This capsule remains sealed. Its private contents are hidden.</p>}
           {!ceremony && !opened && state === TIME_CAPSULE_STATE.AVAILABLE && <><p>This capsule is ready. Its contents stay hidden until you choose to open it.</p><button type="button" disabled={busy} onClick={openSelected}>Open Capsule</button></>}
-          {ceremony && <section aria-live="polite" className={`trace-capsule-ceremony trace-capsule-ceremony--${ceremony.kind}`} role="status">
-            <strong>{ceremony.kind === "opening" ? "Your moment is opening…" : "Your memories are being sealed…"}</strong>
-            <button type="button" onClick={() => finishCeremony(ceremony.token)}>Skip animation</button>
-          </section>}
-          {opened && !ceremony && <section aria-label="Opened capsule contents"><p className="trace-capsule-private-text">{selected.text}</p><div className="trace-capsule-media">{selected.media.map((item, index) => <CapsuleMedia item={item} key={item.id} loader={mediaLoader} audioNumber={audioNumberAt(selected.media, index)} registerPlayback={(element) => playbackElementsRef.current.add(element)} />)}</div></section>}
+          {opened && !ceremony && <section aria-label="Opened capsule contents"><p className="trace-capsule-private-text">{selected.text}</p><div className="trace-capsule-media">{selected.media.map((item, index) => <CapsuleMedia item={item} key={item.id} loader={mediaLoader} audioNumber={audioNumberAt(selected.media, index)} registerPlayback={registerPlayback} unregisterPlayback={unregisterPlayback} />)}</div></section>}
           {opened && !ceremony && !resealOpen && <button type="button" disabled={busy} onClick={() => setResealOpen(true)}>Seal again for later</button>}
           {opened && !ceremony && resealOpen && (
             <section aria-label="Seal again for later" className="trace-capsule-reseal">
@@ -381,7 +408,7 @@ export default function TimeCapsulesPage({
           <article className="trace-feature-surface trace-capsule-card" key={capsule.id}>
             <TimeCapsuleVault state={vaultState(capsule, today)} variant="compact" reducedMotion={reducedMotion} />
             <h2>{capsule.name}</h2><p>{formatDateOnly(capsule.openOn)}</p><strong>{visibleState(capsule, today)}</strong>
-            <button type="button" onClick={() => { setSelectedId(capsule.id); setMode("detail"); }}>View Time Capsule</button>
+            <button type="button" onClick={() => { setStatus(""); setSelectedId(capsule.id); setMode("detail"); }}>View Time Capsule</button>
           </article>
         ))}
         {visibleCount < sorted.length && <button type="button" onClick={() => setVisibleCount((count) => count + 10)}>Show more</button>}
