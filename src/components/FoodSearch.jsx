@@ -100,7 +100,7 @@ function FoodSearch({
             Scan Barcode
           </button>
           <div id="trace-barcode-preview-description">
-            <span className="trace-food-search__premium-badge">{barcodeAccess.label}</span>
+            <span className="trace-food-search__access-badge">{barcodeAccess.label}</span>
             <span>{barcodeAccess.message}</span>
           </div>
         </div>

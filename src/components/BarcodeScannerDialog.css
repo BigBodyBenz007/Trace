@@ -50,7 +50,7 @@
   margin: 6px 0 0;
 }
 
-.trace-barcode-dialog__premium {
+.trace-barcode-dialog__access-label {
   background: rgba(181, 137, 255, 0.18);
   border: 1px solid rgba(203, 174, 255, 0.5);
   border-radius: 999px;

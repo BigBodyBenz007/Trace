@@ -8,12 +8,12 @@ export const FEATURE_ACCESS_MODES = Object.freeze({
   UNAVAILABLE: "unavailable",
 });
 
-const BARCODE_PREVIEW_ACCESS = Object.freeze({
+const BARCODE_BETA_ACCESS = Object.freeze({
   feature: TRACE_FEATURES.BARCODE_SCANNER,
   available: true,
   mode: FEATURE_ACCESS_MODES.PREVIEW,
-  label: "Premium Preview",
-  message: "Barcode scanning is available during Trace beta as a Premium Preview.",
+  label: "Barcode Scanner Beta",
+  message: "Barcode scanning is free for everyone and is currently in beta.",
 });
 
 function normalizeAccess(feature, access) {
@@ -45,7 +45,7 @@ export function createFeatureAccessProvider({ resolve } = {}) {
       const resolved = typeof resolve === "function"
         ? resolve(feature)
         : feature === TRACE_FEATURES.BARCODE_SCANNER
-          ? BARCODE_PREVIEW_ACCESS
+          ? BARCODE_BETA_ACCESS
           : null;
       return normalizeAccess(feature, resolved);
     },

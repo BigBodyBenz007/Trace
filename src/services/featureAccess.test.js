@@ -5,24 +5,24 @@ import {
   traceFeatureAccess,
 } from "./featureAccess";
 
-test("exposes barcode scanning as an available Premium Preview without entitlement state", () => {
+test("exposes barcode scanning as a free, available beta feature", () => {
   expect(traceFeatureAccess.getAccess(TRACE_FEATURES.BARCODE_SCANNER)).toEqual({
     feature: TRACE_FEATURES.BARCODE_SCANNER,
     available: true,
     mode: FEATURE_ACCESS_MODES.PREVIEW,
-    label: "Premium Preview",
-    message: "Barcode scanning is available during Trace beta as a Premium Preview.",
+    label: "Barcode Scanner Beta",
+    message: "Barcode scanning is free for everyone and is currently in beta.",
   });
 });
 
-test("supports an injectable future entitlement decision and safely rejects malformed access", () => {
+test("supports an injectable access decision and safely rejects malformed access", () => {
   const entitled = createFeatureAccessProvider({
     resolve: (feature) => ({
       feature,
       available: true,
       mode: FEATURE_ACCESS_MODES.ENTITLED,
-      label: "Premium",
-      message: "Included with Premium.",
+      label: "Enabled",
+      message: "Available.",
     }),
   });
   expect(entitled.getAccess(TRACE_FEATURES.BARCODE_SCANNER).mode).toBe("entitled");

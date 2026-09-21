@@ -627,20 +627,20 @@ test("shows branded-drink source, package, caffeine, and unknown nutrient detail
   }));
 });
 
-test("shows the mobile-safe Premium Preview scanner action without changing search", () => {
+test("shows the mobile-safe Barcode Scanner Beta action without changing search", () => {
   const onScanBarcode = jest.fn();
   renderFoodSearch({
     barcodeAccess: {
       available: true,
-      label: "Premium Preview",
-      message: "Available during beta.",
+      label: "Barcode Scanner Beta",
+      message: "Barcode scanning is free for everyone and is currently in beta.",
     },
     onScanBarcode,
   });
 
   const action = screen.getByRole("button", { name: "Scan Barcode" });
   expect(action.closest(".trace-food-search__scanner-action")).toBeInTheDocument();
-  expect(screen.getByText("Premium Preview")).toBeInTheDocument();
+  expect(screen.getByText("Barcode Scanner Beta")).toBeInTheDocument();
   fireEvent.click(action);
   expect(onScanBarcode).toHaveBeenCalledTimes(1);
 
@@ -652,7 +652,7 @@ test("honors an unavailable feature-access decision", () => {
   renderFoodSearch({
     barcodeAccess: {
       available: false,
-      label: "Premium",
+      label: "Unavailable",
       message: "Unavailable.",
     },
     onScanBarcode: jest.fn(),

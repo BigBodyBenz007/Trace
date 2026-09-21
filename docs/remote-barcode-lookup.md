@@ -83,11 +83,10 @@ launch. Remote results never overwrite Trace's verified committed catalog.
 
 ## Nutrition scanner UI
 
-Barcode scanning is exposed through a small feature-access provider. During
-beta it reports an available `Premium Preview`; it does not create or persist
-an entitlement, account, subscription, or purchase. A future entitlement
-provider can replace this decision without changing the scanner or lookup
-contracts.
+Barcode scanning is free for everyone and is exposed through a small
+feature-access provider. During beta it reports an available `Barcode Scanner
+Beta`; it does not create or persist an entitlement, account, subscription,
+or purchase. Barcode scanning remains in the free tier for Trace 1.0.
 
 Choosing `Scan Barcode` opens the scanner and starts camera access automatically,
 initially preferring the rear camera (with an availability fallback to front). The user

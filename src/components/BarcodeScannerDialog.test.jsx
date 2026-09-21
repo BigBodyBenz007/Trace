@@ -7,8 +7,8 @@ import { PHOTO_MESSAGES } from "../services/barcodePhoto";
 
 const access = {
   available: true,
-  label: "Premium Preview",
-  message: "Barcode scanning is available during Trace beta as a Premium Preview.",
+  label: "Barcode Scanner Beta",
+  message: "Barcode scanning is free for everyone and is currently in beta.",
 };
 
 const originalScrollTo = window.scrollTo;
@@ -200,7 +200,7 @@ function setup(overrides = {}, { strict = false } = {}) {
 
 test("labels the beta feature and automatically starts the rear camera exactly once", async () => {
   const view = setup();
-  expect(screen.getByText("Premium Preview")).toBeInTheDocument();
+  expect(screen.getByText("Barcode Scanner Beta")).toBeInTheDocument();
   expect(screen.getByText(/does not save or upload camera images/i)).toBeInTheDocument();
   await waitFor(() => expect(view.props.camera.start).toHaveBeenCalledWith(
     expect.objectContaining({ facingMode: "environment" })

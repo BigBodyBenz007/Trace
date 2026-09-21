@@ -206,8 +206,8 @@ test("Nutrition consumes an unavailable feature-access decision", () => {
       feature: "barcode-scanner",
       available: false,
       mode: "unavailable",
-      label: "Premium",
-      message: "Not available for this account.",
+      label: "Unavailable",
+      message: "Scanner unavailable.",
     })),
   };
   setup({ barcodeFeatureAccess });

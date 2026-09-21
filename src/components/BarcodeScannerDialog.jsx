@@ -536,7 +536,7 @@ export default function BarcodeScannerDialog({
       >
         <header className="trace-barcode-dialog__header">
           <div>
-            <span className="trace-barcode-dialog__premium">{access.label}</span>
+            <span className="trace-barcode-dialog__access-label">{access.label}</span>
             <h2 id="trace-barcode-title">Scan a food barcode</h2>
           </div>
           <button aria-label="Close barcode scanner" className="trace-barcode-dialog__close" onClick={close} type="button">
