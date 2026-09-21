@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@capacitor/barcode-scanner": "3.1.2",
     "@capacitor/camera": "8.2.4",
     "@capacitor/core": "8.5.2",
     "@capacitor/filesystem": "8.1.3",

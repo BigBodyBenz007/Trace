@@ -1,5 +1,12 @@
+import {
+  CapacitorBarcodeScanner,
+  CapacitorBarcodeScannerCameraDirection,
+  CapacitorBarcodeScannerScanOrientation,
+  CapacitorBarcodeScannerTypeHint,
+} from "@capacitor/barcode-scanner";
 import { normalizeGtin } from "./productIdentifiers";
 import { barcodeFormats, createBarcodeReader, isExpectedDecodeMiss, loadBarcodeDecoder } from "./barcodeDecoder";
+import { detectRuntimePlatform, RUNTIME_KINDS } from "./runtimePlatform";
 
 export const CAMERA_FACING_MODES = Object.freeze({
   REAR: "environment",
@@ -16,12 +23,33 @@ export const CAMERA_ERROR_CODES = Object.freeze({
   UNAVAILABLE: "unavailable",
 });
 
+export const BARCODE_CAMERA_RESULT_STATUS = Object.freeze({
+  DETECTED: "detected",
+  CANCELED: "canceled",
+});
+
+const NATIVE_BARCODE_ERROR_CODES = Object.freeze({
+  SCANNING_ERROR: "OS-PLUG-BARC-0004",
+  CANCELED: "OS-PLUG-BARC-0006",
+  DENIED: "OS-PLUG-BARC-0007",
+  INVALID_ARGUMENTS: "OS-PLUG-BARC-0008",
+  BRIDGE_UNAVAILABLE: "OS-PLUG-BARC-0013",
+});
+
 function globalMediaDevices() {
   return typeof navigator === "undefined" ? null : navigator.mediaDevices;
 }
 
 function globalSecureContext() {
   return typeof window === "undefined" || window.isSecureContext !== false;
+}
+
+function globalWindow() {
+  return typeof window === "undefined" ? undefined : window;
+}
+
+function globalNavigator() {
+  return typeof navigator === "undefined" ? undefined : navigator;
 }
 
 function cameraFailure(code, message, cause) {
@@ -222,3 +250,148 @@ export function createBrowserBarcodeCamera({
 }
 
 export const browserBarcodeCamera = createBrowserBarcodeCamera();
+
+function nativeCameraDirection(facingMode) {
+  return facingMode === CAMERA_FACING_MODES.FRONT
+    ? CapacitorBarcodeScannerCameraDirection.FRONT
+    : CapacitorBarcodeScannerCameraDirection.BACK;
+}
+
+function nativeCameraResult(status, facingMode, details = {}) {
+  return Object.freeze({
+    native: true,
+    status,
+    facingMode,
+    devices: Object.freeze([]),
+    stop() {},
+    ...details,
+  });
+}
+
+function nativeBarcodeError(error, facingMode) {
+  if (error?.code && Object.values(CAMERA_ERROR_CODES).includes(error.code)) return error;
+  const selectedCamera = facingMode === CAMERA_FACING_MODES.FRONT ? "front" : "rear";
+  if (error?.code === NATIVE_BARCODE_ERROR_CODES.DENIED) {
+    return cameraFailure(
+      CAMERA_ERROR_CODES.DENIED,
+      "Camera permission was denied. Allow camera access in iPhone Settings or enter the barcode manually.",
+      error
+    );
+  }
+  if (error?.code === NATIVE_BARCODE_ERROR_CODES.SCANNING_ERROR) {
+    return cameraFailure(
+      CAMERA_ERROR_CODES.NOT_FOUND,
+      `The ${selectedCamera} camera is unavailable or could not scan. Try the other camera or enter the barcode manually.`,
+      error
+    );
+  }
+  if (error?.code === NATIVE_BARCODE_ERROR_CODES.INVALID_ARGUMENTS) {
+    return cameraFailure(
+      CAMERA_ERROR_CODES.UNAVAILABLE,
+      "Trace could not configure the native barcode scanner. Enter the barcode manually instead.",
+      error
+    );
+  }
+  if (error?.code === NATIVE_BARCODE_ERROR_CODES.BRIDGE_UNAVAILABLE) {
+    return cameraFailure(
+      CAMERA_ERROR_CODES.UNAVAILABLE,
+      "The native barcode scanner is unavailable. Close and reopen Trace, or enter the barcode manually.",
+      error
+    );
+  }
+  return cameraFailure(
+    CAMERA_ERROR_CODES.UNAVAILABLE,
+    "Trace could not start the native barcode scanner. Try again or enter the barcode manually.",
+    error
+  );
+}
+
+export function createNativeIosBarcodeCamera({ scanner = CapacitorBarcodeScanner } = {}) {
+  let scanPending = false;
+
+  async function start({ facingMode = CAMERA_FACING_MODES.REAR, signal } = {}) {
+    if (signal?.aborted) {
+      throw cameraFailure(CAMERA_ERROR_CODES.UNAVAILABLE, "Camera start was canceled.");
+    }
+    if (scanPending) {
+      throw cameraFailure(
+        CAMERA_ERROR_CODES.BUSY,
+        "A barcode scan is already open. Finish or cancel it before starting another scan."
+      );
+    }
+
+    scanPending = true;
+    try {
+      const scan = await scanner.scanBarcode({
+        hint: CapacitorBarcodeScannerTypeHint.ALL,
+        cameraDirection: nativeCameraDirection(facingMode),
+        scanOrientation: CapacitorBarcodeScannerScanOrientation.ADAPTIVE,
+        scanInstructions: "Center the entire food barcode in the frame.",
+        scanButton: false,
+        cancelButtonAccessibilityLabel: "Cancel barcode scan",
+        torchButtonOnAccessibilityLabel: "Turn barcode scanner light off",
+        torchButtonOffAccessibilityLabel: "Turn barcode scanner light on",
+      });
+      if (signal?.aborted) {
+        return nativeCameraResult(BARCODE_CAMERA_RESULT_STATUS.CANCELED, facingMode);
+      }
+      if (
+        typeof scan?.ScanResult !== "string"
+        || !scan.ScanResult.trim()
+        || !Number.isInteger(scan.format)
+      ) {
+        throw cameraFailure(
+          CAMERA_ERROR_CODES.DECODE,
+          "The native scanner returned a malformed barcode result. Try again or enter the digits manually."
+        );
+      }
+      return nativeCameraResult(BARCODE_CAMERA_RESULT_STATUS.DETECTED, facingMode, {
+        value: scan.ScanResult,
+      });
+    } catch (error) {
+      if (signal?.aborted || error?.code === NATIVE_BARCODE_ERROR_CODES.CANCELED) {
+        return nativeCameraResult(BARCODE_CAMERA_RESULT_STATUS.CANCELED, facingMode);
+      }
+      throw nativeBarcodeError(error, facingMode);
+    } finally {
+      scanPending = false;
+    }
+  }
+
+  return Object.freeze({ start, isNativeIos: () => true });
+}
+
+export function createTraceBarcodeCamera(options = {}) {
+  const browser = options.browserCamera || createBrowserBarcodeCamera(options);
+  const nativeIos = createNativeIosBarcodeCamera(options);
+
+  function runtime() {
+    return options.runtime || detectRuntimePlatform({
+      windowObject: Object.prototype.hasOwnProperty.call(options, "windowObject")
+        ? options.windowObject
+        : globalWindow(),
+      navigatorObject: Object.prototype.hasOwnProperty.call(options, "navigatorObject")
+        ? options.navigatorObject
+        : globalNavigator(),
+    });
+  }
+
+  function isNativeIos() {
+    const platform = runtime();
+    return platform.isNative === true && platform.kind === RUNTIME_KINDS.NATIVE_IOS;
+  }
+
+  async function start(request) {
+    const platform = runtime();
+    if (platform.isWeb) return browser.start(request);
+    if (platform.kind === RUNTIME_KINDS.NATIVE_IOS) return nativeIos.start(request);
+    throw cameraFailure(
+      CAMERA_ERROR_CODES.UNSUPPORTED,
+      "Native live barcode scanning is currently supported only on iOS. Enter the barcode manually instead."
+    );
+  }
+
+  return Object.freeze({ start, isNativeIos });
+}
+
+export const traceBarcodeCamera = createTraceBarcodeCamera();

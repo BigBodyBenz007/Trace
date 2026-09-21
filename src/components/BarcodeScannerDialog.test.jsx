@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testi
 import { StrictMode } from "react";
 import BarcodeScannerDialog from "./BarcodeScannerDialog";
 import { APP_LIFECYCLE_PHASE } from "../services/appLifecycleAdapter";
+import { BARCODE_CAMERA_RESULT_STATUS } from "../services/barcodeCamera";
 import { createUserFood } from "../services/userFoodCatalog";
 import { PHOTO_MESSAGES } from "../services/barcodePhoto";
 
@@ -239,6 +240,91 @@ test("falls back to the front camera when the preferred rear camera is unavailab
   expect(camera.start.mock.calls[0][0]).toEqual(expect.objectContaining({ facingMode: "environment" }));
   expect(camera.start.mock.calls[1][0]).toEqual(expect.objectContaining({ facingMode: "user" }));
   expect(screen.getByRole("button", { name: "Use Rear Camera" })).toBeEnabled();
+});
+
+test("native iOS scan results reuse GTIN normalization, lookup, and labeled-serving review", async () => {
+  const camera = {
+    isNativeIos: () => true,
+    start: jest.fn().mockResolvedValue({
+      native: true,
+      status: BARCODE_CAMERA_RESULT_STATUS.DETECTED,
+      facingMode: "environment",
+      devices: [],
+      value: "0001-2345 600012",
+      stop: jest.fn(),
+    }),
+  };
+  const barcodeLookup = {
+    lookup: jest.fn().mockResolvedValue({ status: "found", food: localFood() }),
+  };
+  setup({ camera, barcodeLookup });
+
+  const review = await screen.findByRole("article", { name: "Barcode product review" });
+  expect(barcodeLookup.lookup).toHaveBeenCalledWith("00012345600012");
+  expect(within(review).getByText("Nutrition shown for 1 cup.")).toBeInTheDocument();
+  expect(within(review).getByText("Servings per container: 10")).toBeInTheDocument();
+});
+
+test.each([
+  ["1234", "found", /not a valid supported GTIN/i, 0],
+  ["0001-2345 600012", "not-found", /No matching product/i, 1],
+])("native iOS result %s uses existing validation and %s handling", async (value, status, message, lookupCalls) => {
+  const camera = {
+    isNativeIos: () => true,
+    start: jest.fn().mockResolvedValue({
+      native: true,
+      status: BARCODE_CAMERA_RESULT_STATUS.DETECTED,
+      facingMode: "environment",
+      devices: [],
+      value,
+      stop: jest.fn(),
+    }),
+  };
+  const barcodeLookup = { lookup: jest.fn().mockResolvedValue({ status, food: null }) };
+  setup({ camera, barcodeLookup });
+
+  expect(await screen.findByRole("alert")).toHaveTextContent(message);
+  expect(barcodeLookup.lookup).toHaveBeenCalledTimes(lookupCalls);
+});
+
+test("native iOS cancellation is non-error, blocks a duplicate start, and restores dialog focus", async () => {
+  let finishScan;
+  const camera = {
+    isNativeIos: () => true,
+    start: jest.fn(() => new Promise((resolve) => { finishScan = resolve; })),
+  };
+  setup({ camera });
+
+  await waitFor(() => expect(camera.start).toHaveBeenCalledTimes(1));
+  const frontCamera = screen.getByRole("button", { name: "Use Front Camera" });
+  expect(frontCamera).toBeDisabled();
+  fireEvent.click(frontCamera);
+  expect(camera.start).toHaveBeenCalledTimes(1);
+
+  await act(async () => finishScan({
+    native: true,
+    status: BARCODE_CAMERA_RESULT_STATUS.CANCELED,
+    facingMode: "environment",
+    devices: [],
+    stop: jest.fn(),
+  }));
+
+  expect(await screen.findByText(/barcode scan canceled/i)).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  await waitFor(() => expect(screen.getByRole("button", { name: "Close barcode scanner" })).toHaveFocus());
+  expect(screen.getByRole("button", { name: "Scan from Photo" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Take Photo" })).toBeEnabled();
+  expect(screen.getByLabelText("Barcode photo")).not.toHaveAttribute("capture");
+  expect(screen.getByLabelText("Take barcode photo")).toHaveAttribute("capture", "environment");
+});
+
+test("browser live scanning never shows native scanner cancellation wording", async () => {
+  const view = setup();
+  await screen.findByText(/camera active/i);
+  expect(view.props.camera.isNativeIos).toBeUndefined();
+  expect(screen.queryByText(/barcode scan canceled/i)).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Scan from Photo" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Take Photo" })).toBeEnabled();
 });
 
 test("keeps explicit camera-device selection available and stops the obsolete session", async () => {

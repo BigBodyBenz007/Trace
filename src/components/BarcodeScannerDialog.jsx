@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  BARCODE_CAMERA_RESULT_STATUS,
   CAMERA_ERROR_CODES,
   CAMERA_FACING_MODES,
-  browserBarcodeCamera,
   cameraErrorFor,
+  traceBarcodeCamera,
 } from "../services/barcodeCamera";
 import { createBarcodeNutritionCandidate } from "../services/barcodeNutritionSelection";
 import { normalizeGtin } from "../services/productIdentifiers";
@@ -68,7 +69,7 @@ function missingLabel(field) {
 export default function BarcodeScannerDialog({
   access,
   barcodeLookup,
-  camera = browserBarcodeCamera,
+  camera = traceBarcodeCamera,
   decodePhoto = decodeBarcodePhoto,
   lifecycleAdapter = webAppLifecycleAdapter,
   onClose,
@@ -108,6 +109,24 @@ export default function BarcodeScannerDialog({
   const pendingLookupRef = useRef(false);
   const mountedRef = useRef(true);
   const submitBarcodeRef = useRef(null);
+  const nativeScanReturnFocusRef = useRef(null);
+  const nativeFocusTimerRef = useRef(null);
+  const nativeIos = camera.isNativeIos?.() === true;
+
+  const restoreNativeScannerFocus = useCallback(() => {
+    if (!nativeIos) return;
+    const requestedTarget = nativeScanReturnFocusRef.current;
+    nativeScanReturnFocusRef.current = null;
+    if (nativeFocusTimerRef.current !== null) window.clearTimeout(nativeFocusTimerRef.current);
+    nativeFocusTimerRef.current = window.setTimeout(() => {
+      nativeFocusTimerRef.current = null;
+      if (!mountedRef.current) return;
+      const target = requestedTarget?.isConnected && !requestedTarget.disabled
+        ? requestedTarget
+        : dialogRef.current?.querySelector(FOCUSABLE);
+      target?.focus?.();
+    }, 0);
+  }, [nativeIos]);
 
   const releaseCamera = useCallback(() => {
     startAbortRef.current?.abort();
@@ -119,6 +138,7 @@ export default function BarcodeScannerDialog({
 
   const close = useCallback(() => {
     mountedRef.current = false;
+    if (nativeFocusTimerRef.current !== null) window.clearTimeout(nativeFocusTimerRef.current);
     photoAbortRef.current?.abort();
     releaseCamera();
     onClose();
@@ -184,6 +204,9 @@ export default function BarcodeScannerDialog({
   } = {}) => {
     if (cameraStartPendingRef.current || cameraState === "starting" || lookingUp || photoAbortRef.current) return;
     if (!allowAutomaticFallback) automaticStartAttemptedRef.current = true;
+    if (nativeIos && !nativeScanReturnFocusRef.current) {
+      nativeScanReturnFocusRef.current = document.activeElement;
+    }
     releaseCamera();
     cameraStartPendingRef.current = true;
     acceptedBarcodeRef.current = false;
@@ -243,6 +266,27 @@ export default function BarcodeScannerDialog({
         session?.stop?.();
         return;
       }
+      if (session?.native) {
+        startAbortRef.current = null;
+        cameraStartPendingRef.current = false;
+        setDevices([]);
+        setSelectedDeviceId("");
+        setFacingMode(successfulAttempt.facingMode);
+        setCameraState("idle");
+        if (session.status === BARCODE_CAMERA_RESULT_STATUS.CANCELED) {
+          setErrorMessage("");
+          setMessage("Barcode scan canceled. Choose a camera, scan a photo, or enter the digits manually.");
+          restoreNativeScannerFocus();
+          return;
+        }
+        if (session.status === BARCODE_CAMERA_RESULT_STATUS.DETECTED) {
+          setErrorMessage("");
+          setMessage("Barcode detected. Checking the product...");
+          restoreNativeScannerFocus();
+          submitBarcodeRef.current?.(session.value);
+          return;
+        }
+      }
       sessionRef.current = session;
       cameraStartPendingRef.current = false;
       setDevices(session.devices || []);
@@ -256,8 +300,9 @@ export default function BarcodeScannerDialog({
       setCameraState("idle");
       setMessage("");
       setErrorMessage(cameraErrorFor(error, lastAttemptedFacingMode).message);
+      restoreNativeScannerFocus();
     }
-  }, [camera, cameraState, facingMode, lookingUp, releaseCamera]);
+  }, [camera, cameraState, facingMode, lookingUp, nativeIos, releaseCamera, restoreNativeScannerFocus]);
   startCameraRef.current = startCamera;
 
   function resetForAnotherScan() {
@@ -438,6 +483,7 @@ export default function BarcodeScannerDialog({
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      if (nativeFocusTimerRef.current !== null) window.clearTimeout(nativeFocusTimerRef.current);
       photoAbortRef.current?.abort();
       releaseCamera();
     };

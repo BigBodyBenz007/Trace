@@ -5,7 +5,7 @@ Trace remains the existing React/PWA. Capacitor adds a native wrapper that packa
 ## Foundation decisions
 
 - Studio: Current Forge. App name: Trace. Bundle/application ID: `com.currentforge.trace`.
-- `@capacitor/core`, `@capacitor/ios`, and `@capacitor/cli` are pinned to stable `8.5.2`. Core and iOS are runtime dependencies; the CLI is a development dependency. Official `@capacitor/filesystem@8.1.3`, `@capacitor/share@8.0.2`, and `@capacitor/camera@8.2.4` are pinned exactly. An npm registry query on September 20, 2026 reported Camera `8.2.4` as the stable `latest` release and its peer dependency as `@capacitor/core >=8.0.0`, which includes installed Core `8.5.2`.
+- `@capacitor/core`, `@capacitor/ios`, and `@capacitor/cli` are pinned to stable `8.5.2`. Core and iOS are runtime dependencies; the CLI is a development dependency. Official `@capacitor/filesystem@8.1.3`, `@capacitor/share@8.0.2`, `@capacitor/camera@8.2.4`, and `@capacitor/barcode-scanner@3.1.2` are pinned exactly. An npm registry query on September 20, 2026 reported Barcode Scanner `3.1.2` as the stable `latest` release. Its declared peer dependency is `@capacitor/core >=8.0.0`, which includes installed Core `8.5.2`. The plugin has its own version sequence and does not match the Core major. Its required web dependency resolves to `html5-qrcode@2.3.8`; no existing dependency version changed.
 - `capacitor.config.ts` uses CRA's production `build` output as `webDir`. It has no remote `server.url`, cleartext transport setting, or live-update configuration. Native releases must package a current production build.
 - Native iOS marketing version begins at `1.0.0` and build number at `1`; set and increment them in the Xcode project when it is created. The web `package.json` version is still `0.1.0` and is not the native release version.
 - Future one-time, non-consumable Premium product ID: `com.currentforge.trace.premium.lifetime`. No StoreKit integration, entitlement check, paywall, or theme gating exists in this slice.
@@ -29,13 +29,23 @@ On native iOS, the existing Add Memory photo control uses the official Camera pl
 
 Camera `8.2.4` provides the later native media APIs needed for a planned video slice, but this slice exposes no video controls or behavior.
 
+## Native iOS live barcode scanning
+
+On native iOS, the existing barcode camera abstraction calls the official Barcode Scanner plugin. Trace maps its existing rear and front camera choices to the plugin's back and front directions. A successful native result returns to the same dialog code used by the browser scanner, where Trace validates and canonicalizes the GTIN, performs the existing product lookup, creates the existing nutrition candidate, and presents the existing labeled-serving review and found or not-found handling. The Barcode Scanner Beta label and free access are unchanged.
+
+Closing the native scanner is a normal cancellation. Permission denial, an unavailable selected camera, malformed native results, and plugin or bridge failures have distinct actionable messages. The adapter and dialog prevent simultaneous scans. When the native scanner closes, focus returns to the control that launched it, or to the first available dialog control if that control is unavailable. A failed automatic rear-camera attempt retains the existing front-camera fallback, so the front camera remains usable when the rear camera is broken.
+
+Browser and PWA live scans continue to use Trace's existing `getUserMedia` and ZXing path. The Capacitor plugin is never invoked by that route. **Scan from Photo**, **Take Photo**, manual entry, nutrition calculations, schemas, and storage are unchanged. Native Android and unknown native platforms return an explicit unsupported result.
+
 The following `Info.plist` keys must be added when the iOS project is created in Xcode. Use these user-facing values:
 
-- `NSCameraUsageDescription`: “Trace uses the camera when you choose to take a photo for a Memory.”
+- `NSCameraUsageDescription`: “Trace uses the camera when you choose to take a photo for a Memory or scan a food barcode.”
 - `NSPhotoLibraryUsageDescription`: “Trace accesses your photo library so you can add selected photos to your Memories.”
 - `NSPhotoLibraryAddUsageDescription`: “Trace saves a photo to your library only when you choose to save it.”
 
 The Windows implementation includes the pinned dependency, injectable native adapter, Add Memory routing, file conversion, limit and failure handling, and regression tests. Xcode is still required to generate the iOS project, add and review these permission strings, sync the plugin, review native privacy requirements, sign the app, and build it. A physical iPhone must verify gallery presentation, first-use and denied permission behavior, cancellation, app backgrounding and return, large photos, HEIC and JPEG handling, multiple selection and order, the 12-photo limit, restored unfinished drafts, and backup/restore of Memories containing native-selected photos.
+
+The Windows barcode implementation includes the pinned dependency, injectable platform routing, native iOS adapter, shared dialog integration, error handling, and focused regression tests. Xcode is still required to sync and inspect the plugin, confirm the camera usage description, review native privacy requirements, sign, and build. On a physical iPhone, verify the first-use camera prompt, denial and later Settings recovery, cancellation, rear camera, front camera, glossy packaging, small or damaged barcodes, backgrounding and return, keyboard focus return, product found and not-found results, and exact labeled-serving display.
 
 ## Windows validation, to run after this slice
 
@@ -44,6 +54,7 @@ Use `npm.cmd` in PowerShell because this machine's execution policy blocks the `
 ```powershell
 npm.cmd test -- --watchAll=false --runInBand --runTestsByPath src/services/backupFileAdapter.test.js src/components/BackupPage.test.jsx src/services/traceBackup.test.js
 npm.cmd test -- --watchAll=false --runInBand --runTestsByPath src/services/photoSelectionAdapter.test.js src/components/NewMemoryPage.test.jsx
+npm.cmd test -- --watchAll=false --runInBand --runTestsByPath src/services/barcodeCamera.test.js src/components/BarcodeScannerDialog.test.jsx
 npm.cmd run build
 npm.cmd run cap:doctor
 ```
@@ -70,6 +81,6 @@ npm run cap:open:ios
 
 ## Subsequent native slices
 
-Create and review the iOS project; validate native localStorage, IndexedDB, offline packaged assets, and the Backup/Restore path above; validate and then extend camera/photo support for the separately planned video slice; add microphone/audio, other Files and sharing workflows, lifecycle, and barcode networking adapters; implement StoreKit and Restore Purchases for Premium; finish privacy manifest and permissions; then test on a physical iPhone before TestFlight.
+Create and review the iOS project; validate native localStorage, IndexedDB, offline packaged assets, and the Backup/Restore path above; validate native photo selection and live barcode scanning; extend camera/photo support for the separately planned video slice; add microphone/audio, other Files and sharing workflows, lifecycle, and barcode networking adapters; implement StoreKit and Restore Purchases for Premium; finish privacy manifest and permissions; then test on a physical iPhone before TestFlight.
 
-References: [Capacitor 8 environment setup](https://capacitorjs.com/docs/getting-started/environment-setup), [iOS setup](https://capacitorjs.com/docs/ios), [Swift Package Manager](https://capacitorjs.com/docs/ios/spm), [Filesystem](https://capacitorjs.com/docs/apis/filesystem), [Share](https://capacitorjs.com/docs/apis/share), and [Camera](https://capacitorjs.com/docs/apis/camera).
+References: [Capacitor 8 environment setup](https://capacitorjs.com/docs/getting-started/environment-setup), [iOS setup](https://capacitorjs.com/docs/ios), [Swift Package Manager](https://capacitorjs.com/docs/ios/spm), [Filesystem](https://capacitorjs.com/docs/apis/filesystem), [Share](https://capacitorjs.com/docs/apis/share), [Camera](https://capacitorjs.com/docs/apis/camera), and [Barcode Scanner package](https://www.npmjs.com/package/@capacitor/barcode-scanner).

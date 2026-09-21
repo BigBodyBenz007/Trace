@@ -1,8 +1,17 @@
 import {
+  BARCODE_CAMERA_RESULT_STATUS,
   CAMERA_ERROR_CODES,
   CAMERA_FACING_MODES,
   createBrowserBarcodeCamera,
+  createNativeIosBarcodeCamera,
+  createTraceBarcodeCamera,
 } from "./barcodeCamera";
+import {
+  CapacitorBarcodeScannerCameraDirection,
+  CapacitorBarcodeScannerScanOrientation,
+  CapacitorBarcodeScannerTypeHint,
+} from "@capacitor/barcode-scanner";
+import { RUNTIME_KINDS } from "./runtimePlatform";
 
 function cameraHarness() {
   const stopTrack = jest.fn();
@@ -195,3 +204,120 @@ test("abort while the decoder loads never attaches or starts a late decoder", as
   expect(Reader).not.toHaveBeenCalled();
   expect(stop).toHaveBeenCalledTimes(1);
 });
+
+test("native iOS invokes the plugin with food-barcode options and returns the raw result", async () => {
+  const scanner = {
+    scanBarcode: jest.fn().mockResolvedValue({ ScanResult: "0001-2345 600012", format: 9 }),
+  };
+  const camera = createNativeIosBarcodeCamera({ scanner });
+
+  const session = await camera.start({ facingMode: CAMERA_FACING_MODES.REAR });
+
+  expect(scanner.scanBarcode).toHaveBeenCalledWith({
+    hint: CapacitorBarcodeScannerTypeHint.ALL,
+    cameraDirection: CapacitorBarcodeScannerCameraDirection.BACK,
+    scanOrientation: CapacitorBarcodeScannerScanOrientation.ADAPTIVE,
+    scanInstructions: "Center the entire food barcode in the frame.",
+    scanButton: false,
+    cancelButtonAccessibilityLabel: "Cancel barcode scan",
+    torchButtonOnAccessibilityLabel: "Turn barcode scanner light off",
+    torchButtonOffAccessibilityLabel: "Turn barcode scanner light on",
+  });
+  expect(session).toMatchObject({
+    native: true,
+    status: BARCODE_CAMERA_RESULT_STATUS.DETECTED,
+    facingMode: CAMERA_FACING_MODES.REAR,
+    value: "0001-2345 600012",
+    devices: [],
+  });
+});
+
+test.each([
+  [CAMERA_FACING_MODES.REAR, CapacitorBarcodeScannerCameraDirection.BACK],
+  [CAMERA_FACING_MODES.FRONT, CapacitorBarcodeScannerCameraDirection.FRONT],
+])("native iOS maps %s to the requested plugin camera", async (facingMode, cameraDirection) => {
+  const scanner = { scanBarcode: jest.fn().mockResolvedValue({ ScanResult: "00012345600012", format: 9 }) };
+  await createNativeIosBarcodeCamera({ scanner }).start({ facingMode });
+  expect(scanner.scanBarcode).toHaveBeenCalledWith(expect.objectContaining({ cameraDirection }));
+});
+
+test("native iOS cancellation is a normal non-error result", async () => {
+  const scanner = {
+    scanBarcode: jest.fn().mockRejectedValue({ code: "OS-PLUG-BARC-0006", message: "cancelled" }),
+  };
+  await expect(createNativeIosBarcodeCamera({ scanner }).start()).resolves.toMatchObject({
+    native: true,
+    status: BARCODE_CAMERA_RESULT_STATUS.CANCELED,
+  });
+});
+
+test.each([
+  ["OS-PLUG-BARC-0007", CAMERA_ERROR_CODES.DENIED, /iPhone Settings/i],
+  ["OS-PLUG-BARC-0004", CAMERA_ERROR_CODES.NOT_FOUND, /rear camera is unavailable/i],
+  ["OS-PLUG-BARC-0008", CAMERA_ERROR_CODES.UNAVAILABLE, /configure the native barcode scanner/i],
+  ["OS-PLUG-BARC-0013", CAMERA_ERROR_CODES.UNAVAILABLE, /native barcode scanner is unavailable/i],
+  ["unexpected-plugin-error", CAMERA_ERROR_CODES.UNAVAILABLE, /could not start the native barcode scanner/i],
+])("native iOS maps plugin failure %s clearly", async (code, expectedCode, message) => {
+  const scanner = { scanBarcode: jest.fn().mockRejectedValue({ code, message: "private native detail" }) };
+  await expect(createNativeIosBarcodeCamera({ scanner }).start()).rejects.toMatchObject({
+    code: expectedCode,
+    message: expect.stringMatching(message),
+  });
+});
+
+test.each([
+  null,
+  {},
+  { ScanResult: "", format: 9 },
+  { ScanResult: "00012345600012", format: "EAN_13" },
+])("native iOS rejects malformed scan result %#", async (scanResult) => {
+  const scanner = { scanBarcode: jest.fn().mockResolvedValue(scanResult) };
+  await expect(createNativeIosBarcodeCamera({ scanner }).start()).rejects.toMatchObject({
+    code: CAMERA_ERROR_CODES.DECODE,
+    message: expect.stringMatching(/malformed barcode result/i),
+  });
+});
+
+test("native iOS prevents simultaneous plugin scans", async () => {
+  let finishScan;
+  const scanner = {
+    scanBarcode: jest.fn(() => new Promise((resolve) => { finishScan = resolve; })),
+  };
+  const camera = createNativeIosBarcodeCamera({ scanner });
+  const first = camera.start();
+
+  await expect(camera.start()).rejects.toMatchObject({ code: CAMERA_ERROR_CODES.BUSY });
+  expect(scanner.scanBarcode).toHaveBeenCalledTimes(1);
+  finishScan({ ScanResult: "00012345600012", format: 9 });
+  await expect(first).resolves.toMatchObject({ status: BARCODE_CAMERA_RESULT_STATUS.DETECTED });
+});
+
+test("the platform adapter keeps web live scanning on the existing browser camera", async () => {
+  const browserSession = { devices: [], stop: jest.fn() };
+  const browserCamera = { start: jest.fn().mockResolvedValue(browserSession) };
+  const scanner = { scanBarcode: jest.fn() };
+  const camera = createTraceBarcodeCamera({
+    runtime: { kind: RUNTIME_KINDS.WEB, platform: "web", isNative: false, isWeb: true },
+    browserCamera,
+    scanner,
+  });
+  const request = { facingMode: CAMERA_FACING_MODES.FRONT, videoElement: {} };
+
+  await expect(camera.start(request)).resolves.toBe(browserSession);
+  expect(browserCamera.start).toHaveBeenCalledWith(request);
+  expect(scanner.scanBarcode).not.toHaveBeenCalled();
+  expect(camera.isNativeIos()).toBe(false);
+});
+
+test.each([RUNTIME_KINDS.NATIVE_ANDROID, RUNTIME_KINDS.NATIVE_UNKNOWN])(
+  "%s remains explicitly unsupported",
+  async (kind) => {
+    const scanner = { scanBarcode: jest.fn() };
+    const camera = createTraceBarcodeCamera({
+      runtime: { kind, platform: kind.replace("native-", ""), isNative: true, isWeb: false },
+      scanner,
+    });
+    await expect(camera.start()).rejects.toMatchObject({ code: CAMERA_ERROR_CODES.UNSUPPORTED });
+    expect(scanner.scanBarcode).not.toHaveBeenCalled();
+  }
+);
