@@ -3,7 +3,7 @@ import { CATEGORY_OPTIONS } from "../constants/categories";
 import {
   PHOTO_SELECTION_ACCEPT,
   PHOTO_SELECTION_RESULT_STATUS,
-  webPhotoSelectionAdapter,
+  tracePhotoSelectionAdapter,
 } from "../services/photoSelectionAdapter";
 import { PHOTO_LOAD_PRIORITY } from "../services/photoUrlLoader";
 import {
@@ -38,13 +38,14 @@ function NewMemoryPage({
   discardDraft,
   onBackToTimeline,
   folioRef = null,
-  photoSelectionAdapter = webPhotoSelectionAdapter,
+  photoSelectionAdapter = tracePhotoSelectionAdapter,
 }) {
   const initialDateRef = useRef(draftInitialDate || date);
   const photoSelectionInFlightRef = useRef(false);
   const [photoStatus, setPhotoStatus] = useState("");
   const [photoError, setPhotoError] = useState("");
   const [photosProcessing, setPhotosProcessing] = useState(false);
+  const isNativeIos = photoSelectionAdapter.isNativeIos?.() === true;
 
   function releaseDraftPhoto(image) {
     if (image?.isDraft && image.url) URL.revokeObjectURL(image.url);
@@ -102,23 +103,40 @@ function NewMemoryPage({
 
   async function selectPhotos(event) {
     if (photoSelectionInFlightRef.current) return;
-    const input = event.currentTarget;
-    const selection = photoSelectionAdapter.acquireImages({
-      input,
-      accept: input.accept,
-      multiple: input.multiple,
-      limit: Math.max(0, PHOTO_INGESTION_POLICY.maxPhotosPerEntry - images.length),
-    });
-    input.value = "";
+    const input = event?.currentTarget?.tagName === "INPUT" ? event.currentTarget : null;
+    photoSelectionInFlightRef.current = true;
+    if (isNativeIos) setPhotosProcessing(true);
+    let selection;
+    try {
+      const acquisition = photoSelectionAdapter.acquireImages({
+        ...(input ? { input } : {}),
+        accept: input?.accept || PHOTO_SELECTION_ACCEPT,
+        multiple: input ? input.multiple : true,
+        limit: Math.max(0, PHOTO_INGESTION_POLICY.maxPhotosPerEntry - images.length),
+      });
+      if (input) input.value = "";
+      selection = typeof acquisition?.then === "function" ? await acquisition : acquisition;
+    } catch (error) {
+      selection = { status: PHOTO_SELECTION_RESULT_STATUS.FAILURE, error };
+    }
+    if (input) input.value = "";
 
-    if (selection.status === PHOTO_SELECTION_RESULT_STATUS.CANCELED) return;
-    if (selection.status !== PHOTO_SELECTION_RESULT_STATUS.SUCCESS) {
+    if (selection?.status === PHOTO_SELECTION_RESULT_STATUS.CANCELED) {
+      photoSelectionInFlightRef.current = false;
+      setPhotosProcessing(false);
+      return;
+    }
+    const partialSelection = selection?.status === PHOTO_SELECTION_RESULT_STATUS.PARTIAL
+      && Array.isArray(selection.files)
+      && selection.files.length > 0;
+    if (selection?.status !== PHOTO_SELECTION_RESULT_STATUS.SUCCESS && !partialSelection) {
+      photoSelectionInFlightRef.current = false;
+      setPhotosProcessing(false);
       setPhotoStatus("");
       setPhotoError(selection.error?.message || "Trace could not read those photos. Choose them again.");
       return;
     }
 
-    photoSelectionInFlightRef.current = true;
     setPhotosProcessing(true);
     setPhotoError("");
     setPhotoStatus("Preparing photos…");
@@ -144,6 +162,9 @@ function NewMemoryPage({
       }
       setImages((current) => [...current, ...newImages]);
       setPhotoStatus(photoSelectionSuccessMessage(result));
+      if (partialSelection) {
+        setPhotoError(selection.error?.message || "Some selected photos could not be read. The other photos were kept.");
+      }
     } catch (error) {
       setPhotoStatus("");
       setPhotoError(error.message || "Trace could not safely prepare those photos. Choose them again.");
@@ -364,16 +385,27 @@ function NewMemoryPage({
               </p>
             </div>
 
-            <label className="trace-memory-editor__photo-picker">
-              {photosProcessing ? "Preparing Photos…" : images.length ? "Add More Photos" : "Choose Photos"}
-              <input
-                type="file"
-                accept={PHOTO_SELECTION_ACCEPT}
-                multiple
+            {isNativeIos ? (
+              <button
+                className="trace-memory-editor__photo-picker"
+                type="button"
                 disabled={photosProcessing}
-                onChange={selectPhotos}
-              />
-            </label>
+                onClick={selectPhotos}
+              >
+                {photosProcessing ? "Preparing Photos…" : images.length ? "Add More Photos" : "Choose Photos"}
+              </button>
+            ) : (
+              <label className="trace-memory-editor__photo-picker">
+                {photosProcessing ? "Preparing Photos…" : images.length ? "Add More Photos" : "Choose Photos"}
+                <input
+                  type="file"
+                  accept={PHOTO_SELECTION_ACCEPT}
+                  multiple
+                  disabled={photosProcessing}
+                  onChange={selectPhotos}
+                />
+              </label>
+            )}
           </div>
 
           {photoStatus && <p className="trace-photo-feedback" role="status">{photoStatus}</p>}

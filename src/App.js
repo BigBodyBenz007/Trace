@@ -134,7 +134,7 @@ import {
   TRACE_BACKUP_MIME_TYPE,
   traceBackupFileAdapter,
 } from "./services/backupFileAdapter";
-import { webPhotoSelectionAdapter } from "./services/photoSelectionAdapter";
+import { tracePhotoSelectionAdapter } from "./services/photoSelectionAdapter";
 import {
   photoStorageFailureMessage,
   preparePhotoStorage,
@@ -406,7 +406,7 @@ function initializeJournalPrivacy(storage) {
 
 function App({
   backupFileAdapter = traceBackupFileAdapter,
-  photoSelectionAdapter = webPhotoSelectionAdapter,
+  photoSelectionAdapter = tracePhotoSelectionAdapter,
   lifecycleAdapter = webAppLifecycleAdapter,
 }) {
   const [page, setPage] = useState(() =>

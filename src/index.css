@@ -806,6 +806,7 @@ code {
   cursor: pointer;
   display: inline-flex;
   flex: 0 0 auto;
+  font: inherit;
   font-weight: var(--trace-weight-medium);
   justify-content: center;
   min-height: 48px;

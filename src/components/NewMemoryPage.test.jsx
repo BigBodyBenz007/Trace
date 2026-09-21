@@ -96,6 +96,9 @@ test("uses isolated Modern Heirloom hierarchy for Add and Edit Memory", () => {
   );
   expect(screen.getByLabelText("Choose Photos")).toHaveAttribute("multiple");
   expect(screen.getByLabelText("Choose Photos")).toHaveAttribute("accept", "image/*");
+  expect(screen.queryByRole("button", { name: "Choose Photos" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/iPhone photo library/i)).not.toBeInTheDocument();
+  expect(document.querySelectorAll('input[type="file"]')).toHaveLength(1);
   first.unmount();
 
   renderPage({ editingIndex: "memory-edit", title: "Existing Memory" });
@@ -335,6 +338,71 @@ test("routes Edit Memory selection through the adapter while preserving existing
   expect(updated.slice(1).map(({ blob }) => blob)).toEqual([second, first]);
   expect(URL.createObjectURL.mock.calls.map(([file]) => file)).toEqual([second, first]);
   expect(input).toHaveValue("");
+});
+
+test("native iOS Add Memory opens the shared gallery adapter and passes accepted files to existing ingestion", async () => {
+  const first = new File(["first"], "first.jpg", { type: "image/jpeg" });
+  const second = new File(["second"], "second.png", { type: "image/png" });
+  const photoSelectionAdapter = {
+    isNativeIos: jest.fn(() => true),
+    acquireImages: jest.fn(async () => ({
+      status: PHOTO_SELECTION_RESULT_STATUS.SUCCESS,
+      files: [first, second],
+    })),
+  };
+  const setImages = jest.fn();
+  renderPage({ photoSelectionAdapter, setImages });
+
+  expect(document.querySelector('input[type="file"]')).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Choose Photos" }));
+
+  expect(photoSelectionAdapter.acquireImages).toHaveBeenCalledWith({
+    accept: "image/*",
+    multiple: true,
+    limit: 12,
+  });
+  await waitFor(() => expect(setImages).toHaveBeenCalledTimes(1));
+  const updated = setImages.mock.calls[0][0]([]);
+  expect(updated.map(({ blob }) => blob)).toEqual([first, second]);
+  expect(URL.createObjectURL.mock.calls.map(([file]) => file)).toEqual([first, second]);
+});
+
+test("native partial selection keeps converted photos and reports the unreadable remainder", async () => {
+  const kept = new File(["kept"], "kept.jpg", { type: "image/jpeg" });
+  const photoSelectionAdapter = {
+    isNativeIos: jest.fn(() => true),
+    acquireImages: jest.fn(async () => ({
+      status: PHOTO_SELECTION_RESULT_STATUS.PARTIAL,
+      files: [kept],
+      error: new Error("1 selected photo was kept, but 1 photo could not be read."),
+    })),
+  };
+  const setImages = jest.fn();
+  renderPage({ photoSelectionAdapter, setImages });
+
+  fireEvent.click(screen.getByRole("button", { name: "Choose Photos" }));
+
+  await waitFor(() => expect(setImages).toHaveBeenCalledTimes(1));
+  expect(setImages.mock.calls[0][0]([])[0].blob).toBe(kept);
+  expect(screen.getByRole("alert")).toHaveTextContent("1 selected photo was kept");
+});
+
+test("native permission denial is shown without changing Memory photos", async () => {
+  const photoSelectionAdapter = {
+    isNativeIos: jest.fn(() => true),
+    acquireImages: jest.fn(async () => ({
+      status: PHOTO_SELECTION_RESULT_STATUS.FAILURE,
+      files: [],
+      error: new Error("Trace cannot access the photo library. Allow photo access in iPhone Settings and try again."),
+    })),
+  };
+  const setImages = jest.fn();
+  renderPage({ photoSelectionAdapter, setImages });
+
+  fireEvent.click(screen.getByRole("button", { name: "Choose Photos" }));
+
+  expect(await screen.findByRole("alert")).toHaveTextContent("Allow photo access in iPhone Settings");
+  expect(setImages).not.toHaveBeenCalled();
 });
 
 test.each([
