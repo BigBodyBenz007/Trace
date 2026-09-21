@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import CompoundSearch from "./CompoundSearch";
 import SavedCompoundEditor from "./SavedCompoundEditor";
 import MedicationDoseScheduler from "./MedicationDoseScheduler";
+import InjectionSiteTracker from "./InjectionSiteTracker";
 import { motionScrollBehavior } from "../services/motionPreference";
 import {
   DOSE_UNIT_OPTIONS,
@@ -113,6 +114,14 @@ function MedicationPage({
   endMedicationDoseSchedule = () => false,
   deleteMedicationDoseSchedule = () => false,
   onOpenToday = null,
+  protocols = [],
+  injectionSiteData,
+  injectionSiteSettings,
+  saveInjectionSession,
+  updateInjectionShot,
+  deleteInjectionShot,
+  updateInjectionBodyStyle,
+  reducedMotion = false,
   buttonStyle,
   inputStyle,
   containerStyle,
@@ -155,6 +164,9 @@ function MedicationPage({
   const [scheduleActionError, setScheduleActionError] = useState("");
   const [endedSchedulesExpanded, setEndedSchedulesExpanded] = useState(false);
   const [entrySaveInProgress, setEntrySaveInProgress] = useState(false);
+  const [trackerOpen, setTrackerOpen] = useState(false);
+  const trackerEntryRef = useRef(null);
+  const restoreTrackerFocusRef = useRef(false);
   const pageTopRef = useRef(null);
   const editHeadingRef = useRef(null);
   const compoundSearchRef = useRef(null);
@@ -205,6 +217,17 @@ function MedicationPage({
 
     return () => window.cancelAnimationFrame(frameId);
   }, [formNavigationRequest]);
+
+  useEffect(() => {
+    if (trackerOpen || !restoreTrackerFocusRef.current) return;
+    restoreTrackerFocusRef.current = false;
+    const entry = trackerEntryRef.current;
+    entry?.focus({ preventScroll: true });
+    const bounds = entry?.getBoundingClientRect();
+    if (bounds && (bounds.top < 0 || bounds.bottom > window.innerHeight)) {
+      entry.scrollIntoView?.({ behavior: motionScrollBehavior(reducedMotion), block: "nearest" });
+    }
+  }, [trackerOpen, reducedMotion]);
 
   useEffect(() => {
     try {
@@ -834,6 +857,25 @@ function MedicationPage({
     backgroundColor: "#666",
   };
 
+  if (trackerOpen) {
+    return <InjectionSiteTracker
+      protocols={protocols}
+      data={injectionSiteData}
+      bodyStyleId={injectionSiteSettings?.bodyStyleId}
+      onBack={() => {
+        restoreTrackerFocusRef.current = true;
+        setTrackerOpen(false);
+      }}
+      returnTo="Medications & Supplements"
+      saveSession={saveInjectionSession}
+      updateShot={updateInjectionShot}
+      deleteShot={deleteInjectionShot}
+      updateBodyStyle={updateInjectionBodyStyle}
+      reducedMotion={reducedMotion}
+      containerStyle={containerStyle}
+    />;
+  }
+
   return (
     <div className="trace-feature-page trace-feature-page--medications" ref={pageTopRef} data-testid="medication-page" style={containerStyle}>
       <header className="trace-feature-page__identity">
@@ -855,6 +897,16 @@ function MedicationPage({
         style={{ ...backButtonStyle, marginBottom: "24px", marginTop: 0 }}
       >
         Back to Timeline
+      </button>
+
+      <button
+        className="trace-action trace-action--brass"
+        ref={trackerEntryRef}
+        type="button"
+        onClick={() => setTrackerOpen(true)}
+        style={{ ...buttonStyle, minHeight: "44px", minWidth: "44px", marginBottom: "24px", marginTop: 0 }}
+      >
+        Injection Site Tracker
       </button>
 
       {editingEntryId === null && (

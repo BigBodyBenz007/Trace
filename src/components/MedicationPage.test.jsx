@@ -3,6 +3,7 @@ import MedicationPage from "./MedicationPage";
 import MedicationDoseScheduler from "./MedicationDoseScheduler";
 import { createCompoundDefinition } from "../services/compoundCatalog";
 import { formatDateOnly } from "../services/dateOnly";
+import { defaultInjectionSiteSettings, emptyInjectionSiteCollection } from "../services/injectionSite";
 import {
   completeMedicationDoseOccurrence,
   createMedicationDoseSchedule,
@@ -52,6 +53,13 @@ function renderMedicationPage(overrides = {}) {
     updateCompoundDefinition: jest.fn(() => ({ status: "updated" })),
     updateMedicationEntry: jest.fn(() => true),
     deleteMedicationEntry: jest.fn(() => true),
+    protocols: [],
+    injectionSiteData: emptyInjectionSiteCollection(),
+    injectionSiteSettings: defaultInjectionSiteSettings(),
+    saveInjectionSession: jest.fn(),
+    updateInjectionShot: jest.fn(),
+    deleteInjectionShot: jest.fn(),
+    updateInjectionBodyStyle: jest.fn(),
     buttonStyle: {},
     inputStyle: {},
     containerStyle: {},
@@ -78,6 +86,18 @@ test("uses the scoped regimen presentation with distinct search and entry surfac
   expect(screen.getByTestId("medication-page")).toHaveClass("trace-feature-page--medications");
   expect(screen.getByRole("heading", { name: "Search Compounds" }).closest("section")).toHaveClass("trace-compound-search");
   expect(screen.getByRole("heading", { name: "Add Entry" }).closest("form")).toHaveClass("trace-medication-entry");
+});
+
+test("opens the shared Injection Site Tracker and returns focus to Medications & Supplements", () => {
+  renderMedicationPage();
+  const entry = screen.getByRole("button", { name: "Injection Site Tracker" });
+  expect(entry).toHaveStyle({ minHeight: "44px", minWidth: "44px" });
+  fireEvent.click(entry);
+  expect(screen.getByTestId("injection-site-tracker")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Back to Medications & Supplements" })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Back to Medications & Supplements" }));
+  expect(screen.getByRole("heading", { name: "Medications & Supplements" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Injection Site Tracker" })).toHaveFocus();
 });
 
 function historyEntry(id) {

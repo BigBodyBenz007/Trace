@@ -3312,7 +3312,7 @@ function App({
       const saved = writeInjectionSiteData(localStorage, updated);
       setInjectionSiteData(saved);
       const count = created.shots.length;
-      showConfirmation(`${count} ${count === 1 ? "shot" : "shots"} traced`, "protocols");
+      showConfirmation(`${count} ${count === 1 ? "shot" : "shots"} traced`, page);
       setStorageError("");
       return { status: "saved", session: created.session, shots: created.shots };
     } catch (error) {
@@ -3327,7 +3327,7 @@ function App({
     try {
       const saved = writeInjectionSiteData(localStorage, updated);
       setInjectionSiteData(saved);
-      showConfirmation("Injection updated", "protocols");
+      showConfirmation("Injection updated", page);
       setStorageError("");
       return { status: "saved", shot: saved.shots.find((shot) => shot.id === id) };
     } catch (error) {
@@ -3342,7 +3342,7 @@ function App({
     try {
       const saved = writeInjectionSiteData(localStorage, updated);
       setInjectionSiteData(saved);
-      showConfirmation("Injection deleted", "protocols");
+      showConfirmation("Injection deleted", page);
       setStorageError("");
       return true;
     } catch (error) {
@@ -4343,6 +4343,14 @@ function App({
           updateCompoundDefinition={updateSavedCompound}
           updateMedicationEntry={updateMedicationEntry}
           deleteMedicationEntry={deleteMedicationEntry}
+          protocols={protocols}
+          injectionSiteData={injectionSiteData}
+          injectionSiteSettings={injectionSiteSettings}
+          saveInjectionSession={saveInjectionSession}
+          updateInjectionShot={updateInjectionShot}
+          deleteInjectionShot={deleteInjectionShot}
+          updateInjectionBodyStyle={updateInjectionBodyStyle}
+          reducedMotion={reducedMotion}
           buttonStyle={buttonStyle}
           inputStyle={inputStyle}
           containerStyle={containerStyle}

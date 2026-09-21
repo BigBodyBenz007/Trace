@@ -377,6 +377,7 @@ export default function InjectionSiteTracker({
   initialProtocolId = "",
   now = new Date(),
   onBack,
+  returnTo = "Protocols",
   saveSession = () => ({ status: "error" }),
   updateBodyStyle = () => false,
   updateShot = () => ({ status: "error" }),
@@ -635,12 +636,12 @@ export default function InjectionSiteTracker({
   return (
     <main className="trace-feature-page trace-feature-page--injection-sites" data-testid="injection-site-tracker" style={containerStyle}>
       <header className="trace-feature-page__identity">
-        <p className="trace-feature-page__kicker">Protocols · Site history</p>
+        <p className="trace-feature-page__kicker">{returnTo} · Site history</p>
         <h1>Injection Site Tracker</h1>
         <p className="trace-feature-page__lede" ref={instructionRef} tabIndex="-1">Tap anywhere on the body to mark the exact location.</p>
       </header>
       <nav className="trace-injection-navigation" aria-label="Injection Site Tracker navigation">
-        <button className="trace-action trace-action--secondary" type="button" onClick={leaveTracker}>Back to Protocols</button>
+        <button className="trace-action trace-action--secondary" type="button" onClick={leaveTracker}>Back to {returnTo}</button>
         <label>Injection filter
           <select aria-label="Injection filter" value={filter} onChange={(event) => setFilter(event.target.value)}>
             <option value="">All Injections</option>

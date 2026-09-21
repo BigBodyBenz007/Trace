@@ -3027,6 +3027,70 @@ test("logs an exact Protocol-linked injection site and restores it after an app 
   expect(screen.getByRole("button", { name: /Edit B12 injection at Right Thigh/ })).toBeInTheDocument();
 });
 
+test("Medications and Protocols share injection records, body style, and save handlers", () => {
+  const canvasSpy = jest.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+    clearRect: jest.fn(),
+    drawImage: jest.fn(),
+    getImageData: jest.fn(() => ({ data: [0, 0, 0, 255] })),
+  });
+  renderAppAtTimeline();
+  openMedications();
+  fireEvent.click(screen.getByRole("button", { name: "Injection Site Tracker" }));
+  expect(screen.getByRole("button", { name: "Back to Medications & Supplements" })).toBeInTheDocument();
+
+  const artwork = screen.getByTestId("front-body-art");
+  Object.defineProperties(artwork, {
+    complete: { configurable: true, value: true },
+    naturalWidth: { configurable: true, value: 600 },
+    naturalHeight: { configurable: true, value: 1100 },
+    currentSrc: { configurable: true, value: artwork.src },
+  });
+  screen.getByTestId("front-body-map").getBoundingClientRect = () => ({
+    left: 0, top: 0, width: 200, height: 520, right: 200, bottom: 520,
+  });
+  fireEvent.click(screen.getByTestId("front-silhouette"), { clientX: 50, clientY: 355 });
+  fireEvent.click(screen.getByRole("button", { name: /Log Injection/ }));
+  fireEvent.change(screen.getByLabelText("What did you inject?"), { target: { value: "Iron dextran" } });
+  fireEvent.click(screen.getByRole("button", { name: "Finish & Save" }));
+  expect(JSON.parse(localStorage.getItem("injectionSiteEntries")).shots).toHaveLength(1);
+  fireEvent.change(screen.getByLabelText("Body Style"), { target: { value: "feminine-fuller" } });
+  expect(JSON.parse(localStorage.getItem("injectionSiteSettings")).bodyStyleId).toBe("feminine-fuller");
+  canvasSpy.mockRestore();
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to Medications & Supplements" }));
+  expect(screen.getByRole("button", { name: "Injection Site Tracker" })).toHaveFocus();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Protocols" }));
+  fireEvent.click(screen.getByRole("button", { name: "Injection Site Tracker" }));
+  expect(screen.getByRole("button", { name: "Back to Protocols" })).toBeInTheDocument();
+  expect(screen.getByLabelText("Body Style")).toHaveValue("feminine-fuller");
+  fireEvent.click(screen.getByRole("button", { name: /Edit Iron dextran injection/ }));
+  fireEvent.change(screen.getByLabelText("What did you inject?"), { target: { value: "Iron updated" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(JSON.parse(localStorage.getItem("injectionSiteEntries")).shots[0].substanceName).toBe("Iron updated");
+
+  fireEvent.click(screen.getByRole("button", { name: "Back to Protocols" }));
+  expect(screen.getByRole("heading", { name: "Protocols" })).toBeInTheDocument();
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  openMedications();
+  fireEvent.click(screen.getByRole("button", { name: "Injection Site Tracker" }));
+  expect(screen.getByRole("button", { name: /Edit Iron updated injection/ })).toBeInTheDocument();
+  const originalConfirm = window.confirm;
+  window.confirm = jest.fn(() => true);
+  try {
+    fireEvent.click(screen.getByRole("button", { name: /Edit Iron updated injection/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Delete Shot" }));
+  } finally {
+    window.confirm = originalConfirm;
+  }
+  expect(JSON.parse(localStorage.getItem("injectionSiteEntries")).shots).toHaveLength(0);
+  fireEvent.click(screen.getByRole("button", { name: "Back to Medications & Supplements" }));
+  fireEvent.click(screen.getAllByRole("button", { name: "Back to Timeline" })[0]);
+  fireEvent.click(screen.getByRole("button", { name: "Protocols" }));
+  fireEvent.click(screen.getByRole("button", { name: "Injection Site Tracker" }));
+  expect(screen.getByText("No injections recorded for this filter.")).toBeInTheDocument();
+});
+
 test("Timeline to Workouts and Workouts to Timeline land at the top", () => {
   renderAppAtTimeline();
   openWorkouts();
