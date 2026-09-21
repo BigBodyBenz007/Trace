@@ -132,7 +132,7 @@ import { createTraceBackupArchive, traceBackupFilename } from "./services/traceB
 import {
   BACKUP_FILE_RESULT_STATUS,
   TRACE_BACKUP_MIME_TYPE,
-  webBackupFileAdapter,
+  traceBackupFileAdapter,
 } from "./services/backupFileAdapter";
 import { webPhotoSelectionAdapter } from "./services/photoSelectionAdapter";
 import {
@@ -405,7 +405,7 @@ function initializeJournalPrivacy(storage) {
 }
 
 function App({
-  backupFileAdapter = webBackupFileAdapter,
+  backupFileAdapter = traceBackupFileAdapter,
   photoSelectionAdapter = webPhotoSelectionAdapter,
   lifecycleAdapter = webAppLifecycleAdapter,
 }) {

@@ -5,18 +5,30 @@ Trace remains the existing React/PWA. Capacitor adds a native wrapper that packa
 ## Foundation decisions
 
 - Studio: Current Forge. App name: Trace. Bundle/application ID: `com.currentforge.trace`.
-- `@capacitor/core`, `@capacitor/ios`, and `@capacitor/cli` are pinned to stable `8.5.2`, the matching latest Capacitor 8 release selected for this slice. Core and iOS are runtime dependencies; the CLI is a development dependency. No native plugins are installed yet.
+- `@capacitor/core`, `@capacitor/ios`, and `@capacitor/cli` are pinned to stable `8.5.2`. Core and iOS are runtime dependencies; the CLI is a development dependency. Official `@capacitor/filesystem@8.1.3` and `@capacitor/share@8.0.2` are pinned to their stable Capacitor 8 releases; both accept Core `>=8.0.0`. No other native plugins are installed.
 - `capacitor.config.ts` uses CRA's production `build` output as `webDir`. It has no remote `server.url`, cleartext transport setting, or live-update configuration. Native releases must package a current production build.
 - Native iOS marketing version begins at `1.0.0` and build number at `1`; set and increment them in the Xcode project when it is created. The web `package.json` version is still `0.1.0` and is not the native release version.
 - Future one-time, non-consumable Premium product ID: `com.currentforge.trace.premium.lifetime`. No StoreKit integration, entitlement check, paywall, or theme gating exists in this slice.
 - The existing `src/services/runtimePlatform.js` recognizes Capacitor's native bridge and keeps its injectable detection. `src/serviceWorkerRegistration.js` registers the web service worker only in web mode. Neither needed a source change in this slice.
+
+## Backup/Restore migration path
+
+The PWA user creates a Trace backup using the existing Backup & Restore page and saves or shares the resulting JSON file. In the native iOS app, **Select Backup to Restore** uses the existing `application/json,.json` file input so the user can choose that file from iOS Files. Trace then uses the same read, validation, integrity, preview, explicit confirmation, transaction-blocking, rollback, and restore-without-reload code as the PWA. Selection alone never replaces data. This is a manual backup transfer, not automatic migration or cloud sync. The selected source file is never deleted. The backup schema and contents are unchanged; this work adds no future Add Memory video data.
+
+For native iOS export, the existing backup engine still creates the complete archive Blob and safe `traceBackupFilename`. The file adapter reads its UTF-8 JSON and writes it to an isolated folder in `Directory.Cache`, obtains its native `file://` URI, and passes that URI to the official Share plugin. The user can choose Save to Files or another share destination. Trace reports that the share sheet closed and asks the user to verify the destination; it does not claim a backup was saved merely because the sheet returned. After the share operation settles, Trace deletes only its own temporary file and then its empty temporary folder. Cancellation is distinct from failure, and write, URI, share, or cleanup failures return typed errors. iOS may evict cache files after an interruption; the app does not treat its cache copy as a retained backup. Large exports require physical-device memory testing because native UTF-8 writing reads the archive Blob into a string.
+
+The web/PWA Download Trace Backup action immediately uses the browser download, including in browsers with Web Share support. The shared web adapter still supports Web Share for workflows that explicitly request it. Native Android and unknown native platforms return an explicit unsupported result in this iOS slice. Other App-level raw recovery downloads remain unsupported in native mode; they are separate workflows to address before any native action depends on them.
+
+The iOS project is still deferred. When created, its `ios/App` privacy manifest must declare `NSPrivacyAccessedAPICategoryFileTimestamp` with approved reason `C617.1` for Filesystem. Review the complete native privacy manifest then. `UIFileSharingEnabled` and `LSSupportsOpeningDocumentsInPlace` are unnecessary for this cache-plus-share design: Trace does not expose its private Documents container in Files or edit a picked backup in place. The Files picker supplies the user-selected file to WKWebView; the native share sheet exports a temporary cache file. Do not add broad storage permissions or those Info.plist keys for this design.
+
+On a physical iPhone, verify the Files picker opens from the selection control, accepts a PWA backup, shows preview before confirmation, rejects invalid or modified backups, and preserves existing data after canceled or failed restore. Verify Save to Files and another share destination, canceled sharing, cleanup, large archives, app backgrounding, and a full round-trip restore. Unit tests cannot establish on-device picker or share-sheet behavior.
 
 ## Windows validation, to run after this slice
 
 Use `npm.cmd` in PowerShell because this machine's execution policy blocks the `npm.ps1` shim. Run from the Trace repository root:
 
 ```powershell
-npm.cmd test -- --watchAll=false --runInBand --runTestsByPath src/services/runtimePlatform.test.js src/serviceWorkerRegistration.test.js
+npm.cmd test -- --watchAll=false --runInBand --runTestsByPath src/services/backupFileAdapter.test.js src/components/BackupPage.test.jsx src/services/traceBackup.test.js
 npm.cmd run build
 npm.cmd run cap:doctor
 ```
@@ -43,6 +55,6 @@ npm run cap:open:ios
 
 ## Subsequent native slices
 
-Create and review the iOS project; validate native localStorage, IndexedDB, offline packaged assets, and PWA-to-native Backup/Restore migration; add camera/photo, microphone/audio, Files/Backup/Restore, sharing, lifecycle, and barcode networking adapters; implement StoreKit and Restore Purchases for Premium; finish privacy manifest and permissions; then test on a physical iPhone before TestFlight.
+Create and review the iOS project; validate native localStorage, IndexedDB, offline packaged assets, and the Backup/Restore path above; add camera/photo, microphone/audio, other Files and sharing workflows, lifecycle, and barcode networking adapters; implement StoreKit and Restore Purchases for Premium; finish privacy manifest and permissions; then test on a physical iPhone before TestFlight.
 
-References: [Capacitor 8 environment setup](https://capacitorjs.com/docs/getting-started/environment-setup), [iOS setup](https://capacitorjs.com/docs/ios), and [Swift Package Manager](https://capacitorjs.com/docs/ios/spm).
+References: [Capacitor 8 environment setup](https://capacitorjs.com/docs/getting-started/environment-setup), [iOS setup](https://capacitorjs.com/docs/ios), [Swift Package Manager](https://capacitorjs.com/docs/ios/spm), [Filesystem](https://capacitorjs.com/docs/apis/filesystem), and [Share](https://capacitorjs.com/docs/apis/share).

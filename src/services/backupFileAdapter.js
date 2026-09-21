@@ -1,4 +1,6 @@
-import { detectRuntimePlatform } from "./runtimePlatform";
+import { Directory, Encoding, Filesystem } from "@capacitor/filesystem";
+import { Share } from "@capacitor/share";
+import { detectRuntimePlatform, RUNTIME_KINDS } from "./runtimePlatform";
 
 export const TRACE_BACKUP_MIME_TYPE = "application/json";
 
@@ -203,7 +205,9 @@ export function createWebBackupFileAdapter(options = {}) {
 
   async function readSelectedFile(file) {
     const env = environment();
-    if (!env.runtime?.isWeb) return unsupported(BACKUP_FILE_METHOD.READ);
+    if (!env.runtime?.isWeb && env.runtime?.kind !== RUNTIME_KINDS.NATIVE_IOS) {
+      return unsupported(BACKUP_FILE_METHOD.READ);
+    }
     if (!file) {
       return result(BACKUP_FILE_RESULT_STATUS.CANCELED, BACKUP_FILE_METHOD.READ, {
         reason: "no-file-selected",
@@ -250,3 +254,159 @@ export function createWebBackupFileAdapter(options = {}) {
 }
 
 export const webBackupFileAdapter = createWebBackupFileAdapter();
+
+function isSafeNativeBackup({ contents, filename, mimeType } = {}) {
+  return (typeof contents?.text === "function" || (typeof contents?.size === "number" && typeof contents?.slice === "function"))
+    && typeof filename === "string"
+    && /^trace-backup-[A-Za-z0-9-]+\.json$/.test(filename)
+    && mimeType === TRACE_BACKUP_MIME_TYPE;
+}
+
+function nativeBackupError(stage, error) {
+  const action = {
+    read: "read the prepared backup",
+    write: "write the temporary backup",
+    uri: "locate the temporary backup",
+    share: "share the backup",
+    cleanup: "remove the temporary backup",
+  }[stage];
+  return new Error(`Trace could not ${action}: ${errorWithFallback(error, "Native file operation failed.").message}`);
+}
+
+async function readPreparedBackup(contents, FileReaderConstructor) {
+  if (typeof contents.text === "function") return contents.text();
+  if (typeof FileReaderConstructor !== "function") {
+    throw new Error("This device cannot read the prepared backup file.");
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReaderConstructor();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error("The prepared backup could not be read."));
+    reader.onabort = () => reject(new Error("Reading the prepared backup was interrupted."));
+    try {
+      reader.readAsText(contents, "UTF-8");
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+export function createTraceBackupFileAdapter(options = {}) {
+  const web = createWebBackupFileAdapter(options);
+  const filesystem = options.filesystem || Filesystem;
+  const nativeShare = options.nativeShare || Share;
+  const FileReaderConstructor = configuredValue(options, "FileReaderConstructor", "FileReader");
+  let temporarySequence = 0;
+
+  function runtime() {
+    return options.runtime || detectRuntimePlatform({
+      windowObject: configuredValue(options, "windowObject", "window"),
+      navigatorObject: configuredValue(options, "navigatorObject", "navigator"),
+    });
+  }
+
+  function isNativeIos() {
+    const platform = runtime();
+    return platform.isNative === true && platform.kind === RUNTIME_KINDS.NATIVE_IOS;
+  }
+
+  function unsupportedNative(method) {
+    return result(BACKUP_FILE_RESULT_STATUS.UNSUPPORTED, method, {
+      native: true,
+      error: new Error("Native backup file sharing is currently supported only on iOS."),
+    });
+  }
+
+  function prepareExport(descriptor) {
+    const platform = runtime();
+    if (platform.isWeb) return web.prepareExport(descriptor);
+    if (platform.kind !== RUNTIME_KINDS.NATIVE_IOS) return unsupportedNative(BACKUP_FILE_METHOD.SHARE);
+    if (!isSafeNativeBackup(descriptor)) {
+      return result(BACKUP_FILE_RESULT_STATUS.FAILURE, BACKUP_FILE_METHOD.SHARE, {
+        native: true,
+        error: new Error("The prepared Trace backup file has an unsafe name, type, or contents."),
+      });
+    }
+    return result(BACKUP_FILE_RESULT_STATUS.READY, BACKUP_FILE_METHOD.SHARE, {
+      native: true,
+      file: Object.freeze({
+        contents: descriptor.contents,
+        filename: descriptor.filename,
+        mimeType: descriptor.mimeType,
+      }),
+    });
+  }
+
+  function downloadExport(descriptor) {
+    return runtime().isWeb ? web.downloadExport(descriptor) : unsupportedNative(BACKUP_FILE_METHOD.DOWNLOAD);
+  }
+
+  async function shareExport(file) {
+    const platform = runtime();
+    if (platform.isWeb) return web.shareExport(file);
+    if (platform.kind !== RUNTIME_KINDS.NATIVE_IOS) return unsupportedNative(BACKUP_FILE_METHOD.SHARE);
+    if (!isSafeNativeBackup(file)) {
+      return result(BACKUP_FILE_RESULT_STATUS.FAILURE, BACKUP_FILE_METHOD.SHARE, {
+        native: true,
+        error: new Error("The prepared Trace backup file has an unsafe name, type, or contents."),
+      });
+    }
+
+    const folder = `trace-backup-export-${Date.now()}-${++temporarySequence}`;
+    const path = `${folder}/${file.filename}`;
+    let writeStarted = false;
+    let stage = "read";
+    let delivery;
+    try {
+      const data = await readPreparedBackup(file.contents, FileReaderConstructor);
+      if (typeof data !== "string") throw new Error("The backup did not contain UTF-8 text.");
+      stage = "write";
+      writeStarted = true;
+      await filesystem.writeFile({ path, data, directory: Directory.Cache, encoding: Encoding.UTF8, recursive: true });
+      stage = "uri";
+      const { uri } = await filesystem.getUri({ path, directory: Directory.Cache });
+      if (typeof uri !== "string" || !uri.startsWith("file://")) {
+        throw new Error("The temporary backup file has no usable file URI.");
+      }
+      stage = "share";
+      await nativeShare.share({ files: [uri], title: "Trace Backup" });
+      delivery = result(BACKUP_FILE_RESULT_STATUS.SUCCESS, BACKUP_FILE_METHOD.SHARE, { native: true });
+    } catch (error) {
+      delivery = stage === "share" && (error?.name === "AbortError" || error?.message === "Share canceled")
+        ? result(BACKUP_FILE_RESULT_STATUS.CANCELED, BACKUP_FILE_METHOD.SHARE, { native: true })
+        : result(BACKUP_FILE_RESULT_STATUS.FAILURE, BACKUP_FILE_METHOD.SHARE, {
+          native: true,
+          stage,
+          error: nativeBackupError(stage, error),
+        });
+    }
+
+    if (writeStarted) {
+      try {
+        await filesystem.deleteFile({ path, directory: Directory.Cache });
+        await filesystem.rmdir({ path: folder, directory: Directory.Cache });
+      } catch (error) {
+        if (delivery.status === BACKUP_FILE_RESULT_STATUS.FAILURE) {
+          return Object.freeze({ ...delivery, cleanupError: nativeBackupError("cleanup", error) });
+        }
+        return result(BACKUP_FILE_RESULT_STATUS.FAILURE, BACKUP_FILE_METHOD.SHARE, {
+          native: true,
+          stage: "cleanup",
+          shareStatus: delivery.status,
+          error: nativeBackupError("cleanup", error),
+        });
+      }
+    }
+    return delivery;
+  }
+
+  return Object.freeze({
+    isNativeIos,
+    prepareExport,
+    downloadExport,
+    shareExport,
+    readSelectedFile: web.readSelectedFile,
+  });
+}
+
+export const traceBackupFileAdapter = createTraceBackupFileAdapter();

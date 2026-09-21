@@ -11,7 +11,7 @@ import {
   BACKUP_FILE_METHOD,
   BACKUP_FILE_RESULT_STATUS,
   TRACE_BACKUP_MIME_TYPE,
-  webBackupFileAdapter,
+  traceBackupFileAdapter,
 } from "../services/backupFileAdapter";
 import { JOURNAL_RECOVERY_FORMAT_LEGACY } from "../services/journalVaultCrypto";
 
@@ -24,7 +24,7 @@ export default function BackupPage({
   journalVaultSession = null,
   buttonStyle,
   containerStyle,
-  backupFileAdapter = webBackupFileAdapter,
+  backupFileAdapter = traceBackupFileAdapter,
 }) {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -41,6 +41,7 @@ export default function BackupPage({
   const summary = preview?.summary;
   const backupUsesLegacyRecovery = summary?.journalRecoveryFormat === JOURNAL_RECOVERY_FORMAT_LEGACY;
   const backupRecoveryLabel = backupUsesLegacyRecovery ? "legacy recovery key" : "recovery phrase";
+  const isNativeIos = backupFileAdapter.isNativeIos?.() === true;
 
   useEffect(() => {
     let active = true;
@@ -75,12 +76,15 @@ export default function BackupPage({
         return;
       }
       const backup = await createTraceBackupArchive();
-      const delivery = await backupFileAdapter.prepareExport({
+      const exportFile = {
         contents: backup.contents,
         filename: traceBackupFilename(new Date(backup.createdAt)),
         mimeType: TRACE_BACKUP_MIME_TYPE,
-      });
-      if (delivery.status === BACKUP_FILE_RESULT_STATUS.READY && delivery.method === BACKUP_FILE_METHOD.SHARE) {
+      };
+      const delivery = await (isNativeIos
+        ? backupFileAdapter.prepareExport(exportFile)
+        : backupFileAdapter.downloadExport(exportFile));
+      if (isNativeIos && delivery.status === BACKUP_FILE_RESULT_STATUS.READY && delivery.method === BACKUP_FILE_METHOD.SHARE) {
         setShareBackupFile(delivery.file);
         setStatus("Backup is ready. Tap Save Backup to Files to open the iPhone share sheet.");
       } else if (delivery.status === BACKUP_FILE_RESULT_STATUS.SUCCESS && delivery.method === BACKUP_FILE_METHOD.DOWNLOAD) {
@@ -96,13 +100,15 @@ export default function BackupPage({
   }
 
   async function saveBackupToFiles() {
-    if (!shareBackupFile) return;
+    if (!isNativeIos || !shareBackupFile) return;
     setError("");
     setRestoreComplete(false);
     const delivery = await backupFileAdapter.shareExport(shareBackupFile);
     if (delivery.status === BACKUP_FILE_RESULT_STATUS.SUCCESS && delivery.method === BACKUP_FILE_METHOD.SHARE) {
       setShareBackupFile(null);
-      setStatus("Trace backup is ready in the share sheet. Choose Save to Files to keep it.");
+      setStatus(delivery.native
+        ? "Share sheet closed. Check Files or your chosen destination to confirm the backup was saved."
+        : "Trace backup is ready in the share sheet. Choose Save to Files to keep it.");
     } else if (delivery.status === BACKUP_FILE_RESULT_STATUS.SUCCESS && delivery.method === BACKUP_FILE_METHOD.DOWNLOAD) {
       setShareBackupFile(null);
       setStatus("Trace backup downloaded. Your current data was not changed.");
@@ -110,7 +116,8 @@ export default function BackupPage({
       setStatus("Trace backup sharing was canceled. Your current data was not changed.");
     } else {
       setStatus("");
-      setError(`Trace could not open the Save to Files sheet: ${delivery.error?.message || "Backup file sharing is unavailable."}`);
+      const cleanupDetail = delivery.cleanupError ? ` ${delivery.cleanupError.message}` : "";
+      setError(`${delivery.native ? "Trace could not complete native backup sharing" : "Trace could not open the Save to Files sheet"}: ${delivery.error?.message || "Backup file sharing is unavailable."}${cleanupDetail}`);
     }
   }
 
@@ -219,7 +226,7 @@ export default function BackupPage({
         <button className="trace-action trace-action--brass" type="button" style={{ ...buttonStyle, backgroundColor: "#475569" }} onClick={() => fileInputRef.current?.click()}>
           Select Backup to Restore
         </button>
-        {shareBackupFile && <button className="trace-action trace-action--primary trace-backup-actions__save" type="button" style={buttonStyle} onClick={saveBackupToFiles}>Save Backup to Files</button>}
+        {isNativeIos && shareBackupFile && <button className="trace-action trace-action--primary trace-backup-actions__save" type="button" style={buttonStyle} onClick={saveBackupToFiles}>Save Backup to Files</button>}
         <input ref={fileInputRef} type="file" accept="application/json,.json" onChange={selectBackup} hidden />
       </section>
       <section className="trace-feature-surface trace-backup-estimate" aria-label="Backup size estimate">

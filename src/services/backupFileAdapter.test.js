@@ -1,11 +1,13 @@
 import {
   BACKUP_FILE_METHOD,
   BACKUP_FILE_RESULT_STATUS,
+  createTraceBackupFileAdapter,
   createWebBackupFileAdapter,
   TRACE_BACKUP_MIME_TYPE,
 } from "./backupFileAdapter";
+import { Directory, Encoding } from "@capacitor/filesystem";
 
-function browserHarness({ navigatorObject = {}, runtime } = {}) {
+function browserHarness({ navigatorObject = {}, runtime, createAdapter = createWebBackupFileAdapter } = {}) {
   const link = { click: jest.fn(), remove: jest.fn(), href: "", download: "" };
   const documentObject = {
     body: { appendChild: jest.fn() },
@@ -15,7 +17,7 @@ function browserHarness({ navigatorObject = {}, runtime } = {}) {
     createObjectURL: jest.fn(() => "blob:trace-backup"),
     revokeObjectURL: jest.fn(),
   };
-  const adapter = createWebBackupFileAdapter({
+  const adapter = createAdapter({
     windowObject: {},
     navigatorObject,
     documentObject,
@@ -314,7 +316,7 @@ test.each([
   expect(urlObject.revokeObjectURL).not.toHaveBeenCalled();
 });
 
-test("native runtime classification never invokes browser file, share, download, or read APIs", async () => {
+test("the web-only adapter never invokes browser export APIs in native mode", async () => {
   const FileConstructor = jest.fn();
   const FileReaderConstructor = jest.fn();
   const navigatorObject = { canShare: jest.fn(), share: jest.fn() };
@@ -332,7 +334,6 @@ test("native runtime classification never invokes browser file, share, download,
 
   expect(adapter.prepareExport(descriptor())).toMatchObject({ status: BACKUP_FILE_RESULT_STATUS.UNSUPPORTED });
   await expect(adapter.shareExport({})).resolves.toMatchObject({ status: BACKUP_FILE_RESULT_STATUS.UNSUPPORTED });
-  await expect(adapter.readSelectedFile({})).resolves.toMatchObject({ status: BACKUP_FILE_RESULT_STATUS.UNSUPPORTED });
   expect(FileConstructor).not.toHaveBeenCalled();
   expect(FileReaderConstructor).not.toHaveBeenCalled();
   expect(navigatorObject.canShare).not.toHaveBeenCalled();
@@ -340,4 +341,179 @@ test("native runtime classification never invokes browser file, share, download,
   expect(documentObject.createElement).not.toHaveBeenCalled();
   expect(urlObject.createObjectURL).not.toHaveBeenCalled();
   expect(urlObject.revokeObjectURL).not.toHaveBeenCalled();
+});
+
+function nativeHarness(kind = "native-ios", options = {}) {
+  const filesystem = {
+    writeFile: jest.fn().mockResolvedValue({}),
+    getUri: jest.fn().mockResolvedValue({ uri: "file:///trace-cache/trace-backup.json" }),
+    deleteFile: jest.fn().mockResolvedValue(),
+    rmdir: jest.fn().mockResolvedValue(),
+  };
+  const nativeShare = { share: jest.fn().mockResolvedValue({ activityType: "save-to-files" }) };
+  const adapter = createTraceBackupFileAdapter({
+    runtime: { kind, platform: kind.slice("native-".length), isNative: true, isWeb: false },
+    filesystem,
+    nativeShare,
+    ...options,
+  });
+  return { adapter, filesystem, nativeShare };
+}
+
+function nativeDescriptor(contents = '{"format":"trace-backup","name":"café"}') {
+  return descriptor({ text: jest.fn().mockResolvedValue(contents) });
+}
+
+test("the platform adapter preserves web download and Web Share selection", async () => {
+  const { adapter: downloadAdapter, link } = browserHarness({ createAdapter: createTraceBackupFileAdapter });
+  expect(downloadAdapter.prepareExport(descriptor())).toEqual({
+    status: BACKUP_FILE_RESULT_STATUS.SUCCESS,
+    method: BACKUP_FILE_METHOD.DOWNLOAD,
+  });
+  expect(link.click).toHaveBeenCalledTimes(1);
+
+  const share = jest.fn().mockResolvedValue();
+  const { adapter: shareAdapter } = browserHarness({
+    createAdapter: createTraceBackupFileAdapter,
+    navigatorObject: { canShare: jest.fn(() => true), share },
+  });
+  const prepared = shareAdapter.prepareExport(descriptor());
+  expect(prepared.status).toBe(BACKUP_FILE_RESULT_STATUS.READY);
+  await expect(shareAdapter.shareExport(prepared.file)).resolves.toEqual({
+    status: BACKUP_FILE_RESULT_STATUS.SUCCESS,
+    method: BACKUP_FILE_METHOD.SHARE,
+  });
+  expect(share).toHaveBeenCalledWith({ files: [prepared.file] });
+});
+
+test("native iOS shares the exact UTF-8 archive URI and cleans its isolated cache file", async () => {
+  const contents = '{"format":"trace-backup","name":"café"}';
+  const { adapter, filesystem, nativeShare } = nativeHarness();
+  const prepared = adapter.prepareExport(nativeDescriptor(contents));
+  expect(prepared).toMatchObject({ status: BACKUP_FILE_RESULT_STATUS.READY, method: BACKUP_FILE_METHOD.SHARE, native: true });
+
+  await expect(adapter.shareExport(prepared.file)).resolves.toEqual({
+    status: BACKUP_FILE_RESULT_STATUS.SUCCESS,
+    method: BACKUP_FILE_METHOD.SHARE,
+    native: true,
+  });
+  const written = filesystem.writeFile.mock.calls[0][0];
+  expect(written).toMatchObject({
+    path: expect.stringMatching(/^trace-backup-export-\d+-\d+\/trace-backup-2026-09-02\.json$/),
+    data: contents,
+    directory: Directory.Cache,
+    encoding: Encoding.UTF8,
+    recursive: true,
+  });
+  expect(filesystem.getUri).toHaveBeenCalledWith({ path: written.path, directory: Directory.Cache });
+  expect(nativeShare.share).toHaveBeenCalledWith({ files: ["file:///trace-cache/trace-backup.json"], title: "Trace Backup" });
+  expect(filesystem.deleteFile).toHaveBeenCalledWith({ path: written.path, directory: Directory.Cache });
+  expect(filesystem.rmdir).toHaveBeenCalledWith({ path: written.path.split("/")[0], directory: Directory.Cache });
+  expect(nativeShare.share.mock.invocationCallOrder[0]).toBeLessThan(filesystem.deleteFile.mock.invocationCallOrder[0]);
+});
+
+test("native iOS reads an archive through FileReader when Blob.text is unavailable", async () => {
+  const contents = { size: 25, slice: jest.fn() };
+  class ArchiveReader {
+    readAsText(selected) {
+      expect(selected).toBe(contents);
+      this.result = '{"format":"trace-backup"}';
+      this.onload();
+    }
+  }
+  const { adapter, filesystem } = nativeHarness("native-ios", { FileReaderConstructor: ArchiveReader });
+  const prepared = adapter.prepareExport(descriptor(contents));
+  expect(prepared.status).toBe(BACKUP_FILE_RESULT_STATUS.READY);
+  await expect(adapter.shareExport(prepared.file)).resolves.toMatchObject({ status: BACKUP_FILE_RESULT_STATUS.SUCCESS });
+  expect(filesystem.writeFile.mock.calls[0][0].data).toBe('{"format":"trace-backup"}');
+});
+
+test("native iOS share cancellation is distinct and cleans the temporary file", async () => {
+  const { adapter, filesystem, nativeShare } = nativeHarness();
+  nativeShare.share.mockRejectedValue(new Error("Share canceled"));
+  const prepared = adapter.prepareExport(nativeDescriptor());
+  await expect(adapter.shareExport(prepared.file)).resolves.toEqual({
+    status: BACKUP_FILE_RESULT_STATUS.CANCELED,
+    method: BACKUP_FILE_METHOD.SHARE,
+    native: true,
+  });
+  expect(filesystem.deleteFile).toHaveBeenCalledTimes(1);
+  expect(filesystem.rmdir).toHaveBeenCalledTimes(1);
+});
+
+test.each([
+  ["write", (filesystem) => filesystem.writeFile.mockRejectedValue(new Error("disk full"))],
+  ["uri", (filesystem) => filesystem.getUri.mockRejectedValue(new Error("URI unavailable"))],
+  ["share", (filesystem, nativeShare) => nativeShare.share.mockRejectedValue(new Error("share failed"))],
+])("native %s failure is typed, never falls back to download, and attempts cleanup", async (stage, fail) => {
+  const { adapter, filesystem, nativeShare } = nativeHarness();
+  fail(filesystem, nativeShare);
+  const prepared = adapter.prepareExport(nativeDescriptor());
+  const delivery = await adapter.shareExport(prepared.file);
+  expect(delivery).toMatchObject({ status: BACKUP_FILE_RESULT_STATUS.FAILURE, method: BACKUP_FILE_METHOD.SHARE, native: true, stage });
+  expect(filesystem.deleteFile).toHaveBeenCalledTimes(1);
+  if (stage !== "share") expect(nativeShare.share).not.toHaveBeenCalled();
+});
+
+test("cleanup failure is reported without claiming a saved backup", async () => {
+  const { adapter, filesystem } = nativeHarness();
+  filesystem.deleteFile.mockRejectedValue(new Error("cache locked"));
+  const prepared = adapter.prepareExport(nativeDescriptor());
+  const delivery = await adapter.shareExport(prepared.file);
+  expect(delivery).toMatchObject({
+    status: BACKUP_FILE_RESULT_STATUS.FAILURE,
+    method: BACKUP_FILE_METHOD.SHARE,
+    native: true,
+    stage: "cleanup",
+    shareStatus: BACKUP_FILE_RESULT_STATUS.SUCCESS,
+  });
+  expect(delivery.error.message).toContain("cache locked");
+});
+
+test("native export rejects unsafe backup names before writing", async () => {
+  const { adapter, filesystem, nativeShare } = nativeHarness();
+  const unsafe = { ...nativeDescriptor(), filename: "../private.json" };
+  expect(adapter.prepareExport(unsafe)).toMatchObject({ status: BACKUP_FILE_RESULT_STATUS.FAILURE, native: true });
+  await expect(adapter.shareExport(unsafe)).resolves.toMatchObject({ status: BACKUP_FILE_RESULT_STATUS.FAILURE, native: true });
+  expect(filesystem.writeFile).not.toHaveBeenCalled();
+  expect(nativeShare.share).not.toHaveBeenCalled();
+});
+
+test("a failed write keeps its primary error when partial-file cleanup also fails", async () => {
+  const { adapter, filesystem, nativeShare } = nativeHarness();
+  filesystem.writeFile.mockRejectedValue(new Error("disk full"));
+  filesystem.deleteFile.mockRejectedValue(new Error("partial file locked"));
+  const prepared = adapter.prepareExport(nativeDescriptor());
+  const delivery = await adapter.shareExport(prepared.file);
+  expect(delivery).toMatchObject({
+    status: BACKUP_FILE_RESULT_STATUS.FAILURE,
+    method: BACKUP_FILE_METHOD.SHARE,
+    native: true,
+    stage: "write",
+  });
+  expect(delivery.error.message).toContain("disk full");
+  expect(delivery.cleanupError.message).toContain("partial file locked");
+  expect(nativeShare.share).not.toHaveBeenCalled();
+});
+
+test("native iOS can read a Files-picker File while native exports avoid browser downloads", async () => {
+  const { adapter } = nativeHarness();
+  const file = { name: "pwa-backup.json", type: "application/json", size: 18, text: jest.fn().mockResolvedValue("PWA backup") };
+  await expect(adapter.readSelectedFile(file)).resolves.toMatchObject({
+    status: BACKUP_FILE_RESULT_STATUS.SUCCESS,
+    method: BACKUP_FILE_METHOD.READ,
+    contents: "PWA backup",
+    file: { name: "pwa-backup.json" },
+  });
+  expect(adapter.downloadExport(descriptor())).toMatchObject({ status: BACKUP_FILE_RESULT_STATUS.UNSUPPORTED });
+});
+
+test.each(["native-android", "native-unknown"])("%s explicitly rejects export and import", async (kind) => {
+  const { adapter, filesystem, nativeShare } = nativeHarness(kind);
+  expect(adapter.prepareExport(nativeDescriptor())).toMatchObject({ status: BACKUP_FILE_RESULT_STATUS.UNSUPPORTED });
+  expect(adapter.downloadExport(descriptor())).toMatchObject({ status: BACKUP_FILE_RESULT_STATUS.UNSUPPORTED });
+  await expect(adapter.shareExport(nativeDescriptor())).resolves.toMatchObject({ status: BACKUP_FILE_RESULT_STATUS.UNSUPPORTED });
+  await expect(adapter.readSelectedFile({ text: jest.fn() })).resolves.toMatchObject({ status: BACKUP_FILE_RESULT_STATUS.UNSUPPORTED });
+  expect(filesystem.writeFile).not.toHaveBeenCalled();
+  expect(nativeShare.share).not.toHaveBeenCalled();
 });

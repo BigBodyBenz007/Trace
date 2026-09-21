@@ -9,7 +9,7 @@ import {
   restoreTraceBackup,
   traceBackupFilename,
 } from "../services/traceBackup";
-import { BACKUP_FILE_METHOD, BACKUP_FILE_RESULT_STATUS } from "../services/backupFileAdapter";
+import { BACKUP_FILE_METHOD, BACKUP_FILE_RESULT_STATUS, createTraceBackupFileAdapter } from "../services/backupFileAdapter";
 
 jest.mock("../services/traceBackup", () => ({
   createTraceBackup: jest.fn(),
@@ -188,7 +188,7 @@ test("desktop export retains the complete JSON backup filename and MIME type", a
   URL.revokeObjectURL = originalRevokeObjectURL;
 });
 
-test("iPhone export opens the native file share sheet with the complete JSON file", async () => {
+test("Windows browser downloads the complete JSON directly even when Web Share is available", async () => {
   const backup = {
     createdAt: "2026-08-12T00:00:00.000Z",
     data: { structured: { memories: [{ id: "memory-1" }], settings: { units: "metric" } }, photos: [{ id: "photo-1", data: "full-photo" }] },
@@ -197,69 +197,40 @@ test("iPhone export opens the native file share sheet with the complete JSON fil
   const share = jest.fn().mockResolvedValue(undefined);
   const canShare = jest.fn(() => true);
   const restoreNavigator = mockNavigator({
-    userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)",
-    platform: "iPhone",
-    maxTouchPoints: 5,
+    userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+    platform: "Win32",
     canShare,
     share,
   });
   const originalCreateObjectURL = URL.createObjectURL;
-  URL.createObjectURL = jest.fn();
+  const originalRevokeObjectURL = URL.revokeObjectURL;
+  URL.createObjectURL = jest.fn(() => "blob:web-backup");
+  URL.revokeObjectURL = jest.fn();
+  const click = jest.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
   render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
 
+  expect(screen.queryByRole("button", { name: "Save Backup to Files" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/iPhone|share sheet|Save to Files/i)).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
-  expect(await screen.findByText(/Tap Save Backup to Files/)).toBeInTheDocument();
-  expect(screen.queryByText("Trace backup downloaded. Your current data was not changed.")).not.toBeInTheDocument();
-  expect(URL.createObjectURL).not.toHaveBeenCalled();
+  expect(await screen.findByText("Trace backup downloaded. Your current data was not changed.")).toBeInTheDocument();
+  expect(click).toHaveBeenCalledTimes(1);
+  expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
+  expect(URL.revokeObjectURL).toHaveBeenCalledWith("blob:web-backup");
+  expect(canShare).not.toHaveBeenCalled();
   expect(share).not.toHaveBeenCalled();
-  const saveActions = screen.getAllByRole("button", { name: "Save Backup to Files" });
-  expect(saveActions).toHaveLength(1);
-  fireEvent.click(saveActions[0]);
-  expect(await screen.findByText(/Choose Save to Files/)).toBeInTheDocument();
-
-  const [{ files }] = share.mock.calls[0];
-  expect(canShare).toHaveBeenCalledWith({ files });
-  expect(files).toHaveLength(1);
-  expect(files[0].name).toBe("trace-backup-test.json");
-  expect(files[0].type).toBe("application/json");
-  expect(JSON.parse(await readFileText(files[0]))).toEqual(backup);
-  expect(URL.createObjectURL).not.toHaveBeenCalled();
+  expect(screen.queryByRole("button", { name: "Save Backup to Files" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/iPhone|share sheet|Save to Files/i)).not.toBeInTheDocument();
+  const file = URL.createObjectURL.mock.calls[0][0];
+  expect(file.name).toBe("trace-backup-test.json");
+  expect(file.type).toBe("application/json");
+  expect(JSON.parse(await readFileText(file))).toEqual(backup);
+  click.mockRestore();
   URL.createObjectURL = originalCreateObjectURL;
+  URL.revokeObjectURL = originalRevokeObjectURL;
   restoreNavigator();
 });
 
-test("canceling the file share keeps the prepared backup available without showing an error", async () => {
-  createTraceBackup.mockResolvedValue({ createdAt: "2026-08-12T00:00:00.000Z", data: { structured: {}, photos: [] } });
-  const share = jest.fn().mockRejectedValue(new DOMException("Canceled", "AbortError"));
-  const restoreNavigator = mockNavigator({ canShare: jest.fn(() => true), share });
-  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
-
-  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
-  fireEvent.click(await screen.findByRole("button", { name: "Save Backup to Files" }));
-
-  expect(await screen.findByText("Trace backup sharing was canceled. Your current data was not changed.")).toBeInTheDocument();
-  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  expect(screen.getByRole("button", { name: "Save Backup to Files" })).toBeInTheDocument();
-  restoreNavigator();
-});
-
-test("a genuine file-share failure keeps the existing accurate error behavior", async () => {
-  createTraceBackup.mockResolvedValue({ createdAt: "2026-08-12T00:00:00.000Z", data: { structured: {}, photos: [] } });
-  const share = jest.fn().mockRejectedValue(new Error("share permission denied"));
-  const restoreNavigator = mockNavigator({ canShare: jest.fn(() => true), share });
-  render(<BackupPage onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
-
-  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
-  fireEvent.click(await screen.findByRole("button", { name: "Save Backup to Files" }));
-
-  expect(await screen.findByRole("alert")).toHaveTextContent(
-    "Trace could not open the Save to Files sheet: share permission denied"
-  );
-  expect(screen.getByRole("button", { name: "Save Backup to Files" })).toBeInTheDocument();
-  restoreNavigator();
-});
-
-test("iPhone export falls back to download when file sharing rejects the backup file", async () => {
+test("iPhone browser also downloads directly without native controls", async () => {
   createTraceBackup.mockResolvedValue({ createdAt: "2026-08-12T00:00:00.000Z", data: { structured: {}, photos: [] } });
   const share = jest.fn();
   const restoreNavigator = mockNavigator({
@@ -279,6 +250,8 @@ test("iPhone export falls back to download when file sharing rejects the backup 
   fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
   expect(await screen.findByText("Trace backup downloaded. Your current data was not changed.")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Save Backup to Files" })).not.toBeInTheDocument();
+  expect(screen.queryByText(/iPhone|share sheet|Save to Files/i)).not.toBeInTheDocument();
+  expect(navigator.canShare).not.toHaveBeenCalled();
   expect(share).not.toHaveBeenCalled();
   expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
   expect(URL.revokeObjectURL).toHaveBeenCalledTimes(1);
@@ -293,7 +266,7 @@ test("an injected adapter receives the complete archive Blob without another ful
   const backup = { createdAt: "2026-08-12T00:00:00.000Z", data: { structured: { memories: [] }, photos: [] } };
   createTraceBackup.mockResolvedValue(backup);
   const backupFileAdapter = {
-    prepareExport: jest.fn(() => ({
+    downloadExport: jest.fn(() => ({
       status: BACKUP_FILE_RESULT_STATUS.SUCCESS,
       method: BACKUP_FILE_METHOD.DOWNLOAD,
     })),
@@ -305,13 +278,123 @@ test("an injected adapter receives the complete archive Blob without another ful
   fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
 
   expect(await screen.findByText("Trace backup downloaded. Your current data was not changed.")).toBeInTheDocument();
-  expect(backupFileAdapter.prepareExport).toHaveBeenCalledWith({
+  expect(backupFileAdapter.downloadExport).toHaveBeenCalledWith({
     contents: expect.any(Blob),
     filename: "trace-backup-test.json",
     mimeType: "application/json",
   });
-  const [{ contents }] = backupFileAdapter.prepareExport.mock.calls[0];
+  const [{ contents }] = backupFileAdapter.downloadExport.mock.calls[0];
   expect(JSON.parse(await readFileText(contents))).toEqual(backup);
+});
+
+function nativeBackupAdapter({ writeFile = jest.fn().mockResolvedValue({}), share = jest.fn().mockResolvedValue({ activityType: "save-to-files" }) } = {}) {
+  const filesystem = {
+    writeFile,
+    getUri: jest.fn().mockResolvedValue({ uri: "file:///trace-cache/trace-backup-test.json" }),
+    deleteFile: jest.fn().mockResolvedValue(),
+    rmdir: jest.fn().mockResolvedValue(),
+  };
+  return {
+    adapter: createTraceBackupFileAdapter({
+      runtime: { kind: "native-ios", platform: "ios", isNative: true, isWeb: false },
+      filesystem,
+      nativeShare: { share },
+    }),
+    filesystem,
+    share,
+  };
+}
+
+test("native iOS Backup page shares the existing archive and never claims it was saved", async () => {
+  const backup = { createdAt: "2026-08-12T00:00:00.000Z", data: { structured: {}, photos: [] } };
+  createTraceBackup.mockResolvedValue(backup);
+  const { adapter, filesystem, share } = nativeBackupAdapter();
+  render(<BackupPage backupFileAdapter={adapter} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Save Backup to Files" }));
+  expect(await screen.findByText("Share sheet closed. Check Files or your chosen destination to confirm the backup was saved.")).toBeInTheDocument();
+  expect(screen.queryByText("Trace backup downloaded. Your current data was not changed.")).not.toBeInTheDocument();
+  expect(JSON.parse(filesystem.writeFile.mock.calls[0][0].data)).toEqual(backup);
+  expect(share).toHaveBeenCalledWith({ files: ["file:///trace-cache/trace-backup-test.json"], title: "Trace Backup" });
+  expect(filesystem.deleteFile).toHaveBeenCalledTimes(1);
+});
+
+test("native iOS export failure stays actionable and does not claim a saved backup", async () => {
+  createTraceBackup.mockResolvedValue({ createdAt: "2026-08-12T00:00:00.000Z", data: { structured: {}, photos: [] } });
+  const { adapter, share } = nativeBackupAdapter({ writeFile: jest.fn().mockRejectedValue(new Error("disk full")) });
+  render(<BackupPage backupFileAdapter={adapter} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Save Backup to Files" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("Trace could not write the temporary backup: disk full");
+  expect(screen.getByRole("button", { name: "Save Backup to Files" })).toBeInTheDocument();
+  expect(screen.queryByText(/Check Files or your chosen destination/)).not.toBeInTheDocument();
+  expect(share).not.toHaveBeenCalled();
+});
+
+test("native iOS canceled share keeps the prepared backup available without a success or error", async () => {
+  createTraceBackup.mockResolvedValue({ createdAt: "2026-08-12T00:00:00.000Z", data: { structured: {}, photos: [] } });
+  const { adapter } = nativeBackupAdapter({ share: jest.fn().mockRejectedValue(new Error("Share canceled")) });
+  render(<BackupPage backupFileAdapter={adapter} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+
+  fireEvent.click(screen.getByRole("button", { name: "Download Trace Backup" }));
+  fireEvent.click(await screen.findByRole("button", { name: "Save Backup to Files" }));
+  expect(await screen.findByText("Trace backup sharing was canceled. Your current data was not changed.")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Save Backup to Files" })).toBeInTheDocument();
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.queryByText(/Check Files or your chosen destination/)).not.toBeInTheDocument();
+});
+
+test("native iOS selected File still reaches preview and explicit confirmation before restore", async () => {
+  const { adapter } = nativeBackupAdapter();
+  parseTraceBackupText.mockResolvedValue(parsed);
+  restoreTraceBackup.mockResolvedValue(summary);
+  window.confirm.mockReturnValueOnce(false).mockReturnValueOnce(true);
+  render(<BackupPage backupFileAdapter={adapter} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+  const selected = new File(["PWA backup"], "trace-backup.json", { type: "application/json" });
+  expect(document.querySelector('input[type="file"]')).toHaveAttribute("accept", "application/json,.json");
+  fireEvent.change(document.querySelector('input[type="file"]'), { target: { files: [selected] } });
+
+  expect(await screen.findByRole("heading", { name: "Review Backup" })).toBeInTheDocument();
+  expect(parseTraceBackupText).toHaveBeenCalledWith("PWA backup");
+  expect(restoreTraceBackup).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  expect(window.confirm).toHaveBeenCalledTimes(1);
+  expect(restoreTraceBackup).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  await waitFor(() => expect(restoreTraceBackup).toHaveBeenCalledWith(parsed.backup, {
+    confirmed: true,
+    journalVaultSession: null,
+  }));
+});
+
+test("native iOS rejects a modified backup before preview or replacement", async () => {
+  const { adapter } = nativeBackupAdapter();
+  parseTraceBackupText.mockRejectedValue(new Error("The backup failed its integrity check."));
+  render(<BackupPage backupFileAdapter={adapter} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["modified backup"], "trace-backup.json", { type: "application/json" })] },
+  });
+  expect(await screen.findByRole("alert")).toHaveTextContent("failed its integrity check");
+  expect(screen.queryByRole("heading", { name: "Review Backup" })).not.toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Confirm Full Restore" })).not.toBeInTheDocument();
+  expect(restoreTraceBackup).not.toHaveBeenCalled();
+});
+
+test("native iOS restore surfaces the unchanged rollback result after confirmation", async () => {
+  const { adapter } = nativeBackupAdapter();
+  parseTraceBackupText.mockResolvedValue(parsed);
+  restoreTraceBackup.mockRejectedValue(new Error("Trace restore failed and the previous data was restored: photo write failed"));
+  render(<BackupPage backupFileAdapter={adapter} onBack={jest.fn()} buttonStyle={{}} containerStyle={{}} />);
+  fireEvent.change(document.querySelector('input[type="file"]'), {
+    target: { files: [new File(["backup"], "trace-backup.json", { type: "application/json" })] },
+  });
+  await screen.findByRole("heading", { name: "Review Backup" });
+  expect(restoreTraceBackup).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Confirm Full Restore" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent("previous data was restored");
+  expect(screen.queryByRole("heading", { name: "✓ Trace restored successfully" })).not.toBeInTheDocument();
 });
 
 test("adapter read failure never begins backup validation or restore", async () => {
