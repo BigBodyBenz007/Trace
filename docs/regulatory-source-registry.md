@@ -25,17 +25,22 @@ editions and name-reference bindings. An edition is identified by the pair
 Separate editions of a stable source can coexist. Their publisher, jurisdiction
 and document type must agree; a different kind of source gets a separate ID.
 
-Two sources are shipped:
+Three source editions are shipped (the BVO edition was appended in manifest v2):
 
 | Source | Edition | Verification | Currency |
 | --- | --- | --- | --- |
 | CELEX:32012R0231 | original-2012-03-22 | Verified official text for eight name headings only | Historical |
 | CELEX:02012R0231-20260818 | consolidated-2026-08-18 | Partial, indexed evidence from the audit; completed verification date is null | Undetermined |
+| FR:2024-14300 | published-2024-07-03 | Verified final BVO revocation action and its dates/qualifications; archived official text | Historical |
 
 No source is shipped as current. The 2026 entry neither replaces the 2012
 attribution nor supplies new product metadata. Its separate publication date is
 unknown with an explicit reason; the known consolidation date is not substituted.
 The full-source and amendment-review gaps remain open.
+The BVO citation is held in `src/data/bvoRevocationSource.json`, retaining the
+edition from the [evidence archive](regulatory-evidence/2026-10-19/README.md).
+It supports a [separate legal-event record](regulatory-legal-events.md); it is
+not a name-reference binding or a statement of present product compliance.
 
 ## Record fields
 
@@ -129,16 +134,15 @@ payload field. Existing cached and saved name references keep resolving to the
 calculations, serving safeguards, scanner code and visible layout are unchanged.
 
 Future FDA sources and scientific assessments can use the same citation/edition
-shape, after human verification. Add legal provisions and assessment records as
-separate versioned structures referencing these source editions. Effective dates,
-application dates, compliance deadlines and supersession links belong in those
-explicit structures, not in publication or verification dates. Their validation
-must accommodate proposals, stays, transitions and scope-specific applicability;
-no such legal records are populated in this phase.
+shape, after human verification. The legal-event foundation now holds one final
+US BVO action separately from source and name records. Effective dates,
+compliance deadlines and supersession links belong in that explicit structure,
+not in publication or verification dates. Scientific assessments remain separate.
+Proposals, stays and other date semantics need deliberate schema extensions.
 
-The next development task should retrieve and archive the full relevant official
-EU source material, complete amendment/corrigendum checks, and review a small
-set of dated, use-specific legal records before implementing their schema.
+Further current EU records still require complete official source retrieval and
+amendment/corrigendum checks. See the legal-event documentation for the next
+bounded US implementation and its evidence gates.
 Preserve previous reviewed source snapshots when recording later review attempts;
 the current manifest is a versioned bundle, not a mutable review-history database.
 
@@ -149,12 +153,13 @@ and dangling references, preserved historical citations, future edition lookup,
 immutability and partial-evidence safeguards. Existing additive, cache, selection,
 storage, ingredient, scanner and nutrition suites exercise the unchanged paths.
 
-Validation on 2026-10-19: 355 tests passed across 19 focused suites, run in one
+Original registry validation on 2026-10-19: 355 tests passed across 19 focused suites, run in one
 process. Changed JavaScript passed ESLint with zero warnings and syntax checks;
 Git and new-file whitespace checks passed. Git reported only an LF-to-CRLF
 conversion notice. Existing audit/history documents and unrelated file hashes
 and Git statuses matched the pre-edit baseline. No physical-device test or
 production build was performed for this data/service-only change.
+Validation of the later BVO addition is recorded in [regulatory-legal-events.md](regulatory-legal-events.md).
 
 Copyable focused checks from the project root:
 

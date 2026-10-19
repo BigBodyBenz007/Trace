@@ -1,0 +1,39 @@
+{
+  "sourceId": "FR:2024-14300",
+  "editionId": "published-2024-07-03",
+  "citation": {
+    "id": "FR:2024-14300",
+    "title": "Revocation of Authorization for Use of Brominated Vegetable Oil in Food — 89 FR 55040",
+    "publisher": "US Food and Drug Administration",
+    "jurisdiction": "US-federal",
+    "language": "en",
+    "publicationDate": "2024-07-03",
+    "version": "Publication 2024-07-03",
+    "url": "https://www.govinfo.gov/content/pkg/FR-2024-07-03/pdf/2024-14300.pdf",
+    "attribution": "Source: US Food and Drug Administration, Revocation of Authorization for Use of Brominated Vegetable Oil in Food — 89 FR 55040; accessed 2026-10-19.",
+    "reuseBasis": "US official material; citation and original summary only, no third-party illustrations reproduced.",
+    "reuseNoticeUrl": "https://www.fda.gov/about-fda/about-website/website-policies",
+    "changes": "Citation metadata and concise original summary; no full text reproduced.",
+    "scope": "Final food-use revocation, effective date and one-year compliance period; includes brominated vegetable-oil variants."
+  },
+  "documentType": "final-rule",
+  "edition": {
+    "kind": "original",
+    "date": "2024-07-03",
+    "label": "Publication 2024-07-03"
+  },
+  "verification": {
+    "status": "verified",
+    "currency": "historical",
+    "lastAttemptedOn": "2026-10-19",
+    "lastVerifiedOn": "2026-10-19",
+    "verifiedThrough": null,
+    "evidenceType": "official-text",
+    "scope": "Final food-use revocation, effective date and one-year compliance period; includes brominated vegetable-oil variants.",
+    "evidenceLocator": "docs/regulatory-evidence/2026-10-19/README.md, bvo-final; 89 FR 55040, sections V-VII and instruction 2.",
+    "currentnessBasis": null,
+    "limitations": [
+      "The act is verified; subsequent-change search does not certify all later legal developments."
+    ]
+  }
+}

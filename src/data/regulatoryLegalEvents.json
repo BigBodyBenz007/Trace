@@ -1,0 +1,58 @@
+{
+  "schemaVersion": 1,
+  "referenceVersion": "legal-events-2026-10-19-v1",
+  "snapshotDate": "2026-10-19",
+  "events": [
+    {
+      "eventId": "us-fda-bvo-2024-revocation",
+      "substance": { "id": "brominated-vegetable-oil", "name": "Brominated vegetable oil" },
+      "jurisdiction": "US-federal",
+      "authority": "US Food and Drug Administration",
+      "action": { "type": "authorization-revocation", "stage": "final", "target": "21 CFR 180.30" },
+      "affectedUses": ["Stabilizer for flavoring oils in fruit-flavored beverages"],
+      "dates": {
+        "publishedOn": "2024-07-03",
+        "effectiveOn": "2024-08-02",
+        "complianceOn": "2025-08-02",
+        "complianceNote": "Section VII specifies one year after the effective date; the calendar deadline is derived from that interval.",
+        "sourceReferenceId": "bvo-final-rule"
+      },
+      "qualifications": [
+        {
+          "id": "affected-use",
+          "kind": "scope",
+          "text": "Removes the former beverage stabilizer authorization, including brominated vegetable-oil variants described in response 3. The former 15 ppm finished-beverage limit is historical, not a current permission.",
+          "sourceReferenceId": "bvo-final-rule"
+        },
+        {
+          "id": "statutory-qualification",
+          "kind": "statutory-qualification",
+          "text": "Response 1 states that BVO cannot be used in food without an authorizing food additive regulation or an applicable statutory exception, referring to FD&C Act section 201(s)(1)-(6). This event does not assert that any particular exception applies.",
+          "sourceReferenceId": "bvo-final-rule"
+        },
+        {
+          "id": "compliance-period",
+          "kind": "transition",
+          "text": "The one-year compliance period provides time to reformulate, relabel and deplete inventory. No further sell-through entitlement is established by this event.",
+          "sourceReferenceId": "bvo-final-rule"
+        }
+      ],
+      "sourceReferences": [
+        {
+          "referenceId": "bvo-final-rule",
+          "role": "primary",
+          "sourceId": "FR:2024-14300",
+          "editionId": "published-2024-07-03",
+          "provisions": ["Summary and DATES", "V, responses 1 and 3", "VI-VII", "Amendatory instruction 2: remove 21 CFR 180.30"]
+        }
+      ],
+      "evidence": {
+        "status": "verified",
+        "lastReviewedOn": "2026-10-19",
+        "scope": "The final action and its dates and qualifications only; no scientific assessment or individual product determination.",
+        "limitations": ["Subsequent legal changes have not been exhaustively reconciled through the review date.", "No EU status, verified CAS identifier or E-number is assigned."]
+      },
+      "relationships": []
+    }
+  ]
+}

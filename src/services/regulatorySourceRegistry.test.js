@@ -160,12 +160,13 @@ test.each([null, {}, { schemaVersion: 2 }, { ...sourceData, referenceBindings: n
 
 test("rejects exact duplicates and conflicting source editions rather than choosing one", () => {
   const data = copy(sourceData);
-  data.sources.push(copy(data.sources[0]));
+  const duplicate = copy(data.sources[0]);
+  data.sources.push(duplicate);
   expect(validateSourceRegistry(data).errors.join(" ")).toContain("duplicate/conflicting source edition");
-  data.sources[2].citation.title = "Conflicting title";
+  duplicate.citation.title = "Conflicting title";
   expect(() => createRegulatorySourceRegistry(data)).toThrow("duplicate/conflicting source edition");
-  data.sources[2].editionId = "another-edition";
-  data.sources[2].citation.jurisdiction = "US-federal";
+  duplicate.editionId = "another-edition";
+  duplicate.citation.jurisdiction = "US-federal";
   expect(validateSourceRegistry(data).errors.join(" ")).toContain("conflicting source identity");
 });
 

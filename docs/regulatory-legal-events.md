@@ -1,0 +1,182 @@
+# Regulatory legal-event foundation
+
+Checkpoint: 2026-10-19. One verified US BVO final action is implemented as a
+dated historical event. It is not a product-compliance decision, scientific
+assessment, safety classification, or complete statement of current law.
+The [evidence archive](regulatory-evidence/2026-10-19/README.md) remains unchanged.
+
+## Architecture and schema
+
+- `src/data/regulatoryLegalEvents.json`: versioned local manifest with
+  `schemaVersion`, `referenceVersion`, `snapshotDate`, and `events`.
+- `src/services/regulatoryLegalEventValidation.js`: pure validators
+  `validateLegalEvent(event, sources, { asOf })` and
+  `validateLegalEventRegistry(manifest, sourceManifest)`, returning
+  `{ valid, errors }`. No missing value is repaired or substituted.
+- `src/services/regulatoryLegalEvents.js`: validates the bundle, copies and
+  recursively freezes it, and exposes exact lookups. The factory
+  `createLegalEventRegistry(manifest, sourceManifest)` throws with diagnostics
+  for invalid input. Unknown IDs return null; unknown substance/jurisdiction
+  combinations return an empty array.
+- `src/data/bvoRevocationSource.json`: the archived final-rule edition, appended
+  to the source registry as v2. Historical EU source editions and name bindings
+  are unchanged. Only the evidence locator was expanded; the archive's citation,
+  edition, verification dates, scope and limitations were retained.
+
+Each event has these fields:
+
+| Field | Meaning |
+| --- | --- |
+| `eventId` | Stable local event identifier |
+| `substance.id`, `substance.name` | Local substance key and human-readable identity, independent of an E-number |
+| `jurisdiction`, `authority` | Known jurisdiction and primary source's issuing authority |
+| `action.type`, `stage`, `target` | Final authorization, authorization amendment, or authorization revocation, and affected legal provision |
+| `affectedUses` | Explicit food uses or categories within the action's scope |
+| `dates.publishedOn` | Publication date of the primary legal act |
+| `dates.effectiveOn` | Date the action takes legal effect |
+| `dates.complianceOn`, `complianceNote` | Separate deadline, or explicit null with explanation; derived dates must state their basis |
+| `dates.sourceReferenceId` | Primary legal source supporting the dates |
+| `qualifications` | Identified, cited scope, statutory qualifications and transitions |
+| `sourceReferences` | Unique reference IDs, primary/supporting role, exact source/edition keys and provision locators |
+| `evidence` | Verified scope, last-reviewed date, and explicit limitations |
+| `relationships` | Cited `amends` / `supersedes` links to existing events; explicit empty list when none recorded |
+
+Scientific assessment dates are deliberately unsupported in this legal schema.
+They must not replace publication, effective or compliance dates. There is no
+clock-based active/banned/permitted flag or automatic product matching.
+
+```javascript
+const { getLegalEvent, getLegalEventsForSubstance } = require("../src/services/regulatoryLegalEvents");
+getLegalEvent("us-fda-bvo-2024-revocation");
+getLegalEventsForSubstance("brominated-vegetable-oil", "US-federal");
+```
+
+The service has no runtime network requests, storage writes or migrations and is
+not connected to barcode lookup, product selection, cached/saved food snapshots,
+Nutrition calculations or UI. It uses the source registry's existing exact
+source-edition semantics. Additive names and provider-reported presence retain
+their previous meanings; verified legal evidence does not verify product contents.
+
+## Initial BVO event and official evidence
+
+Event `us-fda-bvo-2024-revocation` concerns FDA removal of **21 CFR 180.30**, the
+former authorization of BVO as a stabilizer for flavoring oils in fruit-flavored
+beverages. Source: [FDA final rule, 89 FR 55040, document 2024-14300](https://www.govinfo.gov/content/pkg/FR-2024-07-03/pdf/2024-14300.pdf),
+edition `FR:2024-14300` / `published-2024-07-03`.
+
+| Date | Value | Basis |
+| --- | --- | --- |
+| Publication | 2024-07-03 | Final-rule publication |
+| Effective | 2024-08-02 | DATES and section VI |
+| Compliance | 2025-08-02 | Section VII: one year after the effective date; calendar date derived from that interval |
+| Reviewed | 2026-10-19 | Archived direct official-text verification, not a new legal effective date |
+
+The source references identify Summary/DATES, section V responses 1 and 3,
+sections VI-VII, and amendatory instruction 2. Qualifications preserve:
+
+- The affected beverage use and covered brominated vegetable-oil variants.
+  The former 15 ppm limit is historical context, not current permission.
+- Response 1's condition concerning an authorizing food additive regulation or
+  an applicable statutory exception under FD&C Act 201(s)(1)-(6). No specific
+  exception is asserted to apply to a product or particular trace occurrence.
+- Time to reformulate, relabel and deplete inventory during the compliance
+  period. No further sell-through entitlement is inferred.
+
+The evidence supports the recorded **final action**. The source remains
+`verified` / `historical` with null `verifiedThrough`; neither source nor event
+asserts exhaustive subsequent-law review. There is no EU BVO event, guessed CAS
+identifier or E-number. No scientific conclusion is encoded by the revocation.
+
+## Validation and limits
+
+The manifest validates the source registry first, then every event and its
+relationships. Invalid data is rejected before being exposed by the factory.
+Validation requires:
+
+- Stable identifiers, explicit food uses, known jurisdictions, authority,
+  supported final action, and no unexpected fields (including safety verdicts).
+- Real ISO calendar dates. This first schema supports prospective actions:
+  publication must not follow effect, and compliance must not precede effect.
+  Compliance may be explicit null with a note; omission is rejected. Future
+  effective/compliance dates are permitted and do not alter verification status.
+- Review on/after publication and source verification, and on/before the pinned
+  snapshot date. Runtime validation does not depend on a device's current date.
+- Exactly one primary legal source, exact edition, nonempty provision locators,
+  matching jurisdiction/authority/publication date, and directly verified
+  official-text evidence. Proposals and scientific assessments cannot be legal
+  sources; a regulatory announcement can only be supporting evidence. Partial,
+  unavailable and unverified evidence cannot enter this verified-only bundle.
+- Nonempty cited qualifications, including explicit scope. A compliance date
+  requires a transition qualification. Missing/blank text, unsupported kinds,
+  duplicate IDs and unresolved citation references are rejected.
+- Unique event IDs and unique action/source-edition identities. Differing
+  versions under one ID or duplicate actions under different IDs are rejected.
+- Cited, distinct amendment/supersession targets within the same substance and
+  jurisdiction. Targets must exist and cannot have later publication dates;
+  self-links, cycles and conflicting duplicate targets are rejected. Original
+  events remain available instead of being overwritten or silently hidden.
+
+Structural validation cannot establish that a paragraph supports its summary or
+that all material exceptions were included. Legal accuracy, completeness,
+substance identity and subsequent-change review remain human evidence-review
+responsibilities. The shipped BVO scope/qualifications and dates are explicitly
+tested. No automatic interpretation of provision text is attempted.
+
+Version 1 intentionally does not model proposals, stays, separate application
+dates, retroactive effects, multiple use-specific compliance deadlines, or
+scientific assessments. Add a deliberate schema extension with source evidence
+and tests before representing these actions. An amendment link alone does not
+compute present legal status or determine an individual product's applicability.
+
+## Validation and resumability
+
+Final focused coverage: **427 tests across 20 suites passed**. The first run
+passed 426 tests and exposed one source-registry test fixture that assumed the
+registry always had two entries. The fixture now retains its appended synthetic
+record instead of addressing index 2. The two affected suites were rerun and all
+136 tests passed; the other 18 suites had already passed. This was a test-fixture
+correction, not a production-validator change.
+
+Coverage includes 72 new legal-event cases plus existing source/name provenance,
+additive states, gateway/cache compatibility, product selection, saved food
+records, serving safeguards, Nutrition, scanner/camera/decoder/photo and
+Ingredients behavior. Browser/PWA behavior was checked by existing automated
+tests; no physical-device verification or production build was performed.
+
+Changed-file ESLint passed with zero warnings. JavaScript syntax, both new JSON
+files, source metadata equality against the archive (expanded evidence locator
+excepted), Git whitespace and all nine task files' whitespace/newlines passed.
+Git emitted only its usual LF-to-CRLF conversion notices. PowerShell formats
+Jest's stderr PASS output as NativeCommandError in redirected logs; test-run exit
+codes and Jest summaries establish the actual outcome.
+
+Logs are in the existing ignored
+`artifacts/barcode-ingredients-disclosure-20261019/` directory:
+`legal-events-tests.log` (initial run), `legal-events-recheck.log` and
+`legal-events-lint.log`. All 48 original unrelated Git entries and their file
+hashes, including the audit/history/evidence files, matched the initial baseline.
+No dependencies were installed, and no files were staged, committed or pushed.
+
+Copyable focused commands from the project root:
+
+```powershell
+$env:CI='true'
+node node_modules/react-scripts/scripts/test.js --watchAll=false --runInBand --runTestsByPath src/services/regulatoryLegalEvents.test.js src/services/regulatorySourceRegistry.test.js src/services/additiveNameReference.test.js src/services/productAdditives.test.js src/services/productAdditives.integration.test.js
+node node_modules/eslint/bin/eslint.js src/data/regulatorySourceRegistry.js src/services/regulatoryLegalEventValidation.js src/services/regulatoryLegalEvents.js src/services/regulatoryLegalEvents.test.js --max-warnings=0
+node --check src/services/regulatoryLegalEventValidation.js
+node --check src/services/regulatoryLegalEvents.js
+git diff --check
+```
+
+Resume by inspecting Git status and this checkpoint, then continue any unfinished
+checks; do not recreate the archive or reset unrelated work. Nothing is committed
+or pushed without explicit approval.
+
+## Next bounded task
+
+Model the archived verified US Red No. 3 order/stay timeline only after extending
+the schema for stays, multiple use-specific dates and prior-lawful-use stock
+conditions. Reconcile the exact order editions without turning the timeline into
+an evergreen product warning. EU BVO records remain gated on direct official EU
+positive-list/applicability verification. Keep legal and scientific records
+separate before considering any visible regulatory UI.
