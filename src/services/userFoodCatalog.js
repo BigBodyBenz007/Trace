@@ -6,7 +6,6 @@ import {
   normalizeProductIdentifiers,
 } from "./productIdentifiers";
 import { getSugarValidationError } from "./nutritionCalculation";
-import { applyRemoteNutrientPrecision } from "./barcodeNutritionSelection";
 import { immutableCopy, normalizeRemoteFood } from "./remoteFoodModel";
 
 export const USER_FOODS_STORAGE_KEY = "userFoods";
@@ -77,7 +76,7 @@ export function createUserFood(
   const categoryLabel = GROCERY_FOOD_CATEGORY_OPTIONS.find(
     (option) => option.value === category
   ).label;
-  let normalizedNutrients = {
+  const normalizedNutrients = {
     calories: toOptionalNonNegativeNumber(nutrients?.calories),
     protein: toOptionalNonNegativeNumber(nutrients?.protein),
     carbohydrates: toOptionalNonNegativeNumber(nutrients?.carbohydrates),
@@ -89,9 +88,6 @@ export function createUserFood(
   };
   if (Object.values(normalizedNutrients).includes(undefined)) return null;
   if (getSugarValidationError(normalizedNutrients)) return null;
-  if (canonicalBarcode) {
-    normalizedNutrients = applyRemoteNutrientPrecision(normalizedNutrients);
-  }
   const packageSize = normalizeOptionalText(details.packageQuantity);
   const servingsPerContainer = normalizeOptionalPositiveNumber(
     details.servingsPerContainer

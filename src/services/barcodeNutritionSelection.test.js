@@ -1,5 +1,4 @@
 import {
-  applyRemoteNutrientPrecision,
   createBarcodeNutritionCandidate,
 } from "./barcodeNutritionSelection";
 import { lookupCatalogFoodByBarcode } from "./barcodeFoodLookup";
@@ -193,7 +192,7 @@ test("legacy normalized per-100g records cannot bypass labeled-serving policy", 
   expect(candidate.recovery.providerSourceSnapshot.dataBasis).toBe("100g");
 });
 
-test("removes false precision from a direct 100 g serving without rounding provider data", () => {
+test("preserves full precision from a direct 100 g serving for selection and review", () => {
   const food = remoteFood({
     brand: "Oikos",
     name: "Oikos Pro Mixed Berry",
@@ -213,16 +212,7 @@ test("removes false precision from a direct 100 g serving without rounding provi
   });
   const candidate = createBarcodeNutritionCandidate({ status: "found", food });
 
-  expect(candidate.display.nutrients).toEqual({
-    calories: 113,
-    protein: 20,
-    carbohydrates: 6,
-    fat: 3,
-    fiber: null,
-    sodium: 45,
-    totalSugar: 3,
-    addedSugar: 0,
-  });
+  expect(candidate.display.nutrients).toEqual(FLOATING_NUTRIENTS);
   expect(candidate.selection.nutrients).toEqual(candidate.display.nutrients);
   expect(candidate.selection.remote.nutrients).toEqual(FLOATING_NUTRIENTS);
   expect(candidate.selection.remote.dataBasis).toBe("serving");
@@ -230,29 +220,31 @@ test("removes false precision from a direct 100 g serving without rounding provi
   expect(candidate.display.basisMessage).not.toMatch(/per-100/);
 });
 
-test("remote precision preserves zero and null, avoids negative zero, and rejects invalid results", () => {
-  const precise = applyRemoteNutrientPrecision({
-    calories: -0,
-    protein: null,
-    carbohydrates: 1.234,
-    fat: Number.POSITIVE_INFINITY,
-    fiber: -1,
-    sodium: 1.5,
-    totalSugar: 2.345,
-    addedSugar: 0,
+test("incomplete recovery preserves small known nutrients and unknown fields without rounding", () => {
+  const food = remoteFood({
+    nutrients: { ...FLOATING_NUTRIENTS, calories: null, addedSugar: 0.000123456789 },
+    nutritionBasis: {
+      ...remoteFood().nutritionBasis,
+      kind: "provider-serving",
+      sourceBasis: "serving",
+      conversionFactor: null,
+      sourceNutrients: { ...FLOATING_NUTRIENTS, calories: null, addedSugar: 0.000123456789 },
+    },
+    logReady: false,
+    completeness: "insufficient",
+    unknownFields: ["nutrients.calories", "nutrients.fiber", "provenance.revisionDate"],
   });
+  const candidate = createBarcodeNutritionCandidate({ status: "incomplete", food });
+  expect(candidate.canUse).toBe(false);
+  expect(candidate.recovery.food.nutrients).toEqual(food.nutrients);
+  expect(candidate.recovery.food.nutrients.fiber).toBeNull();
+});
 
-  expect(precise).toEqual({
-    calories: 0,
-    protein: null,
-    carbohydrates: 1.23,
-    fat: null,
-    fiber: null,
-    sodium: 2,
-    totalSugar: 2.35,
-    addedSugar: 0,
-  });
-  expect(Object.is(precise.calories, -0)).toBe(false);
+test.each([-1, Infinity, NaN])("rejects invalid remote nutrient %s before handoff", (calories) => {
+  expect(createBarcodeNutritionCandidate({
+    status: "found",
+    food: remoteFood({ nutrients: { ...remoteFood().nutrients, calories } }),
+  })).toBeNull();
 });
 
 test("does not apply remote precision rounding to a verified local catalog result", () => {

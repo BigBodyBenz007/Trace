@@ -2,7 +2,6 @@ import { NUTRITION_ENTRY_NUTRIENT_KEYS } from "./nutritionCalculation";
 import { immutableCopy, normalizeRemoteFood } from "./remoteFoodModel";
 
 const REQUIRED_NUTRIENTS = ["calories", "protein", "carbohydrates", "fat"];
-const WHOLE_NUMBER_NUTRIENTS = new Set(["calories", "sodium"]);
 const SAFE_REMOTE_BASIS_KINDS = new Set([
   "provider-serving",
   "derived-serving",
@@ -16,23 +15,6 @@ function safeSourceUrl(value) {
   } catch (error) {
     return null;
   }
-}
-
-function preciseNutrientValue(key, value) {
-  if (value === null || value === undefined) return null;
-  if (!Number.isFinite(value) || value < 0) return null;
-  if (value === 0) return 0;
-  const decimalPlaces = WHOLE_NUMBER_NUTRIENTS.has(key) ? 0 : 2;
-  const factor = 10 ** decimalPlaces;
-  const rounded = Math.round((value + Number.EPSILON) * factor) / factor;
-  return Object.is(rounded, -0) ? 0 : rounded;
-}
-
-export function applyRemoteNutrientPrecision(nutrients) {
-  return Object.fromEntries(NUTRITION_ENTRY_NUTRIENT_KEYS.map((key) => [
-    key,
-    preciseNutrientValue(key, nutrients?.[key]),
-  ]));
 }
 
 function selectedServing(food) {
@@ -61,7 +43,7 @@ function remoteCandidate(result) {
   const reliable = SAFE_REMOTE_BASIS_KINDS.has(food.nutritionBasis?.kind);
   const serving = selectedServing(food);
   const nutrients = reliable
-    ? applyRemoteNutrientPrecision(food.nutrients)
+    ? { ...food.nutrients }
     : Object.fromEntries(NUTRITION_ENTRY_NUTRIENT_KEYS.map((key) => [key, null]));
   const providerSnapshot = immutableCopy({
     provider: food.provider,

@@ -397,7 +397,7 @@ test("shows review nutrients and only populates after explicit confirmation", as
   expect(onUseFood).toHaveBeenCalledWith(expect.objectContaining({ name: "Test Cereal" }));
 });
 
-test("shows and hands off clean remote nutrient precision without altering the provider basis", async () => {
+test("formats remote review for display and hands off full nutrient precision", async () => {
   const onUseFood = jest.fn();
   setup({
     barcodeLookup: {
@@ -414,7 +414,7 @@ test("shows and hands off clean remote nutrient precision without altering the p
   expect(reviewContent.getByText("Nutrition shown for 100 g.")).toBeInTheDocument();
   expect(reviewContent.getByText("Servings per container: 1")).toBeInTheDocument();
   expect(review).not.toHaveTextContent(/adapted from|per-100g values/i);
-  expect(reviewContent.getByText("113")).toBeInTheDocument();
+  expect(reviewContent.getByText("112.67")).toBeInTheDocument();
   expect(reviewContent.getByText("20 g")).toBeInTheDocument();
   expect(reviewContent.getByText("6 g")).toBeInTheDocument();
   expect(reviewContent.getAllByText("3 g")).toHaveLength(2);
@@ -429,15 +429,7 @@ test("shows and hands off clean remote nutrient precision without altering the p
 
   fireEvent.click(screen.getByRole("button", { name: "Use This Food" }));
   const selection = onUseFood.mock.calls[0][0];
-  expect(selection.nutrients).toMatchObject({
-    calories: 113,
-    protein: 20,
-    carbohydrates: 6,
-    fat: 3,
-    sodium: 45,
-    totalSugar: 3,
-    addedSugar: 0,
-  });
+  expect(selection.nutrients).toEqual(floatingRemoteFood().nutrients);
   expect(selection.nutrients.fiber).toBeNull();
   expect(selection.remote.nutrients.calories).toBe(112.6666666666671);
   expect(selection.remote.nutrients.protein).toBe(20.00000000000002);
@@ -574,7 +566,7 @@ test("incomplete remote recovery prefills known values and preserves the full pr
   expect(saveUserFood.mock.calls[0][0].providerSourceSnapshot).toEqual(providerFood);
   const saved = saveUserFood.mock.results[0].value.food;
   expect(saved.providerSourceSnapshot.nutrients.protein).toBe(20.00000000000002);
-  expect(saved.nutrients.protein).toBe(20);
+  expect(saved.nutrients.protein).toBe(20.00000000000002);
   expect(Object.isFrozen(saved.providerSourceSnapshot)).toBe(true);
   expect(screen.getByText(/Source: User-completed from USDA FoodData Central/i))
     .toBeInTheDocument();

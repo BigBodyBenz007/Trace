@@ -1,6 +1,11 @@
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import NutritionPage from "./NutritionPage";
-import { createUserFood } from "../services/userFoodCatalog";
+import {
+  appendNutritionEntry,
+  readNutritionEntries,
+  updateStoredNutritionEntry,
+} from "../services/nutritionEntryStorage";
+import { readUserFoods, writeUserFoods, createUserFood } from "../services/userFoodCatalog";
 import { decodeBarcodePhoto } from "../services/barcodePhoto";
 
 jest.mock("../services/barcodePhoto", () => ({
@@ -130,10 +135,10 @@ function setup(overrides = {}, lookupFood = remoteFood()) {
     containerStyle: {},
     ...overrides,
   };
-  render(<NutritionPage
+  const view = render(<NutritionPage
     {...props}
   />);
-  return { lookup, saveNutritionEntry };
+  return { lookup, saveNutritionEntry: props.saveNutritionEntry, ...view };
 }
 
 async function scanAndUse() {
@@ -301,11 +306,11 @@ test("reopening a saved scan keeps its labeled-serving basis", () => {
   expect(entryNutrient("Protein (g)")).toHaveValue(1.5);
 });
 
-test("keeps remote handoff, fractional scaling, double scaling, and saved values clean", async () => {
+test("preserves precise remote handoff, fractional scaling, and double-serving save", async () => {
   const { saveNutritionEntry } = setup({}, floatingRemoteFood());
   await scanAndUse();
 
-  expect(entryNutrient("Calories")).toHaveValue(113);
+  expect(entryNutrient("Calories")).toHaveValue(112.67);
   expect(entryNutrient("Protein (g)")).toHaveValue(20);
   expect(entryNutrient("Carbohydrates (g)")).toHaveValue(6);
   expect(entryNutrient("Fat (g)")).toHaveValue(3);
@@ -315,13 +320,13 @@ test("keeps remote handoff, fractional scaling, double scaling, and saved values
   expect(entryNutrient("Fiber (g)")).toHaveValue(null);
 
   fireEvent.change(screen.getByLabelText("Number of servings"), { target: { value: "0.5" } });
-  expect(entryNutrient("Calories")).toHaveValue(57);
+  expect(entryNutrient("Calories")).toHaveValue(56.33);
   expect(entryNutrient("Protein (g)")).toHaveValue(10);
   expect(entryNutrient("Fat (g)")).toHaveValue(1.5);
-  expect(entryNutrient("Sodium (mg)")).toHaveValue(23);
+  expect(entryNutrient("Sodium (mg)")).toHaveValue(22.5);
 
   fireEvent.change(screen.getByLabelText("Number of servings"), { target: { value: "2" } });
-  expect(entryNutrient("Calories")).toHaveValue(226);
+  expect(entryNutrient("Calories")).toHaveValue(225.33);
   expect(entryNutrient("Protein (g)")).toHaveValue(40);
   expect(entryNutrient("Carbohydrates (g)")).toHaveValue(12);
   expect(entryNutrient("Fat (g)")).toHaveValue(6);
@@ -333,26 +338,14 @@ test("keeps remote handoff, fractional scaling, double scaling, and saved values
   fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
   await waitFor(() => expect(saveNutritionEntry).toHaveBeenCalledTimes(1));
   const saved = saveNutritionEntry.mock.calls[0][0];
-  expect(saved).toMatchObject({
-    calories: 226,
-    protein: 40,
-    carbohydrates: 12,
-    fat: 6,
-    sodium: 90,
-    totalSugar: 6,
-    addedSugar: 0,
-    nutritionBasis: {
-      calories: 113,
-      protein: 20,
-      carbohydrates: 6,
-      fat: 3,
-      fiber: null,
-      sodium: 45,
-      totalSugar: 3,
-      addedSugar: 0,
-    },
-    foodReference: { sourceType: "remote-barcode", modified: false },
+  const raw = floatingRemoteFood().nutrients;
+  Object.entries(raw).forEach(([key, value]) => {
+    expect(saved[key]).toBe(value === null ? null : value * 2);
   });
+  expect(saved.calories).toBeCloseTo(225.3333333333342, 10);
+  expect(saved.calories).not.toBe(226);
+  expect(saved.nutritionBasis).toEqual(raw);
+  expect(saved.foodReference).toMatchObject({ sourceType: "remote-barcode", modified: false });
   expect(saved.foodReference.providerNutritionBasis.nutrients.calories)
     .toBe(112.6666666666671);
   expect(saved.foodReference.providerNutritionBasis.nutrients.sodium)
@@ -385,23 +378,23 @@ test("a recovered custom barcode food hands off cleanly without auto-logging", a
   expect(saveNutritionEntry).not.toHaveBeenCalled();
   fireEvent.click(await screen.findByRole("button", { name: "Use This Food" }));
 
-  expect(entryNutrient("Calories")).toHaveValue(113);
+  expect(entryNutrient("Calories")).toHaveValue(112.67);
   expect(entryNutrient("Protein (g)")).toHaveValue(20);
   expect(entryNutrient("Carbohydrates (g)")).toHaveValue(6);
   expect(entryNutrient("Fat (g)")).toHaveValue(3);
   expect(entryNutrient("Sodium (mg)")).toHaveValue(45);
   expect(entryNutrient("Added Sugar (g)")).toHaveValue(0);
   fireEvent.change(screen.getByLabelText("Number of servings"), { target: { value: "0.5" } });
-  expect(entryNutrient("Calories")).toHaveValue(57);
+  expect(entryNutrient("Calories")).toHaveValue(56.33);
   fireEvent.change(screen.getByLabelText("Number of servings"), { target: { value: "2" } });
-  expect(entryNutrient("Calories")).toHaveValue(226);
+  expect(entryNutrient("Calories")).toHaveValue(225.33);
   expect(entryNutrient("Protein (g)")).toHaveValue(40);
 
   fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
   await waitFor(() => expect(saveNutritionEntry).toHaveBeenCalledTimes(1));
   expect(saveNutritionEntry.mock.calls[0][0]).toMatchObject({
-    calories: 226,
-    protein: 40,
+    calories: 112.6666666666671 * 2,
+    protein: 20.00000000000002 * 2,
     foodReference: {
       source: "user-added",
       sourceType: "grocery-custom",
@@ -409,6 +402,105 @@ test("a recovered custom barcode food hands off cleanly without auto-logging", a
       identifiers: [{ scheme: "gtin", value: "00012345600012" }],
     },
   });
+});
+
+test.each(["remote", "custom"])("%s barcode precision survives storage, reopening, and repeated serving changes", async (source) => {
+  const providerFood = floatingRemoteFood();
+  let food = providerFood;
+  if (source === "custom") {
+    const custom = createUserFood(providerFood.name, providerFood.nutrients, providerFood.serving, {
+      identifiers: providerFood.identifiers,
+    });
+    writeUserFoods(localStorage, [custom]);
+    [food] = readUserFoods(localStorage);
+  }
+  const saveNutritionEntry = jest.fn((entry) => appendNutritionEntry(localStorage, entry, {
+    createId: () => "precise-scan",
+  }).status === "saved");
+  const updateNutritionEntry = jest.fn((id, entry) => (
+    updateStoredNutritionEntry(localStorage, id, entry).status === "saved"
+  ));
+  const callbacks = { saveNutritionEntry, updateNutritionEntry };
+  let view = setup(callbacks, food);
+  await scanAndUse();
+  fireEvent.change(screen.getByLabelText("Number of servings"), { target: { value: "2" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+  expect(saveNutritionEntry).toHaveReturnedWith(true);
+  let [stored] = readNutritionEntries(localStorage).entries;
+  expect(stored.calories).toBeCloseTo(225.3333333333342, 10);
+  expect(stored.nutritionBasis).toEqual(providerFood.nutrients);
+  view.unmount();
+
+  // Reopen through JSON storage, then save untouched display fields.
+  view = setup({ ...callbacks, nutritionEntries: [stored] }, food);
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(entryNutrient("Calories")).toHaveValue(225.33);
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(updateNutritionEntry).toHaveReturnedWith(true);
+  expect(readNutritionEntries(localStorage).entries[0]).toEqual(stored);
+  view.unmount();
+
+  // Every new quantity must use the original basis, including after reopening.
+  for (const quantity of [0.5, 1.25, 2]) {
+    view = setup({ ...callbacks, nutritionEntries: [stored] }, food);
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText("Number of servings"), { target: { value: String(quantity) } });
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    const [savedPortion] = readNutritionEntries(localStorage).entries;
+    Object.entries(providerFood.nutrients).forEach(([key, value]) => {
+      expect(savedPortion[key]).toBe(value === null ? null : value * quantity);
+    });
+    stored = savedPortion;
+    expect(stored.nutritionBasis).toEqual(providerFood.nutrients);
+    expect(stored.portion.amount).toBe(quantity);
+    view.unmount();
+  }
+
+  view = setup({ ...callbacks, nutritionEntries: [stored] }, food);
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(entryNutrient("Protein (g)"), { target: { value: "41.123456789" } });
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  const [edited] = readNutritionEntries(localStorage).entries;
+  expect(edited.protein).toBe(41.123456789);
+  expect(edited.calories).toBe(stored.calories);
+  expect(edited.foodReference.modified).toBe(true);
+});
+
+test("legacy rounded scans keep their saved values and basis despite a precise provider snapshot", async () => {
+  const providerFood = floatingRemoteFood();
+  const legacyBasis = {
+    calories: 113, protein: 20, carbohydrates: 6, fat: 3,
+    fiber: null, sodium: 45, totalSugar: 3, addedSugar: 0,
+  };
+  const legacy = {
+    name: providerFood.name,
+    ...Object.fromEntries(Object.entries(legacyBasis).map(([key, value]) => [key, value === null ? null : value * 2])),
+    loggedAt: "2026-09-03T12:00:00.000Z",
+    notes: "",
+    portion: { amount: 2, unit: "serving", basis: providerFood.serving },
+    nutritionBasis: legacyBasis,
+    foodReference: {
+      sourceType: "remote-barcode", modified: false,
+      providerNutritionBasis: { nutrients: providerFood.nutrients },
+    },
+  };
+  appendNutritionEntry(localStorage, legacy, { createId: () => "legacy-scan" });
+  const originalRaw = localStorage.getItem("nutritionEntries");
+  const updateNutritionEntry = jest.fn((id, entry) => (
+    updateStoredNutritionEntry(localStorage, id, entry).status === "saved"
+  ));
+  setup({ nutritionEntries: readNutritionEntries(localStorage).entries, updateNutritionEntry });
+  expect(localStorage.getItem("nutritionEntries")).toBe(originalRaw);
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(entryNutrient("Calories")).toHaveValue(226);
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  const [stored] = readNutritionEntries(localStorage).entries;
+  expect(stored.calories).toBe(226);
+  expect(stored.nutritionBasis).toEqual(legacyBasis);
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Number of servings"), { target: { value: "0.5" } });
+  expect(entryNutrient("Calories")).toHaveValue(56.5);
+  expect(entryNutrient("Sodium (mg)")).toHaveValue(22.5);
 });
 
 test("completed remote recovery keeps the raw provider snapshot through Nutrition handoff", async () => {

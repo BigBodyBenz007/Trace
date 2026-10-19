@@ -14,7 +14,6 @@ import {
   writeFormDraft,
 } from "../services/formDrafts";
 import { createRemoteBarcodeLookup } from "../services/remoteBarcodeLookup";
-import { applyRemoteNutrientPrecision } from "../services/barcodeNutritionSelection";
 import { lookupUserFoodByBarcode } from "../services/userFoodCatalog";
 import {
   TRACE_FEATURES,
@@ -1034,15 +1033,10 @@ function NutritionPage({
 
   function changeServingQuantity(value) {
     const scaledNutrition = scaleNutrition(nutritionBasis, value);
-    const formNutrition = foodReference?.sourceType === "remote-barcode" || (
-      foodReference?.sourceType === "grocery-custom"
-      && foodReference.identifiers?.length
-    )
-      ? applyRemoteNutrientPrecision(scaledNutrition)
-      : scaledNutrition;
 
     setServingQuantity(value);
-    populateNutrientInputs(formNutrition);
+    // Keep the raw calculation in metadata; populateNutrientInputs formats only the visible fields.
+    populateNutrientInputs(scaledNutrition);
     setNutritionValidationError("");
   }
 

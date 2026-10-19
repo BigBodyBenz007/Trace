@@ -185,6 +185,32 @@ test("persists and reads user foods from their own storage key", () => {
   expect(readUserFoods(localStorage)).toEqual([food]);
 });
 
+test("barcode custom food precision survives creation, storage, reopening, and an edit", () => {
+  const precise = {
+    calories: 112.6666666666671,
+    protein: 20.00000000000002,
+    carbohydrates: 5.999999999999993,
+    fat: 3.000000000000003,
+    fiber: null,
+    sodium: 22.5,
+    totalSugar: 3.000000000000003,
+    addedSugar: 0,
+  };
+  const details = { identifiers: [{ scheme: "gtin", value: BARCODE }] };
+  const food = createUserFood("Precise barcode food", precise, undefined, details);
+  expect(food.nutrients).toEqual(precise);
+  writeUserFoods(localStorage, [food]);
+  const reopened = lookupUserFoodByBarcode(readUserFoods(localStorage), BARCODE).food;
+  expect(reopened.nutrients).toEqual(precise);
+  const replacement = createUserFood(reopened.name, {
+    ...reopened.nutrients, protein: "21.123456789",
+  }, reopened.serving, reopened);
+  const updated = updateUserFood([reopened], reopened.id, replacement);
+  expect(updated.updated).toBe(true);
+  writeUserFoods(localStorage, updated.foods);
+  expect(readUserFoods(localStorage)[0].nutrients).toEqual({ ...precise, protein: 21.123456789 });
+});
+
 test("prevents duplicate user foods by normalized name and keeps first values", () => {
   const original = createUserFood("Meatloaf", nutrients);
   const replacement = createUserFood("  MEATLOAF ", {
@@ -265,7 +291,7 @@ test("recognizes a pre-grocery saved food as the same definition", () => {
   });
 });
 
-test("creates a clean barcode-linked custom food while preserving zero and unknown", () => {
+test("preserves full precision, zero, and unknown in a barcode-linked custom food", () => {
   const food = createUserFood(
     "Scanned food",
     {
@@ -289,13 +315,13 @@ test("creates a clean barcode-linked custom food while preserving zero and unkno
     identifiers: [{ scheme: "gtin", value: BARCODE }],
     packaged: { packageSize: "5.3 oz", servingsPerContainer: null },
     nutrients: {
-      calories: 113,
-      protein: 20,
-      carbohydrates: 6,
-      fat: 3,
+      calories: 112.6666666666671,
+      protein: 20.00000000000002,
+      carbohydrates: 5.999999999999993,
+      fat: 3.000000000000003,
       fiber: null,
-      sodium: 45,
-      totalSugar: 3,
+      sodium: 44.99999999999999,
+      totalSugar: 3.000000000000003,
       addedSugar: 0,
     },
     provenance: { source: "user-added", label: "User-created barcode food" },
