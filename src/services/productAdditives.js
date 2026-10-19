@@ -1,5 +1,6 @@
-// Shared by the Node gateway and browser. This formats provider identifiers;
-// it does not parse ingredient text or verify membership in an additive registry.
+// Shared by the Node gateway and browser. Product presence remains provider-reported;
+// the separate local reference verifies only the identifier-to-name association.
+const { resolveAdditiveName } = require("./additiveNameReference");
 const OFF = "open-food-facts";
 const MAX_ADDITIVE_TAGS = 100;
 const MAX_ADDITIVE_TAG_LENGTH = 128;
@@ -27,13 +28,18 @@ function normalizeOpenFoodFactsAdditives(tags) {
     status: "reported",
     source: OFF,
     sourceField: "additives_tags",
-    items: Object.freeze([...new Set(tags)].map((providerIdentifier) => Object.freeze({
-      standardizedIdentifier: standardizedIdentifier(providerIdentifier),
-      name: null, // The product's tags do not supply reliable display names.
-      providerIdentifier,
-      source: OFF,
-      identification: "provider-reported",
-    }))),
+    items: Object.freeze([...new Set(tags)].map((providerIdentifier) => {
+      const identifier = standardizedIdentifier(providerIdentifier);
+      const resolved = resolveAdditiveName(identifier);
+      return Object.freeze({
+        standardizedIdentifier: identifier,
+        name: resolved?.name || null,
+        nameReference: resolved?.nameReference || null,
+        providerIdentifier,
+        source: OFF,
+        identification: "provider-reported",
+      });
+    })),
   });
 }
 

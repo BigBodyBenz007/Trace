@@ -2,7 +2,10 @@ import { normalizeRemoteFood } from "./remoteFoodModel";
 import { createRemoteBarcodeCache, REMOTE_BARCODE_CACHE_STORAGE_KEY, REMOTE_BARCODE_CACHE_VERSION } from "./remoteBarcodeCache";
 import { createRemoteBarcodeLookup } from "./remoteBarcodeLookup";
 import { createBarcodeNutritionCandidate } from "./barcodeNutritionSelection";
-import { createUserFood, writeUserFoods, readUserFoods } from "./userFoodCatalog";
+import { createUserFood, writeUserFoods, readUserFoods, USER_FOODS_STORAGE_KEY } from "./userFoodCatalog";
+import { appendNutritionEntry, readNutritionEntries, NUTRITION_ENTRIES_STORAGE_KEY } from "./nutritionEntryStorage";
+import { getAdditiveNameSource } from "./additiveNameReference";
+import { REMOTE_BARCODE_RESPONSE_MAX_BYTES } from "./remoteBarcodeLookup";
 
 const { normalizeOpenFoodFactsProduct } = require("../../api/nutrition/_barcodeGateway.cjs");
 const BARCODE = "00012345600012";
@@ -48,6 +51,15 @@ test.each([undefined, [], ["en:e330", "en:unknown-tag"]])(
   }
 );
 
+test("selection distinguishes the name-reference source from provider-reported product presence", () => {
+  const candidate = createBarcodeNutritionCandidate(result(["en:e330", "en:unknown-tag"]));
+  const [known, unknown] = candidate.selection.remote.additives.items;
+  expect(known).toMatchObject({ name: "Citric acid", identification: "provider-reported", source: "open-food-facts" });
+  expect(known.nameReference).toMatchObject({ jurisdiction: "EU", verification: "exact-source-name" });
+  expect(getAdditiveNameSource(known.nameReference).attribution).toContain("European Union");
+  expect(unknown).toMatchObject({ name: null, nameReference: null });
+});
+
 test("legacy v2 cache records retain absence without a schema change or invented data", () => {
   const legacy = JSON.parse(JSON.stringify(result(undefined)));
   delete legacy.food.additives;
@@ -60,6 +72,70 @@ test("legacy v2 cache records retain absence without a schema change or invented
   expect(localStorage.getItem(REMOTE_BARCODE_CACHE_STORAGE_KEY)).toBe(raw);
   expect(reopened.get(BARCODE).food).not.toHaveProperty("additives");
   expect(createBarcodeNutritionCandidate(reopened.get(BARCODE)).selection.remote).not.toHaveProperty("additives");
+});
+
+test("pre-reference v2 cache items resolve locally without requiring a refresh or changing status", async () => {
+  const original = result(["en:e330"]);
+  const cache = createRemoteBarcodeCache({ storage: localStorage, clock: () => NOW });
+  cache.set(BARCODE, original);
+  const legacyCache = JSON.parse(localStorage.getItem(REMOTE_BARCODE_CACHE_STORAGE_KEY));
+  const item = legacyCache.records[0].result.food.additives.items[0];
+  item.name = null;
+  delete item.nameReference;
+  localStorage.setItem(REMOTE_BARCODE_CACHE_STORAGE_KEY, JSON.stringify(legacyCache));
+  const fetchImpl = jest.fn();
+  const lookup = createRemoteBarcodeLookup({ storage: localStorage, clock: () => NOW,
+    runtime: { isOnline: false, isWeb: true }, localLookup: () => ({ status: "not-found" }), fetchImpl });
+  const cached = await lookup.lookup(BARCODE);
+  expect(cached.food.additives).toEqual(original.food.additives);
+  expect(cached.food.provenance).toEqual(original.food.provenance);
+  expect(fetchImpl).not.toHaveBeenCalled();
+});
+
+test.each(["remote", "custom"])("%s saved records preserve name provenance and legacy snapshots without migration", (kind) => {
+  const food = result(["en:e330"]).food;
+  const reference = kind === "remote"
+    ? { sourceType: "remote-barcode", identifiers: food.identifiers, provider: food.provider, additives: food.additives, ingredients: food.ingredients }
+    : { sourceType: "grocery-custom", identifiers: food.identifiers, providerSourceSnapshot: food };
+  const saved = appendNutritionEntry(localStorage, {
+    name: food.name, ...food.nutrients, notes: "", loggedAt: new Date(NOW).toISOString(), foodReference: reference,
+  }, { createId: () => "name-reference-entry" });
+  expect(saved.status).toBe("saved");
+  const raw = localStorage.getItem(NUTRITION_ENTRIES_STORAGE_KEY);
+  const [entry] = readNutritionEntries(localStorage).entries;
+  const snapshot = kind === "remote" ? entry.foodReference : entry.foodReference.providerSourceSnapshot;
+  expect(snapshot.additives).toEqual(food.additives);
+  expect(snapshot.ingredients).toEqual(food.ingredients);
+  expect(localStorage.getItem(NUTRITION_ENTRIES_STORAGE_KEY)).toBe(raw);
+
+  const legacy = JSON.parse(raw);
+  const oldSnapshot = kind === "remote" ? legacy[0].foodReference : legacy[0].foodReference.providerSourceSnapshot;
+  oldSnapshot.additives.items[0].name = null;
+  delete oldSnapshot.additives.items[0].nameReference;
+  const oldRaw = JSON.stringify(legacy);
+  localStorage.setItem(NUTRITION_ENTRIES_STORAGE_KEY, oldRaw);
+  expect(readNutritionEntries(localStorage).entries).toEqual(legacy);
+  expect(localStorage.getItem(NUTRITION_ENTRIES_STORAGE_KEY)).toBe(oldRaw);
+});
+
+test("reading a legacy custom product resolves names in memory without rewriting stored products", () => {
+  const food = result(["en:e330"]).food;
+  const custom = createUserFood(food.name, food.nutrients, food.serving, {
+    identifiers: food.identifiers, providerSourceSnapshot: food,
+  });
+  const legacy = JSON.parse(JSON.stringify(custom));
+  legacy.providerSourceSnapshot.additives.items[0].name = null;
+  delete legacy.providerSourceSnapshot.additives.items[0].nameReference;
+  writeUserFoods(localStorage, [legacy]);
+  const raw = localStorage.getItem(USER_FOODS_STORAGE_KEY);
+  expect(readUserFoods(localStorage)[0].providerSourceSnapshot.additives).toEqual(food.additives);
+  expect(localStorage.getItem(USER_FOODS_STORAGE_KEY)).toBe(raw);
+});
+
+test("bounded repeated recognized tags plus maximum ingredient text fit the browser response limit", () => {
+  const original = JSON.parse(JSON.stringify(result(Array.from({ length: 100 }, (_, i) => `${" ".repeat(i)}en:e500ii`))));
+  original.food.ingredients.text = "x".repeat(8192);
+  expect(new TextEncoder().encode(JSON.stringify(original)).byteLength).toBeLessThan(REMOTE_BARCODE_RESPONSE_MAX_BYTES);
 });
 
 test("an online result retains additives on later cached lookups without extra requests", async () => {

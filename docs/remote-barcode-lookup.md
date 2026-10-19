@@ -76,7 +76,16 @@ additives: {
   sourceField: "additives_tags",
   items: [{
     standardizedIdentifier: "E330",
-    name: null,
+    name: "Citric acid",
+    nameReference: {
+      verification: "exact-source-name",
+      referenceVersion: "eu-231-2012-names-v1",
+      sourceId: "CELEX:32012R0231",
+      sourcePublicationDate: "2012-03-22",
+      sourceIdentifier: "E 330",
+      jurisdiction: "EU",
+      language: "en",
+    },
     providerIdentifier: "en:e330",
     source: "open-food-facts",
     identification: "provider-reported",
@@ -98,9 +107,11 @@ additives: {
   or confirmation of authorization, safety, quantity, or actual presence.
   Unrecognized strings remain in `items` with a null standardized identifier
   and null name. Exact duplicate strings are removed; no parent/child expansion
-  or free-text matching occurs. Names remain null until a sourced taxonomy
-  mapping is deliberately added. Cached names and verification claims are not
-  trusted; supported provider identifiers are normalized again on read.
+  or free-text matching occurs. Only the eight exact identifiers in the local
+  name reference below receive names. Identifiers outside that subset retain
+  `name: null, nameReference: null`, even when their E-number shape is valid.
+  Cached names and verification claims are not trusted; supported provider
+  identifiers and local name associations are resolved again on normalization.
 
 The containing product/snapshot retains provider attribution, record ID, source
 URL, revision, and retrieval time. Additives pass through the existing browser
@@ -110,15 +121,82 @@ nutrition completeness, log readiness, serving conversion, or nutrient math.
 There is no cache version bump, history migration, visible additive section,
 scanner change, extra request, or change to lookup priority. A usable USDA or
 local match still wins; Trace does not call OFF solely to enrich additives.
-Older cache entries may remain without additive data until normal expiry and
-refresh. Previously saved entries are not retroactively enriched.
+Older cache entries with no additive data remain without it until normal expiry
+and refresh. Existing v2 cache items that already contain structured identifiers
+can resolve names locally, including offline; normal cache access may persist
+that derived metadata. Reading saved custom products can enrich their source
+snapshots in memory without rewriting storage. Saved Nutrition history is not
+retroactively enriched or migrated. New selections save name-reference metadata
+through the existing food-reference path, leaving nutrient values unchanged.
 
 Coverage depends on the provider's record and analysis; structured data can be
-incomplete or incorrect. This foundation makes no independent verification or
-health claims. Before a compact Additives disclosure is added, review real OFF
-tag coverage and a versioned, attributed taxonomy mapping for display names.
-The UI should distinguish unknown data from a provider-reported empty list and
-keep provider attribution visible. Do not label the latter "additive-free".
+incomplete or incorrect. The name reference verifies an identifier/name pairing,
+not product contents, permitted uses, current regulatory approval, or safety.
+The UI should distinguish unknown data from a provider-reported empty list,
+and keep product-provider attribution separate from name-reference attribution.
+Do not label the latter empty state "additive-free".
+
+### Local additive name reference (reviewed 19 October 2026)
+
+`src/data/additiveNameReference.json` is a deliberately small, versioned local
+excerpt of the Annex to [Commission Regulation (EU) No 231/2012](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32012R0231).
+It pins the original Official Journal publication of 22 March 2012, not the
+latest consolidated regulation. The eight entries are E150d, E202, E211, E300,
+E322, E330, E415, and E500ii. Each retains its exact source heading and source
+identifier; display casing and key formatting changes are recorded. E300 uses
+the first of the two names in its heading. No translations or synonyms are
+generated. The historical edition is sufficient for this narrow name reference;
+it must never serve as a current authorization list.
+
+`resolveAdditiveName` accepts only an exact standardized key and returns a name
+plus a frozen `nameReference`. It does not expand parent groups or infer sibling
+subtypes (E500 does not match E500ii), parse ingredients, or convert CAS/INS codes.
+`identification: "provider-reported"` remains unchanged on the product item.
+`nameReference.verification: "exact-source-name"` refers only to the name.
+`getAdditiveNameSource` resolves the version/source pair to the bundled source
+record containing attribution, publication/version, URL, review date, reuse
+terms, and changes. Unknown versions return null rather than using another
+edition's citation. Keep prior editions available if a future reference version
+is introduced and saved references still point to them.
+
+#### Sources and reuse research
+
+| Source | Identifiers/names and available formats | Decision |
+| --- | --- | --- |
+| European Commission / EUR-Lex | E numbers and exact names in the dated Annex; downloadable HTML and Official Journal PDF. The [Commission database](https://food.ec.europa.eu/food-safety/food-improvement-agents/additives/database_en) also provides E-number/condition searches. | Use eight manually checked headings from the pinned HTML edition. No bulk import or runtime request. |
+| [FDA Substances Added to Food](https://www.hfpappexternal.fda.gov/scripts/fdcc/index.cfm?set=FoodSubstances) | Substance names with CAS registry numbers or FDA-assigned IDs, CFR references, searchable HTML and an Excel download. | Not an E-number crosswalk. No FDA mappings imported. FDA [explains that inclusion is not itself approval](https://www.fda.gov/food/food-additives-petitions/substances-added-food-formerly-eafus). |
+| [EFSA OpenFoodTox](https://www.efsa.europa.eu/en/data-report/chemical-hazards-database-openfoodtox) and [food-additive resources](https://www.efsa.europa.eu/en/topics/topic/food-additives) | Chemical identifiers/characterisation and scientific assessments; OpenFoodTox 3.0 offers Excel and IUCLID archives. | No toxicology or assessments imported. EFSA directs users to the Commission for the EU additive list; unnecessary breadth for this name-only subset. |
+| [Codex GSFA](https://www.fao.org/gsfaonline/index.html) | International INS numbers, names/synonyms, and searchable provisions; the [new portal](https://codex.fao.org/codex-texts/codex-online-databases/gsfa/food-additives-list/food-additive-details?additiveId=057ae6b8-249a-f111-b8dc-70a8a5613865) advertises table CSV exports. | Not a US/EU authorization list. No INS-to-E conversion or data import. |
+
+The [EUR-Lex copyright notice](https://eur-lex.europa.eu/content/legal-notice/legal-notice.html)
+permits commercial/non-commercial reuse of legal documents unless otherwise
+specified, under [Decision 2011/833/EU](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32011D0833).
+No special restriction was identified for these Annex headings. Trace records
+source attribution and transformations, preserves their meaning, and identifies
+the excerpt's limited scope and Commission non-liability. This supports local
+storage and distribution of the small excerpt. We do **not** relabel the original
+legal text CC0: EUR-Lex distinguishes legal-document reuse from CC BY 4.0 for
+consolidated/editorial texts and CC0 for metadata. No logos are copied.
+
+[FDA website terms](https://www.fda.gov/about-fda/about-website/website-policies)
+describe site content as public domain unless otherwise noted and recommend a
+source link and copying date. Third-party material still needs separate review.
+EFSA's OpenFoodTox notice requires original-output attribution for legal/regulatory
+reuse and disclaims suitability conclusions; its downloadable archive's precise
+licence was not verified here, so none is copied. Codex/FAO dataset-specific reuse
+terms also need checking before any future import; no blanket licence is assumed.
+These unused sources do not affect the verified reuse basis of the selected EU
+legal-document excerpt.
+
+Names and identifier groupings can differ by jurisdiction. Preserve the EU
+wording (including plural/group names) rather than substituting US/common names.
+An E-number match establishes no US approval and says nothing about use limits.
+No ongoing API calls, scheduled downloads, new dependencies, scores, or visible
+Additives section are introduced. Future additions require an exact source
+identifier/name check, reuse review, source version and review date, and tests.
+Before building the compact UI, review the eight mappings and design separate
+provider and reference attribution, a neutral unknown-name fallback, and clear
+unknown-versus-empty states.
 
 ## Optional ingredient information
 

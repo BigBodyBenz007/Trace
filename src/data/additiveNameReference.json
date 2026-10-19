@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "referenceVersion": "eu-231-2012-names-v1",
+  "source": {
+    "id": "CELEX:32012R0231",
+    "title": "Commission Regulation (EU) No 231/2012 of 9 March 2012",
+    "publisher": "European Commission",
+    "jurisdiction": "EU",
+    "language": "en",
+    "publicationDate": "2012-03-22",
+    "version": "Original Official Journal publication, OJ L 83, 22 March 2012",
+    "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32012R0231",
+    "reviewedOn": "2026-10-19",
+    "attribution": "Source: European Union, Commission Regulation (EU) No 231/2012, Annex, original publication of 22 March 2012.",
+    "reuseBasis": "EUR-Lex legal-document reuse notice; Commission Decision 2011/833/EU",
+    "reuseNoticeUrl": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
+    "reuseDecisionUrl": "https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:32011D0833",
+    "changes": "Eight identifier/name headings selected. Identifier spacing and parentheses removed for Trace keys; display names use sentence case. E300 uses the first name in its heading.",
+    "scope": "Names only. This historical excerpt establishes no current authorization, permitted use, product presence, or safety assessment. The European Commission is not responsible for consequences of this reuse."
+  },
+  "entries": [
+    { "identifier": "E150d", "name": "Sulphite ammonia caramel", "sourceIdentifier": "E 150d", "sourceHeading": "E 150d SULPHITE AMMONIA CARAMEL" },
+    { "identifier": "E202", "name": "Potassium sorbate", "sourceIdentifier": "E 202", "sourceHeading": "E 202 POTASSIUM SORBATE" },
+    { "identifier": "E211", "name": "Sodium benzoate", "sourceIdentifier": "E 211", "sourceHeading": "E 211 SODIUM BENZOATE" },
+    { "identifier": "E300", "name": "Ascorbic acid", "sourceIdentifier": "E 300", "sourceHeading": "E 300 ASCORBIC ACID, L-ASCORBIC ACID" },
+    { "identifier": "E322", "name": "Lecithins", "sourceIdentifier": "E 322", "sourceHeading": "E 322 LECITHINS" },
+    { "identifier": "E330", "name": "Citric acid", "sourceIdentifier": "E 330", "sourceHeading": "E 330 CITRIC ACID" },
+    { "identifier": "E415", "name": "Xanthan gum", "sourceIdentifier": "E 415", "sourceHeading": "E 415 XANTHAN GUM" },
+    { "identifier": "E500ii", "name": "Sodium hydrogen carbonate", "sourceIdentifier": "E 500 (ii)", "sourceHeading": "E 500 (ii) SODIUM HYDROGEN CARBONATE" }
+  ]
+}
