@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "referenceVersion": "legal-events-2026-10-19-v1",
+  "referenceVersion": "legal-events-2026-10-19-v2",
   "snapshotDate": "2026-10-19",
   "events": [
     {
@@ -53,6 +53,250 @@
         "limitations": ["Subsequent legal changes have not been exhaustively reconciled through the review date.", "No EU status, verified CAS identifier or E-number is assigned."]
       },
       "relationships": []
+    },
+    {
+      "eventId": "us-fda-red3-food-2025-revocation",
+      "substance": {
+        "id": "erythrosine",
+        "name": "FD&C Red No. 3 (erythrosine)"
+      },
+      "jurisdiction": "US-federal",
+      "authority": "US Food and Drug Administration",
+      "affectedUses": [
+        "Color additive use in food, including dietary supplements, under 21 CFR 74.303"
+      ],
+      "useScope": {
+        "domain": "food",
+        "provision": "21 CFR 74.303"
+      },
+      "evidence": {
+        "status": "verified",
+        "lastReviewedOn": "2026-10-19",
+        "scope": "Dated US food action only; no scientific assessment or individual product determination.",
+        "limitations": [
+          "No exhaustive subsequent-change reconciliation or current consolidated-law certification.",
+          "No EU E127 legal status or ingested-drug regulatory record is supplied.",
+          "Product manufacture date, certification and other compliance facts remain unknown."
+        ]
+      },
+      "action": {
+        "type": "authorization-revocation",
+        "stage": "final",
+        "target": "21 CFR 74.303"
+      },
+      "dates": {
+        "publishedOn": "2025-01-16",
+        "effectiveOn": "2027-01-15",
+        "complianceOn": "2027-01-15",
+        "complianceNote": "The food removal effective date and FDA manufacturer reformulation deadline coincide; this is not the publication date or a universal retail cutoff.",
+        "sourceReferenceId": "red3-final-order",
+        "complianceSourceReferenceId": "red3-fda-summary"
+      },
+      "qualifications": [
+        {
+          "id": "food-scope",
+          "kind": "scope",
+          "text": "Removes the food color listing in 21 CFR 74.303, including dietary supplements. The separate ingested-drug removal in instruction 4 and its January 18, 2028 date are outside this food event.",
+          "sourceReferenceId": "red3-final-order"
+        },
+        {
+          "id": "statutory-basis",
+          "kind": "statutory-qualification",
+          "text": "The order applies FD&C Act section 721(b)(5)(B), the Delaney Clause. This records the legal basis without making a scientific or product-safety determination.",
+          "sourceReferenceId": "red3-final-order"
+        },
+        {
+          "id": "food-transition",
+          "kind": "transition",
+          "text": "The food removal is deferred to January 15, 2027. Section VI states that certificates cease for food use on the removal date; this is not an immediate January 2025 removal.",
+          "sourceReferenceId": "red3-final-order"
+        },
+        {
+          "id": "prior-certified-use",
+          "kind": "prior-certified-use",
+          "text": "Food in which the color was used while its certificate was effective is not regarded as adulterated by reason of that color use. This does not establish other product compliance or an unconditional sale permission.",
+          "conditions": [
+            "color-used-while-certificate-effective"
+          ],
+          "verificationStatus": "verified",
+          "sourceReferenceId": "red3-final-order"
+        }
+      ],
+      "sourceReferences": [
+        {
+          "referenceId": "red3-final-order",
+          "role": "primary",
+          "sourceId": "FR:2025-00830",
+          "editionId": "published-2025-01-16",
+          "provisions": [
+            "Summary and DATES (90 FR 4628)",
+            "II.B, chemical identity (4630)",
+            "III and VI; certification and prior-use paragraphs (4633)",
+            "X, objections; amendatory instruction 2 (4634)"
+          ]
+        },
+        {
+          "referenceId": "red3-fda-summary",
+          "role": "supporting",
+          "sourceId": "FDA:Red3",
+          "editionId": "snapshot-2026-10-19",
+          "provisions": [
+            "Regulatory Information: manufacturer reformulation deadline and following stock paragraph"
+          ]
+        }
+      ],
+      "relationships": []
+    },
+    {
+      "eventId": "us-fda-red3-food-2025-administrative-stay",
+      "substance": {
+        "id": "erythrosine",
+        "name": "FD&C Red No. 3 (erythrosine)"
+      },
+      "jurisdiction": "US-federal",
+      "authority": "US Food and Drug Administration",
+      "affectedUses": [
+        "Color additive use in food, including dietary supplements, under 21 CFR 74.303"
+      ],
+      "useScope": {
+        "domain": "food",
+        "provision": "21 CFR 74.303"
+      },
+      "evidence": {
+        "status": "verified",
+        "lastReviewedOn": "2026-10-19",
+        "scope": "Dated US food action only; no scientific assessment or individual product determination.",
+        "limitations": [
+          "No exhaustive subsequent-change reconciliation or current consolidated-law certification.",
+          "No EU E127 legal status or ingested-drug regulatory record is supplied.",
+          "Product manufacture date, certification and other compliance facts remain unknown."
+        ]
+      },
+      "action": {
+        "type": "administrative-stay",
+        "stage": "final",
+        "target": "21 CFR 74.303"
+      },
+      "dates": {
+        "publishedOn": "2026-08-05",
+        "effectiveOn": "2025-02-18",
+        "complianceOn": null,
+        "complianceNote": "Procedural stay, not a new manufacturer deadline; the original food action retains its separately recorded dates.",
+        "sourceReferenceId": "red3-stay-order",
+        "effectiveNote": "The August 5, 2026 notice retrospectively reports the automatic stay arising from objections as of February 18, 2025. No separate February publication date is established."
+      },
+      "qualifications": [
+        {
+          "id": "food-scope",
+          "kind": "scope",
+          "text": "Records only the stay of the 21 CFR 74.303 food removal. It does not create a new food authorization or a drug-use rule.",
+          "sourceReferenceId": "red3-stay-order"
+        },
+        {
+          "id": "automatic-stay",
+          "kind": "statutory-qualification",
+          "text": "The notice identifies the automatic stay under FD&C Act sections 701(e)(2) and 721(d), arising from the filing of objections.",
+          "sourceReferenceId": "red3-stay-order"
+        }
+      ],
+      "sourceReferences": [
+        {
+          "referenceId": "red3-stay-order",
+          "role": "primary",
+          "sourceId": "FR:2026-15920",
+          "editionId": "published-2026-08-05",
+          "provisions": [
+            "ACTION and DATES (91 FR 50475)",
+            "II, objections and hearing requests (50475)",
+            "V. Summary and Conclusions (50481)"
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "type": "stays",
+          "eventId": "us-fda-red3-food-2025-revocation",
+          "sourceReferenceId": "red3-stay-order"
+        }
+      ]
+    },
+    {
+      "eventId": "us-fda-red3-food-2026-stay-lifted",
+      "substance": {
+        "id": "erythrosine",
+        "name": "FD&C Red No. 3 (erythrosine)"
+      },
+      "jurisdiction": "US-federal",
+      "authority": "US Food and Drug Administration",
+      "affectedUses": [
+        "Color additive use in food, including dietary supplements, under 21 CFR 74.303"
+      ],
+      "useScope": {
+        "domain": "food",
+        "provision": "21 CFR 74.303"
+      },
+      "evidence": {
+        "status": "verified",
+        "lastReviewedOn": "2026-10-19",
+        "scope": "Dated US food action only; no scientific assessment or individual product determination.",
+        "limitations": [
+          "No exhaustive subsequent-change reconciliation or current consolidated-law certification.",
+          "No EU E127 legal status or ingested-drug regulatory record is supplied.",
+          "Product manufacture date, certification and other compliance facts remain unknown."
+        ]
+      },
+      "action": {
+        "type": "stay-lifted",
+        "stage": "final",
+        "target": "21 CFR 74.303"
+      },
+      "dates": {
+        "publishedOn": "2026-08-05",
+        "effectiveOn": "2026-08-05",
+        "complianceOn": null,
+        "complianceNote": "The notice confirms the original food effective date; it does not create a new compliance deadline.",
+        "sourceReferenceId": "red3-stay-order",
+        "effectiveNote": "The administrative stay is lifted as of August 5, 2026. The food removal remains effective January 15, 2027."
+      },
+      "qualifications": [
+        {
+          "id": "food-scope",
+          "kind": "scope",
+          "text": "Overrules objections, denies hearing requests and lifts the administrative stay for the referenced food action while confirming its original effective date. Food removal is not brought forward to August 2026.",
+          "sourceReferenceId": "red3-stay-order"
+        },
+        {
+          "id": "no-inferred-exemption",
+          "kind": "statutory-qualification",
+          "text": "No additional exemption is granted by this record. The ingested-drug timeline and any product-specific eligibility remain outside its food scope.",
+          "sourceReferenceId": "red3-stay-order"
+        }
+      ],
+      "sourceReferences": [
+        {
+          "referenceId": "red3-stay-order",
+          "role": "primary",
+          "sourceId": "FR:2026-15920",
+          "editionId": "published-2026-08-05",
+          "provisions": [
+            "ACTION and DATES (91 FR 50475)",
+            "II, objections and hearing requests (50475)",
+            "V. Summary and Conclusions (50481)"
+          ]
+        }
+      ],
+      "relationships": [
+        {
+          "type": "lifts-stay",
+          "eventId": "us-fda-red3-food-2025-administrative-stay",
+          "sourceReferenceId": "red3-stay-order"
+        },
+        {
+          "type": "confirms",
+          "eventId": "us-fda-red3-food-2025-revocation",
+          "sourceReferenceId": "red3-stay-order"
+        }
+      ]
     }
   ]
 }

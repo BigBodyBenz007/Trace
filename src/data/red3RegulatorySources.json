@@ -1,0 +1,118 @@
+[
+  {
+    "sourceId": "FR:2025-00830",
+    "editionId": "published-2025-01-16",
+    "citation": {
+      "id": "FR:2025-00830",
+      "title": "Color Additive Petition — revoke FD&C Red No. 3 in Food and Ingested Drugs — 90 FR 4628",
+      "publisher": "US Food and Drug Administration",
+      "jurisdiction": "US-federal",
+      "language": "en",
+      "publicationDate": "2025-01-16",
+      "version": "Publication 2025-01-16",
+      "url": "https://www.govinfo.gov/content/pkg/FR-2025-01-16/pdf/2025-00830.pdf",
+      "attribution": "Source: US Food and Drug Administration, Color Additive Petition — revoke FD&C Red No. 3 in Food and Ingested Drugs — 90 FR 4628; accessed 2026-10-19.",
+      "reuseBasis": "US official material; citation and original summary only, no third-party illustrations reproduced.",
+      "reuseNoticeUrl": "https://www.fda.gov/about-fda/about-website/website-policies",
+      "changes": "Citation metadata and concise original summary; no full text reproduced.",
+      "scope": "Final amendment/order: distinct food and ingested-drug removal dates, certification consequences and prior lawful use treatment."
+    },
+    "documentType": "final-rule",
+    "edition": {
+      "kind": "original",
+      "date": "2025-01-16",
+      "label": "Publication 2025-01-16"
+    },
+    "verification": {
+      "status": "verified",
+      "currency": "historical",
+      "lastAttemptedOn": "2026-10-19",
+      "lastVerifiedOn": "2026-10-19",
+      "verifiedThrough": null,
+      "evidenceType": "official-text",
+      "scope": "Final amendment/order: distinct food and ingested-drug removal dates, certification consequences and prior lawful use treatment.",
+      "evidenceLocator": "docs/regulatory-red3-timeline-2026-10-19.md; 90 FR 4628: DATES, II.B, III, VI (4633), X, instruction 2 (4634).",
+      "currentnessBasis": null,
+      "limitations": [
+        "Requires the 2026 stay-removal order for subsequent procedural status."
+      ]
+    }
+  },
+  {
+    "sourceId": "FR:2026-15920",
+    "editionId": "published-2026-08-05",
+    "citation": {
+      "id": "FR:2026-15920",
+      "title": "Micro-Tracers, Inc.; Response to Objections and Requests for a Public Hearing — 91 FR 50475",
+      "publisher": "US Food and Drug Administration",
+      "jurisdiction": "US-federal",
+      "language": "en",
+      "publicationDate": "2026-08-05",
+      "version": "Publication 2026-08-05",
+      "url": "https://www.govinfo.gov/content/pkg/FR-2026-08-05/pdf/2026-15920.pdf",
+      "attribution": "Source: US Food and Drug Administration, Micro-Tracers, Inc.; Response to Objections and Requests for a Public Hearing — 91 FR 50475; accessed 2026-10-19.",
+      "reuseBasis": "US official material; citation and original summary only, no third-party illustrations reproduced.",
+      "reuseNoticeUrl": "https://www.fda.gov/about-fda/about-website/website-policies",
+      "changes": "Citation metadata and concise original summary; no full text reproduced.",
+      "scope": "Final objection/hearing disposition and removal of administrative stay, confirming the two effective dates."
+    },
+    "documentType": "final-rule",
+    "edition": {
+      "kind": "original",
+      "date": "2026-08-05",
+      "label": "Publication 2026-08-05"
+    },
+    "verification": {
+      "status": "verified",
+      "currency": "historical",
+      "lastAttemptedOn": "2026-10-19",
+      "lastVerifiedOn": "2026-10-19",
+      "verifiedThrough": null,
+      "evidenceType": "official-text",
+      "scope": "Final objection/hearing disposition and removal of administrative stay, confirming the two effective dates.",
+      "evidenceLocator": "docs/regulatory-red3-timeline-2026-10-19.md; 91 FR 50475: ACTION, DATES, II; V. Summary and Conclusions (50481).",
+      "currentnessBasis": null,
+      "limitations": [
+        "This is a final procedural order, not a proposed rule or a new immediate food-use removal date."
+      ]
+    }
+  },
+  {
+    "sourceId": "FDA:Red3",
+    "editionId": "snapshot-2026-10-19",
+    "citation": {
+      "id": "FDA:Red3",
+      "title": "FD&C Red No. 3",
+      "publisher": "US Food and Drug Administration",
+      "jurisdiction": "US-federal",
+      "language": "en",
+      "publicationDate": null,
+      "publicationDateNote": "Live page publication date not established.",
+      "version": "Source snapshot 2026-10-19",
+      "url": "https://www.fda.gov/industry/color-additives/fdc-red-no-3",
+      "attribution": "Source: US Food and Drug Administration, FD&C Red No. 3; accessed 2026-10-19.",
+      "reuseBasis": "US official material; citation and original summary only, no third-party illustrations reproduced.",
+      "reuseNoticeUrl": "https://www.fda.gov/about-fda/about-website/website-policies",
+      "changes": "Citation metadata and concise original summary; no full text reproduced.",
+      "scope": "FDA's dated-access summary; distinguish manufacturer use deadlines from sale of earlier products."
+    },
+    "documentType": "regulatory-announcement",
+    "edition": {
+      "kind": "snapshot",
+      "date": "2026-10-19",
+      "label": "Source snapshot 2026-10-19"
+    },
+    "verification": {
+      "status": "verified",
+      "currency": "undetermined",
+      "lastAttemptedOn": "2026-10-19",
+      "lastVerifiedOn": "2026-10-19",
+      "verifiedThrough": null,
+      "evidenceType": "official-text",
+      "scope": "FDA's dated-access summary; distinguish manufacturer use deadlines from sale of earlier products.",
+      "evidenceLocator": "docs/regulatory-red3-timeline-2026-10-19.md; Regulatory Information: manufacturer deadlines and immediately following stock paragraph.",
+      "currentnessBasis": null,
+      "limitations": []
+    }
+  }
+]

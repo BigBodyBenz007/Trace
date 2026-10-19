@@ -10,7 +10,7 @@ const validate = (event, sources = sourceData.sources) => validateLegalEvent(eve
 
 test("ships one verified, scoped US BVO final action with separate publication, effect and compliance dates", () => {
   expect(validateLegalEventRegistry(data, sourceData)).toEqual({ valid: true, errors: [] });
-  expect(data.events).toHaveLength(1);
+  expect(getLegalEventsForSubstance("brominated-vegetable-oil", "US-federal")).toHaveLength(1);
   expect(getLegalEvent("us-fda-bvo-2024-revocation")).toMatchObject({
     substance: { id: "brominated-vegetable-oil", name: "Brominated vegetable oil" },
     jurisdiction: "US-federal", authority: "US Food and Drug Administration",

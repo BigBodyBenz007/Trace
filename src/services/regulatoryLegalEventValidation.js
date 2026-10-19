@@ -1,6 +1,8 @@
 // Legal actions and cited qualifications only; no product or scientific verdicts.
 const { JURISDICTIONS, validateSourceReference, validateSourceRegistry } = require("./regulatorySourceValidation");
-const ACTION_TYPES = Object.freeze(["authorization", "authorization-amendment", "authorization-revocation"]);
+const ACTION_TYPES = Object.freeze(["authorization", "authorization-amendment", "authorization-revocation",
+  "administrative-stay", "stay-lifted"]);
+const PROCEDURAL_ACTIONS = ["administrative-stay", "stay-lifted"];
 const LEGAL_DOCUMENTS = ["regulation", "consolidated-regulation", "amendment", "final-rule"];
 const object = (v) => v !== null && typeof v === "object" && !Array.isArray(v);
 const text = (v) => typeof v === "string" && v.trim() === v && v.length > 0;
@@ -26,7 +28,7 @@ function validateLegalEvent(event, sources, { asOf = null } = {}) {
   const check = (ok, message) => { if (!ok) errors.push(message); };
   if (!object(event)) return result(["event must be an object"]);
   fields(event, ["eventId", "substance", "jurisdiction", "authority", "action", "affectedUses", "dates",
-    "qualifications", "sourceReferences", "evidence", "relationships"], "event", errors);
+    "qualifications", "sourceReferences", "evidence", "relationships", "useScope"], "event", errors);
   check(identifier(event.eventId), "eventId is required");
   const substance = object(event.substance) ? event.substance : {};
   fields(event.substance, ["id", "name"], "substance", errors);
@@ -38,18 +40,31 @@ function validateLegalEvent(event, sources, { asOf = null } = {}) {
   check(ACTION_TYPES.includes(action.type), "unsupported action type");
   check(action.stage === "final", "only final actions are supported");
   check(text(action.target), "action target is required");
+  const procedural = PROCEDURAL_ACTIONS.includes(action.type);
+  if (event.useScope !== undefined || procedural) {
+    fields(event.useScope, ["domain", "provision"], "useScope", errors);
+    check(event.useScope?.domain === "food" && text(event.useScope?.provision)
+      && event.useScope.provision === action.target, "useScope requires food and the exact affected provision");
+  }
   check(Array.isArray(event.affectedUses) && event.affectedUses.length > 0
     && list(event.affectedUses).every(text), "affectedUses requires explicit food uses");
 
   const dates = object(event.dates) ? event.dates : {};
-  fields(event.dates, ["publishedOn", "effectiveOn", "complianceOn", "complianceNote", "sourceReferenceId"], "dates", errors);
+  fields(event.dates, ["publishedOn", "effectiveOn", "complianceOn", "complianceNote", "sourceReferenceId",
+    "effectiveNote", "complianceSourceReferenceId"], "dates", errors);
   check(date(dates.publishedOn), "publishedOn requires a real ISO date");
   check(date(dates.effectiveOn), "effectiveOn requires a real ISO date");
   check(dates.complianceOn === null || date(dates.complianceOn), "complianceOn requires an ISO date or explicit null");
   check(text(dates.complianceNote), "complianceNote must explain the deadline or its absence");
   const ordered = (a, b, message) => { if (date(a) && date(b)) check(a <= b, message); };
-  ordered(dates.publishedOn, dates.effectiveOn, "publication must not follow effect in this schema");
+  // A later notice can explicitly report an earlier automatic stay. Ordinary
+  // final actions still cannot acquire retroactive effect by adding a note.
+  if (action.type !== "administrative-stay") {
+    ordered(dates.publishedOn, dates.effectiveOn, "publication must not follow effect in this schema");
+  }
   ordered(dates.effectiveOn, dates.complianceOn, "compliance must not precede effect in this schema");
+  if (dates.effectiveNote !== undefined || procedural) check(text(dates.effectiveNote), "effectiveNote is required for procedural dates");
+  if (procedural) check(dates.complianceOn === null, "procedural events must not create or copy compliance deadlines");
 
   const evidence = object(event.evidence) ? event.evidence : {};
   fields(event.evidence, ["status", "lastReviewedOn", "scope", "limitations"], "evidence", errors);
@@ -95,17 +110,31 @@ function validateLegalEvent(event, sources, { asOf = null } = {}) {
   check(primaryCount === 1, "exactly one primary source is required");
   check(primary !== null && dates.sourceReferenceId === primary.referenceId, "dates must cite the primary legal source");
   const cite = (id) => check(identifier(id) && references.has(id), "qualification/relationship source reference is missing");
+  if (dates.complianceSourceReferenceId !== undefined || (event.useScope && date(dates.complianceOn))) {
+    cite(dates.complianceSourceReferenceId);
+  }
 
   const qualificationIds = new Set();
   check(Array.isArray(event.qualifications) && event.qualifications.length > 0, "reviewed qualifications are required");
   list(event.qualifications).forEach((q) => {
-    fields(q, ["id", "kind", "text", "sourceReferenceId"], "qualification", errors);
+    fields(q, ["id", "kind", "text", "sourceReferenceId", "conditions", "verificationStatus"], "qualification", errors);
     if (!object(q)) return;
     check(identifier(q.id) && !qualificationIds.has(q.id), "qualification id is missing or duplicated");
     qualificationIds.add(q.id);
-    check(["scope", "statutory-qualification", "transition"].includes(q.kind), "unsupported qualification kind");
+    check(["scope", "statutory-qualification", "transition", "prior-certified-use"].includes(q.kind), "unsupported qualification kind");
     check(text(q.text), "qualification text is required");
     cite(q.sourceReferenceId);
+    if (q.kind === "prior-certified-use") {
+      check(action.type === "authorization-revocation" && event.useScope?.domain === "food",
+        "prior-certified-use requires an explicit food revocation scope");
+      check(q.verificationStatus === "verified", "prior-certified-use requires verified qualification evidence");
+      check(Array.isArray(q.conditions) && q.conditions.length === 1
+        && q.conditions[0] === "color-used-while-certificate-effective", "prior-certified-use requires the certificate condition");
+      check(references.get(q.sourceReferenceId)?.role === "primary", "prior-certified-use must cite the primary legal act");
+    } else {
+      check(q.conditions === undefined && q.verificationStatus === undefined,
+        "conditional-use fields require a supported qualification kind");
+    }
   });
   check(list(event.qualifications).some((q) => q?.kind === "scope"), "an explicit scope qualification is required");
   if (date(dates.complianceOn)) {
@@ -117,12 +146,22 @@ function validateLegalEvent(event, sources, { asOf = null } = {}) {
   list(event.relationships).forEach((relation) => {
     fields(relation, ["type", "eventId", "sourceReferenceId"], "relationship", errors);
     if (!object(relation)) return;
-    check(["supersedes", "amends"].includes(relation.type), "unsupported relationship type");
+    const allowed = action.type === "administrative-stay" ? ["stays"]
+      : action.type === "stay-lifted" ? ["lifts-stay", "confirms"] : ["supersedes", "amends"];
+    check(allowed.includes(relation.type), "unsupported relationship type for action");
     check(identifier(relation.eventId) && relation.eventId !== event.eventId, "invalid/self event relationship");
     check(!targets.has(relation.eventId), "duplicate/conflicting relationship target");
     targets.add(relation.eventId);
     cite(relation.sourceReferenceId);
+    if (procedural) check(relation.sourceReferenceId === primary?.referenceId, "procedural relationships must cite the primary legal notice");
   });
+  if (action.type === "administrative-stay") {
+    check(event.relationships?.length === 1 && event.relationships[0]?.type === "stays", "administrative-stay requires exactly one stays relationship");
+  }
+  if (action.type === "stay-lifted") {
+    check(event.relationships?.length === 2 && list(event.relationships).some((r) => r?.type === "lifts-stay")
+      && list(event.relationships).some((r) => r?.type === "confirms"), "stay-lifted requires lifts-stay and confirms relationships");
+  }
   return result(errors);
 }
 
@@ -147,6 +186,7 @@ function validateLegalEventRegistry(data, sourceData) {
     if (actions.has(identity)) errors.push("duplicate/conflicting legal action under different event IDs");
     actions.add(identity);
   });
+  const liftedStays = new Set();
   events.forEach((event) => list(event.relationships).forEach((relation) => {
     const target = events.get(relation?.eventId);
     if (!target) { errors.push("unresolved relationship target"); return; }
@@ -155,6 +195,26 @@ function validateLegalEventRegistry(data, sourceData) {
     }
     if (date(target.dates?.publishedOn) && date(event.dates?.publishedOn)
       && target.dates.publishedOn > event.dates.publishedOn) errors.push("relationship target published after its amendment/supersession");
+    if (["stays", "lifts-stay", "confirms"].includes(relation?.type)) {
+      const expectedType = relation.type === "lifts-stay" ? "administrative-stay" : "authorization-revocation";
+      if (target.action?.type !== expectedType) errors.push("invalid procedural relationship target action");
+      if (!event.useScope || !target.useScope || event.useScope.domain !== target.useScope.domain
+        || event.useScope.provision !== target.useScope.provision || event.action?.target !== target.action?.target
+        || event.authority !== target.authority || JSON.stringify(event.affectedUses) !== JSON.stringify(target.affectedUses)) {
+        errors.push("procedural relationship must preserve authority and exact food-use scope");
+      }
+      if (relation.type === "stays" && date(event.dates?.effectiveOn) && date(target.dates?.publishedOn)
+        && event.dates.effectiveOn < target.dates.publishedOn) errors.push("stay cannot begin before the original act was published");
+      if (relation.type === "lifts-stay") {
+        if (date(event.dates?.effectiveOn) && date(target.dates?.effectiveOn)
+          && event.dates.effectiveOn < target.dates.effectiveOn) errors.push("stay lifting cannot precede the stay");
+        if (liftedStays.has(target.eventId)) errors.push("conflicting stay-lifting records");
+        liftedStays.add(target.eventId);
+        const confirmed = list(event.relationships).find((r) => r?.type === "confirms");
+        const stayed = list(target.relationships).find((r) => r?.type === "stays");
+        if (!confirmed || !stayed || confirmed.eventId !== stayed.eventId) errors.push("confirmed action must be the action originally stayed");
+      }
+    }
   }));
   const visited = new Set();
   const visiting = new Set();

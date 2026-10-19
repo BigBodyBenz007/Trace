@@ -25,13 +25,17 @@ editions and name-reference bindings. An edition is identified by the pair
 Separate editions of a stable source can coexist. Their publisher, jurisdiction
 and document type must agree; a different kind of source gets a separate ID.
 
-Three source editions are shipped (the BVO edition was appended in manifest v2):
+Six source editions are shipped (BVO was appended in manifest v2; three
+Red No. 3 editions were appended in v3):
 
 | Source | Edition | Verification | Currency |
 | --- | --- | --- | --- |
 | CELEX:32012R0231 | original-2012-03-22 | Verified official text for eight name headings only | Historical |
 | CELEX:02012R0231-20260818 | consolidated-2026-08-18 | Partial, indexed evidence from the audit; completed verification date is null | Undetermined |
 | FR:2024-14300 | published-2024-07-03 | Verified final BVO revocation action and its dates/qualifications; archived official text | Historical |
+| FR:2025-00830 | published-2025-01-16 | Verified Red No. 3 final food-removal order, dates and certificate qualification | Historical |
+| FR:2026-15920 | published-2026-08-05 | Verified automatic-stay history, lifting and food-date confirmation | Historical |
+| FDA:Red3 | snapshot-2026-10-19 | Verified manufacturer deadline and earlier-stock summary; supporting evidence only | Undetermined |
 
 No source is shipped as current. The 2026 entry neither replaces the 2012
 attribution nor supplies new product metadata. Its separate publication date is
@@ -41,6 +45,12 @@ The BVO citation is held in `src/data/bvoRevocationSource.json`, retaining the
 edition from the [evidence archive](regulatory-evidence/2026-10-19/README.md).
 It supports a [separate legal-event record](regulatory-legal-events.md); it is
 not a name-reference binding or a statement of present product compliance.
+The Red No. 3 editions are in `src/data/red3RegulatorySources.json`, retaining
+archived citations and editions with more precise evidence locators. Relevant
+text was independently read for the
+[Red No. 3 implementation](regulatory-red3-timeline-2026-10-19.md). The live-page
+publication date remains unknown; its access date is not substituted. No earlier
+edition, source verification scope or historical name binding was overwritten.
 
 ## Record fields
 
@@ -135,10 +145,12 @@ calculations, serving safeguards, scanner code and visible layout are unchanged.
 
 Future FDA sources and scientific assessments can use the same citation/edition
 shape, after human verification. The legal-event foundation now holds one final
-US BVO action separately from source and name records. Effective dates,
+US BVO action and the bounded US Red No. 3 food timeline separately from source and name records. Effective dates,
 compliance deadlines and supersession links belong in that explicit structure,
 not in publication or verification dates. Scientific assessments remain separate.
-Proposals, stays and other date semantics need deliberate schema extensions.
+Proposals, partial stays, changed deadlines and other unsupported date semantics
+need deliberate schema extensions; the implemented automatic stay and lifting
+preserve their exact source/version bindings.
 
 Further current EU records still require complete official source retrieval and
 amendment/corrigendum checks. See the legal-event documentation for the next

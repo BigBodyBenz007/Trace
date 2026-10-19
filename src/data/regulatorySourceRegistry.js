@@ -3,7 +3,7 @@ const historical = require("./additiveNameReference.json");
 
 module.exports = {
   schemaVersion: 1,
-  registryVersion: "regulatory-sources-2026-10-19-v2",
+  registryVersion: "regulatory-sources-2026-10-19-v3",
   snapshotDate: "2026-10-19",
   sources: [
     {
@@ -63,6 +63,7 @@ module.exports = {
       },
     },
     require("./bvoRevocationSource.json"),
+    ...require("./red3RegulatorySources.json"),
   ],
   // Keep old bindings when new name editions are introduced. Never resolve to latest.
   referenceBindings: [{
