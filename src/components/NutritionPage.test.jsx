@@ -154,6 +154,15 @@ function dailyTotalsSection() {
   return screen.getByRole("heading", { name: "Daily Totals" }).closest("section");
 }
 
+test("Add Food focuses the existing food search and preserves an unfinished entry", () => {
+  renderNutritionPage();
+  const name = screen.getByLabelText("Food / meal name");
+  fireEvent.change(name, { target: { value: "Unfinished snack" } });
+  fireEvent.click(screen.getByRole("button", { name: "Add Food" }));
+  expect(screen.getByLabelText("Food search")).toHaveFocus();
+  expect(name).toHaveValue("Unfinished snack");
+});
+
 test("renders complete daily sugar totals including explicit zero", () => {
   renderNutritionPage({
     nutritionEntries: [
@@ -337,11 +346,15 @@ test("collapses Nutrition Goals by default and preserves edits across disclosure
   expect(within(screen.getByRole("heading", { name: "Daily Goals" }).closest("form")).getByLabelText("Calories")).toHaveValue(2100);
 });
 
-test("places food logging before daily, weekly, and monthly totals in semantic DOM order", () => {
+test("places the daily summary and quick actions before food logging, with averages below", () => {
   renderNutritionPage();
   const foodSearch = screen.getByRole("heading", { name: "Find a Food" });
   const addFood = screen.getByRole("heading", { name: "Add Nutrition Entry" });
-  const totals = ["Daily Totals", "Weekly Totals", "Monthly Totals"].map((name) =>
+  const daily = screen.getByRole("heading", { name: "Daily Totals" });
+  const scan = screen.getByRole("button", { name: "Scan Barcode" });
+  expect(daily.compareDocumentPosition(scan) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+  expect(scan.compareDocumentPosition(foodSearch) & Node.DOCUMENT_POSITION_FOLLOWING).not.toBe(0);
+  const totals = ["Weekly Totals", "Monthly Totals"].map((name) =>
     screen.getByRole("heading", { name })
   );
 
@@ -430,7 +443,7 @@ test("shows today's Water against its goal and updates progress with Water entry
   });
   let totals = within(screen.getByRole("heading", { name: "Daily Totals" }).closest("section"));
   expect(totals.getByText("250 mL / 1,000 mL")).toBeInTheDocument();
-  expect(totals.getByText("25%")).toBeInTheDocument();
+  expect(totals.getByLabelText("Water progress")).toHaveAttribute("aria-valuetext", "25%");
 
   view.rerender(<NutritionPage
     {...view.props}
@@ -441,7 +454,7 @@ test("shows today's Water against its goal and updates progress with Water entry
   />);
   totals = within(screen.getByRole("heading", { name: "Daily Totals" }).closest("section"));
   expect(totals.getByText("750 mL / 1,000 mL")).toBeInTheDocument();
-  expect(totals.getByText("75%")).toBeInTheDocument();
+  expect(totals.getByLabelText("Water progress")).toHaveAttribute("aria-valuetext", "75%");
 
   view.rerender(<NutritionPage
     {...view.props}
@@ -459,7 +472,9 @@ test("shows today's sodium total and an incomplete warning", () => {
     ],
   });
 
-  expect(screen.getByText("400mg · Incomplete: one or more logged foods had unknown sodium.")).toBeInTheDocument();
+  const sodium = within(dailyTotalsSection()).getByText("Known Sodium (mg)").closest(".trace-stat-card");
+  expect(sodium).toHaveTextContent("400mg");
+  expect(within(dailyTotalsSection()).getByText("Totals may be incomplete: some foods have missing nutrition data.")).toBeInTheDocument();
 });
 
 test("formats floating-point nutrient tails across saved cards, totals, and averages", () => {
@@ -503,12 +518,13 @@ test("formats floating-point nutrient tails across saved cards, totals, and aver
     .toHaveTextContent("Sodium 0 mg");
   expect(history.getByRole("heading", { name: "Unknown sodium" }).closest("article"))
     .toHaveTextContent("Sodium Unknown");
-  expect(dailyTotalsSection())
-    .toHaveTextContent("447.8mg · Incomplete: one or more logged foods had unknown sodium.");
   const dailyTotals = within(dailyTotalsSection());
-  expect(dailyTotals.getByText("Calories").closest(".trace-stat-card")).toHaveTextContent("360.6 · No goal set");
-  expect(dailyTotals.getByText("Protein (g)").closest(".trace-stat-card")).toHaveTextContent("76.56g · No goal set");
-  expect(dailyTotals.getByText("Carbohydrates (g)").closest(".trace-stat-card")).toHaveTextContent("6g · No goal set");
+  const sodium = dailyTotals.getByText("Known Sodium (mg)").closest(".trace-stat-card");
+  expect(sodium).toHaveTextContent("447.8mg");
+  expect(dailyTotals.getByText("Totals may be incomplete: some foods have missing nutrition data.")).toBeInTheDocument();
+  expect(dailyTotals.getByText("Calories").closest(".trace-stat-card")).toHaveTextContent("361 · No goal set");
+  expect(dailyTotals.getByText("Protein").closest(".trace-stat-card")).toHaveTextContent("76.6g · No goal set");
+  expect(dailyTotals.getByText("Carbs").closest(".trace-stat-card")).toHaveTextContent("6g · No goal set");
   expect(dailyTotals.getByText("Fat (g)").closest(".trace-stat-card")).toHaveTextContent("6.57g · No goal set");
   expect(dailyTotals.getByText("Known Total Sugar (g)").closest(".trace-stat-card")).toHaveTextContent("3g");
   expect(dailyTotals.getByText("Known Added Sugar (g)").closest(".trace-stat-card")).toHaveTextContent("0g");
@@ -529,11 +545,12 @@ test("shows sodium goal progress in a standard nutrient-sized grid item", () => 
     nutritionEntries: [entry(new Date().toISOString(), 0, 0, 0, 0, 2045)],
   });
 
-  expect(screen.getByText("2045 / 2300 mg")).toBeInTheDocument();
+  expect(within(dailyTotalsSection()).getByText("Sodium (mg)").closest(".trace-stat-card")).toHaveTextContent("2045 / 2300 mg");
   expect(screen.getByLabelText("Sodium progress")).toBeInTheDocument();
-  expect(screen.getByText("89%")).toBeInTheDocument();
-  expect(screen.getByLabelText("Sodium progress").parentElement.parentElement.style.gridTemplateColumns)
-    .toBe(screen.getByLabelText("Calories progress").parentElement.parentElement.style.gridTemplateColumns);
+  expect(screen.getByLabelText("Sodium progress")).toHaveAttribute("aria-valuetext", "89%");
+  expect(screen.getByLabelText("Sodium progress").closest("#nutrition-details")).not.toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "View all nutrition" }));
+  expect(screen.getByRole("progressbar", { name: "Sodium progress" })).toBeVisible();
 });
 
 test("shows sodium total without progress when no sodium goal is set", () => {
@@ -552,8 +569,8 @@ test("caps sodium bar width when the goal is exceeded", () => {
     nutritionEntries: [entry(new Date().toISOString(), 0, 0, 0, 0, 2500)],
   });
 
-  expect(screen.getByText("2500 / 2000 mg")).toBeInTheDocument();
-  expect(screen.getByText("125%")).toBeInTheDocument();
+  expect(within(dailyTotalsSection()).getByText("Sodium (mg)").closest(".trace-stat-card")).toHaveTextContent("2500 / 2000 mg");
+  expect(screen.getByLabelText("Sodium progress")).toHaveAttribute("aria-valuetext", "125%");
   expect(screen.getByLabelText("Sodium progress").firstElementChild).toHaveStyle({ width: "100%" });
 });
 
@@ -566,9 +583,9 @@ test("warns that sodium goal progress may be incomplete", () => {
     ],
   });
 
-  expect(screen.getByText(/400 \/ 2300 mg/)).toBeInTheDocument();
-  expect(screen.getByText(/Progress may be incomplete because one or more logged foods had unknown sodium/)).toBeInTheDocument();
-  expect(screen.getByText("17%")).toBeInTheDocument();
+  expect(screen.getByText("Known Sodium (mg)").closest(".trace-stat-card")).toHaveTextContent("400 / 2300 mg");
+  expect(screen.getByText("Totals may be incomplete: some foods have missing nutrition data.")).toBeInTheDocument();
+  expect(screen.getByLabelText("Sodium progress")).toHaveAttribute("aria-valuetext", "17% · Known values only; incomplete");
 });
 
 function entryForm() {

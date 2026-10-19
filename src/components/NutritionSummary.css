@@ -1,0 +1,182 @@
+.trace-nutrition-overview {
+  max-width: 700px;
+  width: 100%;
+  text-align: left;
+}
+
+.trace-nutrition-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.trace-feature-page .trace-nutrition-heading h1 {
+  margin: 0 !important;
+  font-size: clamp(1.8rem, 5vw, 2.25rem);
+}
+
+.trace-nutrition-date {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 10px;
+  background: var(--trace-surface-primary);
+  border: 1px solid var(--trace-border-default);
+  border-radius: var(--trace-control-radius);
+  color: var(--trace-text-secondary);
+  white-space: nowrap;
+}
+
+.trace-nutrition-date input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  min-width: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.trace-nutrition-date:focus-within {
+  outline: 2px solid var(--trace-focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--trace-control-radius);
+}
+
+.trace-feature-page .trace-nutrition-summary {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 18px !important;
+  width: 100%;
+}
+
+.trace-nutrition-summary .trace-nutrition-metric {
+  background: none;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+  padding: 0;
+  min-width: 0;
+}
+
+.trace-nutrition-metric__label {
+  color: var(--trace-text-secondary);
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.trace-nutrition-summary .trace-nutrition-metric__value {
+  color: var(--trace-text-primary);
+  font-size: clamp(1.1rem, 4.5vw, 1.35rem);
+  font-weight: 600;
+  line-height: 1.35;
+  margin: 6px 0 10px;
+  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.trace-nutrition-metric__value small,
+.trace-nutrition-metric__goal {
+  color: var(--trace-text-secondary);
+  font-weight: 400;
+}
+
+.trace-nutrition-metric__value small { font-size: 0.75rem; }
+
+.trace-nutrition-metric--calories {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+}
+
+.trace-nutrition-metric--calories .trace-nutrition-metric__label { grid-column: 1 / -1; }
+.trace-nutrition-metric--calories .trace-nutrition-metric__value { font-size: clamp(1.4rem, 5.5vw, 1.8rem); }
+.trace-nutrition-metric--calories .trace-nutrition-metric__value > span:first-child { font-size: 1.25em; }
+.trace-nutrition-remaining { color: var(--trace-text-secondary); font-size: 0.9rem; margin: 0; }
+.trace-nutrition-metric--calories .trace-nutrition-progress,
+.trace-nutrition-metric--calories .trace-nutrition-incomplete { grid-column: 1 / -1; }
+
+.trace-nutrition-macros,
+.trace-nutrition-details {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px 16px;
+  margin-top: 18px;
+}
+
+.trace-nutrition-summary .trace-nutrition-progress {
+  height: 6px !important;
+  overflow: hidden;
+}
+.trace-nutrition-progress > div { height: 100%; }
+
+.trace-nutrition-summary .trace-nutrition-details-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  width: 100%;
+  min-height: 44px;
+  margin: 18px 0 0 !important;
+  padding: 8px 10px !important;
+  font-size: 0.95rem !important;
+  border-radius: 999px !important;
+}
+
+.trace-nutrition-chevron {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+.trace-nutrition-chevron--up { transform: translateY(2px) rotate(225deg); }
+.trace-nutrition-details { border-top: 1px solid var(--trace-divider); padding-top: 18px; }
+.trace-nutrition-details[hidden] { display: none; }
+.trace-nutrition-incomplete { color: var(--trace-text-secondary); font-size: 0.8rem; line-height: 1.4; margin: 4px 0 8px; }
+
+.trace-nutrition-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.trace-feature-page .trace-nutrition-quick-actions .trace-action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: 0 !important;
+  padding: 14px 8px !important;
+  min-height: 84px;
+  font-size: clamp(1rem, 4vw, 1.2rem) !important;
+  font-weight: 600;
+}
+
+.trace-nutrition-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.trace-feature-page--nutrition > .trace-nutrition-back {
+  align-self: center;
+  min-height: 44px;
+  margin: 12px 0 !important;
+  padding: 8px 14px !important;
+  font-size: 0.9rem !important;
+}

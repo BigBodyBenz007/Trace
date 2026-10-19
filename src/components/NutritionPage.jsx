@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import FoodSearch from "./FoodSearch";
+import NutritionSummary, { calculateDailyNutritionTotals } from "./NutritionSummary";
 import GroceryFoodForm from "./GroceryFoodForm";
 import ConfirmationMessage from "./ConfirmationMessage";
 import WaterTrackerSection from "./WaterTrackerSection";
@@ -22,8 +23,6 @@ import {
 import { webAppLifecycleAdapter } from "../services/appLifecycleAdapter";
 import {
   WATER_UNITS,
-  calculateWaterSummary,
-  formatWaterAmount,
   millilitersToWaterAmount,
   waterAmountToMilliliters,
 } from "../services/waterTracker";
@@ -31,7 +30,6 @@ import {
   NUTRITION_COMPLETENESS_NUTRIENT_KEYS,
   NUTRITION_ENTRY_NUTRIENT_KEYS,
   NUTRIENT_KEYS,
-  SUGAR_NUTRIENT_KEYS,
   TRACKED_NUTRIENT_KEYS,
   getSugarValidationError,
   scaleNutrition,
@@ -168,14 +166,6 @@ function getLocalDateTimeFromTimestamp(loggedAt) {
   };
 }
 
-function isSameLocalDate(firstDate, secondDate) {
-  return (
-    firstDate.getFullYear() === secondDate.getFullYear() &&
-    firstDate.getMonth() === secondDate.getMonth() &&
-    firstDate.getDate() === secondDate.getDate()
-  );
-}
-
 function getLocalDateKey(date) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
@@ -210,26 +200,8 @@ function emptyNutritionEntryDraft(dateTime = getCurrentLocalDateTime()) {
 }
 
 export function calculateDailySugarTotals(nutritionEntries, today = new Date()) {
-  const totals = {
-    entryCount: 0,
-    totalSugar: { knownCount: 0, value: 0 },
-    addedSugar: { knownCount: 0, value: 0 },
-  };
-
-  nutritionEntries.forEach((entry) => {
-    const loggedAt = new Date(entry.loggedAt);
-    if (Number.isNaN(loggedAt.getTime()) || !isSameLocalDate(loggedAt, today)) return;
-
-    totals.entryCount += 1;
-    SUGAR_NUTRIENT_KEYS.forEach((nutrient) => {
-      const value = Number(entry[nutrient]);
-      if (entry[nutrient] === null || entry[nutrient] === undefined || !Number.isFinite(value) || value < 0) return;
-      totals[nutrient].knownCount += 1;
-      totals[nutrient].value += value;
-    });
-  });
-
-  return totals;
+  const { entryCount, totalSugar, addedSugar } = calculateDailyNutritionTotals(nutritionEntries, today);
+  return { entryCount, totalSugar, addedSugar };
 }
 
 function hasValidSavedCalculationBasis(entry) {
@@ -574,48 +546,15 @@ function NutritionPage({
   const remainingEntryCount = Math.max(0, sortedEntries.length - visibleEntries.length);
   const nextEntryBatchCount = Math.min(FOOD_HISTORY_BATCH_SIZE, remainingEntryCount);
   const today = new Date();
-  const todayTotals = nutritionEntries.reduce(
-    (totals, entry) => {
-      if (!isSameLocalDate(new Date(entry.loggedAt), today)) {
-        return totals;
-      }
-
-      return {
-        calories: entry.calories == null ? totals.calories : totals.calories + toNutritionNumber(entry.calories),
-        protein: entry.protein == null ? totals.protein : totals.protein + toNutritionNumber(entry.protein),
-        carbohydrates: entry.carbohydrates == null ? totals.carbohydrates : totals.carbohydrates + toNutritionNumber(entry.carbohydrates),
-        fat: entry.fat == null ? totals.fat : totals.fat + toNutritionNumber(entry.fat),
-        sodium: entry.sodium == null ? totals.sodium : totals.sodium + toNutritionNumber(entry.sodium),
-        incompleteNutrients: [...new Set([...(totals.incompleteNutrients || []), ...TRACKED_NUTRIENT_KEYS.filter((nutrient) => entry[nutrient] == null)])],
-      };
-    },
-    { calories: 0, protein: 0, carbohydrates: 0, fat: 0, sodium: 0 }
-  );
   const nutritionMetrics = [
     { key: "calories", label: "Calories", unit: "" },
     { key: "protein", label: "Protein", unit: "g" },
     { key: "carbohydrates", label: "Carbohydrates", unit: "g" },
     { key: "fat", label: "Fat", unit: "g" },
   ];
-  const dailySugarTotals = calculateDailySugarTotals(nutritionEntries, today);
-  const sugarMetrics = [
-    { key: "totalSugar", label: "Total Sugar" },
-    { key: "addedSugar", label: "Added Sugar" },
-  ];
   const sodiumMetric = { key: "sodium", label: "Sodium", unit: "mg" };
   const averageMetrics = [...nutritionMetrics, sodiumMetric];
   const nutritionAverages = calculateNutritionAverages(nutritionEntries, today);
-  const sodiumGoal = toNutritionNumber(nutritionGoals.sodium);
-  const hasSodiumGoal = sodiumGoal > 0;
-  const sodiumProgress = hasSodiumGoal
-    ? (todayTotals.sodium / sodiumGoal) * 100
-    : 0;
-  const waterSummary = calculateWaterSummary(waterEntries, today);
-  const waterGoalMl = toNutritionNumber(nutritionGoals.waterGoalMl);
-  const hasWaterGoal = waterGoalMl > 0;
-  const waterProgress = hasWaterGoal
-    ? (waterSummary.todayMl / waterGoalMl) * 100
-    : 0;
   const averagePeriods = [
     { key: "lastSevenDays", label: "Weekly Totals" },
     { key: "thisMonth", label: "Monthly Totals" },
@@ -1204,18 +1143,25 @@ function NutritionPage({
 
   return (
     <div className="trace-feature-page trace-feature-page--nutrition" ref={nutritionPageTopRef} data-testid="nutrition-page" style={containerStyle}>
-      <header className="trace-feature-page__identity">
-      <p className="trace-feature-page__kicker">Daily ledger</p>
-      <h1 style={{ marginBottom: "10px" }}>Nutrition</h1>
       <ConfirmationMessage message={confirmationMessage} />
-
-      <p className="trace-feature-page__lede" style={{ color: "#bbb", marginBottom: "30px" }}>
-        Track your food and nutrition here.
-      </p>
-      </header>
+      <NutritionSummary
+        entries={nutritionEntries}
+        goals={nutritionGoals}
+        waterEntries={waterEntries}
+        waterUnit={waterUnit}
+        summaryRef={todaySectionRef}
+        barcodeAccess={barcodeAccess}
+        scanButtonRef={barcodeScanButtonRef}
+        onScanBarcode={openBarcodeScanner}
+        onAddFood={() => {
+          const searchInput = nutritionPageTopRef.current?.querySelector('input[type="search"]');
+          searchInput?.focus({ preventScroll: true });
+          searchInput?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "center" });
+        }}
+      />
 
       <button
-        className="trace-action trace-action--secondary"
+        className="trace-action trace-action--secondary trace-nutrition-back"
         type="button"
         onClick={backToTimeline}
         style={{
@@ -1406,10 +1352,7 @@ function NutritionPage({
       </section>
 
       <FoodSearch
-        barcodeAccess={barcodeAccess}
         onSelectFood={selectFood}
-        onScanBarcode={openBarcodeScanner}
-        scanButtonRef={barcodeScanButtonRef}
         inputStyle={inputStyle}
         userFoods={userFoods}
         resetKey={foodSearchResetKey}
@@ -1776,181 +1719,6 @@ function NutritionPage({
         deleteEntry={deleteWaterEntry}
         showConfirmation={showConfirmation}
       />
-
-      <section
-        className="trace-feature-surface trace-nutrition-today"
-        ref={todaySectionRef}
-        style={{
-          background: "#1f2937",
-          borderRadius: "16px",
-          marginTop: "24px",
-          maxWidth: "700px",
-          padding: "24px",
-          textAlign: "left",
-          width: "100%",
-        }}
-      >
-        <h2 style={{ marginTop: 0 }}>Daily Totals</h2>
-
-        <div
-          style={{
-            display: "grid",
-            gap: "12px",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(min(130px, 100%), 1fr))",
-          }}
-        >
-          {nutritionMetrics.map((metric) => {
-            const current = todayTotals[metric.key];
-            const goal = toNutritionNumber(nutritionGoals[metric.key]);
-            const hasGoal = goal > 0;
-            const progress = hasGoal ? (current / goal) * 100 : 0;
-
-            return (
-              <div className="trace-stat-card" key={metric.key}>
-                <strong>
-                  {metric.label}
-                  {metric.unit ? ` (${metric.unit})` : ""}
-                </strong>
-                <p style={{ marginBottom: hasGoal ? "8px" : 0 }}>
-                  {hasGoal
-                    ? `${formatNutrientValue(current, metric.key, metric.unit)} / ${formatNutrientValue(goal, metric.key, metric.unit)}`
-                    : `${formatNutrientValue(current, metric.key, metric.unit)} · No goal set`}
-                </p>
-                {todayTotals.incompleteNutrients?.includes(metric.key) && <p style={{ color: "#fbbf24", margin: "-4px 0 8px" }}>Incomplete: one or more logged foods had an unknown value.</p>}
-
-                <div
-                  aria-label={`${metric.label} progress`}
-                  style={{
-                    background: "#374151",
-                    borderRadius: "999px",
-                    height: "8px",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      background: "#5ec8ff",
-                      borderRadius: "999px",
-                      height: "100%",
-                      width: `${hasGoal ? Math.min(progress, 100) : 0}%`,
-                    }}
-                  />
-                </div>
-
-                {hasGoal && (
-                  <p style={{ color: "#9ca3af", marginBottom: 0 }}>
-                    {Math.round(progress)}%
-                  </p>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        <div
-          style={{
-            borderTop: "1px solid #374151",
-            display: "grid",
-            gap: "12px",
-            gridTemplateColumns:
-              "repeat(auto-fit, minmax(min(130px, 100%), 1fr))",
-            marginTop: "18px",
-            paddingTop: "18px",
-          }}
-        >
-          <div className="trace-stat-card">
-          <strong>Sodium (mg)</strong>
-          <p style={{ marginBottom: hasSodiumGoal ? "8px" : 0 }}>
-            {hasSodiumGoal
-              ? `${formatNutrientValue(todayTotals.sodium, "sodium")} / ${formatNutrientValue(sodiumGoal, "sodium")} mg`
-              : formatNutrientValue(todayTotals.sodium, "sodium", "mg")}
-            {todayTotals.incompleteNutrients?.includes("sodium") && " · Incomplete: one or more logged foods had unknown sodium."}
-          </p>
-          {todayTotals.incompleteNutrients?.includes("sodium") && (
-            <p style={{ color: "#fbbf24", margin: "-4px 0 8px" }}>
-              Progress may be incomplete because one or more logged foods had unknown sodium.
-            </p>
-          )}
-          {hasSodiumGoal && (
-            <>
-              <div
-                aria-label="Sodium progress"
-                style={{
-                  background: "#374151",
-                  borderRadius: "999px",
-                  height: "8px",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    background: "#5ec8ff",
-                    borderRadius: "999px",
-                    height: "100%",
-                    width: `${Math.min(sodiumProgress, 100)}%`,
-                  }}
-                />
-              </div>
-              <p style={{ color: "#9ca3af", marginBottom: 0 }}>
-                {Math.round(sodiumProgress)}%
-              </p>
-            </>
-          )}
-        </div>
-        <div className="trace-stat-card">
-          <strong>Water ({waterUnit})</strong>
-          <p style={{ marginBottom: hasWaterGoal ? "8px" : 0 }}>
-            {hasWaterGoal
-              ? `${formatWaterAmount(waterSummary.todayMl, waterUnit)} / ${formatWaterAmount(waterGoalMl, waterUnit)}`
-              : formatWaterAmount(waterSummary.todayMl, waterUnit)}
-          </p>
-          {hasWaterGoal && (
-            <>
-              <div
-                aria-label="Water progress"
-                style={{
-                  background: "#374151",
-                  borderRadius: "999px",
-                  height: "8px",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    background: "#5ec8ff",
-                    borderRadius: "999px",
-                    height: "100%",
-                    width: `${Math.min(waterProgress, 100)}%`,
-                  }}
-                />
-              </div>
-              <p style={{ color: "#9ca3af", marginBottom: 0 }}>
-                {Math.round(waterProgress)}%
-              </p>
-            </>
-          )}
-        </div>
-        {sugarMetrics.map((metric) => {
-          const sugarTotal = dailySugarTotals[metric.key];
-          const hasKnownValues = sugarTotal.knownCount > 0;
-          const isPartial = hasKnownValues && sugarTotal.knownCount < dailySugarTotals.entryCount;
-
-          return (
-            <div className="trace-stat-card" key={metric.key}>
-              <strong>{isPartial ? `Known ${metric.label}` : metric.label} (g)</strong>
-              <p style={{ marginBottom: isPartial ? "8px" : 0 }}>
-                {hasKnownValues ? formatNutrientValue(sugarTotal.value, metric.key, "g") : "Unknown"}
-              </p>
-              {isPartial && (
-                <p style={{ color: "#9ca3af", marginBottom: 0 }}>
-                  Some logged foods have unknown {metric.label.toLowerCase()}.
-                </p>
-              )}
-            </div>
-          );
-        })}
-        </div>
-      </section>
 
       <section
         className="trace-feature-surface trace-nutrition-averages"
