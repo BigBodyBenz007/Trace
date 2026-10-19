@@ -3,6 +3,7 @@
 /* global globalThis */
 
 const { normalizeProductIngredients } = require("../../src/services/productIngredients");
+const { normalizeOpenFoodFactsAdditives, unknownAdditives } = require("../../src/services/productAdditives");
 
 const USDA_SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search";
 const OPEN_FOOD_FACTS_URL = "https://world.openfoodfacts.org/api/v2/product";
@@ -563,6 +564,7 @@ function normalizeUsdaFood(food, barcode, retrievedAt) {
     brand: textOrNull(food.brandOwner || food.brandName),
     name: textOrNull(food.description),
     ingredients: normalizeProductIngredients({ text: food.ingredients, language: null }),
+    additives: unknownAdditives("usda-fdc"),
     packageQuantity: textOrNull(food.packageWeight),
     serving: selected.serving,
     servingsPerContainer: positiveOrNull(food.servingsPerContainer),
@@ -671,6 +673,7 @@ function normalizeOpenFoodFactsProduct(product, barcode, retrievedAt) {
     brand: textOrNull(product.brands),
     name: textOrNull(product.product_name || product.product_name_en),
     ingredients: normalizeProductIngredients({ text: product.ingredients_text, language: product.lang }),
+    additives: normalizeOpenFoodFactsAdditives(product.additives_tags),
     packageQuantity,
     serving: selected.serving,
     servingsPerContainer: positiveOrNull(product.servings_per_container),
@@ -791,7 +794,7 @@ async function lookupUsda({ barcode, fetchImpl, apiKey, now, timeoutMs, maxBytes
 
 const OFF_FIELDS = [
   "code", "product_name", "product_name_en", "brands", "quantity",
-  "ingredients_text", "lang",
+  "ingredients_text", "lang", "additives_tags",
   "product_quantity", "product_quantity_unit", "serving_size",
   "serving_quantity", "serving_quantity_unit", "servings_per_container",
   "nutrition_data_per", "nutriments", "last_modified_t",

@@ -894,6 +894,9 @@ function NutritionPage({
               ...(food.remote.ingredients === undefined
                 ? {}
                 : { ingredients: { ...food.remote.ingredients } }),
+              ...(food.remote.additives === undefined
+                ? {}
+                : { additives: food.remote.additives }),
               providerNutritionBasis: {
                 dataBasis: food.remote.dataBasis,
                 serving: { ...food.remote.serving },

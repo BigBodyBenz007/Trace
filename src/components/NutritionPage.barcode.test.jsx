@@ -7,6 +7,7 @@ import {
 } from "../services/nutritionEntryStorage";
 import { readUserFoods, writeUserFoods, createUserFood } from "../services/userFoodCatalog";
 import { decodeBarcodePhoto } from "../services/barcodePhoto";
+import { normalizeOpenFoodFactsAdditives } from "../services/productAdditives";
 
 jest.mock("../services/barcodePhoto", () => ({
   ...jest.requireActual("../services/barcodePhoto"),
@@ -407,7 +408,17 @@ test("a recovered custom barcode food hands off cleanly without auto-logging", a
 });
 
 test.each(["remote", "custom"])("%s barcode precision survives storage, reopening, and repeated serving changes", async (source) => {
-  const providerFood = floatingRemoteFood();
+  const original = floatingRemoteFood();
+  const providerFood = {
+    ...original,
+    provider: { id: "open-food-facts", recordId: "00012345600012", attribution: "Open Food Facts contributors" },
+    provenance: { ...original.provenance,
+      provider: "open-food-facts", providerRecordId: "00012345600012",
+      attribution: "Open Food Facts contributors; database licensed under ODbL",
+      sourceUrl: "https://world.openfoodfacts.org/product/00012345600012",
+    },
+    additives: normalizeOpenFoodFactsAdditives(["en:e330"]),
+  };
   let food = providerFood;
   if (source === "custom") {
     const custom = createUserFood(providerFood.name, providerFood.nutrients, providerFood.serving, {
@@ -434,6 +445,7 @@ test.each(["remote", "custom"])("%s barcode precision survives storage, reopenin
   expect(stored.nutritionBasis).toEqual(providerFood.nutrients);
   const sourceReference = source === "remote" ? stored.foodReference : stored.foodReference.providerSourceSnapshot;
   expect(sourceReference.ingredients).toEqual(providerFood.ingredients);
+  expect(sourceReference.additives).toEqual(providerFood.additives);
   expect(sourceReference.provider).toEqual(providerFood.provider);
   view.unmount();
 
@@ -461,6 +473,8 @@ test.each(["remote", "custom"])("%s barcode precision survives storage, reopenin
     expect(stored.portion.amount).toBe(quantity);
     expect(source === "remote" ? stored.foodReference.ingredients : stored.foodReference.providerSourceSnapshot.ingredients)
       .toEqual(providerFood.ingredients);
+    expect(source === "remote" ? stored.foodReference.additives : stored.foodReference.providerSourceSnapshot.additives)
+      .toEqual(providerFood.additives);
     view.unmount();
   }
 

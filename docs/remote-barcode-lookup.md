@@ -58,6 +58,68 @@ or one-serving package basis, calories, protein, carbohydrates, and fat are
 present and valid. Reference-only per-100g/per-100mL data remains attributable
 provider provenance but produces an `incomplete` result for user completion.
 
+## Optional additive identification
+
+The existing Open Food Facts product request includes `additives_tags`, a
+structured string array in its [product ingredients schema](https://openfoodfacts.github.io/documentation/docs/Product-Opener/schemas/schemas/product_ingredients/).
+Trace retains these as **provider-reported** identifiers, not independent
+verification of the product label. The [OFF additive taxonomy](https://github.com/openfoodfacts/openfoodfacts-server/blob/main/taxonomies/additives.txt)
+contains names separately; this phase does not download it or infer names from
+ingredient text. The [USDA branded response schema](https://fdc.nal.usda.gov/api-spec/fdc_api.html)
+documents ingredient text but no equivalent structured additive identifiers in
+the response used by Trace. USDA additive information therefore stays unknown.
+
+```js
+additives: {
+  status: "reported",
+  source: "open-food-facts",
+  sourceField: "additives_tags",
+  items: [{
+    standardizedIdentifier: "E330",
+    name: null,
+    providerIdentifier: "en:e330",
+    source: "open-food-facts",
+    identification: "provider-reported",
+  }],
+}
+```
+
+- An absent `additives` property is legacy/uncollected data and remains absent.
+- `status: "unknown", items: null` means unavailable or unusable data. This
+  includes missing/null tags, unsupported provider data, malformed lists, more
+  than 100 tags, or tags longer than 128 UTF-16 code units. A malformed list is
+  discarded as a whole rather than silently becoming an empty or partial list.
+- `status: "reported", items: []` preserves an explicitly empty OFF list.
+  It means the provider returned no identifiers, **not** that the food contains
+  no additives. There is no additive-free flag or score.
+- Nonempty lists retain original provider strings. Only OFF `en:e...` identifier
+  shapes are formatted to E numbers, preserving letter/roman suffixes (for
+  example `en:e150d` and `en:e500ii`). This is formatting, not a registry lookup
+  or confirmation of authorization, safety, quantity, or actual presence.
+  Unrecognized strings remain in `items` with a null standardized identifier
+  and null name. Exact duplicate strings are removed; no parent/child expansion
+  or free-text matching occurs. Names remain null until a sourced taxonomy
+  mapping is deliberately added. Cached names and verification claims are not
+  trusted; supported provider identifiers are normalized again on read.
+
+The containing product/snapshot retains provider attribution, record ID, source
+URL, revision, and retrieval time. Additives pass through the existing browser
+normalizer, v2 cache, review candidate, remote selection, custom recovery source
+snapshot, and saved Nutrition food reference. They do not participate in
+nutrition completeness, log readiness, serving conversion, or nutrient math.
+There is no cache version bump, history migration, visible additive section,
+scanner change, extra request, or change to lookup priority. A usable USDA or
+local match still wins; Trace does not call OFF solely to enrich additives.
+Older cache entries may remain without additive data until normal expiry and
+refresh. Previously saved entries are not retroactively enriched.
+
+Coverage depends on the provider's record and analysis; structured data can be
+incomplete or incorrect. This foundation makes no independent verification or
+health claims. Before a compact Additives disclosure is added, review real OFF
+tag coverage and a versioned, attributed taxonomy mapping for display names.
+The UI should distinguish unknown data from a provider-reported empty list and
+keep provider attribution visible. Do not label the latter "additive-free".
+
 ## Optional ingredient information
 
 Remote products may include an optional `ingredients` object:

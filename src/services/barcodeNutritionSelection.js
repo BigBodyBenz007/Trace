@@ -40,7 +40,10 @@ function basisMessage(food, servingDescription, reliable) {
 function remoteCandidate(result) {
   const food = normalizeRemoteFood(result.food);
   if (!food) return null;
-  const ingredientFields = food.ingredients === undefined ? {} : { ingredients: food.ingredients };
+  const ingredientFields = {
+    ...(food.ingredients === undefined ? {} : { ingredients: food.ingredients }),
+    ...(food.additives === undefined ? {} : { additives: food.additives }),
+  };
   const reliable = SAFE_REMOTE_BASIS_KINDS.has(food.nutritionBasis?.kind);
   const serving = selectedServing(food);
   const nutrients = reliable
@@ -154,6 +157,9 @@ function localCandidate(result) {
       ...(food.providerSourceSnapshot?.ingredients === undefined
         ? {}
         : { ingredients: food.providerSourceSnapshot.ingredients }),
+      ...(food.providerSourceSnapshot?.additives === undefined
+        ? {}
+        : { additives: food.providerSourceSnapshot.additives }),
       brand: food.brand || food.restaurant?.name || null,
       name: food.name,
       packageQuantity: food.packaged?.packageSize || food.beverage?.packageSize || null,

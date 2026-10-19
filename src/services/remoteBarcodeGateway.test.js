@@ -114,6 +114,7 @@ test("Open Food Facts requests raw ingredients and preserves their main language
     .mockResolvedValueOnce(upstream({ foods: [] }))
     .mockResolvedValueOnce(upstream({ status: 1, product: offProduct({
       ingredients_text: text, lang: "fr", ingredients_lc: "en",
+      additives_tags: ["en:e330", "en:e322"],
       allergens: "en:milk", traces: "en:peanuts", ingredients_text_with_allergens: "HTML markup",
     }) }));
   const result = await lookupRemoteBarcode({ barcode: BARCODE, fetchImpl, env: env(), now: () => NOW });
@@ -121,9 +122,12 @@ test("Open Food Facts requests raw ingredients and preserves their main language
   expect(normalizeRemoteFood(result.food).ingredients).toEqual({ text, language: "fr" });
   expect(result.food.provider.id).toBe("open-food-facts");
   expect(result.food.provenance.attribution).toContain("ODbL");
+  expect(result.food.additives).toMatchObject({ status: "reported", source: "open-food-facts" });
+  expect(result.food.additives.items.map((item) => item.standardizedIdentifier)).toEqual(["E330", "E322"]);
+  expect(normalizeRemoteFood(result.food).additives).toEqual(result.food.additives);
   expect(result.food.provenance.sourceUrl).toContain("openfoodfacts.org/product/");
   const requested = new URL(fetchImpl.mock.calls[1][0]).searchParams.get("fields").split(",");
-  expect(requested).toEqual(expect.arrayContaining(["ingredients_text", "lang"]));
+  expect(requested).toEqual(expect.arrayContaining(["ingredients_text", "lang", "additives_tags"]));
   expect(OFF_FIELDS.split(",")).not.toContain("ingredients_text_with_allergens");
   expect(fetchImpl).toHaveBeenCalledTimes(2);
 });
@@ -144,8 +148,22 @@ test("a ready USDA product with unknown ingredients does not trigger or merge an
   const fetchImpl = jest.fn().mockResolvedValue(upstream({ foods: [usdaFood()] }));
   const result = await lookupRemoteBarcode({ barcode: BARCODE, fetchImpl, env: env(), now: () => NOW });
   expect(result.food.ingredients.text).toBeNull();
+  expect(result.food.additives).toEqual({ status: "unknown", source: "usda-fdc", sourceField: null, items: null });
   expect(result.food.provider.id).toBe("usda-fdc");
   expect(fetchImpl).toHaveBeenCalledTimes(1);
+});
+
+test("ingredient names, counts, and unrelated provider fields do not invent additive identities", () => {
+  const time = new Date(NOW).toISOString();
+  const off = normalizeOpenFoodFactsProduct(offProduct({
+    ingredients_text: "Citric acid, sodium bicarbonate", additives_n: 2,
+    ingredients_tags: ["en:citric-acid"], allergens_tags: ["en:milk"],
+  }), BARCODE, time);
+  expect(off.additives).toMatchObject({ status: "unknown", items: null });
+  const usda = normalizeUsdaFood(usdaFood({ ingredients: "CITRIC ACID", additives_tags: ["en:e330"] }), BARCODE, time);
+  expect(usda.additives).toMatchObject({ status: "unknown", items: null, source: "usda-fdc" });
+  expect(off.logReady).toBe(true);
+  expect(usda.logReady).toBe(true);
 });
 
 test("rejects invalid barcodes before provider access", async () => {
