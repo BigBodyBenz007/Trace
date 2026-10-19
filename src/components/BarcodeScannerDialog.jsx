@@ -15,6 +15,7 @@ import {
 } from "../services/appLifecycleAdapter";
 import { acquireDocumentScrollLock } from "../services/documentScrollLock";
 import GroceryFoodForm from "./GroceryFoodForm";
+import BarcodeIngredients from "./BarcodeIngredients";
 import { formatNutrientValue } from "../services/nutritionDisplay";
 import "./BarcodeScannerDialog.css";
 
@@ -794,6 +795,11 @@ export default function BarcodeScannerDialog({
               )}
               <button onClick={resetForAnotherScan} type="button">Scan Again</button>
             </div>
+            <BarcodeIngredients
+              key={lookupIdentifier?.value}
+              ingredients={candidate.display.ingredients}
+              attribution={candidate.customFood?.providerSourceSnapshot?.provenance?.attribution || candidate.display.attribution}
+            />
           </article>
         )}
         </div>

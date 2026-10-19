@@ -1,0 +1,60 @@
+.trace-barcode-ingredients {
+  background: var(--trace-surface-primary, #102538);
+  border: 1px solid var(--trace-border-default, #314859);
+  border-radius: 10px;
+  color: var(--trace-text-primary, #f2eadc);
+  margin-top: 12px;
+  overflow: hidden;
+  text-align: left;
+}
+
+.trace-barcode-dialog .trace-barcode-ingredients__toggle {
+  align-items: center;
+  background: var(--trace-surface-primary, #102538) !important;
+  border: 0 !important;
+  border-radius: 9px !important;
+  box-shadow: none !important;
+  color: var(--trace-text-primary, #f2eadc) !important;
+  display: flex;
+  font-size: 0.95rem !important;
+  font-weight: 600;
+  gap: 12px;
+  justify-content: space-between;
+  margin: 0 !important;
+  min-height: 44px;
+  padding: 10px 12px !important;
+  text-align: left;
+  width: 100%;
+}
+
+.trace-barcode-ingredients__toggle svg { flex: 0 0 auto; }
+.trace-barcode-ingredients__details { padding: 0 12px 12px; }
+.trace-barcode-ingredients__details[hidden] { display: none; }
+
+.trace-barcode-ingredients__text {
+  font-size: 0.9rem;
+  line-height: 1.55;
+  max-height: min(16rem, 35dvh);
+  overflow: auto;
+  overflow-wrap: anywhere;
+  overscroll-behavior: contain;
+  padding: 2px 4px 2px 0;
+  scrollbar-gutter: stable;
+  white-space: pre-wrap;
+}
+
+.trace-barcode-ingredients__text p { margin: 0; }
+.trace-barcode-ingredients__metadata,
+.trace-barcode-ingredients__unavailable {
+  color: var(--trace-text-secondary, #b9b0a2);
+  font-size: 0.82rem;
+  line-height: 1.45;
+  margin: 8px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.trace-barcode-ingredients__toggle:focus-visible,
+.trace-barcode-ingredients__text:focus-visible {
+  outline: 2px solid var(--trace-focus-ring, #83d8cf);
+  outline-offset: -3px;
+}
