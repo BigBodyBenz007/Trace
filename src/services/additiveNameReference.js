@@ -1,5 +1,6 @@
 // Shared by the gateway and browser; no requests, storage writes, or inference.
 const data = require("../data/additiveNameReference.json");
+const { getReferenceSource } = require("./regulatorySourceRegistry");
 
 function freeze(value) {
   Object.values(value).forEach((item) => {
@@ -8,7 +9,9 @@ function freeze(value) {
   return Object.freeze(value);
 }
 
-const ADDITIVE_NAME_REFERENCE = freeze(data);
+const source = getReferenceSource({ sourceId: data.source.id, referenceVersion: data.referenceVersion });
+if (!source) throw new Error("Additive name reference requires a registered source edition");
+const ADDITIVE_NAME_REFERENCE = freeze({ ...data, source });
 const names = new Map(data.entries.map((entry) => [entry.identifier, Object.freeze({
   name: entry.name,
   nameReference: Object.freeze({
@@ -29,8 +32,7 @@ function resolveAdditiveName(identifier) {
 }
 
 function getAdditiveNameSource(nameReference) {
-  return nameReference?.referenceVersion === data.referenceVersion
-    && nameReference?.sourceId === data.source.id ? data.source : null;
+  return getReferenceSource(nameReference);
 }
 
 module.exports = { ADDITIVE_NAME_REFERENCE, resolveAdditiveName, getAdditiveNameSource };

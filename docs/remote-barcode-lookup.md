@@ -159,6 +159,14 @@ terms, and changes. Unknown versions return null rather than using another
 edition's citation. Keep prior editions available if a future reference version
 is introduced and saved references still point to them.
 
+Source editions now resolve through the [versioned regulatory-source registry](regulatory-source-registry.md).
+Its exact version/source binding preserves the original 2012 citation and all
+existing serialized name-reference fields. A separate 2026 audit-evidence record
+is marked partial, with no completed verification or current-coverage date; it
+does not replace the eight mappings' historical source. Registry validation
+rejects missing, malformed, ambiguous or conflicting provenance without adding
+network requests, storage migrations, legal claims or UI changes.
+
 #### Sources and reuse research
 
 | Source | Identifiers/names and available formats | Decision |
