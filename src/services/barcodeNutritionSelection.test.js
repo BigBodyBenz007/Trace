@@ -182,6 +182,33 @@ test("preserves the stale marker on an expired offline cache result", () => {
   expect(candidate.stale).toBe(true);
 });
 
+test("review, selection, and recovery preserve ingredients alongside the original provider attribution", () => {
+  const ingredients = { text: " Lait, cacao;\n sel. ", language: "fr" };
+  const food = remoteFood({ ingredients });
+  const candidate = createBarcodeNutritionCandidate({ status: "found", food });
+  expect(candidate.display.ingredients).toEqual(ingredients);
+  expect(candidate.selection.ingredients).toEqual(ingredients);
+  expect(candidate.selection.remote.ingredients).toEqual(ingredients);
+  expect(candidate.selection.remote.provider).toEqual(food.provider);
+  expect(candidate.selection.remote.provenance).toEqual(food.provenance);
+  expect(candidate.selection.nutrients).toEqual(food.nutrients);
+
+  const incomplete = remoteFood({
+    ingredients,
+    nutrients: { ...food.nutrients, calories: null },
+    nutritionBasis: {
+      ...food.nutritionBasis,
+      sourceNutrients: { ...food.nutritionBasis.sourceNutrients, calories: null },
+    },
+    completeness: "insufficient", logReady: false,
+    unknownFields: [...food.unknownFields, "nutrients.calories"],
+  });
+  const recovery = createBarcodeNutritionCandidate({ status: "incomplete", food: incomplete });
+  expect(recovery.canUse).toBe(false);
+  expect(recovery.recovery.food.ingredients).toEqual(ingredients);
+  expect(recovery.recovery.providerSourceSnapshot.ingredients).toEqual(ingredients);
+});
+
 test("legacy normalized per-100g records cannot bypass labeled-serving policy", () => {
   const food = remoteFood({ dataBasis: "100g" });
   delete food.nutritionBasis;

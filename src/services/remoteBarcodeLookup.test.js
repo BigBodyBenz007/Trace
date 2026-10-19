@@ -90,6 +90,27 @@ function gatewayResponse(payload) {
   };
 }
 
+test("ingredient text and attribution survive browser lookup and a new offline cache reader", async () => {
+  const result = remoteResult();
+  result.food.ingredients = { text: " Leche, cacao.\n ", language: "es" };
+  const storage = memoryStorage();
+  const fetchImpl = jest.fn().mockResolvedValue(gatewayResponse(result));
+  const options = {
+    storage, fetchImpl, clock: () => 1000,
+    localLookup: () => ({ status: "not-found", food: null }),
+  };
+  const service = createRemoteBarcodeLookup({ ...options, runtime: { isWeb: true, isOnline: true } });
+  const found = await service.lookup(BARCODE);
+  expect(found.food.ingredients).toEqual(result.food.ingredients);
+  expect(found.food.provider).toEqual(result.food.provider);
+  expect(found.food.provenance).toEqual(result.food.provenance);
+  const offline = createRemoteBarcodeLookup({ ...options, runtime: { isWeb: true, isOnline: false } });
+  const cached = await offline.lookup(BARCODE);
+  expect(cached.food).toEqual(found.food);
+  expect(cached.cache.hit).toBe(true);
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+});
+
 test("invalid input performs no local, storage, or network activity", async () => {
   const storage = memoryStorage();
   const fetchImpl = jest.fn();

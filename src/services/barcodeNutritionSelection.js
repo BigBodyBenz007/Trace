@@ -40,12 +40,14 @@ function basisMessage(food, servingDescription, reliable) {
 function remoteCandidate(result) {
   const food = normalizeRemoteFood(result.food);
   if (!food) return null;
+  const ingredientFields = food.ingredients === undefined ? {} : { ingredients: food.ingredients };
   const reliable = SAFE_REMOTE_BASIS_KINDS.has(food.nutritionBasis?.kind);
   const serving = selectedServing(food);
   const nutrients = reliable
     ? { ...food.nutrients }
     : Object.fromEntries(NUTRITION_ENTRY_NUTRIENT_KEYS.map((key) => [key, null]));
   const providerSnapshot = immutableCopy({
+    ...ingredientFields,
     provider: food.provider,
     dataBasis: food.dataBasis,
     serving: food.serving,
@@ -72,6 +74,7 @@ function remoteCandidate(result) {
     brand: food.brand,
     name: food.name,
     identifiers: food.identifiers,
+    ...ingredientFields,
     serving,
     nutrients,
     packaged: {
@@ -98,6 +101,7 @@ function remoteCandidate(result) {
     canUse,
     selection,
     display: {
+      ...ingredientFields,
       brand: food.brand,
       name: food.name,
       packageQuantity: food.packageQuantity,
@@ -116,6 +120,7 @@ function remoteCandidate(result) {
           recovery: {
             barcode: food.identifiers[0],
             food: {
+              ...ingredientFields,
               brand: food.brand,
               name: food.name,
               packageQuantity: food.packageQuantity,
@@ -146,6 +151,9 @@ function localCandidate(result) {
     canUse,
     selection: canUse ? food : null,
     display: {
+      ...(food.providerSourceSnapshot?.ingredients === undefined
+        ? {}
+        : { ingredients: food.providerSourceSnapshot.ingredients }),
       brand: food.brand || food.restaurant?.name || null,
       name: food.name,
       packageQuantity: food.packaged?.packageSize || food.beverage?.packageSize || null,

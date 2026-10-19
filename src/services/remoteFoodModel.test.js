@@ -86,6 +86,29 @@ test("normalizes a provider record into an immutable browser trust boundary", ()
   expect(normalized.nutrients).not.toBe(source.nutrients);
 });
 
+test("optional ingredients retain original text, language, and containing provider provenance", () => {
+  const source = remoteFood({ ingredients: { text: " Milk, cocoa;\n salt. ", language: "en" } });
+  const normalized = normalizeRemoteFood(source);
+  expect(normalized.ingredients).toEqual(source.ingredients);
+  expect(Object.isFrozen(normalized.ingredients)).toBe(true);
+  expect(normalized.provider).toEqual(source.provider);
+  expect(normalized.provenance).toEqual(source.provenance);
+  expect(normalized.nutrients).toEqual(source.nutrients);
+  expect(normalized.nutritionBasis).toEqual(source.nutritionBasis);
+  expect(normalized.completeness).toBe("complete");
+  expect(normalized.unknownFields).toEqual([]);
+  expect(normalizeRemoteLookupResult(remoteResult("00000000000000", { food: source })).food.ingredients)
+    .toEqual(source.ingredients);
+});
+
+test.each([null, {}, { text: ["Milk"], language: "en" }])("missing or malformed optional ingredients %p do not block nutrition", (ingredients) => {
+  const normalized = normalizeRemoteFood(remoteFood({ ingredients }));
+  expect(normalized.ingredients).toEqual({ text: null, language: null });
+  expect(normalized.logReady).toBe(true);
+  expect(normalized.completeness).toBe("complete");
+  expect(normalizeRemoteFood(remoteFood())).not.toHaveProperty("ingredients");
+});
+
 test("preserves unknown null and explicit zero nutrient values", () => {
   const normalized = normalizeRemoteFood(remoteFood({
     completeness: "partial",

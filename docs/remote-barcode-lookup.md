@@ -58,6 +58,63 @@ or one-serving package basis, calories, protein, carbohydrates, and fat are
 present and valid. Reference-only per-100g/per-100mL data remains attributable
 provider provenance but produces an `incomplete` result for user completion.
 
+## Optional ingredient information
+
+Remote products may include an optional `ingredients` object:
+
+```js
+ingredients: {
+  text: "Milk, cocoa (2%);\n salt.",
+  language: "en",
+}
+```
+
+`text` preserves the provider's original string, including case, punctuation,
+spacing, and line breaks. `language` is the declared language code when known;
+it is never inferred from the product name, country, or application language.
+The containing product's existing `provider` and `provenance` retain the source
+identity, record ID, attribution, source URL, revision, and retrieval time. Keep
+that provenance with ingredient data; ingredients are not merged across providers.
+
+USDA's existing branded search result can supply `ingredients`; Trace retains
+that field when returned and leaves its language unknown. No detail request is
+added. The existing Open Food Facts request now includes `ingredients_text` and
+`lang`. Its schema identifies `ingredients_text` as the raw list in the product's
+main language (`lang`); `ingredients_lc` instead describes the language used for
+provider-side parsing and is not substituted. See the [USDA branded data
+documentation](https://fdc.nal.usda.gov/GBFPD_Documentation/) and [Open Food Facts
+ingredient schema](https://openfoodfacts.github.io/documentation/docs/Product-Opener/schemas/schemas/product_ingredients/).
+
+An absent `ingredients` field means it was not collected, as in older cached
+products. A returned object with `text: null, language: null` means the ingredient
+list is unknown or unusable. Blank, non-string, or oversized text stays unknown,
+never an empty ingredient list. The shared contract permits up to 8,192 UTF-16
+code units, preserving accepted text in full rather than truncating it. Language
+codes are bounded and checked for a language-tag shape; invalid or absent
+language does not discard valid text. No language is assigned to an unknown list.
+
+Ingredient availability does not change nutrition `completeness`, `unknownFields`,
+`logReady`, provider fallback order, serving selection, or calculation precision.
+There are no added provider calls or dependencies. Allergen warnings, precautionary
+traces, HTML-emphasized ingredient fields, additive tags, and ratings are not used
+as substitutes for raw ingredient text. This slice performs no ingredient analysis.
+If a ready USDA result lacks ingredients, it stays usable with unknown ingredient
+text; Trace does not fetch Open Food Facts just to fill that gap.
+
+The existing cache remains version 2: old entries without the optional field
+remain valid, and enriched entries round-trip through the same normalizer and
+JSON storage. Cached old products may remain ingredient-unknown until normal
+expiry or eviction allows a fresh lookup; this does not force a refresh or migrate
+saved records. Capacity, expiry, stale handling, and lookup precedence are unchanged.
+
+Candidate review data, the selected product, and its immutable provider snapshot
+retain the optional object. New remote food-log entries copy it to
+`foodReference.ingredients` beside the existing provider metadata. Completed custom
+barcode foods retain it through `providerSourceSnapshot`, including storage and
+reopening. Old entries keep their original shape. No ingredient controls or text
+are rendered by this foundation change; scanner acquisition and Nutrition layout
+are unchanged.
+
 ## Local response cache
 
 `remoteBarcodeFoodResponses` stores only normalized successful or incomplete

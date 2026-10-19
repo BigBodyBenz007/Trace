@@ -1,6 +1,7 @@
 const {
   MAX_PROVIDER_RESPONSE_BYTES,
   MAX_REQUEST_BYTES,
+  OFF_FIELDS,
   createHandler,
   lookupRemoteBarcode,
   normalizeOpenFoodFactsProduct,
@@ -93,6 +94,59 @@ function env(overrides = {}) {
     ...overrides,
   };
 }
+
+test("USDA raw ingredients survive provider lookup and browser normalization without guessing language", async () => {
+  const text = "  MILK, COCOA (2%),\n SALT.  ";
+  const fetchImpl = jest.fn().mockResolvedValue(upstream({ foods: [usdaFood({ ingredients: text })] }));
+  const result = await lookupRemoteBarcode({ barcode: BARCODE, fetchImpl, env: env(), now: () => NOW });
+  expect(result.food.ingredients).toEqual({ text, language: null });
+  const normalized = normalizeRemoteFood(result.food);
+  expect(normalized.ingredients).toEqual({ text, language: null });
+  expect(normalized.provider.id).toBe("usda-fdc");
+  expect(normalized.provenance.attribution).toBe("USDA FoodData Central (public domain / CC0)");
+  expect(normalized.provenance.providerRecordId).toBe("100");
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+});
+
+test("Open Food Facts requests raw ingredients and preserves their main language, separate from allergens", async () => {
+  const text = " Farine de blé, lait;\n cacao. ";
+  const fetchImpl = jest.fn()
+    .mockResolvedValueOnce(upstream({ foods: [] }))
+    .mockResolvedValueOnce(upstream({ status: 1, product: offProduct({
+      ingredients_text: text, lang: "fr", ingredients_lc: "en",
+      allergens: "en:milk", traces: "en:peanuts", ingredients_text_with_allergens: "HTML markup",
+    }) }));
+  const result = await lookupRemoteBarcode({ barcode: BARCODE, fetchImpl, env: env(), now: () => NOW });
+  expect(result.food.ingredients).toEqual({ text, language: "fr" });
+  expect(normalizeRemoteFood(result.food).ingredients).toEqual({ text, language: "fr" });
+  expect(result.food.provider.id).toBe("open-food-facts");
+  expect(result.food.provenance.attribution).toContain("ODbL");
+  expect(result.food.provenance.sourceUrl).toContain("openfoodfacts.org/product/");
+  const requested = new URL(fetchImpl.mock.calls[1][0]).searchParams.get("fields").split(",");
+  expect(requested).toEqual(expect.arrayContaining(["ingredients_text", "lang"]));
+  expect(OFF_FIELDS.split(",")).not.toContain("ingredients_text_with_allergens");
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+});
+
+test("missing ingredients or allergen-only information never prevents ready-to-log nutrition", () => {
+  const time = new Date(NOW).toISOString();
+  for (const food of [
+    normalizeUsdaFood(usdaFood(), BARCODE, time),
+    normalizeOpenFoodFactsProduct(offProduct({ lang: "fr", allergens: "Milk", traces: "Nuts" }), BARCODE, time),
+  ]) {
+    expect(food.ingredients).toEqual({ text: null, language: null });
+    expect(food.logReady).toBe(true);
+    expect(normalizeRemoteFood(food)).not.toBeNull();
+  }
+});
+
+test("a ready USDA product with unknown ingredients does not trigger or merge another provider", async () => {
+  const fetchImpl = jest.fn().mockResolvedValue(upstream({ foods: [usdaFood()] }));
+  const result = await lookupRemoteBarcode({ barcode: BARCODE, fetchImpl, env: env(), now: () => NOW });
+  expect(result.food.ingredients.text).toBeNull();
+  expect(result.food.provider.id).toBe("usda-fdc");
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+});
 
 test("rejects invalid barcodes before provider access", async () => {
   const fetchImpl = jest.fn();

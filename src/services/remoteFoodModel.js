@@ -3,6 +3,7 @@ import {
   normalizeProductIdentifiers,
 } from "./productIdentifiers";
 import { NUTRITION_ENTRY_NUTRIENT_KEYS } from "./nutritionCalculation";
+import { normalizeProductIngredients } from "./productIngredients";
 
 export const REMOTE_FOOD_PROVIDERS = Object.freeze({
   USDA: "usda-fdc",
@@ -194,6 +195,7 @@ export function normalizeRemoteFood(food) {
   const provenanceRecordId = stringOrNull(food.provenance?.providerRecordId);
   const provenanceAttribution = stringOrNull(food.provenance?.attribution);
   const nutritionBasis = normalizeNutritionBasis(food.nutritionBasis);
+  const ingredients = normalizeProductIngredients(food.ingredients);
 
   if (
     food.sourceType !== "remote-barcode"
@@ -303,6 +305,7 @@ export function normalizeRemoteFood(food) {
     },
     servingsPerContainer,
     nutrients,
+    ...(ingredients === undefined ? {} : { ingredients }),
     dataBasis: food.dataBasis,
     ...(nutritionBasis === undefined ? {} : { nutritionBasis }),
     completeness: food.completeness,

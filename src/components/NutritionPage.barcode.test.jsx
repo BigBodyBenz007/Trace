@@ -83,6 +83,7 @@ function floatingRemoteFood() {
     ...remoteFood(),
     brand: "Oikos",
     name: "Oikos Pro Mixed Berry",
+    ingredients: { text: " Cultured milk, cream;\n cocoa. ", language: "en" },
     serving: { description: "100 g", amount: 100, unit: "g", grams: 100 },
     nutrients: {
       calories: 112.6666666666671,
@@ -345,6 +346,7 @@ test("preserves precise remote handoff, fractional scaling, and double-serving s
   expect(saved.calories).toBeCloseTo(225.3333333333342, 10);
   expect(saved.calories).not.toBe(226);
   expect(saved.nutritionBasis).toEqual(raw);
+  expect(saved.foodReference.ingredients).toEqual(floatingRemoteFood().ingredients);
   expect(saved.foodReference).toMatchObject({ sourceType: "remote-barcode", modified: false });
   expect(saved.foodReference.providerNutritionBasis.nutrients.calories)
     .toBe(112.6666666666671);
@@ -410,6 +412,7 @@ test.each(["remote", "custom"])("%s barcode precision survives storage, reopenin
   if (source === "custom") {
     const custom = createUserFood(providerFood.name, providerFood.nutrients, providerFood.serving, {
       identifiers: providerFood.identifiers,
+      providerSourceSnapshot: providerFood,
     });
     writeUserFoods(localStorage, [custom]);
     [food] = readUserFoods(localStorage);
@@ -429,6 +432,9 @@ test.each(["remote", "custom"])("%s barcode precision survives storage, reopenin
   let [stored] = readNutritionEntries(localStorage).entries;
   expect(stored.calories).toBeCloseTo(225.3333333333342, 10);
   expect(stored.nutritionBasis).toEqual(providerFood.nutrients);
+  const sourceReference = source === "remote" ? stored.foodReference : stored.foodReference.providerSourceSnapshot;
+  expect(sourceReference.ingredients).toEqual(providerFood.ingredients);
+  expect(sourceReference.provider).toEqual(providerFood.provider);
   view.unmount();
 
   // Reopen through JSON storage, then save untouched display fields.
@@ -453,6 +459,8 @@ test.each(["remote", "custom"])("%s barcode precision survives storage, reopenin
     stored = savedPortion;
     expect(stored.nutritionBasis).toEqual(providerFood.nutrients);
     expect(stored.portion.amount).toBe(quantity);
+    expect(source === "remote" ? stored.foodReference.ingredients : stored.foodReference.providerSourceSnapshot.ingredients)
+      .toEqual(providerFood.ingredients);
     view.unmount();
   }
 
@@ -548,6 +556,7 @@ test("completed remote recovery keeps the raw provider snapshot through Nutritio
   });
   expect(reference.providerSourceSnapshot.nutrients.protein).toBe(20.00000000000002);
   expect(reference.providerSourceSnapshot.nutrients.calories).toBeNull();
+  expect(reference.providerSourceSnapshot.ingredients).toEqual(completeProviderFood.ingredients);
 });
 
 test("ordinary grocery creation keeps its helpful example placeholders", () => {

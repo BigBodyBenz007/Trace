@@ -79,6 +79,30 @@ test("uses a versioned 30-day cache capped at 500 records", () => {
   expect(REMOTE_BARCODE_CACHE_MAX_RECORDS).toBe(500);
 });
 
+test.each([undefined, { text: null, language: null }, { text: " Milk, cocoa;\n salt. ", language: "en" }])(
+  "version 2 cache round trips optional ingredients %p, including old entries without them",
+  (ingredients) => {
+    const result = remoteResult();
+    if (ingredients !== undefined) result.food.ingredients = ingredients;
+    const storage = memoryStorage();
+    let now = 1000;
+    const cache = createRemoteBarcodeCache({ storage, clock: () => now, ttlMs: 100 });
+    expect(cache.set("00000000000000", result)).toBe(true);
+    const reopened = createRemoteBarcodeCache({ storage, clock: () => now, ttlMs: 100 });
+    const fresh = reopened.get("00000000000000");
+    expect(fresh.food).toEqual(result.food);
+    expect(fresh.food.logReady).toBe(true);
+    expect(fresh.food.provenance).toEqual(result.food.provenance);
+    expect(Object.prototype.hasOwnProperty.call(fresh.food, "ingredients")).toBe(ingredients !== undefined);
+    expect(Object.isFrozen(fresh.food.ingredients)).toBe(true);
+    expect(JSON.parse(storage.value()).version).toBe(2);
+    now = 1100;
+    expect(reopened.get("00000000000000")).toBeNull();
+    expect(reopened.get("00000000000000", { allowExpired: true }))
+      .toMatchObject({ stale: true, food: result.food });
+  }
+);
+
 test("canonicalizes UPC and GTIN forms and returns immutable fresh entries", () => {
   const storage = memoryStorage();
   const cache = createRemoteBarcodeCache({ storage, clock: () => 1000 });

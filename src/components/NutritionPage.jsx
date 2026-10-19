@@ -891,6 +891,9 @@ function NutritionPage({
               retrievedAt: food.remote.provenance.retrievedAt,
               dataBasis: food.remote.dataBasis,
               unknownFields: [...food.remote.unknownFields],
+              ...(food.remote.ingredients === undefined
+                ? {}
+                : { ingredients: { ...food.remote.ingredients } }),
               providerNutritionBasis: {
                 dataBasis: food.remote.dataBasis,
                 serving: { ...food.remote.serving },
