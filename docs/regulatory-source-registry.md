@@ -25,8 +25,8 @@ editions and name-reference bindings. An edition is identified by the pair
 Separate editions of a stable source can coexist. Their publisher, jurisdiction
 and document type must agree; a different kind of source gets a separate ID.
 
-Six source editions are shipped (BVO was appended in manifest v2; three
-Red No. 3 editions were appended in v3):
+Nine source editions are shipped (BVO was appended in manifest v2; three
+Red No. 3 editions in v3; three E171 legal/context editions in v4):
 
 | Source | Edition | Verification | Currency |
 | --- | --- | --- | --- |
@@ -36,6 +36,9 @@ Red No. 3 editions were appended in v3):
 | FR:2025-00830 | published-2025-01-16 | Verified Red No. 3 final food-removal order, dates and certificate qualification | Historical |
 | FR:2026-15920 | published-2026-08-05 | Verified automatic-stay history, lifting and food-date confirmation | Historical |
 | FDA:Red3 | snapshot-2026-10-19 | Verified manufacturer deadline and earlier-stock summary; supporting evidence only | Undetermined |
+| CELEX:32022R0063 | original-2022-01-18 | Verified historical EU E171 withdrawal and conditional transition | Historical |
+| EC:FoodAdditiveReevaluation | snapshot-2026-10-19 | Verified E171 Q&A: identity, transition and medicinal distinction; not consolidated law | Undetermined |
+| DOI:10.2903/j.efsa.2021.6585 | published-2021-05-06 | Verified dated scientific opinion and its limits; separate from legal authority | Historical |
 
 No source is shipped as current. The 2026 entry neither replaces the 2012
 attribution nor supplies new product metadata. Its separate publication date is
@@ -51,6 +54,12 @@ text was independently read for the
 [Red No. 3 implementation](regulatory-red3-timeline-2026-10-19.md). The live-page
 publication date remains unknown; its access date is not substituted. No earlier
 edition, source verification scope or historical name binding was overwritten.
+E171 editions are in `src/data/e171RegulatorySources.json`; relevant text was
+read directly for [the E171 checkpoint](regulatory-e171-timeline-2026-10-19.md).
+The original act, Commission snapshot and EFSA publication remain distinct.
+EFSA is not a legal-event source, and source registration does not add E171 to
+the existing eight-name reference. Current EU consolidation/amendment retrieval
+gaps are documented; the existing partial 2026 source is unchanged.
 
 ## Record fields
 
@@ -145,7 +154,8 @@ calculations, serving safeguards, scanner code and visible layout are unchanged.
 
 Future FDA sources and scientific assessments can use the same citation/edition
 shape, after human verification. The legal-event foundation now holds one final
-US BVO action and the bounded US Red No. 3 food timeline separately from source and name records. Effective dates,
+US BVO action, bounded US Red No. 3 timeline and historical EU E171 withdrawal
+separately from source and name records. Effective dates,
 compliance deadlines and supersession links belong in that explicit structure,
 not in publication or verification dates. Scientific assessments remain separate.
 Proposals, partial stays, changed deadlines and other unsupported date semantics

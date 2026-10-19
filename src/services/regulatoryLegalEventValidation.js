@@ -28,11 +28,27 @@ function validateLegalEvent(event, sources, { asOf = null } = {}) {
   const check = (ok, message) => { if (!ok) errors.push(message); };
   if (!object(event)) return result(["event must be an object"]);
   fields(event, ["eventId", "substance", "jurisdiction", "authority", "action", "affectedUses", "dates",
-    "qualifications", "sourceReferences", "evidence", "relationships", "useScope"], "event", errors);
+    "qualifications", "sourceReferences", "evidence", "relationships", "useScope", "marketTransition"], "event", errors);
   check(identifier(event.eventId), "eventId is required");
   const substance = object(event.substance) ? event.substance : {};
-  fields(event.substance, ["id", "name"], "substance", errors);
+  fields(event.substance, ["id", "name", "identifiers", "synonyms", "sourceReferenceId"], "substance", errors);
   check(identifier(substance.id) && text(substance.name), "substance requires a stable id and name");
+  const hasIdentity = ["identifiers", "synonyms", "sourceReferenceId"].some((key) => substance[key] !== undefined);
+  if (hasIdentity) {
+    check(Array.isArray(substance.identifiers) && substance.identifiers.length > 0, "identity identifiers are required");
+    const identities = new Set();
+    list(substance.identifiers).forEach((id) => {
+      fields(id, ["scheme", "value"], "substance identifier", errors);
+      if (!object(id)) return;
+      check(id.scheme === "EU-E-number" && typeof id.value === "string" && /^E[1-9][0-9]{2,3}[a-z]*$/.test(id.value),
+        "unsupported or malformed substance identifier");
+      const key = JSON.stringify([id.scheme, id.value]);
+      check(!identities.has(key), "duplicate substance identifier");
+      identities.add(key);
+    });
+    check(Array.isArray(substance.synonyms) && list(substance.synonyms).every(text)
+      && new Set(substance.synonyms).size === substance.synonyms.length, "synonyms require an explicit unique text array");
+  }
   check(JURISDICTIONS.includes(event.jurisdiction), "unknown jurisdiction");
   check(text(event.authority), "authority is required");
   const action = object(event.action) ? event.action : {};
@@ -112,6 +128,27 @@ function validateLegalEvent(event, sources, { asOf = null } = {}) {
   const cite = (id) => check(identifier(id) && references.has(id), "qualification/relationship source reference is missing");
   if (dates.complianceSourceReferenceId !== undefined || (event.useScope && date(dates.complianceOn))) {
     cite(dates.complianceSourceReferenceId);
+  }
+  if (hasIdentity) cite(substance.sourceReferenceId);
+
+  // One reviewed Article-2 style transition. A product-specific stock end basis
+  // is deliberately not convertible into a universal sell-through date here.
+  if (event.marketTransition !== undefined) {
+    const transition = object(event.marketTransition) ? event.marketTransition : {};
+    fields(event.marketTransition, ["productionRulesBefore", "placementUntil", "stockEndBasis",
+      "verificationStatus", "sourceReferenceId"], "marketTransition", errors);
+    check(event.jurisdiction === "EU" && action.type === "authorization-revocation"
+      && event.useScope?.domain === "food", "marketTransition requires an EU food revocation scope");
+    check(date(transition.productionRulesBefore) && transition.productionRulesBefore === dates.effectiveOn,
+      "productionRulesBefore must identify the rules cutoff at entry into force");
+    check(date(transition.placementUntil), "placementUntil requires a real ISO date");
+    ordered(dates.effectiveOn, transition.placementUntil, "placement transition must not end before entry into force");
+    check(transition.stockEndBasis === "product-minimum-durability-or-use-by", "unsupported stock end basis; no universal sell-through date");
+    check(transition.verificationStatus === "verified", "marketTransition requires verified stock-condition evidence");
+    check(primary !== null && transition.sourceReferenceId === primary.referenceId, "marketTransition must cite the primary legal act");
+    check(dates.complianceOn === null && dates.complianceSourceReferenceId === undefined,
+      "conditional market placement must remain separate from general compliance dates");
+    check(list(event.qualifications).some((q) => q?.kind === "transition"), "marketTransition requires a cited transition qualification");
   }
 
   const qualificationIds = new Set();

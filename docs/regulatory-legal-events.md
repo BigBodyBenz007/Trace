@@ -1,7 +1,8 @@
 # Regulatory legal-event foundation
 
-Checkpoint: 2026-10-19. One verified US BVO final action and three US Red No. 3
-food timeline events are implemented as dated records. This is not a product-compliance decision, scientific
+Checkpoint: 2026-10-19. One US BVO action, three US Red No. 3 food timeline
+events and one historical EU E171 withdrawal are implemented as dated records.
+This is not a product-compliance decision, scientific
 assessment, safety classification, or complete statement of current law.
 The [evidence archive](regulatory-evidence/2026-10-19/README.md) remains unchanged.
 
@@ -26,6 +27,11 @@ The [evidence archive](regulatory-evidence/2026-10-19/README.md) remains unchang
   supporting FDA page snapshot, independently rechecked for the
   [Red No. 3 implementation](regulatory-red3-timeline-2026-10-19.md). The three
   earlier registry editions and all name bindings remain unchanged in bundle v3.
+- `src/data/e171RegulatorySources.json`: the historical EU withdrawal act,
+  Commission Q&A snapshot and dated EFSA opinion, appended in source bundle v4.
+  The opinion remains separate from legal-event source references. Direct
+  evidence and current-consolidation limits are recorded in
+  [the E171 checkpoint](regulatory-e171-timeline-2026-10-19.md).
 
 Each event has these fields:
 
@@ -33,6 +39,7 @@ Each event has these fields:
 | --- | --- |
 | `eventId` | Stable local event identifier |
 | `substance.id`, `substance.name` | Local substance key and human-readable identity, independent of an E-number |
+| Optional `substance.identifiers`, `synonyms`, `sourceReferenceId` | Cited local identity metadata; currently supports EU E-number syntax, with explicit synonym state; no provider-presence or current-authorization inference |
 | `jurisdiction`, `authority` | Known jurisdiction and primary source's issuing authority |
 | `action.type`, `stage`, `target` | Final authorization/amendment/revocation, administrative stay, or stay lifting, and affected legal provision |
 | `affectedUses` | Explicit food uses or categories within the action's scope |
@@ -46,6 +53,7 @@ Each event has these fields:
 | `qualifications` | Identified, cited scope, statutory qualifications and transitions |
 | `sourceReferences` | Unique reference IDs, primary/supporting role, exact source/edition keys and provision locators |
 | `evidence` | Verified scope, last-reviewed date, and explicit limitations |
+| `marketTransition` | Optional verified EU withdrawal transition: prior-rules cutoff, market-placement end and product-specific stock-end basis; distinct from general compliance |
 | `relationships` | Cited `amends` / `supersedes`, `stays`, `lifts-stay`, or `confirms` links; explicit empty list when none recorded |
 
 Scientific assessment dates are deliberately unsupported in this legal schema.
@@ -120,6 +128,39 @@ validity or other compliance. No unconditional sale permission, universal retail
 cutoff, animal-feed exemption or EU E127 status is inferred. Sources, exact
 provisions and direct re-verification are recorded in the linked evidence note.
 
+## EU E171 historical food withdrawal
+
+Bundle `legal-events-2026-10-19-v3` appends
+`eu-ec-e171-food-2022-withdrawal`; the four US events are unchanged.
+The original 2022/63 source edition supports:
+
+| Meaning | Recorded value |
+| --- | --- |
+| Official Journal publication | 2022-01-18 |
+| Entry into force (`effectiveOn`) | 2022-02-07; Article 4's twentieth-day rule |
+| Rules applicable before (`marketTransition.productionRulesBefore`) | 2022-02-07; a rules cutoff, not a manufacture-before requirement |
+| Conditional market placement through (`placementUntil`) | 2022-08-07 |
+| Qualifying stock end (`stockEndBasis`) | The applicable product minimum-durability or use-by date |
+| General compliance date | Explicit null, with explanation |
+
+The transition applies to foods produced under the prior rules and placed on
+the market by the transition end. It cannot be converted into a universal retail
+deadline or unconditional stock permission. A cited Commission Q&A qualification
+also preserves the finished-food/no-further-transformation clarification for B2B
+supply. No code evaluates a product's eligibility or commercial dates.
+
+The event includes the E171 identifier and the cited TiO2 alias. This does not
+add E171 to the separate eight-name reference, interpret ingredient text, or
+change provider-reported additive metadata. Food scope preserves Annex II's
+Part D/E exclusion, Group II/category removals and Annex III's carrier change.
+The medicinal context is not a food exception or a present medicinal verdict.
+
+EFSA's adoption (2021-03-25) and publication (2021-05-06) are documented as
+scientific context, not legal effective dates. Its registered scientific edition
+is not cited as legal authority. No scientific result becomes a safety rating.
+Full current consolidated EU law and subsequent-change coverage remain
+unverified; this record is explicitly the verified historical action.
+
 ## Validation and limits
 
 The manifest validates the source registry first, then every event and its
@@ -148,6 +189,15 @@ Validation requires:
   `prior-certified-use` additionally requires explicit food revocation scope,
   verified qualification evidence, the supported certificate condition and the
   primary legal citation. Conditional-use fields on other kinds are rejected.
+- Optional identity metadata must include supported identifiers, unique explicit
+  synonyms (empty is allowed when none were verified), and a valid source
+  reference. Legacy substance objects remain valid without these fields.
+- `marketTransition` requires EU food revocation scope, a primary legal citation,
+  verified conditions and a cited transition qualification. Its prior-rules date
+  must equal entry into force, placement cannot end earlier, and its only
+  supported stock-end basis is the product minimum-durability/use-by date.
+  General compliance must remain null. Fixed stock dates, manufacture-before
+  fields and unconditional permission flags are rejected as unsupported fields.
 - Unique event IDs and unique action/source-edition identities. Differing
   versions under one ID or duplicate actions under different IDs are rejected.
 - Cited, distinct amendment/supersession targets within the same substance and
@@ -171,7 +221,7 @@ tested. No automatic interpretation of provision text is attempted.
 The manifest retains schemaVersion 1 so legacy BVO-only inputs remain accepted;
 the bundle reference version records this additive extension. It intentionally
 does not model proposals, separate application dates, general retroactive
-effects, partial stays, changed compliance deadlines, multiple drug/food dates
+effects, partial stays, changed compliance deadlines, arbitrary stock transitions, multiple drug/food dates
 inside one event, or scientific assessments. Add a deliberate schema extension with source evidence
 and tests before representing these actions. An amendment link alone does not
 compute present legal status or determine an individual product's applicability.
@@ -207,13 +257,14 @@ No dependencies were installed, and no files were staged, committed or pushed.
 Those results and logs describe the original BVO implementation checkpoint.
 Red No. 3 validation is recorded separately in
 [its evidence note](regulatory-red3-timeline-2026-10-19.md).
+E171 validation is recorded in [its checkpoint](regulatory-e171-timeline-2026-10-19.md).
 
 Copyable focused commands from the project root:
 
 ```powershell
 $env:CI='true'
-node node_modules/react-scripts/scripts/test.js --watchAll=false --runInBand --runTestsByPath src/services/regulatoryLegalEvents.red3.test.js src/services/regulatoryLegalEvents.test.js src/services/regulatorySourceRegistry.test.js src/services/additiveNameReference.test.js src/services/productAdditives.test.js src/services/productAdditives.integration.test.js
-node node_modules/eslint/bin/eslint.js src/data/regulatorySourceRegistry.js src/services/regulatoryLegalEventValidation.js src/services/regulatoryLegalEvents.test.js src/services/regulatoryLegalEvents.red3.test.js --max-warnings=0
+node node_modules/react-scripts/scripts/test.js --watchAll=false --runInBand --runTestsByPath src/services/regulatoryLegalEvents.e171.test.js src/services/regulatoryLegalEvents.red3.test.js src/services/regulatoryLegalEvents.test.js src/services/regulatorySourceRegistry.test.js src/services/additiveNameReference.test.js src/services/productAdditives.test.js src/services/productAdditives.integration.test.js
+node node_modules/eslint/bin/eslint.js src/data/regulatorySourceRegistry.js src/services/regulatoryLegalEventValidation.js src/services/regulatoryLegalEvents.e171.test.js --max-warnings=0
 node --check src/services/regulatoryLegalEventValidation.js
 node --check src/services/regulatoryLegalEvents.js
 git diff --check
@@ -225,9 +276,9 @@ or pushed without explicit approval.
 
 ## Next bounded task
 
-Model the archived EU titanium-dioxide withdrawal and stock transition only after
-directly rechecking its provisions and adding its distinct placing-on-market and
-durability/use-by conditions. Do not turn historical actions into an evergreen
-product warning. EU BVO records remain gated on direct official EU
+Complete direct EU consolidation and subsequent-amendment verification, then
+record dated coverage limits before any legal UI or product applicability work.
+Do not turn historical actions into an evergreen product warning.
+EU BVO records remain gated on direct official EU
 positive-list/applicability verification. Keep legal and scientific records
 separate before considering any visible regulatory UI.

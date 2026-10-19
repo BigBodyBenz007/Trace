@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "referenceVersion": "legal-events-2026-10-19-v2",
+  "referenceVersion": "legal-events-2026-10-19-v3",
   "snapshotDate": "2026-10-19",
   "events": [
     {
@@ -297,6 +297,116 @@
           "sourceReferenceId": "red3-stay-order"
         }
       ]
+    },
+    {
+      "eventId": "eu-ec-e171-food-2022-withdrawal",
+      "substance": {
+        "id": "titanium-dioxide",
+        "name": "Titanium dioxide",
+        "identifiers": [
+          {
+            "scheme": "EU-E-number",
+            "value": "E171"
+          }
+        ],
+        "synonyms": [
+          "TiO2"
+        ],
+        "sourceReferenceId": "e171-commission"
+      },
+      "jurisdiction": "EU",
+      "authority": "European Commission",
+      "action": {
+        "type": "authorization-revocation",
+        "stage": "final",
+        "target": "Regulation (EC) No 1333/2008, Annexes II and III"
+      },
+      "affectedUses": [
+        "E171 food-colour use in Annex II, Parts D and E; subject to the Article 2 transition",
+        "Former Group II quantum satis food-colour entry",
+        "Category 04.2.4.1: fruit and vegetable preparations excluding compote",
+        "Category 09.2: processed fish and fishery products including molluscs and crustaceans"
+      ],
+      "useScope": {
+        "domain": "food",
+        "provision": "Regulation (EC) No 1333/2008, Annexes II and III"
+      },
+      "dates": {
+        "publishedOn": "2022-01-18",
+        "effectiveOn": "2022-02-07",
+        "effectiveNote": "Entry into force is the twentieth day after Official Journal publication under Article 4; Article 2 and the Commission Q&A corroborate February 7, 2022.",
+        "complianceOn": null,
+        "complianceNote": "Article 2 provides conditional market placement through August 7, 2022 and product-specific stock conditions, not a general compliance or universal retail-removal deadline.",
+        "sourceReferenceId": "e171-withdrawal"
+      },
+      "marketTransition": {
+        "productionRulesBefore": "2022-02-07",
+        "placementUntil": "2022-08-07",
+        "stockEndBasis": "product-minimum-durability-or-use-by",
+        "verificationStatus": "verified",
+        "sourceReferenceId": "e171-withdrawal"
+      },
+      "qualifications": [
+        {
+          "id": "food-withdrawal-scope",
+          "kind": "scope",
+          "text": "Annex II retains the E171 heading but expressly excludes food categories in Parts D and E; removes the Group II entry and the specified fruit-preparation and fish entries. Annex III changes the E555 carrier entry to E172 only. This records the 2022 action, not a complete current-law finding.",
+          "sourceReferenceId": "e171-withdrawal"
+        },
+        {
+          "id": "conditional-market-transition",
+          "kind": "transition",
+          "text": "Foods produced in accordance with the rules applicable before February 7, 2022 could continue to be placed on the market until August 7, 2022. Qualifying foods may then remain until their own minimum-durability or use-by date. The prior-rules cutoff is not a requirement that manufacture occurred before February 7.",
+          "sourceReferenceId": "e171-withdrawal"
+        },
+        {
+          "id": "finished-food-stock",
+          "kind": "scope",
+          "text": "The Commission Q&A describes later B2B supply of qualifying finished foods placed on the market, including holding for sale, by the transition end, until shelf-life expiry, without further transformation into compound products. No unconditional stock permission or product eligibility is inferred.",
+          "sourceReferenceId": "e171-commission"
+        },
+        {
+          "id": "medicinal-context",
+          "kind": "statutory-qualification",
+          "text": "The retained Part B entry and Article 3 review concern medicinal-product colouring. They do not reinstate food use or establish a medicinal or worldwide legal determination in this food record.",
+          "sourceReferenceId": "e171-withdrawal"
+        }
+      ],
+      "sourceReferences": [
+        {
+          "referenceId": "e171-withdrawal",
+          "role": "primary",
+          "sourceId": "CELEX:32022R0063",
+          "editionId": "original-2022-01-18",
+          "provisions": [
+            "OJ L 11, 18 January 2022, pp. 1-4",
+            "Articles 1-4",
+            "Annex 1(a)-(d): Part B food exclusion, Group II and category removals",
+            "Annex 2: E555 carrier entry limited to E172"
+          ]
+        },
+        {
+          "referenceId": "e171-commission",
+          "role": "supporting",
+          "sourceId": "EC:FoodAdditiveReevaluation",
+          "editionId": "snapshot-2026-10-19",
+          "provisions": [
+            "Questions & Answers on titanium dioxide: TiO2/E171 identity, entry into force and phase-out",
+            "B2B clarification: finished food, holding for sale and no further transformation"
+          ]
+        }
+      ],
+      "evidence": {
+        "status": "verified",
+        "lastReviewedOn": "2026-10-19",
+        "scope": "Historical 2022 EU food withdrawal and its conditional transition only; not scientific risk or individual product compliance.",
+        "limitations": [
+          "Full August 2026 consolidated legislation and subsequent amendment/corrigendum coverage remain unverified.",
+          "No product production compliance, market-placement date, durability/use-by date or transformation history is known.",
+          "No US status, current medicinal status, safety classification or individual health-risk conclusion is supplied."
+        ]
+      },
+      "relationships": []
     }
   ]
 }

@@ -1,0 +1,120 @@
+[
+  {
+    "sourceId": "CELEX:32022R0063",
+    "editionId": "original-2022-01-18",
+    "citation": {
+      "id": "CELEX:32022R0063",
+      "title": "Commission Regulation (EU) 2022/63 of 14 January 2022",
+      "publisher": "European Commission",
+      "jurisdiction": "EU",
+      "language": "en",
+      "publicationDate": "2022-01-18",
+      "version": "Publication 2022-01-18",
+      "url": "https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32022R0063",
+      "attribution": "Source: European Commission, Commission Regulation (EU) 2022/63 of 14 January 2022; accessed 2026-10-19.",
+      "reuseBasis": "EUR-Lex legal-document reuse; consolidated text requires attribution and change notice.",
+      "reuseNoticeUrl": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
+      "changes": "Citation metadata and concise original summary; no full text reproduced.",
+      "scope": "2022 food withdrawal and transition; retained medicinal-use distinction in that act. Not a full 2026 consolidation review."
+    },
+    "documentType": "amendment",
+    "edition": {
+      "kind": "original",
+      "date": "2022-01-18",
+      "label": "Publication 2022-01-18"
+    },
+    "verification": {
+      "status": "verified",
+      "currency": "historical",
+      "lastAttemptedOn": "2026-10-19",
+      "lastVerifiedOn": "2026-10-19",
+      "verifiedThrough": null,
+      "evidenceType": "official-text",
+      "scope": "2022 food withdrawal and transition; retained medicinal-use distinction in that act. Not a full 2026 consolidation review.",
+      "evidenceLocator": "docs/regulatory-e171-timeline-2026-10-19.md; OJ L 11, 18 January 2022, pp. 1-4: Articles 1-4 and Annex 1(a)-(d), 2.",
+      "currentnessBasis": null,
+      "limitations": [
+        "Current legal coverage requires the consolidated text and later amendment/corrigendum verification."
+      ]
+    }
+  },
+  {
+    "sourceId": "EC:FoodAdditiveReevaluation",
+    "editionId": "snapshot-2026-10-19",
+    "citation": {
+      "id": "EC:FoodAdditiveReevaluation",
+      "title": "Food additives — Re-evaluation",
+      "publisher": "European Commission",
+      "jurisdiction": "EU",
+      "language": "en",
+      "publicationDate": null,
+      "publicationDateNote": "Live page publication date not established; dated subsection is not the publication date of every paragraph.",
+      "version": "Source snapshot 2026-10-19",
+      "url": "https://food.ec.europa.eu/food-safety/food-improvement-agents/additives/re-evaluation_en",
+      "attribution": "Source: European Commission, Food additives — Re-evaluation; accessed 2026-10-19.",
+      "reuseBasis": "EUR-Lex legal-document reuse; consolidated text requires attribution and change notice.",
+      "reuseNoticeUrl": "https://eur-lex.europa.eu/content/legal-notice/legal-notice.html",
+      "changes": "Citation metadata and concise original summary; no full text reproduced.",
+      "scope": "Commission summary corroborates withdrawal and explains medicinal-use distinction; not a complete current legal consolidation."
+    },
+    "documentType": "regulatory-announcement",
+    "edition": {
+      "kind": "snapshot",
+      "date": "2026-10-19",
+      "label": "Source snapshot 2026-10-19"
+    },
+    "verification": {
+      "status": "verified",
+      "currency": "undetermined",
+      "lastAttemptedOn": "2026-10-19",
+      "lastVerifiedOn": "2026-10-19",
+      "verifiedThrough": null,
+      "evidenceType": "official-text",
+      "scope": "Commission summary corroborates withdrawal and explains medicinal-use distinction; not a complete current legal consolidation.",
+      "evidenceLocator": "docs/regulatory-e171-timeline-2026-10-19.md; Questions & Answers on titanium dioxide: identity, entry into force, phase-out, finished-food/B2B clarification and medicinal context.",
+      "currentnessBasis": null,
+      "limitations": [
+        "Older paragraphs may persist on a recently updated page."
+      ]
+    }
+  },
+  {
+    "sourceId": "DOI:10.2903/j.efsa.2021.6585",
+    "editionId": "published-2021-05-06",
+    "citation": {
+      "id": "DOI:10.2903/j.efsa.2021.6585",
+      "title": "Safety assessment of titanium dioxide (E171) as a food additive",
+      "publisher": "European Food Safety Authority",
+      "jurisdiction": "EU",
+      "language": "en",
+      "publicationDate": "2021-05-06",
+      "version": "Publication 2021-05-06",
+      "url": "https://www.efsa.europa.eu/en/efsajournal/pub/6585",
+      "attribution": "Source: European Food Safety Authority, Safety assessment of titanium dioxide (E171) as a food additive; accessed 2026-10-19.",
+      "reuseBasis": "Citation and original Trace summary only; full-text redistribution rights not evaluated.",
+      "reuseNoticeUrl": "https://www.efsa.europa.eu/en/efsajournal/pub/6585",
+      "changes": "Citation metadata and concise original summary; no full text reproduced.",
+      "scope": "Dated scientific conclusion and limitations concerning genotoxicity; no individual-product risk calculation."
+    },
+    "documentType": "scientific-assessment",
+    "edition": {
+      "kind": "original",
+      "date": "2021-05-06",
+      "label": "Publication 2021-05-06"
+    },
+    "verification": {
+      "status": "verified",
+      "currency": "historical",
+      "lastAttemptedOn": "2026-10-19",
+      "lastVerifiedOn": "2026-10-19",
+      "verifiedThrough": null,
+      "evidenceType": "official-text",
+      "scope": "Dated scientific conclusion and limitations concerning genotoxicity; no individual-product risk calculation.",
+      "evidenceLocator": "docs/regulatory-e171-timeline-2026-10-19.md; adopted 25 March 2021, published 6 May 2021; abstract and section 7, Conclusions.",
+      "currentnessBasis": null,
+      "limitations": [
+        "No systematic post-2021 literature review performed in this task."
+      ]
+    }
+  }
+]
