@@ -1,0 +1,4138 @@
+{
+  "schemaVersion": 2,
+  "asOf": "2026-10-19",
+  "methodId": "trace-us-nutrient-profile",
+  "methodVersion": "0.1-research-A",
+  "grade": null,
+  "scoreReady": false,
+  "valid": true,
+  "issues": [],
+  "summary": {
+    "observations": 18,
+    "completeNineNutrients": 12,
+    "missingNutrition": 6,
+    "eligible": 5,
+    "rejected": 13,
+    "invalidIntake": 0,
+    "formulationRejected": 10,
+    "unsupportedCategory": 7,
+    "conflictingObservations": 2
+  },
+  "samplingCaution": "Purposive observations only; no national coverage estimate or scientific validation.",
+  "records": [
+    {
+      "id": "refined-cereal-rice-krispies",
+      "name": "Kellogg's Rice Krispies cereal",
+      "role": "refined breakfast cereal",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "saturatedFat",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [],
+        "ambiguous": [],
+        "conflicting": [
+          "Heading says 9 oz but Nutrition Facts says about 29 servings of 40 g; cannot bind the table to the stated package without adjudication"
+        ],
+        "numericProfileComplete": true,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": "NLI 15973c; last-update placeholder unresolved",
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "matched-formulation",
+        "formulationAcceptedByScorer": true,
+        "recovery": [
+          {
+            "field": "package/servingsPerContainer",
+            "status": "candidate-requires-verification",
+            "url": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000199929",
+            "reason": "Adjudicate the documented contradiction against an exact package/label edition; do not choose whichever value permits scoring."
+          }
+        ],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "unknown",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": false,
+        "engineEligible": false,
+        "inputStatus": "needs-review",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [
+          {
+            "status": "not-enough-data",
+            "code": "consistency-review-missing",
+            "path": "review.consistency"
+          },
+          {
+            "status": "needs-review",
+            "code": "conflicting-data",
+            "path": "sourceState.unresolvedConflicts"
+          }
+        ],
+        "engineReasonCodes": [
+          "consistency-review-missing",
+          "conflicting-data"
+        ]
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "needs-review",
+        "eligible": false,
+        "reasons": [
+          {
+            "status": "not-enough-data",
+            "code": "consistency-review-missing",
+            "path": "review.consistency"
+          },
+          {
+            "status": "needs-review",
+            "code": "conflicting-data",
+            "path": "sourceState.unresolvedConflicts"
+          }
+        ],
+        "reasonCodes": [
+          "consistency-review-missing",
+          "conflicting-data"
+        ],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade"
+        ],
+        "experimentalRawScore": null,
+        "experimentalScore": null,
+        "components": null,
+        "fiberAdjustment": null,
+        "contributions": null,
+        "explanationInputs": null,
+        "categoryRules": null
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "sugary-cereal-frosted-flakes",
+      "name": "Kellogg's Frosted Flakes Cereal",
+      "role": "sugary cereal",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "saturatedFat",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [],
+        "ambiguous": [],
+        "conflicting": [],
+        "numericProfileComplete": true,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": "NLI 16903a; last-update placeholder unresolved",
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "matched-formulation",
+        "formulationAcceptedByScorer": true,
+        "recovery": [],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "unknown",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": true,
+        "engineEligible": true,
+        "inputStatus": "eligible-for-research",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [],
+        "engineReasonCodes": []
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "eligible-for-research",
+        "eligible": true,
+        "reasons": [],
+        "reasonCodes": [],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade",
+          "reported-label-values-may-be-rounded"
+        ],
+        "experimentalRawScore": 14.94208494208495,
+        "experimentalScore": 15,
+        "components": {
+          "addedSugarBurden": 1,
+          "saturatedFatBurden": 0,
+          "sodiumBurden": 1,
+          "fiberFraction": 0.48262548262548266,
+          "meanBurden": 0.6666666666666666,
+          "worstBurden": 1,
+          "combinedBurden": 0.8333333333333333,
+          "strongestComponents": [
+            "addedSugar",
+            "sodium"
+          ]
+        },
+        "fiberAdjustment": {
+          "factor": 0.8965250965250966,
+          "maximumFactor": 1,
+          "pointsAboveNoFiber": 1.6087516087516096
+        },
+        "contributions": {
+          "start": 100,
+          "fiberGap": 10.347490347490346,
+          "addedSugarLoss": 14.942084942084943,
+          "saturatedFatLoss": 0,
+          "sodiumLoss": 14.942084942084943,
+          "strongestComponentLoss": 44.82625482625483
+        },
+        "explanationInputs": {
+          "asOf": "2026-10-19",
+          "product": {
+            "gtin": "00038000196560",
+            "name": "Kellogg's Frosted Flakes Cereal",
+            "brand": "Kellogg's Frosted Flakes",
+            "variant": "Kellogg's Frosted Flakes Cereal",
+            "packageDescription": "28.5 oz",
+            "preparation": "as-sold",
+            "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+            "market": "US",
+            "category": "breakfast-cereal"
+          },
+          "basis": {
+            "kind": "100g",
+            "amount": 100,
+            "unit": "g"
+          },
+          "originalBasis": {
+            "kind": "serving",
+            "amount": 37,
+            "unit": "g",
+            "sourceId": "wk-frosted-flakes-16903a",
+            "sourceEdition": "capture:2026-10-19:wk-frosted-flakes-16903a",
+            "field": "products.sugary-cereal-frosted-flakes.serving"
+          },
+          "canonicalNutrients": {
+            "calories": 351.35135135135135,
+            "saturatedFat": 0,
+            "addedSugar": 32.432432432432435,
+            "totalSugar": 32.432432432432435,
+            "sodium": 513.5135135135135,
+            "fiber": 2.7027027027027026,
+            "protein": 5.405405405405405,
+            "fat": 0,
+            "carbohydrates": 89.1891891891892
+          },
+          "originalNutrients": {
+            "calories": {
+              "value": 130,
+              "unit": "kcal",
+              "sourceId": "wk-frosted-flakes-16903a",
+              "sourceEdition": "capture:2026-10-19:wk-frosted-flakes-16903a",
+              "field": "products.sugary-cereal-frosted-flakes.nutrients.0"
+            },
+            "saturatedFat": {
+              "value": 0,
+              "unit": "g",
+              "sourceId": "wk-frosted-flakes-16903a",
+              "sourceEdition": "capture:2026-10-19:wk-frosted-flakes-16903a",
+              "field": "products.sugary-cereal-frosted-flakes.nutrients.1"
+            },
+            "addedSugar": {
+              "value": 12,
+              "unit": "g",
+              "sourceId": "wk-frosted-flakes-16903a",
+              "sourceEdition": "capture:2026-10-19:wk-frosted-flakes-16903a",
+              "field": "products.sugary-cereal-frosted-flakes.nutrients.2"
+            },
+            "totalSugar": {
+              "value": 12,
+              "unit": "g",
+              "sourceId": "wk-frosted-flakes-16903a",
+              "sourceEdition": "capture:2026-10-19:wk-frosted-flakes-16903a",
+              "field": "products.sugary-cereal-frosted-flakes.nutrients.3"
+            },
+            "sodium": {
+              "value": 190,
+              "unit": "mg",
+              "sourceId": "wk-frosted-flakes-16903a",
+              "sourceEdition": "capture:2026-10-19:wk-frosted-flakes-16903a",
+              "field": "products.sugary-cereal-frosted-flakes.nutrients.4"
+            },
+            "fiber": {
+              "value": 1,
+              "unit": "g",
+              "sourceId": "wk-frosted-flakes-16903a",
+              "sourceEdition": "capture:2026-10-19:wk-frosted-flakes-16903a",
+              "field": "products.sugary-cereal-frosted-flakes.nutrients.5"
+            },
+            "protein": {
+              "value": 2,
+              "unit": "g",
+              "sourceId": "wk-frosted-flakes-16903a",
+              "sourceEdition": "capture:2026-10-19:wk-frosted-flakes-16903a",
+              "field": "products.sugary-cereal-frosted-flakes.nutrients.6"
+            },
+            "fat": {
+              "value": 0,
+              "unit": "g",
+              "sourceId": "wk-frosted-flakes-16903a",
+              "sourceEdition": "capture:2026-10-19:wk-frosted-flakes-16903a",
+              "field": "products.sugary-cereal-frosted-flakes.nutrients.7"
+            },
+            "carbohydrates": {
+              "value": 33,
+              "unit": "g",
+              "sourceId": "wk-frosted-flakes-16903a",
+              "sourceEdition": "capture:2026-10-19:wk-frosted-flakes-16903a",
+              "field": "products.sugary-cereal-frosted-flakes.nutrients.8"
+            }
+          },
+          "transformations": [
+            {
+              "nutrient": "calories",
+              "unitFactor": 1,
+              "referenceFactor": 2.7027027027027026,
+              "value": 351.35135135135135,
+              "unit": "kcal"
+            },
+            {
+              "nutrient": "saturatedFat",
+              "unitFactor": 1,
+              "referenceFactor": 2.7027027027027026,
+              "value": 0,
+              "unit": "g"
+            },
+            {
+              "nutrient": "addedSugar",
+              "unitFactor": 1,
+              "referenceFactor": 2.7027027027027026,
+              "value": 32.432432432432435,
+              "unit": "g"
+            },
+            {
+              "nutrient": "totalSugar",
+              "unitFactor": 1,
+              "referenceFactor": 2.7027027027027026,
+              "value": 32.432432432432435,
+              "unit": "g"
+            },
+            {
+              "nutrient": "sodium",
+              "unitFactor": 1,
+              "referenceFactor": 2.7027027027027026,
+              "value": 513.5135135135135,
+              "unit": "mg"
+            },
+            {
+              "nutrient": "fiber",
+              "unitFactor": 1,
+              "referenceFactor": 2.7027027027027026,
+              "value": 2.7027027027027026,
+              "unit": "g"
+            },
+            {
+              "nutrient": "protein",
+              "unitFactor": 1,
+              "referenceFactor": 2.7027027027027026,
+              "value": 5.405405405405405,
+              "unit": "g"
+            },
+            {
+              "nutrient": "fat",
+              "unitFactor": 1,
+              "referenceFactor": 2.7027027027027026,
+              "value": 0,
+              "unit": "g"
+            },
+            {
+              "nutrient": "carbohydrates",
+              "unitFactor": 1,
+              "referenceFactor": 2.7027027027027026,
+              "value": 89.1891891891892,
+              "unit": "g"
+            }
+          ],
+          "sourceBindings": {
+            "sourceId": "wk-frosted-flakes-16903a",
+            "provider": "WK Kellogg Co",
+            "recordId": "00038000196560",
+            "edition": "capture:2026-10-19:wk-frosted-flakes-16903a",
+            "kind": "manufacturer-label",
+            "attribution": "WK Kellogg Co",
+            "artifact": {
+              "id": "primary-capture:wk-frosted-flakes-16903a",
+              "locator": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000196560",
+              "sha256": "8eb5960b8199e8d41e7e3882510e36810c7441b1a2b17043c6672137de5bfd41"
+            },
+            "retrievedOn": "2026-10-19",
+            "revisionOn": null,
+            "publishedOn": null,
+            "reviewId": "research-review:sugary-cereal-frosted-flakes:2026-10-19",
+            "reviewerId": "Codex automated primary-source research review; not a second human review or physical package inspection",
+            "reviewNotes": "Matched manufacturer GTIN, package, US Nutrition Facts and Battle Creek MI distribution address; Cereal-only observations; milk column excluded; Reported label zeros are rounded declarations; Physical package not inspected; no manufacturer revision date established",
+            "labelObservedOn": "2026-10-19",
+            "reviewedOn": "2026-10-19",
+            "reviewDueOn": "2027-10-19"
+          }
+        },
+        "categoryRules": {
+          "category": "breakfast-cereal",
+          "comparisonClass": "solid-per-100g",
+          "method": "candidate-A-unmodified",
+          "consumerApproved": false,
+          "energyPenalty": false,
+          "proteinCredit": false,
+          "additivePenalty": false
+        }
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "plain-almonds",
+      "name": "Whole Natural Almonds",
+      "role": "plain almonds",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "optional-gtin-unknown-scoring-still-requires-it",
+          "path": "product.gtin"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "saturatedFat",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [],
+        "ambiguous": [],
+        "conflicting": [],
+        "numericProfileComplete": true,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": null,
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "us-oriented-observation",
+        "formulationAcceptedByScorer": false,
+        "recovery": [
+          {
+            "field": "ingredients.text",
+            "sourceId": "blue-diamond-whole-natural",
+            "sourceEdition": "capture:2026-10-19:blue-diamond-whole-natural",
+            "status": "documented-not-transcribed",
+            "url": "https://www.bluediamond.com/brand/blue-diamond/snack-almonds/classic-flavors/whole-natural/",
+            "reason": "Archived provision identifies an ingredient field: Nutrition Facts: six servings; Ingredients: almonds. Transcribe and bind it before use."
+          },
+          {
+            "field": "product.gtin/formulation",
+            "status": "candidate-requires-verification",
+            "url": "https://www.bluediamond.com/brand/blue-diamond/snack-almonds/classic-flavors/whole-natural/",
+            "reason": "Review an exact US package barcode and matching label edition; this source observation does not establish that binding."
+          }
+        ],
+        "recoverableFromExistingSource": [
+          {
+            "field": "ingredients.text",
+            "sourceId": "blue-diamond-whole-natural",
+            "sourceEdition": "capture:2026-10-19:blue-diamond-whole-natural",
+            "status": "documented-not-transcribed",
+            "url": "https://www.bluediamond.com/brand/blue-diamond/snack-almonds/classic-flavors/whole-natural/",
+            "reason": "Archived provision identifies an ingredient field: Nutrition Facts: six servings; Ingredients: almonds. Transcribe and bind it before use."
+          }
+        ],
+        "unknowns": {
+          "ingredients": "not-transcribed",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": false,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": false,
+        "engineEligible": false,
+        "inputStatus": "not-enough-data",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          }
+        ],
+        "engineReasonCodes": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified"
+        ]
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "not-enough-data",
+        "eligible": false,
+        "reasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          }
+        ],
+        "reasonCodes": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified"
+        ],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade"
+        ],
+        "experimentalRawScore": null,
+        "experimentalScore": null,
+        "components": null,
+        "fiberAdjustment": null,
+        "contributions": null,
+        "explanationInputs": null,
+        "categoryRules": null
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "peanut-butter",
+      "name": "Creamy Peanut Butter",
+      "role": "peanut butter",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "optional-gtin-unknown-scoring-still-requires-it",
+          "path": "product.gtin"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "saturatedFat",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [],
+        "ambiguous": [],
+        "conflicting": [],
+        "numericProfileComplete": true,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": null,
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "us-oriented-observation",
+        "formulationAcceptedByScorer": false,
+        "recovery": [
+          {
+            "field": "product.gtin/formulation",
+            "status": "candidate-requires-verification",
+            "url": "https://www.jif.com/products/creamy/creamy-peanut-butter",
+            "reason": "Review an exact US package barcode and matching label edition; this source observation does not establish that binding."
+          }
+        ],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "unknown",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": false,
+        "engineEligible": false,
+        "inputStatus": "not-enough-data",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          }
+        ],
+        "engineReasonCodes": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified"
+        ]
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "not-enough-data",
+        "eligible": false,
+        "reasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          }
+        ],
+        "reasonCodes": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified"
+        ],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade"
+        ],
+        "experimentalRawScore": null,
+        "experimentalScore": null,
+        "components": null,
+        "fiberAdjustment": null,
+        "contributions": null,
+        "explanationInputs": null,
+        "categoryRules": null
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "frozen-meal",
+      "name": "Santa Fe Rice & Beans with Zucchini, Zesty Green Chile Sour Cream Sauce & Mozzarella Cheese Frozen Meal",
+      "role": "frozen meal",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "saturatedFat",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [],
+        "ambiguous": [],
+        "conflicting": [],
+        "numericProfileComplete": true,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": null,
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "matched-formulation",
+        "formulationAcceptedByScorer": true,
+        "recovery": [],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "unknown",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": true,
+        "engineEligible": true,
+        "inputStatus": "eligible-for-research",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [],
+        "engineReasonCodes": []
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "eligible-for-research",
+        "eligible": true,
+        "reasons": [],
+        "reasonCodes": [],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade",
+          "reported-label-values-may-be-rounded"
+        ],
+        "experimentalRawScore": 50.62656264551857,
+        "experimentalScore": 51,
+        "components": {
+          "addedSugarBurden": 0,
+          "saturatedFatBurden": 0.24509803921568626,
+          "sodiumBurden": 0.5797101449275363,
+          "fiberFraction": 0.4201680672268908,
+          "meanBurden": 0.2749360613810742,
+          "worstBurden": 0.5797101449275363,
+          "combinedBurden": 0.4273231031543052,
+          "strongestComponents": [
+            "sodium"
+          ]
+        },
+        "fiberAdjustment": {
+          "factor": 0.8840336134453782,
+          "maximumFactor": 1,
+          "pointsAboveNoFiber": 4.812410897862982
+        },
+        "contributions": {
+          "start": 100,
+          "fiberGap": 11.596638655462183,
+          "addedSugarLoss": 0,
+          "saturatedFatLoss": 3.6112484209370024,
+          "sodiumLoss": 8.541387569520563,
+          "strongestComponentLoss": 25.62416270856169
+        },
+        "explanationInputs": {
+          "asOf": "2026-10-19",
+          "product": {
+            "gtin": "00025800023608",
+            "name": "Santa Fe Rice & Beans with Zucchini, Zesty Green Chile Sour Cream Sauce & Mozzarella Cheese Frozen Meal",
+            "brand": "Smart Ones",
+            "variant": "Santa Fe Rice & Beans with Zucchini, Zesty Green Chile Sour Cream Sauce & Mozzarella Cheese Frozen Meal",
+            "packageDescription": "9 oz (255 g), one package",
+            "preparation": "as-sold",
+            "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+            "market": "US",
+            "category": "frozen-meal"
+          },
+          "basis": {
+            "kind": "100g",
+            "amount": 100,
+            "unit": "g"
+          },
+          "originalBasis": {
+            "kind": "serving",
+            "amount": 255,
+            "unit": "g",
+            "sourceId": "kraft-smart-ones-025800023608",
+            "sourceEdition": "capture:2026-10-19:kraft-smart-ones-025800023608",
+            "field": "products.frozen-meal.serving"
+          },
+          "canonicalNutrients": {
+            "calories": 117.6470588235294,
+            "saturatedFat": 0.9803921568627451,
+            "addedSugar": 0,
+            "totalSugar": 1.9607843137254901,
+            "sodium": 266.6666666666667,
+            "fiber": 2.3529411764705883,
+            "protein": 3.9215686274509802,
+            "fat": 1.9607843137254901,
+            "carbohydrates": 20.784313725490197
+          },
+          "originalNutrients": {
+            "calories": {
+              "value": 300,
+              "unit": "kcal",
+              "sourceId": "kraft-smart-ones-025800023608",
+              "sourceEdition": "capture:2026-10-19:kraft-smart-ones-025800023608",
+              "field": "products.frozen-meal.nutrients.0"
+            },
+            "saturatedFat": {
+              "value": 2.5,
+              "unit": "g",
+              "sourceId": "kraft-smart-ones-025800023608",
+              "sourceEdition": "capture:2026-10-19:kraft-smart-ones-025800023608",
+              "field": "products.frozen-meal.nutrients.1"
+            },
+            "addedSugar": {
+              "value": 0,
+              "unit": "g",
+              "sourceId": "kraft-smart-ones-025800023608",
+              "sourceEdition": "capture:2026-10-19:kraft-smart-ones-025800023608",
+              "field": "products.frozen-meal.nutrients.2"
+            },
+            "totalSugar": {
+              "value": 5,
+              "unit": "g",
+              "sourceId": "kraft-smart-ones-025800023608",
+              "sourceEdition": "capture:2026-10-19:kraft-smart-ones-025800023608",
+              "field": "products.frozen-meal.nutrients.3"
+            },
+            "sodium": {
+              "value": 680,
+              "unit": "mg",
+              "sourceId": "kraft-smart-ones-025800023608",
+              "sourceEdition": "capture:2026-10-19:kraft-smart-ones-025800023608",
+              "field": "products.frozen-meal.nutrients.4"
+            },
+            "fiber": {
+              "value": 6,
+              "unit": "g",
+              "sourceId": "kraft-smart-ones-025800023608",
+              "sourceEdition": "capture:2026-10-19:kraft-smart-ones-025800023608",
+              "field": "products.frozen-meal.nutrients.5"
+            },
+            "protein": {
+              "value": 10,
+              "unit": "g",
+              "sourceId": "kraft-smart-ones-025800023608",
+              "sourceEdition": "capture:2026-10-19:kraft-smart-ones-025800023608",
+              "field": "products.frozen-meal.nutrients.6"
+            },
+            "fat": {
+              "value": 5,
+              "unit": "g",
+              "sourceId": "kraft-smart-ones-025800023608",
+              "sourceEdition": "capture:2026-10-19:kraft-smart-ones-025800023608",
+              "field": "products.frozen-meal.nutrients.7"
+            },
+            "carbohydrates": {
+              "value": 53,
+              "unit": "g",
+              "sourceId": "kraft-smart-ones-025800023608",
+              "sourceEdition": "capture:2026-10-19:kraft-smart-ones-025800023608",
+              "field": "products.frozen-meal.nutrients.8"
+            }
+          },
+          "transformations": [
+            {
+              "nutrient": "calories",
+              "unitFactor": 1,
+              "referenceFactor": 0.39215686274509803,
+              "value": 117.6470588235294,
+              "unit": "kcal"
+            },
+            {
+              "nutrient": "saturatedFat",
+              "unitFactor": 1,
+              "referenceFactor": 0.39215686274509803,
+              "value": 0.9803921568627451,
+              "unit": "g"
+            },
+            {
+              "nutrient": "addedSugar",
+              "unitFactor": 1,
+              "referenceFactor": 0.39215686274509803,
+              "value": 0,
+              "unit": "g"
+            },
+            {
+              "nutrient": "totalSugar",
+              "unitFactor": 1,
+              "referenceFactor": 0.39215686274509803,
+              "value": 1.9607843137254901,
+              "unit": "g"
+            },
+            {
+              "nutrient": "sodium",
+              "unitFactor": 1,
+              "referenceFactor": 0.39215686274509803,
+              "value": 266.6666666666667,
+              "unit": "mg"
+            },
+            {
+              "nutrient": "fiber",
+              "unitFactor": 1,
+              "referenceFactor": 0.39215686274509803,
+              "value": 2.3529411764705883,
+              "unit": "g"
+            },
+            {
+              "nutrient": "protein",
+              "unitFactor": 1,
+              "referenceFactor": 0.39215686274509803,
+              "value": 3.9215686274509802,
+              "unit": "g"
+            },
+            {
+              "nutrient": "fat",
+              "unitFactor": 1,
+              "referenceFactor": 0.39215686274509803,
+              "value": 1.9607843137254901,
+              "unit": "g"
+            },
+            {
+              "nutrient": "carbohydrates",
+              "unitFactor": 1,
+              "referenceFactor": 0.39215686274509803,
+              "value": 20.784313725490197,
+              "unit": "g"
+            }
+          ],
+          "sourceBindings": {
+            "sourceId": "kraft-smart-ones-025800023608",
+            "provider": "Kraft Heinz",
+            "recordId": "00025800023608",
+            "edition": "capture:2026-10-19:kraft-smart-ones-025800023608",
+            "kind": "manufacturer-label",
+            "attribution": "Kraft Heinz",
+            "artifact": {
+              "id": "primary-capture:kraft-smart-ones-025800023608",
+              "locator": "https://www.kraftheinz.com/smart-ones/products/00025800023608-santa-fe-rice-beans-with-zucchini-zesty-green-chile-sour-cream-sauce-mozzarella-cheese-frozen-meal",
+              "sha256": "d0fdee12a139cde51c61ed3b71e831374e73cbec262e7eedd1d5bc4434c855f0"
+            },
+            "retrievedOn": "2026-10-19",
+            "revisionOn": null,
+            "publishedOn": null,
+            "reviewId": "research-review:frozen-meal:2026-10-19",
+            "reviewerId": "Codex automated primary-source research review; not a second human review or physical package inspection",
+            "reviewNotes": "Exact manufacturer SKU URL, product/size and USA (English) selector bind the complete Nutrition Facts table; One-package labeled composition, no invented cooking yield or additions; Added sugar declares 0 g alongside 1% DV; retain gram declaration without recovering hidden unrounded sugar; No food-group gram quantities verified",
+            "labelObservedOn": "2026-10-19",
+            "reviewedOn": "2026-10-19",
+            "reviewDueOn": "2027-10-19"
+          }
+        },
+        "categoryRules": {
+          "category": "frozen-meal",
+          "comparisonClass": "solid-per-100g",
+          "method": "candidate-A-unmodified",
+          "consumerApproved": false,
+          "energyPenalty": false,
+          "proteinCredit": false,
+          "additivePenalty": false
+        }
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "processed-meat",
+      "name": "Classic Wieners Hot Dogs",
+      "role": "processed meat",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "saturatedFat",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [],
+        "ambiguous": [],
+        "conflicting": [],
+        "numericProfileComplete": true,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": null,
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "matched-formulation",
+        "formulationAcceptedByScorer": true,
+        "recovery": [],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "unknown",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": true,
+        "engineEligible": true,
+        "inputStatus": "eligible-for-research",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [],
+        "engineReasonCodes": []
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "eligible-for-research",
+        "eligible": true,
+        "reasons": [],
+        "reasonCodes": [],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade",
+          "reported-label-values-may-be-rounded"
+        ],
+        "experimentalRawScore": 13.333333333333341,
+        "experimentalScore": 13,
+        "components": {
+          "addedSugarBurden": 0,
+          "saturatedFatBurden": 1,
+          "sodiumBurden": 1,
+          "fiberFraction": 0,
+          "meanBurden": 0.6666666666666666,
+          "worstBurden": 1,
+          "combinedBurden": 0.8333333333333333,
+          "strongestComponents": [
+            "saturatedFat",
+            "sodium"
+          ]
+        },
+        "fiberAdjustment": {
+          "factor": 0.8,
+          "maximumFactor": 1,
+          "pointsAboveNoFiber": 0
+        },
+        "contributions": {
+          "start": 100,
+          "fiberGap": 20,
+          "addedSugarLoss": 0,
+          "saturatedFatLoss": 13.333333333333332,
+          "sodiumLoss": 13.333333333333332,
+          "strongestComponentLoss": 40
+        },
+        "explanationInputs": {
+          "asOf": "2026-10-19",
+          "product": {
+            "gtin": "00044700000632",
+            "name": "Classic Wieners Hot Dogs",
+            "brand": "Oscar Mayer",
+            "variant": "Classic Wieners Hot Dogs",
+            "packageDescription": "16 oz, 10 links",
+            "preparation": "as-sold",
+            "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+            "market": "US",
+            "category": "processed-meat"
+          },
+          "basis": {
+            "kind": "100g",
+            "amount": 100,
+            "unit": "g"
+          },
+          "originalBasis": {
+            "kind": "serving",
+            "amount": 45,
+            "unit": "g",
+            "sourceId": "oscar-mayer-044700000632",
+            "sourceEdition": "capture:2026-10-19:oscar-mayer-044700000632",
+            "field": "products.processed-meat.serving"
+          },
+          "canonicalNutrients": {
+            "calories": 266.6666666666667,
+            "saturatedFat": 7.777777777777779,
+            "addedSugar": 0,
+            "totalSugar": 0,
+            "sodium": 955.5555555555555,
+            "fiber": 0,
+            "protein": 11.11111111111111,
+            "fat": 22.22222222222222,
+            "carbohydrates": 2.2222222222222223
+          },
+          "originalNutrients": {
+            "calories": {
+              "value": 120,
+              "unit": "kcal",
+              "sourceId": "oscar-mayer-044700000632",
+              "sourceEdition": "capture:2026-10-19:oscar-mayer-044700000632",
+              "field": "products.processed-meat.nutrients.0"
+            },
+            "saturatedFat": {
+              "value": 3.5,
+              "unit": "g",
+              "sourceId": "oscar-mayer-044700000632",
+              "sourceEdition": "capture:2026-10-19:oscar-mayer-044700000632",
+              "field": "products.processed-meat.nutrients.1"
+            },
+            "addedSugar": {
+              "value": 0,
+              "unit": "g",
+              "sourceId": "oscar-mayer-044700000632",
+              "sourceEdition": "capture:2026-10-19:oscar-mayer-044700000632",
+              "field": "products.processed-meat.nutrients.2"
+            },
+            "totalSugar": {
+              "value": 0,
+              "unit": "g",
+              "sourceId": "oscar-mayer-044700000632",
+              "sourceEdition": "capture:2026-10-19:oscar-mayer-044700000632",
+              "field": "products.processed-meat.nutrients.3"
+            },
+            "sodium": {
+              "value": 430,
+              "unit": "mg",
+              "sourceId": "oscar-mayer-044700000632",
+              "sourceEdition": "capture:2026-10-19:oscar-mayer-044700000632",
+              "field": "products.processed-meat.nutrients.4"
+            },
+            "fiber": {
+              "value": 0,
+              "unit": "g",
+              "sourceId": "oscar-mayer-044700000632",
+              "sourceEdition": "capture:2026-10-19:oscar-mayer-044700000632",
+              "field": "products.processed-meat.nutrients.5"
+            },
+            "protein": {
+              "value": 5,
+              "unit": "g",
+              "sourceId": "oscar-mayer-044700000632",
+              "sourceEdition": "capture:2026-10-19:oscar-mayer-044700000632",
+              "field": "products.processed-meat.nutrients.6"
+            },
+            "fat": {
+              "value": 10,
+              "unit": "g",
+              "sourceId": "oscar-mayer-044700000632",
+              "sourceEdition": "capture:2026-10-19:oscar-mayer-044700000632",
+              "field": "products.processed-meat.nutrients.7"
+            },
+            "carbohydrates": {
+              "value": 1,
+              "unit": "g",
+              "sourceId": "oscar-mayer-044700000632",
+              "sourceEdition": "capture:2026-10-19:oscar-mayer-044700000632",
+              "field": "products.processed-meat.nutrients.8"
+            }
+          },
+          "transformations": [
+            {
+              "nutrient": "calories",
+              "unitFactor": 1,
+              "referenceFactor": 2.2222222222222223,
+              "value": 266.6666666666667,
+              "unit": "kcal"
+            },
+            {
+              "nutrient": "saturatedFat",
+              "unitFactor": 1,
+              "referenceFactor": 2.2222222222222223,
+              "value": 7.777777777777779,
+              "unit": "g"
+            },
+            {
+              "nutrient": "addedSugar",
+              "unitFactor": 1,
+              "referenceFactor": 2.2222222222222223,
+              "value": 0,
+              "unit": "g"
+            },
+            {
+              "nutrient": "totalSugar",
+              "unitFactor": 1,
+              "referenceFactor": 2.2222222222222223,
+              "value": 0,
+              "unit": "g"
+            },
+            {
+              "nutrient": "sodium",
+              "unitFactor": 1,
+              "referenceFactor": 2.2222222222222223,
+              "value": 955.5555555555555,
+              "unit": "mg"
+            },
+            {
+              "nutrient": "fiber",
+              "unitFactor": 1,
+              "referenceFactor": 2.2222222222222223,
+              "value": 0,
+              "unit": "g"
+            },
+            {
+              "nutrient": "protein",
+              "unitFactor": 1,
+              "referenceFactor": 2.2222222222222223,
+              "value": 11.11111111111111,
+              "unit": "g"
+            },
+            {
+              "nutrient": "fat",
+              "unitFactor": 1,
+              "referenceFactor": 2.2222222222222223,
+              "value": 22.22222222222222,
+              "unit": "g"
+            },
+            {
+              "nutrient": "carbohydrates",
+              "unitFactor": 1,
+              "referenceFactor": 2.2222222222222223,
+              "value": 2.2222222222222223,
+              "unit": "g"
+            }
+          ],
+          "sourceBindings": {
+            "sourceId": "oscar-mayer-044700000632",
+            "provider": "Kraft Heinz / Oscar Mayer",
+            "recordId": "00044700000632",
+            "edition": "capture:2026-10-19:oscar-mayer-044700000632",
+            "kind": "manufacturer-label",
+            "attribution": "Kraft Heinz / Oscar Mayer",
+            "artifact": {
+              "id": "primary-capture:oscar-mayer-044700000632",
+              "locator": "https://www.oscarmayer.com/products/00044700000632-classic-wieners-hot-dogs",
+              "sha256": "7b0cf2fa828b1d133a37381cc9ac0c9123c87cdb7b94e963ef3fa6d2e2ab2071"
+            },
+            "retrievedOn": "2026-10-19",
+            "revisionOn": null,
+            "publishedOn": null,
+            "reviewId": "research-review:processed-meat:2026-10-19",
+            "reviewerId": "Codex automated primary-source research review; not a second human review or physical package inspection",
+            "reviewNotes": "Exact manufacturer SKU URL and US ounce/gram Nutrition Facts with FDA units; US manufacturer product/retail locator; As-sold labeled link without bun or toppings; Added sugar declares 0 g alongside 1% DV; retain grams as declared, not analytical zero; No independent product-content or safety confirmation",
+            "labelObservedOn": "2026-10-19",
+            "reviewedOn": "2026-10-19",
+            "reviewDueOn": "2027-10-19"
+          }
+        },
+        "categoryRules": {
+          "category": "processed-meat",
+          "comparisonClass": "solid-per-100g",
+          "method": "candidate-A-unmodified",
+          "consumerApproved": false,
+          "energyPenalty": false,
+          "proteinCredit": false,
+          "additivePenalty": false
+        }
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "protein-bar",
+      "name": "Peanut Butter Dark Chocolate Protein Chewy Bars 15ct",
+      "role": "protein bar",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "optional-gtin-unknown-scoring-still-requires-it",
+          "path": "product.gtin"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        },
+        {
+          "severity": "warning",
+          "code": "reference-conversion-unavailable",
+          "path": "datasets.0.basis"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "saturatedFat",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [],
+        "ambiguous": [],
+        "conflicting": [
+          "Marketing says 200 calories, while Nutrition Facts table says 190; no coherent edition adjudicated"
+        ],
+        "numericProfileComplete": true,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": null,
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "us-oriented-observation",
+        "formulationAcceptedByScorer": false,
+        "recovery": [
+          {
+            "field": "product.gtin/formulation",
+            "status": "candidate-requires-verification",
+            "url": "https://www.naturevalley.com/products/peanut-butter-dark-chocolate-protein-chewy-bars-15ct",
+            "reason": "Review an exact US package barcode and matching label edition; this source observation does not establish that binding."
+          },
+          {
+            "field": "serving.quantity",
+            "status": "candidate-requires-verification",
+            "url": "https://www.naturevalley.com/products/peanut-butter-dark-chocolate-protein-chewy-bars-15ct",
+            "reason": "Find a declared gram/mL serving on the matching package/primary label. No box-weight division, density or household-unit conversion."
+          },
+          {
+            "field": "calories/product-edition",
+            "status": "candidate-requires-verification",
+            "url": "https://www.naturevalley.com/products/peanut-butter-dark-chocolate-protein-chewy-bars-15ct",
+            "reason": "Adjudicate the documented contradiction against an exact package/label edition; do not choose whichever value permits scoring."
+          }
+        ],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "unknown",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": false,
+        "engineEligible": false,
+        "inputStatus": "needs-review",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "consistency-review-missing",
+            "path": "review.consistency"
+          },
+          {
+            "status": "needs-review",
+            "code": "conflicting-data",
+            "path": "sourceState.unresolvedConflicts"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "reference-basis-unknown",
+            "path": "basis.amount"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "unsupported-reference-unit",
+            "path": "basis.unit"
+          }
+        ],
+        "engineReasonCodes": [
+          "product-identity-incomplete",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "consistency-review-missing",
+          "conflicting-data",
+          "reference-basis-unknown",
+          "unsupported-reference-unit"
+        ]
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "needs-review",
+        "eligible": false,
+        "reasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "consistency-review-missing",
+            "path": "review.consistency"
+          },
+          {
+            "status": "needs-review",
+            "code": "conflicting-data",
+            "path": "sourceState.unresolvedConflicts"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "reference-basis-unknown",
+            "path": "basis.amount"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "unsupported-reference-unit",
+            "path": "basis.unit"
+          }
+        ],
+        "reasonCodes": [
+          "product-identity-incomplete",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "consistency-review-missing",
+          "conflicting-data",
+          "reference-basis-unknown",
+          "unsupported-reference-unit"
+        ],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade"
+        ],
+        "experimentalRawScore": null,
+        "experimentalScore": null,
+        "components": null,
+        "fiberAdjustment": null,
+        "contributions": null,
+        "explanationInputs": null,
+        "categoryRules": null
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "white-bread",
+      "name": "Farmhouse Hearty White Sliced Bread",
+      "role": "white bread",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "optional-gtin-unknown-scoring-still-requires-it",
+          "path": "product.gtin"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        },
+        {
+          "severity": "warning",
+          "code": "reference-conversion-unavailable",
+          "path": "datasets.0.basis"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "saturatedFat",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [],
+        "ambiguous": [],
+        "conflicting": [],
+        "numericProfileComplete": true,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": null,
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "us-oriented-observation",
+        "formulationAcceptedByScorer": false,
+        "recovery": [
+          {
+            "field": "ingredients.text",
+            "sourceId": "heb-white-bread-387618",
+            "sourceEdition": "capture:2026-10-19:heb-white-bread-387618",
+            "status": "documented-not-transcribed",
+            "url": "https://www.heb.com/product-detail/pepperidge-farm-farmhouse-hearty-white-sliced-bread/387618",
+            "reason": "Archived provision identifies an ingredient field: 24 oz product; Nutrition Facts; serving one slice; ingredients begin enriched wheat flour. Transcribe and bind it before use."
+          },
+          {
+            "field": "product.gtin/formulation",
+            "status": "candidate-requires-verification",
+            "url": "https://www.heb.com/product-detail/pepperidge-farm-farmhouse-hearty-white-sliced-bread/387618",
+            "reason": "Review an exact US package barcode and matching label edition; this source observation does not establish that binding."
+          },
+          {
+            "field": "serving.quantity",
+            "status": "candidate-requires-verification",
+            "url": "https://www.heb.com/product-detail/pepperidge-farm-farmhouse-hearty-white-sliced-bread/387618",
+            "reason": "Find a declared gram/mL serving on the matching package/primary label. No box-weight division, density or household-unit conversion."
+          },
+          {
+            "field": "source.primaryLabel",
+            "status": "candidate-requires-verification",
+            "url": "https://www.heb.com/product-detail/pepperidge-farm-farmhouse-hearty-white-sliced-bread/387618",
+            "reason": "Use this retailer listing only to locate a matching manufacturer/package label. It does not pass the engine's primary-label gate."
+          }
+        ],
+        "recoverableFromExistingSource": [
+          {
+            "field": "ingredients.text",
+            "sourceId": "heb-white-bread-387618",
+            "sourceEdition": "capture:2026-10-19:heb-white-bread-387618",
+            "status": "documented-not-transcribed",
+            "url": "https://www.heb.com/product-detail/pepperidge-farm-farmhouse-hearty-white-sliced-bread/387618",
+            "reason": "Archived provision identifies an ingredient field: 24 oz product; Nutrition Facts; serving one slice; ingredients begin enriched wheat flour. Transcribe and bind it before use."
+          }
+        ],
+        "unknowns": {
+          "ingredients": "not-transcribed",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": false,
+        "engineEligible": false,
+        "inputStatus": "not-enough-data",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "primary-label-evidence-missing",
+            "path": "source.kind"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "reference-basis-unknown",
+            "path": "basis.amount"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "unsupported-reference-unit",
+            "path": "basis.unit"
+          }
+        ],
+        "engineReasonCodes": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "primary-label-evidence-missing",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "reference-basis-unknown",
+          "unsupported-reference-unit"
+        ]
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "not-enough-data",
+        "eligible": false,
+        "reasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "primary-label-evidence-missing",
+            "path": "source.kind"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "reference-basis-unknown",
+            "path": "basis.amount"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "unsupported-reference-unit",
+            "path": "basis.unit"
+          }
+        ],
+        "reasonCodes": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "primary-label-evidence-missing",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "reference-basis-unknown",
+          "unsupported-reference-unit"
+        ],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade"
+        ],
+        "experimentalRawScore": null,
+        "experimentalScore": null,
+        "components": null,
+        "fiberAdjustment": null,
+        "contributions": null,
+        "explanationInputs": null,
+        "categoryRules": null
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "whole-wheat-bread",
+      "name": "100% Whole Wheat",
+      "role": "whole-wheat bread",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "optional-gtin-unknown-scoring-still-requires-it",
+          "path": "product.gtin"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        },
+        {
+          "severity": "warning",
+          "code": "supplemental-claim-not-independently-bound",
+          "path": "wholeGrains.0"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "saturatedFat",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [],
+        "ambiguous": [],
+        "conflicting": [],
+        "numericProfileComplete": true,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": null,
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "us-oriented-observation",
+        "formulationAcceptedByScorer": false,
+        "recovery": [
+          {
+            "field": "product.gtin/formulation",
+            "status": "candidate-requires-verification",
+            "url": "https://www.daveskillerbread.com/100-whole-wheat",
+            "reason": "Review an exact US package barcode and matching label edition; this source observation does not establish that binding."
+          }
+        ],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "unknown",
+          "foodGroups": true,
+          "wholeGrains": false,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": false,
+        "engineEligible": false,
+        "inputStatus": "not-enough-data",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          }
+        ],
+        "engineReasonCodes": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified"
+        ]
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "not-enough-data",
+        "eligible": false,
+        "reasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          }
+        ],
+        "reasonCodes": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified"
+        ],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade"
+        ],
+        "experimentalRawScore": null,
+        "experimentalScore": null,
+        "components": null,
+        "fiberAdjustment": null,
+        "contributions": null,
+        "explanationInputs": null,
+        "categoryRules": null
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "whole-grain-cereal",
+      "name": "Shredded Wheat Original Big Biscuit cereal",
+      "role": "whole-grain breakfast cereal",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "optional-gtin-unknown-scoring-still-requires-it",
+          "path": "product.gtin"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "saturatedFat",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [],
+        "ambiguous": [],
+        "conflicting": [],
+        "numericProfileComplete": true,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": "SBB-101-RTE",
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "us-oriented-observation",
+        "formulationAcceptedByScorer": false,
+        "recovery": [
+          {
+            "field": "ingredients.text",
+            "sourceId": "post-big-biscuit-sbb101",
+            "sourceEdition": "capture:2026-10-19:post-big-biscuit-sbb101",
+            "status": "documented-not-transcribed",
+            "url": "https://www.postconsumerbrands.com/brands/shredded-wheat/products/shredded-wheat-original-big-biscuit-cereal/",
+            "reason": "Archived provision identifies an ingredient field: Product Information, Nutrition Information and ingredient panel; SBB-101-RTE. Transcribe and bind it before use."
+          },
+          {
+            "field": "product.gtin/formulation",
+            "status": "candidate-requires-verification",
+            "url": "https://www.postconsumerbrands.com/brands/shredded-wheat/products/shredded-wheat-original-big-biscuit-cereal/",
+            "reason": "Review an exact US package barcode and matching label edition; this source observation does not establish that binding."
+          }
+        ],
+        "recoverableFromExistingSource": [
+          {
+            "field": "ingredients.text",
+            "sourceId": "post-big-biscuit-sbb101",
+            "sourceEdition": "capture:2026-10-19:post-big-biscuit-sbb101",
+            "status": "documented-not-transcribed",
+            "url": "https://www.postconsumerbrands.com/brands/shredded-wheat/products/shredded-wheat-original-big-biscuit-cereal/",
+            "reason": "Archived provision identifies an ingredient field: Product Information, Nutrition Information and ingredient panel; SBB-101-RTE. Transcribe and bind it before use."
+          }
+        ],
+        "unknowns": {
+          "ingredients": "not-transcribed",
+          "foodGroups": true,
+          "wholeGrains": false,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": false,
+        "engineEligible": false,
+        "inputStatus": "not-enough-data",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          }
+        ],
+        "engineReasonCodes": [
+          "product-identity-incomplete",
+          "provenance-incomplete",
+          "us-formulation-unverified"
+        ]
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "not-enough-data",
+        "eligible": false,
+        "reasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          }
+        ],
+        "reasonCodes": [
+          "product-identity-incomplete",
+          "provenance-incomplete",
+          "us-formulation-unverified"
+        ],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade"
+        ],
+        "experimentalRawScore": null,
+        "experimentalScore": null,
+        "components": null,
+        "fiberAdjustment": null,
+        "contributions": null,
+        "explanationInputs": null,
+        "categoryRules": null
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "olive-oil",
+      "name": "Robust Extra Virgin Olive Oil",
+      "role": "extra virgin olive oil",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "optional-gtin-unknown-scoring-still-requires-it",
+          "path": "product.gtin"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "saturatedFat",
+          "sodium",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [
+          "addedSugar",
+          "totalSugar",
+          "fiber"
+        ],
+        "ambiguous": [
+          "addedSugar",
+          "totalSugar",
+          "fiber"
+        ],
+        "conflicting": [],
+        "numericProfileComplete": false,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": null,
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "us-oriented-observation",
+        "formulationAcceptedByScorer": false,
+        "recovery": [
+          {
+            "field": "product.gtin/formulation",
+            "status": "candidate-requires-verification",
+            "url": "https://pompeian.com/products/robust-extra-virgin-olive-oil/",
+            "reason": "Review an exact US package barcode and matching label edition; this source observation does not establish that binding."
+          },
+          {
+            "field": "addedSugar,totalSugar,fiber",
+            "url": "https://pompeian.com/products/robust-extra-virgin-olive-oil/",
+            "status": "not-numeric-in-observed-source",
+            "reason": "No numeric declarations in this observed source. A not-significant-source statement is not zero; require a matching authoritative numeric edition."
+          }
+        ],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "unknown",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": false,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": false,
+        "engineEligible": false,
+        "inputStatus": "not-enough-data",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "added-sugars-missing",
+            "path": "nutrients.addedSugar"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.totalSugar"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.fiber"
+          }
+        ],
+        "engineReasonCodes": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "added-sugars-missing",
+          "required-nutrient-missing"
+        ]
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "not-enough-data",
+        "eligible": false,
+        "reasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "added-sugars-missing",
+            "path": "nutrients.addedSugar"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.totalSugar"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.fiber"
+          }
+        ],
+        "reasonCodes": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "added-sugars-missing",
+          "required-nutrient-missing"
+        ],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade"
+        ],
+        "experimentalRawScore": null,
+        "experimentalScore": null,
+        "components": null,
+        "fiberAdjustment": null,
+        "contributions": null,
+        "explanationInputs": null,
+        "categoryRules": null
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "regular-soda",
+      "name": "Pepsi",
+      "role": "regular soda",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [
+          "saturatedFat",
+          "fiber"
+        ],
+        "ambiguous": [
+          "saturatedFat",
+          "fiber"
+        ],
+        "conflicting": [],
+        "numericProfileComplete": false,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": "2024-07-20",
+          "labelVersion": "0028-en-US",
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "matched-formulation",
+        "formulationAcceptedByScorer": true,
+        "recovery": [
+          {
+            "field": "saturatedFat,fiber",
+            "url": "https://smartlabel.pepsico.info/012000809941-0028-en-US/index.html",
+            "status": "not-numeric-in-observed-source",
+            "reason": "No numeric declarations in this observed source. A not-significant-source statement is not zero; require a matching authoritative numeric edition."
+          }
+        ],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "unknown",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": false
+        }
+      },
+      "eligibility": {
+        "eligible": false,
+        "engineEligible": false,
+        "inputStatus": "not-enough-data",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.saturatedFat"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.fiber"
+          }
+        ],
+        "engineReasonCodes": [
+          "required-nutrient-missing"
+        ]
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "not-enough-data",
+        "eligible": false,
+        "reasons": [
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.saturatedFat"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.fiber"
+          }
+        ],
+        "reasonCodes": [
+          "required-nutrient-missing"
+        ],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade"
+        ],
+        "experimentalRawScore": null,
+        "experimentalScore": null,
+        "components": null,
+        "fiberAdjustment": null,
+        "contributions": null,
+        "explanationInputs": null,
+        "categoryRules": null
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "diet-soda",
+      "name": "Diet Pepsi",
+      "role": "diet soda",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [
+          "saturatedFat",
+          "fiber"
+        ],
+        "ambiguous": [
+          "saturatedFat",
+          "fiber"
+        ],
+        "conflicting": [],
+        "numericProfileComplete": false,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": "2025-05-30",
+          "labelVersion": "0001-en-US",
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "matched-formulation",
+        "formulationAcceptedByScorer": true,
+        "recovery": [
+          {
+            "field": "saturatedFat,fiber",
+            "url": "https://smartlabel.pepsico.info/012000241536-0001-en-US/index.html",
+            "status": "not-numeric-in-observed-source",
+            "reason": "No numeric declarations in this observed source. A not-significant-source statement is not zero; require a matching authoritative numeric edition."
+          }
+        ],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "unknown",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": false
+        }
+      },
+      "eligibility": {
+        "eligible": false,
+        "engineEligible": false,
+        "inputStatus": "not-enough-data",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.saturatedFat"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.fiber"
+          }
+        ],
+        "engineReasonCodes": [
+          "unsupported-category",
+          "required-nutrient-missing"
+        ]
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "not-enough-data",
+        "eligible": false,
+        "reasons": [
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.saturatedFat"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.fiber"
+          }
+        ],
+        "reasonCodes": [
+          "unsupported-category",
+          "required-nutrient-missing"
+        ],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade"
+        ],
+        "experimentalRawScore": null,
+        "experimentalScore": null,
+        "components": null,
+        "fiberAdjustment": null,
+        "contributions": null,
+        "explanationInputs": null,
+        "categoryRules": null
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "unsweetened-tea",
+      "name": "Unsweetened Black Tea",
+      "role": "unsweetened beverage",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "optional-gtin-unknown-scoring-still-requires-it",
+          "path": "product.gtin"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        },
+        {
+          "severity": "warning",
+          "code": "reference-conversion-unavailable",
+          "path": "datasets.0.basis"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [
+          "saturatedFat",
+          "fiber"
+        ],
+        "ambiguous": [
+          "saturatedFat",
+          "fiber"
+        ],
+        "conflicting": [],
+        "numericProfileComplete": false,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": "Image copyright 2025; not a revision date",
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "us-oriented-observation",
+        "formulationAcceptedByScorer": false,
+        "recovery": [
+          {
+            "field": "product.gtin/formulation",
+            "status": "candidate-requires-verification",
+            "url": "https://www.pureleaf.com/our-products/?product=Unsweetened+Tea",
+            "reason": "Review an exact US package barcode and matching label edition; this source observation does not establish that binding."
+          },
+          {
+            "field": "serving.quantity",
+            "status": "candidate-requires-verification",
+            "url": "https://www.pureleaf.com/our-products/?product=Unsweetened+Tea",
+            "reason": "Find a declared gram/mL serving on the matching package/primary label. No box-weight division, density or household-unit conversion."
+          },
+          {
+            "field": "saturatedFat,fiber",
+            "url": "https://www.pureleaf.com/our-products/?product=Unsweetened+Tea",
+            "status": "not-numeric-in-observed-source",
+            "reason": "No numeric declarations in this observed source. A not-significant-source statement is not zero; require a matching authoritative numeric edition."
+          }
+        ],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "unknown",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": false,
+        "engineEligible": false,
+        "inputStatus": "not-enough-data",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "unsupported-reference-unit",
+            "path": "basis.unit"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.saturatedFat"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.fiber"
+          }
+        ],
+        "engineReasonCodes": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "unsupported-reference-unit",
+          "required-nutrient-missing"
+        ]
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "not-enough-data",
+        "eligible": false,
+        "reasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-applicable",
+            "code": "unsupported-category",
+            "path": "product.category"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "unsupported-reference-unit",
+            "path": "basis.unit"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.saturatedFat"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.fiber"
+          }
+        ],
+        "reasonCodes": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "unsupported-reference-unit",
+          "required-nutrient-missing"
+        ],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade"
+        ],
+        "experimentalRawScore": null,
+        "experimentalScore": null,
+        "components": null,
+        "fiberAdjustment": null,
+        "contributions": null,
+        "explanationInputs": null,
+        "categoryRules": null
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "plain-yogurt",
+      "name": "Total 0% Plain Greek Yogurt 5.3 oz",
+      "role": "plain yogurt",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "gtin-unknown-no-scan-match",
+          "path": "product.gtin"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "saturatedFat",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [],
+        "ambiguous": [],
+        "conflicting": [],
+        "numericProfileComplete": true,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": null,
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "matched-formulation",
+        "formulationAcceptedByScorer": true,
+        "recovery": [
+          {
+            "field": "product.gtin/formulation",
+            "status": "candidate-requires-verification",
+            "url": "https://usa.fage/nutrition",
+            "reason": "Review an exact US package barcode and matching label edition; this source observation does not establish that binding."
+          }
+        ],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "transcribed",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": true,
+        "engineEligible": true,
+        "inputStatus": "eligible-for-research",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [],
+        "engineReasonCodes": []
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "eligible-for-research",
+        "eligible": true,
+        "reasons": [],
+        "reasonCodes": [],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade",
+          "reported-label-values-may-be-rounded",
+          "fiber-adjustment-has-dairy-category-limitations"
+        ],
+        "experimentalRawScore": 75.7487922705314,
+        "experimentalScore": 76,
+        "components": {
+          "addedSugarBurden": 0,
+          "saturatedFatBurden": 0,
+          "sodiumBurden": 0.07971014492753623,
+          "fiberFraction": 0,
+          "meanBurden": 0.02657004830917874,
+          "worstBurden": 0.07971014492753623,
+          "combinedBurden": 0.05314009661835748,
+          "strongestComponents": [
+            "sodium"
+          ]
+        },
+        "fiberAdjustment": {
+          "factor": 0.8,
+          "maximumFactor": 1,
+          "pointsAboveNoFiber": 0
+        },
+        "contributions": {
+          "start": 100,
+          "fiberGap": 20,
+          "addedSugarLoss": 0,
+          "saturatedFatLoss": 0,
+          "sodiumLoss": 1.0628019323671496,
+          "strongestComponentLoss": 3.1884057971014492
+        },
+        "explanationInputs": {
+          "asOf": "2026-10-19",
+          "product": {
+            "gtin": null,
+            "name": "Total 0% Plain Greek Yogurt 5.3 oz",
+            "brand": "FAGE",
+            "variant": "Total 0% Plain Greek Yogurt 5.3 oz",
+            "packageDescription": "5.3 oz (150 g) cup",
+            "preparation": "as-sold",
+            "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+            "market": "US",
+            "category": "spoonable-yogurt"
+          },
+          "reviewedLabelIdentity": {
+            "schemaVersion": 1,
+            "type": "reviewed_us_manufacturer_label",
+            "observationId": "fage-plain-product:product-2862:first-150g-cup:2026-10-19",
+            "formulationId": "US:FAGE:plain-yogurt:150g:as-sold",
+            "manufacturer": {
+              "name": "FAGE USA",
+              "officialUrl": "https://usa.fage/",
+              "status": "reviewed-official-source"
+            },
+            "panel": {
+              "id": "product-2862:first-150g-cup",
+              "nutritionField": "product-2862.cup-150g.nutrition",
+              "ingredientsField": "product-2862.cup-150g.ingredients",
+              "presentationField": "product-2862.cup-150g.presentation",
+              "presentationStatus": "reviewed-specific-presentation",
+              "ingredientsStatus": "reviewed-same-formulation",
+              "market": "US",
+              "marketField": "FAGE-USA-product-catalog.regional-panel",
+              "marketStatus": "reviewed-US-formulation",
+              "marketStatement": "FAGE USA regional catalog links this exact 5.3 oz product and 150 g US Nutrition Facts panel; regional context, presentation and panel reviewed together, not inferred from brand alone.",
+              "sourceId": "reviewed-label:plain-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-plain-product",
+              "artifactId": "official-capture:fage-plain-product",
+              "artifactSha256": "93baf91b06794dc8a9788e902c3edd8400a3f166bd819400bf9f9366120c65c0"
+            },
+            "review": {
+              "status": "completed",
+              "reviewerId": "Codex automated document review 2026-10-19; no independent human review",
+              "reviewerType": "automated-document-review",
+              "reviewedOn": "2026-10-19",
+              "evidenceStatus": "direct-manufacturer-label",
+              "notes": "Completed automated review of this specific US primary panel, its presentation, nine nutrients and ingredients. Candidate provider records are explicitly not linked. No physical package or independent human review; no scan match."
+            }
+          },
+          "basis": {
+            "kind": "100g",
+            "amount": 100,
+            "unit": "g"
+          },
+          "originalBasis": {
+            "kind": "serving",
+            "amount": 150,
+            "unit": "g",
+            "sourceId": "reviewed-label:plain-yogurt",
+            "sourceEdition": "capture:2026-10-19:fage-plain-product",
+            "field": "product-2862.cup-150g.nutrition.serving"
+          },
+          "canonicalNutrients": {
+            "calories": 53.33333333333333,
+            "saturatedFat": 0,
+            "addedSugar": 0,
+            "totalSugar": 3.333333333333333,
+            "sodium": 36.666666666666664,
+            "fiber": 0,
+            "protein": 10.666666666666666,
+            "fat": 0,
+            "carbohydrates": 3.333333333333333
+          },
+          "originalNutrients": {
+            "calories": {
+              "value": 80,
+              "unit": "kcal",
+              "sourceId": "reviewed-label:plain-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-plain-product",
+              "field": "product-2862.cup-150g.nutrition.calories"
+            },
+            "saturatedFat": {
+              "value": 0,
+              "unit": "g",
+              "sourceId": "reviewed-label:plain-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-plain-product",
+              "field": "product-2862.cup-150g.nutrition.saturatedFat"
+            },
+            "addedSugar": {
+              "value": 0,
+              "unit": "g",
+              "sourceId": "reviewed-label:plain-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-plain-product",
+              "field": "product-2862.cup-150g.nutrition.addedSugar"
+            },
+            "totalSugar": {
+              "value": 5,
+              "unit": "g",
+              "sourceId": "reviewed-label:plain-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-plain-product",
+              "field": "product-2862.cup-150g.nutrition.totalSugar"
+            },
+            "sodium": {
+              "value": 55,
+              "unit": "mg",
+              "sourceId": "reviewed-label:plain-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-plain-product",
+              "field": "product-2862.cup-150g.nutrition.sodium"
+            },
+            "fiber": {
+              "value": 0,
+              "unit": "g",
+              "sourceId": "reviewed-label:plain-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-plain-product",
+              "field": "product-2862.cup-150g.nutrition.fiber"
+            },
+            "protein": {
+              "value": 16,
+              "unit": "g",
+              "sourceId": "reviewed-label:plain-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-plain-product",
+              "field": "product-2862.cup-150g.nutrition.protein"
+            },
+            "fat": {
+              "value": 0,
+              "unit": "g",
+              "sourceId": "reviewed-label:plain-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-plain-product",
+              "field": "product-2862.cup-150g.nutrition.fat"
+            },
+            "carbohydrates": {
+              "value": 5,
+              "unit": "g",
+              "sourceId": "reviewed-label:plain-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-plain-product",
+              "field": "product-2862.cup-150g.nutrition.carbohydrates"
+            }
+          },
+          "transformations": [
+            {
+              "nutrient": "calories",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 53.33333333333333,
+              "unit": "kcal"
+            },
+            {
+              "nutrient": "saturatedFat",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 0,
+              "unit": "g"
+            },
+            {
+              "nutrient": "addedSugar",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 0,
+              "unit": "g"
+            },
+            {
+              "nutrient": "totalSugar",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 3.333333333333333,
+              "unit": "g"
+            },
+            {
+              "nutrient": "sodium",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 36.666666666666664,
+              "unit": "mg"
+            },
+            {
+              "nutrient": "fiber",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 0,
+              "unit": "g"
+            },
+            {
+              "nutrient": "protein",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 10.666666666666666,
+              "unit": "g"
+            },
+            {
+              "nutrient": "fat",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 0,
+              "unit": "g"
+            },
+            {
+              "nutrient": "carbohydrates",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 3.333333333333333,
+              "unit": "g"
+            }
+          ],
+          "sourceBindings": {
+            "sourceId": "reviewed-label:plain-yogurt",
+            "provider": "FAGE USA",
+            "recordId": "product-2862:first-150g-cup",
+            "edition": "capture:2026-10-19:fage-plain-product",
+            "kind": "manufacturer-label",
+            "attribution": "FAGE USA",
+            "artifact": {
+              "id": "official-capture:fage-plain-product",
+              "locator": "https://usa.fage/products/yogurt/fage-total-0#product-2862",
+              "sha256": "93baf91b06794dc8a9788e902c3edd8400a3f166bd819400bf9f9366120c65c0"
+            },
+            "retrievedOn": "2026-10-19",
+            "revisionOn": null,
+            "publishedOn": null,
+            "reviewId": "manufacturer-label-review:plain-yogurt:2026-10-19",
+            "reviewerId": "Codex automated document review 2026-10-19; no independent human review",
+            "reviewNotes": "Completed automated review of this specific US primary panel, its presentation, nine nutrients and ingredients. Candidate provider records are explicitly not linked. No physical package or independent human review; no scan match.",
+            "labelObservedOn": "2026-10-19",
+            "reviewedOn": "2026-10-19",
+            "reviewDueOn": "2027-10-19"
+          }
+        },
+        "categoryRules": {
+          "category": "spoonable-yogurt",
+          "comparisonClass": "solid-per-100g",
+          "method": "candidate-A-unmodified",
+          "consumerApproved": false,
+          "energyPenalty": false,
+          "proteinCredit": false,
+          "additivePenalty": false
+        },
+        "assessmentIdentity": {
+          "type": "reviewed_us_manufacturer_label",
+          "schemaVersion": 1,
+          "observationId": "fage-plain-product:product-2862:first-150g-cup:2026-10-19",
+          "formulationId": "US:FAGE:plain-yogurt:150g:as-sold",
+          "assessmentEligible": true,
+          "scanMatch": {
+            "eligible": false,
+            "status": "not-established",
+            "reason": "label-review-does-not-establish-scanned-product-match"
+          },
+          "review": {
+            "reviewerId": "Codex automated document review 2026-10-19; no independent human review",
+            "reviewerType": "automated-document-review",
+            "status": "completed"
+          }
+        }
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "sweetened-yogurt",
+      "name": "Total 2% Split Cup Strawberry 5.3 oz",
+      "role": "sweetened yogurt",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "gtin-unknown-no-scan-match",
+          "path": "product.gtin"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "saturatedFat",
+          "addedSugar",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [],
+        "ambiguous": [],
+        "conflicting": [],
+        "numericProfileComplete": true,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": null,
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "matched-formulation",
+        "formulationAcceptedByScorer": true,
+        "recovery": [
+          {
+            "field": "product.gtin/formulation",
+            "status": "candidate-requires-verification",
+            "url": "https://usa.fage/nutrition",
+            "reason": "Review an exact US package barcode and matching label edition; this source observation does not establish that binding."
+          }
+        ],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "transcribed",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": true,
+        "engineEligible": true,
+        "inputStatus": "eligible-for-research",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [],
+        "engineReasonCodes": []
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "eligible-for-research",
+        "eligible": true,
+        "reasons": [],
+        "reasonCodes": [],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade",
+          "reported-label-values-may-be-rounded",
+          "fiber-adjustment-has-dairy-category-limitations"
+        ],
+        "experimentalRawScore": 50.90821256038649,
+        "experimentalScore": 51,
+        "components": {
+          "addedSugarBurden": 0.4666666666666666,
+          "saturatedFatBurden": 0.25,
+          "sodiumBurden": 0.06521739130434782,
+          "fiberFraction": 0,
+          "meanBurden": 0.26062801932367147,
+          "worstBurden": 0.4666666666666666,
+          "combinedBurden": 0.36364734299516904,
+          "strongestComponents": [
+            "addedSugar"
+          ]
+        },
+        "fiberAdjustment": {
+          "factor": 0.8,
+          "maximumFactor": 1,
+          "pointsAboveNoFiber": 0
+        },
+        "contributions": {
+          "start": 100,
+          "fiberGap": 20,
+          "addedSugarLoss": 6.222222222222221,
+          "saturatedFatLoss": 3.333333333333333,
+          "sodiumLoss": 0.8695652173913042,
+          "strongestComponentLoss": 18.666666666666664
+        },
+        "explanationInputs": {
+          "asOf": "2026-10-19",
+          "product": {
+            "gtin": null,
+            "name": "Total 2% Split Cup Strawberry 5.3 oz",
+            "brand": "FAGE",
+            "variant": "Total 2% Split Cup Strawberry 5.3 oz",
+            "packageDescription": "5.3 oz (150 g) split cup",
+            "preparation": "as-sold",
+            "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+            "market": "US",
+            "category": "spoonable-yogurt"
+          },
+          "reviewedLabelIdentity": {
+            "schemaVersion": 1,
+            "type": "reviewed_us_manufacturer_label",
+            "observationId": "fage-strawberry-product:strawberry-2-percent:full-150g-split-cup:2026-10-19",
+            "formulationId": "US:FAGE:sweetened-yogurt:150g:as-sold",
+            "manufacturer": {
+              "name": "FAGE USA",
+              "officialUrl": "https://usa.fage/",
+              "status": "reviewed-official-source"
+            },
+            "panel": {
+              "id": "strawberry-2-percent:full-150g-split-cup",
+              "nutritionField": "strawberry-2-percent.full-150g-cup.nutrition",
+              "ingredientsField": "strawberry-2-percent.full-150g-cup.ingredients",
+              "presentationField": "strawberry-2-percent.full-150g-cup.presentation",
+              "presentationStatus": "reviewed-specific-presentation",
+              "ingredientsStatus": "reviewed-same-formulation",
+              "market": "US",
+              "marketField": "FAGE-USA-product-catalog.regional-panel",
+              "marketStatus": "reviewed-US-formulation",
+              "marketStatement": "FAGE USA regional catalog links this exact 5.3 oz product and 150 g US Nutrition Facts panel; regional context, presentation and panel reviewed together, not inferred from brand alone.",
+              "sourceId": "reviewed-label:sweetened-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-strawberry-product",
+              "artifactId": "official-capture:fage-strawberry-product",
+              "artifactSha256": "6ac16113023dc9cf0eed246e04635f98b1230b3a531748c30cbf67afc7abe5e1"
+            },
+            "review": {
+              "status": "completed",
+              "reviewerId": "Codex automated document review 2026-10-19; no independent human review",
+              "reviewerType": "automated-document-review",
+              "reviewedOn": "2026-10-19",
+              "evidenceStatus": "direct-manufacturer-label",
+              "notes": "Completed automated review of this specific US primary panel, its presentation, nine nutrients and ingredients. Candidate provider records are explicitly not linked. No physical package or independent human review; no scan match."
+            }
+          },
+          "basis": {
+            "kind": "100g",
+            "amount": 100,
+            "unit": "g"
+          },
+          "originalBasis": {
+            "kind": "serving",
+            "amount": 150,
+            "unit": "g",
+            "sourceId": "reviewed-label:sweetened-yogurt",
+            "sourceEdition": "capture:2026-10-19:fage-strawberry-product",
+            "field": "strawberry-2-percent.full-150g-cup.nutrition.serving"
+          },
+          "canonicalNutrients": {
+            "calories": 80,
+            "saturatedFat": 1,
+            "addedSugar": 4.666666666666666,
+            "totalSugar": 7.333333333333333,
+            "sodium": 30,
+            "fiber": 0,
+            "protein": 8,
+            "fat": 1.6666666666666665,
+            "carbohydrates": 8.666666666666666
+          },
+          "originalNutrients": {
+            "calories": {
+              "value": 120,
+              "unit": "kcal",
+              "sourceId": "reviewed-label:sweetened-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-strawberry-product",
+              "field": "strawberry-2-percent.full-150g-cup.nutrition.calories"
+            },
+            "saturatedFat": {
+              "value": 1.5,
+              "unit": "g",
+              "sourceId": "reviewed-label:sweetened-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-strawberry-product",
+              "field": "strawberry-2-percent.full-150g-cup.nutrition.saturatedFat"
+            },
+            "addedSugar": {
+              "value": 7,
+              "unit": "g",
+              "sourceId": "reviewed-label:sweetened-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-strawberry-product",
+              "field": "strawberry-2-percent.full-150g-cup.nutrition.addedSugar"
+            },
+            "totalSugar": {
+              "value": 11,
+              "unit": "g",
+              "sourceId": "reviewed-label:sweetened-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-strawberry-product",
+              "field": "strawberry-2-percent.full-150g-cup.nutrition.totalSugar"
+            },
+            "sodium": {
+              "value": 45,
+              "unit": "mg",
+              "sourceId": "reviewed-label:sweetened-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-strawberry-product",
+              "field": "strawberry-2-percent.full-150g-cup.nutrition.sodium"
+            },
+            "fiber": {
+              "value": 0,
+              "unit": "g",
+              "sourceId": "reviewed-label:sweetened-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-strawberry-product",
+              "field": "strawberry-2-percent.full-150g-cup.nutrition.fiber"
+            },
+            "protein": {
+              "value": 12,
+              "unit": "g",
+              "sourceId": "reviewed-label:sweetened-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-strawberry-product",
+              "field": "strawberry-2-percent.full-150g-cup.nutrition.protein"
+            },
+            "fat": {
+              "value": 2.5,
+              "unit": "g",
+              "sourceId": "reviewed-label:sweetened-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-strawberry-product",
+              "field": "strawberry-2-percent.full-150g-cup.nutrition.fat"
+            },
+            "carbohydrates": {
+              "value": 13,
+              "unit": "g",
+              "sourceId": "reviewed-label:sweetened-yogurt",
+              "sourceEdition": "capture:2026-10-19:fage-strawberry-product",
+              "field": "strawberry-2-percent.full-150g-cup.nutrition.carbohydrates"
+            }
+          },
+          "transformations": [
+            {
+              "nutrient": "calories",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 80,
+              "unit": "kcal"
+            },
+            {
+              "nutrient": "saturatedFat",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 1,
+              "unit": "g"
+            },
+            {
+              "nutrient": "addedSugar",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 4.666666666666666,
+              "unit": "g"
+            },
+            {
+              "nutrient": "totalSugar",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 7.333333333333333,
+              "unit": "g"
+            },
+            {
+              "nutrient": "sodium",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 30,
+              "unit": "mg"
+            },
+            {
+              "nutrient": "fiber",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 0,
+              "unit": "g"
+            },
+            {
+              "nutrient": "protein",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 8,
+              "unit": "g"
+            },
+            {
+              "nutrient": "fat",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 1.6666666666666665,
+              "unit": "g"
+            },
+            {
+              "nutrient": "carbohydrates",
+              "unitFactor": 1,
+              "referenceFactor": 0.6666666666666666,
+              "value": 8.666666666666666,
+              "unit": "g"
+            }
+          ],
+          "sourceBindings": {
+            "sourceId": "reviewed-label:sweetened-yogurt",
+            "provider": "FAGE USA",
+            "recordId": "strawberry-2-percent:full-150g-split-cup",
+            "edition": "capture:2026-10-19:fage-strawberry-product",
+            "kind": "manufacturer-label",
+            "attribution": "FAGE USA",
+            "artifact": {
+              "id": "official-capture:fage-strawberry-product",
+              "locator": "https://usa.fage/products/yogurt/fage-total-2-split-cup/fage-total-2-strawberry-53-oz",
+              "sha256": "6ac16113023dc9cf0eed246e04635f98b1230b3a531748c30cbf67afc7abe5e1"
+            },
+            "retrievedOn": "2026-10-19",
+            "revisionOn": null,
+            "publishedOn": null,
+            "reviewId": "manufacturer-label-review:sweetened-yogurt:2026-10-19",
+            "reviewerId": "Codex automated document review 2026-10-19; no independent human review",
+            "reviewNotes": "Completed automated review of this specific US primary panel, its presentation, nine nutrients and ingredients. Candidate provider records are explicitly not linked. No physical package or independent human review; no scan match.",
+            "labelObservedOn": "2026-10-19",
+            "reviewedOn": "2026-10-19",
+            "reviewDueOn": "2027-10-19"
+          }
+        },
+        "categoryRules": {
+          "category": "spoonable-yogurt",
+          "comparisonClass": "solid-per-100g",
+          "method": "candidate-A-unmodified",
+          "consumerApproved": false,
+          "energyPenalty": false,
+          "proteinCredit": false,
+          "additivePenalty": false
+        },
+        "assessmentIdentity": {
+          "type": "reviewed_us_manufacturer_label",
+          "schemaVersion": 1,
+          "observationId": "fage-strawberry-product:strawberry-2-percent:full-150g-split-cup:2026-10-19",
+          "formulationId": "US:FAGE:sweetened-yogurt:150g:as-sold",
+          "assessmentEligible": true,
+          "scanMatch": {
+            "eligible": false,
+            "status": "not-established",
+            "reason": "label-review-does-not-establish-scanned-product-match"
+          },
+          "review": {
+            "reviewerId": "Codex automated document review 2026-10-19; no independent human review",
+            "reviewerType": "automated-document-review",
+            "status": "completed"
+          }
+        }
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "fresh-apple",
+      "name": "Apple, raw edible portion",
+      "role": "fresh fruit",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "optional-gtin-unknown-scoring-still-requires-it",
+          "path": "product.gtin"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [
+          "saturatedFat",
+          "addedSugar"
+        ],
+        "ambiguous": [],
+        "conflicting": [],
+        "numericProfileComplete": false,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": "Legacy poster linked to 2006 voluntary-program update; exact web revision unknown",
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "us-oriented-observation",
+        "formulationAcceptedByScorer": false,
+        "recovery": [
+          {
+            "field": "saturatedFat,addedSugar",
+            "url": "https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/raw-fruits-poster-text-version-accessible-version",
+            "status": "candidate-requires-verification",
+            "reason": "A separate reviewed USDA generic composition record is a research candidate, not a branded replacement. Do not splice its nutrients into this FDA table."
+          }
+        ],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "unknown",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": false,
+        "engineEligible": false,
+        "inputStatus": "not-enough-data",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.brand"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.packageDescription"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "primary-label-evidence-missing",
+            "path": "source.kind"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.saturatedFat"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "added-sugars-missing",
+            "path": "nutrients.addedSugar"
+          }
+        ],
+        "engineReasonCodes": [
+          "product-identity-incomplete",
+          "primary-label-evidence-missing",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "required-nutrient-missing",
+          "added-sugars-missing"
+        ]
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "not-enough-data",
+        "eligible": false,
+        "reasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.brand"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.packageDescription"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "primary-label-evidence-missing",
+            "path": "source.kind"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.saturatedFat"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "added-sugars-missing",
+            "path": "nutrients.addedSugar"
+          }
+        ],
+        "reasonCodes": [
+          "product-identity-incomplete",
+          "primary-label-evidence-missing",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "required-nutrient-missing",
+          "added-sugars-missing"
+        ],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade"
+        ],
+        "experimentalRawScore": null,
+        "experimentalScore": null,
+        "components": null,
+        "fiberAdjustment": null,
+        "contributions": null,
+        "explanationInputs": null,
+        "categoryRules": null
+      },
+      "grade": null,
+      "scoreReady": false
+    },
+    {
+      "id": "fresh-broccoli",
+      "name": "Broccoli, raw edible portion",
+      "role": "fresh vegetable",
+      "validIntake": true,
+      "issues": [
+        {
+          "severity": "warning",
+          "code": "optional-gtin-unknown-scoring-still-requires-it",
+          "path": "product.gtin"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.publishedOn"
+        },
+        {
+          "severity": "warning",
+          "code": "source-date-unknown",
+          "path": "source.revisionOn"
+        }
+      ],
+      "coverage": {
+        "present": [
+          "calories",
+          "totalSugar",
+          "sodium",
+          "fiber",
+          "protein",
+          "fat",
+          "carbohydrates"
+        ],
+        "missing": [
+          "saturatedFat",
+          "addedSugar"
+        ],
+        "ambiguous": [],
+        "conflicting": [],
+        "numericProfileComplete": false,
+        "freshness": {
+          "retrievedOn": "2026-10-19",
+          "publishedOn": null,
+          "revisionOn": null,
+          "labelVersion": "Legacy voluntary-program poster; exact web revision unknown",
+          "labelObservedOn": "2026-10-19",
+          "reviewedOn": "2026-10-19",
+          "reviewDueOn": "2027-10-19",
+          "engineFreshnessReasons": [],
+          "currentRetailFormulationEstablished": false
+        },
+        "marketClaim": "US",
+        "formulationEvidence": "us-oriented-observation",
+        "formulationAcceptedByScorer": false,
+        "recovery": [
+          {
+            "field": "saturatedFat,addedSugar",
+            "url": "https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/nutrition-information-raw-vegetables",
+            "status": "candidate-requires-verification",
+            "reason": "A separate reviewed USDA generic composition record is a research candidate, not a branded replacement. Do not splice its nutrients into this FDA table."
+          }
+        ],
+        "recoverableFromExistingSource": [],
+        "unknowns": {
+          "ingredients": "unknown",
+          "foodGroups": true,
+          "wholeGrains": true,
+          "fatQuality": true,
+          "sourceRevision": true
+        }
+      },
+      "eligibility": {
+        "eligible": false,
+        "engineEligible": false,
+        "inputStatus": "not-enough-data",
+        "intakeRejectionReasons": [],
+        "engineRejectionReasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.brand"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.packageDescription"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "primary-label-evidence-missing",
+            "path": "source.kind"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.saturatedFat"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "added-sugars-missing",
+            "path": "nutrients.addedSugar"
+          }
+        ],
+        "engineReasonCodes": [
+          "product-identity-incomplete",
+          "primary-label-evidence-missing",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "required-nutrient-missing",
+          "added-sugars-missing"
+        ]
+      },
+      "result": {
+        "methodId": "trace-us-nutrient-profile",
+        "methodVersion": "0.1-research-A",
+        "methodStatus": "research-not-frozen",
+        "grade": null,
+        "scoreReady": false,
+        "inputStatus": "not-enough-data",
+        "eligible": false,
+        "reasons": [
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.gtin"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.brand"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "product-identity-incomplete",
+            "path": "product.packageDescription"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "primary-label-evidence-missing",
+            "path": "source.kind"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "source.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "provenance-incomplete",
+            "path": "review.product"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "us-formulation-unverified",
+            "path": "review.decision"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "required-nutrient-missing",
+            "path": "nutrients.saturatedFat"
+          },
+          {
+            "status": "not-enough-data",
+            "code": "added-sugars-missing",
+            "path": "nutrients.addedSugar"
+          }
+        ],
+        "reasonCodes": [
+          "product-identity-incomplete",
+          "primary-label-evidence-missing",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "required-nutrient-missing",
+          "added-sugars-missing"
+        ],
+        "warnings": [
+          "experimental-not-scientifically-validated",
+          "not-a-complete-food-quality-assessment",
+          "food-matrix-and-fat-quality-not-scored",
+          "no-consumer-grade"
+        ],
+        "experimentalRawScore": null,
+        "experimentalScore": null,
+        "components": null,
+        "fiberAdjustment": null,
+        "contributions": null,
+        "explanationInputs": null,
+        "categoryRules": null
+      },
+      "grade": null,
+      "scoreReady": false
+    }
+  ],
+  "inputFiles": [
+    {
+      "path": "docs/nutrition-label-intake/2026-10-19/intake.json",
+      "sha256": "27edb10a44cebe2cfca39cd2f055ee77db97b5016c849405e8982944f0ab5119"
+    },
+    {
+      "path": "docs/reviewed-us-manufacturer-labels/2026-10-19/reviews.json",
+      "sha256": "b59dbdd378965663b9343b8ed78507e51ac654b17ce7ed8c42e3257f2ed58a4f"
+    }
+  ],
+  "reviewApplication": {
+    "automaticPromotion": false,
+    "dispositions": [
+      {
+        "productId": "plain-yogurt",
+        "status": "completed",
+        "reason": "Individual primary-document review completed for the dated label observation; no retail-product or barcode match asserted."
+      },
+      {
+        "productId": "sweetened-yogurt",
+        "status": "completed",
+        "reason": "Individual primary-document review completed for the dated label observation; no retail-product or barcode match asserted."
+      },
+      {
+        "productId": "whole-grain-cereal",
+        "status": "pending",
+        "reason": "US panel and ingredients are available, but the linked 15 oz front illustration is not a matched back-panel edition. Package/presentation-to-panel reconciliation remains incomplete; no new route granted."
+      }
+    ],
+    "untouchedObservations": 16
+  }
+}

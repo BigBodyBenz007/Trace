@@ -3,6 +3,7 @@ const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const { METHOD_ID, METHOD_VERSION } = require("../../src/services/experimentalUsNutritionScoring");
 const { analyzeCollection, scoringInput } = require("./us-nutrition-label-intake.cjs");
+const { assertEngineCompatibility } = require("./us-nutrition-engine-compatibility.cjs");
 const clone = v => JSON.parse(JSON.stringify(v));
 const digest = bytes => crypto.createHash("sha256").update(bytes).digest("hex");
 
@@ -12,8 +13,7 @@ function importArchive({ catalog, captures, results, engineSource }) {
   assert.equal(results.schemaVersion, 1);
   assert.equal(captures.capturedOn, catalog.researchAsOf);
   assert.equal(results.asOf, catalog.researchAsOf);
-  assert.equal(digest(engineSource.replace(/\r\n/g, "\n")), catalog.engineNormalizedSourceSha256,
-    "Engine differs from the archived research edition");
+  assertEngineCompatibility(engineSource, catalog.engineNormalizedSourceSha256, 1);
   assert.equal(results.engineNormalizedSourceSha256, catalog.engineNormalizedSourceSha256);
   assert.equal(new Set(catalog.products.map(r => r.id)).size, catalog.products.length);
   assert.equal(new Set(results.results.map(r => r.productId)).size, catalog.products.length);

@@ -80,7 +80,7 @@ for (const [name, mutation, expected] of [
   ["source attribution missing", r => { r.source.attribution = null; }, "source-attribution-incomplete"],
   ["non-HTTPS source", r => { r.source.url = "http://example.com"; }, "invalid-source-url"],
   ["missing hash", r => { r.source.artifact.sha256 = null; }, "artifact-provenance-incomplete"],
-  ["unknown version", r => { r.schemaVersion = 2; }, "unsupported-intake-version"],
+  ["unknown version", r => { r.schemaVersion = 99; }, "unsupported-intake-version"],
   ["missing servings unknown", r => { delete r.serving.servingsPerContainer; }, "explicit-unknown-required"],
   ["invalid container count", r => { r.serving.servingsPerContainer = { value: 0, qualifier: "exact" }; }, "invalid-servings-per-container"],
 ]) test(`synthetic rejection: ${name}`, () => {

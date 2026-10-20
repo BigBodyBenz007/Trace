@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "editions": [
+    {
+      "id": "reviewed-us-label-identity-v1",
+      "methodId": "trace-us-nutrient-profile",
+      "methodVersion": "0.1-research-A",
+      "engineSha256": "0ba37e61628f43cef4b2629547db1875d1fab74211936a33b7cdfc559ef81335",
+      "identityValidatorSha256": "54c382f4ed3264840d24d7098437120f50fd646d04bc69f6036d66424801e686",
+      "replaysLegacySha256": [
+        "afe23fa9a76b5b5801513c96add0243106cb9ddce8a2f99a86c0d6af1f2c1aa0"
+      ],
+      "compatibility": "Legacy inputs and exact historical results remain unchanged; new identity requires explicit versioned review evidence."
+    }
+  ]
+}

@@ -1,4 +1,5 @@
-// INTERNAL RESEARCH ONLY. No imports, storage, I/O, runtime clock or public grade.
+// INTERNAL RESEARCH ONLY. Pure local modules; no storage, I/O, runtime clock or public grade.
+const { REVIEWED_US_LABEL, validateReviewedManufacturerLabelIdentity, labelIdentityResult } = require("./reviewedManufacturerLabelIdentity");
 const METHOD_ID = "trace-us-nutrient-profile";
 const METHOD_VERSION = "0.1-research-A";
 const UNITS = Object.freeze({ calories: "kcal", saturatedFat: "g", addedSugar: "g",
@@ -42,8 +43,10 @@ function gtin(value) {
   return (10 - sum % 10) % 10 === Number(value[value.length - 1]) ? value.padStart(14, "0") : null;
 }
 
-function sameProduct(left, right) {
-  return object(left) && object(right) && gtin(left.gtin) !== null && gtin(left.gtin) === gtin(right.gtin)
+function sameProduct(left, right, reviewedLabel = false) {
+  return object(left) && object(right)
+    && ((reviewedLabel && left.gtin === null && right.gtin === null)
+      || (gtin(left.gtin) !== null && gtin(left.gtin) === gtin(right.gtin)))
     && PRODUCT_FIELDS.filter((key) => key !== "gtin").every((key) => left[key] === right[key]);
 }
 
@@ -51,8 +54,9 @@ function productCopy(product) {
   return Object.fromEntries(PRODUCT_FIELDS.map((key) => [key, product[key]]));
 }
 
-function completeProduct(product) {
-  return object(product) && PRODUCT_FIELDS.every((key) => text(product[key])) && gtin(product.gtin) !== null;
+function completeProduct(product, reviewedLabel = false) {
+  return object(product) && PRODUCT_FIELDS.every((key) => key === "gtin" && reviewedLabel && product.gtin === null ? true : text(product[key]))
+    && ((reviewedLabel && product.gtin === null) || gtin(product.gtin) !== null);
 }
 
 function assess(input) {
@@ -67,10 +71,16 @@ function assess(input) {
     else if (date(value) === null) invalid("invalid-date", path);
   };
   if (!object(input)) return { reasons: [{ status: "invalid-data", code: "input-not-object", path: "input" }] };
+  const reviewedLabel = input.identity?.type === REVIEWED_US_LABEL;
+  if (own(input, "identity")) {
+    if (reviewedLabel) reasons.push(...validateReviewedManufacturerLabelIdentity(input));
+    else invalid("unsupported-identity-type", "identity.type");
+  }
   if (input.methodId !== METHOD_ID || input.methodVersion !== METHOD_VERSION) invalid("unsupported-method", "methodVersion");
   requireDate(input.asOf, "asOf");
   const product = object(input.product) ? input.product : {};
   for (const key of PRODUCT_FIELDS) {
+    if (key === "gtin" && reviewedLabel && product.gtin === null) continue;
     if (!text(product[key])) missing(key === "market" ? "us-formulation-unverified"
       : ["category", "preparation", "preparationDescription"].includes(key)
         ? "category-or-preparation-unknown" : "product-identity-incomplete", `product.${key}`);
@@ -105,8 +115,8 @@ function assess(input) {
       if (url.protocol !== "https:" || url.username || url.password) invalid("invalid-source-locator", "source.artifact.locator");
     } catch (error) { invalid("invalid-source-locator", "source.artifact.locator"); }
   }
-  if (!completeProduct(source.product)) missing("provenance-incomplete", "source.product");
-  else if (completeProduct(product) && !sameProduct(product, source.product)) reviewNeeded("source-product-mismatch", "source.product");
+  if (!completeProduct(source.product, reviewedLabel)) missing("provenance-incomplete", "source.product");
+  else if (completeProduct(product, reviewedLabel) && !sameProduct(product, source.product, reviewedLabel)) reviewNeeded("source-product-mismatch", "source.product");
   for (const field of ["id", "reviewerId", "notes", "sourceId", "sourceEdition", "artifactId"]) requireText(review[field], `review.${field}`);
   if (!hash(review.artifactSha256)) missing("provenance-incomplete", "review.artifactSha256");
   if ([review.sourceId, review.sourceEdition, review.artifactId, source.id, source.edition, artifact.id].every((value) => text(value))
@@ -115,10 +125,10 @@ function assess(input) {
     || review.artifactSha256.toLowerCase() !== artifact.sha256.toLowerCase())) {
     reviewNeeded("review-source-binding-mismatch", "review");
   }
-  if (!completeProduct(review.product)) missing("provenance-incomplete", "review.product");
-  else if (completeProduct(product) && !sameProduct(product, review.product)) reviewNeeded("review-product-mismatch", "review.product");
+  if (!completeProduct(review.product, reviewedLabel)) missing("provenance-incomplete", "review.product");
+  else if (completeProduct(product, reviewedLabel) && !sameProduct(product, review.product, reviewedLabel)) reviewNeeded("review-product-mismatch", "review.product");
   const expectedReview = source.kind === "synthetic-reference" ? "synthetic-controlled" : "independent-label-review";
-  if (review.kind !== expectedReview || review.decision !== "matched-product-market-and-label") {
+  if (review.kind !== expectedReview || review.decision !== (reviewedLabel ? "label-suitable-for-research-assessment" : "matched-product-market-and-label")) {
     missing("us-formulation-unverified", "review.decision");
   }
   if (review.consistency !== "reviewed-no-unresolved-conflict") missing("consistency-review-missing", "review.consistency");
@@ -239,6 +249,7 @@ function evaluateExperimentalUsNutrition(input) {
     reasons, reasonCodes: [...new Set(reasons.map((reason) => reason.code))], warnings,
     experimentalRawScore: null, experimentalScore: null, components: null, fiberAdjustment: null,
     contributions: null, explanationInputs: null, categoryRules: null };
+  if (input?.identity?.type === REVIEWED_US_LABEL) output.assessmentIdentity = labelIdentityResult(input, output.eligible);
   if (!output.eligible) return freeze(output);
   const { product, source, review, artifact, category, basis, nutrients, originals, transformations } = assessment;
   warnings.push(source.kind === "synthetic-reference" ? "explicitly-synthetic-input" : "reported-label-values-may-be-rounded");
@@ -250,6 +261,7 @@ function evaluateExperimentalUsNutrition(input) {
       method: "candidate-A-unmodified", consumerApproved: false, energyPenalty: false, proteinCredit: false, additivePenalty: false },
     explanationInputs: {
       asOf: input.asOf, product: productCopy(product),
+      ...(input.identity?.type === REVIEWED_US_LABEL ? { reviewedLabelIdentity: JSON.parse(JSON.stringify(input.identity)) } : {}),
       basis: { kind: category === "solid" ? "100g" : "100ml", amount: 100, unit: category === "solid" ? "g" : "ml" },
       originalBasis: { kind: basis.kind, amount: basis.amount, unit: basis.unit, sourceId: basis.sourceId,
         sourceEdition: basis.sourceEdition, field: basis.field },

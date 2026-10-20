@@ -4,6 +4,8 @@ const path = require("node:path");
 const assert = require("node:assert/strict");
 const { analyzeCollection } = require("./lib/us-nutrition-label-intake.cjs");
 const { importArchive, digest } = require("./lib/us-nutrition-label-archive.cjs");
+const { assertEngineCompatibility } = require("./lib/us-nutrition-engine-compatibility.cjs");
+const { applyReviewedLabelReviews } = require("./lib/us-nutrition-reviewed-labels.cjs");
 const ROOT = path.resolve(__dirname, "..");
 const read = file => JSON.parse(fs.readFileSync(file, "utf8").replace(/^\uFEFF/, ""));
 
@@ -23,17 +25,20 @@ function markdown(report) {
 function main(argv) {
   const options = {};
   for (let i = 0; i < argv.length; i += 2) {
-    assert(["--input", "--archive", "--output-dir"].includes(argv[i]) && argv[i + 1], "Use --input file OR --archive directory, optionally --output-dir new-directory");
+    assert(["--input", "--archive", "--output-dir", "--reviews"].includes(argv[i]) && argv[i + 1], "Use --input file OR --archive directory, optionally --output-dir new-directory and --reviews manifest");
     assert(!options[argv[i]], "Duplicate CLI option"); options[argv[i]] = argv[i + 1];
   }
   assert(!(options["--input"] && options["--archive"]), "Choose input or archive");
+  assert(!options["--reviews"] || options["--input"], "Reviews require an explicitly selected intake file");
   const provenance = [];
   let collection;
   if (options["--input"]) {
     const file = path.resolve(options["--input"]); collection = read(file);
     provenance.push({ path: path.relative(ROOT, file).replace(/\\/g, "/"), sha256: digest(fs.readFileSync(file)) });
-    const engineHash = digest(fs.readFileSync(path.join(ROOT, "src/services/experimentalUsNutritionScoring.js"), "utf8").replace(/\r\n/g, "\n"));
-    assert.equal(collection.engineNormalizedSourceSha256, engineHash, "Intake must bind the unchanged experimental engine edition");
+    if ([1, 2].includes(collection?.schemaVersion)) {
+      assertEngineCompatibility(fs.readFileSync(path.join(ROOT, "src/services/experimentalUsNutritionScoring.js"), "utf8"),
+        collection.engineNormalizedSourceSha256, collection.schemaVersion);
+    }
   } else {
     const dir = path.resolve(options["--archive"] || path.join(ROOT, "docs/nutrition-validation/2026-10-19"));
     for (const name of ["products.json", "results.json", "source-captures.json"]) {
@@ -45,7 +50,13 @@ function main(argv) {
     collection = importArchive({ catalog, captures, results: read(path.join(dir, "results.json")),
       engineSource: fs.readFileSync(path.join(ROOT, "src/services/experimentalUsNutritionScoring.js"), "utf8") });
   }
-  const report = { ...analyzeCollection(collection), inputFiles: provenance };
+  if (options["--reviews"]) {
+    const file = path.resolve(options["--reviews"]);
+    collection = applyReviewedLabelReviews(collection, read(file), fs.readFileSync(path.join(ROOT, "src/services/experimentalUsNutritionScoring.js"), "utf8"));
+    provenance.push({ path: path.relative(ROOT, file).replace(/\\/g, "/"), sha256: digest(fs.readFileSync(file)) });
+  }
+  const report = { ...analyzeCollection(collection), inputFiles: provenance,
+    ...(collection.reviewApplication ? { reviewApplication: collection.reviewApplication } : {}) };
   if (options["--output-dir"]) {
     const dir = path.resolve(options["--output-dir"]), relative = path.relative(ROOT, dir);
     assert(relative && !relative.startsWith("..") && !path.isAbsolute(relative), "Output must be a new directory inside Trace");

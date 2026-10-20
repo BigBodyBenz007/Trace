@@ -1,0 +1,321 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-10-19",
+  "status": "internal-research-curation-only",
+  "grade": null,
+  "scoreReady": false,
+  "reviewer": "Codex automated document review 2026-10-19; no independent human review",
+  "independentHumanReview": false,
+  "automaticPromotion": false,
+  "reviews": [
+    {
+      "productId": "plain-yogurt",
+      "status": "completed",
+      "reason": "Individual primary-document review completed for the dated label observation; no retail-product or barcode match asserted.",
+      "reviewId": "manufacturer-label-review:plain-yogurt:2026-10-19",
+      "product": {
+        "gtin": null,
+        "name": "Total 0% Plain Greek Yogurt 5.3 oz",
+        "brand": "FAGE",
+        "variant": "Total 0% Plain Greek Yogurt 5.3 oz",
+        "packageDescription": "5.3 oz (150 g) cup",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "spoonable-yogurt"
+      },
+      "identity": {
+        "schemaVersion": 1,
+        "type": "reviewed_us_manufacturer_label",
+        "observationId": "fage-plain-product:product-2862:first-150g-cup:2026-10-19",
+        "formulationId": "US:FAGE:plain-yogurt:150g:as-sold",
+        "manufacturer": {
+          "name": "FAGE USA",
+          "officialUrl": "https://usa.fage/",
+          "status": "reviewed-official-source"
+        },
+        "panel": {
+          "id": "product-2862:first-150g-cup",
+          "nutritionField": "product-2862.cup-150g.nutrition",
+          "ingredientsField": "product-2862.cup-150g.ingredients",
+          "presentationField": "product-2862.cup-150g.presentation",
+          "presentationStatus": "reviewed-specific-presentation",
+          "ingredientsStatus": "reviewed-same-formulation",
+          "market": "US",
+          "marketField": "FAGE-USA-product-catalog.regional-panel",
+          "marketStatus": "reviewed-US-formulation",
+          "marketStatement": "FAGE USA regional catalog links this exact 5.3 oz product and 150 g US Nutrition Facts panel; regional context, presentation and panel reviewed together, not inferred from brand alone.",
+          "sourceId": "reviewed-label:plain-yogurt",
+          "sourceEdition": "capture:2026-10-19:fage-plain-product",
+          "artifactId": "official-capture:fage-plain-product",
+          "artifactSha256": "93baf91b06794dc8a9788e902c3edd8400a3f166bd819400bf9f9366120c65c0"
+        },
+        "review": {
+          "status": "completed",
+          "reviewerId": "Codex automated document review 2026-10-19; no independent human review",
+          "reviewerType": "automated-document-review",
+          "reviewedOn": "2026-10-19",
+          "evidenceStatus": "direct-manufacturer-label",
+          "notes": "Completed automated review of this specific US primary panel, its presentation, nine nutrients and ingredients. Candidate provider records are explicitly not linked. No physical package or independent human review; no scan match."
+        }
+      },
+      "source": {
+        "id": "reviewed-label:plain-yogurt",
+        "provider": "FAGE USA",
+        "recordId": "product-2862:first-150g-cup",
+        "edition": "capture:2026-10-19:fage-plain-product",
+        "kind": "manufacturer-label",
+        "attribution": "FAGE USA",
+        "url": "https://usa.fage/products/yogurt/fage-total-0#product-2862",
+        "documentTitle": null,
+        "description": "FAGE USA Total 0% Plain Greek Yogurt 5.3 oz: reviewed label observation",
+        "provision": "product-2862:first-150g-cup",
+        "labelVersion": null,
+        "artifact": {
+          "id": "official-capture:fage-plain-product",
+          "locator": "https://usa.fage/products/yogurt/fage-total-0#product-2862",
+          "sha256": "93baf91b06794dc8a9788e902c3edd8400a3f166bd819400bf9f9366120c65c0"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null
+      },
+      "observedBasis": {
+        "kind": "serving",
+        "amount": 150,
+        "unit": "g"
+      },
+      "observedNutrients": {
+        "calories": {
+          "value": 80,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 5,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 55,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 0,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 16,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 5,
+          "unit": "g"
+        }
+      },
+      "servingsPerContainer": {
+        "value": 1,
+        "qualifier": "exact"
+      },
+      "ingredients": {
+        "text": "Grade A Pasteurized Skimmed Milk, Live Active Yogurt Cultures (L. Bulgaricus, S. Thermophilus, L. Acidophilus, Bifidus, L. Casei).",
+        "language": "en"
+      },
+      "labelObservedOn": "2026-10-19",
+      "reviewDueOn": "2027-10-19",
+      "candidateDispositions": [
+        {
+          "source": "USDA FDC 2757146",
+          "status": "not-linked-to-reviewed-formulation",
+          "reason": "Description is 6 oz, not the reviewed 5.3 oz cup; no primary GTIN link. Similar nutrient quantities do not prove equivalence."
+        }
+      ],
+      "evidenceCaptures": [
+        {
+          "id": "fage-plain-product",
+          "url": "https://usa.fage/products/yogurt/fage-total-0#product-2862",
+          "sha256": "93baf91b06794dc8a9788e902c3edd8400a3f166bd819400bf9f9366120c65c0",
+          "localOriginal": "artifacts/us-eligibility-investigation-20261019/fage-plain-product.html"
+        },
+        {
+          "id": "fage-products",
+          "url": "https://usa.fage/products",
+          "sha256": "62adbdce9b9378c459f7bc91a71d3e065096a97a4f4d476901951f7b804d4aa4",
+          "localOriginal": "artifacts/us-eligibility-investigation-20261019/fage-products.html"
+        }
+      ],
+      "limitations": [
+        "Dated manufacturer label observation only; current shelf formulation not established",
+        "GTIN remains unknown",
+        "Automated document review; no second human or physical package check"
+      ]
+    },
+    {
+      "productId": "sweetened-yogurt",
+      "status": "completed",
+      "reason": "Individual primary-document review completed for the dated label observation; no retail-product or barcode match asserted.",
+      "reviewId": "manufacturer-label-review:sweetened-yogurt:2026-10-19",
+      "product": {
+        "gtin": null,
+        "name": "Total 2% Split Cup Strawberry 5.3 oz",
+        "brand": "FAGE",
+        "variant": "Total 2% Split Cup Strawberry 5.3 oz",
+        "packageDescription": "5.3 oz (150 g) split cup",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "spoonable-yogurt"
+      },
+      "identity": {
+        "schemaVersion": 1,
+        "type": "reviewed_us_manufacturer_label",
+        "observationId": "fage-strawberry-product:strawberry-2-percent:full-150g-split-cup:2026-10-19",
+        "formulationId": "US:FAGE:sweetened-yogurt:150g:as-sold",
+        "manufacturer": {
+          "name": "FAGE USA",
+          "officialUrl": "https://usa.fage/",
+          "status": "reviewed-official-source"
+        },
+        "panel": {
+          "id": "strawberry-2-percent:full-150g-split-cup",
+          "nutritionField": "strawberry-2-percent.full-150g-cup.nutrition",
+          "ingredientsField": "strawberry-2-percent.full-150g-cup.ingredients",
+          "presentationField": "strawberry-2-percent.full-150g-cup.presentation",
+          "presentationStatus": "reviewed-specific-presentation",
+          "ingredientsStatus": "reviewed-same-formulation",
+          "market": "US",
+          "marketField": "FAGE-USA-product-catalog.regional-panel",
+          "marketStatus": "reviewed-US-formulation",
+          "marketStatement": "FAGE USA regional catalog links this exact 5.3 oz product and 150 g US Nutrition Facts panel; regional context, presentation and panel reviewed together, not inferred from brand alone.",
+          "sourceId": "reviewed-label:sweetened-yogurt",
+          "sourceEdition": "capture:2026-10-19:fage-strawberry-product",
+          "artifactId": "official-capture:fage-strawberry-product",
+          "artifactSha256": "6ac16113023dc9cf0eed246e04635f98b1230b3a531748c30cbf67afc7abe5e1"
+        },
+        "review": {
+          "status": "completed",
+          "reviewerId": "Codex automated document review 2026-10-19; no independent human review",
+          "reviewerType": "automated-document-review",
+          "reviewedOn": "2026-10-19",
+          "evidenceStatus": "direct-manufacturer-label",
+          "notes": "Completed automated review of this specific US primary panel, its presentation, nine nutrients and ingredients. Candidate provider records are explicitly not linked. No physical package or independent human review; no scan match."
+        }
+      },
+      "source": {
+        "id": "reviewed-label:sweetened-yogurt",
+        "provider": "FAGE USA",
+        "recordId": "strawberry-2-percent:full-150g-split-cup",
+        "edition": "capture:2026-10-19:fage-strawberry-product",
+        "kind": "manufacturer-label",
+        "attribution": "FAGE USA",
+        "url": "https://usa.fage/products/yogurt/fage-total-2-split-cup/fage-total-2-strawberry-53-oz",
+        "documentTitle": null,
+        "description": "FAGE USA Total 2% Split Cup Strawberry 5.3 oz: reviewed label observation",
+        "provision": "strawberry-2-percent:full-150g-split-cup",
+        "labelVersion": null,
+        "artifact": {
+          "id": "official-capture:fage-strawberry-product",
+          "locator": "https://usa.fage/products/yogurt/fage-total-2-split-cup/fage-total-2-strawberry-53-oz",
+          "sha256": "6ac16113023dc9cf0eed246e04635f98b1230b3a531748c30cbf67afc7abe5e1"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null
+      },
+      "observedBasis": {
+        "kind": "serving",
+        "amount": 150,
+        "unit": "g"
+      },
+      "observedNutrients": {
+        "calories": {
+          "value": 120,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 1.5,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 7,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 11,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 45,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 0,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 12,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 2.5,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 13,
+          "unit": "g"
+        }
+      },
+      "servingsPerContainer": {
+        "value": 1,
+        "qualifier": "exact"
+      },
+      "ingredients": {
+        "text": "STRAINED YOGURT: Grade A Pasteurized Skimmed Milk and Cream, Live Active Yogurt Cultures (L. Bulgaricus, S. Thermophilus, L. Acidophilus, Bifidus, L. Casei).\nSTRAWBERRY FRUIT PREPARATION: Strawberries, Cane Sugar, Water, Corn Starch, Contains 2% or less of: Strawberry Juice Concentrate, Lemon Juice Concentrate, Natural Flavors, Fruit Pectin.",
+        "language": "en"
+      },
+      "labelObservedOn": "2026-10-19",
+      "reviewDueOn": "2027-10-19",
+      "candidateDispositions": [
+        {
+          "source": "USDA FDC 2756927",
+          "status": "incompatible-candidate-not-merged",
+          "reason": "Candidate has 7 g total sugar and a different fruit-ingredient order, with no exact manufacturer edition/GTIN link. It is not selected or transferred."
+        }
+      ],
+      "evidenceCaptures": [
+        {
+          "id": "fage-strawberry-product",
+          "url": "https://usa.fage/products/yogurt/fage-total-2-split-cup/fage-total-2-strawberry-53-oz",
+          "sha256": "6ac16113023dc9cf0eed246e04635f98b1230b3a531748c30cbf67afc7abe5e1",
+          "localOriginal": "artifacts/us-eligibility-investigation-20261019/fage-strawberry-product.html"
+        },
+        {
+          "id": "fage-products",
+          "url": "https://usa.fage/products",
+          "sha256": "62adbdce9b9378c459f7bc91a71d3e065096a97a4f4d476901951f7b804d4aa4",
+          "localOriginal": "artifacts/us-eligibility-investigation-20261019/fage-products.html"
+        }
+      ],
+      "limitations": [
+        "Dated manufacturer label observation only; current shelf formulation not established",
+        "GTIN remains unknown",
+        "Automated document review; no second human or physical package check"
+      ]
+    },
+    {
+      "productId": "whole-grain-cereal",
+      "status": "pending",
+      "reason": "US panel and ingredients are available, but the linked 15 oz front illustration is not a matched back-panel edition. Package/presentation-to-panel reconciliation remains incomplete; no new route granted."
+    }
+  ]
+}

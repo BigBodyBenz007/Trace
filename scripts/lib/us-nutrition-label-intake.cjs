@@ -3,6 +3,8 @@ const { METHOD_ID, METHOD_VERSION, REQUIRED_NUTRIENT_UNITS, evaluateExperimental
   require("../../src/services/experimentalUsNutritionScoring");
 
 const VERSION = 1;
+const REVIEWED_LABEL_VERSION = 2;
+const REVIEWED_US_LABEL = "reviewed_us_manufacturer_label";
 const KEYS = Object.keys(REQUIRED_NUTRIENT_UNITS);
 const MASS = new Map([["g", 1], ["mg", .001], ["mcg", .000001], ["ug", .000001], ["µg", .000001], ["μg", .000001]]);
 const object = v => v !== null && typeof v === "object" && !Array.isArray(v);
@@ -45,7 +47,8 @@ function scoringInput(record, asOf) {
   return { methodId: METHOD_ID, methodVersion: METHOD_VERSION, asOf,
     product: copy(record.product || {}), source: copy(record.source || {}),
     review: copy(record.review || {}), sourceState: copy(record.sourceState || {}),
-    basis: copy(dataset?.basis || {}), nutrients: copy(dataset?.nutrients || {}) };
+    basis: copy(dataset?.basis || {}), nutrients: copy(dataset?.nutrients || {}),
+    ...(own(record, "identity") ? { identity: copy(record.identity ?? null) } : {}) };
 }
 
 function validateRecord(record, asOf) {
@@ -60,7 +63,9 @@ function validateRecord(record, asOf) {
     }
   };
   if (!object(record)) return [{ severity: "error", code: "record-not-object", path: "record" }];
-  if (record.schemaVersion !== VERSION) error("unsupported-intake-version", "schemaVersion");
+  if (![VERSION, REVIEWED_LABEL_VERSION].includes(record.schemaVersion)) error("unsupported-intake-version", "schemaVersion");
+  if (record.schemaVersion === REVIEWED_LABEL_VERSION && record.identity?.type !== REVIEWED_US_LABEL) error("reviewed-label-identity-required", "identity");
+  if (record.schemaVersion === VERSION && own(record, "identity")) error("identity-requires-intake-version-2", "identity");
   if (!text(record.id)) error("record-id-missing", "id");
   if (date(asOf) === null) error("invalid-as-of", "asOf");
   const p = record.product || {};
@@ -69,7 +74,7 @@ function validateRecord(record, asOf) {
     nullableText(p[key], `product.${key}`);
   }
   if (p.gtin !== null && !canonicalGtin(p.gtin)) error("invalid-gtin", "product.gtin");
-  if (p.gtin === null) warning("optional-gtin-unknown-scoring-still-requires-it", "product.gtin");
+  if (p.gtin === null) warning(record.schemaVersion === REVIEWED_LABEL_VERSION ? "gtin-unknown-no-scan-match" : "optional-gtin-unknown-scoring-still-requires-it", "product.gtin");
   const s = record.source || {};
   for (const key of ["id", "edition", "provider", "recordId", "kind", "attribution", "description", "provision"]) {
     if (!text(s[key])) error("source-attribution-incomplete", `source.${key}`);
@@ -101,7 +106,8 @@ function validateRecord(record, asOf) {
     binding(market, "marketEvidence");
     if (!text(market.statement) || market.claim !== p.market) error("market-evidence-inconsistent", "marketEvidence");
   } else if (market.claim !== null || p.market !== null) error("market-claim-without-evidence", "marketEvidence");
-  if (record.review?.decision === "matched-product-market-and-label" && market.verification !== "matched-formulation") {
+  if (["matched-product-market-and-label", "label-suitable-for-research-assessment"].includes(record.review?.decision)
+    && market.verification !== "matched-formulation") {
     error("formulation-review-unsupported", "marketEvidence.verification");
   }
   const serving = record.serving || {};
@@ -166,6 +172,14 @@ function validateRecord(record, asOf) {
   }
   if (!text(record.selectedDatasetId) || !ids.has(record.selectedDatasetId)) error("selected-dataset-missing", "selectedDatasetId");
   const ingredients = record.ingredients;
+  if (record.schemaVersion === REVIEWED_LABEL_VERSION) {
+    if (ingredients?.status !== "transcribed" || ingredients?.provenance?.field !== record.identity?.panel?.ingredientsField) {
+      error("reviewed-label-ingredients-unbound", "ingredients");
+    }
+    if (market.field !== record.identity?.panel?.marketField || market.statement !== record.identity?.panel?.marketStatement) {
+      error("reviewed-label-market-unbound", "marketEvidence");
+    }
+  }
   if (!object(ingredients) || !["transcribed", "not-transcribed", "unknown"].includes(ingredients.status)) error("ingredients-state-invalid", "ingredients");
   else {
     nullableText(ingredients.text, "ingredients.text"); nullableText(ingredients.language, "ingredients.language");
@@ -204,7 +218,7 @@ function validateRecord(record, asOf) {
 
 function analyzeCollection(collection) {
   const rootIssues = [];
-  if (!object(collection) || collection.schemaVersion !== VERSION || date(collection.asOf) === null || !Array.isArray(collection.records)) {
+  if (!object(collection) || ![VERSION, REVIEWED_LABEL_VERSION].includes(collection.schemaVersion) || date(collection.asOf) === null || !Array.isArray(collection.records)) {
     return { schemaVersion: VERSION, grade: null, scoreReady: false, valid: false,
       issues: [{ severity: "error", code: "invalid-intake-collection", path: "collection" }], summary: null, records: [] };
   }
@@ -216,9 +230,19 @@ function analyzeCollection(collection) {
     input: scoringInput(object(record) ? record : {}, collection.asOf),
   }));
   const flag = (i, code, path) => reports[i].issues.push({ severity: "error", code, path });
-  const seen = new Map(), editions = new Map(), products = new Map();
+  const seen = new Map(), editions = new Map(), products = new Map(), observations = new Map();
   collection.records.forEach((record, i) => {
     if (!object(record)) return;
+    if (collection.schemaVersion === VERSION && record.schemaVersion !== VERSION) flag(i, "collection-version-mismatch", "schemaVersion");
+    if (record.identity?.type === REVIEWED_US_LABEL) {
+      const identity = record.identity;
+      const key = JSON.stringify([identity.manufacturer?.officialUrl, identity.formulationId, identity.panel?.id,
+        record.source?.edition]);
+      if (observations.has(key)) {
+        flag(i, "duplicate-reviewed-label-observation", "identity");
+        flag(observations.get(key), "duplicate-reviewed-label-observation", "identity");
+      } else observations.set(key, i);
+    }
     if (seen.has(record.id)) {
       const j = seen.get(record.id);
       const code = JSON.stringify(record) === JSON.stringify(collection.records[j]) ? "duplicate-record" : "conflicting-record-id";
@@ -258,7 +282,8 @@ function analyzeCollection(collection) {
     const safeResult = eligible ? result : { ...result, eligible: false,
       inputStatus: errors.length ? "invalid-intake" : result.inputStatus,
       experimentalRawScore: null, experimentalScore: null,
-      components: null, contributions: null, fiberAdjustment: null, explanationInputs: null, categoryRules: null };
+      components: null, contributions: null, fiberAdjustment: null, explanationInputs: null, categoryRules: null,
+      ...(result.assessmentIdentity ? { assessmentIdentity: { ...result.assessmentIdentity, assessmentEligible: false } } : {}) };
     return { id: report.id, name: input.product.name ?? null, role: record.role ?? null,
       validIntake: errors.length === 0, issues: report.issues,
       coverage: { present, missing, ambiguous,
@@ -282,7 +307,7 @@ function analyzeCollection(collection) {
         intakeRejectionReasons: errors, engineRejectionReasons: result.reasons, engineReasonCodes: result.reasonCodes },
       result: safeResult, grade: null, scoreReady: false };
   });
-  return { schemaVersion: VERSION, asOf: collection.asOf, methodId: METHOD_ID, methodVersion: METHOD_VERSION,
+  return { schemaVersion: collection.schemaVersion, asOf: collection.asOf, methodId: METHOD_ID, methodVersion: METHOD_VERSION,
     grade: null, scoreReady: false, valid: rootIssues.length === 0 && records.every(r => r.validIntake), issues: rootIssues,
     summary: { observations: records.length, completeNineNutrients: records.filter(r => r.coverage.numericProfileComplete).length,
       missingNutrition: records.filter(r => r.coverage.missing.length).length, eligible: records.filter(r => r.eligibility.eligible).length,
@@ -293,4 +318,4 @@ function analyzeCollection(collection) {
     samplingCaution: "Purposive observations only; no national coverage estimate or scientific validation.", records };
 }
 
-module.exports = { VERSION, KEYS, canonicalValue, canonicalGtin, scoringInput, validateRecord, analyzeCollection };
+module.exports = { VERSION, REVIEWED_LABEL_VERSION, KEYS, canonicalValue, canonicalGtin, scoringInput, validateRecord, analyzeCollection };

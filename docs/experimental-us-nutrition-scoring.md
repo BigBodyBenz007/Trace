@@ -9,15 +9,17 @@ to show a consumer grade. The earlier research reports remain unchanged.
 
 ## Isolation and method
 
-`src/services/experimentalUsNutritionScoring.js` has no imports and no storage,
-network, UI, provider, regulatory, additive or runtime-clock dependencies. Its
+`src/services/experimentalUsNutritionScoring.js` imports only its pure local
+reviewed-label identity validator. It has no storage, network, UI, provider,
+regulatory, additive or runtime-clock dependencies. Its
 only evaluator is `evaluateExperimentalUsNutrition(input)`. No existing application
 file imports it; it is exercised by focused tests. It cannot enrich missing data,
 look up an artifact or authenticate a reviewer's claims.
 
 The existing assessment contract, lookup/cache formats and saved records are
-unchanged. There is no adapter, migration, persistence, score display or call from
-barcode review or Nutrition. Every result, eligible or rejected, has
+unchanged. Offline research intake has its own adapter; no adapter connects this
+evaluator to barcode review, Nutrition, logging or saved records. There is no
+migration, public persistence or score display. Every result, eligible or rejected, has
 `grade: null`, `scoreReady: false`, and `methodStatus: research-not-frozen`.
 Existing assessment quality continues to report `scoreReady: false`; no public
 grade field is added to the existing contract.
@@ -66,7 +68,7 @@ cache entries do not meet it merely by being log-ready or nutrient-complete.
 | Field | Required content |
 | --- | --- |
 | `methodId`, `methodVersion`, `asOf` | Exact method constants; explicit `YYYY-MM-DD` UTC assessment date. No default to today's date. |
-| `product` | GTIN, name, brand, variant, packageDescription, preparation, preparationDescription, market and category; all explicit nonempty strings. GTIN accepts 8/12/13/14 digits with valid check digit, retains leading zeros, and matches equivalent padded forms for identity binding. |
+| `product` | Name, brand, variant, packageDescription, preparation, preparationDescription, market and category are explicit nonempty strings. Legacy inputs require GTIN (8/12/13/14 digits with valid check digit). The explicit reviewed-label route permits GTIN=null; it never invents a barcode. |
 | `basis` | `kind`: `100g`, `100ml` or `serving`; positive numeric `amount`, `unit`: `g` or `ml`, `sourceId`, `sourceEdition`, original source `field`. A 100-reference must actually declare 100 of its stated unit. |
 | `nutrients` | Nine measurements keyed by `calories`, `saturatedFat`, `addedSugar`, `totalSugar`, `sodium`, `fiber`, `protein`, `fat`, `carbohydrates`. Each requires numeric `value`, `unit`, `sourceId`, `sourceEdition`, `field`. Numeric strings, booleans, missing, negative and nonfinite values are not known amounts. |
 | `source` | ID, provider, recordId, edition, attribution, kind, artifact, matching product identity, retrievedOn, publishedOn and revisionOn. Publication/revision may be explicitly null; they cannot silently disappear or replace observation/review dates. |
@@ -84,6 +86,14 @@ These fields validate a controlled review record's structure and consistency;
 they do not cryptographically certify that someone performed a truthful review.
 Production trust/curation infrastructure is outside this experiment.
 
+The additional [reviewed US manufacturer-label route](reviewed-us-manufacturer-label-identity.md)
+requires versioned `identity`, direct official-manufacturer/panel/formulation
+evidence and a completed review. Its decision is
+`label-suitable-for-research-assessment`, distinct from the legacy decision above.
+It always returns `assessmentIdentity.scanMatch.eligible=false`: an assessment
+does not establish a match to a scanned item. Legacy inputs/results are unchanged.
+The formula/method version below has not changed; this is an identity extension.
+
 Root, source and review product snapshots must match, including US market,
 category, variant, package and preparation. US country claims from a provider,
 language, GTIN alone, source URL or current retrieval cannot supply missing primary
@@ -93,6 +103,9 @@ scope; malformed/unknown labels (including `XX` and `ZZ`) remain insufficient
 data. This is a serialization check, not an independent country-code or market
 verification service.
 There is no generic-food substitution or ingredient-based identity inference.
+Reviewed-label snapshots must also agree on a stable formulation ID and their
+product identity, including explicit null GTIN when unknown. The new route does
+not waive the original source, date, nutrients, basis, category or conflict checks.
 
 `preparation` is `as-sold` or `as-prepared`, with an explicit description. A prepared
 snapshot also needs artifact-bound `source.preparationEvidence` containing

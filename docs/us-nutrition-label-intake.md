@@ -1,4 +1,4 @@
-# Offline US nutrition-label intake, version 1
+# Offline US nutrition-label intake, versions 1 and 2
 
 Research checkpoint: 2026-10-19. This tool validates local, reviewed observations;
 it does not fetch labels, authenticate manufacturers, change eligibility policy,
@@ -10,9 +10,9 @@ to documentation/tool output. No application file imports the tool.
 
 - `scripts/lib/us-nutrition-label-intake.cjs`: versioned contract validation,
   collection conflict checks, coverage analysis and a narrow adapter to the
-  unchanged experimental engine. No I/O, network or current-time dependency.
+  experimental engine. No I/O, network or current-time dependency.
 - `scripts/lib/us-nutrition-label-archive.cjs`: explicit import of the existing
-  reviewed observations. Checks source bindings, unchanged engine hash, original
+  reviewed observations. Checks source bindings, registered compatible engine hashes, original
   quantities/units, exact rejection reasons and research results. It is an
   archive adapter, not a general label scraper or ingredient parser.
 - `scripts/validate-us-nutrition-labels.cjs`: Node-built-in-only CLI. Reads an
@@ -20,6 +20,12 @@ to documentation/tool output. No application file imports the tool.
   reasons) to stdout. Full coverage files require an explicitly requested new
   output directory. Checks the engine's normalized source hash.
   Archive import also checks original catalog/capture-manifest byte hashes.
+- `scripts/lib/us-nutrition-engine-compatibility.cjs`: explicit engine/identity
+  validator edition bindings. Version 1 historical pins replay only through a
+  registered compatible implementation; unknown editions fail. Version 2 inputs
+  require the current exact engine hash. Original archive hashes stay unchanged.
+- `scripts/lib/us-nutrition-reviewed-labels.cjs`: explicit completed-review
+  overlays; no review is inferred from a manufacturer URL or existing row.
 - [Initial intake and coverage](nutrition-label-intake/2026-10-19/README.md): new
   snapshots, leaving the six prior research files unchanged. `intake.json`
   preserves the observations; `coverage.json` includes every engine reason/path,
@@ -48,9 +54,9 @@ dependency installation or production build.
 
 ## Intake contract
 
-The JSON collection contains `schemaVersion: 1`, an explicit ISO `asOf`, exact
+The legacy JSON collection contains `schemaVersion: 1`, an explicit ISO `asOf`, exact
 `methodId`/`methodVersion`, `engineNormalizedSourceSha256`, and `records`.
-The CLI refuses an absent/different engine hash. Method constants remain
+The CLI refuses an absent/unregistered engine hash. Method constants remain
 `trace-us-nutrient-profile` / `0.1-research-A`.
 
 Each record contains:
@@ -68,6 +74,30 @@ Each record contains:
 | `foodGroups`, `wholeGrains`, `fatQuality` | Evidence arrays, not inferred health claims. Empty arrays mean no captured evidence, not zero content. Claims carry description, nullable value/unit/basis description and URL/field/source/edition/artifact verification. Quantitative fat observations also bind a dataset ID. |
 | `recovery` | Target field, source URL, reason and explicit recovery status described below. Documented fields also bind the source edition. Entries never fill values or establish formulation identity. |
 | `limitations`, `lineage` | Original qualifications, prior observation ID/verification description and local original-capture path/hash/size. Local paths are descriptive, never automatically opened by the importer. |
+
+### Explicit reviewed-label intake, version 2
+
+Version 1 retains its original semantics. A version 2 collection may include
+unchanged version 1 rows alongside version 2 rows using explicit
+`identity.type=reviewed_us_manufacturer_label`. A version 1 collection cannot
+silently use that identity. The full evidence requirements and assessment/scan
+distinction are in the [identity contract](reviewed-us-manufacturer-label-identity.md).
+
+Version 2 requires transcribed ingredient provenance and market evidence to
+agree with the reviewed panel. Duplicate formulation/panel/source-edition
+observations require reconciliation even when their GTINs are null. Neither
+the engine nor the harness treats missing identifiers as scan matches.
+
+Reviews are applied only with explicit input and manifest arguments:
+
+```powershell
+node scripts/validate-us-nutrition-labels.cjs --input docs/nutrition-label-intake/2026-10-19/intake.json --reviews docs/reviewed-us-manufacturer-labels/2026-10-19/reviews.json
+```
+
+Completed reviews must reproduce the original nine amounts/units and serving
+basis exactly. The overlay refuses nutrient changes, fabricated GTINs and clearing
+unresolved historical conflicts. Pending reviews leave their original row intact.
+The new research evaluation is saved separately; no old archive is rewritten.
 
 Source kinds distinguish manufacturer/package labels, retailer labels, government
 composition, provider observations and synthetic references. Unknown kinds are
