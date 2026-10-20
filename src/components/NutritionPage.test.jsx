@@ -620,6 +620,8 @@ test("provides matching timeline navigation controls without changing draft or s
 
   expect(navigationButtons).toHaveLength(2);
   expect(navigationButtons[1]).toBe(bottomButton);
+  expect(navigationButtons[0].compareDocumentPosition(screen.getByRole("heading", { name: "Nutrition", exact: true })) & Node.DOCUMENT_POSITION_FOLLOWING)
+    .not.toBe(0);
   [
     screen.getByRole("heading", { name: "Find a Food" }),
     screen.getByRole("heading", { name: "Add Nutrition Entry" }),

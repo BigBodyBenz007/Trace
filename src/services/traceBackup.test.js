@@ -237,6 +237,68 @@ test("measurably insufficient heap fails before creating or presenting an archiv
   expect(BlobConstructor).not.toHaveBeenCalled();
 });
 
+test("synthetic 85-photo and one-attachment archive validates without writing and preserves source identity on destination replacement", async () => {
+  const timestamp = "2026-09-11T12:00:00.000Z";
+  const photos = Array.from({ length: 85 }, (_, index) => ({
+    id: `synthetic-photo-${index}`, memoryId: "synthetic-memory", createdAt: timestamp,
+    blob: new Blob([`synthetic bytes ${index}`], { type: "image/jpeg" }),
+  }));
+  const memory = { id: "synthetic-memory", date: "1999-06-12", createdAt: timestamp, updatedAt: timestamp, images: photos.map(photo => photo.id) };
+  const capsule = timeCapsuleFixture();
+  const attachment = { id: "capsule-audio", capsuleId: capsule.id, kind: "audio", name: "voice.m4a", mimeType: "audio/mp4", bytes: 5, durationMs: 1200, blob: new Blob(["voice"], { type: "audio/mp4" }) };
+  const source = makeStorage({ memories: JSON.stringify([memory]), timeCapsules: JSON.stringify([capsule]) });
+  const sourceDatabase = makeDatabaseWithMedia(photos, [attachment]);
+  const archive = await createTraceBackupArchive({ storage: source, openDatabase: async () => sourceDatabase });
+  source.setItem.mockClear(); source.removeItem.mockClear();
+  const preview = await parseTraceBackupText(await readBlobText(archive.contents));
+  expect(preview.summary).toMatchObject({ memories: 1, photos: 85, timeCapsules: 1, capsuleMedia: 1 });
+  expect(Object.keys(preview.backup.data.structured).sort()).toEqual([...TRACE_STORAGE_KEYS].sort());
+  expect(source.setItem).not.toHaveBeenCalled(); expect(source.removeItem).not.toHaveBeenCalled();
+  const destination = makeStorage({ memories: JSON.stringify([{ id: "laptop-only" }]) });
+  const destinationDatabase = makeDatabaseWithMedia([{ id: "laptop-photo", blob: new Blob(["old"]) }], []);
+  await restoreTraceBackup(preview.backup, { confirmed: true, storage: destination, openDatabase: async () => destinationDatabase });
+  expect(JSON.parse(destination.value("memories"))).toEqual([memory]);
+  expect(JSON.parse(destination.value("timeCapsules"))).toEqual([capsule]);
+  expect(destinationDatabase.records("photos").map(({ id, createdAt, memoryId }) => ({ id, createdAt, memoryId })))
+    .toEqual(photos.map(({ id, createdAt, memoryId }) => ({ id, createdAt, memoryId })));
+  expect(await readBlobText(destinationDatabase.records("photos")[84].blob)).toBe("synthetic bytes 84");
+  expect(await readBlobText(destinationDatabase.records("media")[0].blob)).toBe("voice");
+  expect(source.value("memories")).toBe(JSON.stringify([memory]));
+  expect(sourceDatabase.records("photos")).toHaveLength(85);
+  expect(source.setItem).not.toHaveBeenCalled(); expect(source.removeItem).not.toHaveBeenCalled();
+});
+
+test("195 MB size estimation and insufficient-export-memory rejection do not allocate a large archive", async () => {
+  // Size-only stand-in: no 195 MB payload is allocated and no large restore is claimed.
+  const photo = { id: "size-only", memoryId: "synthetic", blob: new Blob(["tiny"]) };
+  Object.defineProperty(photo.blob, "size", { value: 146475000 });
+  const storage = makeStorage();
+  const openDatabase = async () => makePhotoDatabase([photo]);
+  const estimate = await estimateTraceBackupSize({ storage, openDatabase });
+  expect(estimate.encodedPhotoBytes).toBeGreaterThanOrEqual(195300000);
+  expect(estimate.isLarge).toBe(true);
+  const BlobConstructor = jest.fn();
+  await expect(createTraceBackupArchive({ storage, openDatabase, BlobConstructor,
+    performanceObject: { memory: { jsHeapSizeLimit: 256 * 1024 * 1024, usedJSHeapSize: 32 * 1024 * 1024 } },
+  })).rejects.toThrow(/enough working memory/i);
+  expect(BlobConstructor).not.toHaveBeenCalled();
+  expect(storage.setItem).not.toHaveBeenCalled(); expect(storage.removeItem).not.toHaveBeenCalled();
+});
+
+test("a second storage failure can defeat rollback and must not be reported as a preserved archive", async () => {
+  const original = JSON.stringify([{ id: "original" }]);
+  const storage = makeStorage({ memories: original }, "workoutEntries");
+  const setItem = storage.setItem.getMockImplementation();
+  storage.setItem.mockImplementation((key, value) => {
+    if (key === "memories" && value === original) throw new Error("rollback storage unavailable");
+    return setItem(key, value);
+  });
+  const value = backup({ data: { structured: emptyStructured({ memories: [{ id: "replacement" }] }), photos: [] } });
+  await expect(restoreTraceBackup(value, { confirmed: true, storage, openDatabase: async () => makePhotoDatabase() }))
+    .rejects.toThrow(/automatic rollback could not be completed/i);
+  expect(storage.value("memories")).toBe(JSON.stringify([{ id: "replacement" }]));
+});
+
 function cloneJsonForTest(value) {
   return JSON.parse(JSON.stringify(value));
 }

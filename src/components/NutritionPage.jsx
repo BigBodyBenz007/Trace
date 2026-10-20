@@ -1147,6 +1147,20 @@ function NutritionPage({
   return (
     <div className="trace-feature-page trace-feature-page--nutrition" ref={nutritionPageTopRef} data-testid="nutrition-page" style={containerStyle}>
       <ConfirmationMessage message={confirmationMessage} />
+      <button
+        className="trace-action trace-action--secondary trace-nutrition-back"
+        type="button"
+        onClick={backToTimeline}
+        style={{
+          ...buttonStyle,
+          backgroundColor: "#666",
+          marginBottom: "24px",
+          marginTop: 0,
+        }}
+      >
+        Back to Timeline
+      </button>
+
       <NutritionSummary
         entries={nutritionEntries}
         goals={nutritionGoals}
@@ -1162,20 +1176,6 @@ function NutritionPage({
           searchInput?.scrollIntoView?.({ behavior: motionScrollBehavior(), block: "center" });
         }}
       />
-
-      <button
-        className="trace-action trace-action--secondary trace-nutrition-back"
-        type="button"
-        onClick={backToTimeline}
-        style={{
-          ...buttonStyle,
-          backgroundColor: "#666",
-          marginBottom: "24px",
-          marginTop: 0,
-        }}
-      >
-        Back to Timeline
-      </button>
 
       {nutritionRecovery && (
         nutritionRecovery.status === "blocked" ||
