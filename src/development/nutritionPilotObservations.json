@@ -1,0 +1,1950 @@
+{
+  "schemaVersion": 1,
+  "asOf": "2026-10-19",
+  "attribution": "Minimal projection of the committed Trace 18-observation research intake; original source fields and amounts retained. No new manufacturer claims. Each row is one selected dataset; no nutrients were combined across sources. Source/edition applies to all row measurements.",
+  "origin": {
+    "path": "docs/reviewed-us-manufacturer-labels/2026-10-19/evaluation/intake.json",
+    "sha256": "de6514b08161d991a17f24f49a75f8c20a73c3c8860841ae5c66daa872823a71"
+  },
+  "records": [
+    {
+      "id": "refined-cereal-rice-krispies",
+      "synthetic": false,
+      "product": {
+        "gtin": "00038000199929",
+        "name": "Kellogg's Rice Krispies cereal",
+        "brand": "Kellogg's",
+        "variant": "Kellogg's Rice Krispies cereal",
+        "packageDescription": "9 oz",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "breakfast-cereal"
+      },
+      "source": {
+        "id": "wk-rice-krispies-15973c",
+        "provider": "WK Kellogg Co",
+        "recordId": "00038000199929",
+        "edition": "capture:2026-10-19:wk-rice-krispies-15973c",
+        "kind": "manufacturer-label",
+        "attribution": "WK Kellogg Co",
+        "artifact": {
+          "id": "primary-capture:wk-rice-krispies-15973c",
+          "locator": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000199929",
+          "sha256": "19ed9013b577b127ea67915e5274503fe5414d32ed8838ee1a44e206716c5077"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000199929",
+        "documentTitle": null,
+        "labelVersion": "NLI 15973c; last-update placeholder unresolved"
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 40,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 150,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 4,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 4,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 200,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 0,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 3,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 36,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "matched-formulation",
+          "statement": "Matched manufacturer GTIN and US Nutrition Facts/US distribution address, not an overseas label"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": [
+          "Heading says 9 oz but Nutrition Facts says about 29 servings of 40 g; cannot bind the table to the stated package without adjudication"
+        ]
+      },
+      "ingredients": {
+        "status": "unknown",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": null,
+        "reasons": [
+          "consistency-review-missing",
+          "conflicting-data"
+        ]
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "sugary-cereal-frosted-flakes",
+      "synthetic": false,
+      "product": {
+        "gtin": "00038000196560",
+        "name": "Kellogg's Frosted Flakes Cereal",
+        "brand": "Kellogg's Frosted Flakes",
+        "variant": "Kellogg's Frosted Flakes Cereal",
+        "packageDescription": "28.5 oz",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "breakfast-cereal"
+      },
+      "source": {
+        "id": "wk-frosted-flakes-16903a",
+        "provider": "WK Kellogg Co",
+        "recordId": "00038000196560",
+        "edition": "capture:2026-10-19:wk-frosted-flakes-16903a",
+        "kind": "manufacturer-label",
+        "attribution": "WK Kellogg Co",
+        "artifact": {
+          "id": "primary-capture:wk-frosted-flakes-16903a",
+          "locator": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000196560",
+          "sha256": "8eb5960b8199e8d41e7e3882510e36810c7441b1a2b17043c6672137de5bfd41"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000196560",
+        "documentTitle": null,
+        "labelVersion": "NLI 16903a; last-update placeholder unresolved"
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 37,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 130,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 12,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 12,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 190,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 1,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 2,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 33,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "matched-formulation",
+          "statement": "Matched manufacturer GTIN, package, US Nutrition Facts and Battle Creek MI distribution address"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "unknown",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": 15,
+        "reasons": []
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "plain-almonds",
+      "synthetic": false,
+      "product": {
+        "gtin": null,
+        "name": "Whole Natural Almonds",
+        "brand": "Blue Diamond",
+        "variant": "Whole Natural Almonds",
+        "packageDescription": "6 oz reference, among several listed sizes",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "nuts"
+      },
+      "source": {
+        "id": "blue-diamond-whole-natural",
+        "provider": "Blue Diamond Growers",
+        "recordId": "blue-diamond-whole-natural",
+        "edition": "capture:2026-10-19:blue-diamond-whole-natural",
+        "kind": "manufacturer-label",
+        "attribution": "Blue Diamond Growers",
+        "artifact": {
+          "id": "primary-capture:blue-diamond-whole-natural",
+          "locator": "https://www.bluediamond.com/brand/blue-diamond/snack-almonds/classic-flavors/whole-natural/",
+          "sha256": "77eba00da8f53e64ab881e98ada0654b4d06f39e795bea7027971211aaa3976a"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://www.bluediamond.com/brand/blue-diamond/snack-almonds/classic-flavors/whole-natural/",
+        "documentTitle": null,
+        "labelVersion": null
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 28,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 160,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 1,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 1,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 0,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 3,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 6,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 14,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 6,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "us-oriented-observation",
+          "statement": "US manufacturer Nutrition Facts and ounce/gram package sizes; no exact-SKU GTIN established in this table"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "not-transcribed",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": null,
+        "reasons": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified"
+        ]
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "peanut-butter",
+      "synthetic": false,
+      "product": {
+        "gtin": null,
+        "name": "Creamy Peanut Butter",
+        "brand": "Jif",
+        "variant": "Creamy Peanut Butter",
+        "packageDescription": "Family page: 12/16/28/40 oz jars and other sizes",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "peanut-butter"
+      },
+      "source": {
+        "id": "jif-creamy",
+        "provider": "The J.M. Smucker Company",
+        "recordId": "jif-creamy",
+        "edition": "capture:2026-10-19:jif-creamy",
+        "kind": "manufacturer-label",
+        "attribution": "The J.M. Smucker Company",
+        "artifact": {
+          "id": "primary-capture:jif-creamy",
+          "locator": "https://www.jif.com/products/creamy/creamy-peanut-butter",
+          "sha256": "3482f9634471b5e69e463150939e7fb4671ba4391f6737adce82b6eac201aa2a"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://www.jif.com/products/creamy/creamy-peanut-butter",
+        "documentTitle": null,
+        "labelVersion": null
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 33,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 190,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 3.5,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 2,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 3,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 140,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 2,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 7,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 16,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 8,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "us-oriented-observation",
+          "statement": "US manufacturer Nutrition Facts; page lists multiple package sizes and no matched GTIN"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "unknown",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": null,
+        "reasons": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified"
+        ]
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "frozen-meal",
+      "synthetic": false,
+      "product": {
+        "gtin": "00025800023608",
+        "name": "Santa Fe Rice & Beans with Zucchini, Zesty Green Chile Sour Cream Sauce & Mozzarella Cheese Frozen Meal",
+        "brand": "Smart Ones",
+        "variant": "Santa Fe Rice & Beans with Zucchini, Zesty Green Chile Sour Cream Sauce & Mozzarella Cheese Frozen Meal",
+        "packageDescription": "9 oz (255 g), one package",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "frozen-meal"
+      },
+      "source": {
+        "id": "kraft-smart-ones-025800023608",
+        "provider": "Kraft Heinz",
+        "recordId": "00025800023608",
+        "edition": "capture:2026-10-19:kraft-smart-ones-025800023608",
+        "kind": "manufacturer-label",
+        "attribution": "Kraft Heinz",
+        "artifact": {
+          "id": "primary-capture:kraft-smart-ones-025800023608",
+          "locator": "https://www.kraftheinz.com/smart-ones/products/00025800023608-santa-fe-rice-beans-with-zucchini-zesty-green-chile-sour-cream-sauce-mozzarella-cheese-frozen-meal",
+          "sha256": "d0fdee12a139cde51c61ed3b71e831374e73cbec262e7eedd1d5bc4434c855f0"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://www.kraftheinz.com/smart-ones/products/00025800023608-santa-fe-rice-beans-with-zucchini-zesty-green-chile-sour-cream-sauce-mozzarella-cheese-frozen-meal",
+        "documentTitle": null,
+        "labelVersion": null
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 255,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 300,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 2.5,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 5,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 680,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 6,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 10,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 5,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 53,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "matched-formulation",
+          "statement": "Exact manufacturer SKU URL, product/size and USA (English) selector bind the complete Nutrition Facts table"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "unknown",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": 51,
+        "reasons": []
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "processed-meat",
+      "synthetic": false,
+      "product": {
+        "gtin": "00044700000632",
+        "name": "Classic Wieners Hot Dogs",
+        "brand": "Oscar Mayer",
+        "variant": "Classic Wieners Hot Dogs",
+        "packageDescription": "16 oz, 10 links",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "processed-meat"
+      },
+      "source": {
+        "id": "oscar-mayer-044700000632",
+        "provider": "Kraft Heinz / Oscar Mayer",
+        "recordId": "00044700000632",
+        "edition": "capture:2026-10-19:oscar-mayer-044700000632",
+        "kind": "manufacturer-label",
+        "attribution": "Kraft Heinz / Oscar Mayer",
+        "artifact": {
+          "id": "primary-capture:oscar-mayer-044700000632",
+          "locator": "https://www.oscarmayer.com/products/00044700000632-classic-wieners-hot-dogs",
+          "sha256": "7b0cf2fa828b1d133a37381cc9ac0c9123c87cdb7b94e963ef3fa6d2e2ab2071"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://www.oscarmayer.com/products/00044700000632-classic-wieners-hot-dogs",
+        "documentTitle": null,
+        "labelVersion": null
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 45,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 120,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 3.5,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 430,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 0,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 5,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 10,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 1,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "matched-formulation",
+          "statement": "Exact manufacturer SKU URL and US ounce/gram Nutrition Facts with FDA units; US manufacturer product/retail locator"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "unknown",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": 13,
+        "reasons": []
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "protein-bar",
+      "synthetic": false,
+      "product": {
+        "gtin": null,
+        "name": "Peanut Butter Dark Chocolate Protein Chewy Bars 15ct",
+        "brand": "Nature Valley",
+        "variant": "Peanut Butter Dark Chocolate Protein Chewy Bars 15ct",
+        "packageDescription": "21.3 oz box, 15 individually wrapped bars",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "conventional-protein-bar"
+      },
+      "source": {
+        "id": "nature-valley-protein-15ct",
+        "provider": "General Mills / Nature Valley",
+        "recordId": "nature-valley-protein-15ct",
+        "edition": "capture:2026-10-19:nature-valley-protein-15ct",
+        "kind": "manufacturer-label",
+        "attribution": "General Mills / Nature Valley",
+        "artifact": {
+          "id": "primary-capture:nature-valley-protein-15ct",
+          "locator": "https://www.naturevalley.com/products/peanut-butter-dark-chocolate-protein-chewy-bars-15ct",
+          "sha256": "f616df17d3489318586fbbf6605b78fc7759102df85c7c1d885a3e1e84554c68"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://www.naturevalley.com/products/peanut-butter-dark-chocolate-protein-chewy-bars-15ct",
+        "documentTitle": null,
+        "labelVersion": null
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": null,
+        "unit": null
+      },
+      "nutrients": {
+        "calories": {
+          "value": 190,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 3.5,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 5,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 7,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 170,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 6,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 10,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 12,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 15,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "us-oriented-observation",
+          "statement": "US manufacturer product and country selector, but missing exact GTIN and evidenced per-bar mass"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": [
+          "Marketing says 200 calories, while Nutrition Facts table says 190; no coherent edition adjudicated"
+        ]
+      },
+      "ingredients": {
+        "status": "unknown",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": null,
+        "reasons": [
+          "product-identity-incomplete",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "consistency-review-missing",
+          "conflicting-data",
+          "reference-basis-unknown",
+          "unsupported-reference-unit"
+        ]
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "white-bread",
+      "synthetic": false,
+      "product": {
+        "gtin": null,
+        "name": "Farmhouse Hearty White Sliced Bread",
+        "brand": "Pepperidge Farm",
+        "variant": "Farmhouse Hearty White Sliced Bread",
+        "packageDescription": "24 oz loaf",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "bread"
+      },
+      "source": {
+        "id": "heb-white-bread-387618",
+        "provider": "H-E-B, US retailer",
+        "recordId": "heb-white-bread-387618",
+        "edition": "capture:2026-10-19:heb-white-bread-387618",
+        "kind": "retailer-label",
+        "attribution": "H-E-B, US retailer",
+        "artifact": {
+          "id": "primary-capture:heb-white-bread-387618",
+          "locator": "https://www.heb.com/product-detail/pepperidge-farm-farmhouse-hearty-white-sliced-bread/387618",
+          "sha256": "d02032286070b4dd9d8fbd985a7bdca8af8edf52b89ff177db3bfcb2c8a9c43d"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://www.heb.com/product-detail/pepperidge-farm-farmhouse-hearty-white-sliced-bread/387618",
+        "documentTitle": null,
+        "labelVersion": null
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": null,
+        "unit": null
+      },
+      "nutrients": {
+        "calories": {
+          "value": 130,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 4,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 4,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 230,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 1,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 4,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 1,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 26,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "us-oriented-observation",
+          "statement": "Texas grocery listing and US Nutrition Facts; retailer evidence alone does not satisfy the primary exact-SKU formulation gate"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "not-transcribed",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": null,
+        "reasons": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "primary-label-evidence-missing",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "reference-basis-unknown",
+          "unsupported-reference-unit"
+        ]
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "whole-wheat-bread",
+      "synthetic": false,
+      "product": {
+        "gtin": null,
+        "name": "100% Whole Wheat",
+        "brand": "Dave's Killer Bread",
+        "variant": "100% Whole Wheat",
+        "packageDescription": "Regular-slice loaf; label says 17 servings",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "bread"
+      },
+      "source": {
+        "id": "dkb-100ww-label",
+        "provider": "Dave's Killer Bread / Flowers Foods",
+        "recordId": "dkb-100ww-label",
+        "edition": "capture:2026-10-19:dkb-100ww-label",
+        "kind": "manufacturer-label",
+        "attribution": "Dave's Killer Bread / Flowers Foods",
+        "artifact": {
+          "id": "primary-capture:dkb-100ww-label",
+          "locator": "https://images.squarespace-cdn.com/content/v1/5f44410f4070506a20db3f2b/830a7308-17e5-4dc1-907d-ecad5766d243/DKB%2B100%25%2BWW%2BNFP.jpg",
+          "sha256": "a23d4e7cfed6f6bc9eef867c02e946ecd3654896f18b90dc01f8ab2df0b4cccc"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://www.daveskillerbread.com/100-whole-wheat",
+        "documentTitle": null,
+        "labelVersion": null
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 42,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 100,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 4,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 4,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 160,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 3,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 4,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 1.5,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 21,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "us-oriented-observation",
+          "statement": "Manufacturer-linked US Nutrition Facts with gram/ounce slice and US DV conventions; GTIN absent"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "unknown",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": null,
+        "reasons": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified"
+        ]
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "whole-grain-cereal",
+      "synthetic": false,
+      "product": {
+        "gtin": null,
+        "name": "Shredded Wheat Original Big Biscuit cereal",
+        "brand": "Post",
+        "variant": "Shredded Wheat Original Big Biscuit cereal",
+        "packageDescription": "Big Biscuit cereal; exact box size not established",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "breakfast-cereal"
+      },
+      "source": {
+        "id": "post-big-biscuit-sbb101",
+        "provider": "Post Consumer Brands",
+        "recordId": "post-big-biscuit-sbb101",
+        "edition": "capture:2026-10-19:post-big-biscuit-sbb101",
+        "kind": "manufacturer-label",
+        "attribution": "Post Consumer Brands",
+        "artifact": {
+          "id": "primary-capture:post-big-biscuit-sbb101",
+          "locator": "https://www.postconsumerbrands.com/brands/shredded-wheat/products/shredded-wheat-original-big-biscuit-cereal/",
+          "sha256": "f95c75e8d36a40e0e3abcead2a4a2033a9f60faebaeb747363adb33d160a8acc"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://www.postconsumerbrands.com/brands/shredded-wheat/products/shredded-wheat-original-big-biscuit-cereal/",
+        "documentTitle": null,
+        "labelVersion": "SBB-101-RTE"
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 51,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 170,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 0,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 7,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 6,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 1,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 41,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "us-oriented-observation",
+          "statement": "US manufacturer product with US Nutrition Facts and whole-grain wheat identity; no package-specific GTIN"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "not-transcribed",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": null,
+        "reasons": [
+          "product-identity-incomplete",
+          "provenance-incomplete",
+          "us-formulation-unverified"
+        ]
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "olive-oil",
+      "synthetic": false,
+      "product": {
+        "gtin": null,
+        "name": "Robust Extra Virgin Olive Oil",
+        "brand": "Pompeian",
+        "variant": "Robust Extra Virgin Olive Oil",
+        "packageDescription": "Bottle; displayed table says 48 servings",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "oil"
+      },
+      "source": {
+        "id": "pompeian-robust-evoo",
+        "provider": "Pompeian",
+        "recordId": "pompeian-robust-evoo",
+        "edition": "capture:2026-10-19:pompeian-robust-evoo",
+        "kind": "manufacturer-label",
+        "attribution": "Pompeian",
+        "artifact": {
+          "id": "primary-capture:pompeian-robust-evoo",
+          "locator": "https://pompeian.com/products/robust-extra-virgin-olive-oil/",
+          "sha256": "d54019ef74ef6e338c29a9fc2228041a529d8808dcbd486ae145b25dbae155df"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://pompeian.com/products/robust-extra-virgin-olive-oil/",
+        "documentTitle": null,
+        "labelVersion": null
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 15,
+        "unit": "ml"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 120,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 2,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": null,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": null,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 0,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": null,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 0,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 14,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 0,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "us-oriented-observation",
+          "statement": "US manufacturer Nutrition Facts and US retail product; oil origin/import status is not formulation-market proof"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "unknown",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": null,
+        "reasons": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "added-sugars-missing",
+          "required-nutrient-missing"
+        ]
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "regular-soda",
+      "synthetic": false,
+      "product": {
+        "gtin": "012000809941",
+        "name": "Pepsi",
+        "brand": "Pepsi",
+        "variant": "Pepsi",
+        "packageDescription": "12 cans, each 12 fl oz (355 mL)",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "sugar-sweetened-beverage"
+      },
+      "source": {
+        "id": "pepsi-012000809941-0028",
+        "provider": "PepsiCo",
+        "recordId": "012000809941",
+        "edition": "capture:2026-10-19:pepsi-012000809941-0028",
+        "kind": "manufacturer-label",
+        "attribution": "PepsiCo",
+        "artifact": {
+          "id": "primary-capture:pepsi-012000809941-0028",
+          "locator": "https://smartlabel.pepsico.info/012000809941-0028-en-US/779351f7-11d3-45b9-8787-38084c64ef6c-nutrition.html",
+          "sha256": "55c281f51164f3c055e849a56f53f9da28c885c9d943c2e9d3e529d681944bc9"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": "2024-07-20",
+        "url": "https://smartlabel.pepsico.info/012000809941-0028-en-US/index.html",
+        "documentTitle": null,
+        "labelVersion": "0028-en-US"
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 355,
+        "unit": "ml"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 150,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": null,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 41,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 41,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 30,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": null,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 0,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 41,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "matched-formulation",
+          "statement": "Exact UPC/package and en-US manufacturer label with Purchase NY distributor"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "unknown",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": null,
+        "reasons": [
+          "required-nutrient-missing"
+        ]
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "diet-soda",
+      "synthetic": false,
+      "product": {
+        "gtin": "012000241536",
+        "name": "Diet Pepsi",
+        "brand": "Pepsi",
+        "variant": "Diet Pepsi",
+        "packageDescription": "30 cans, each 12 fl oz (355 mL)",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "diet-beverage"
+      },
+      "source": {
+        "id": "diet-pepsi-012000241536-0001",
+        "provider": "PepsiCo",
+        "recordId": "012000241536",
+        "edition": "capture:2026-10-19:diet-pepsi-012000241536-0001",
+        "kind": "manufacturer-label",
+        "attribution": "PepsiCo",
+        "artifact": {
+          "id": "primary-capture:diet-pepsi-012000241536-0001",
+          "locator": "https://smartlabel.pepsico.info/012000241536-0001-en-US/af7f7aa2-fe4a-4baa-8c89-348c1fec8d13-nutrition.html",
+          "sha256": "50d0793cf732a24649cda874e9d0b183adb9fb5801606f0e4308219e5c9b8e61"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": "2025-05-30",
+        "url": "https://smartlabel.pepsico.info/012000241536-0001-en-US/index.html",
+        "documentTitle": null,
+        "labelVersion": "0001-en-US"
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 355,
+        "unit": "ml"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 0,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": null,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 35,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": null,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 0,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 0,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "matched-formulation",
+          "statement": "Exact UPC/package and en-US manufacturer label with Purchase NY distributor"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "unknown",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": null,
+        "reasons": [
+          "unsupported-category",
+          "required-nutrient-missing"
+        ]
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "unsweetened-tea",
+      "synthetic": false,
+      "product": {
+        "gtin": null,
+        "name": "Unsweetened Black Tea",
+        "brand": "Pure Leaf",
+        "variant": "Unsweetened Black Tea",
+        "packageDescription": "18.5 fl oz bottle label",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "unsweetened-low-energy-beverage"
+      },
+      "source": {
+        "id": "pureleaf-unsweet-image",
+        "provider": "Pepsi/Lipton Tea Partnership",
+        "recordId": "pureleaf-unsweet-image",
+        "edition": "capture:2026-10-19:pureleaf-unsweet-image",
+        "kind": "manufacturer-label",
+        "attribution": "Pepsi/Lipton Tea Partnership",
+        "artifact": {
+          "id": "primary-capture:pureleaf-unsweet-image",
+          "locator": "https://a.storyblok.com/f/181388/837x1500/dc63de88af/unsweet.png",
+          "sha256": "233ad1ba303d80adc6d3455d68c83a55598763c947f5883a5574673fc8737451"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://www.pureleaf.com/our-products/?product=Unsweetened+Tea",
+        "documentTitle": null,
+        "labelVersion": "Image copyright 2025; not a revision date"
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 18.5,
+        "unit": "fl oz"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 0,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": null,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 0,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": null,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 0,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 0,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "us-oriented-observation",
+          "statement": "Manufacturer-linked US Nutrition Facts with Purchase NY address; no exact GTIN"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "unknown",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": null,
+        "reasons": [
+          "product-identity-incomplete",
+          "unsupported-category",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "unsupported-reference-unit",
+          "required-nutrient-missing"
+        ]
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "plain-yogurt",
+      "synthetic": false,
+      "product": {
+        "gtin": null,
+        "name": "Total 0% Plain Greek Yogurt 5.3 oz",
+        "brand": "FAGE",
+        "variant": "Total 0% Plain Greek Yogurt 5.3 oz",
+        "packageDescription": "5.3 oz (150 g) cup",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "spoonable-yogurt"
+      },
+      "source": {
+        "id": "reviewed-label:plain-yogurt",
+        "provider": "FAGE USA",
+        "recordId": "product-2862:first-150g-cup",
+        "edition": "capture:2026-10-19:fage-plain-product",
+        "kind": "manufacturer-label",
+        "attribution": "FAGE USA",
+        "url": "https://usa.fage/products/yogurt/fage-total-0#product-2862",
+        "documentTitle": null,
+        "labelVersion": null,
+        "artifact": {
+          "id": "official-capture:fage-plain-product",
+          "locator": "https://usa.fage/products/yogurt/fage-total-0#product-2862",
+          "sha256": "93baf91b06794dc8a9788e902c3edd8400a3f166bd819400bf9f9366120c65c0"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "formulationId": "US:FAGE:plain-yogurt:150g:as-sold"
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 150,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 80,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 5,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 55,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 0,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 16,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 5,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "matched-formulation",
+          "statement": "FAGE USA regional catalog links this exact 5.3 oz product and 150 g US Nutrition Facts panel; regional context, presentation and panel reviewed together, not inferred from brand alone."
+        },
+        "reviewerType": "automated-document-review",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "transcribed",
+        "text": "Grade A Pasteurized Skimmed Milk, Live Active Yogurt Cultures (L. Bulgaricus, S. Thermophilus, L. Acidophilus, Bifidus, L. Casei).",
+        "language": "en",
+        "provenance": {
+          "sourceId": "reviewed-label:plain-yogurt",
+          "sourceEdition": "capture:2026-10-19:fage-plain-product",
+          "field": "product-2862.cup-150g.ingredients"
+        }
+      },
+      "additives": null,
+      "baseline": {
+        "score": 76,
+        "reasons": []
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "sweetened-yogurt",
+      "synthetic": false,
+      "product": {
+        "gtin": null,
+        "name": "Total 2% Split Cup Strawberry 5.3 oz",
+        "brand": "FAGE",
+        "variant": "Total 2% Split Cup Strawberry 5.3 oz",
+        "packageDescription": "5.3 oz (150 g) split cup",
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "spoonable-yogurt"
+      },
+      "source": {
+        "id": "reviewed-label:sweetened-yogurt",
+        "provider": "FAGE USA",
+        "recordId": "strawberry-2-percent:full-150g-split-cup",
+        "edition": "capture:2026-10-19:fage-strawberry-product",
+        "kind": "manufacturer-label",
+        "attribution": "FAGE USA",
+        "url": "https://usa.fage/products/yogurt/fage-total-2-split-cup/fage-total-2-strawberry-53-oz",
+        "documentTitle": null,
+        "labelVersion": null,
+        "artifact": {
+          "id": "official-capture:fage-strawberry-product",
+          "locator": "https://usa.fage/products/yogurt/fage-total-2-split-cup/fage-total-2-strawberry-53-oz",
+          "sha256": "6ac16113023dc9cf0eed246e04635f98b1230b3a531748c30cbf67afc7abe5e1"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "formulationId": "US:FAGE:sweetened-yogurt:150g:as-sold"
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 150,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 120,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 1.5,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": 7,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 11,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 45,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 0,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 12,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 2.5,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 13,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "matched-formulation",
+          "statement": "FAGE USA regional catalog links this exact 5.3 oz product and 150 g US Nutrition Facts panel; regional context, presentation and panel reviewed together, not inferred from brand alone."
+        },
+        "reviewerType": "automated-document-review",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "transcribed",
+        "text": "STRAINED YOGURT: Grade A Pasteurized Skimmed Milk and Cream, Live Active Yogurt Cultures (L. Bulgaricus, S. Thermophilus, L. Acidophilus, Bifidus, L. Casei).\nSTRAWBERRY FRUIT PREPARATION: Strawberries, Cane Sugar, Water, Corn Starch, Contains 2% or less of: Strawberry Juice Concentrate, Lemon Juice Concentrate, Natural Flavors, Fruit Pectin.",
+        "language": "en",
+        "provenance": {
+          "sourceId": "reviewed-label:sweetened-yogurt",
+          "sourceEdition": "capture:2026-10-19:fage-strawberry-product",
+          "field": "strawberry-2-percent.full-150g-cup.ingredients"
+        }
+      },
+      "additives": null,
+      "baseline": {
+        "score": 51,
+        "reasons": []
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "fresh-apple",
+      "synthetic": false,
+      "product": {
+        "gtin": null,
+        "name": "Apple, raw edible portion",
+        "brand": null,
+        "variant": "Apple, raw edible portion",
+        "packageDescription": null,
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "produce"
+      },
+      "source": {
+        "id": "fda-raw-apple",
+        "provider": "US Food and Drug Administration",
+        "recordId": "fda-raw-apple",
+        "edition": "capture:2026-10-19:fda-raw-apple",
+        "kind": "government-composition",
+        "attribution": "US Food and Drug Administration",
+        "artifact": {
+          "id": "primary-capture:fda-raw-apple",
+          "locator": "https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/raw-fruits-poster-text-version-accessible-version",
+          "sha256": "cb8b5ebab149e350c49f7f970c3886c38dcb97b22bebaab4e39ddb54cf9f0cae"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/raw-fruits-poster-text-version-accessible-version",
+        "documentTitle": null,
+        "labelVersion": "Legacy poster linked to 2006 voluntary-program update; exact web revision unknown"
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 242,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 130,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": null,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": null,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 25,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 0,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 5,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 1,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 34,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "us-oriented-observation",
+          "statement": "US federal generic composition/retail education reference, not a branded formulation"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "unknown",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": null,
+        "reasons": [
+          "product-identity-incomplete",
+          "primary-label-evidence-missing",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "required-nutrient-missing",
+          "added-sugars-missing"
+        ]
+      },
+      "grainEvidence": null
+    },
+    {
+      "id": "fresh-broccoli",
+      "synthetic": false,
+      "product": {
+        "gtin": null,
+        "name": "Broccoli, raw edible portion",
+        "brand": null,
+        "variant": "Broccoli, raw edible portion",
+        "packageDescription": null,
+        "preparation": "as-sold",
+        "preparationDescription": "Declared product composition without additions; no guessed cooking yield",
+        "market": "US",
+        "category": "produce"
+      },
+      "source": {
+        "id": "fda-raw-broccoli",
+        "provider": "US Food and Drug Administration",
+        "recordId": "fda-raw-broccoli",
+        "edition": "capture:2026-10-19:fda-raw-broccoli",
+        "kind": "government-composition",
+        "attribution": "US Food and Drug Administration",
+        "artifact": {
+          "id": "primary-capture:fda-raw-broccoli",
+          "locator": "https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/nutrition-information-raw-vegetables",
+          "sha256": "3df8d86884e5f369974ae9f3ea10fa122ecb81b10b55d4f2b75130b85c8db67e"
+        },
+        "retrievedOn": "2026-10-19",
+        "publishedOn": null,
+        "revisionOn": null,
+        "url": "https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/nutrition-information-raw-vegetables",
+        "documentTitle": null,
+        "labelVersion": "Legacy voluntary-program poster; exact web revision unknown"
+      },
+      "basis": {
+        "kind": "serving",
+        "amount": 148,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 45,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": null,
+          "unit": "g"
+        },
+        "addedSugar": {
+          "value": null,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 2,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 80,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 3,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 4,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 0.5,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 8,
+          "unit": "g"
+        }
+      },
+      "evidence": {
+        "market": {
+          "claim": "US",
+          "verification": "us-oriented-observation",
+          "statement": "US federal generic composition/retail education reference, not a branded formulation"
+        },
+        "reviewerType": "archived-document-review; independence not established",
+        "reviewedOn": "2026-10-19"
+      },
+      "sourceState": {
+        "cacheStale": false,
+        "superseded": false,
+        "unresolvedConflicts": []
+      },
+      "ingredients": {
+        "status": "unknown",
+        "text": null,
+        "language": null,
+        "provenance": null
+      },
+      "additives": null,
+      "baseline": {
+        "score": null,
+        "reasons": [
+          "product-identity-incomplete",
+          "primary-label-evidence-missing",
+          "provenance-incomplete",
+          "us-formulation-unverified",
+          "required-nutrient-missing",
+          "added-sugars-missing"
+        ]
+      },
+      "grainEvidence": null
+    }
+  ]
+}

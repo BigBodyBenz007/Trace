@@ -6,10 +6,15 @@ import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { shouldLoadSyntheticLife } from "./development/syntheticMode";
 import { registerTraceServiceWorker } from "./serviceWorkerRegistration";
+import { shouldLoadNutritionPilot } from "./development/nutritionPilotMode";
 
 let RootComponent = App;
 if (shouldLoadSyntheticLife(process.env.NODE_ENV, window.location.search)) {
   RootComponent = require("./development/SyntheticLifeApp").default;
+}
+if (process.env.NODE_ENV === 'development'
+  && shouldLoadNutritionPilot(process.env.NODE_ENV, window.location.hostname, window.location.search)) {
+  RootComponent = require('./development/NutritionPilot').default;
 }
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
