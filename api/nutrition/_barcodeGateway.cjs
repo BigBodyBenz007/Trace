@@ -4,6 +4,7 @@
 
 const { normalizeProductIngredients } = require("../../src/services/productIngredients");
 const { normalizeOpenFoodFactsAdditives, unknownAdditives } = require("../../src/services/productAdditives");
+const { captureNutritionAssessmentInputs } = require("./_assessmentInputs.cjs");
 
 const USDA_SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search";
 const OPEN_FOOD_FACTS_URL = "https://world.openfoodfacts.org/api/v2/product";
@@ -497,7 +498,7 @@ function buildCompleteness(food) {
   };
 }
 
-function finalizeFood(food) {
+function finalizeFood(food, providerRecord) {
   if (!food?.name || !food?.provider?.recordId || !food?.provenance?.sourceUrl) return null;
   if (!NUTRIENT_KEYS.every((key) => {
     const value = food.nutrients?.[key];
@@ -520,7 +521,8 @@ function finalizeFood(food) {
     nutrients,
     nutritionBasis: { ...food.nutritionBasis, sourceNutrients },
   };
-  return deepFreeze({ ...normalized, ...buildCompleteness(normalized) });
+  return deepFreeze({ ...normalized, ...buildCompleteness(normalized),
+    assessmentInputs: captureNutritionAssessmentInputs(providerRecord, normalized) });
 }
 
 function normalizeUsdaFood(food, barcode, retrievedAt) {
@@ -579,7 +581,7 @@ function normalizeUsdaFood(food, barcode, retrievedAt) {
       revisionDate: newestRevisionDate(food),
       retrievedAt,
     },
-  });
+  }, food);
 }
 
 function safeOffSourceUrl(value, barcode) {
@@ -688,7 +690,7 @@ function normalizeOpenFoodFactsProduct(product, barcode, retrievedAt) {
       revisionDate,
       retrievedAt,
     },
-  });
+  }, product);
 }
 
 function retryAfter(response) {
@@ -795,6 +797,7 @@ async function lookupUsda({ barcode, fetchImpl, apiKey, now, timeoutMs, maxBytes
 const OFF_FIELDS = [
   "code", "product_name", "product_name_en", "brands", "quantity",
   "ingredients_text", "lang", "additives_tags",
+  "countries_tags", "countries", "categories_tags", "categories",
   "product_quantity", "product_quantity_unit", "serving_size",
   "serving_quantity", "serving_quantity_unit", "servings_per_container",
   "nutrition_data_per", "nutriments", "last_modified_t",

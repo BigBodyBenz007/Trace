@@ -9,6 +9,9 @@ import { readUserFoods, writeUserFoods, createUserFood } from "../services/userF
 import { decodeBarcodePhoto } from "../services/barcodePhoto";
 import { normalizeOpenFoodFactsAdditives } from "../services/productAdditives";
 
+const { captureNutritionAssessmentInputs } = require("../../api/nutrition/_assessmentInputs.cjs");
+const { offRecord } = require("../services/__fixtures__/nutritionAssessmentInputs.cjs");
+
 jest.mock("../services/barcodePhoto", () => ({
   ...jest.requireActual("../services/barcodePhoto"),
   decodeBarcodePhoto: jest.fn(),
@@ -420,6 +423,9 @@ test.each(["remote", "custom"])("%s barcode precision survives storage, reopenin
     additives: normalizeOpenFoodFactsAdditives(["en:e330"]),
   };
   let food = providerFood;
+  // Separate synthetic assessment evidence must never become the logging basis.
+  providerFood.assessmentInputs = captureNutritionAssessmentInputs(offRecord(), providerFood);
+  expect(providerFood.assessmentInputs).not.toBeNull();
   if (source === "custom") {
     const custom = createUserFood(providerFood.name, providerFood.nutrients, providerFood.serving, {
       identifiers: providerFood.identifiers,
@@ -446,6 +452,7 @@ test.each(["remote", "custom"])("%s barcode precision survives storage, reopenin
   const sourceReference = source === "remote" ? stored.foodReference : stored.foodReference.providerSourceSnapshot;
   expect(sourceReference.ingredients).toEqual(providerFood.ingredients);
   expect(sourceReference.additives).toEqual(providerFood.additives);
+  expect(sourceReference.assessmentInputs).toEqual(providerFood.assessmentInputs);
   expect(sourceReference.provider).toEqual(providerFood.provider);
   view.unmount();
 
@@ -475,6 +482,8 @@ test.each(["remote", "custom"])("%s barcode precision survives storage, reopenin
       .toEqual(providerFood.ingredients);
     expect(source === "remote" ? stored.foodReference.additives : stored.foodReference.providerSourceSnapshot.additives)
       .toEqual(providerFood.additives);
+    expect(source === "remote" ? stored.foodReference.assessmentInputs : stored.foodReference.providerSourceSnapshot.assessmentInputs)
+      .toEqual(providerFood.assessmentInputs);
     view.unmount();
   }
 
@@ -486,6 +495,8 @@ test.each(["remote", "custom"])("%s barcode precision survives storage, reopenin
   expect(edited.protein).toBe(41.123456789);
   expect(edited.calories).toBe(stored.calories);
   expect(edited.foodReference.modified).toBe(true);
+  expect(source === "remote" ? edited.foodReference.assessmentInputs : edited.foodReference.providerSourceSnapshot.assessmentInputs)
+    .toEqual(providerFood.assessmentInputs);
 });
 
 test("legacy rounded scans keep their saved values and basis despite a precise provider snapshot", async () => {

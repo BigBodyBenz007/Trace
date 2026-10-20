@@ -1,5 +1,6 @@
 import { NUTRITION_ENTRY_NUTRIENT_KEYS } from "./nutritionCalculation";
 import { immutableCopy, normalizeRemoteFood } from "./remoteFoodModel";
+import { getNutritionAssessmentQuality, normalizeNutritionAssessmentInputs } from "./nutritionAssessmentInputs";
 
 const REQUIRED_NUTRIENTS = ["calories", "protein", "carbohydrates", "fat"];
 const SAFE_REMOTE_BASIS_KINDS = new Set([
@@ -40,9 +41,14 @@ function basisMessage(food, servingDescription, reliable) {
 function remoteCandidate(result) {
   const food = normalizeRemoteFood(result.food);
   if (!food) return null;
+  const assessmentInputs = result.stale && food.assessmentInputs
+    ? normalizeNutritionAssessmentInputs({ ...food.assessmentInputs,
+        source: { ...food.assessmentInputs.source, cacheStale: true } }, food)
+    : food.assessmentInputs;
   const ingredientFields = {
     ...(food.ingredients === undefined ? {} : { ingredients: food.ingredients }),
     ...(food.additives === undefined ? {} : { additives: food.additives }),
+    ...(assessmentInputs === undefined ? {} : { assessmentInputs }),
   };
   const reliable = SAFE_REMOTE_BASIS_KINDS.has(food.nutritionBasis?.kind);
   const serving = selectedServing(food);
@@ -105,6 +111,9 @@ function remoteCandidate(result) {
     selection,
     display: {
       ...ingredientFields,
+      ...(assessmentInputs === undefined ? {} : {
+        assessmentInputQuality: getNutritionAssessmentQuality(assessmentInputs, { stale: result.stale === true }),
+      }),
       brand: food.brand,
       name: food.name,
       packageQuantity: food.packageQuantity,
@@ -131,7 +140,7 @@ function remoteCandidate(result) {
               servingsPerContainer: food.servingsPerContainer,
               nutrients,
             },
-            providerSourceSnapshot: food,
+            providerSourceSnapshot: { ...food, ...ingredientFields },
           },
         }),
   });
@@ -160,6 +169,10 @@ function localCandidate(result) {
       ...(food.providerSourceSnapshot?.additives === undefined
         ? {}
         : { additives: food.providerSourceSnapshot.additives }),
+      ...(food.providerSourceSnapshot?.assessmentInputs === undefined
+        ? {}
+        : { assessmentInputs: food.providerSourceSnapshot.assessmentInputs,
+            assessmentInputQuality: getNutritionAssessmentQuality(food.providerSourceSnapshot.assessmentInputs) }),
       brand: food.brand || food.restaurant?.name || null,
       name: food.name,
       packageQuantity: food.packaged?.packageSize || food.beverage?.packageSize || null,

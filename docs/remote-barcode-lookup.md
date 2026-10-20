@@ -280,6 +280,15 @@ payload, credentials, failed responses, or user history.
 
 ## Source and licensing
 
+Normalized products can also retain optional version-1 `assessmentInputs`, separate
+from logging nutrients and serving calculations. This preserves provider-reported
+saturated fat, separate sugar types, label/reference observations, units, market,
+category and source evidence through existing cache and saved snapshots. Legacy
+absence stays absent; no migration or additional request is introduced. Complete
+nutrient capture never declares a score ready. See
+[nutritional assessment input contract](nutrition-assessment-inputs.md) for basis
+ambiguities, bounds, quality states and remaining US identity limitations.
+
 USDA FoodData Central data is public domain under CC0. Open Food Facts records
 retain provider attribution, their public product URL, and revision metadata.
 Open Food Facts database content is offered under ODbL; attribution and

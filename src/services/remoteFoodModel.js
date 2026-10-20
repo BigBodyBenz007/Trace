@@ -5,6 +5,7 @@ import {
 import { NUTRITION_ENTRY_NUTRIENT_KEYS } from "./nutritionCalculation";
 import { normalizeProductIngredients } from "./productIngredients";
 import { normalizeProductAdditives } from "./productAdditives";
+import { normalizeNutritionAssessmentInputs } from "./nutritionAssessmentInputs";
 
 export const REMOTE_FOOD_PROVIDERS = Object.freeze({
   USDA: "usda-fdc",
@@ -309,6 +310,9 @@ export function normalizeRemoteFood(food) {
     nutrients,
     ...(ingredients === undefined ? {} : { ingredients }),
     ...(additives === undefined ? {} : { additives }),
+    ...(food.assessmentInputs === undefined ? {} : {
+      assessmentInputs: normalizeNutritionAssessmentInputs(food.assessmentInputs, food),
+    }),
     dataBasis: food.dataBasis,
     ...(nutritionBasis === undefined ? {} : { nutritionBasis }),
     completeness: food.completeness,
