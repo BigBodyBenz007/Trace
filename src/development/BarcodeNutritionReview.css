@@ -1,0 +1,21 @@
+.trace-barcode-grade, .trace-barcode-additives { color: var(--trace-text-primary); background: var(--trace-surface-primary); border: 1px solid var(--trace-border-default); border-radius: 9px; padding: 10px 12px; margin: 10px 0; font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; text-align: left; }
+.trace-barcode-grade__headline { display: flex; align-items: center; gap: 12px; }
+.trace-barcode-grade__headline strong { font-size: 38px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.trace-barcode-grade__headline strong small { font-size: 15px; font-weight: 400; }
+.trace-barcode-grade__headline strong[data-unavailable="true"] { font-size: 20px; }
+.trace-barcode-grade__headline span { font-weight: 600; }
+.trace-barcode-grade__headline span small, .trace-barcode-additives li small { display: block; font-weight: 400; }
+.trace-barcode-grade__confidence { color: var(--trace-text-secondary); }
+.trace-barcode-grade p, .trace-barcode-additives p { margin: 7px 0; }
+.trace-barcode-grade summary, .trace-barcode-additives summary { min-height: 30px; cursor: pointer; display: list-item; align-content: center; }
+.trace-barcode-grade a, .trace-barcode-additives a { color: var(--trace-text-primary); text-decoration: underline; }
+.trace-barcode-grade ul, .trace-barcode-additives ul { padding-left: 18px; margin: 6px 0; }
+.trace-barcode-additives li { margin-bottom: 9px; }
+.trace-barcode-dialog--grading .trace-barcode-dialog__product { background: var(--trace-surface-primary); color: var(--trace-text-primary); }
+.trace-barcode-dialog--grading .trace-barcode-dialog__nutrients div { background: var(--trace-surface-secondary); padding: 5px 8px; }
+.trace-barcode-dialog--grading .trace-barcode-dialog__nutrients dt, .trace-barcode-dialog--grading .trace-barcode-dialog__unknowns, .trace-barcode-dialog--grading .trace-barcode-dialog__source { color: var(--trace-text-secondary); }
+.trace-barcode-dialog--grading .trace-barcode-dialog__product h3 { margin: 6px 0; }
+.trace-barcode-dialog--grading .trace-barcode-dialog__product > p { margin: 6px 0; }
+.trace-barcode-dialog--grading #trace-barcode-description, .trace-barcode-dialog--grading .trace-barcode-dialog__camera, .trace-barcode-dialog--grading .trace-barcode-dialog__manual, .trace-barcode-dialog--grading .trace-barcode-dialog__status { display: none; }
+.trace-barcode-dialog--grading .trace-barcode-dialog__header { padding-top: 12px; padding-bottom: 6px; }
+.trace-barcode-dialog--grading .trace-barcode-dialog__header h2 { font-size: 20px; }

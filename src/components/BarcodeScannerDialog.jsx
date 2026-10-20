@@ -16,6 +16,7 @@ import {
 import { acquireDocumentScrollLock } from "../services/documentScrollLock";
 import GroceryFoodForm from "./GroceryFoodForm";
 import BarcodeIngredients from "./BarcodeIngredients";
+import { shouldLoadBarcodeGrading } from "../development/barcodeGradingMode";
 import { formatNutrientValue } from "../services/nutritionDisplay";
 import "./BarcodeScannerDialog.css";
 
@@ -81,6 +82,9 @@ export default function BarcodeScannerDialog({
   orientation = availableScreenOrientation(),
   reducedMotion = false,
 }) {
+  const grading = process.env.NODE_ENV === 'development'
+    && shouldLoadBarcodeGrading(process.env.NODE_ENV, window.location.hostname, window.location.search)
+    ? require('../development/BarcodeNutritionReview') : null;
   const [manualBarcode, setManualBarcode] = useState("");
   const [cameraState, setCameraState] = useState("idle");
   const [facingMode, setFacingMode] = useState(CAMERA_FACING_MODES.REAR);
@@ -567,13 +571,31 @@ export default function BarcodeScannerDialog({
     ? "Use Front Camera"
     : "Use Rear Camera";
 
+  const reviewActions = candidate && (
+    <div className="trace-barcode-dialog__review-actions">
+      <button disabled={!candidate.canUse} onClick={useFood} type="button">Use This Food</button>
+      {!candidate.canUse && candidate.recovery && (
+        <button onClick={beginRecovery} type="button">Complete This Food</button>
+      )}
+      {candidate.customFood && (
+        <>
+          <button onClick={beginRecovery} type="button">Edit Custom Food</button>
+          <button onClick={removeCustomFood} type="button">
+            {deletePending ? "Confirm Delete Custom Food" : "Delete Custom Food"}
+          </button>
+        </>
+      )}
+      <button onClick={resetForAnotherScan} type="button">Scan Again</button>
+    </div>
+  );
+
   return (
     <div className="trace-barcode-dialog__backdrop">
       <section
         aria-describedby="trace-barcode-description"
         aria-labelledby="trace-barcode-title"
         aria-modal="true"
-        className={`trace-barcode-dialog${reducedMotion ? " trace-barcode-dialog--reduced-motion" : ""}`}
+        className={`trace-barcode-dialog${grading && candidate ? " trace-barcode-dialog--grading" : ""}${reducedMotion ? " trace-barcode-dialog--reduced-motion" : ""}`}
         data-camera-state={cameraState}
         data-orientation-layout="responsive"
         data-mobile-safe="true"
@@ -745,12 +767,13 @@ export default function BarcodeScannerDialog({
               {candidate.canUse ? "Ready to review" : "Review required"}
             </p>
             <h3>{[candidate.display.brand, candidate.display.name].filter(Boolean).join(" · ")}</h3>
-            {candidate.display.packageQuantity && <p>Package: {candidate.display.packageQuantity}</p>}
-            {candidate.display.servingsPerContainer !== null
+            {grading && <grading.default candidate={candidate} identifier={lookupIdentifier} />}
+            {!grading && candidate.display.packageQuantity && <p>Package: {candidate.display.packageQuantity}</p>}
+            {!grading && candidate.display.servingsPerContainer !== null
               && candidate.display.servingsPerContainer !== undefined && (
               <p>Servings per container: {candidate.display.servingsPerContainer}</p>
             )}
-            <p>{candidate.display.basisMessage}</p>
+            <p>{grading ? `Nutrition per ${candidate.display.servingDescription}.` : candidate.display.basisMessage}</p>
             {candidate.stale && (
               <p className="trace-barcode-dialog__unknowns">
                 Offline cached result: this provider record is past Trace's normal cache age. Review it carefully.
@@ -780,26 +803,14 @@ export default function BarcodeScannerDialog({
                 Exact labeled-serving nutrition is missing or cannot be safely established, so this product cannot populate an entry yet.
               </p>
             )}
-            <div className="trace-barcode-dialog__review-actions">
-              <button disabled={!candidate.canUse} onClick={useFood} type="button">Use This Food</button>
-              {!candidate.canUse && candidate.recovery && (
-                <button onClick={beginRecovery} type="button">Complete This Food</button>
-              )}
-              {candidate.customFood && (
-                <>
-                  <button onClick={beginRecovery} type="button">Edit Custom Food</button>
-                  <button onClick={removeCustomFood} type="button">
-                    {deletePending ? "Confirm Delete Custom Food" : "Delete Custom Food"}
-                  </button>
-                </>
-              )}
-              <button onClick={resetForAnotherScan} type="button">Scan Again</button>
-            </div>
+            {!grading && reviewActions}
             <BarcodeIngredients
               key={lookupIdentifier?.value}
               ingredients={candidate.display.ingredients}
               attribution={candidate.customFood?.providerSourceSnapshot?.provenance?.attribution || candidate.display.attribution}
             />
+            {grading && <grading.BarcodeAdditives key={`additives:${lookupIdentifier?.value}`} candidate={candidate} />}
+            {grading && reviewActions}
           </article>
         )}
         </div>
