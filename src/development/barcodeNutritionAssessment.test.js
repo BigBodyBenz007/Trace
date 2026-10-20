@@ -26,7 +26,7 @@ test('actual captured product data yields a whole number with public grading dis
   expect(JSON.stringify(c)).toBe(before);
   expect(JSON.stringify(result)).not.toMatch(/"letters?":/);
 });
-test.each(['unresolved', 'unknown-market'])('%s inputs remain unresolved', scenario => {
+test.each(['unresolved'])('%s inputs remain unresolved', scenario => {
   const result = assessBarcodeNutrition(candidate(scenario), identifier);
   expect(result.nutritionScore100).toBeNull(); expect(result.reasons.length).toBeGreaterThan(0);
 });
@@ -41,8 +41,6 @@ test('custom edits cannot inherit a score from the retained provider snapshot', 
 test.each([
   input => { input.identity.gtin = '012000001291'; }, input => { input.identity.name = 'Other formulation'; },
   input => { input.source.url = 'https://world.openfoodfacts.org/product/012000001291'; },
-  input => { input.markets[0].values = ['en:france']; },
-  input => { input.markets[0].values.push('en:france'); },
   input => { input.categories[0].values = ['en:infant-formula']; },
   input => { input.categories[0].values = ['en:yogurts']; },
   input => { input.categories[0].values = ['en:yogurts', 'en:drinkable-yogurts']; },
@@ -55,6 +53,31 @@ test.each([
   const c = clone(candidate()); change(c.display.assessmentInputs);
   expect(assessBarcodeNutrition(c, identifier).nutritionScore100).toBeNull();
 });
+
+test.each(['unknown-market', 'foreign', 'multi-market'])('%s assesses a coherent profile without claiming US formulation', scenario => {
+  const c = clone(candidate(scenario === 'unknown-market' ? scenario : undefined));
+  if (scenario === 'foreign') c.display.assessmentInputs.markets = [{ field: 'countries_tags', values: ['en:france'] }];
+  if (scenario === 'multi-market') c.display.assessmentInputs.markets[0].values.push('en:france');
+  const before = JSON.stringify(c);
+  const result = assessBarcodeNutrition(c, identifier);
+  expect(result.nutritionScore100).toBe(assessBarcodeNutrition(candidate(), identifier).nutritionScore100);
+  expect(result.evidence.market.exactUsFormulationVerified).toBe(false);
+  expect(result.confidence).toContain('not independently verified');
+  expect(result.warnings.join(' ')).toMatch(/market|formulation/);
+  expect(result).toMatchObject({ grade: null, scoreReady: false, scanMatchEligible: false });
+  expect(JSON.stringify(c)).toBe(before);
+});
+
+test('unused total fat/carbohydrate absence does not block a settled general-food calculation', () => {
+  const c = clone(candidate());
+  c.display.assessmentInputs.datasets.forEach(dataset => {
+    dataset.observations = dataset.observations.filter(entry => !['fat', 'carbohydrates'].includes(entry.nutrient));
+  });
+  const result = assessBarcodeNutrition(c, identifier);
+  expect(result.nutritionScore100).toBe(assessBarcodeNutrition(candidate(), identifier).nutritionScore100);
+  expect(result.warnings.join(' ')).toContain('no zero is substituted');
+  expect(result.result.normalized.nutrients.fat).toBeNull();
+});
 test('older positive or estimated plant content is not reused as updated FVL', () => {
   for (const group of [{ identification: 'provider-reported', rawValue: 50 }, { identification: 'provider-estimated', rawValue: 0 }]) {
     const c = clone(candidate()); Object.assign(c.display.assessmentInputs.foodGroups[0], group);
@@ -65,6 +88,36 @@ test('older positive or estimated plant content is not reused as updated FVL', (
 test('nut categories cannot reuse the old group zero because oil eligibility differs', () => {
   const c = clone(candidate()); c.display.assessmentInputs.categories[0].values = ['en:nuts'];
   expect(assessBarcodeNutrition(c, identifier).nutritionScore100).toBeNull();
+});
+test('complete single-grain evidence settles FVL without provider percentages or saved-record edits', () => {
+  const c = clone(candidate());
+  c.display.ingredients.text = 'Whole grain wheat. bht is added to the packaging material to preserve freshness.';
+  c.display.assessmentInputs.foodGroups = [];
+  const before = JSON.stringify(c), result = assessBarcodeNutrition(c, identifier);
+  expect(Number.isInteger(result.nutritionScore100)).toBe(true);
+  expect(result.evidence.plantContent).toMatchObject({ status: 'verified-zero', percent: 0,
+    ingredientEvidence: { text: c.display.ingredients.text }, source: c.display.assessmentInputs.source });
+  expect(result.result.normalized.plantPercent).toBe(0);
+  expect(result).toMatchObject({ grade: null, scoreReady: false, scanMatchEligible: false });
+  expect(JSON.stringify(c)).toBe(before);
+});
+test('conflicting provider plant quantities block scoring without blocking logging or mutating sources', () => {
+  const c = clone(candidate()); c.display.ingredients.text = 'Whole grain wheat.';
+  c.display.assessmentInputs.foodGroups[0].rawValue = 20;
+  const before = JSON.stringify(c), result = assessBarcodeNutrition(c, identifier);
+  expect(result.nutritionScore100).toBeNull();
+  expect(result.evidence.plantContent.status).toBe('conflicting');
+  expect(result.reasons.join(' ')).toContain('no quantity is overwritten');
+  expect(c.canUse).toBe(true); expect(JSON.stringify(c)).toBe(before);
+});
+test('ingredient-derived zero does not fill missing scoring nutrients', () => {
+  const c = clone(candidate('unresolved')); c.display.ingredients.text = 'Whole grain wheat.';
+  c.display.assessmentInputs.foodGroups = [];
+  const result = assessBarcodeNutrition(c, identifier);
+  expect(result.evidence.plantContent.percent).toBe(0);
+  expect(result.nutritionScore100).toBeNull();
+  expect(result.reasons.join(' ')).toContain('Saturated fat is missing');
+  expect(result.result.normalized.nutrients.saturatedFat).toBeNull();
 });
 test('beverages retain unknown sweetener evidence rather than assume absence', () => {
   const c = clone(candidate()); const input = c.display.assessmentInputs;

@@ -1,0 +1,4456 @@
+{
+  "sourceHead": "537dff1417e7325a6c12e19a651ea28827a088a2",
+  "originalArchiveSha256": {
+    "selection.json": "d67cc210ca62e9a5c6d70db6a783682bd8451897bd9d36fbdd36a16b579af4e3",
+    "results.json": "3077b0525964bde5f36a3143b7467a17d7cf63d595d84069b767d188f3f55a1a",
+    "follow-up-results.json": "2d8ca5377899873707a3de364331467c95824a815935bd4864f2b999386db49e",
+    "summary.json": "348acee2a4e2f896ef03dbe59c08dccc08e35659ed3d2a687735ffc616e0d4cf",
+    "README.md": "e90d6bc3c6e67ba42e6e1f447288c95c9353243d5acf9b5b498cc17fb1b85966",
+    "evaluate.cjs": "cc794cf7c59e757637feaffc144f22e9d04696df3fc1bf2b9a10aa5037d86e57"
+  },
+  "offline": true,
+  "previousScores": 0,
+  "revisedScores": 3,
+  "products": [
+    {
+      "barcode": "00049000000443",
+      "selectedName": "Coca-Cola Original Taste",
+      "retrievedAt": "2026-10-20T17:59:53.143Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Source/formulation evidence incomplete; no exact US formulation verification.",
+        "reasons": [
+          "A US-only product record is not established; foreign or multi-market formulations are not substituted.",
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "Energy is missing or unsupported.",
+          "Saturated fat is missing or unsupported.",
+          "Fiber is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Foreign or multi-market record: the score assesses this supplied profile only. The exact US formulation is not independently verified.",
+        "reasons": [
+          "addedSugar exceeds totalSugar in off-serving.",
+          "addedSugar exceeds carbohydrates in off-serving.",
+          "addedSugar exceeds totalSugar in off-100g.",
+          "addedSugar exceeds carbohydrates in off-100g.",
+          "addedSugar exceeds totalSugar in off-value.",
+          "addedSugar exceeds carbohydrates in off-value."
+        ],
+        "warnings": [
+          "Foreign or multi-market availability is reported; this profile is not verified as the US formulation. No regional records are merged.",
+          "Compatible kcal/kJ rounding accepted in off-serving; original source values are retained in the evidence details.",
+          "Compatible kcal/kJ rounding accepted in off-100g; original source values are retained in the evidence details.",
+          "Compatible kcal/kJ rounding accepted in off-value; original source values are retained in the evidence details.",
+          "Recorded decimal rounding differs for addedSugar between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for addedSugar between off-serving and off-value; the selected dataset is retained intact.",
+          "Saturated fat is missing or unsupported; no zero is substituted.",
+          "Fiber is missing or unsupported; no zero is substituted."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:guyana"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "Guyana"
+                ]
+              }
+            ],
+            "status": "foreign-or-multi-market",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "beverage"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Explicit provider food-category claims."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 591,
+                "unit": "ml"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 250,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1070,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1070,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                1024.58,
+                1071.5
+              ],
+              "calorieRoundingAllowance": 5,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "ml"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 42.3011844331641,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 181.218274111675,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 181.218274111675,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                173.44839255499144,
+                181.21827411167502
+              ],
+              "calorieRoundingAllowance": 0.8460236886632826,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "ml"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 42.3011844331641,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 181.218274111675,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 181.218274111675,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                173.44839255499144,
+                181.21827411167502
+              ],
+              "calorieRoundingAllowance": 0.8460236886632826,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-serving"
+        },
+        "result": null
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00049000000450",
+      "selectedName": "Diet Coke",
+      "retrievedAt": "2026-10-20T17:59:54.300Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "A supported, unambiguous nutritional category is missing.",
+          "A compatible nutrient measurement basis is missing."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "A compatible nutrient measurement basis is missing."
+        ],
+        "warnings": [],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "marketCountry",
+                "values": [
+                  "US"
+                ]
+              }
+            ],
+            "status": "provider-reported-us",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "beverage"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Explicit provider food-category claims."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "usda-reference",
+              "quantity": null,
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 0,
+                  "rawUnit": "KCAL",
+                  "unitSource": "provider",
+                  "enteredUnit": null,
+                  "field": "foodNutrients[3].value",
+                  "derivation": "Calculated from an approximate value per serving size measure"
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                0,
+                0
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ]
+        },
+        "result": null
+      },
+      "loggingUsable": false,
+      "explanation": null
+    },
+    {
+      "barcode": "00038000196560",
+      "selectedName": "Kellogg's Frosted Flakes",
+      "retrievedAt": "2026-10-20T17:59:55.309Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "Energy observations conflict beyond compatible rounding in off-100g.",
+          "Energy observations conflict beyond compatible rounding in off-value."
+        ],
+        "warnings": [
+          "Energy is missing or unsupported; no zero is substituted."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:united-states"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "United States"
+                ]
+              }
+            ],
+            "status": "provider-reported-us",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Explicit provider food-category claims."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 351.35135135135,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1629.72972972973,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1629.72972972973,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1470.0540540540485,
+                1475.67567567567
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 351.35135135135,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1629.72972972973,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1629.72972972973,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1470.0540540540485,
+                1475.67567567567
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": null
+      },
+      "loggingUsable": false,
+      "explanation": null
+    },
+    {
+      "barcode": "00038000199929",
+      "selectedName": "Kellogg's Rice Krispies",
+      "retrievedAt": "2026-10-20T17:59:56.343Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "Energy observations conflict beyond compatible rounding in off-serving.",
+          "Energy observations conflict beyond compatible rounding in off-100g.",
+          "Energy observations conflict beyond compatible rounding in off-value."
+        ],
+        "warnings": [
+          "Energy is missing or unsupported; no zero is substituted."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:united-states"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "United States"
+                ]
+              }
+            ],
+            "status": "provider-reported-us",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Explicit provider food-category claims."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 40,
+                "unit": "ml"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 150,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 663,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 663,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                606.1800000000001,
+                651.5
+              ],
+              "calorieRoundingAllowance": 5,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 375,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1657.5,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1657.5,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1569,
+                1575
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 375,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1657.5,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1657.5,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1569,
+                1575
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": null
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00884912180056",
+      "selectedName": "Post Shredded Wheat Original Big Biscuit",
+      "retrievedAt": "2026-10-20T17:59:57.367Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Source/formulation evidence incomplete; no exact US formulation verification.",
+        "reasons": [
+          "A US-only product record is not established; foreign or multi-market formulations are not substituted.",
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Foreign or multi-market record: the score assesses this supplied profile only. The exact US formulation is not independently verified.",
+        "reasons": [
+          "Energy observations conflict beyond compatible rounding in off-serving.",
+          "Energy observations conflict beyond compatible rounding in off-100g.",
+          "Energy observations conflict beyond compatible rounding in off-value."
+        ],
+        "warnings": [
+          "Foreign or multi-market availability is reported; this profile is not verified as the US formulation. No regional records are merged.",
+          "Energy is missing or unsupported; no zero is substituted."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:united-states",
+                  "en:world"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "United States, world"
+                ]
+              }
+            ],
+            "status": "foreign-or-multi-market",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Explicit provider food-category claims."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 51,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 180,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 892,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 892,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                731.7,
+                777.5
+              ],
+              "calorieRoundingAllowance": 5,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 352.941176470588,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1749.01960784314,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1749.01960784314,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1434.7058823529403,
+                1524.5098039215677
+              ],
+              "calorieRoundingAllowance": 9.80392156862745,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 352.941176470588,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1749.01960784314,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1749.01960784314,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1434.7058823529403,
+                1524.5098039215677
+              ],
+              "calorieRoundingAllowance": 9.80392156862745,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": null
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00689544080008",
+      "selectedName": "FAGE Total 0% Plain Greek Yogurt",
+      "retrievedAt": "2026-10-20T17:59:58.389Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "A supported, unambiguous nutritional category is missing."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": 84,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [],
+        "warnings": [],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "marketCountry",
+                "values": [
+                  "United States"
+                ]
+              }
+            ],
+            "status": "provider-reported-us",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general"
+            ],
+            "plantZero": "Only milk and yogurt cultures are declared; no qualifying FVL ingredients.",
+            "basis": [
+              "Explicit strained/Greek/spoonable yogurt food description."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "usda-reference",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 53.3,
+                  "rawUnit": "KCAL",
+                  "unitSource": "provider",
+                  "enteredUnit": null,
+                  "field": "foodNutrients[3].value",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                223.00719999999998,
+                223.85999999999999
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "usda-reference"
+        },
+        "result": {
+          "methodId": "trace-experimental-updated-nutrition-numeric",
+          "methodVersion": "2023-updated+2024-04-04-calculator+2025-03-17-faq+trace-bands-v1+trace-boundary-calibration-v2",
+          "methodCategory": "general",
+          "categoryCandidates": [
+            "general"
+          ],
+          "categoryRules": [
+            "General foods count protein only when negative points are below eleven.",
+            "Nuts, seeds and added oils do not receive the general FVL credit."
+          ],
+          "sources": {
+            "calculator": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/Nutri-Score_Updated-algorithm_20240404.xlsx",
+            "guide": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "official": "https://www.santepubliquefrance.fr/en/nutrition-and-physical-activity/nutri-score",
+            "usLabelRounding": "https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-101/subpart-A/section-101.9#p-101.9(c)(6)"
+          },
+          "displayScale": "Experimental Trace 0–100 presentation; not a health percentage or validated risk measurement",
+          "grade": null,
+          "scoreReady": false,
+          "scanMatchEligible": false,
+          "status": "calculated",
+          "eligible": true,
+          "nutritionScore100": 84,
+          "rawScore": -4,
+          "rawRange": [
+            -4,
+            -4
+          ],
+          "rawCandidates": [
+            {
+              "category": "general",
+              "rawScores": [
+                -4
+              ]
+            }
+          ],
+          "possibleScores": [
+            84
+          ],
+          "points": {
+            "energy": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "sugar": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "saturatedFat": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "salt": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "fiber": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "protein": {
+              "min": 4,
+              "max": 4,
+              "possible": [
+                4
+              ]
+            },
+            "plant": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "nonNutritiveSweeteners": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "negative": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "proteinApplied": {
+              "min": 4,
+              "max": 4,
+              "possible": [
+                4
+              ]
+            }
+          },
+          "normalized": {
+            "basis": {
+              "amount": 100,
+              "unit": "g"
+            },
+            "nutrients": {
+              "calories": 53.3,
+              "energyKj": 224,
+              "saturatedFat": 0,
+              "totalSugar": 3.33,
+              "sodium": 36.7,
+              "salt": 0.09175000000000001,
+              "fiber": 0,
+              "protein": 10.7,
+              "fat": 0,
+              "carbohydrates": 3.33,
+              "addedSugar": null,
+              "freeSugar": null
+            },
+            "plantPercent": 0,
+            "nonNutritiveSweeteners": null,
+            "derivedBounds": {},
+            "conversions": [
+              "Energy converted after normalization with the official updated calculator: round(kcal × 4.2).",
+              "Salt g = sodium mg / 1000 × 2.5; no intermediate sodium rounding.",
+              "Updated eligible FVL rounded to one decimal per calculator Instructions!B35."
+            ]
+          },
+          "reasons": [],
+          "warnings": [
+            "Market unknown; this evaluates the supplied profile without establishing a regional formulation.",
+            "No review date is supplied.",
+            "No archived source hash is supplied."
+          ],
+          "scoreRange": [
+            84,
+            84
+          ]
+        }
+      },
+      "loggingUsable": true,
+      "explanation": "It is raised by protein."
+    },
+    {
+      "barcode": "00894700010045",
+      "selectedName": "Chobani Strawberry on the Bottom Greek Yogurt",
+      "retrievedAt": "2026-10-20T17:59:58.929Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Source/formulation evidence incomplete; no exact US formulation verification.",
+        "reasons": [
+          "Nutrition assessment inputs were not captured for this product. Food logging remains available when its serving data is usable."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Source/formulation evidence incomplete; no exact US formulation verification.",
+        "reasons": [
+          "Nutrition assessment inputs were not captured for this product. Food logging remains available when its serving data is usable."
+        ],
+        "warnings": [],
+        "evidence": {},
+        "result": null
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00888849000012",
+      "selectedName": "Quest Chocolate Chip Cookie Dough Protein Bar",
+      "retrievedAt": "2026-10-20T17:59:59.840Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Source/formulation evidence incomplete; no exact US formulation verification.",
+        "reasons": [
+          "A US-only product record is not established; foreign or multi-market formulations are not substituted.",
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "A supported, unambiguous nutritional category is missing.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Foreign or multi-market record: the score assesses this supplied profile only. The exact US formulation is not independently verified.",
+        "reasons": [
+          "The supplied evidence places this product outside supported food scope.",
+          "Energy observations conflict beyond compatible rounding in off-serving.",
+          "Energy observations conflict beyond compatible rounding in off-100g.",
+          "Energy observations conflict beyond compatible rounding in off-value."
+        ],
+        "warnings": [
+          "Foreign or multi-market availability is reported; this profile is not verified as the US formulation. No regional records are merged.",
+          "Energy is missing or unsupported; no zero is substituted."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:france",
+                  "en:united-states"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "France, United States"
+                ]
+              }
+            ],
+            "status": "foreign-or-multi-market",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [],
+            "plantZero": null,
+            "basis": [],
+            "excluded": true,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 60,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 190,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1160,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1160,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                773.5400000000001,
+                819.5
+              ],
+              "calorieRoundingAllowance": 5,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 316.666666666667,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1933.33333333333,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1933.33333333333,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1289.233333333335,
+                1365.8333333333348
+              ],
+              "calorieRoundingAllowance": 8.333333333333334,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 316.666666666667,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1933.33333333333,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1933.33333333333,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1289.233333333335,
+                1365.8333333333348
+              ],
+              "calorieRoundingAllowance": 8.333333333333334,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": null
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00016000457232",
+      "selectedName": "Nature Valley Peanut Butter Dark Chocolate Protein Bars",
+      "retrievedAt": "2026-10-20T18:00:00.759Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Source/formulation evidence incomplete; no exact US formulation verification.",
+        "reasons": [
+          "A US-only product record is not established; foreign or multi-market formulations are not substituted.",
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "A supported, unambiguous nutritional category is missing.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Foreign or multi-market record: the score assesses this supplied profile only. The exact US formulation is not independently verified.",
+        "reasons": [
+          "Energy observations conflict beyond compatible rounding in off-serving.",
+          "Energy observations conflict beyond compatible rounding in off-100g.",
+          "Energy observations conflict beyond compatible rounding in off-value."
+        ],
+        "warnings": [
+          "Foreign or multi-market availability is reported; this profile is not verified as the US formulation. No regional records are merged.",
+          "Energy is missing or unsupported; no zero is substituted."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:colombia"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "Colombia"
+                ]
+              }
+            ],
+            "status": "foreign-or-multi-market",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general",
+              "fats-nuts-seeds"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Granola-bar description and declared nuts; proportion unknown, both category rules retained."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 40,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 197,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 920,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 920,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                823.748,
+                827.9000000000001
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 492,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2301,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2301,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                2058.5280000000002,
+                2066.4
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 492,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2301,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2301,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                2058.5280000000002,
+                2066.4
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": null
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00013764027176",
+      "selectedName": "Dave's Killer Bread 100% Whole Wheat",
+      "retrievedAt": "2026-10-20T18:00:01.659Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Source/formulation evidence incomplete; no exact US formulation verification.",
+        "reasons": [
+          "A US-only product record is not established; foreign or multi-market formulations are not substituted.",
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Foreign or multi-market record: the score assesses this supplied profile only. The exact US formulation is not independently verified.",
+        "reasons": [
+          "Energy observations conflict beyond compatible rounding in off-serving.",
+          "Energy observations conflict beyond compatible rounding in off-100g.",
+          "Energy observations conflict beyond compatible rounding in off-value."
+        ],
+        "warnings": [
+          "Foreign or multi-market availability is reported; this profile is not verified as the US formulation. No regional records are merged.",
+          "Energy is missing or unsupported; no zero is substituted."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:united-states",
+                  "en:world"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "United States, world"
+                ]
+              }
+            ],
+            "status": "foreign-or-multi-market",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Explicit provider food-category claims."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 42,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 100,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 505,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 505,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                396.98,
+                441.5
+              ],
+              "calorieRoundingAllowance": 5,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 238.095238095238,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1201.19047619048,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1201.19047619048,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                945.1904761904758,
+                1051.1904761904757
+              ],
+              "calorieRoundingAllowance": 11.904761904761905,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 238.095238095238,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1201.19047619048,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1201.19047619048,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                945.1904761904758,
+                1051.1904761904757
+              ],
+              "calorieRoundingAllowance": 11.904761904761905,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": null
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00014100070832",
+      "selectedName": "Pepperidge Farm Farmhouse Hearty White Bread",
+      "retrievedAt": "2026-10-20T18:00:02.682Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Source/formulation evidence incomplete; no exact US formulation verification.",
+        "reasons": [
+          "A US-only product record is not established; foreign or multi-market formulations are not substituted.",
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Foreign or multi-market record: the score assesses this supplied profile only. The exact US formulation is not independently verified.",
+        "reasons": [
+          "Energy observations conflict beyond compatible rounding in off-serving.",
+          "addedSugar exceeds totalSugar in off-serving.",
+          "Energy observations conflict beyond compatible rounding in off-100g.",
+          "addedSugar exceeds totalSugar in off-100g.",
+          "Energy observations conflict beyond compatible rounding in off-value.",
+          "addedSugar exceeds totalSugar in off-value."
+        ],
+        "warnings": [
+          "Foreign or multi-market availability is reported; this profile is not verified as the US formulation. No regional records are merged.",
+          "Energy is missing or unsupported; no zero is substituted."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:france",
+                  "en:united-states"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "France, United States"
+                ]
+              }
+            ],
+            "status": "foreign-or-multi-market",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Explicit provider food-category claims."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 49,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 114,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 555,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 555,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                476.476,
+                479.3
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 232.142857142857,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1132.65306122449,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1132.65306122449,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                971.2857142857138,
+                974.9999999999994
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 232.142857142857,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1132.65306122449,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1132.65306122449,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                971.2857142857138,
+                974.9999999999994
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": null
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00037600110754",
+      "selectedName": "Skippy Creamy Peanut Butter",
+      "retrievedAt": "2026-10-20T18:00:03.705Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Source/formulation evidence incomplete; no exact US formulation verification.",
+        "reasons": [
+          "A US-only product record is not established; foreign or multi-market formulations are not substituted.",
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "A supported, unambiguous nutritional category is missing.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Foreign or multi-market record: the score assesses this supplied profile only. The exact US formulation is not independently verified.",
+        "reasons": [
+          "Energy observations conflict beyond compatible rounding in off-serving.",
+          "Energy observations conflict beyond compatible rounding in off-100g.",
+          "Energy observations conflict beyond compatible rounding in off-value."
+        ],
+        "warnings": [
+          "Foreign or multi-market availability is reported; this profile is not verified as the US formulation. No regional records are merged.",
+          "Recorded decimal rounding differs for saturatedFat between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for totalSugar between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for sodium between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for protein between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for carbohydrates between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for saturatedFat between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for totalSugar between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for sodium between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for protein between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for carbohydrates between off-serving and off-value; the selected dataset is retained intact.",
+          "Energy is missing or unsupported; no zero is substituted."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:germany",
+                  "en:united-states"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "Germany, United States"
+                ]
+              }
+            ],
+            "status": "foreign-or-multi-market",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general",
+              "fats-nuts-seeds"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Processed nut product; proportion unknown, so both category rules are retained."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 32,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 190,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 829,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 829,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                773.5400000000001,
+                819.5
+              ],
+              "calorieRoundingAllowance": 5,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 593.75,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2591.9,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2591.9,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                2417.3125,
+                2560.9375
+              ],
+              "calorieRoundingAllowance": 15.625,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 593.75,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2591.9,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2591.9,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                2417.3125,
+                2560.9375
+              ],
+              "calorieRoundingAllowance": 15.625,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": null
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00041570003831",
+      "selectedName": "Blue Diamond Whole Natural Almonds",
+      "retrievedAt": "2026-10-20T18:00:04.609Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "A supported, unambiguous nutritional category is missing.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": 87,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [],
+        "warnings": [
+          "Compatible kcal/kJ rounding accepted in off-serving; original source values are retained in the evidence details.",
+          "Compatible kcal/kJ rounding accepted in off-100g; original source values are retained in the evidence details.",
+          "Compatible kcal/kJ rounding accepted in off-value; original source values are retained in the evidence details."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:united-states"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "United States"
+                ]
+              }
+            ],
+            "status": "provider-reported-us",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "fats-nuts-seeds"
+            ],
+            "plantZero": "Only declared nuts; nuts do not count as updated FVL.",
+            "basis": [
+              "Complete single-nut ingredient declaration."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 28.349,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 160,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 669,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                648.02,
+                693.5
+              ],
+              "calorieRoundingAllowance": 5,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 564.393805777982,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2361,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                2285.8654626265497,
+                2446.294401918941
+              ],
+              "calorieRoundingAllowance": 17.637306430561924,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 564.393805777982,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2361,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                2285.8654626265497,
+                2446.294401918941
+              ],
+              "calorieRoundingAllowance": 17.637306430561924,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": {
+          "methodId": "trace-experimental-updated-nutrition-numeric",
+          "methodVersion": "2023-updated+2024-04-04-calculator+2025-03-17-faq+trace-bands-v1+trace-boundary-calibration-v2",
+          "methodCategory": "fats-nuts-seeds",
+          "categoryCandidates": [
+            "fats-nuts-seeds"
+          ],
+          "categoryRules": [
+            "Fats, oils, nuts and seeds use energy from saturates (g × 37 kJ) and the saturated/total-fat ratio.",
+            "Protein counts only when negative points are below seven.",
+            "Processed nut/seed products require more than 50% nuts/seeds; qualifying whole-edible-plant oils can count toward FVL."
+          ],
+          "sources": {
+            "calculator": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/Nutri-Score_Updated-algorithm_20240404.xlsx",
+            "guide": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "official": "https://www.santepubliquefrance.fr/en/nutrition-and-physical-activity/nutri-score",
+            "usLabelRounding": "https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-101/subpart-A/section-101.9#p-101.9(c)(6)"
+          },
+          "displayScale": "Experimental Trace 0–100 presentation; not a health percentage or validated risk measurement",
+          "grade": null,
+          "scoreReady": false,
+          "scanMatchEligible": false,
+          "status": "calculated",
+          "eligible": true,
+          "nutritionScore100": 87,
+          "rawScore": -10,
+          "rawRange": [
+            -10,
+            -10
+          ],
+          "rawCandidates": [
+            {
+              "category": "fats-nuts-seeds",
+              "rawScores": [
+                -10
+              ]
+            }
+          ],
+          "possibleScores": [
+            87
+          ],
+          "points": {
+            "energy": {
+              "min": 1,
+              "max": 1,
+              "possible": [
+                1
+              ]
+            },
+            "sugar": {
+              "min": 1,
+              "max": 1,
+              "possible": [
+                1
+              ]
+            },
+            "saturatedFat": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "salt": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "fiber": {
+              "min": 5,
+              "max": 5,
+              "possible": [
+                5
+              ]
+            },
+            "protein": {
+              "min": 7,
+              "max": 7,
+              "possible": [
+                7
+              ]
+            },
+            "plant": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "nonNutritiveSweeteners": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "negative": {
+              "min": 2,
+              "max": 2,
+              "possible": [
+                2
+              ]
+            },
+            "proteinApplied": {
+              "min": 7,
+              "max": 7,
+              "possible": [
+                7
+              ]
+            }
+          },
+          "normalized": {
+            "basis": {
+              "amount": 100,
+              "unit": "g"
+            },
+            "nutrients": {
+              "calories": 564.393805777982,
+              "energyKj": 2361,
+              "saturatedFat": 3.52746128611239,
+              "totalSugar": 3.52746128611239,
+              "sodium": 0,
+              "salt": 0,
+              "fiber": 10.5823838583372,
+              "protein": 21.1647677166743,
+              "fat": 49.3844580055734,
+              "carbohydrates": 21.1647677166743,
+              "addedSugar": 0,
+              "freeSugar": null
+            },
+            "plantPercent": 0,
+            "nonNutritiveSweeteners": null,
+            "derivedBounds": {},
+            "conversions": [
+              "Salt g = sodium mg / 1000 × 2.5; no intermediate sodium rounding.",
+              "Updated eligible FVL rounded to one decimal per calculator Instructions!B35."
+            ]
+          },
+          "reasons": [],
+          "warnings": [
+            "Market unknown; this evaluates the supplied profile without establishing a regional formulation.",
+            "No review date is supplied.",
+            "No archived source hash is supplied.",
+            "Declared kJ is used directly; kcal is retained separately."
+          ],
+          "scoreRange": [
+            87,
+            87
+          ]
+        }
+      },
+      "loggingUsable": true,
+      "explanation": "This score is lowered by energy from saturated fat and total sugars. It is raised by fiber and protein."
+    },
+    {
+      "barcode": "00025800023608",
+      "selectedName": "Smart Ones Santa Fe Rice & Beans",
+      "retrievedAt": "2026-10-20T18:00:05.551Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "A supported, unambiguous nutritional category is missing.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "Energy observations conflict beyond compatible rounding in off-serving.",
+          "Energy observations conflict beyond compatible rounding in off-100g.",
+          "Energy observations conflict beyond compatible rounding in off-value.",
+          "Reported kJ conflicts between off-serving and off-100g after matching measurement bases.",
+          "Reported kJ conflicts between off-serving and off-value after matching measurement bases."
+        ],
+        "warnings": [
+          "Recorded decimal rounding differs for saturatedFat between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for totalSugar between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for sodium between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for fiber between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for protein between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for fat between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for carbohydrates between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for saturatedFat between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for totalSugar between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for sodium between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for fiber between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for protein between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for fat between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for carbohydrates between off-serving and off-value; the selected dataset is retained intact.",
+          "Energy is missing or unsupported; no zero is substituted."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:united-states"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "United States"
+                ]
+              }
+            ],
+            "status": "provider-reported-us",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Rice food description corroborated by the captured ingredient declaration."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 255,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 300,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1300,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1300,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1233.78,
+                1281.5
+              ],
+              "calorieRoundingAllowance": 5,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 117.647058823529,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 511.558431372549,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 511.558431372549,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                484.03137254901793,
+                502.35294117646885
+              ],
+              "calorieRoundingAllowance": 1.9607843137254901,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 117.647058823529,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 511.558431372549,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 511.558431372549,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                484.03137254901793,
+                502.35294117646885
+              ],
+              "calorieRoundingAllowance": 1.9607843137254901,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": null
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00013800103215",
+      "selectedName": "Stouffer's Classic Lasagna with Meat & Sauce",
+      "retrievedAt": "2026-10-20T18:00:06.476Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "A supported, unambiguous nutritional category is missing.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "The updated fruit/vegetable/legume fraction is unknown.",
+          "Missing inputs or category evidence allow several numerical scores; no single score is assigned."
+        ],
+        "warnings": [
+          "Compatible kcal/kJ rounding accepted in off-serving; original source values are retained in the evidence details.",
+          "Compatible kcal/kJ rounding accepted in off-100g; original source values are retained in the evidence details.",
+          "Compatible kcal/kJ rounding accepted in off-value; original source values are retained in the evidence details."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:united-states"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "United States"
+                ]
+              }
+            ],
+            "status": "provider-reported-us",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Explicit provider food-category claims."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 297,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 360,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1520,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1520,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                1484.8200000000002,
+                1533.5
+              ],
+              "calorieRoundingAllowance": 5,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 121.212121212121,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 512.457912457912,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 512.457912457912,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                500.10774410774326,
+                516.1616161616154
+              ],
+              "calorieRoundingAllowance": 1.6835016835016836,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 121.212121212121,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 512.457912457912,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 512.457912457912,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                500.10774410774326,
+                516.1616161616154
+              ],
+              "calorieRoundingAllowance": 1.6835016835016836,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": {
+          "methodId": "trace-experimental-updated-nutrition-numeric",
+          "methodVersion": "2023-updated+2024-04-04-calculator+2025-03-17-faq+trace-bands-v1+trace-boundary-calibration-v2",
+          "methodCategory": "general",
+          "categoryCandidates": [
+            "general"
+          ],
+          "categoryRules": [
+            "General foods count protein only when negative points are below eleven.",
+            "Nuts, seeds and added oils do not receive the general FVL credit."
+          ],
+          "sources": {
+            "calculator": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/Nutri-Score_Updated-algorithm_20240404.xlsx",
+            "guide": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "official": "https://www.santepubliquefrance.fr/en/nutrition-and-physical-activity/nutri-score",
+            "usLabelRounding": "https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-101/subpart-A/section-101.9#p-101.9(c)(6)"
+          },
+          "displayScale": "Experimental Trace 0–100 presentation; not a health percentage or validated risk measurement",
+          "grade": null,
+          "scoreReady": false,
+          "scanMatchEligible": false,
+          "status": "incomplete",
+          "eligible": false,
+          "nutritionScore100": null,
+          "rawScore": null,
+          "rawRange": [
+            -1,
+            4
+          ],
+          "rawCandidates": [
+            {
+              "category": "general",
+              "rawScores": [
+                -1,
+                2,
+                3,
+                4
+              ]
+            }
+          ],
+          "possibleScores": [
+            56,
+            58,
+            65,
+            81
+          ],
+          "points": {
+            "energy": {
+              "min": 1,
+              "max": 1,
+              "possible": [
+                1
+              ]
+            },
+            "sugar": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "saturatedFat": {
+              "min": 2,
+              "max": 2,
+              "possible": [
+                2
+              ]
+            },
+            "salt": {
+              "min": 4,
+              "max": 4,
+              "possible": [
+                4
+              ]
+            },
+            "fiber": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "protein": {
+              "min": 3,
+              "max": 3,
+              "possible": [
+                3
+              ]
+            },
+            "plant": {
+              "min": 0,
+              "max": 5,
+              "possible": [
+                0,
+                1,
+                2,
+                5
+              ]
+            },
+            "nonNutritiveSweeteners": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "negative": {
+              "min": 7,
+              "max": 7,
+              "possible": [
+                7
+              ]
+            },
+            "proteinApplied": {
+              "min": 3,
+              "max": 3,
+              "possible": [
+                3
+              ]
+            }
+          },
+          "normalized": {
+            "basis": {
+              "amount": 100,
+              "unit": "g"
+            },
+            "nutrients": {
+              "calories": 121.212121212121,
+              "energyKj": 512.457912457912,
+              "saturatedFat": 2.02020202020202,
+              "totalSugar": 2.35690235690236,
+              "sodium": 340.06734006734,
+              "salt": 0.85016835016835,
+              "fiber": 1.01010101010101,
+              "protein": 7.40740740740741,
+              "fat": 4.04040404040404,
+              "carbohydrates": 13.4680134680135,
+              "addedSugar": 0.336700336700337,
+              "freeSugar": null
+            },
+            "plantPercent": null,
+            "nonNutritiveSweeteners": null,
+            "derivedBounds": {},
+            "conversions": [
+              "Salt g = sodium mg / 1000 × 2.5; no intermediate sodium rounding."
+            ]
+          },
+          "reasons": [
+            {
+              "code": "score-not-determined",
+              "path": "nutrients",
+              "message": "Missing inputs or category evidence allow several numerical scores; no single score is assigned."
+            }
+          ],
+          "warnings": [
+            "Market unknown; this evaluates the supplied profile without establishing a regional formulation.",
+            "No review date is supplied.",
+            "No archived source hash is supplied.",
+            "Declared kJ is used directly; kcal is retained separately.",
+            "Updated FVL percentage is unknown; all applicable point bands are retained."
+          ],
+          "scoreRange": [
+            56,
+            81
+          ]
+        }
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00044700000632",
+      "selectedName": "Oscar Mayer Classic Wieners",
+      "retrievedAt": "2026-10-20T18:00:07.436Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Source/formulation evidence incomplete; no exact US formulation verification.",
+        "reasons": [
+          "A US-only product record is not established; foreign or multi-market formulations are not substituted.",
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "A supported, unambiguous nutritional category is missing.",
+          "Energy is missing or unsupported.",
+          "Fiber is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Foreign or multi-market record: the score assesses this supplied profile only. The exact US formulation is not independently verified.",
+        "reasons": [
+          "Energy observations conflict beyond compatible rounding in off-serving.",
+          "Energy observations conflict beyond compatible rounding in off-100g.",
+          "Energy observations conflict beyond compatible rounding in off-value."
+        ],
+        "warnings": [
+          "Foreign or multi-market availability is reported; this profile is not verified as the US formulation. No regional records are merged.",
+          "Energy is missing or unsupported; no zero is substituted.",
+          "Fiber is missing or unsupported; no zero is substituted."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:lebanon",
+                  "en:united-states"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "Lebanon, United States"
+                ]
+              }
+            ],
+            "status": "foreign-or-multi-market",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general",
+              "red-meat"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Meat product; red-meat percentage unknown, so both applicable rules are retained."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 45,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 120,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 472,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 472,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                480.66,
+                525.5
+              ],
+              "calorieRoundingAllowance": 5,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 266.666666666667,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1048.88888888889,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1048.88888888889,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1068.1333333333348,
+                1167.7777777777792
+              ],
+              "calorieRoundingAllowance": 11.11111111111111,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 266.666666666667,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1048.88888888889,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1048.88888888889,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1068.1333333333348,
+                1167.7777777777792
+              ],
+              "calorieRoundingAllowance": 11.11111111111111,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": null
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00037600138727",
+      "selectedName": "SPAM Classic",
+      "retrievedAt": "2026-10-20T18:03:39.505Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Source/formulation evidence incomplete; no exact US formulation verification.",
+        "reasons": [
+          "A US-only product record is not established; foreign or multi-market formulations are not substituted.",
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "A supported, unambiguous nutritional category is missing.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Foreign or multi-market record: the score assesses this supplied profile only. The exact US formulation is not independently verified.",
+        "reasons": [
+          "Energy observations conflict beyond compatible rounding in off-serving.",
+          "addedSugar exceeds totalSugar in off-serving.",
+          "Energy observations conflict beyond compatible rounding in off-100g.",
+          "addedSugar exceeds totalSugar in off-100g.",
+          "Energy observations conflict beyond compatible rounding in off-value.",
+          "addedSugar exceeds totalSugar in off-value."
+        ],
+        "warnings": [
+          "Foreign or multi-market availability is reported; this profile is not verified as the US formulation. No regional records are merged.",
+          "Recorded decimal rounding differs for saturatedFat between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for addedSugar between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for totalSugar between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for sodium between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for protein between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for fat between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for carbohydrates between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for saturatedFat between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for addedSugar between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for totalSugar between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for sodium between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for protein between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for fat between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for carbohydrates between off-serving and off-value; the selected dataset is retained intact.",
+          "Energy is missing or unsupported; no zero is substituted."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:germany",
+                  "en:united-states"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "Germany, United States"
+                ]
+              }
+            ],
+            "status": "foreign-or-multi-market",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general",
+              "red-meat"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Meat product; red-meat percentage unknown, so both applicable rules are retained."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 56.699,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 182,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 685,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 685,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                760.988,
+                764.9
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 321.428571428572,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1208.5,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1208.5,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1344.8571428571454,
+                1350.0000000000025
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 321.428571428572,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1208.5,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 1208.5,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1344.8571428571454,
+                1350.0000000000025
+              ],
+              "calorieRoundingAllowance": 0,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": null
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00024100106851",
+      "selectedName": "Cheez-It Original",
+      "retrievedAt": "2026-10-20T18:00:09.646Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Source/formulation evidence incomplete; no exact US formulation verification.",
+        "reasons": [
+          "A US-only product record is not established; foreign or multi-market formulations are not substituted.",
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "A supported, unambiguous nutritional category is missing.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Foreign or multi-market record: the score assesses this supplied profile only. The exact US formulation is not independently verified.",
+        "reasons": [
+          "The updated fruit/vegetable/legume fraction is unknown.",
+          "Missing inputs or category evidence allow several numerical scores; no single score is assigned."
+        ],
+        "warnings": [
+          "Foreign or multi-market availability is reported; this profile is not verified as the US formulation. No regional records are merged.",
+          "Compatible kcal/kJ rounding accepted in off-serving; original source values are retained in the evidence details.",
+          "Compatible kcal/kJ rounding accepted in off-100g; original source values are retained in the evidence details.",
+          "Compatible kcal/kJ rounding accepted in off-value; original source values are retained in the evidence details.",
+          "Recorded decimal rounding differs for sodium between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for carbohydrates between off-serving and off-100g; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for sodium between off-serving and off-value; the selected dataset is retained intact.",
+          "Recorded decimal rounding differs for carbohydrates between off-serving and off-value; the selected dataset is retained intact."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:germany",
+                  "en:united-states"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "Germany, United States"
+                ]
+              }
+            ],
+            "status": "foreign-or-multi-market",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Explicit provider food-category claims."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 30,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 150,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 645,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 645,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                606.1800000000001,
+                651.5
+              ],
+              "calorieRoundingAllowance": 5,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 500,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2148.44,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2148.44,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                2020.6,
+                2171.6666666666665
+              ],
+              "calorieRoundingAllowance": 16.666666666666668,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 500,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2148.44,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2148.44,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                2020.6,
+                2171.6666666666665
+              ],
+              "calorieRoundingAllowance": 16.666666666666668,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": {
+          "methodId": "trace-experimental-updated-nutrition-numeric",
+          "methodVersion": "2023-updated+2024-04-04-calculator+2025-03-17-faq+trace-bands-v1+trace-boundary-calibration-v2",
+          "methodCategory": "general",
+          "categoryCandidates": [
+            "general"
+          ],
+          "categoryRules": [
+            "General foods count protein only when negative points are below eleven.",
+            "Nuts, seeds and added oils do not receive the general FVL credit."
+          ],
+          "sources": {
+            "calculator": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/Nutri-Score_Updated-algorithm_20240404.xlsx",
+            "guide": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "official": "https://www.santepubliquefrance.fr/en/nutrition-and-physical-activity/nutri-score",
+            "usLabelRounding": "https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-101/subpart-A/section-101.9#p-101.9(c)(6)"
+          },
+          "displayScale": "Experimental Trace 0–100 presentation; not a health percentage or validated risk measurement",
+          "grade": null,
+          "scoreReady": false,
+          "scanMatchEligible": false,
+          "status": "incomplete",
+          "eligible": false,
+          "nutritionScore100": null,
+          "rawScore": null,
+          "rawRange": [
+            13,
+            18
+          ],
+          "rawCandidates": [
+            {
+              "category": "general",
+              "rawScores": [
+                13,
+                16,
+                17,
+                18
+              ]
+            }
+          ],
+          "possibleScores": [
+            21,
+            23,
+            26,
+            33
+          ],
+          "points": {
+            "energy": {
+              "min": 6,
+              "max": 6,
+              "possible": [
+                6
+              ]
+            },
+            "sugar": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "saturatedFat": {
+              "min": 4,
+              "max": 4,
+              "possible": [
+                4
+              ]
+            },
+            "salt": {
+              "min": 9,
+              "max": 9,
+              "possible": [
+                9
+              ]
+            },
+            "fiber": {
+              "min": 1,
+              "max": 1,
+              "possible": [
+                1
+              ]
+            },
+            "protein": {
+              "min": 4,
+              "max": 4,
+              "possible": [
+                4
+              ]
+            },
+            "plant": {
+              "min": 0,
+              "max": 5,
+              "possible": [
+                0,
+                1,
+                2,
+                5
+              ]
+            },
+            "nonNutritiveSweeteners": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "negative": {
+              "min": 19,
+              "max": 19,
+              "possible": [
+                19
+              ]
+            },
+            "proteinApplied": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            }
+          },
+          "normalized": {
+            "basis": {
+              "amount": 100,
+              "unit": "g"
+            },
+            "nutrients": {
+              "calories": 500,
+              "energyKj": 2148.44,
+              "saturatedFat": 5,
+              "totalSugar": 0,
+              "sodium": 768,
+              "salt": 1.92,
+              "fiber": 3.33,
+              "protein": 10,
+              "fat": 26.7,
+              "carbohydrates": 56.7,
+              "addedSugar": 0,
+              "freeSugar": null
+            },
+            "plantPercent": null,
+            "nonNutritiveSweeteners": null,
+            "derivedBounds": {},
+            "conversions": [
+              "Salt g = sodium mg / 1000 × 2.5; no intermediate sodium rounding."
+            ]
+          },
+          "reasons": [
+            {
+              "code": "score-not-determined",
+              "path": "nutrients",
+              "message": "Missing inputs or category evidence allow several numerical scores; no single score is assigned."
+            }
+          ],
+          "warnings": [
+            "Market unknown; this evaluates the supplied profile without establishing a regional formulation.",
+            "No review date is supplied.",
+            "No archived source hash is supplied.",
+            "Declared kJ is used directly; kcal is retained separately.",
+            "Updated FVL percentage is unknown; all applicable point bands are retained."
+          ],
+          "scoreRange": [
+            21,
+            33
+          ]
+        }
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00044000060114",
+      "selectedName": "OREO Original",
+      "retrievedAt": "2026-10-20T18:03:50.529Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "Energy observations conflict beyond compatible rounding in off-serving.",
+          "Energy observations conflict beyond compatible rounding in off-100g.",
+          "Energy observations conflict beyond compatible rounding in off-value."
+        ],
+        "warnings": [
+          "Energy is missing or unsupported; no zero is substituted."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:united-states"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "United States"
+                ]
+              }
+            ],
+            "status": "provider-reported-us",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general"
+            ],
+            "plantZero": null,
+            "basis": [
+              "Explicit provider food-category claims."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 34,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 160,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 709,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 709,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                648.02,
+                693.5
+              ],
+              "calorieRoundingAllowance": 5,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 470.588235294118,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2085.29411764706,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2085.29411764706,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1905.9411764705899,
+                2039.7058823529428
+              ],
+              "calorieRoundingAllowance": 14.705882352941178,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 470.588235294118,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2085.29411764706,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2085.29411764706,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": false,
+              "acceptedKjInterval": [
+                1905.9411764705899,
+                2039.7058823529428
+              ],
+              "calorieRoundingAllowance": 14.705882352941178,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": null
+      },
+      "loggingUsable": true,
+      "explanation": null
+    },
+    {
+      "barcode": "00028400199148",
+      "selectedName": "Lay's Classic Potato Chips",
+      "retrievedAt": "2026-10-20T18:04:01.477Z",
+      "before": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": null,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [
+          "Provider nutrient values, units or provenance conflict and need review.",
+          "A supported, unambiguous nutritional category is missing.",
+          "Energy is missing or unsupported."
+        ],
+        "result": null
+      },
+      "after": {
+        "grade": null,
+        "scoreReady": false,
+        "scanMatchEligible": false,
+        "nutritionScore100": 21,
+        "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+        "reasons": [],
+        "warnings": [
+          "Compatible kcal/kJ rounding accepted in off-serving; original source values are retained in the evidence details.",
+          "Compatible kcal/kJ rounding accepted in off-100g; original source values are retained in the evidence details.",
+          "Compatible kcal/kJ rounding accepted in off-value; original source values are retained in the evidence details."
+        ],
+        "evidence": {
+          "market": {
+            "claims": [
+              {
+                "field": "countries_tags",
+                "values": [
+                  "en:united-states"
+                ]
+              },
+              {
+                "field": "countries",
+                "values": [
+                  "United States"
+                ]
+              }
+            ],
+            "status": "provider-reported-us",
+            "exactUsFormulationVerified": false
+          },
+          "category": {
+            "categories": [
+              "general"
+            ],
+            "plantZero": "Potatoes are excluded from FVL; added oils in general foods and salt do not count.",
+            "basis": [
+              "Explicit provider food-category claims.",
+              "Complete potato/oil/salt food composition."
+            ],
+            "excluded": false,
+            "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "edition": "2025-03-17"
+          },
+          "energy": [
+            {
+              "datasetId": "off-serving",
+              "quantity": {
+                "amount": 28,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 160,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 667,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_serving",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 667,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_serving",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                648.02,
+                693.5
+              ],
+              "calorieRoundingAllowance": 5,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-100g",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 571.428571428572,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2382.14285714286,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_100g",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2382.14285714286,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider-schema",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_100g",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                2314.3571428571454,
+                2476.785714285717
+              ],
+              "calorieRoundingAllowance": 17.857142857142858,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            },
+            {
+              "datasetId": "off-value",
+              "quantity": {
+                "amount": 100,
+                "unit": "g"
+              },
+              "observations": [
+                {
+                  "nutrient": "calories",
+                  "rawValue": 571.428571428572,
+                  "rawUnit": "kcal",
+                  "unitSource": "provider",
+                  "enteredUnit": "kcal",
+                  "field": "nutriments.energy-kcal_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2382.14285714286,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy-kj_value",
+                  "derivation": null
+                },
+                {
+                  "nutrient": "calories",
+                  "rawValue": 2382.14285714286,
+                  "rawUnit": "kJ",
+                  "unitSource": "provider",
+                  "enteredUnit": "kJ",
+                  "field": "nutriments.energy_value",
+                  "derivation": null
+                }
+              ],
+              "accepted": true,
+              "acceptedKjInterval": [
+                2314.3571428571454,
+                2476.785714285717
+              ],
+              "calorieRoundingAllowance": 17.857142857142858,
+              "source": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(1)",
+              "policy": "Compatible numeric rounding, not proof of a US label. Preserve reported kcal and kJ; never average or repair contradictory values."
+            }
+          ],
+          "selectedDatasetId": "off-100g"
+        },
+        "result": {
+          "methodId": "trace-experimental-updated-nutrition-numeric",
+          "methodVersion": "2023-updated+2024-04-04-calculator+2025-03-17-faq+trace-bands-v1+trace-boundary-calibration-v2",
+          "methodCategory": "general",
+          "categoryCandidates": [
+            "general"
+          ],
+          "categoryRules": [
+            "General foods count protein only when negative points are below eleven.",
+            "Nuts, seeds and added oils do not receive the general FVL credit."
+          ],
+          "sources": {
+            "calculator": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/Nutri-Score_Updated-algorithm_20240404.xlsx",
+            "guide": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+            "official": "https://www.santepubliquefrance.fr/en/nutrition-and-physical-activity/nutri-score",
+            "usLabelRounding": "https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-101/subpart-A/section-101.9#p-101.9(c)(6)"
+          },
+          "displayScale": "Experimental Trace 0–100 presentation; not a health percentage or validated risk measurement",
+          "grade": null,
+          "scoreReady": false,
+          "scanMatchEligible": false,
+          "status": "calculated",
+          "eligible": true,
+          "nutritionScore100": 21,
+          "rawScore": 18,
+          "rawRange": [
+            18,
+            18
+          ],
+          "rawCandidates": [
+            {
+              "category": "general",
+              "rawScores": [
+                18
+              ]
+            }
+          ],
+          "possibleScores": [
+            21
+          ],
+          "points": {
+            "energy": {
+              "min": 7,
+              "max": 7,
+              "possible": [
+                7
+              ]
+            },
+            "sugar": {
+              "min": 1,
+              "max": 1,
+              "possible": [
+                1
+              ]
+            },
+            "saturatedFat": {
+              "min": 5,
+              "max": 5,
+              "possible": [
+                5
+              ]
+            },
+            "salt": {
+              "min": 6,
+              "max": 6,
+              "possible": [
+                6
+              ]
+            },
+            "fiber": {
+              "min": 1,
+              "max": 1,
+              "possible": [
+                1
+              ]
+            },
+            "protein": {
+              "min": 2,
+              "max": 2,
+              "possible": [
+                2
+              ]
+            },
+            "plant": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "nonNutritiveSweeteners": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "negative": {
+              "min": 19,
+              "max": 19,
+              "possible": [
+                19
+              ]
+            },
+            "proteinApplied": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            }
+          },
+          "normalized": {
+            "basis": {
+              "amount": 100,
+              "unit": "g"
+            },
+            "nutrients": {
+              "calories": 571.428571428572,
+              "energyKj": 2382.14285714286,
+              "saturatedFat": 5.35714285714286,
+              "totalSugar": 3.57142857142857,
+              "sodium": 500,
+              "salt": 1.25,
+              "fiber": 3.57142857142857,
+              "protein": 7.14285714285714,
+              "fat": 35.7142857142857,
+              "carbohydrates": 53.5714285714286,
+              "addedSugar": 0,
+              "freeSugar": null
+            },
+            "plantPercent": 0,
+            "nonNutritiveSweeteners": null,
+            "derivedBounds": {},
+            "conversions": [
+              "Salt g = sodium mg / 1000 × 2.5; no intermediate sodium rounding.",
+              "Updated eligible FVL rounded to one decimal per calculator Instructions!B35."
+            ]
+          },
+          "reasons": [],
+          "warnings": [
+            "Market unknown; this evaluates the supplied profile without establishing a regional formulation.",
+            "No review date is supplied.",
+            "No archived source hash is supplied.",
+            "Declared kJ is used directly; kcal is retained separately."
+          ],
+          "scoreRange": [
+            21,
+            21
+          ]
+        }
+      },
+      "loggingUsable": true,
+      "explanation": "This score is lowered by energy density, total sugars, saturated fat, and sodium (calculated as salt). It is raised by fiber."
+    }
+  ]
+}

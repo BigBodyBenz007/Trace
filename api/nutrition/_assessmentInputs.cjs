@@ -57,6 +57,24 @@ function observation(nutrient, value, unit, field, {
     enteredUnit: string(enteredUnit, 32), field, derivation: string(derivation) };
 }
 
+function offEnergyDerivation(nutrients, key, suffix) {
+  if (!["energy", "energy-kj", "energy-kcal"].includes(key)) return null;
+  let modifier = string(nutrients[`${key}_modifier`], 32);
+  // energy is the legacy kJ alias, not an independent label declaration. A
+  // missing alias qualifier must not upgrade the same approximate kJ value.
+  if (!modifier && key === "energy" && suffix
+    && OWN(nutrients, `energy-kj_${suffix}`)
+    && nutrients[`energy_${suffix}`] === nutrients[`energy-kj_${suffix}`]
+    && (suffix !== "value" || nutrients.energy_unit === nutrients["energy-kj_unit"])) {
+    modifier = string(nutrients["energy-kj_modifier"], 32);
+  }
+  if (!modifier && key === "energy" && suffix
+    && !OWN(nutrients, `energy-kj_${suffix}`) && OWN(nutrients, `energy-kcal_${suffix}`)) {
+    modifier = string(nutrients["energy-kcal_modifier"], 32);
+  }
+  return modifier ? `off:modifier:${modifier.trim()}` : null;
+}
+
 function usdaDatasets(record, limitations) {
   const serving = [];
   Object.entries(LABEL_NAMES).forEach(([field, nutrient]) => {
@@ -117,6 +135,7 @@ function offDatasets(record) {
       observations.push(observation(nutrient, nutrients[field], unit, `nutriments.${field}`, {
         unitSource: suffix === "value" ? (unit == null ? "unknown" : "provider") : "provider-schema",
         enteredUnit,
+        derivation: offEnergyDerivation(nutrients, key, suffix),
       }));
     });
     return { id: `off-${suffix}`, basis, quantity: amount, observations };
@@ -176,4 +195,4 @@ function captureNutritionAssessmentInputs(record, food) {
   }
 }
 
-module.exports = { captureNutritionAssessmentInputs };
+module.exports = { captureNutritionAssessmentInputs, offEnergyDerivation };

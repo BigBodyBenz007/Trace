@@ -68,6 +68,46 @@ test("OFF standardized grams are distinct from the original contributor-entered 
   expect(getAssessmentDatasetNutrients(entered).sodium.value).toBe(500);
 });
 
+test("OFF energy qualifications survive capture and reconstruction without changing logging", () => {
+  const record = offRecord();
+  record.nutriments["energy-kj_100g"] = 1800;
+  record.nutriments.energy_100g = 1800;
+  record.nutriments["energy-kj_unit"] = "kJ";
+  const baseline = off(record);
+  record.nutriments["energy-kj_modifier"] = "~";
+  const food = off(record);
+  const input = normalizeNutritionAssessmentInputs(copy(food.assessmentInputs), food);
+  const reference = input.datasets.find(entry => entry.id === "off-100g");
+  expect(reference.observations.find(entry => entry.field === "nutriments.energy-kj_100g")).toMatchObject({ rawValue: 1800, derivation: "off:modifier:~" });
+  // The generic energy alias cannot silently turn the same estimate into an
+  // independent unqualified measurement when its own modifier is omitted.
+  expect(reference.observations.find(entry => entry.field === "nutriments.energy_100g")).toMatchObject({ rawValue: 1800, derivation: "off:modifier:~" });
+  expect(reference.observations.find(entry => entry.field === "nutriments.energy-kcal_100g").derivation).toBeNull();
+  const logging = value => Object.fromEntries(Object.entries(value).filter(([key]) => key !== "assessmentInputs"));
+  expect(logging(food)).toEqual(logging(baseline));
+  expect(getNutritionAssessmentQuality(input).scoreReady).toBe(false);
+});
+
+test.each(["<", ">", "~"])("OFF retains energy modifier %s rather than promoting a qualified value", modifier => {
+  const record = offRecord();
+  record.nutriments["energy-kcal_modifier"] = modifier;
+  const input = off(record).assessmentInputs;
+  const energy = input.datasets.flatMap(entry => entry.observations).filter(entry => entry.field.startsWith("nutriments.energy-kcal_"));
+  expect(energy.length).toBeGreaterThan(0);
+  expect(energy.every(entry => entry.derivation === `off:modifier:${modifier}`)).toBe(true);
+});
+
+test("generic energy cannot upgrade an approximate kcal-only source through its converted kJ alias", () => {
+  const record = offRecord();
+  record.nutriments["energy-kcal_100g"] = 200;
+  record.nutriments["energy-kcal_modifier"] = "~";
+  record.nutriments.energy_100g = 836.8;
+  delete record.nutriments["energy-kj_100g"];
+  const input = off(record).assessmentInputs;
+  expect(input.datasets.find(entry => entry.id === "off-100g").observations
+    .filter(entry => entry.nutrient === "calories").every(entry => entry.derivation === "off:modifier:~")).toBe(true);
+});
+
 test.each(["%DV", "IU", "teaspoon", ""])("unsupported units stay visible and unusable: %s", (unit) => {
   const record = usdaRecord();
   record.labelNutrients.saturatedFat.unitName = unit;

@@ -17,6 +17,18 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
       <p>GTIN: {identifier?.value || 'Unknown'}. Source: {candidate.display.attribution}. Edition: {candidate.display.assessmentInputs?.source?.revisionDate || 'Undated'}.</p>
       <p>{candidate.display.basisMessage} Package: {candidate.display.packageQuantity || 'Unknown'}. Servings per container: {candidate.display.servingsPerContainer ?? 'Unknown'}.</p>
       <ul>{assessment.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
+      <ul>{assessment.warnings.map(warning => <li key={warning}>{warning}</li>)}</ul>
+      {assessment.evidence.market && <p>Provider market claims: {assessment.evidence.market.claims.flatMap(entry => entry.values).join('; ') || 'Unknown'}. Exact US formulation verified: no.</p>}
+      {assessment.evidence.category?.basis.map(basis => <p key={basis}>{basis}</p>)}
+      {assessment.evidence.plantContent?.status !== 'unknown' && assessment.evidence.plantContent?.basis && <p aria-label="Plant-content evidence">
+        {assessment.evidence.plantContent.status === 'verified-zero' ? 'Qualifying plant content: 0%. ' : 'Qualifying plant content unresolved. '}
+        {assessment.evidence.plantContent.basis} {assessment.evidence.plantContent.verificationScope}{' '}
+        Source: {assessment.evidence.plantContent.source.attribution}.{' '}
+        <a href={assessment.evidence.plantContent.method.url} target="_blank" rel="noreferrer">Updated component rules</a>.
+      </p>}
+      {assessment.evidence.energy?.length > 0 && <details aria-label="Original energy evidence"><summary>Original energy evidence</summary>
+        {assessment.evidence.energy.map(entry => <p key={entry.datasetId}>{entry.datasetId} ({entry.quantity?.amount ?? '?'} {entry.quantity?.unit || 'unknown basis'}): {entry.observations.map(value => `${value.field}: ${value.derivation?.startsWith('off:modifier:') ? value.derivation.slice('off:modifier:'.length) : ''}${value.rawValue ?? 'unknown'} ${value.rawUnit || ''}`).join('; ')}. {entry.accepted ? entry.excludedQualifiedFields?.length ? 'Qualified approximations retained separately from reported energy' : 'Compatible representations' : 'Unresolved conflict'}. Calorie rounding allowance: {entry.calorieRoundingAllowance}. <a href={entry.qualificationSource || entry.source} target="_blank" rel="noreferrer">Energy evidence reference</a>.</p>)}
+      </details>}
       {assessment.result && <p>Published raw points: {assessment.result.rawScore ?? 'Unresolved'}. Updated nutrient profiling with Trace's experimental numerical calibration.</p>}
       {assessment.result && <ul>{Object.entries(assessment.result.points).filter(([key]) =>
         ['energy', 'sugar', 'saturatedFat', 'salt', 'fiber', 'proteinApplied', 'plant', 'nonNutritiveSweeteners'].includes(key))

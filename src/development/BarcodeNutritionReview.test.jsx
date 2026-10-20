@@ -79,6 +79,34 @@ test('explanations and additive functions preserve collapsed details and source 
   expect(screen.getByLabelText('Product additives')).not.toHaveAttribute('open');
 });
 
+test('approximate provider energy remains qualified in collapsed evidence, without replacing entered kcal', () => {
+  const record = barcodeGradingRecord();
+  record.nutriments['energy-kj_100g'] = 2000;
+  record.nutriments['energy-kj_modifier'] = '~';
+  const c = createBarcodeNutritionCandidate({ status: 'found', identifier,
+    food: normalizeOpenFoodFactsProduct(record, BARCODE, RETRIEVED_AT) });
+  render(<BarcodeNutritionReview candidate={c} identifier={identifier} />);
+  expect(screen.getByLabelText('Experimental nutrition rating').textContent).toMatch(/^\d+\/100$/);
+  expect(screen.getByLabelText('Score details & limitations')).not.toHaveAttribute('open');
+  expect(screen.getByLabelText('Original energy evidence')).not.toHaveAttribute('open');
+  expect(screen.getByText(/nutriments.energy-kj_100g: ~2000/)).toHaveTextContent('Qualified approximations retained separately');
+});
+
+test('ingredient-derived zero remains attributed within collapsed technical details', () => {
+  const record = barcodeGradingRecord();
+  record.ingredients_text = 'Whole grain wheat. bht is added to the packaging material to preserve freshness.';
+  delete record.nutriments['fruits-vegetables-nuts_100g'];
+  const c = createBarcodeNutritionCandidate({ status: 'found', identifier,
+    food: normalizeOpenFoodFactsProduct(record, BARCODE, RETRIEVED_AT) });
+  render(<BarcodeNutritionReview candidate={c} identifier={identifier} />);
+  const details = screen.getByLabelText('Score details & limitations');
+  expect(details).not.toHaveAttribute('open');
+  expect(details).toContainElement(screen.getByLabelText('Plant-content evidence'));
+  expect(screen.getByLabelText('Plant-content evidence')).toHaveTextContent('Qualifying plant content: 0%');
+  expect(screen.getByLabelText('Plant-content evidence')).toHaveTextContent('Open Food Facts contributors');
+  expect(c.display.ingredients.text).toBe(record.ingredients_text);
+});
+
 test.each(['unknown-additives', 'empty-additives'])('%s never receives substance-specific claims', scenario => {
   render(<BarcodeAdditives candidate={candidate(scenario)} />);
   expect(screen.queryByText(/Verified US provision:|Acidity regulator/)).not.toBeInTheDocument();
@@ -87,6 +115,7 @@ test.each(['unknown-additives', 'empty-additives'])('%s never receives substance
 test('unknown market and missing nutrients have concise explanations and no letter ratings', () => {
   const view = render(<BarcodeNutritionReview candidate={candidate('unknown-market')} identifier={identifier} />);
   expect(screen.getByLabelText('Experimental nutrition assessment')).toHaveTextContent('market is unknown');
+  expect(screen.getByLabelText('Experimental nutrition rating').textContent).toMatch(/^\d+\/100$/);
   view.rerender(<BarcodeNutritionReview candidate={candidate('unresolved')} identifier={identifier} />);
   expect(screen.getByLabelText('Experimental nutrition assessment')).toHaveTextContent('Saturated fat is missing');
   expect(screen.getByLabelText('Experimental nutrition assessment')).not.toHaveTextContent(/Nutri-Score [A-E]\b|Letter:/);

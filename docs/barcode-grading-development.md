@@ -52,33 +52,44 @@ It never modifies the candidate, selection, cache, assessment contract or saved
 record. All outputs retain `grade=null`, `scoreReady=false` and
 `scanMatchEligible=false`. There are no runtime network requests in scoring.
 
-One compatible provider dataset supplies the whole nutrient vector. Datasets
-are not spliced together. The existing assessment quality checks reject
-conflicting datasets, units and provenance. Required energy, saturated fat,
-total sugars, sodium, fiber, protein, fat and carbohydrate values must be
-present. Added/free sugars remain separate and are not substituted. Direct
-reported kJ is preserved when available. No mass/volume density conversion is
-assumed. Stale data blocks scoring while existing logging remains usable.
+One compatible provider dataset supplies the whole nutrient vector; datasets
+are not spliced together. The development evidence adapter reconciles compatible
+energy rounding and independently rounded serving/per-100 representations while
+retaining all original observations. Genuine conflicts, invalid units and
+provenance mismatches still block assessment. Missing nutrients stay unknown;
+the unchanged engine may return a score only if every retained possibility agrees.
+Unused total fat/carbohydrate fields are not mandatory for general foods.
+Added/free sugars remain separate. Direct reported kJ is preserved, including
+equal duplicate provider aliases. No mass/volume density conversion is assumed.
+Stale data blocks scoring while existing logging remains usable. The shared
+assessment-input model and food logging behavior are unchanged.
 
-Only explicit supported provider categories are mapped. Ambiguous categories,
-unknown markets, foreign/multiple market claims, drinkable yogurt ambiguity,
-special-purpose foods and unsupported categories stay unresolved. A generic
-yogurt category does not establish spoonable versus drinkable presentation and
-is deliberately unsupported without stronger evidence. US market
-claims support only a **provider-reported US availability** statement, never
-independent confirmation of exact regional formulation or current shelf contents.
-This conservative coverage policy will reject otherwise usable products.
+Provider category claims and corroborating food descriptions/composition can
+establish a category without a specific taxonomy tag. Greek/strained yogurt,
+single-ingredient nuts and potato crisps have explicit routes. Uncertain
+meat/nut proportions retain both applicable published category rules rather than
+guessing percentages. Generic yogurt/milk evidence alone remains insufficient;
+explicit drinking-yogurt presentation uses the beverage rules. Special-purpose
+exclusions remain. Unknown, foreign and multiple market claims are confidence
+warnings, not automatic barriers to assessing the supplied coherent profile.
+They never establish an exact US formulation or barcode match, nor merge regions.
 
 The captured legacy fruit/vegetable/nut group is not generally the updated
 fruit/vegetable/legume fraction. Only an explicitly provider-reported zero can
 bound that subset to zero in general/cheese/beverage calculations. Estimates
 and positive legacy values remain unknown. This zero shortcut is excluded from
-fats/nuts/seeds because updated oil eligibility differs. No ingredient parser
-guesses plant fractions or beverage sweetener absence. The engine retains all
+fats/nuts/seeds because updated oil eligibility differs. Three closed composition
+patterns can separately establish FVL zero: sole nuts, milk/known yogurt cultures,
+and potatoes/declared oils/salt. Unknown additional ingredients do not inherit
+this conclusion; estimated percentages and beverage sweetener absence are not
+guessed. The engine retains all
 possible point bands for unknown method inputs and returns a single score only
 when every supported possibility agrees. Many beverages and nut/oil products
 will therefore remain unresolved. No published equations or calibration anchors
 were changed.
+
+See [the eligibility correction and unchanged 20-product replay](barcode-nutrition-eligibility-2026-10-20.md)
+for exact rounding conventions, source qualifications and remaining coverage gaps.
 
 ## Display and additives
 
