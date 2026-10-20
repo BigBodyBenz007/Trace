@@ -207,7 +207,7 @@ export function createBrowserBarcodeCamera({
         // Optional focus controls vary by browser; keep scanning if rejected.
       }
       if (stopped || signal?.aborted) throw cameraFailure(CAMERA_ERROR_CODES.UNAVAILABLE, "Camera start was canceled.");
-      const reader = createBarcodeReader(decoder, { live: true });
+      const reader = createBarcodeReader(decoder, { live: true, videoElement });
       controls = await reader.decodeFromStream(stream, videoElement, (result, error) => {
         if (stopped) return;
         if (result) {

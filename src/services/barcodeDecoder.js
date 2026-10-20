@@ -50,7 +50,7 @@ export function barcodeCanvas(source, { maxSide = 1920, angle = 0, contrast = fa
   return canvas;
 }
 
-export function createBarcodeReader(decoder, { live = false } = {}) {
+export function createBarcodeReader(decoder, { live = false, videoElement = null } = {}) {
   const { BrowserMultiFormatOneDReader: Reader, DecodeHintType } = decoder;
   const hints = new Map([
     [DecodeHintType.POSSIBLE_FORMATS, barcodeFormats(decoder)],
@@ -70,8 +70,14 @@ export function createBarcodeReader(decoder, { live = false } = {}) {
     let frame = 0;
     reader.decodeFromCanvas = (canvas) => {
       // One bounded pass per frame keeps the existing cancellable scan loop.
-      const angle = [0, 0, 90, -15, 15][frame++ % 5];
-      const transformed = barcodeCanvas(canvas, { angle, contrast: frame % 5 === 0 });
+      const pass = frame++ % 5;
+      const angle = [0, 0, 90, -15, 15][pass];
+      // ZXing sizes its capture canvas once at startup. A later camera resize
+      // can clip every subsequent frame. Read the current video dimensions and
+      // pixels instead; photo decoding continues to use its supplied canvas.
+      // Enhance a straight frame, as the photo path does. Pairing contrast only
+      // with a 15-degree rotation can make short, low-contrast bars unreadable.
+      const transformed = barcodeCanvas(videoElement || canvas, { angle, contrast: pass === 1 });
       try {
         return decodeCanvas(transformed);
       } finally {
