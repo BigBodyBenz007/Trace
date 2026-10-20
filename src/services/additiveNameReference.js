@@ -11,7 +11,8 @@ function freeze(value) {
 
 const source = getReferenceSource({ sourceId: data.source.id, referenceVersion: data.referenceVersion });
 if (!source) throw new Error("Additive name reference requires a registered source edition");
-const ADDITIVE_NAME_REFERENCE = freeze({ ...data, source });
+// Keep this shared CommonJS module free of injected ESM spread helpers.
+const ADDITIVE_NAME_REFERENCE = freeze(Object.assign({}, data, { source }));
 const names = new Map(data.entries.map((entry) => [entry.identifier, Object.freeze({
   name: entry.name,
   nameReference: Object.freeze({

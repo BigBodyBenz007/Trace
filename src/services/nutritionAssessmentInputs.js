@@ -196,7 +196,8 @@ function different(left, right) {
 }
 
 function getAssessmentDatasetNutrients(dataset) {
-  return freeze(Object.fromEntries(Object.entries(NUTRIENT_UNITS).map(([key, unit]) => {
+  return freeze(Object.fromEntries(Object.keys(NUTRIENT_UNITS).map((key) => {
+    const unit = NUTRIENT_UNITS[key];
     const entries = (dataset?.observations || []).filter((entry) => entry.nutrient === key);
     const results = entries.map(converted);
     const reported = results.filter((result) => result.status === "reported");
