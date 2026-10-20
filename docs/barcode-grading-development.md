@@ -1,8 +1,8 @@
 # Development-only barcode nutrition review
 
 This opt-in integration is for local research, not consumer grading. It reuses
-the existing scanner, lookup, selected-product assessment inputs, updated
-nutrient calculations and Trace numerical calibration. No research product is
+the existing scanner, lookup, selected-product assessment inputs and the independent Trace US nutrition
+experiment described in [the current methodology](trace-nutrition-v2.md). No research product is
 matched by name, and no USDA reference is silently substituted for a scan.
 
 ## Access and local review
@@ -44,52 +44,13 @@ Production and flag-off review retain the original layout and handoff.
 
 ## Data boundary
 
-`assessBarcodeNutrition` consumes the selected candidate's normalized
-`assessmentInputs`, never the rounded serving display or a research fixture.
-It checks GTIN equivalence, product name/brand, source URL/attribution and
-provider/record bindings. Legacy inputs and custom edited foods stay unresolved.
-It never modifies the candidate, selection, cache, assessment contract or saved
-record. All outputs retain `grade=null`, `scoreReady=false` and
-`scanMatchEligible=false`. There are no runtime network requests in scoring.
+The active local preview uses `traceUsNutritionScoringV2.js`. See [the density-based revision and 21-product comparison](trace-nutrition-v2.md). The previous practical engine remains unchanged in `traceUsNutritionScoring.js`; `practicalBarcodeNutritionAssessmentV1.js` preserves its adapter. The published engine, conversion and `publishedBarcodeNutritionAssessment.js` remain research references. Existing historical reports retain their original dates and results.
 
-One compatible provider dataset supplies the whole nutrient vector; datasets
-are not spliced together. The development evidence adapter reconciles compatible
-energy rounding and independently rounded serving/per-100 representations while
-retaining all original observations. Genuine conflicts, invalid units and
-provenance mismatches still block assessment. Missing nutrients stay unknown;
-the unchanged engine may return a score only if every retained possibility agrees.
-Unused total fat/carbohydrate fields are not mandatory for general foods.
-Added/free sugars remain separate. Direct reported kJ is preserved, including
-equal duplicate provider aliases. No mass/volume density conversion is assumed.
-Stale data blocks scoring while existing logging remains usable. The shared
-assessment-input model and food logging behavior are unchanged.
+One compatible captured reference panel supplies the assessment. No nutrients are spliced across products, datasets or countries. Reported energy and provider-qualified approximations remain separately attributed. Energy is needed for calorie-capped solid comparisons, while fixed beverage/oil portions can retain unknown energy. Normally use saturated fat, sodium and usable added or total sugar; a missing limiting nutrient is unnecessary only when its entire possible burden range gives the same result. Unknown values remain null. Optional fiber/protein absence earns no benefit. Total sugars use an explicitly different screening rule, never an estimate of added sugar. Contradictory added-sugar fields can be excluded with a visible explanation while coherent total sugars are used. Other required nutrient or selected energy conflicts still reject the calculation.
 
-Provider category claims and corroborating food descriptions/composition can
-establish a category without a specific taxonomy tag. Greek/strained yogurt,
-single-ingredient nuts and potato crisps have explicit routes. Uncertain
-meat/nut proportions retain both applicable published category rules rather than
-guessing percentages. Generic yogurt/milk evidence alone remains insufficient;
-explicit drinking-yogurt presentation uses the beverage rules. Special-purpose
-exclusions remain. Unknown, foreign and multiple market claims are confidence
-warnings, not automatic barriers to assessing the supplied coherent profile.
-They never establish an exact US formulation or barcode match, nor merge regions.
+No fruit/vegetable/legume percentage, exact category tag, reviewer record, hash, source revision or verified US market is required. The pure profile engine needs no GTIN. Optional barcode identity bindings in the review still prevent attaching another record's nutrition to the selected product. Unknown/foreign/multiple markets and older observations remain confidence warnings. Assessing a profile never proves a current US formulation, barcode match, product compliance or safety.
 
-The captured legacy fruit/vegetable/nut group is not generally the updated
-fruit/vegetable/legume fraction. Only an explicitly provider-reported zero can
-bound that subset to zero in general/cheese/beverage calculations. Estimates
-and positive legacy values remain unknown. This zero shortcut is excluded from
-fats/nuts/seeds because updated oil eligibility differs. Three closed composition
-patterns can separately establish FVL zero: sole nuts, milk/known yogurt cultures,
-and potatoes/declared oils/salt. Unknown additional ingredients do not inherit
-this conclusion; estimated percentages and beverage sweetener absence are not
-guessed. The engine retains all
-possible point bands for unknown method inputs and returns a single score only
-when every supported possibility agrees. Many beverages and nut/oil products
-will therefore remain unresolved. No published equations or calibration anchors
-were changed.
-
-See [the eligibility correction and unchanged 20-product replay](barcode-nutrition-eligibility-2026-10-20.md)
-for exact rounding conventions, source qualifications and remaining coverage gaps.
+The general, beverage, nuts and oil comparison portions are Trace choices, not FDA recommended portions or a published scoring standard. Source confidence, missing information and ingredient/additive disclosures remain visible. All output retains `grade=null`, `scoreReady=false` and `scanMatchEligible=false`; no score is saved, cached or passed to food logging. The production gate, scanner, serving calculations and saved-record contracts are unchanged.
 
 ## Display and additives
 

@@ -9,8 +9,8 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
   const score = assessment.nutritionScore100;
   return <section className="trace-barcode-grade" aria-label="Experimental nutrition assessment">
     <div className="trace-barcode-grade__headline"><strong aria-label="Experimental nutrition rating" data-unavailable={score == null}>{score == null ? 'Score unavailable' : <>{score}<small>/100</small></>}</strong>
-      <span>Experimental nutrition{score != null && <small>Per 100 {assessment.result.normalized.basis.unit}</small>}</span></div>
-    {score != null ? <p>{explainNutritionPoints(assessment.result)} No separate additive-risk penalty is applied.</p>
+      <span>Experimental nutrition{score != null && <small>Comparison: {Number(assessment.result.normalized.basis.amount.toFixed(1))} {assessment.result.normalized.basis.unit}</small>}</span></div>
+    {score != null ? <p>{explainNutritionPoints(assessment.result)} Nutrition only; additive assessment is incomplete.</p>
       : <p>{assessment.reasons.slice(0, 3).join(' ')}{assessment.reasons.length > 3 && ' Further gaps are listed below.'}</p>}
     <p className="trace-barcode-grade__confidence">{assessment.confidence}</p>
     <details aria-label="Score details & limitations"><summary>Score details &amp; limitations</summary>
@@ -29,10 +29,11 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
       {assessment.evidence.energy?.length > 0 && <details aria-label="Original energy evidence"><summary>Original energy evidence</summary>
         {assessment.evidence.energy.map(entry => <p key={entry.datasetId}>{entry.datasetId} ({entry.quantity?.amount ?? '?'} {entry.quantity?.unit || 'unknown basis'}): {entry.observations.map(value => `${value.field}: ${value.derivation?.startsWith('off:modifier:') ? value.derivation.slice('off:modifier:'.length) : ''}${value.rawValue ?? 'unknown'} ${value.rawUnit || ''}`).join('; ')}. {entry.accepted ? entry.excludedQualifiedFields?.length ? 'Qualified approximations retained separately from reported energy' : 'Compatible representations' : 'Unresolved conflict'}. Calorie rounding allowance: {entry.calorieRoundingAllowance}. <a href={entry.qualificationSource || entry.source} target="_blank" rel="noreferrer">Energy evidence reference</a>.</p>)}
       </details>}
-      {assessment.result && <p>Published raw points: {assessment.result.rawScore ?? 'Unresolved'}. Updated nutrient profiling with Trace's experimental numerical calibration.</p>}
+      {assessment.result && <p>Trace US nutrition model: {assessment.result.methodVersion}. Independent development calculation; FDA guidance informs the references, not this numerical formula.</p>}
+      {assessment.result?.sugarMode && <p>Sugar input: {assessment.result.sugarMode === 'addedSugar' ? 'Added sugars' : assessment.result.sugarMode === 'totalSugar' ? 'Total sugars, not an estimate of added sugars' : 'Unknown; no sugar value has been assumed'}. {assessment.result.sugarMode === 'totalSugar' && 'The total-sugar reference is Trace-specific; FDA has no total-sugar Daily Value.'}</p>}
       {assessment.result && <ul>{Object.entries(assessment.result.points).filter(([key]) =>
-        ['energy', 'sugar', 'saturatedFat', 'salt', 'fiber', 'proteinApplied', 'plant', 'nonNutritiveSweeteners'].includes(key))
-        .map(([key, value]) => <li key={key}>{key}: {value.min === value.max ? value.min : `${value.min}–${value.max}`} points</li>)}</ul>}
+        ['energy', 'sugar', 'saturatedFat', 'salt', 'fiber', 'proteinApplied', 'wholeGrain', 'plant', 'nonNutritiveSweeteners'].includes(key))
+          .map(([key, value]) => <li key={key}>{key}: {value.min === value.max ? Number(value.min.toFixed(2)) : `${value.min}–${value.max}`} points</li>)}</ul>}
       <p>Not an official score, FDA endorsement, safety judgment or health-risk percentage. A score of 100 does not mean perfect health. Provider market claims do not verify a specific US formulation.</p>
       <p>Public grade=null; scoreReady=false. This assessment is not saved with the food.</p>
     </details>
@@ -73,6 +74,6 @@ export function BarcodeAdditives({ candidate }) {
         return source ? <p key={`${reference.sourceId}:${reference.referenceVersion}`}>Verified name reference: <a href={source.url} target="_blank" rel="noreferrer">{source.title || source.documentTitle}</a> · {reference.jurisdiction} · publication {reference.sourcePublicationDate} · {reference.referenceVersion}. Name matching does not establish regulatory authorization.</p> : null;
       })}
     </> : <p>Structured additive information is unavailable or incomplete. Absence of data does not establish absence of additives.</p>}
-    <p>No safety classification or additive-risk penalty. Dated source information is not a finding about product safety or current compliance. Historical regulatory events are not evaluated here.</p>
+    <p>Additive assessment incomplete; no combined food-quality score or additive-risk penalty. Missing or empty provider data earns no automatic safety credit. Dated source information is not a finding about product safety or current compliance. Historical regulatory events are not evaluated here.</p>
   </details>;
 }

@@ -13,22 +13,37 @@ require.extensions['.js'] = (module, filename) => {
     plugins: [require.resolve('@babel/plugin-transform-modules-commonjs')] }).code, filename);
 };
 const { createBarcodeNutritionCandidate } = require('../src/services/barcodeNutritionSelection');
-const { assessBarcodeNutrition } = require('../src/development/barcodeNutritionAssessment');
+const { assessBarcodeNutrition: publishedAssessment } = require('../src/development/publishedBarcodeNutritionAssessment');
+const { assessBarcodeNutrition: practicalAssessment } = require('../src/development/practicalBarcodeNutritionAssessmentV1');
+const { assessBarcodeNutrition: revisedAssessment } = require('../src/development/barcodeNutritionAssessment');
 const { explainNutritionPoints } = require('../src/development/barcodeReviewInformation');
 const { offEnergyDerivation } = require('../api/nutrition/_assessmentInputs.cjs');
-const plantAudit = process.argv.includes('--plant-audit');
+const revisionAudit = process.argv.includes('--calibration-v2');
+const practicalAudit = revisionAudit || process.argv.includes('--practical-audit');
+const assessBarcodeNutrition = revisionAudit ? revisedAssessment : practicalAudit ? practicalAssessment : publishedAssessment;
+const plantAudit = practicalAudit || process.argv.includes('--plant-audit');
 const energyAudit = plantAudit || process.argv.includes('--energy-audit');
 const approvedReplay = energyAudit ? require('../docs/barcode-eligibility-replay-2026-10-20.json') : null;
 const plantBaseline = plantAudit ? require('../docs/barcode-energy-replay-2026-10-20.json') : null;
+const practicalBaseline = practicalAudit ? require('../docs/barcode-plant-replay-2026-10-20.json') : null;
+const revisionBaseline = revisionAudit ? require('../docs/barcode-practical-us-replay-2026-10-20.json') : null;
+const teddy = revisionAudit ? require('../docs/trace-nutrition-v2-teddy-2026-10-20.json') : null;
 const energySources = energyAudit ? require('../docs/barcode-energy-provider-evidence-2026-10-20.json') : null;
 const folder = path.join(root, 'docs/barcode-grading-grocery-pilot-2026-10-20');
 const read = filename => JSON.parse(fs.readFileSync(path.join(folder, filename), 'utf8'));
 const first = read('results.json'), follow = read('follow-up-results.json');
 const originalHashes = Object.fromEntries(['selection.json', 'results.json', 'follow-up-results.json', 'summary.json', 'README.md', 'evaluate.cjs'].map(filename =>
   [filename, crypto.createHash('sha256').update(fs.readFileSync(path.join(folder, filename))).digest('hex')]));
-const products = first.observations.map(row => follow.observations.find(next => next.barcode === row.barcode) || row).map(row => {
-  const legacyAssessment = energyAudit ? assessBarcodeNutrition(createBarcodeNutritionCandidate(row.lookup), row.lookup.identifier) : null;
-  if (energyAudit) assert.equal(legacyAssessment.nutritionScore100,
+const observations = first.observations.map(row => follow.observations.find(next => next.barcode === row.barcode) || row);
+if (teddy) {
+  const previous = practicalAssessment(createBarcodeNutritionCandidate(teddy.lookup), teddy.lookup.identifier);
+  observations.push({ barcode: teddy.barcode, selectedName: 'Teddy Grahams', retrievedAt: teddy.capturedAt,
+    lookup: teddy.lookup, additionalComparison: true,
+    evaluation: { loggingUsable: true, assessment: previous } });
+}
+const products = observations.map(row => {
+  const legacyAssessment = energyAudit ? publishedAssessment(createBarcodeNutritionCandidate(row.lookup), row.lookup.identifier) : null;
+  if (energyAudit && !row.additionalComparison) assert.equal(legacyAssessment.nutritionScore100,
     approvedReplay.products.find(product => product.barcode === row.barcode).after.nutritionScore100,
     'Legacy inputs without recovered qualifiers must not gain a score silently.');
   const lookup = JSON.parse(JSON.stringify(row.lookup));
@@ -68,18 +83,24 @@ const products = first.observations.map(row => follow.observations.find(next => 
   assert.equal(JSON.stringify(candidate), before);
   assert.equal(revised.grade, null); assert.equal(revised.scoreReady, false); assert.equal(revised.scanMatchEligible, false);
   const product = { barcode: row.barcode, selectedName: row.selectedName, retrievedAt: row.retrievedAt,
-    before: (plantBaseline || approvedReplay)?.products.find(product => product.barcode === row.barcode)?.after || row.evaluation.assessment,
+    before: (revisionBaseline || practicalBaseline || plantBaseline || approvedReplay)?.products.find(product => product.barcode === row.barcode)?.after || row.evaluation.assessment,
     after: revised, qualificationReview, legacyScore100: legacyAssessment?.nutritionScore100 ?? null, loggingUsable: candidate?.canUse === true,
-    explanation: explainNutritionPoints(revised.result) };
+    explanation: explainNutritionPoints(revised.result), ...(row.additionalComparison ? { additionalComparison: true } : {}) };
   console.log(JSON.stringify({ name: product.selectedName, score: revised.nutritionScore100,
     category: revised.result?.categoryCandidates || revised.evidence.category?.categories, reasons: revised.reasons }));
   return product;
 });
 const output = { sourceHead: first.head, originalArchiveSha256: originalHashes, offline: true, energyAudit,
+  ...(revisionAudit ? { revisionAudit: true, yukaTeddyBenchmark: teddy.yukaBenchmark,
+    originalTwenty: { previousScores: products.filter(p => !p.additionalComparison && p.before.nutritionScore100 !== null).length,
+      revisedScores: products.filter(p => !p.additionalComparison && p.after.nutritionScore100 !== null).length } } : {}),
   ...(plantAudit ? { plantAudit: true } : {}),
+  ...(practicalAudit ? { practicalAudit: true } : {}),
   previousScores: products.filter(product => product.before.nutritionScore100 !== null).length,
   revisedScores: products.filter(product => product.after.nutritionScore100 !== null).length, products };
-const destination = path.join(root, plantAudit ? 'docs/barcode-plant-replay-2026-10-20.json'
+const destination = path.join(root, revisionAudit ? 'docs/trace-nutrition-v2-comparison-2026-10-20.json'
+  : practicalAudit ? 'docs/barcode-practical-us-replay-2026-10-20.json'
+  : plantAudit ? 'docs/barcode-plant-replay-2026-10-20.json'
   : energyAudit ? 'docs/barcode-energy-replay-2026-10-20.json' : 'docs/barcode-eligibility-replay-2026-10-20.json');
 fs.writeFileSync(destination, JSON.stringify(output, null, 2) + '\n');
 console.log(`Previous: ${output.previousScores}; revised: ${output.revisedScores}; original observations unchanged.`);

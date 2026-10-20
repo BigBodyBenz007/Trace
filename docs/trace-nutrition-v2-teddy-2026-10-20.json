@@ -1,0 +1,570 @@
+{
+  "capturedAt": "2026-10-20T21:57:56.659Z",
+  "endpoint": "https://trace-umber.vercel.app/api/nutrition/barcode",
+  "barcode": "044000045586",
+  "lookup": {
+    "status": "found",
+    "identifier": {
+      "scheme": "gtin",
+      "value": "044000045586"
+    },
+    "food": {
+      "sourceType": "remote-barcode",
+      "dataType": "branded",
+      "identifiers": [
+        {
+          "scheme": "gtin",
+          "value": "044000045586"
+        }
+      ],
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0044000045586",
+        "attribution": "Open Food Facts contributors"
+      },
+      "brand": "Teddy Grahams",
+      "name": "Graham Snacks",
+      "ingredients": {
+        "text": "GRAHAM FLOUR (WHOLE GRAIN WHEAT FLOUR), UNBLEACHED ENRICHED FLOUR (WHEAT FLOUR, NIACIN, REDUCED IRON, THIAMINE MONONITRATE {VITAMIN B1}, RIBOFLAVIN {VITAMIN B2}, FOLIC ACID), SUGAR, CANOLA OIL, HONEY, CALCIUM CARBONATE (SOURCE OF CALCIUM), MALTODEXTRIN, BAKING SODA, SALT, SOY LECITHIN, NATURAL FLAVOR.",
+        "language": "en"
+      },
+      "additives": {
+        "status": "reported",
+        "source": "open-food-facts",
+        "sourceField": "additives_tags",
+        "items": [
+          {
+            "standardizedIdentifier": "E322",
+            "name": "Lecithins",
+            "nameReference": {
+              "verification": "exact-source-name",
+              "referenceVersion": "eu-231-2012-names-v1",
+              "sourceId": "CELEX:32012R0231",
+              "sourcePublicationDate": "2012-03-22",
+              "sourceIdentifier": "E 322",
+              "jurisdiction": "EU",
+              "language": "en"
+            },
+            "providerIdentifier": "en:e322",
+            "source": "open-food-facts",
+            "identification": "provider-reported"
+          },
+          {
+            "standardizedIdentifier": "E322i",
+            "name": null,
+            "nameReference": null,
+            "providerIdentifier": "en:e322i",
+            "source": "open-food-facts",
+            "identification": "provider-reported"
+          },
+          {
+            "standardizedIdentifier": "E500",
+            "name": null,
+            "nameReference": null,
+            "providerIdentifier": "en:e500",
+            "source": "open-food-facts",
+            "identification": "provider-reported"
+          },
+          {
+            "standardizedIdentifier": "E500ii",
+            "name": "Sodium hydrogen carbonate",
+            "nameReference": {
+              "verification": "exact-source-name",
+              "referenceVersion": "eu-231-2012-names-v1",
+              "sourceId": "CELEX:32012R0231",
+              "sourcePublicationDate": "2012-03-22",
+              "sourceIdentifier": "E 500 (ii)",
+              "jurisdiction": "EU",
+              "language": "en"
+            },
+            "providerIdentifier": "en:e500ii",
+            "source": "open-food-facts",
+            "identification": "provider-reported"
+          }
+        ]
+      },
+      "packageQuantity": "10 oz",
+      "serving": {
+        "description": "30 g",
+        "amount": 30,
+        "unit": "g",
+        "grams": 30
+      },
+      "servingsPerContainer": null,
+      "nutrients": {
+        "calories": 130,
+        "protein": 2,
+        "carbohydrates": 22,
+        "fat": 4,
+        "fiber": 1,
+        "sodium": 90,
+        "totalSugar": 7,
+        "addedSugar": 2.1
+      },
+      "dataBasis": "serving",
+      "nutritionBasis": {
+        "kind": "provider-serving",
+        "source": "nutriments._serving",
+        "sourceBasis": "serving",
+        "sourceQuantity": {
+          "amount": 1,
+          "unit": "serving",
+          "dimension": null
+        },
+        "servingQuantity": {
+          "amount": 30,
+          "unit": "g",
+          "dimension": "mass"
+        },
+        "conversionFactor": null,
+        "sourceNutrients": {
+          "calories": 130,
+          "protein": 2,
+          "carbohydrates": 22,
+          "fat": 4,
+          "fiber": 1,
+          "sodium": 90,
+          "totalSugar": 7,
+          "addedSugar": 2.1
+        }
+      },
+      "provenance": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/044000045586",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0044000045586",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-02-22T21:18:10.000Z",
+        "retrievedAt": "2026-10-20T21:57:56.506Z"
+      },
+      "completeness": "partial",
+      "unknownFields": [
+        "servingsPerContainer"
+      ],
+      "logReady": true,
+      "assessmentInputs": {
+        "schemaVersion": 1,
+        "identification": "provider-reported",
+        "identity": {
+          "gtin": "044000045586",
+          "providerGtin": "0044000045586",
+          "name": "Graham Snacks",
+          "brand": "Teddy Grahams"
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0044000045586",
+          "url": "https://world.openfoodfacts.org/product/044000045586",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-02-22T21:18:10.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-20T21:57:56.506Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1771795090
+            }
+          ]
+        },
+        "markets": [
+          {
+            "field": "countries_tags",
+            "values": [
+              "en:united-states"
+            ]
+          },
+          {
+            "field": "countries",
+            "values": [
+              "United States"
+            ]
+          }
+        ],
+        "categories": [
+          {
+            "field": "categories_tags",
+            "values": [
+              "en:snacks",
+              "en:sweet-snacks",
+              "en:biscuits-and-cakes",
+              "en:biscuits-and-crackers",
+              "en:biscuits"
+            ]
+          },
+          {
+            "field": "categories",
+            "values": [
+              "Biscuits"
+            ]
+          }
+        ],
+        "serving": [
+          {
+            "field": "serving_quantity",
+            "value": 30
+          },
+          {
+            "field": "serving_quantity_unit",
+            "value": "g"
+          },
+          {
+            "field": "serving_size",
+            "value": "30 g"
+          },
+          {
+            "field": "nutrition_data_per",
+            "value": "100g"
+          }
+        ],
+        "ingredients": {
+          "field": "ingredients_text",
+          "language": "en",
+          "textAvailable": true
+        },
+        "datasets": [
+          {
+            "id": "off-serving",
+            "basis": "serving",
+            "quantity": {
+              "amount": 30,
+              "unit": "g"
+            },
+            "observations": [
+              {
+                "nutrient": "calories",
+                "rawValue": 130,
+                "rawUnit": "kcal",
+                "unitSource": "provider-schema",
+                "enteredUnit": "kcal",
+                "field": "nutriments.energy-kcal_serving",
+                "derivation": null
+              },
+              {
+                "nutrient": "calories",
+                "rawValue": 564,
+                "rawUnit": "kJ",
+                "unitSource": "provider-schema",
+                "enteredUnit": "kJ",
+                "field": "nutriments.energy-kj_serving",
+                "derivation": "off:modifier:~"
+              },
+              {
+                "nutrient": "calories",
+                "rawValue": 564,
+                "rawUnit": "kJ",
+                "unitSource": "provider-schema",
+                "enteredUnit": "kJ",
+                "field": "nutriments.energy_serving",
+                "derivation": "off:modifier:~"
+              },
+              {
+                "nutrient": "saturatedFat",
+                "rawValue": 0,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.saturated-fat_serving",
+                "derivation": null
+              },
+              {
+                "nutrient": "addedSugar",
+                "rawValue": 2.1,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.added-sugars_serving",
+                "derivation": null
+              },
+              {
+                "nutrient": "totalSugar",
+                "rawValue": 7,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.sugars_serving",
+                "derivation": null
+              },
+              {
+                "nutrient": "sodium",
+                "rawValue": 0.09,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.sodium_serving",
+                "derivation": null
+              },
+              {
+                "nutrient": "fiber",
+                "rawValue": 1,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.fiber_serving",
+                "derivation": null
+              },
+              {
+                "nutrient": "protein",
+                "rawValue": 2,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.proteins_serving",
+                "derivation": null
+              },
+              {
+                "nutrient": "fat",
+                "rawValue": 4,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.fat_serving",
+                "derivation": null
+              },
+              {
+                "nutrient": "carbohydrates",
+                "rawValue": 22,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.carbohydrates_serving",
+                "derivation": null
+              }
+            ]
+          },
+          {
+            "id": "off-100g",
+            "basis": "100g",
+            "quantity": {
+              "amount": 100,
+              "unit": "g"
+            },
+            "observations": [
+              {
+                "nutrient": "calories",
+                "rawValue": 433.333333333333,
+                "rawUnit": "kcal",
+                "unitSource": "provider-schema",
+                "enteredUnit": "kcal",
+                "field": "nutriments.energy-kcal_100g",
+                "derivation": null
+              },
+              {
+                "nutrient": "calories",
+                "rawValue": 1880,
+                "rawUnit": "kJ",
+                "unitSource": "provider-schema",
+                "enteredUnit": "kJ",
+                "field": "nutriments.energy-kj_100g",
+                "derivation": "off:modifier:~"
+              },
+              {
+                "nutrient": "calories",
+                "rawValue": 1880,
+                "rawUnit": "kJ",
+                "unitSource": "provider-schema",
+                "enteredUnit": "kJ",
+                "field": "nutriments.energy_100g",
+                "derivation": "off:modifier:~"
+              },
+              {
+                "nutrient": "saturatedFat",
+                "rawValue": 0,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.saturated-fat_100g",
+                "derivation": null
+              },
+              {
+                "nutrient": "addedSugar",
+                "rawValue": 7,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.added-sugars_100g",
+                "derivation": null
+              },
+              {
+                "nutrient": "totalSugar",
+                "rawValue": 23.3333333333333,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.sugars_100g",
+                "derivation": null
+              },
+              {
+                "nutrient": "sodium",
+                "rawValue": 0.3,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.sodium_100g",
+                "derivation": null
+              },
+              {
+                "nutrient": "fiber",
+                "rawValue": 3.33333333333333,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.fiber_100g",
+                "derivation": null
+              },
+              {
+                "nutrient": "protein",
+                "rawValue": 6.66666666666667,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.proteins_100g",
+                "derivation": null
+              },
+              {
+                "nutrient": "fat",
+                "rawValue": 13.3333333333333,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.fat_100g",
+                "derivation": null
+              },
+              {
+                "nutrient": "carbohydrates",
+                "rawValue": 73.3333333333333,
+                "rawUnit": "g",
+                "unitSource": "provider-schema",
+                "enteredUnit": "g",
+                "field": "nutriments.carbohydrates_100g",
+                "derivation": null
+              }
+            ]
+          },
+          {
+            "id": "off-value",
+            "basis": "100g",
+            "quantity": {
+              "amount": 100,
+              "unit": "g"
+            },
+            "observations": [
+              {
+                "nutrient": "calories",
+                "rawValue": 433.333333333333,
+                "rawUnit": "kcal",
+                "unitSource": "provider",
+                "enteredUnit": "kcal",
+                "field": "nutriments.energy-kcal_value",
+                "derivation": null
+              },
+              {
+                "nutrient": "calories",
+                "rawValue": 1880,
+                "rawUnit": "kJ",
+                "unitSource": "provider",
+                "enteredUnit": "kJ",
+                "field": "nutriments.energy-kj_value",
+                "derivation": "off:modifier:~"
+              },
+              {
+                "nutrient": "calories",
+                "rawValue": 1880,
+                "rawUnit": "kJ",
+                "unitSource": "provider",
+                "enteredUnit": "kJ",
+                "field": "nutriments.energy_value",
+                "derivation": "off:modifier:~"
+              },
+              {
+                "nutrient": "saturatedFat",
+                "rawValue": 0,
+                "rawUnit": "g",
+                "unitSource": "provider",
+                "enteredUnit": "g",
+                "field": "nutriments.saturated-fat_value",
+                "derivation": null
+              },
+              {
+                "nutrient": "addedSugar",
+                "rawValue": 7,
+                "rawUnit": "g",
+                "unitSource": "provider",
+                "enteredUnit": "g",
+                "field": "nutriments.added-sugars_value",
+                "derivation": null
+              },
+              {
+                "nutrient": "totalSugar",
+                "rawValue": 23.3333333333333,
+                "rawUnit": "g",
+                "unitSource": "provider",
+                "enteredUnit": "g",
+                "field": "nutriments.sugars_value",
+                "derivation": null
+              },
+              {
+                "nutrient": "sodium",
+                "rawValue": 0.3,
+                "rawUnit": "g",
+                "unitSource": "provider",
+                "enteredUnit": "g",
+                "field": "nutriments.sodium_value",
+                "derivation": null
+              },
+              {
+                "nutrient": "fiber",
+                "rawValue": 3.33333333333333,
+                "rawUnit": "g",
+                "unitSource": "provider",
+                "enteredUnit": "g",
+                "field": "nutriments.fiber_value",
+                "derivation": null
+              },
+              {
+                "nutrient": "protein",
+                "rawValue": 6.66666666666667,
+                "rawUnit": "g",
+                "unitSource": "provider",
+                "enteredUnit": "g",
+                "field": "nutriments.proteins_value",
+                "derivation": null
+              },
+              {
+                "nutrient": "fat",
+                "rawValue": 13.3333333333333,
+                "rawUnit": "g",
+                "unitSource": "provider",
+                "enteredUnit": "g",
+                "field": "nutriments.fat_value",
+                "derivation": null
+              },
+              {
+                "nutrient": "carbohydrates",
+                "rawValue": 73.3333333333333,
+                "rawUnit": "g",
+                "unitSource": "provider",
+                "enteredUnit": "g",
+                "field": "nutriments.carbohydrates_value",
+                "derivation": null
+              }
+            ]
+          }
+        ],
+        "foodGroups": [
+          {
+            "field": "nutriments.fruits-vegetables-nuts-estimate-from-ingredients_100g",
+            "rawValue": 3.5,
+            "rawUnit": "%",
+            "identification": "provider-estimated"
+          }
+        ],
+        "limitations": []
+      }
+    }
+  },
+  "yukaBenchmark": {
+    "score100": 36,
+    "source": "User-verified score supplied in task; not independently fetched",
+    "role": "Benchmark only, not calibration target; nutrition/additive/organic components differ"
+  }
+}

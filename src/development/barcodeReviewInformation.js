@@ -6,6 +6,23 @@ export function explainNutritionPoints(result) {
   if (result?.nutritionScore100 == null) return null;
   const points = result.points || {};
   const applied = key => Number.isFinite(points[key]?.min) && points[key].min > 0;
+  if (result.methodId === 'trace-us-practical-nutrition') {
+    const hasUsableAdded = result.normalized.originalNutrients?.addedSugar != null && !result.excludedNutrients?.includes('addedSugar');
+    const sugar = result.sugarMode === 'addedSugar' ? 'added sugars' : hasUsableAdded ? 'total sugars' : 'total sugars (added sugars unavailable or inconsistent)';
+    const fatRich = ['nuts', 'oil'].includes(result.methodCategory);
+    const lower = [['energy', fatRich ? 'energy from saturated fat' : 'energy density'], ['sugar', sugar],
+      ['saturatedFat', fatRich ? 'the share of saturated fat' : 'saturated fat'], ['salt', 'sodium']]
+      .filter(([key]) => applied(key)).map(([, label]) => label);
+    const higher = [['fiber', 'fiber'], ['proteinApplied', 'protein'], ['wholeGrain', 'a first-listed whole-grain ingredient']]
+      .filter(([key]) => applied(key)).map(([, label]) => label);
+    const sentences = [lower.length ? `This score is lowered by ${list(lower)}.` : 'The measured limiting nutrients do not lower this score.'];
+    if (higher.length) sentences.push(`It is raised by ${list(higher)}.`);
+    if (result.sugarMode === 'totalSugar' && !applied('sugar')) sentences.push(hasUsableAdded
+      ? 'Total sugars are screened separately from the reported added sugars.' : 'Total sugars are screened separately because added sugars are unavailable or inconsistent.');
+    if (result.normalized.nutrients.fiber === null || result.normalized.nutrients.protein === null) sentences.push('Missing fiber or protein earns no credit.');
+    if (result.comparison.missingLimitingNutrients.length) sentences.push('The missing limiting-nutrient information cannot change this result under the model; no missing value is assumed.');
+    return sentences.join(' ');
+  }
   if (result.methodCategory === 'water') return 'Plain water uses a separate reference score.';
   const fats = result.methodCategory === 'fats-nuts-seeds';
   const lower = [[ 'energy', fats ? 'energy from saturated fat' : 'energy density' ],

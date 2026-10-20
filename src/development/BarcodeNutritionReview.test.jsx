@@ -92,7 +92,7 @@ test('approximate provider energy remains qualified in collapsed evidence, witho
   expect(screen.getByText(/nutriments.energy-kj_100g: ~2000/)).toHaveTextContent('Qualified approximations retained separately');
 });
 
-test('ingredient-derived zero remains attributed within collapsed technical details', () => {
+test('plant percentages are not required and the independent method remains inside collapsed technical details', () => {
   const record = barcodeGradingRecord();
   record.ingredients_text = 'Whole grain wheat. bht is added to the packaging material to preserve freshness.';
   delete record.nutriments['fruits-vegetables-nuts_100g'];
@@ -101,9 +101,10 @@ test('ingredient-derived zero remains attributed within collapsed technical deta
   render(<BarcodeNutritionReview candidate={c} identifier={identifier} />);
   const details = screen.getByLabelText('Score details & limitations');
   expect(details).not.toHaveAttribute('open');
-  expect(details).toContainElement(screen.getByLabelText('Plant-content evidence'));
-  expect(screen.getByLabelText('Plant-content evidence')).toHaveTextContent('Qualifying plant content: 0%');
-  expect(screen.getByLabelText('Plant-content evidence')).toHaveTextContent('Open Food Facts contributors');
+  expect(screen.queryByLabelText('Plant-content evidence')).not.toBeInTheDocument();
+  expect(details).toHaveTextContent('Trace US nutrition model');
+  expect(details).toHaveTextContent('Independent development calculation');
+  expect(screen.getByLabelText('Experimental nutrition rating').textContent).toMatch(/^\d+\/100$/);
   expect(c.display.ingredients.text).toBe(record.ingredients_text);
 });
 
