@@ -6,6 +6,7 @@ import { evaluateTraceNutrition } from './traceNutritionConversion';
 import { PROFILES, OBSERVATIONS } from './updatedNutritionFixtures';
 import { NAMES } from './nutritionPilotScoring';
 import './NutritionPilot.css';
+import UsdaProduceFallback from './UsdaProduceFallback';
 
 const number = value => value == null ? 'Unknown' : new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(value);
 const unit = key => key === 'calories' ? 'kcal' : key === 'energyKj' ? 'kJ' : key === 'sodium' ? 'mg' : 'g';
@@ -163,6 +164,7 @@ export default function NutritionPilot() {
         <p>Public grade=null; scoreReady=false. No consumer grades, automatic additive risk penalties, saved scores or scanner changes.</p>
       </details>
     </div>
+    <UsdaProduceFallback />
     <details className="nutrition-pilot__card nutrition-pilot__comparison"><summary>Compare 18 observations · {rows.filter(r => r.result.nutritionScore100 != null).length} nutrition scores available</summary>
       <p>Before: the theoretical-endpoint linear conversion. Revised: calibration to published nutritional categories, using the same raw points and product data. A numerical change is not a measured health change. Ranges preserve unresolved inputs.</p>
       <div className="nutrition-pilot__table-wrap"><table><thead><tr><th>Observation</th><th>Before /100</th><th>Updated /100</th><th>Remaining gap / interpretation</th></tr></thead>

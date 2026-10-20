@@ -13,6 +13,12 @@
 .nutrition-pilot select { width: 100%; min-height: 44px; padding: 10px; border: 1px solid var(--trace-input-border); border-radius: 8px; color: var(--trace-input-text); background: var(--trace-input-bg); font: inherit; }
 .nutrition-pilot__grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
 .nutrition-pilot__column { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+.nutrition-pilot__produce { margin-bottom: 18px; }
+.nutrition-pilot .nutrition-pilot__confirmation { flex-direction: row; align-items: flex-start; margin: 14px 0; line-height: 1.5; }
+.nutrition-pilot__confirmation input { flex-shrink: 0; width: 24px; height: 24px; }
+.nutrition-pilot__produce button { min-height: 44px; padding: 10px 14px; border: 1px solid var(--trace-border-default); border-radius: 8px; color: var(--trace-text-primary); background: var(--trace-surface-secondary); font: inherit; cursor: pointer; }
+.nutrition-pilot__produce button:disabled { opacity: .55; cursor: default; }
+.nutrition-pilot__produce-result { border-top: 1px solid var(--trace-border-default); margin-top: 18px; padding-top: 16px; }
 .nutrition-pilot__card { background: var(--trace-surface-primary); border: 1px solid var(--trace-border-default); border-radius: 14px; padding: 20px; min-width: 0; overflow-wrap: anywhere; }
 .nutrition-pilot__product { font-size: 22px !important; letter-spacing: -.02em; }
 .nutrition-pilot__score-row { display: flex; align-items: center; gap: 20px; margin: 18px 0 12px; }

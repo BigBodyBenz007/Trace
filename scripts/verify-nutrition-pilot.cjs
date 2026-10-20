@@ -1,13 +1,15 @@
 /* Inspect the real opt-in CRA development preview. No server/bundle/dependencies.
  * Start npm start on localhost:3000 first, then node scripts/verify-nutrition-pilot.cjs.
- * One headless Chrome process; seven themes checked serially, five screenshots.
+ * One headless Chrome process; seven themes checked serially, five screenshots
+ * plus three generic-produce screenshots with --produce.
  */
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 const { spawn } = require('node:child_process');
 const root = path.resolve(__dirname, '..');
-const output = path.join(root, 'artifacts/nutrition-calibration-20261020');
+const produce = process.argv.includes('--produce');
+const output = path.join(root, produce ? 'artifacts/usda-produce-fallback-20261020' : 'artifacts/nutrition-calibration-20261020');
 const base = 'http://localhost:3000';
 const themes = ['modern-heirloom', 'river', 'haunted-forest', 'gnome-village', 'desert-journey', 'outer-space-journey', 'to-kingdoms-ahead'];
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
@@ -95,13 +97,49 @@ async function main() {
     assert.equal(await evaluate(`document.querySelector('[aria-label="Nutrition rating"]').textContent`), 'Not available');
     assert(await evaluate(`document.querySelector('[aria-label="Possible nutrition score"]').textContent.includes('80–85/100')`));
     await capture('pilot-uncertain-390x844.png');
+    if (produce) {
+      await navigate(`${base}/?nutritionPilot=1`);
+      await evaluate(`document.querySelector('.nutrition-pilot__produce').open = true; document.querySelector('.nutrition-pilot__produce').scrollIntoView()`);
+      assert.equal(await evaluate(`document.querySelector('.nutrition-pilot__produce button').disabled`), true);
+      assert.equal(await evaluate(`Boolean(document.querySelector('[aria-label="Generic nutrition rating"]'))`), false);
+      await evaluate(`document.querySelector('.nutrition-pilot__produce input').click()`);
+      await wait(100);
+      await evaluate(`document.querySelector('.nutrition-pilot__produce button').click()`);
+      await wait(100);
+      assert.equal(await evaluate(`document.querySelector('[aria-label="Generic nutrition rating"]').textContent`), '82/100');
+      assert.equal(await evaluate(`document.querySelector('[aria-label="Nutrition rating"]').textContent`), '84/100');
+      assert(await evaluate(`document.querySelector('[aria-label="USDA produce estimate"]').textContent.includes('Package additives: unknown')`));
+      assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Produce mobile overflow');
+      await evaluate(`document.querySelector('[aria-label="USDA produce estimate"]').scrollIntoView()`);
+      await wait(100);
+      await capture('produce-apple-mobile-390x844.png');
+      await c.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 960, deviceScaleFactor: 1, mobile: false });
+      await evaluate(`document.querySelector('.nutrition-pilot__produce').scrollIntoView()`);
+      await wait(100);
+      assert(await evaluate('document.documentElement.scrollWidth <= innerWidth'), 'Produce desktop overflow');
+      await capture('produce-apple-desktop-1280x960.png');
+      await evaluate(`(() => { const s = document.querySelector('.nutrition-pilot__produce select'); s.value = 'produce-1750341'; s.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+      await wait(100);
+      assert.equal(await evaluate(`Boolean(document.querySelector('[aria-label="USDA produce estimate"]'))`), false);
+      assert.equal(await evaluate(`document.querySelector('.nutrition-pilot__produce input').checked`), false);
+      await evaluate(`document.querySelector('.nutrition-pilot__produce input').click()`);
+      await wait(100);
+      await evaluate(`document.querySelector('.nutrition-pilot__produce button').click()`);
+      await wait(100);
+      assert.equal(await evaluate(`document.querySelector('[aria-label="Generic nutrition rating"]').textContent`), 'Not available');
+      await c.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
+      await evaluate(`document.querySelector('[aria-label="USDA produce estimate"]').scrollIntoView()`);
+      await wait(100);
+      await capture('produce-gala-mobile-390x844.png');
+    }
     // No opt-in must mount the ordinary application, never the pilot.
     await c.send('Page.navigate', { url: base + '/' });
     for (let i = 0; i < 100 && !await evaluate('Boolean(document.querySelector("#root")?.textContent)'); i++) await wait(100);
     await wait(200);
     assert.equal(await evaluate('Boolean(document.querySelector(".nutrition-pilot"))'), false);
     const report = { testedUrl: base + '/?nutritionPilot=1', mobile: '390x844', desktop: '1280x960',
-      themes: reports, ordinaryAppWithoutOptIn: true, physicalDeviceTest: false, screenshots: 5, letterRatingsAbsent: true };
+      themes: reports, ordinaryAppWithoutOptIn: true, physicalDeviceTest: false, screenshots: produce ? 8 : 5,
+      genericProduceChecks: produce, letterRatingsAbsent: true };
     fs.writeFileSync(path.join(output, 'visual-checks.json'), JSON.stringify(report, null, 2) + '\n');
     console.log(JSON.stringify(report, null, 2));
   } finally { if (c) { try { await c.send('Browser.close'); } catch { /* already closed */ } c.close(); }

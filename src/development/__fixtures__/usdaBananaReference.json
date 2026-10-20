@@ -1,0 +1,81 @@
+{
+  "fdcId": 173944,
+  "description": "Bananas, raw",
+  "dataType": "SR Legacy",
+  "publicationDate": "2019-04-01",
+  "retrievedOn": "2026-10-20",
+  "url": "https://api.nal.usda.gov/fdc/v1/food/173944?api_key=DEMO_KEY",
+  "responseSha256": "ecb7d42310e6867b0f757e79dc5402c67f5378724e61edecc89103695fe4404d",
+  "basis": {
+    "amount": 100,
+    "unit": "g",
+    "description": "Edible portion; raw"
+  },
+  "attribution": "US Department of Agriculture, Agricultural Research Service. FoodData Central, SR Legacy. Public domain (CC0).",
+  "foodNutrients": [
+    {
+      "nutrientId": 1008,
+      "name": "Energy",
+      "unit": "kcal",
+      "amount": 89,
+      "derivationCode": "NC",
+      "derivationDescription": "Calculated"
+    },
+    {
+      "nutrientId": 1003,
+      "name": "Protein",
+      "unit": "g",
+      "amount": 1.09,
+      "derivationCode": "A",
+      "derivationDescription": "Analytical"
+    },
+    {
+      "nutrientId": 1004,
+      "name": "Total lipid (fat)",
+      "unit": "g",
+      "amount": 0.33,
+      "derivationCode": "A",
+      "derivationDescription": "Analytical"
+    },
+    {
+      "nutrientId": 1005,
+      "name": "Carbohydrate, by difference",
+      "unit": "g",
+      "amount": 22.84,
+      "derivationCode": "NC",
+      "derivationDescription": "Calculated"
+    },
+    {
+      "nutrientId": 1079,
+      "name": "Fiber, total dietary",
+      "unit": "g",
+      "amount": 2.6,
+      "derivationCode": "A",
+      "derivationDescription": "Analytical"
+    },
+    {
+      "nutrientId": 2000,
+      "name": "Total Sugars",
+      "unit": "g",
+      "amount": 12.23,
+      "derivationCode": "A",
+      "derivationDescription": "Analytical"
+    },
+    {
+      "nutrientId": 1093,
+      "name": "Sodium, Na",
+      "unit": "mg",
+      "amount": 1,
+      "derivationCode": "A",
+      "derivationDescription": "Analytical"
+    },
+    {
+      "nutrientId": 1258,
+      "name": "Fatty acids, total saturated",
+      "unit": "g",
+      "amount": 0.112,
+      "derivationCode": "NC",
+      "derivationDescription": "Calculated"
+    }
+  ]
+}
