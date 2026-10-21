@@ -19,10 +19,10 @@ function dialog(lookup, onUseFood = jest.fn()) {
   return render(<BarcodeScannerDialog access={{ available: true, message: 'Scan a barcode.', label: 'Scanner beta' }}
     barcodeLookup={{ lookup }} camera={camera} lifecycleAdapter={lifecycleAdapter} onUseFood={onUseFood} onClose={jest.fn()} />);
 }
-async function lookup(barcode = BARCODE) {
+async function lookup(barcode = BARCODE, options) {
   fireEvent.change(screen.getByLabelText('Enter barcode manually'), { target: { value: barcode } });
   fireEvent.click(screen.getByRole('button', { name: 'Look Up Barcode' }));
-  return screen.findByRole('article', { name: 'Barcode product review' });
+  return screen.findByRole('article', { name: 'Barcode product review' }, options);
 }
 test.each(['production', 'test'])('%s runtime cannot expose grading with URL flag', async environment => {
   process.env.NODE_ENV = environment; dialog(jest.fn(async () => ({ status: 'found', food: food() })));
@@ -91,17 +91,17 @@ test('a real nitrite finding shows its deduction and limitations with the provis
   expect(screen.getByLabelText('Overall assessment evidence')).toHaveTextContent('low nitrosamine concern');
 });
 
-test('actual Teddy shows one score and three reasons without a generic baking-soda warning', () => {
+test('actual Teddy uses its reviewed manufacturer sugars, retains provider data and keeps details collapsed', () => {
   const archive = require('../../docs/trace-nutrition-v2-teddy-2026-10-20.json');
   const c = createBarcodeNutritionCandidate(archive.lookup);
   render(<><BarcodeNutritionReview candidate={c} identifier={archive.lookup.identifier} /><BarcodeAdditives candidate={c} /></>);
-  expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('46/100');
-  expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 46/100 · additive deduction 0 points');
+  expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('20/100');
+  expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 20/100 · additive deduction 0 points');
   expect(screen.getByLabelText('Experimental nutrition rating')).not.toBeVisible();
   const opening = screen.getByLabelText('Opening score summary');
   expect(within(opening).getAllByRole('listitem')).toHaveLength(3);
   expect(opening).toHaveTextContent('Calorie density lowers the score');
-  expect(opening).toHaveTextContent('Total sugars lower the score');
+  expect(opening).toHaveTextContent('Added sugars lower the score');
   expect(opening).toHaveTextContent('Whole grains help');
   expect(opening).not.toHaveTextContent(/baking soda|sodium hydrogen|premenopausal|HR 1.48|deduction 0|46\/100.*46\/100/);
   expect(opening.textContent.split(/\s+/).length).toBeLessThan(90);
@@ -109,7 +109,12 @@ test('actual Teddy shows one score and three reasons without a generic baking-so
   expect(screen.queryByLabelText('Additive deduction reasons')).not.toBeInTheDocument();
   const details = screen.getByLabelText('Score details & limitations');
   expect(details).not.toHaveAttribute('open');
-  expect(screen.getByLabelText('Possible overall range')).toHaveTextContent('37–46/100');
+  expect(screen.getByLabelText('Possible overall range')).toHaveTextContent('16–20/100');
+  expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('Honey · 10 oz');
+  expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('7 g per 30 g');
+  expect(details).toHaveTextContent('2.1 g per serving');
+  expect(screen.getByLabelText('Manufacturer label comparison')).not.toHaveAttribute('open');
+  expect(c.selection.nutrients.addedSugar).toBe(7);
   fireEvent.click(screen.getByText('Score details & limitations'));
   expect(screen.getByLabelText('Experimental nutrition rating')).toBeVisible();
   expect(details).toHaveTextContent('premenopausal');
@@ -127,6 +132,24 @@ test('actual Teddy shows one score and three reasons without a generic baking-so
   expect(additives).toHaveTextContent('1975');
   expect(additives).toHaveTextContent('Flavor mixture');
   expect(additives).toHaveTextContent('Fortification and purity questions remain unresolved');
+});
+
+test.each(['development', 'production'])('manufacturer correction reaches review and Use This Food without exposing grading in %s', async environment => {
+  process.env.NODE_ENV = environment;
+  const archive = require('../../docs/trace-nutrition-v2-teddy-2026-10-20.json');
+  const onUseFood = jest.fn(() => true);
+  dialog(jest.fn(async () => archive.lookup), onUseFood);
+  await lookup(archive.barcode, { timeout: 5000 });
+  expect(screen.queryByLabelText('Experimental overall rating')?.textContent || null).toBe(environment === 'development' ? '20/100' : null);
+  expect(Boolean(screen.queryByLabelText('Experimental nutrition assessment'))).toBe(environment === 'development');
+  expect(screen.queryByLabelText('Manufacturer label correction')?.textContent.includes('new food entries use this value') || false).toBe(environment === 'development');
+  expect(within(screen.getByRole('article', { name: 'Barcode product review' })).getAllByText('7 g')).toHaveLength(2);
+  fireEvent.click(screen.getByRole('button', { name: 'Use This Food' }));
+  const selected = onUseFood.mock.calls[0][0];
+  expect(selected.nutrients).toEqual({ ...archive.lookup.food.nutrients, addedSugar: 7 });
+  expect(selected.remote.nutrients.addedSugar).toBe(2.1);
+  expect(selected.nutritionCorrection.source.updatedOn).toBe('2023-12-14');
+  expect(JSON.stringify(selected)).not.toMatch(/nutritionScore100|overallScore100|reviewedManufacturerLabel/);
 });
 
 test('raw finding remains disclosed when rounding leaves the main whole-number score unchanged', () => {

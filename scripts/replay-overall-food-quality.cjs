@@ -40,7 +40,9 @@ const products = comparison.products.map(row => {
       entry.derivation = verified.derivation;
     }
   }
-  const candidate = createBarcodeNutritionCandidate(lookup);
+  // Historical source-profile replay, deliberately before later reviewed fact
+  // corrections. Normal barcode review/logging uses the default corrected path.
+  const candidate = createBarcodeNutritionCandidate(lookup, { applyVerifiedCorrections: false });
   const before = JSON.stringify(candidate);
   const result = row.after.result;
   if (result?.normalized) {

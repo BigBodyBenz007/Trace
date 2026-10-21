@@ -36,13 +36,13 @@ const originalHashes = Object.fromEntries(['selection.json', 'results.json', 'fo
   [filename, crypto.createHash('sha256').update(fs.readFileSync(path.join(folder, filename))).digest('hex')]));
 const observations = first.observations.map(row => follow.observations.find(next => next.barcode === row.barcode) || row);
 if (teddy) {
-  const previous = practicalAssessment(createBarcodeNutritionCandidate(teddy.lookup), teddy.lookup.identifier);
+  const previous = practicalAssessment(createBarcodeNutritionCandidate(teddy.lookup, { applyVerifiedCorrections: false }), teddy.lookup.identifier);
   observations.push({ barcode: teddy.barcode, selectedName: 'Teddy Grahams', retrievedAt: teddy.capturedAt,
     lookup: teddy.lookup, additionalComparison: true,
     evaluation: { loggingUsable: true, assessment: previous } });
 }
 const products = observations.map(row => {
-  const legacyAssessment = energyAudit ? publishedAssessment(createBarcodeNutritionCandidate(row.lookup), row.lookup.identifier) : null;
+  const legacyAssessment = energyAudit ? publishedAssessment(createBarcodeNutritionCandidate(row.lookup, { applyVerifiedCorrections: false }), row.lookup.identifier) : null;
   if (energyAudit && !row.additionalComparison) assert.equal(legacyAssessment.nutritionScore100,
     approvedReplay.products.find(product => product.barcode === row.barcode).after.nutritionScore100,
     'Legacy inputs without recovered qualifiers must not gain a score silently.');
@@ -76,7 +76,9 @@ const products = observations.map(row => {
       computedKjConfirmedInOfficialInputSet: true, structuredSourceUrl: energySource.structured.url,
       change: 'Recover only omitted energy modifiers; no nutrient, market, ingredient or category values replaced.' };
   }
-  const candidate = createBarcodeNutritionCandidate(lookup);
+  // Reproduce the archived provider profiles; normal application selection uses
+  // the corrected default instead of this retrospective opt-out.
+  const candidate = createBarcodeNutritionCandidate(lookup, { applyVerifiedCorrections: false });
   assert.equal(candidate?.canUse === true, row.evaluation.loggingUsable, 'Logging eligibility changed.');
   const before = JSON.stringify(candidate);
   const revised = assessBarcodeNutrition(candidate, row.lookup.identifier);

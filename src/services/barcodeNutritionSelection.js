@@ -1,6 +1,7 @@
 import { NUTRITION_ENTRY_NUTRIENT_KEYS } from "./nutritionCalculation";
 import { immutableCopy, normalizeRemoteFood } from "./remoteFoodModel";
 import { getNutritionAssessmentQuality, normalizeNutritionAssessmentInputs } from "./nutritionAssessmentInputs";
+import { resolveVerifiedNutritionCorrection } from "./verifiedProductNutritionCorrections";
 
 const REQUIRED_NUTRIENTS = ["calories", "protein", "carbohydrates", "fat"];
 const SAFE_REMOTE_BASIS_KINDS = new Set([
@@ -38,7 +39,7 @@ function basisMessage(food, servingDescription, reliable) {
   return `Nutrition shown for ${servingDescription}.`;
 }
 
-function remoteCandidate(result) {
+function remoteCandidate(result, applyVerifiedCorrections) {
   const food = normalizeRemoteFood(result.food);
   if (!food) return null;
   const assessmentInputs = result.stale && food.assessmentInputs
@@ -76,6 +77,11 @@ function remoteCandidate(result) {
     && food.logReady
     && reliable
     && REQUIRED_NUTRIENTS.every((key) => nutrients[key] !== null);
+  const nutritionCorrection = canUse && applyVerifiedCorrections
+    ? resolveVerifiedNutritionCorrection(food, { identifier: result.identifier, stale: result.stale }) : null;
+  if (nutritionCorrection) nutritionCorrection.changes.forEach(({ nutrient, correctedValue }) => {
+    nutrients[nutrient] = correctedValue;
+  });
   const selection = canUse ? immutableCopy({
     id: `remote-barcode:${food.provider.id}:${food.provider.recordId}`,
     sourceType: "remote-barcode",
@@ -86,6 +92,7 @@ function remoteCandidate(result) {
     ...ingredientFields,
     serving,
     nutrients,
+    ...(nutritionCorrection ? { nutritionCorrection } : {}),
     packaged: {
       packageSize: food.packageQuantity,
       servingsPerContainer: food.servingsPerContainer,
@@ -119,8 +126,10 @@ function remoteCandidate(result) {
       packageQuantity: food.packageQuantity,
       servingsPerContainer: food.servingsPerContainer,
       servingDescription: serving.description,
-      basisMessage: basisMessage(food, serving.description, reliable),
+      basisMessage: basisMessage(food, serving.description, reliable) + (nutritionCorrection
+        ? ` Added sugars corrected using ${nutritionCorrection.source.attribution} (label edition ${nutritionCorrection.source.updatedOn}); original provider values are retained in the source snapshot.` : ""),
       nutrients,
+      ...(nutritionCorrection ? { nutritionCorrection } : {}),
       providerNutritionBasis: food.dataBasis,
       attribution: food.provenance.attribution,
       sourceUrl: food.provenance.sourceUrl,
@@ -200,9 +209,11 @@ function localCandidate(result) {
   });
 }
 
-export function createBarcodeNutritionCandidate(result) {
+// The explicit opt-out is for retrospective source-only research replays.
+// Normal lookup/selection always applies reviewed fact corrections.
+export function createBarcodeNutritionCandidate(result, { applyVerifiedCorrections = true } = {}) {
   if (!result || !["found", "incomplete"].includes(result.status) || !result.food) return null;
   return result.food.sourceType === "remote-barcode"
-    ? remoteCandidate(result)
+    ? remoteCandidate(result, applyVerifiedCorrections)
     : localCandidate(result);
 }

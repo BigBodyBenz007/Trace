@@ -891,6 +891,7 @@ function NutritionPage({
               retrievedAt: food.remote.provenance.retrievedAt,
               dataBasis: food.remote.dataBasis,
               unknownFields: [...food.remote.unknownFields],
+              ...(food.nutritionCorrection ? { nutritionCorrection: food.nutritionCorrection } : {}),
               ...(food.remote.ingredients === undefined
                 ? {}
                 : { ingredients: { ...food.remote.ingredients } }),
@@ -1466,6 +1467,9 @@ function NutritionPage({
                 {foodReference.providerAttribution ? ` · ${foodReference.providerAttribution}` : ""}
                 {foodReference.sourceUrl && (
                   <> · <a href={foodReference.sourceUrl} rel="noreferrer noopener" target="_blank">View source</a></>
+                )}
+                {foodReference.nutritionCorrection && (
+                  <> · Verified nutrition correction: <a href={foodReference.nutritionCorrection.source.url} rel="noreferrer noopener" target="_blank">Manufacturer label</a> ({foodReference.nutritionCorrection.source.updatedOn})</>
                 )}
               </p>
             )}

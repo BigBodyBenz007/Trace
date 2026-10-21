@@ -374,3 +374,30 @@ The Open Food Facts ODbL attribution and share-alike obligations still require
 product/legal review before public launch. The visible attribution and source
 link are implementation safeguards, not a conclusion that every distribution
 or database-use obligation has been resolved.
+
+
+## Verified manufacturer nutrient corrections
+
+The browser selection adapter can apply a reviewed, exact-product fact overlay
+after provider normalization. `src/services/verifiedProductNutritionCorrections.js`
+contains no network or grading code; `src/data/teddyGrahamsHoneyLabel.json` retains
+the initial manufacturer panel, source edition, verification timestamp and hashes.
+The UPC, provider identity, US-only market claims, package, serving, full ingredient
+sequence and remaining nutrient panel must match. Unknown/conflicting/changed
+evidence or stale records do not inherit a correction. This is independent of
+the development-only grading gate.
+
+For matching Teddy Grahams Honey 10-oz records, added sugars change from the OFF
+2.1 g to the manufacturer-declared 7 g per 30 g. Review and selection share the
+corrected nutrients; new entries use the same precise serving basis. The original
+OFF response/cache and `selection.remote` snapshot remain unchanged. A separate
+`nutritionCorrection` on the selection, review and new saved food reference records
+which field changed and which manufacturer source supplied it. The complete panel
+and original provider values remain accessible without relabeling OFF as the
+manufacturer. Existing saved entries never re-run this overlay.
+
+Retrospective research scripts may explicitly use
+`createBarcodeNutritionCandidate(result, { applyVerifiedCorrections: false })` to
+reproduce historical source-only results. Normal application lookup uses the
+corrected default. No storage migration, automatic provider update or public
+grading activation is introduced.

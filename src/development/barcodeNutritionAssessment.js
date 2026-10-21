@@ -3,6 +3,7 @@ import { normalizeNutritionAssessmentInputs } from '../services/nutritionAssessm
 import { reconcileBarcodeDatasets, resolveBarcodeCategory } from './barcodeNutritionEvidence';
 import { evaluateTraceUsNutritionV2 as evaluatePracticalUsNutrition } from './traceUsNutritionScoringV2';
 import { assessAdditiveEvidence, resolveGrainEvidence } from './traceFoodQualityEvidence';
+import { applyVerifiedNutritionToAssessment } from './verifiedBarcodeNutritionAssessment';
 
 const UNITS = { calories: 'kcal', saturatedFat: 'g', addedSugar: 'g', totalSugar: 'g', sodium: 'mg', fiber: 'g', protein: 'g', fat: 'g', carbohydrates: 'g' };
 const freeze = value => { if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); } return value; };
@@ -110,5 +111,6 @@ export function assessBarcodeNutrition(candidate, identifier) {
   base.warnings.push(...result.warnings);
   base.evidence.assessment = { methodId: result.methodId, methodVersion: result.methodVersion,
     sugarMode: result.sugarMode ?? null, excludedNutrients: [...new Set([...excludedFromPanel, ...(result.excludedNutrients ?? [])])], source: { ...input.source } };
-  return freeze({ ...base, result, nutritionScore100: result.nutritionScore100, reasons: result.reasons });
+  return applyVerifiedNutritionToAssessment(candidate, identifier,
+    freeze({ ...base, result, nutritionScore100: result.nutritionScore100, reasons: result.reasons }));
 }

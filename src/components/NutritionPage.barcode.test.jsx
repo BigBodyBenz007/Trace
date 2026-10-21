@@ -8,6 +8,7 @@ import {
 import { readUserFoods, writeUserFoods, createUserFood } from "../services/userFoodCatalog";
 import { decodeBarcodePhoto } from "../services/barcodePhoto";
 import { normalizeOpenFoodFactsAdditives } from "../services/productAdditives";
+import teddyArchive from "../../docs/trace-nutrition-v2-teddy-2026-10-20.json";
 
 const { captureNutritionAssessmentInputs } = require("../../api/nutrition/_assessmentInputs.cjs");
 const { offRecord } = require("../services/__fixtures__/nutritionAssessmentInputs.cjs");
@@ -146,12 +147,12 @@ function setup(overrides = {}, lookupFood = remoteFood()) {
   return { lookup, saveNutritionEntry: props.saveNutritionEntry, ...view };
 }
 
-async function scanAndUse() {
+async function scanAndUse(barcodeValue = "00012345600012") {
   fireEvent.click(screen.getByRole("button", { name: "Scan Barcode" }));
   const barcode = screen.getByLabelText("Enter barcode manually");
-  fireEvent.change(barcode, { target: { value: "00012345600012" } });
+  fireEvent.change(barcode, { target: { value: barcodeValue } });
   fireEvent.submit(barcode.closest("form"));
-  await screen.findByRole("article", { name: "Barcode product review" });
+  await screen.findByRole("article", { name: "Barcode product review" }, { timeout: 5000 });
   fireEvent.click(screen.getByRole("button", { name: "Use This Food" }));
 }
 
@@ -594,4 +595,85 @@ test("ordinary grocery creation keeps its helpful example placeholders", () => {
     .toHaveAttribute("placeholder", "32 oz");
   expect(ordinary.getByLabelText("Serving description (optional)"))
     .toHaveAttribute("placeholder", "1 cup (30 g)");
+});
+
+
+test("verified Teddy correction reaches normal logging, persists source evidence, and survives reopening without migrating history", async () => {
+  const providerFood = teddyArchive.lookup.food;
+  const legacy = {
+    name: "Historical Teddy", ...Object.fromEntries(Object.entries(providerFood.nutrients).map(([key, value]) => [key, value === null ? null : value * 2])),
+    loggedAt: "2026-10-20T17:00:00.000Z", notes: "",
+    portion: { amount: 2, unit: "serving", basis: providerFood.serving },
+    nutritionBasis: providerFood.nutrients,
+    foodReference: { sourceType: "remote-barcode", modified: false, providerNutritionBasis: { nutrients: providerFood.nutrients } },
+  };
+  expect(appendNutritionEntry(localStorage, legacy, { createId: () => "teddy-legacy" }).status).toBe("saved");
+  const originalLegacy = JSON.stringify(JSON.parse(localStorage.getItem("nutritionEntries"))[0]);
+  const saveNutritionEntry = jest.fn(entry => appendNutritionEntry(localStorage, entry, { createId: () => "teddy-new" }).status === "saved");
+  const updateNutritionEntry = jest.fn((id, entry) => updateStoredNutritionEntry(localStorage, id, entry).status === "saved");
+  const callbacks = { saveNutritionEntry, updateNutritionEntry };
+  let view = setup(callbacks, providerFood);
+  await scanAndUse(teddyArchive.barcode);
+  expect(screen.queryByLabelText("Experimental nutrition assessment")).not.toBeInTheDocument();
+  expect(entryNutrient("Added Sugar (g)")).toHaveValue(7);
+  expect(entryNutrient("Total Sugar (g)")).toHaveValue(7);
+  expect(screen.getByRole("link", { name: "Manufacturer label" })).toHaveAttribute("href", "https://smartlabel.mondelez.info/044000045586-0001-en-US/index.html");
+  fireEvent.change(screen.getByLabelText("Number of servings"), { target: { value: "2" } });
+  expect(entryNutrient("Added Sugar (g)")).toHaveValue(14);
+  fireEvent.click(screen.getByRole("button", { name: "Save Entry" }));
+  expect(saveNutritionEntry).toHaveReturnedWith(true);
+  let stored = readNutritionEntries(localStorage).entries.find(entry => entry.id === "teddy-new");
+  expect(stored.addedSugar).toBe(14);
+  expect(stored.nutritionBasis.addedSugar).toBe(7);
+  expect(stored.foodReference.nutritionCorrection).toMatchObject({
+    source: { updatedOn: "2023-12-14", attribution: "Teddy Grahams / Mondelez SmartLabel" },
+    changes: [{ nutrient: "addedSugar", unit: "g", originalValue: 2.1, correctedValue: 7 }],
+  });
+  expect(stored.foodReference.providerNutritionBasis.nutrients.addedSugar).toBe(2.1);
+  expect(stored.foodReference.assessmentInputs).toEqual(providerFood.assessmentInputs);
+  expect(stored.foodReference.ingredients).toEqual(providerFood.ingredients);
+  expect(stored.foodReference.additives).toEqual(providerFood.additives);
+  expect(JSON.stringify(stored)).not.toMatch(/nutritionScore100|overallScore100|"grade"|scoreReady/);
+  view.unmount();
+
+  for (const quantity of [0.5, 1.25]) {
+    view = setup({ ...callbacks, nutritionEntries: [stored] }, providerFood);
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    fireEvent.change(screen.getByLabelText("Number of servings"), { target: { value: String(quantity) } });
+    expect(entryNutrient("Added Sugar (g)")).toHaveValue(7 * quantity);
+    fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+    const next = readNutritionEntries(localStorage).entries.find(entry => entry.id === "teddy-new");
+    expect(next.addedSugar).toBe(7 * quantity);
+    expect(next.nutritionBasis.addedSugar).toBe(7);
+    expect(next.foodReference).toEqual(stored.foodReference);
+    stored = next;
+    view.unmount();
+  }
+  view = setup({ ...callbacks, nutritionEntries: [stored] }, providerFood);
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(readNutritionEntries(localStorage).entries.find(entry => entry.id === "teddy-new")).toEqual(stored);
+  expect(JSON.stringify(JSON.parse(localStorage.getItem("nutritionEntries"))[0])).toBe(originalLegacy);
+});
+
+test("reopening a historical Teddy entry preserves its old basis, including explicit serving edits", () => {
+  const providerFood = teddyArchive.lookup.food;
+  const legacy = { name: "Historical Teddy", ...providerFood.nutrients, loggedAt: "2026-10-20T17:00:00.000Z", notes: "",
+    nutritionBasis: providerFood.nutrients, portion: { amount: 1, unit: "serving", basis: providerFood.serving },
+    foodReference: { sourceType: "remote-barcode", modified: false, providerNutritionBasis: { nutrients: providerFood.nutrients } } };
+  appendNutritionEntry(localStorage, legacy, { createId: () => "teddy-legacy" });
+  const raw = localStorage.getItem("nutritionEntries");
+  const updateNutritionEntry = jest.fn((id, entry) => updateStoredNutritionEntry(localStorage, id, entry).status === "saved");
+  setup({ nutritionEntries: readNutritionEntries(localStorage).entries, updateNutritionEntry }, providerFood);
+  expect(localStorage.getItem("nutritionEntries")).toBe(raw);
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  expect(entryNutrient("Added Sugar (g)")).toHaveValue(2.1);
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(localStorage.getItem("nutritionEntries")).toBe(raw);
+  fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+  fireEvent.change(screen.getByLabelText("Number of servings"), { target: { value: "0.5" } });
+  expect(entryNutrient("Added Sugar (g)")).toHaveValue(1.05);
+  fireEvent.click(screen.getByRole("button", { name: "Save Changes" }));
+  expect(readNutritionEntries(localStorage).entries[0].nutritionBasis.addedSugar).toBe(2.1);
+  expect(readNutritionEntries(localStorage).entries[0].foodReference.nutritionCorrection).toBeUndefined();
 });

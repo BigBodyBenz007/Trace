@@ -1,0 +1,76 @@
+{
+  "id": "mondelez-teddy-grahams-honey-044000045586-2023-12-14",
+  "identity": {
+    "gtin": "044000045586",
+    "brand": "Teddy Grahams",
+    "name": "Graham Snacks, Made with Real Honey",
+    "flavor": "Honey",
+    "packageQuantity": "10 oz",
+    "packageGrams": 283
+  },
+  "source": {
+    "url": "https://smartlabel.mondelez.info/044000045586-0001-en-US/index.html",
+    "nutritionUrl": "https://smartlabel.mondelez.info/044000045586-0001-en-US/6111eae5-9016-4f38-8965-5b6ca35d5f24-nutrition.html",
+    "ingredientsUrl": "https://smartlabel.mondelez.info/044000045586-0001-en-US/6111eae5-9016-4f38-8965-5b6ca35d5f24-ingredients.html",
+    "attribution": "Teddy Grahams / Mondelez SmartLabel",
+    "updatedOn": "2023-12-14",
+    "verifiedAt": "2026-10-21T03:48:02.807Z",
+    "verification": "direct-manufacturer-panel"
+  },
+  "serving": {
+    "description": "24 pieces (30 g)",
+    "amount": 30,
+    "unit": "g"
+  },
+  "nutrients": {
+    "calories": 130,
+    "carbohydrates": 22,
+    "protein": 2,
+    "fat": 4,
+    "fiber": 1,
+    "sodium": 90,
+    "totalSugar": 7,
+    "addedSugar": 7,
+    "saturatedFat": 0
+  },
+  "ingredients": {
+    "text": "GRAHAM FLOUR (WHOLE GRAIN WHEAT FLOUR), UNBLEACHED ENRICHED FLOUR (WHEAT FLOUR, NIACIN, REDUCED IRON, THIAMINE MONONITRATE {VITAMIN B1}, RIBOFLAVIN {VITAMIN B2}, FOLIC ACID), SUGAR, CANOLA OIL, HONEY, CALCIUM CARBONATE (SOURCE OF CALCIUM), MALTODEXTRIN, BAKING SODA, SALT, SOY LECITHIN, NATURAL FLAVOR.",
+    "language": "en"
+  },
+  "sourceArtifacts": [
+    {
+      "url": "https://smartlabel.mondelez.info/044000045586-0001-en-US/6111eae5-9016-4f38-8965-5b6ca35d5f24-nutrition.html",
+      "sha256": "5862b9e517c3ecb451d764f370cb16bf2f8e96da8cfadeea150f868ca9f5fad0"
+    },
+    {
+      "url": "https://smartlabel.mondelez.info/044000045586-0001-en-US/6111eae5-9016-4f38-8965-5b6ca35d5f24-ingredients.html",
+      "sha256": "d5d354f5271f552f172f10915d25a9643c91c49a0b70a93eb1b06f6c782691a2"
+    },
+    {
+      "url": "https://images.salsify.com/image/upload/s--qW9V1LA6--/c_limit%2Cq_auto%2Cw_429/efbf81c6077beaadc4eaf77504068031a4b9867b.jpg",
+      "sha256": "12b8a8251a9d45927d721fa00f8465d581db2d6e31d59d582485ab71f031a000"
+    }
+  ],
+  "providerObservation": {
+    "provider": "open-food-facts",
+    "recordId": "0044000045586",
+    "revision": 26,
+    "revisionDate": "2026-02-22T21:18:10.000Z",
+    "sourceUrl": "https://world.openfoodfacts.org/product/0044000045586",
+    "rawAddedSugars": {
+      "added-sugars_value": 7,
+      "added-sugars_100g": 7,
+      "added-sugars_serving": 2.1,
+      "added-sugars_modifier": "~",
+      "nutrition_data_per": "100g"
+    },
+    "nutritionPhotoUrl": "https://images.openfoodfacts.org/images/products/004/400/004/5586/nutrition_en.21.full.jpg",
+    "nutritionPhotoUploadedAt": "2024-08-25T13:42:46.000Z"
+  },
+  "matchingProviderName": "Graham Snacks",
+  "corrections": [
+    { "nutrient": "addedSugar", "unit": "g", "originalValue": 2.1, "correctedValue": 7 }
+  ],
+  "initialReviewScope": "Originally reviewed for experimental assessment only; the subsequent shared correction applies to new selections and entries, never historical records.",
+  "qualification": "Exact UPC manufacturer label and matching provider package photo; not verification of the scanned physical package revision. Original provider information is retained separately."
+}

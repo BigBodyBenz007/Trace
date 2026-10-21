@@ -196,8 +196,10 @@ async function main() {
       await capture('mobile-provisional-390x844.png');
       if (refinement) {
         await review('teddy');
-        assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental overall rating"]').textContent`), '46/100');
-        assert(await evaluate(`document.querySelector('[aria-label="Experimental nutrition rating"]').textContent.includes('Nutrition 46/100 · additive deduction 0 points')`));
+        assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental overall rating"]').textContent`), '20/100');
+        assert(await evaluate(`document.querySelector('[aria-label="Experimental nutrition rating"]').textContent.includes('Nutrition 20/100 · additive deduction 0 points')`));
+        assert(await evaluate(`document.querySelector('[aria-label="Manufacturer label correction"]').textContent.includes('7 g per 30 g')`));
+        assert(await evaluate(`Array.from(document.querySelectorAll('dt')).find(el=>el.textContent==='Added Sugar').nextElementSibling.textContent.includes('7 g')`));
         assert(await evaluate(`(() => { const opening=document.querySelector('[aria-label="Opening score summary"]'); return opening.querySelectorAll('li').length<=3 && opening.textContent.trim().split(/\\s+/).length<90 && !/baking soda|premenopausal|deduction|HR 1.48/i.test(opening.textContent); })()`));
         assert(await evaluate(`document.querySelector('[aria-label="Provisional overall score"]') && Array.from(document.querySelectorAll('.trace-barcode-grade details, .trace-barcode-additives')).every(el => !el.open)`));
         assert(await evaluate(`document.querySelector('[aria-label="Experimental nutrition assessment"]').getBoundingClientRect().bottom < 844`));

@@ -7,6 +7,89 @@ are unchanged. Public `grade=null`, `scoreReady=false`. No consumer-release appr
 
 ## Opening result
 
+### Subsequent Teddy Grahams label verification
+
+The original captured replay below remains historical provider data. A focused
+review of UPC `044000045586` now connects it to the US **Honey, 10 oz (283 g)**
+product via [the manufacturer's exact-UPC SmartLabel](https://smartlabel.mondelez.info/044000045586-0001-en-US/index.html),
+linked by the current Snackworks 10-oz product page. The SmartLabel edition is
+2023-12-14; the review timestamp and source hashes are in
+`src/data/teddyGrahamsHoneyLabel.json`.
+
+Both the manufacturer panel and OFF's own selected package photo declare
+**7 g added sugars per 30 g**, separately from 7 g total sugars. OFF revision 26
+incorrectly places added sugars at 7 g/100 g (qualified `~`), producing
+`7 * 30 / 100 = 2.1 g/serving`. Trace's conversion is correct for those erroneous
+inputs. Other listed macronutrients, the ingredient sequence and the two provider
+additive families match. This is not evidence for a different flavor or an older
+2.1-g label formulation. An older manufacturer page has a conflicting 14.4-oz
+title/10-oz weight; the linked exact-UPC page and photographed box both say 10 oz.
+
+The shared barcode-selection adapter now applies a reviewed fact overlay when
+the exact UPC, US record, Honey ingredient sequence, 10-oz package, 30-g serving
+and remaining nutrient panel match. A changed/partial panel, different formulation,
+user-edited food or stale record does not inherit it. Manufacturer credentials,
+edition/review dates, exact-UPC source URLs and evidence hashes are required.
+`verifiedProductNutritionCorrections.js` contains no scoring code. The existing
+development assessment consumes this same correction through
+`verifiedBarcodeNutritionAssessment.js` and the unchanged v2 engine. No new
+provider requests, product score, threshold or additive-weight override.
+
+The historical provider profile remains **46** (`45.86458794977321` before
+rounding). The label profile gives **20** (`19.650047483380824`). Added sugars
+become `7*100/30 = 23.3333333333 g/100 g`; the sugar burden is
+`(23.3333333333-2.5)/22.5 = 0.9259259259`. The existing strongest-component
+safeguard sets the limiting burden to `0.8*0.9259259259 = 0.7407407407`.
+Energy burden remains `0.6794871795`, saturated-fat burden 0 and sodium burden
+`0.2592592593`. The unchanged formula is
+`85 - 60*0.7407407407 - 35*0.6794871795 + 11.0952380952*(1-0.7407407407)`.
+The unchanged additive screen adds no deduction, so overall is also **20,
+provisional**. Yuka's observed overall 36 is not a target or a reconstructed score.
+
+Review, experimental grading and new food entries now agree on **7 g added
+sugars per 30 g**. Serving multiplication uses that unrounded basis: 0.5 -> 3.5 g,
+1.25 -> 8.75 g and 2 -> 14 g. The original OFF snapshot and assessment inputs
+remain unmodified. New food references carry a separate `nutritionCorrection`
+with the changed field, old/new values, original source, complete manufacturer
+panel, edition, review timestamp and evidence hashes. Save/reopen preserves both.
+No correction runs on historical entry reads or edits; their stored basis remains
+authoritative. Upstream OFF and provider caches are unchanged. A physical-package
+revision remains unconfirmed; label verification is not product-specific safety.
+The archived 21-product replay explicitly opts out of later corrections to retain
+its historical 46 result. Normal lookup never opts out. The current preview uses
+20; public `grade=null`, `scoreReady=false` remain unchanged.
+
+Current shared-correction implementation inventory (including the preceding label review):
+
+- src/data/teddyGrahamsHoneyLabel.json
+- src/services/verifiedProductNutritionCorrections.js
+- src/services/verifiedProductNutritionCorrections.test.js
+- src/services/barcodeNutritionSelection.js
+- src/components/NutritionPage.jsx
+- src/components/NutritionPage.barcode.test.jsx
+- src/development/verifiedBarcodeNutritionAssessment.js
+- src/development/barcodeNutritionAssessment.js
+- src/development/BarcodeNutritionReview.jsx
+- src/development/BarcodeNutritionReview.test.jsx
+- scripts/replay-overall-food-quality.cjs
+- scripts/replay-barcode-eligibility.cjs
+- scripts/verify-barcode-grading.cjs
+- docs/trace-overall-food-quality.md
+- docs/remote-barcode-lookup.md
+
+The manufacturer JSON and its review helper/tests were moved from the earlier
+`src/development/__fixtures__/teddyGrahamsHoneyLabel.json`,
+`reviewedTeddyGrahamsLabel.js` and `reviewedTeddyGrahamsLabel.test.js` into the
+shared/data locations above. The original source editions and evidence hashes
+are preserved.
+
+Validation: 287 focused tests pass across 12 suites (latest results per test).
+New-entry storage/reopening, precise fractions, historical compatibility, original
+provider evidence, additive grouping, scanner/photo/UPC/EAN behavior and production
+gating are covered. No new lint findings; 18 existing test lint errors are unchanged.
+Syntax, JSON and whitespace checks pass. No build, real user storage access,
+commit, push or deployment.
+
 One prominent whole-number overall score. Up to three short nutrition factors
 appear immediately below, selected by the magnitude of actually applied point
 contributions. No new nutrient thresholds or calculations. Unknown/ranged values
@@ -144,7 +227,7 @@ unknown flavors/modification types and historical legal qualifications remain.
 The separate archived Quest sodium source-quality concern is not repaired or
 replaced with an assumed value in this task.
 
-Exact modified files:
+Original simplification checkpoint inventory (already committed):
 
 - src/development/additiveScreeningPolicy.js
 - src/development/traceOverallFoodQuality.js
