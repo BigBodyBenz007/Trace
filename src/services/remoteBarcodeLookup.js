@@ -43,6 +43,30 @@ async function readBoundedResponse(response, maxBytes) {
   }
 }
 
+function needsAssessmentRefresh(food) {
+  const input = food?.assessmentInputs;
+  if (input == null) return true;
+  const fields = Object.fromEntries(input.serving.map(({ field, value }) => [field, value]));
+  const unit = value => {
+    const normalized = typeof value === "string" ? value.trim().toLowerCase() : "";
+    return ["g", "grm"].includes(normalized) ? "g" : ["ml", "mlt"].includes(normalized) ? "ml" : null;
+  };
+  // Refresh only captured shapes affected by the known basis/unit fixes. A
+  // genuinely missing nutrient or unresolved category is not a refresh trigger.
+  if (input.source.provider === "usda-fdc") {
+    return input.datasets.some(dataset => ["grm", "mlt"].includes(dataset.quantity?.unit?.toLowerCase())
+      || (dataset.id === "usda-reference" && dataset.basis === "unknown" && unit(fields.servingSizeUnit)));
+  }
+  if (input.source.provider !== "open-food-facts") return false;
+  const servingUnit = unit(fields.serving_quantity_unit), packageUnit = unit(fields.product_quantity_unit);
+  const servingText = typeof fields.serving_size === "string" ? fields.serving_size.toLowerCase() : "";
+  const conflict = (servingUnit === "ml" && /\d\s*(?:g|grams?)\b/.test(servingText))
+    || (servingUnit === "g" && /\d\s*(?:ml|millilit(?:er|re)s?)\b/.test(servingText));
+  if (!servingUnit || conflict || (packageUnit && packageUnit !== servingUnit)) return false;
+  return input.datasets.some(dataset => dataset.id === "off-100g"
+    && (dataset.basis === "unknown" || (servingUnit === "ml" && dataset.basis === "100g")));
+}
+
 export function createRemoteBarcodeLookup({
   fetchImpl = defaultBrowserFetch,
   clock = Date.now,
@@ -56,13 +80,17 @@ export function createRemoteBarcodeLookup({
 } = {}) {
   const cache = createRemoteBarcodeCache({ storage, clock });
   const inFlight = new Map();
+  // Older valid v2 records predate optional capture or its basis fixes. Refresh
+  // them once online instead of hiding newer evidence for the cache lifetime.
+  // This is an in-memory attempt marker, not a cache or saved-record migration.
+  const legacyRefreshAttempts = new Set();
   const gatewayEndpoint = typeof endpoint === "string"
     && endpoint.startsWith("/")
     && !endpoint.startsWith("//")
     ? endpoint
     : REMOTE_BARCODE_ENDPOINT;
 
-  async function requestRemote(barcode) {
+  async function requestRemote(barcode, fallback = null) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
     try {
@@ -75,12 +103,15 @@ export function createRemoteBarcodeLookup({
       });
       const payload = await readBoundedResponse(response, responseMaxBytes);
       const result = normalizeRemoteLookupResult(payload);
-      if (!result) return safeResult("unavailable", { scheme: "gtin", value: barcode });
-      if (["found", "incomplete"].includes(result.status)) cache.set(barcode, result);
-      return result;
+      if (!result) return fallback || safeResult("unavailable", { scheme: "gtin", value: barcode });
+      if (["found", "incomplete"].includes(result.status)) {
+        cache.set(barcode, result);
+        return result;
+      }
+      return fallback || result;
     } catch (error) {
       const runtimeState = typeof runtime === "function" ? runtime() : runtime;
-      return safeResult(
+      return fallback || safeResult(
         runtimeState?.isOnline === false ? "offline" : "unavailable",
         { scheme: "gtin", value: barcode }
       );
@@ -104,9 +135,10 @@ export function createRemoteBarcodeLookup({
     }
 
     const cached = cache.get(barcode);
-    if (cached) return cached;
+    if (cached && !needsAssessmentRefresh(cached.food)) return cached;
 
     const runtimeState = typeof runtime === "function" ? runtime() : runtime;
+    if (cached && (runtimeState?.isOnline === false || runtimeState?.isWeb !== true)) return cached;
     if (runtimeState?.isOnline === false) {
       return cache.get(barcode, { allowExpired: true })
         || safeResult("offline", { scheme: "gtin", value: barcode });
@@ -116,8 +148,13 @@ export function createRemoteBarcodeLookup({
     }
 
     const key = canonicalGtinKey(barcode);
+    if (inFlight.has(key)) return inFlight.get(key);
+    if (cached) {
+      if (legacyRefreshAttempts.has(key)) return cached;
+      legacyRefreshAttempts.add(key);
+    }
     if (!inFlight.has(key)) {
-      inFlight.set(key, requestRemote(barcode).finally(() => inFlight.delete(key)));
+      inFlight.set(key, requestRemote(barcode, cached).finally(() => inFlight.delete(key)));
     }
     return inFlight.get(key);
   }

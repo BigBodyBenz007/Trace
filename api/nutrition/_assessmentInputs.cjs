@@ -47,7 +47,38 @@ function servingQuantity(amount, unit) {
   if (typeof amount === "string" && !/^(?:\d+(?:\.\d*)?|\.\d+)$/.test(amount.trim())) return null;
   const number = Number(amount);
   return Number.isFinite(number) && number > 0 && string(unit, 32)
-    ? { amount: number, unit } : null;
+    ? { amount: number, unit: referenceUnit(unit) || unit } : null;
+}
+
+// GS1/UN measurement codes are units, not unknown product dimensions. Preserve
+// the provider spelling in serving metadata; use canonical units in quantities.
+function referenceUnit(unit) {
+  const normalized = typeof unit === "string" ? unit.trim().toLowerCase() : "";
+  if (["g", "gram", "grams", "grm"].includes(normalized)) return "g";
+  if (["ml", "milliliter", "milliliters", "millilitre", "millilitres", "mlt"].includes(normalized)) return "ml";
+  return null;
+}
+
+function resolveOpenFoodFactsReferenceBasis(record) {
+  const declared = typeof record.nutrition_data_per === "string"
+    ? record.nutrition_data_per.trim().toLowerCase() : null;
+  const servingUnit = referenceUnit(record.serving_quantity_unit);
+  const packageUnit = referenceUnit(record.product_quantity_unit);
+  const text = typeof record.serving_size === "string" ? record.serving_size.toLowerCase() : "";
+  const massText = /\d\s*(?:g|grams?)\b/.test(text);
+  const volumeText = /\d\s*(?:ml|millilit(?:er|re)s?)\b/.test(text);
+  const servingConflict = (servingUnit === "ml" && massText) || (servingUnit === "g" && volumeText);
+  // A bad structured serving must not turn a separately retained reference
+  // into volume (e.g. printed 40 g versus structured 40 ml). Retain the prior
+  // declared reference and expose both original fields for consistency checks.
+  if (servingConflict) return ["100g", "100ml"].includes(declared) ? declared : "unknown";
+  if (declared === "100ml") return "100ml";
+  if (servingUnit && packageUnit && servingUnit !== packageUnit) return "unknown";
+  const unit = servingUnit || packageUnit;
+  // The legacy _100g suffix covers 100 g OR 100 ml. nutrition_data_per describes
+  // the entered _value basis; it is not a requirement for normalized fields.
+  if (unit) return unit === "ml" ? "100ml" : "100g";
+  return declared === "100g" ? "100g" : "unknown";
 }
 
 function observation(nutrient, value, unit, field, {
@@ -97,15 +128,16 @@ function usdaDatasets(record, limitations) {
       `foodNutrients[${index}].${field}`, { derivation: entry.derivationDescription
         ?? entry.foodNutrientDerivation?.description ?? entry.derivationCode ?? null }));
   });
-  // GBFPD reference values can use grams or milliliters. A mass serving in
-  // grams establishes the mass convention; other responses need better evidence.
-  const massReference = String(record.servingSizeUnit || "").trim().toLowerCase() === "g";
-  if (reference.length && !massReference) limitations.push("unconfirmed-usda-reference-dimension");
+  // GBFPD standardizes reference nutrients per 100 g or 100 ml according to the
+  // submitted serving unit. No density or unknown-unit conversion is inferred.
+  const unit = referenceUnit(record.servingSizeUnit);
+  const basis = unit === "g" ? "100g" : unit === "ml" ? "100ml" : "unknown";
+  if (reference.length && !unit) limitations.push("unconfirmed-usda-reference-dimension");
   return [
     ...(serving.length ? [{ id: "usda-label-serving", basis: "serving",
       quantity: servingQuantity(record.servingSize, record.servingSizeUnit), observations: serving }] : []),
-    ...(reference.length ? [{ id: "usda-reference", basis: massReference ? "100g" : "unknown",
-      quantity: massReference ? { amount: 100, unit: "g" } : null,
+    ...(reference.length ? [{ id: "usda-reference", basis,
+      quantity: unit ? { amount: 100, unit } : null,
       observations: reference }] : []),
   ];
 }
@@ -117,7 +149,9 @@ function offDatasets(record) {
   return ["serving", "100g", "100ml", "value"].map((suffix) => {
     let basis = suffix === "value" ? declared : suffix;
     // OFF's _100g means 100 g OR 100 mL for liquids. Do not guess that dimension.
-    if (suffix === "100g") basis = ["100g", "100ml"].includes(declared) ? declared : "unknown";
+    if (suffix === "100g" || (suffix === "value" && declared === "100g")) {
+      basis = resolveOpenFoodFactsReferenceBasis(record);
+    }
     if (!["serving", "100g", "100ml", "package"].includes(basis)) basis = "unknown";
     const amount = basis === "100g" ? { amount: 100, unit: "g" }
       : basis === "100ml" ? { amount: 100, unit: "ml" }
@@ -176,7 +210,8 @@ function buildInputs(record, food) {
     markets: metadata(record, usda ? ["marketCountry"] : ["countries_tags", "countries"], limitations),
     categories: metadata(record, usda ? ["foodCategory", "brandedFoodCategory"] : ["categories_tags", "categories"], limitations),
     serving: fields(record, usda ? ["servingSize", "servingSizeUnit", "householdServingFullText"]
-      : ["serving_quantity", "serving_quantity_unit", "serving_size", "nutrition_data_per"]),
+      : ["serving_quantity", "serving_quantity_unit", "serving_size", "nutrition_data_per",
+        "product_quantity", "product_quantity_unit"]),
     ingredients: { field: usda ? "ingredients" : "ingredients_text",
       language: food.ingredients?.language ?? null, textAvailable: typeof food.ingredients?.text === "string" },
     datasets,
@@ -201,4 +236,4 @@ function captureNutritionAssessmentInputs(record, food) {
   }
 }
 
-module.exports = { captureNutritionAssessmentInputs, offEnergyDerivation };
+module.exports = { captureNutritionAssessmentInputs, offEnergyDerivation, resolveOpenFoodFactsReferenceBasis };

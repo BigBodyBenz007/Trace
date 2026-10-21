@@ -1,0 +1,797 @@
+{
+  "selectedBeforeScoring": true,
+  "head": "12bc90c32194d9f545bf6d7ca1385a1d7969f0a3",
+  "target": 100,
+  "originalCohort": 20,
+  "additionalPerCategory": 10,
+  "categories": [
+    "non-alcoholic-beverages",
+    "breakfast-cereals",
+    "dairies",
+    "protein-bars",
+    "breads",
+    "nuts",
+    "prepared-meals",
+    "snacks"
+  ],
+  "sort": "last_modified_t",
+  "criteria": "Original grocery cohort plus first 10 unique valid GTINs in each US category listing. Initial listings sorted by last modification; one availability retry may use provider scan-count ordering. If categories remain unavailable, fill remaining slots round-robin from unused available listing records, before any scoring. No nutrient, ingredient, additive, grade or completeness fields requested during selection.",
+  "limitations": "Purposive recent-record sample, not a random or national coverage estimate. Provider US availability claims do not establish US formulation.",
+  "selectedAt": "2026-10-21T21:41:14.981Z",
+  "selected": 100,
+  "products": [
+    {
+      "barcode": "00049000000443",
+      "name": "Coca-Cola Original Taste",
+      "presentation": "20 fl oz",
+      "category": "regular soda",
+      "url": "https://www.shoprite.com/sm/planning/rsid/548/product/cocacola-original-taste-soda-20-fl-oz-id-00049000000443",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/sm/planning/rsid/548/product/cocacola-original-taste-soda-20-fl-oz-id-00049000000443"
+    },
+    {
+      "barcode": "00049000000450",
+      "name": "Diet Coke",
+      "presentation": "20 fl oz",
+      "category": "diet soda",
+      "url": "https://www.shoprite.com/sm/delivery/rsid/293/product/diet-coke-soda-20-fl-oz-id-00049000000450",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/sm/delivery/rsid/293/product/diet-coke-soda-20-fl-oz-id-00049000000450"
+    },
+    {
+      "barcode": "00038000196560",
+      "name": "Kellogg's Frosted Flakes",
+      "presentation": "28.5 oz",
+      "category": "breakfast cereal",
+      "url": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000196560",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000196560"
+    },
+    {
+      "barcode": "00038000199929",
+      "name": "Kellogg's Rice Krispies",
+      "presentation": "9 oz",
+      "category": "breakfast cereal",
+      "url": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000199929",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000199929"
+    },
+    {
+      "barcode": "00884912180056",
+      "name": "Post Shredded Wheat Original Big Biscuit",
+      "presentation": "15 oz; 18 count",
+      "category": "breakfast cereal",
+      "url": "https://www.shoprite.com/sm/planning/rsid/533/product/post-shredded-wheat-100-whole-grain-big-biscuit-cereal-18-count-15-oz-id-00884912180056",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/sm/planning/rsid/533/product/post-shredded-wheat-100-whole-grain-big-biscuit-cereal-18-count-15-oz-id-00884912180056"
+    },
+    {
+      "barcode": "00689544080008",
+      "name": "FAGE Total 0% Plain Greek Yogurt",
+      "presentation": "5.3 oz",
+      "category": "Greek yogurt",
+      "url": "https://www.shoprite.com/sm/pickup/rsid/156/product/fage-total-0-milkfat-all-natural-nonfat-greek-strained-yogurt-53-oz-id-00689544080008",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/sm/pickup/rsid/156/product/fage-total-0-milkfat-all-natural-nonfat-greek-strained-yogurt-53-oz-id-00689544080008"
+    },
+    {
+      "barcode": "00894700010045",
+      "name": "Chobani Strawberry on the Bottom Greek Yogurt",
+      "presentation": "5.3 oz",
+      "category": "Greek yogurt",
+      "url": "https://www.shoprite.com/sm/planning/rsid/140/product/chobani-strawberry-on-the-bottom-greek-yogurt-53-oz-id-00894700010045",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/sm/planning/rsid/140/product/chobani-strawberry-on-the-bottom-greek-yogurt-53-oz-id-00894700010045"
+    },
+    {
+      "barcode": "00888849000012",
+      "name": "Quest Chocolate Chip Cookie Dough Protein Bar",
+      "presentation": "2.12 oz",
+      "category": "protein bar",
+      "url": "https://www.shoprite.com/sm/pickup/rsid/553/product/quest-chocolate-chip-cookie-dough-protein-bar-212-oz-id-00888849000012",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/sm/pickup/rsid/553/product/quest-chocolate-chip-cookie-dough-protein-bar-212-oz-id-00888849000012"
+    },
+    {
+      "barcode": "00016000457232",
+      "name": "Nature Valley Peanut Butter Dark Chocolate Protein Bars",
+      "presentation": "1.42 oz; 5 count",
+      "category": "protein bar",
+      "url": "https://www.shoprite.com/sm/pickup/rsid/630/product/nature-valley-peanut-butter-dark-chocolate-protein-chewy-bars-142-oz-5-count-id-00016000457232",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/sm/pickup/rsid/630/product/nature-valley-peanut-butter-dark-chocolate-protein-chewy-bars-142-oz-5-count-id-00016000457232"
+    },
+    {
+      "barcode": "00013764027176",
+      "name": "Dave's Killer Bread 100% Whole Wheat",
+      "presentation": "25 oz",
+      "category": "bread",
+      "url": "https://www.shoprite.com/sm/pickup/rsid/390/product/daves-killer-bread-100-whole-wheat-organic-bread-25-oz-id-00013764027176",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/sm/pickup/rsid/390/product/daves-killer-bread-100-whole-wheat-organic-bread-25-oz-id-00013764027176"
+    },
+    {
+      "barcode": "00014100070832",
+      "name": "Pepperidge Farm Farmhouse Hearty White Bread",
+      "presentation": "24 oz",
+      "category": "bread",
+      "url": "https://www.shoprite.com/sm/pickup/rsid/804/product/pepperidge-farm-farmhouse-hearty-white-bread-24-oz-id-00014100070832",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/sm/pickup/rsid/804/product/pepperidge-farm-farmhouse-hearty-white-bread-24-oz-id-00014100070832"
+    },
+    {
+      "barcode": "00037600110754",
+      "name": "Skippy Creamy Peanut Butter",
+      "presentation": "16.3 oz",
+      "category": "peanut butter",
+      "url": "https://www.shoprite.com/sm/pickup/rsid/325/product/skippy-creamy-peanut-butter-163-oz-id-00037600110754",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/sm/pickup/rsid/325/product/skippy-creamy-peanut-butter-163-oz-id-00037600110754"
+    },
+    {
+      "barcode": "00041570003831",
+      "name": "Blue Diamond Whole Natural Almonds",
+      "presentation": "6 oz",
+      "category": "nuts",
+      "url": "https://smartlabel.bluediamond.com/041570003831-0002-en-US/index.html",
+      "retailerUrl": "https://www.shoprite.com/sm/pickup/rsid/429/product/blue-diamond-almonds-whole-natural-almonds-6-oz-id-00041570003831",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://smartlabel.bluediamond.com/041570003831-0002-en-US/index.html"
+    },
+    {
+      "barcode": "00025800023608",
+      "name": "Smart Ones Santa Fe Rice & Beans",
+      "presentation": "9 oz frozen meal",
+      "category": "frozen meal",
+      "url": "https://www.kraftheinz.com/smart-ones/products/00025800023608-santa-fe-rice-beans-with-zucchini-zesty-green-chile-sour-cream-sauce-mozzarella-cheese-frozen-meal",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.kraftheinz.com/smart-ones/products/00025800023608-santa-fe-rice-beans-with-zucchini-zesty-green-chile-sour-cream-sauce-mozzarella-cheese-frozen-meal"
+    },
+    {
+      "barcode": "00013800103215",
+      "name": "Stouffer's Classic Lasagna with Meat & Sauce",
+      "presentation": "10.5 oz",
+      "category": "frozen meal",
+      "url": "https://www.shoprite.com/sm/pickup/rsid/447/product/stouffers-classic-lasagna-with-meat-%26-sauce-10-oz-id-00013800103215",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/sm/pickup/rsid/447/product/stouffers-classic-lasagna-with-meat-%26-sauce-10-oz-id-00013800103215"
+    },
+    {
+      "barcode": "00044700000632",
+      "name": "Oscar Mayer Classic Wieners",
+      "presentation": "16 oz; 10 links",
+      "category": "processed meat",
+      "url": "https://www.oscarmayer.com/products/00044700000632-classic-wieners-hot-dogs",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.oscarmayer.com/products/00044700000632-classic-wieners-hot-dogs"
+    },
+    {
+      "barcode": "00037600138727",
+      "name": "SPAM Classic",
+      "presentation": "12 oz",
+      "category": "processed meat",
+      "url": "https://www.shoprite.com/sm/pickup/rsid/466/product/spam-classic-canned-meat-12-oz-id-00037600138727",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/sm/pickup/rsid/466/product/spam-classic-canned-meat-12-oz-id-00037600138727"
+    },
+    {
+      "barcode": "00024100106851",
+      "name": "Cheez-It Original",
+      "presentation": "12.4 oz",
+      "category": "crackers",
+      "url": "https://www.shoprite.com/sm/pickup/rsid/102/product/cheezit-original-baked-snack-crackers-pantry-size-124-oz-id-00024100106851",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/sm/pickup/rsid/102/product/cheezit-original-baked-snack-crackers-pantry-size-124-oz-id-00024100106851"
+    },
+    {
+      "barcode": "00044000060114",
+      "name": "OREO Original",
+      "presentation": "13.29 oz",
+      "category": "cookies",
+      "url": "https://smartlabel.mondelez.info/044000060114-0003-en-US/index.html",
+      "retailerUrl": "https://www.shoprite.com/sm/pickup/rsid/291/product/oreo-chocolate-sandwich-cookies-1329-oz-id-00044000060114",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://smartlabel.mondelez.info/044000060114-0003-en-US/index.html"
+    },
+    {
+      "barcode": "00028400199148",
+      "name": "Lay's Classic Potato Chips",
+      "presentation": "8 oz",
+      "category": "chips",
+      "url": "https://www.shoprite.com/product/lays-classic-potato-chips-8-oz-00028400199148",
+      "selectionGroup": "original-20",
+      "selectionEvidence": "https://www.shoprite.com/product/lays-classic-potato-chips-8-oz-00028400199148"
+    },
+    {
+      "barcode": "0049000018011",
+      "name": "Cherry Coca-Cola",
+      "brand": "Coca-Cola",
+      "selectionGroup": "non-alcoholic-beverages",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0815154023269",
+      "name": "REIGN Total Body Fuel White Gummy Bear",
+      "brand": "REIGN",
+      "selectionGroup": "non-alcoholic-beverages",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "07834608",
+      "name": "Ginger Ale",
+      "brand": "Schweppes",
+      "selectionGroup": "non-alcoholic-beverages",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "5449000335159",
+      "name": "Coca-Cola Zero",
+      "brand": "Coca-Cola",
+      "selectionGroup": "non-alcoholic-beverages",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0041152102730",
+      "name": "Organic Strawberry Lemonade",
+      "brand": "Grown Right",
+      "selectionGroup": "non-alcoholic-beverages",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0860439001005",
+      "name": "Vintage Cola",
+      "brand": "Olipop",
+      "selectionGroup": "non-alcoholic-beverages",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0678963100206",
+      "name": "Guarana antarctica",
+      "brand": "Antarctica",
+      "selectionGroup": "non-alcoholic-beverages",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0021136181364",
+      "name": "Blueberry sparkling water",
+      "brand": "Too Chico",
+      "selectionGroup": "non-alcoholic-beverages",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0070847812715",
+      "name": "Java Monster Coffee + Energy",
+      "brand": "Monster",
+      "selectionGroup": "non-alcoholic-beverages",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "8901764112263",
+      "name": "Coke Zero",
+      "brand": "Coca-Cola",
+      "selectionGroup": "non-alcoholic-beverages",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "20621483",
+      "name": "Special Flakes Bran Flakes",
+      "brand": "Crownfield",
+      "selectionGroup": "breakfast-cereals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0096619194261",
+      "name": "Ancient Grains Probiotic Granola",
+      "brand": "Kirkland Signature",
+      "selectionGroup": "breakfast-cereals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0058449770565",
+      "name": "Pumpkin Seed + Flax Granola",
+      "brand": "Nature's Path Organic",
+      "selectionGroup": "breakfast-cereals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0884912004710",
+      "name": "grape-nuts cereal",
+      "brand": "Post",
+      "selectionGroup": "breakfast-cereals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0016000275263",
+      "name": "Cheerios",
+      "brand": "General Mills",
+      "selectionGroup": "breakfast-cereals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0016000170032",
+      "name": "Cheerios",
+      "brand": "General Mills",
+      "selectionGroup": "breakfast-cereals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0058449770206",
+      "name": "Heritage Flakes",
+      "brand": "Nature's Path Organic",
+      "selectionGroup": "breakfast-cereals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0819562022791",
+      "name": "nut granola blueberry cinnamon sweet & crunchy",
+      "brand": "Snacks Generation LLC, nútrail",
+      "selectionGroup": "breakfast-cereals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0016000435094",
+      "name": "Toasted Whole Grain Oat Cereal",
+      "brand": "Cheerios",
+      "selectionGroup": "breakfast-cereals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0675625371189",
+      "name": "Sprouted Rolled Oats",
+      "brand": "One Degree Organic Foods",
+      "selectionGroup": "breakfast-cereals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0021130070121",
+      "name": "Fat Free Milk",
+      "brand": "Lucerne",
+      "selectionGroup": "dairies",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "9339687411702",
+      "name": "Strawberry Yoghurt",
+      "brand": "Woolworths",
+      "selectionGroup": "dairies",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0036632011411",
+      "name": "Oikos Pro",
+      "brand": "OIKOS PRO",
+      "selectionGroup": "dairies",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0049576000168",
+      "name": "Chocolate milk",
+      "brand": "Mountain Dairy",
+      "selectionGroup": "dairies",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "4099100007619",
+      "name": "Pure Irish Butter",
+      "brand": "Countryside Creamery",
+      "selectionGroup": "dairies",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0818290015150",
+      "name": "Greek Strained Yogurt with Vanilla flavour",
+      "brand": "Chobani",
+      "selectionGroup": "dairies",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0036632024282",
+      "name": "Protein Shake",
+      "brand": "Oikos",
+      "selectionGroup": "dairies",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0068200960548",
+      "name": "2022 Reserve Fromage Cheddar Cheese",
+      "brand": "Balderson",
+      "selectionGroup": "dairies",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "4316268741163",
+      "name": "Speisequark 20% Fett",
+      "brand": "Gutes Land",
+      "selectionGroup": "dairies",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0856312002795",
+      "name": "Chocolate Reduced Fat Ultra-filtered Milk",
+      "brand": "fairlife",
+      "selectionGroup": "dairies",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0077034009873",
+      "name": "Sweet 'N Salty Mix Trail Mix",
+      "brand": "Kar's",
+      "selectionGroup": "nuts",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0014113702164",
+      "name": "Roasted & Salted Pistachios",
+      "brand": "Wonderful",
+      "selectionGroup": "nuts",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0897922002171",
+      "name": "Organic PBfit peanut butter powder",
+      "brand": "PBfit",
+      "selectionGroup": "nuts",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0029000016699",
+      "name": "Lightly Salted Mixed Nuts Peanuts, Almonds, Cashews Brazil Nuts & Pecans",
+      "brand": "Planters",
+      "selectionGroup": "nuts",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0029000072121",
+      "name": "Salted Cocktail Peanuts",
+      "brand": "Planters",
+      "selectionGroup": "nuts",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "3168930007340",
+      "name": "Bénénuts cacahuètes grillées & salées",
+      "brand": "Bénénuts",
+      "selectionGroup": "nuts",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "4056489714392",
+      "name": "Walnuts",
+      "brand": "Alesto",
+      "selectionGroup": "nuts",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0011110024718",
+      "name": "PECANS HALVES",
+      "brand": "simple truth",
+      "selectionGroup": "nuts",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "4099100333985",
+      "name": "Creamy Peanut Butter",
+      "brand": "Simply Nature",
+      "selectionGroup": "nuts",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0096619196470",
+      "name": "Heart Healthy Mixed Nuts",
+      "brand": "Kirkland Signature",
+      "selectionGroup": "nuts",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "6111266962187",
+      "name": "Lait frais naturel demi écrémé",
+      "brand": "Jaouda",
+      "selectionGroup": "prepared-meals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "3036811460259",
+      "name": "Velouté de légumes",
+      "brand": "Liebig",
+      "selectionGroup": "prepared-meals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "3270190174356",
+      "name": "Ratatouille",
+      "brand": "Carrefour BIO, Carrefour",
+      "selectionGroup": "prepared-meals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "3270190174349",
+      "name": "Ravioli vegetariens",
+      "brand": "Carrefour BIO, Carrefour",
+      "selectionGroup": "prepared-meals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0021000658831",
+      "name": "mac & cheese",
+      "brand": "Kraft",
+      "selectionGroup": "prepared-meals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0811620020633",
+      "name": "CORE POWER High Protein Milk Shake Chocolate",
+      "brand": "rlife",
+      "selectionGroup": "prepared-meals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "00414234",
+      "name": "Fettuccine Alfredo",
+      "brand": "Trader Giotto's",
+      "selectionGroup": "prepared-meals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0748404287947",
+      "name": "Organic Quinoa & Brown Rice with Garlic",
+      "brand": "Seeds of Change",
+      "selectionGroup": "prepared-meals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "3564700738009",
+      "name": "Haricots blancs tomate",
+      "brand": "Notre Jardin",
+      "selectionGroup": "prepared-meals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0782733000020",
+      "name": "Madras Lentils",
+      "brand": "Tasty Bite",
+      "selectionGroup": "prepared-meals",
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "7315122037814",
+      "name": "ISKUB Elderflower flavour",
+      "brand": "IKEA",
+      "selectionGroup": "non-alcoholic-beverages",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0016000147652",
+      "name": "Lightly Sweetened Maple Berry Blend Cereal",
+      "brand": "Morning Summit",
+      "selectionGroup": "breakfast-cereals",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "4061459567601",
+      "name": "Yogurt Plain",
+      "brand": "Simply Nature",
+      "selectionGroup": "dairies",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0856666002823",
+      "name": "Everything Goes Nuts",
+      "brand": "BobbySue's Nuts!",
+      "selectionGroup": "nuts",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0084000901024",
+      "name": "Ratatouille",
+      "brand": "Cassegrain",
+      "selectionGroup": "prepared-meals",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "5449000214799",
+      "name": "Coca-Cola sans sucres",
+      "brand": "COCA-COLA SERVICES SA/NV",
+      "selectionGroup": "non-alcoholic-beverages",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0030000010402",
+      "name": "Old Fashioned Oats",
+      "brand": "Quaker Oats",
+      "selectionGroup": "breakfast-cereals",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0856312002757",
+      "name": "Fairlife Nonfat Ultra-Filtered Milk",
+      "brand": "Fairlife",
+      "selectionGroup": "dairies",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0014113910446",
+      "name": "Wonderful Pistachios",
+      "brand": "Wonderful",
+      "selectionGroup": "nuts",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "8402001010200",
+      "name": "Spaghetti integral",
+      "brand": "Hacendado",
+      "selectionGroup": "prepared-meals",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "8850389100684",
+      "name": "Mogu lychee",
+      "brand": "Sappe Public Company Limited",
+      "selectionGroup": "non-alcoholic-beverages",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0855140002175",
+      "name": "ORIGINAL ANCIENT GRAIN GRANOLA",
+      "brand": "purely elizabeth.",
+      "selectionGroup": "breakfast-cereals",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0091945045935",
+      "name": "Gouda Cracker Cuts",
+      "brand": "Dutch Farms",
+      "selectionGroup": "dairies",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "4061459260731",
+      "name": "Deluxe Whole Cashews",
+      "brand": "Southern Grove",
+      "selectionGroup": "nuts",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0051000000118",
+      "name": "Tomato Soup",
+      "brand": "Campbell's",
+      "selectionGroup": "prepared-meals",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "8850389111352",
+      "name": "Mogu Mogu melon flavored drink",
+      "brand": "Sappe Public Company Limited",
+      "selectionGroup": "non-alcoholic-beverages",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "4056489255499",
+      "name": "Schoko Müsli",
+      "brand": "Crownfield, Brüggen, Lidl",
+      "selectionGroup": "breakfast-cereals",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0070801103033",
+      "name": "Real Dairy Power Shake",
+      "brand": "Dairy Farmers Of America  Inc.",
+      "selectionGroup": "dairies",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0029000016682",
+      "name": "Mixed Nuts",
+      "brand": "Planters",
+      "selectionGroup": "nuts",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0850031990005",
+      "name": "Cheddy Mac Creamy Cheddar And Macaroni",
+      "brand": "GOODLES",
+      "selectionGroup": "prepared-meals",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "01231809",
+      "name": "Montain Dew",
+      "brand": "Waitrose",
+      "selectionGroup": "non-alcoholic-beverages",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0016000124790",
+      "name": "Honey Nut Cheerios",
+      "brand": "General Mills",
+      "selectionGroup": "breakfast-cereals",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0053000071402",
+      "name": "borden",
+      "brand": "Borden",
+      "selectionGroup": "dairies",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0096619107698",
+      "name": "Shelled Pistachios",
+      "brand": "Costco Companies Inc.",
+      "selectionGroup": "nuts",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0051000012517",
+      "name": "Chicken Noodle",
+      "brand": "Campbell's",
+      "selectionGroup": "prepared-meals",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0012000182563",
+      "name": "Pepsi",
+      "brand": "Pepsi",
+      "selectionGroup": "non-alcoholic-beverages",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "0030000012000",
+      "name": "Quick 1-Minute Oats",
+      "brand": "Quaker Oats",
+      "selectionGroup": "breakfast-cereals",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "7755073001807",
+      "name": "Yogurt Griego Bebible Arándano conChía",
+      "brand": "Tigo",
+      "selectionGroup": "dairies",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "5400117582676",
+      "name": "Cerneaux de noix",
+      "brand": "Delhaize",
+      "selectionGroup": "nuts",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    },
+    {
+      "barcode": "8410748301000",
+      "name": "Vegetables Broth",
+      "brand": "Aneto, Aneto 100% Natural",
+      "selectionGroup": "prepared-meals",
+      "availabilityFallback": true,
+      "selectionEvidence": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands"
+    }
+  ],
+  "exclusions": []
+}

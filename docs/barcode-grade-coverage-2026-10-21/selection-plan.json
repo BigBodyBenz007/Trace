@@ -1,0 +1,20 @@
+{
+  "selectedBeforeScoring": true,
+  "head": "12bc90c32194d9f545bf6d7ca1385a1d7969f0a3",
+  "target": 100,
+  "originalCohort": 20,
+  "additionalPerCategory": 10,
+  "categories": [
+    "non-alcoholic-beverages",
+    "breakfast-cereals",
+    "dairies",
+    "protein-bars",
+    "breads",
+    "nuts",
+    "prepared-meals",
+    "snacks"
+  ],
+  "sort": "last_modified_t",
+  "criteria": "Original grocery cohort plus first 10 unique valid GTINs in each US category listing. Initial listings sorted by last modification; one availability retry may use provider scan-count ordering. If categories remain unavailable, fill remaining slots round-robin from unused available listing records, before any scoring. No nutrient, ingredient, additive, grade or completeness fields requested during selection.",
+  "limitations": "Purposive recent-record sample, not a random or national coverage estimate. Provider US availability claims do not establish US formulation."
+}

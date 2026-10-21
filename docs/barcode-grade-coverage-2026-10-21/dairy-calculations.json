@@ -1,0 +1,2287 @@
+{
+  "purpose": "Calculation audit of the same five captured dairy records; not manufacturer validation or a new scoring method.",
+  "originalHead": "12bc90c32194d9f545bf6d7ca1385a1d7969f0a3",
+  "observationArchive": "raw-responses.jsonl",
+  "normalizedNutrientUnits": {
+    "calories": "kcal",
+    "addedSugar": "g",
+    "totalSugar": "g",
+    "saturatedFat": "g",
+    "sodium": "mg",
+    "fiber": "g",
+    "protein": "g",
+    "fat": "g",
+    "carbohydrates": "g"
+  },
+  "sourcePolicy": {
+    "sourceType": "captured-open-food-facts-product-response",
+    "manufacturerPanelVerified": false,
+    "sourcePublicationDate": null,
+    "sourceEdition": null,
+    "sourceEditionStatus": "No manufacturer label publication date or package edition is supplied by these captures. Provider revision/retrieval dates are recorded separately and do not establish a label edition.",
+    "networkRequestsForThisAudit": 0
+  },
+  "sharedLayerFindings": {
+    "source": "All five canonical and serving nutrient sets agree to their recorded rounding. They remain unverified provider observations; internal consistency does not establish source accuracy.",
+    "normalization": "The old normalizer labeled canonical OFF _100g observations as mass despite explicit mL serving/package dimensions. The incoming patch uses the supported OFF canonical-field semantics (100 g or 100 mL), binds these consistent volume declarations to 100 mL, and keeps the entered basis and raw fields. No density is assumed and no nutrient quantity is changed.",
+    "categorySelection": "resolveBarcodeCategory returns no explicit category for all five. The existing barcodeNutritionAssessment volumeOnly fallback chooses beverage when no mass dataset remains, except nuts/oils. Thus corrected dimensions expose the pre-existing beverage rule; no new milk category was introduced.",
+    "panelSelection": "The rank prefers the intact complete explicit reference panel off-100g. It does not mix nutrients from serving, entered, or reference panels.",
+    "scoringPolicyIssueForReview": "The beverage energy ramp spans 0 to 60 kcal per 100 mL, and the sugar component takes the larger added-sugar or total-sugar burden (each 0 to 10 g per 100 mL). Naturally occurring total sugars can therefore dominate with zero added sugars. Protein credit is at most two points and is reduced by the limiting burden. These are existing policy choices, not evidence that milk has the reported nutritional quality.",
+    "implementationConclusion": "No additional shared implementation error is demonstrated by these five calculations. Do not substitute guessed label values, relabel reference values as serving values, change formula weights, or invent a milk-specific exception."
+  },
+  "currentEquation": {
+    "clamp": "max(0,min(1,x))",
+    "addedSugarBurden": "clamp(addedSugar_g_per100mL/10)",
+    "totalSugarBurden": "clamp(totalSugar_g_per100mL/10)",
+    "sugarBurden": "max(available addedSugarBurden,totalSugarBurden)",
+    "saturatedFatBurden": "clamp((saturatedFat_g_per100mL-1)/9)",
+    "sodiumBurden": "clamp((sodium_mg_per100mL-90)/810)",
+    "weightedBurden": "0.4*sugarBurden + 0.3*saturatedFatBurden + 0.3*sodiumBurden",
+    "limitingBurden": "max(weightedBurden,0.8*max(sugarBurden,saturatedFatBurden,sodiumBurden))",
+    "energyBurden": "clamp(kcal_per100mL/60)",
+    "fiberCredit": "8*clamp(fiber_g_per100mL/5.6); missing fiber earns no credit and remains unknown",
+    "proteinCredit": "2*clamp(protein_g_per100mL/10)",
+    "wholeGrainCredit": "0 for these five records",
+    "rawScore": "85 - 60*limitingBurden - 35*energyBurden + (fiberCredit+proteinCredit+wholeGrainCredit)*(1-limitingBurden)",
+    "displayedScore": "Math.round(max(0,min(100,rawScore)))",
+    "thresholdsAre": "Existing Trace Nutrition v2 policy; unchanged by this audit."
+  },
+  "products": [
+    {
+      "barcode": "0021130070121",
+      "name": "Fat Free Milk",
+      "source": {
+        "url": "https://world.openfoodfacts.org/api/v2/product/0021130070121.json?fields=code%2Cproduct_name%2Cproduct_name_en%2Cbrands%2Cquantity%2Cingredients_text%2Clang%2Cadditives_tags%2Ccountries_tags%2Ccountries%2Ccategories_tags%2Ccategories%2Cproduct_quantity%2Cproduct_quantity_unit%2Cserving_size%2Cserving_quantity%2Cserving_quantity_unit%2Cservings_per_container%2Cnutrition_data_per%2Cnutriments%2Clast_modified_t%2Clast_modified_datetime%2Curl",
+        "productUrl": "https://world.openfoodfacts.org/product/0021130070121",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "retrievedAt": "2026-10-21T21:45:28.829Z",
+        "providerRecordRevisionDate": "2026-10-21T04:44:48.000Z",
+        "sourcePublicationDate": null,
+        "manufacturerLabelEdition": null,
+        "manufacturerLabelEditionVerified": false
+      },
+      "comparison": {
+        "originalHeadNutritionScore": 76,
+        "incomingPatchNutritionScore": 2,
+        "originalHeadRawScore": 75.75062678062679,
+        "incomingPatchRawScore": 2.36,
+        "originalHeadBasis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "incomingPatchBasis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "originalHeadCategory": "general",
+        "incomingPatchCategory": "beverage",
+        "reasonForChange": "The same captured nutrient values now carry their explicit volume dimension; existing volume-only category selection changes general to beverage, selecting the existing beverage energy/sugar ramps."
+      },
+      "raw": {
+        "declarationAndMeasurementFields": {
+          "categories": "Milks",
+          "categories_tags": [
+            "en:dairies",
+            "en:milks-liquid-and-powder",
+            "en:milks"
+          ],
+          "countries": "United States",
+          "countries_tags": [
+            "en:united-states"
+          ],
+          "ingredients_text": "Fat free milk, vitamin a palmitate, vitamin d3.",
+          "nutrition_data": "on",
+          "nutrition_data_per": "100g",
+          "nutrition_data_prepared_per": "100g",
+          "serving_quantity": 240,
+          "serving_quantity_unit": "ml",
+          "serving_size": "1 portion (240 ml)"
+        },
+        "nutrientFields": {
+          "added-sugars": 0,
+          "added-sugars_100g": 0,
+          "added-sugars_serving": 0,
+          "added-sugars_unit": "g",
+          "added-sugars_value": 0,
+          "carbohydrates": 13,
+          "carbohydrates_100g": 13,
+          "carbohydrates_serving": 31.2,
+          "carbohydrates_unit": "g",
+          "carbohydrates_value": 13,
+          "energy": 374,
+          "energy-kcal": 90,
+          "energy-kcal_100g": 90,
+          "energy-kcal_serving": 216,
+          "energy-kcal_unit": "kcal",
+          "energy-kcal_value": 90,
+          "energy-kj": 374,
+          "energy-kj_100g": 374,
+          "energy-kj_modifier": "~",
+          "energy-kj_serving": 898,
+          "energy-kj_unit": "kJ",
+          "energy-kj_value": 374,
+          "energy_100g": 374,
+          "energy_modifier": "~",
+          "energy_serving": 898,
+          "energy_unit": "kJ",
+          "energy_value": 374,
+          "fat": 0,
+          "fat_100g": 0,
+          "fat_serving": 0,
+          "fat_unit": "g",
+          "fat_value": 0,
+          "fiber": 0,
+          "fiber_100g": 0,
+          "fiber_serving": 0,
+          "fiber_unit": "g",
+          "fiber_value": 0,
+          "proteins": 9,
+          "proteins_100g": 9,
+          "proteins_serving": 21.6,
+          "proteins_unit": "g",
+          "proteins_value": 9,
+          "saturated-fat": 0,
+          "saturated-fat_100g": 0,
+          "saturated-fat_serving": 0,
+          "saturated-fat_unit": "g",
+          "saturated-fat_value": 0,
+          "sodium": 0.14,
+          "sodium_100g": 0.14,
+          "sodium_serving": 0.336,
+          "sodium_unit": "g",
+          "sodium_value": 0.14,
+          "sugars": 13,
+          "sugars_100g": 13,
+          "sugars_serving": 31.2,
+          "sugars_unit": "g",
+          "sugars_value": 13
+        },
+        "canonicalFieldMeaning": "OFF _100g canonical suffix means per 100 g or 100 mL. This captured record explicitly supplies mL serving/package units, with no contrary mass evidence.",
+        "enteredBasisField": "100g"
+      },
+      "normalizedPanels": [
+        {
+          "id": "off-serving",
+          "basis": "serving",
+          "quantity": {
+            "amount": 240,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 216,
+            "saturatedFat": 0,
+            "addedSugar": 0,
+            "totalSugar": 31.2,
+            "sodium": 336,
+            "fiber": 0,
+            "protein": 21.6,
+            "fat": 0,
+            "carbohydrates": 31.2,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        },
+        {
+          "id": "off-100g",
+          "basis": "100ml",
+          "quantity": {
+            "amount": 100,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 90,
+            "saturatedFat": 0,
+            "addedSugar": 0,
+            "totalSugar": 13,
+            "sodium": 140,
+            "fiber": 0,
+            "protein": 9,
+            "fat": 0,
+            "carbohydrates": 13,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        },
+        {
+          "id": "off-value",
+          "basis": "100ml",
+          "quantity": {
+            "amount": 100,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 90,
+            "saturatedFat": 0,
+            "addedSugar": 0,
+            "totalSugar": 13,
+            "sodium": 140,
+            "fiber": 0,
+            "protein": 9,
+            "fat": 0,
+            "carbohydrates": 13,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        }
+      ],
+      "servingConversion": {
+        "providerServing": {
+          "description": "1 portion (240 ml)",
+          "amount": 240,
+          "unit": "ml",
+          "grams": null
+        },
+        "ratioTo100mL": 2.4,
+        "displayedNutrients": {
+          "calories": 216,
+          "protein": 21.6,
+          "carbohydrates": 31.2,
+          "fat": 0,
+          "fiber": 0,
+          "sodium": 336,
+          "totalSugar": 31.2,
+          "addedSugar": 0
+        },
+        "rule": "Use the provider serving fields when present; they agree with the reference multiplied by the explicit mL amount, subject to recorded rounding. No g-to-mL conversion."
+      },
+      "selectedDatasetId": "off-100g",
+      "categoryEvidence": {
+        "resolver": {
+          "categories": [],
+          "plantZero": null,
+          "basis": [],
+          "excluded": false,
+          "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+          "edition": "2025-03-17"
+        },
+        "selected": "beverage",
+        "rule": "volumeOnly && !isOil && !isNuts; no dataset has mass quantity after resolving explicit mL reference metadata",
+        "providerCategories": [
+          {
+            "field": "categories_tags",
+            "values": [
+              "en:dairies",
+              "en:milks-liquid-and-powder",
+              "en:milks"
+            ]
+          },
+          {
+            "field": "categories",
+            "values": [
+              "Milks"
+            ]
+          }
+        ]
+      },
+      "normalizedV2Input": {
+        "category": "beverage",
+        "basis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "nutrients": {
+          "calories": {
+            "value": 90,
+            "unit": "kcal"
+          },
+          "addedSugar": {
+            "value": 0,
+            "unit": "g"
+          },
+          "totalSugar": {
+            "value": 13,
+            "unit": "g"
+          },
+          "saturatedFat": {
+            "value": 0,
+            "unit": "g"
+          },
+          "sodium": {
+            "value": 140,
+            "unit": "mg"
+          },
+          "fiber": {
+            "value": 0,
+            "unit": "g"
+          },
+          "protein": {
+            "value": 9,
+            "unit": "g"
+          },
+          "fat": {
+            "value": 0,
+            "unit": "g"
+          },
+          "carbohydrates": {
+            "value": 13,
+            "unit": "g"
+          }
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0021130070121",
+          "url": "https://world.openfoodfacts.org/product/0021130070121",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-21T04:44:48.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-21T21:45:28.829Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792557888
+            }
+          ]
+        },
+        "grainEvidence": {
+          "status": "not-established",
+          "firstIngredient": "Fat free milk",
+          "originalText": "Fat free milk, vitamin a palmitate, vitamin d3.",
+          "identification": "provider-reported-first-ingredient",
+          "percentage": null,
+          "source": {
+            "url": "https://world.openfoodfacts.org/product/0021130070121",
+            "attribution": "Open Food Facts contributors; database licensed under ODbL",
+            "provider": "open-food-facts",
+            "revisionDate": "2026-10-21T04:44:48.000Z",
+            "retrievedAt": "2026-10-21T21:45:28.829Z"
+          }
+        }
+      },
+      "actualV2Output": {
+        "methodId": "trace-us-practical-nutrition",
+        "methodVersion": "2-density-development-2026-10-20",
+        "grade": null,
+        "scoreReady": false,
+        "normalizedPer100": {
+          "calories": 90,
+          "addedSugar": 0,
+          "totalSugar": 13,
+          "saturatedFat": 0,
+          "sodium": 140,
+          "fiber": 0,
+          "protein": 9,
+          "fat": 0,
+          "carbohydrates": 13
+        },
+        "normalizedBasis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "sugarMode": "totalSugar",
+        "sugarBenchmark": {
+          "type": "Trace-density-screens",
+          "addedThresholds": [
+            0,
+            10
+          ],
+          "totalThresholds": [
+            0,
+            10
+          ],
+          "unit": "g per 100 g/ml"
+        },
+        "comparison": {
+          "category": "beverage",
+          "maxAmount": 100,
+          "energyCapKcal": null,
+          "limitingBurden": 0.8,
+          "weightedBurden": 0.4185185185185185,
+          "strongestBurden": 1,
+          "burdens": {
+            "sugar": 1,
+            "saturatedFat": 0,
+            "salt": 0.06172839506172839
+          },
+          "missingLimitingNutrients": [],
+          "burdenUpperBounds": {
+            "sugar": 1,
+            "saturatedFat": 1,
+            "salt": 1
+          },
+          "saturatedFatBound": null,
+          "energyBurden": 1,
+          "energyInput": 90,
+          "energyRule": "beverage density"
+        },
+        "points": {
+          "energy": {
+            "min": 35,
+            "max": 35,
+            "possible": [
+              35
+            ]
+          },
+          "sugar": {
+            "min": 48,
+            "max": 48,
+            "possible": [
+              48
+            ]
+          },
+          "saturatedFat": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "salt": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "fiber": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "proteinApplied": {
+            "min": 0.35999999999999993,
+            "max": 0.35999999999999993,
+            "possible": [
+              0.35999999999999993
+            ]
+          },
+          "wholeGrain": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          }
+        },
+        "excludedNutrients": [],
+        "rawScore": 2.36,
+        "rawScoreRange": [
+          2.36,
+          2.36
+        ],
+        "nutritionScore100": 2,
+        "reasons": [],
+        "warnings": [
+          "Total-sugar density drives the sugar component even though added sugars are reported; both original measurements remain separate."
+        ]
+      },
+      "arithmetic": {
+        "rawCreditsBeforeLimitingAttenuation": {
+          "fiber": 0,
+          "protein": 1.8,
+          "wholeGrain": 0
+        },
+        "limitingDeduction": 48,
+        "energyDeduction": 35,
+        "appliedCredits": 0.35999999999999993,
+        "rawScore": 2.36,
+        "clampedRaw": 2.36,
+        "roundedWholeNumber": 2
+      },
+      "sourceCaveats": [
+        "The provider declares 90 kcal, 13 g total sugars and 9 g protein per canonical 100-unit reference, and scales those to 216 kcal, 31.2 g sugars and 21.6 g protein per 240 mL. These agree internally. There is no captured evidence permitting relabeling the canonical values as per-serving values.",
+        "Added sugars are zero, but the existing total-sugar screen dominates. No sugar type or exposure amount is inferred."
+      ],
+      "additionalImplementationCorrectionJustified": false
+    },
+    {
+      "barcode": "0856312002795",
+      "name": "Chocolate Reduced Fat Ultra-filtered Milk",
+      "source": {
+        "url": "https://world.openfoodfacts.org/api/v2/product/0856312002795.json?fields=code%2Cproduct_name%2Cproduct_name_en%2Cbrands%2Cquantity%2Cingredients_text%2Clang%2Cadditives_tags%2Ccountries_tags%2Ccountries%2Ccategories_tags%2Ccategories%2Cproduct_quantity%2Cproduct_quantity_unit%2Cserving_size%2Cserving_quantity%2Cserving_quantity_unit%2Cservings_per_container%2Cnutrition_data_per%2Cnutriments%2Clast_modified_t%2Clast_modified_datetime%2Curl",
+        "productUrl": "https://world.openfoodfacts.org/product/0856312002795",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "retrievedAt": "2026-10-21T21:46:07.534Z",
+        "providerRecordRevisionDate": "2026-10-20T21:52:38.000Z",
+        "sourcePublicationDate": null,
+        "manufacturerLabelEdition": null,
+        "manufacturerLabelEditionVerified": false
+      },
+      "comparison": {
+        "originalHeadNutritionScore": 71,
+        "incomingPatchNutritionScore": 3,
+        "originalHeadRawScore": 70.99963369963372,
+        "incomingPatchRawScore": 2.6857142857142855,
+        "originalHeadBasis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "incomingPatchBasis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "originalHeadCategory": "general",
+        "incomingPatchCategory": "beverage",
+        "reasonForChange": "The same captured nutrient values now carry their explicit volume dimension; existing volume-only category selection changes general to beverage, selecting the existing beverage energy/sugar ramps."
+      },
+      "raw": {
+        "declarationAndMeasurementFields": {
+          "categories": "Milks, Chocolate milks, Chocolate reduced milk",
+          "categories_tags": [
+            "en:beverages-and-beverages-preparations",
+            "en:beverages",
+            "en:dairies",
+            "en:milks-liquid-and-powder",
+            "en:dairy-drinks",
+            "en:milks",
+            "en:flavoured-milks",
+            "en:chocolate-milks",
+            "en:Chocolate reduced milk"
+          ],
+          "countries": "United States",
+          "countries_tags": [
+            "en:united-states"
+          ],
+          "ingredients_text": "REDUCED FAT ULTRA-FILTERED MILK, SUGAR, ALKALIZED COCOA, LACTASE ENZYME, DIPOTASSIUM PHOSPHATE, SALT, ACESULFAME POTASSIUM, CARRAGEENAN, NATURAL AND ARTIFICIAL FLAVORS, SUCRALOSE, VITAMIN A PALMITATE, VITAMIN D3. CONTAINS MILK.",
+          "nutrition_data": "on",
+          "nutrition_data_per": "100g",
+          "nutrition_data_prepared_per": "100g",
+          "product_quantity": 1537.822,
+          "product_quantity_unit": "ml",
+          "quantity": "52 fl oz",
+          "serving_quantity": 240,
+          "serving_quantity_unit": "ml",
+          "serving_size": "1 portion (1 cup)"
+        },
+        "nutrientFields": {
+          "added-sugars": 6,
+          "added-sugars_100g": 6,
+          "added-sugars_serving": 14.4,
+          "added-sugars_unit": "g",
+          "added-sugars_value": 6,
+          "carbohydrates": 13,
+          "carbohydrates_100g": 13,
+          "carbohydrates_serving": 31.2,
+          "carbohydrates_unit": "g",
+          "carbohydrates_value": 13,
+          "energy": 616.5,
+          "energy-kcal": 140,
+          "energy-kcal_100g": 140,
+          "energy-kcal_serving": 336,
+          "energy-kcal_unit": "kcal",
+          "energy-kcal_value": 140,
+          "energy-kj": 616.5,
+          "energy-kj_100g": 616.5,
+          "energy-kj_modifier": "~",
+          "energy-kj_serving": 1480,
+          "energy-kj_unit": "kJ",
+          "energy-kj_value": 616.5,
+          "energy_100g": 616.5,
+          "energy_modifier": "~",
+          "energy_serving": 1480,
+          "energy_unit": "kJ",
+          "energy_value": 616.5,
+          "fat": 4.5,
+          "fat_100g": 4.5,
+          "fat_serving": 10.8,
+          "fat_unit": "g",
+          "fat_value": 4.5,
+          "fiber": 1,
+          "fiber_100g": 1,
+          "fiber_serving": 2.4,
+          "fiber_unit": "g",
+          "fiber_value": 1,
+          "proteins": 13,
+          "proteins_100g": 13,
+          "proteins_serving": 31.2,
+          "proteins_unit": "g",
+          "proteins_value": 13,
+          "saturated-fat": 3,
+          "saturated-fat_100g": 3,
+          "saturated-fat_serving": 7.2,
+          "saturated-fat_unit": "g",
+          "saturated-fat_value": 3,
+          "sodium": 0.28,
+          "sodium_100g": 0.28,
+          "sodium_serving": 0.672,
+          "sodium_unit": "g",
+          "sodium_value": 0.28,
+          "sugars": 12,
+          "sugars_100g": 12,
+          "sugars_serving": 28.8,
+          "sugars_unit": "g",
+          "sugars_value": 12
+        },
+        "canonicalFieldMeaning": "OFF _100g canonical suffix means per 100 g or 100 mL. This captured record explicitly supplies mL serving/package units, with no contrary mass evidence.",
+        "enteredBasisField": "100g"
+      },
+      "normalizedPanels": [
+        {
+          "id": "off-serving",
+          "basis": "serving",
+          "quantity": {
+            "amount": 240,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 336,
+            "saturatedFat": 7.2,
+            "addedSugar": 14.4,
+            "totalSugar": 28.8,
+            "sodium": 672,
+            "fiber": 2.4,
+            "protein": 31.2,
+            "fat": 10.8,
+            "carbohydrates": 31.2,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        },
+        {
+          "id": "off-100g",
+          "basis": "100ml",
+          "quantity": {
+            "amount": 100,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 140,
+            "saturatedFat": 3,
+            "addedSugar": 6,
+            "totalSugar": 12,
+            "sodium": 280,
+            "fiber": 1,
+            "protein": 13,
+            "fat": 4.5,
+            "carbohydrates": 13,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        },
+        {
+          "id": "off-value",
+          "basis": "100ml",
+          "quantity": {
+            "amount": 100,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 140,
+            "saturatedFat": 3,
+            "addedSugar": 6,
+            "totalSugar": 12,
+            "sodium": 280,
+            "fiber": 1,
+            "protein": 13,
+            "fat": 4.5,
+            "carbohydrates": 13,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        }
+      ],
+      "servingConversion": {
+        "providerServing": {
+          "description": "1 portion (1 cup)",
+          "amount": 240,
+          "unit": "ml",
+          "grams": null
+        },
+        "ratioTo100mL": 2.4,
+        "displayedNutrients": {
+          "calories": 336,
+          "protein": 31.2,
+          "carbohydrates": 31.2,
+          "fat": 10.8,
+          "fiber": 2.4,
+          "sodium": 672,
+          "totalSugar": 28.8,
+          "addedSugar": 14.4
+        },
+        "rule": "Use the provider serving fields when present; they agree with the reference multiplied by the explicit mL amount, subject to recorded rounding. No g-to-mL conversion."
+      },
+      "selectedDatasetId": "off-100g",
+      "categoryEvidence": {
+        "resolver": {
+          "categories": [],
+          "plantZero": null,
+          "basis": [],
+          "excluded": false,
+          "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+          "edition": "2025-03-17"
+        },
+        "selected": "beverage",
+        "rule": "volumeOnly && !isOil && !isNuts; no dataset has mass quantity after resolving explicit mL reference metadata",
+        "providerCategories": [
+          {
+            "field": "categories_tags",
+            "values": [
+              "en:beverages-and-beverages-preparations",
+              "en:beverages",
+              "en:dairies",
+              "en:milks-liquid-and-powder",
+              "en:dairy-drinks",
+              "en:milks",
+              "en:flavoured-milks",
+              "en:chocolate-milks",
+              "en:Chocolate reduced milk"
+            ]
+          },
+          {
+            "field": "categories",
+            "values": [
+              "Milks, Chocolate milks, Chocolate reduced milk"
+            ]
+          }
+        ]
+      },
+      "normalizedV2Input": {
+        "category": "beverage",
+        "basis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "nutrients": {
+          "calories": {
+            "value": 140,
+            "unit": "kcal"
+          },
+          "addedSugar": {
+            "value": 6,
+            "unit": "g"
+          },
+          "totalSugar": {
+            "value": 12,
+            "unit": "g"
+          },
+          "saturatedFat": {
+            "value": 3,
+            "unit": "g"
+          },
+          "sodium": {
+            "value": 280,
+            "unit": "mg"
+          },
+          "fiber": {
+            "value": 1,
+            "unit": "g"
+          },
+          "protein": {
+            "value": 13,
+            "unit": "g"
+          },
+          "fat": {
+            "value": 4.5,
+            "unit": "g"
+          },
+          "carbohydrates": {
+            "value": 13,
+            "unit": "g"
+          }
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0856312002795",
+          "url": "https://world.openfoodfacts.org/product/0856312002795",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-20T21:52:38.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-21T21:46:07.534Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792533158
+            }
+          ]
+        },
+        "grainEvidence": {
+          "status": "not-established",
+          "firstIngredient": "REDUCED FAT ULTRA-FILTERED MILK",
+          "originalText": "REDUCED FAT ULTRA-FILTERED MILK, SUGAR, ALKALIZED COCOA, LACTASE ENZYME, DIPOTASSIUM PHOSPHATE, SALT, ACESULFAME POTASSIUM, CARRAGEENAN, NATURAL AND ARTIFICIAL FLAVORS, SUCRALOSE, VITAMIN A PALMITATE, VITAMIN D3. CONTAINS MILK.",
+          "identification": "provider-reported-first-ingredient",
+          "percentage": null,
+          "source": {
+            "url": "https://world.openfoodfacts.org/product/0856312002795",
+            "attribution": "Open Food Facts contributors; database licensed under ODbL",
+            "provider": "open-food-facts",
+            "revisionDate": "2026-10-20T21:52:38.000Z",
+            "retrievedAt": "2026-10-21T21:46:07.534Z"
+          }
+        }
+      },
+      "actualV2Output": {
+        "methodId": "trace-us-practical-nutrition",
+        "methodVersion": "2-density-development-2026-10-20",
+        "grade": null,
+        "scoreReady": false,
+        "normalizedPer100": {
+          "calories": 140,
+          "addedSugar": 6,
+          "totalSugar": 12,
+          "saturatedFat": 3,
+          "sodium": 280,
+          "fiber": 1,
+          "protein": 13,
+          "fat": 4.5,
+          "carbohydrates": 13
+        },
+        "normalizedBasis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "sugarMode": "totalSugar",
+        "sugarBenchmark": {
+          "type": "Trace-density-screens",
+          "addedThresholds": [
+            0,
+            10
+          ],
+          "totalThresholds": [
+            0,
+            10
+          ],
+          "unit": "g per 100 g/ml"
+        },
+        "comparison": {
+          "category": "beverage",
+          "maxAmount": 100,
+          "energyCapKcal": null,
+          "limitingBurden": 0.8,
+          "weightedBurden": 0.537037037037037,
+          "strongestBurden": 1,
+          "burdens": {
+            "sugar": 1,
+            "saturatedFat": 0.2222222222222222,
+            "salt": 0.2345679012345679
+          },
+          "missingLimitingNutrients": [],
+          "burdenUpperBounds": {
+            "sugar": 1,
+            "saturatedFat": 1,
+            "salt": 1
+          },
+          "saturatedFatBound": null,
+          "energyBurden": 1,
+          "energyInput": 140,
+          "energyRule": "beverage density"
+        },
+        "points": {
+          "energy": {
+            "min": 35,
+            "max": 35,
+            "possible": [
+              35
+            ]
+          },
+          "sugar": {
+            "min": 48,
+            "max": 48,
+            "possible": [
+              48
+            ]
+          },
+          "saturatedFat": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "salt": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "fiber": {
+            "min": 0.28571428571428564,
+            "max": 0.28571428571428564,
+            "possible": [
+              0.28571428571428564
+            ]
+          },
+          "proteinApplied": {
+            "min": 0.3999999999999999,
+            "max": 0.3999999999999999,
+            "possible": [
+              0.3999999999999999
+            ]
+          },
+          "wholeGrain": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          }
+        },
+        "excludedNutrients": [],
+        "rawScore": 2.6857142857142855,
+        "rawScoreRange": [
+          2.6857142857142855,
+          2.6857142857142855
+        ],
+        "nutritionScore100": 3,
+        "reasons": [],
+        "warnings": [
+          "Total-sugar density drives the sugar component even though added sugars are reported; both original measurements remain separate."
+        ]
+      },
+      "arithmetic": {
+        "rawCreditsBeforeLimitingAttenuation": {
+          "fiber": 1.4285714285714286,
+          "protein": 2,
+          "wholeGrain": 0
+        },
+        "limitingDeduction": 48,
+        "energyDeduction": 35,
+        "appliedCredits": 0.6857142857142856,
+        "rawScore": 2.6857142857142855,
+        "clampedRaw": 2.6857142857142855,
+        "roundedWholeNumber": 3
+      },
+      "sourceCaveats": [
+        "The provider declares 140 kcal, 6 g added sugars, 12 g total sugars and 13 g protein per canonical reference, consistently scaled by 2.4 to the serving. No manufacturer panel was consulted to validate that reference or edition.",
+        "The provider package quantity is 1537.822 mL, printed as 52 fl oz; no package-to-serving density conversion is needed."
+      ],
+      "additionalImplementationCorrectionJustified": false
+    },
+    {
+      "barcode": "6111266962187",
+      "name": "Lait frais naturel demi écrémé",
+      "source": {
+        "url": "https://world.openfoodfacts.org/api/v2/product/6111266962187.json?fields=code%2Cproduct_name%2Cproduct_name_en%2Cbrands%2Cquantity%2Cingredients_text%2Clang%2Cadditives_tags%2Ccountries_tags%2Ccountries%2Ccategories_tags%2Ccategories%2Cproduct_quantity%2Cproduct_quantity_unit%2Cserving_size%2Cserving_quantity%2Cserving_quantity_unit%2Cservings_per_container%2Cnutrition_data_per%2Cnutriments%2Clast_modified_t%2Clast_modified_datetime%2Curl",
+        "productUrl": "https://world.openfoodfacts.org/product/6111266962187",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "retrievedAt": "2026-10-21T21:46:54.625Z",
+        "providerRecordRevisionDate": "2026-09-28T18:13:20.000Z",
+        "sourcePublicationDate": null,
+        "manufacturerLabelEdition": null,
+        "manufacturerLabelEditionVerified": false
+      },
+      "comparison": {
+        "originalHeadNutritionScore": 86,
+        "incomingPatchNutritionScore": 59,
+        "originalHeadRawScore": 85.62,
+        "incomingPatchRawScore": 59.37,
+        "originalHeadBasis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "incomingPatchBasis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "originalHeadCategory": "general",
+        "incomingPatchCategory": "beverage",
+        "reasonForChange": "The same captured nutrient values now carry their explicit volume dimension; existing volume-only category selection changes general to beverage, selecting the existing beverage energy/sugar ramps."
+      },
+      "raw": {
+        "declarationAndMeasurementFields": {
+          "categories": "Plats préparés, Laits homogénéisés, Laits demi-écrémés",
+          "categories_tags": [
+            "en:dairies",
+            "en:meals",
+            "en:milks-liquid-and-powder",
+            "en:milks",
+            "en:homogenized-milks",
+            "en:semi-skimmed-milks"
+          ],
+          "countries": "France, Maroc, Pays-Bas, États-Unis",
+          "countries_tags": [
+            "en:france",
+            "en:morocco",
+            "en:netherlands",
+            "en:united-states"
+          ],
+          "ingredients_text": "Lait frais pasteurisé demi écrémé à 15g/l de matière grasse",
+          "nutrition_data": "on",
+          "nutrition_data_per": "100g",
+          "nutrition_data_prepared_per": "100g",
+          "product_quantity": 450,
+          "product_quantity_unit": "ml",
+          "quantity": "450 ml",
+          "serving_quantity": 470,
+          "serving_quantity_unit": "ml",
+          "serving_size": "47 cl"
+        },
+        "nutrientFields": {
+          "added-sugars": 0,
+          "added-sugars_100g": 0,
+          "added-sugars_modifier": "~",
+          "added-sugars_serving": 0,
+          "added-sugars_unit": "g",
+          "added-sugars_value": 0,
+          "carbohydrates": 4.9,
+          "carbohydrates_100g": 4.9,
+          "carbohydrates_serving": 23,
+          "carbohydrates_unit": "g",
+          "carbohydrates_value": 4.9,
+          "energy": 189,
+          "energy-kcal": 45,
+          "energy-kcal_100g": 45,
+          "energy-kcal_serving": 212,
+          "energy-kcal_unit": "kcal",
+          "energy-kcal_value": 45,
+          "energy-kj": 189,
+          "energy-kj_100g": 189,
+          "energy-kj_serving": 888,
+          "energy-kj_unit": "kJ",
+          "energy-kj_value": 189,
+          "energy_100g": 189,
+          "energy_serving": 888,
+          "energy_unit": "kJ",
+          "energy_value": 189,
+          "fat": 1.5,
+          "fat_100g": 1.5,
+          "fat_serving": 7.05,
+          "fat_unit": "g",
+          "fat_value": 1.5,
+          "proteins": 3.1,
+          "proteins_100g": 3.1,
+          "proteins_serving": 14.6,
+          "proteins_unit": "g",
+          "proteins_value": 3.1,
+          "saturated-fat": 1,
+          "saturated-fat_100g": 1,
+          "saturated-fat_serving": 4.7,
+          "saturated-fat_unit": "g",
+          "saturated-fat_value": 1,
+          "sodium": 0,
+          "sodium_100g": 0,
+          "sodium_modifier": "~",
+          "sodium_serving": 0,
+          "sodium_unit": "g",
+          "sodium_value": 0,
+          "sugars": 0,
+          "sugars_100g": 0,
+          "sugars_serving": 0,
+          "sugars_unit": "g",
+          "sugars_value": 0
+        },
+        "canonicalFieldMeaning": "OFF _100g canonical suffix means per 100 g or 100 mL. This captured record explicitly supplies mL serving/package units, with no contrary mass evidence.",
+        "enteredBasisField": "100g"
+      },
+      "normalizedPanels": [
+        {
+          "id": "off-serving",
+          "basis": "serving",
+          "quantity": {
+            "amount": 470,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 212,
+            "saturatedFat": 4.7,
+            "addedSugar": 0,
+            "totalSugar": 0,
+            "sodium": 0,
+            "fiber": null,
+            "protein": 14.6,
+            "fat": 7.05,
+            "carbohydrates": 23,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        },
+        {
+          "id": "off-100g",
+          "basis": "100ml",
+          "quantity": {
+            "amount": 100,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 45,
+            "saturatedFat": 1,
+            "addedSugar": 0,
+            "totalSugar": 0,
+            "sodium": 0,
+            "fiber": null,
+            "protein": 3.1,
+            "fat": 1.5,
+            "carbohydrates": 4.9,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        },
+        {
+          "id": "off-value",
+          "basis": "100ml",
+          "quantity": {
+            "amount": 100,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 45,
+            "saturatedFat": 1,
+            "addedSugar": 0,
+            "totalSugar": 0,
+            "sodium": 0,
+            "fiber": null,
+            "protein": 3.1,
+            "fat": 1.5,
+            "carbohydrates": 4.9,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        }
+      ],
+      "servingConversion": {
+        "providerServing": {
+          "description": "47 cl",
+          "amount": 470,
+          "unit": "ml",
+          "grams": null
+        },
+        "ratioTo100mL": 4.7,
+        "displayedNutrients": {
+          "calories": 212,
+          "protein": 14.6,
+          "carbohydrates": 23,
+          "fat": 7.05,
+          "fiber": null,
+          "sodium": 0,
+          "totalSugar": 0,
+          "addedSugar": 0
+        },
+        "rule": "Use the provider serving fields when present; they agree with the reference multiplied by the explicit mL amount, subject to recorded rounding. No g-to-mL conversion."
+      },
+      "selectedDatasetId": "off-100g",
+      "categoryEvidence": {
+        "resolver": {
+          "categories": [],
+          "plantZero": null,
+          "basis": [],
+          "excluded": false,
+          "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+          "edition": "2025-03-17"
+        },
+        "selected": "beverage",
+        "rule": "volumeOnly && !isOil && !isNuts; no dataset has mass quantity after resolving explicit mL reference metadata",
+        "providerCategories": [
+          {
+            "field": "categories_tags",
+            "values": [
+              "en:dairies",
+              "en:meals",
+              "en:milks-liquid-and-powder",
+              "en:milks",
+              "en:homogenized-milks",
+              "en:semi-skimmed-milks"
+            ]
+          },
+          {
+            "field": "categories",
+            "values": [
+              "Plats préparés, Laits homogénéisés, Laits demi-écrémés"
+            ]
+          }
+        ]
+      },
+      "normalizedV2Input": {
+        "category": "beverage",
+        "basis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "nutrients": {
+          "calories": {
+            "value": 45,
+            "unit": "kcal"
+          },
+          "addedSugar": {
+            "value": 0,
+            "unit": "g"
+          },
+          "totalSugar": {
+            "value": 0,
+            "unit": "g"
+          },
+          "saturatedFat": {
+            "value": 1,
+            "unit": "g"
+          },
+          "sodium": {
+            "value": 0,
+            "unit": "mg"
+          },
+          "fiber": {
+            "value": null,
+            "unit": "g"
+          },
+          "protein": {
+            "value": 3.1,
+            "unit": "g"
+          },
+          "fat": {
+            "value": 1.5,
+            "unit": "g"
+          },
+          "carbohydrates": {
+            "value": 4.9,
+            "unit": "g"
+          }
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "6111266962187",
+          "url": "https://world.openfoodfacts.org/product/6111266962187",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-09-28T18:13:20.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-21T21:46:54.625Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1790619200
+            }
+          ]
+        },
+        "grainEvidence": {
+          "status": "not-established",
+          "firstIngredient": null,
+          "originalText": "Lait frais pasteurisé demi écrémé à 15g/l de matière grasse",
+          "source": {}
+        }
+      },
+      "actualV2Output": {
+        "methodId": "trace-us-practical-nutrition",
+        "methodVersion": "2-density-development-2026-10-20",
+        "grade": null,
+        "scoreReady": false,
+        "normalizedPer100": {
+          "calories": 45,
+          "addedSugar": 0,
+          "totalSugar": 0,
+          "saturatedFat": 1,
+          "sodium": 0,
+          "fiber": null,
+          "protein": 3.1,
+          "fat": 1.5,
+          "carbohydrates": 4.9
+        },
+        "normalizedBasis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "sugarMode": "addedSugar",
+        "sugarBenchmark": {
+          "type": "Trace-density-screens",
+          "addedThresholds": [
+            0,
+            10
+          ],
+          "totalThresholds": [
+            0,
+            10
+          ],
+          "unit": "g per 100 g/ml"
+        },
+        "comparison": {
+          "category": "beverage",
+          "maxAmount": 100,
+          "energyCapKcal": null,
+          "limitingBurden": 0,
+          "weightedBurden": 0,
+          "strongestBurden": 0,
+          "burdens": {
+            "sugar": 0,
+            "saturatedFat": 0,
+            "salt": 0
+          },
+          "missingLimitingNutrients": [],
+          "burdenUpperBounds": {
+            "sugar": 1,
+            "saturatedFat": 1,
+            "salt": 1
+          },
+          "saturatedFatBound": null,
+          "energyBurden": 0.75,
+          "energyInput": 45,
+          "energyRule": "beverage density"
+        },
+        "points": {
+          "energy": {
+            "min": 26.25,
+            "max": 26.25,
+            "possible": [
+              26.25
+            ]
+          },
+          "sugar": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "saturatedFat": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "salt": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "fiber": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "proteinApplied": {
+            "min": 0.62,
+            "max": 0.62,
+            "possible": [
+              0.62
+            ]
+          },
+          "wholeGrain": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          }
+        },
+        "excludedNutrients": [],
+        "rawScore": 59.37,
+        "rawScoreRange": [
+          59.37,
+          59.37
+        ],
+        "nutritionScore100": 59,
+        "reasons": [],
+        "warnings": [
+          "fiber is missing: no positive credit is awarded; its value remains unknown."
+        ]
+      },
+      "arithmetic": {
+        "rawCreditsBeforeLimitingAttenuation": {
+          "fiber": 0,
+          "protein": 0.62,
+          "wholeGrain": 0
+        },
+        "limitingDeduction": 0,
+        "energyDeduction": 26.25,
+        "appliedCredits": 0.62,
+        "rawScore": 59.37,
+        "clampedRaw": 59.37,
+        "roundedWholeNumber": 59
+      },
+      "sourceCaveats": [
+        "The provider declares zero total sugars despite 4.9 g carbohydrates. This is not a demonstrated cross-field contradiction: carbohydrates can include nonsugar components, and no composition is inferred from the milk name.",
+        "Added sugars and sodium have provider approximate modifiers (~). Their captured numeric zeros are what the existing non-energy pipeline uses; these are not manufacturer-verified exact measurements.",
+        "The 470 mL serving exceeds the declared 450 mL package. That metadata inconsistency is retained, not silently repaired; the selected reference panel does not use package size.",
+        "Fiber is missing and remains null; no fiber credit is awarded."
+      ],
+      "additionalImplementationCorrectionJustified": false
+    },
+    {
+      "barcode": "0811620020633",
+      "name": "CORE POWER High Protein Milk Shake Chocolate",
+      "source": {
+        "url": "https://world.openfoodfacts.org/api/v2/product/0811620020633.json?fields=code%2Cproduct_name%2Cproduct_name_en%2Cbrands%2Cquantity%2Cingredients_text%2Clang%2Cadditives_tags%2Ccountries_tags%2Ccountries%2Ccategories_tags%2Ccategories%2Cproduct_quantity%2Cproduct_quantity_unit%2Cserving_size%2Cserving_quantity%2Cserving_quantity_unit%2Cservings_per_container%2Cnutrition_data_per%2Cnutriments%2Clast_modified_t%2Clast_modified_datetime%2Curl",
+        "productUrl": "https://world.openfoodfacts.org/product/0811620020633",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "retrievedAt": "2026-10-21T21:47:16.559Z",
+        "providerRecordRevisionDate": "2026-10-11T22:53:47.000Z",
+        "sourcePublicationDate": null,
+        "manufacturerLabelEdition": null,
+        "manufacturerLabelEditionVerified": false
+      },
+      "comparison": {
+        "originalHeadNutritionScore": 88,
+        "incomingPatchNutritionScore": 47,
+        "originalHeadRawScore": 87.69013112491373,
+        "incomingPatchRawScore": 46.80289921751796,
+        "originalHeadBasis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "incomingPatchBasis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "originalHeadCategory": "general",
+        "incomingPatchCategory": "beverage",
+        "reasonForChange": "The same captured nutrient values now carry their explicit volume dimension; existing volume-only category selection changes general to beverage, selecting the existing beverage energy/sugar ramps."
+      },
+      "raw": {
+        "declarationAndMeasurementFields": {
+          "categories": "Milks, Meal replacements, Protein shakes, Protein drink",
+          "categories_tags": [
+            "en:dairies",
+            "en:meals",
+            "en:milks-liquid-and-powder",
+            "en:milks",
+            "en:dietary-supplements",
+            "en:meal-replacements",
+            "en:bodybuilding-supplements",
+            "en:protein-shakes",
+            "en:Protein drink"
+          ],
+          "countries": "France, United States",
+          "countries_tags": [
+            "en:france",
+            "en:united-states"
+          ],
+          "ingredients_text": "filtered lowfat grade a milk, alkalized cocoa, natural flavors, lactase enzyme, sea salt, acesulfame potassium, carrageenan, cellulose gel, cellulose gum, stevia leaf extract, sucralose, vitamin a palmitate, vitamin d3",
+          "nutrition_data": "on",
+          "nutrition_data_per": "100g",
+          "nutrition_data_prepared_per": "100g",
+          "product_quantity": 414,
+          "product_quantity_unit": "ml",
+          "quantity": "414ml",
+          "serving_quantity": 414,
+          "serving_quantity_unit": "ml",
+          "serving_size": "1 bottle (414 ml)"
+        },
+        "nutrientFields": {
+          "added-sugars": 0,
+          "added-sugars_100g": 0,
+          "added-sugars_serving": 0,
+          "added-sugars_unit": "g",
+          "added-sugars_value": 0,
+          "carbohydrates": 2.17391304347826,
+          "carbohydrates_100g": 2.17391304347826,
+          "carbohydrates_serving": 9,
+          "carbohydrates_unit": "g",
+          "carbohydrates_value": 2.17391304347826,
+          "energy": 244.565217391305,
+          "energy-kcal": 55.5555555555556,
+          "energy-kcal_100g": 55.5555555555556,
+          "energy-kcal_serving": 230,
+          "energy-kcal_unit": "kcal",
+          "energy-kcal_value": 55.5555555555556,
+          "energy-kj": 244.565217391305,
+          "energy-kj_100g": 244.565217391305,
+          "energy-kj_modifier": "~",
+          "energy-kj_serving": 1010,
+          "energy-kj_unit": "kJ",
+          "energy-kj_value": 244.565217391305,
+          "energy_100g": 244.565217391305,
+          "energy_modifier": "~",
+          "energy_serving": 1010,
+          "energy_unit": "kJ",
+          "energy_value": 244.565217391305,
+          "fat": 0.845410628019324,
+          "fat_100g": 0.845410628019324,
+          "fat_serving": 3.5,
+          "fat_unit": "g",
+          "fat_value": 0.845410628019324,
+          "fiber": 0.483091787439614,
+          "fiber_100g": 0.483091787439614,
+          "fiber_serving": 2,
+          "fiber_unit": "g",
+          "fiber_value": 0.483091787439614,
+          "proteins": 10.1449275362319,
+          "proteins_100g": 10.1449275362319,
+          "proteins_serving": 42,
+          "proteins_unit": "g",
+          "proteins_value": 10.1449275362319,
+          "saturated-fat": 0.483091787439614,
+          "saturated-fat_100g": 0.483091787439614,
+          "saturated-fat_serving": 2,
+          "saturated-fat_unit": "g",
+          "saturated-fat_value": 0.483091787439614,
+          "sodium": 0.0628019323671498,
+          "sodium_100g": 0.0628019323671498,
+          "sodium_serving": 0.26,
+          "sodium_unit": "g",
+          "sodium_value": 0.0628019323671498,
+          "sugars": 1.69082125603865,
+          "sugars_100g": 1.69082125603865,
+          "sugars_serving": 7,
+          "sugars_unit": "g",
+          "sugars_value": 1.69082125603865
+        },
+        "canonicalFieldMeaning": "OFF _100g canonical suffix means per 100 g or 100 mL. This captured record explicitly supplies mL serving/package units, with no contrary mass evidence.",
+        "enteredBasisField": "100g"
+      },
+      "normalizedPanels": [
+        {
+          "id": "off-serving",
+          "basis": "serving",
+          "quantity": {
+            "amount": 414,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 230,
+            "saturatedFat": 2,
+            "addedSugar": 0,
+            "totalSugar": 7,
+            "sodium": 260,
+            "fiber": 2,
+            "protein": 42,
+            "fat": 3.5,
+            "carbohydrates": 9,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        },
+        {
+          "id": "off-100g",
+          "basis": "100ml",
+          "quantity": {
+            "amount": 100,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 55.5555555555556,
+            "saturatedFat": 0.483091787439614,
+            "addedSugar": 0,
+            "totalSugar": 1.69082125603865,
+            "sodium": 62.8019323671498,
+            "fiber": 0.483091787439614,
+            "protein": 10.1449275362319,
+            "fat": 0.845410628019324,
+            "carbohydrates": 2.17391304347826,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        },
+        {
+          "id": "off-value",
+          "basis": "100ml",
+          "quantity": {
+            "amount": 100,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 55.5555555555556,
+            "saturatedFat": 0.483091787439614,
+            "addedSugar": 0,
+            "totalSugar": 1.69082125603865,
+            "sodium": 62.8019323671498,
+            "fiber": 0.483091787439614,
+            "protein": 10.1449275362319,
+            "fat": 0.845410628019324,
+            "carbohydrates": 2.17391304347826,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        }
+      ],
+      "servingConversion": {
+        "providerServing": {
+          "description": "1 bottle (414 ml)",
+          "amount": 414,
+          "unit": "ml",
+          "grams": null
+        },
+        "ratioTo100mL": 4.14,
+        "displayedNutrients": {
+          "calories": 230,
+          "protein": 42,
+          "carbohydrates": 9,
+          "fat": 3.5,
+          "fiber": 2,
+          "sodium": 260,
+          "totalSugar": 7,
+          "addedSugar": 0
+        },
+        "rule": "Use the provider serving fields when present; they agree with the reference multiplied by the explicit mL amount, subject to recorded rounding. No g-to-mL conversion."
+      },
+      "selectedDatasetId": "off-100g",
+      "categoryEvidence": {
+        "resolver": {
+          "categories": [],
+          "plantZero": null,
+          "basis": [],
+          "excluded": true,
+          "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+          "edition": "2025-03-17"
+        },
+        "selected": "beverage",
+        "rule": "volumeOnly && !isOil && !isNuts; no dataset has mass quantity after resolving explicit mL reference metadata",
+        "providerCategories": [
+          {
+            "field": "categories_tags",
+            "values": [
+              "en:dairies",
+              "en:meals",
+              "en:milks-liquid-and-powder",
+              "en:milks",
+              "en:dietary-supplements",
+              "en:meal-replacements",
+              "en:bodybuilding-supplements",
+              "en:protein-shakes",
+              "en:Protein drink"
+            ]
+          },
+          {
+            "field": "categories",
+            "values": [
+              "Milks, Meal replacements, Protein shakes, Protein drink"
+            ]
+          }
+        ]
+      },
+      "normalizedV2Input": {
+        "category": "beverage",
+        "basis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "nutrients": {
+          "calories": {
+            "value": 55.5555555555556,
+            "unit": "kcal"
+          },
+          "addedSugar": {
+            "value": 0,
+            "unit": "g"
+          },
+          "totalSugar": {
+            "value": 1.69082125603865,
+            "unit": "g"
+          },
+          "saturatedFat": {
+            "value": 0.483091787439614,
+            "unit": "g"
+          },
+          "sodium": {
+            "value": 62.8019323671498,
+            "unit": "mg"
+          },
+          "fiber": {
+            "value": 0.483091787439614,
+            "unit": "g"
+          },
+          "protein": {
+            "value": 10.1449275362319,
+            "unit": "g"
+          },
+          "fat": {
+            "value": 0.845410628019324,
+            "unit": "g"
+          },
+          "carbohydrates": {
+            "value": 2.17391304347826,
+            "unit": "g"
+          }
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0811620020633",
+          "url": "https://world.openfoodfacts.org/product/0811620020633",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-11T22:53:47.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-21T21:47:16.559Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1791759227
+            }
+          ]
+        },
+        "grainEvidence": {
+          "status": "not-established",
+          "firstIngredient": "filtered lowfat grade a milk",
+          "originalText": "filtered lowfat grade a milk, alkalized cocoa, natural flavors, lactase enzyme, sea salt, acesulfame potassium, carrageenan, cellulose gel, cellulose gum, stevia leaf extract, sucralose, vitamin a palmitate, vitamin d3",
+          "identification": "provider-reported-first-ingredient",
+          "percentage": null,
+          "source": {
+            "url": "https://world.openfoodfacts.org/product/0811620020633",
+            "attribution": "Open Food Facts contributors; database licensed under ODbL",
+            "provider": "open-food-facts",
+            "revisionDate": "2026-10-11T22:53:47.000Z",
+            "retrievedAt": "2026-10-21T21:47:16.559Z"
+          }
+        }
+      },
+      "actualV2Output": {
+        "methodId": "trace-us-practical-nutrition",
+        "methodVersion": "2-density-development-2026-10-20",
+        "grade": null,
+        "scoreReady": false,
+        "normalizedPer100": {
+          "calories": 55.5555555555556,
+          "addedSugar": 0,
+          "totalSugar": 1.69082125603865,
+          "saturatedFat": 0.48309178743961406,
+          "sodium": 62.8019323671498,
+          "fiber": 0.48309178743961406,
+          "protein": 10.1449275362319,
+          "fat": 0.845410628019324,
+          "carbohydrates": 2.17391304347826
+        },
+        "normalizedBasis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "sugarMode": "totalSugar",
+        "sugarBenchmark": {
+          "type": "Trace-density-screens",
+          "addedThresholds": [
+            0,
+            10
+          ],
+          "totalThresholds": [
+            0,
+            10
+          ],
+          "unit": "g per 100 g/ml"
+        },
+        "comparison": {
+          "category": "beverage",
+          "maxAmount": 100,
+          "energyCapKcal": null,
+          "limitingBurden": 0.135265700483092,
+          "weightedBurden": 0.067632850241546,
+          "strongestBurden": 0.16908212560386499,
+          "burdens": {
+            "sugar": 0.16908212560386499,
+            "saturatedFat": 0,
+            "salt": 0
+          },
+          "missingLimitingNutrients": [],
+          "burdenUpperBounds": {
+            "sugar": 1,
+            "saturatedFat": 1,
+            "salt": 1
+          },
+          "saturatedFatBound": null,
+          "energyBurden": 0.9259259259259267,
+          "energyInput": 55.5555555555556,
+          "energyRule": "beverage density"
+        },
+        "points": {
+          "energy": {
+            "min": 32.40740740740743,
+            "max": 32.40740740740743,
+            "possible": [
+              32.40740740740743
+            ]
+          },
+          "sugar": {
+            "min": 8.115942028985518,
+            "max": 8.115942028985518,
+            "possible": [
+              8.115942028985518
+            ]
+          },
+          "saturatedFat": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "salt": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "fiber": {
+            "min": 0.5967800548770938,
+            "max": 0.5967800548770938,
+            "possible": [
+              0.5967800548770938
+            ]
+          },
+          "proteinApplied": {
+            "min": 1.7294685990338161,
+            "max": 1.7294685990338161,
+            "possible": [
+              1.7294685990338161
+            ]
+          },
+          "wholeGrain": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          }
+        },
+        "excludedNutrients": [],
+        "rawScore": 46.80289921751796,
+        "rawScoreRange": [
+          46.80289921751796,
+          46.80289921751796
+        ],
+        "nutritionScore100": 47,
+        "reasons": [],
+        "warnings": [
+          "Total-sugar density drives the sugar component even though added sugars are reported; both original measurements remain separate."
+        ]
+      },
+      "arithmetic": {
+        "rawCreditsBeforeLimitingAttenuation": {
+          "fiber": 0.6901311249137344,
+          "protein": 2,
+          "wholeGrain": 0
+        },
+        "limitingDeduction": 8.11594202898552,
+        "energyDeduction": 32.40740740740743,
+        "appliedCredits": 2.32624865391091,
+        "rawScore": 46.80289921751796,
+        "clampedRaw": 46.80289921751796,
+        "roundedWholeNumber": 47
+      },
+      "sourceCaveats": [
+        "The canonical long-decimal values scale coherently to the captured 414 mL bottle: 230 kcal, 7 g total sugars, 42 g protein and 260 mg sodium.",
+        "The provider special-purpose/supplement flag remains a visible warning; it does not establish product suitability or prevent the existing nutrients-only calculation."
+      ],
+      "additionalImplementationCorrectionJustified": false
+    },
+    {
+      "barcode": "0856312002757",
+      "name": "Fairlife Nonfat Ultra-Filtered Milk",
+      "source": {
+        "url": "https://world.openfoodfacts.org/api/v2/product/0856312002757.json?fields=code%2Cproduct_name%2Cproduct_name_en%2Cbrands%2Cquantity%2Cingredients_text%2Clang%2Cadditives_tags%2Ccountries_tags%2Ccountries%2Ccategories_tags%2Ccategories%2Cproduct_quantity%2Cproduct_quantity_unit%2Cserving_size%2Cserving_quantity%2Cserving_quantity_unit%2Cservings_per_container%2Cnutrition_data_per%2Cnutriments%2Clast_modified_t%2Clast_modified_datetime%2Curl",
+        "productUrl": "https://world.openfoodfacts.org/product/0856312002757",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "retrievedAt": "2026-10-21T21:48:08.583Z",
+        "providerRecordRevisionDate": "2026-10-19T18:31:49.000Z",
+        "sourcePublicationDate": null,
+        "manufacturerLabelEdition": null,
+        "manufacturerLabelEditionVerified": false
+      },
+      "comparison": {
+        "originalHeadNutritionScore": 86,
+        "incomingPatchNutritionScore": 55,
+        "originalHeadRawScore": 86.084,
+        "incomingPatchRawScore": 54.6172,
+        "originalHeadBasis": {
+          "amount": 100,
+          "unit": "g"
+        },
+        "incomingPatchBasis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "originalHeadCategory": "general",
+        "incomingPatchCategory": "beverage",
+        "reasonForChange": "The same captured nutrient values now carry their explicit volume dimension; existing volume-only category selection changes general to beverage, selecting the existing beverage energy/sugar ramps."
+      },
+      "raw": {
+        "declarationAndMeasurementFields": {
+          "categories": "Skimmed milks, Lactose-free milk, Protein",
+          "categories_tags": [
+            "en:dairies",
+            "en:milks-liquid-and-powder",
+            "en:milks",
+            "en:skimmed-milks",
+            "en:lactose-free-milk",
+            "en:Protein"
+          ],
+          "countries": "United States",
+          "countries_tags": [
+            "en:united-states"
+          ],
+          "ingredients_text": "ultra filtered milk, lactase enzyme, vitamin A palmitate, vitamin D3",
+          "nutrition_data": "on",
+          "nutrition_data_per": "100g",
+          "nutrition_data_prepared_per": "100g",
+          "product_quantity": 1537.822,
+          "product_quantity_unit": "ml",
+          "quantity": "52 FL OZ / 1.5L",
+          "serving_quantity": 240,
+          "serving_quantity_unit": "ml",
+          "serving_size": "1 serving (240 ml)"
+        },
+        "nutrientFields": {
+          "added-sugars": 0,
+          "added-sugars_100g": 0,
+          "added-sugars_serving": 0,
+          "added-sugars_unit": "g",
+          "added-sugars_value": 0,
+          "carbohydrates": 2.5,
+          "carbohydrates_100g": 2.5,
+          "carbohydrates_serving": 6,
+          "carbohydrates_unit": "g",
+          "carbohydrates_value": 2.5,
+          "energy": 134.64,
+          "energy-kcal": 33,
+          "energy-kcal_100g": 33,
+          "energy-kcal_serving": 79.2,
+          "energy-kcal_unit": "kcal",
+          "energy-kcal_value": 33,
+          "energy-kj": 134.64,
+          "energy-kj_100g": 134.64,
+          "energy-kj_modifier": "~",
+          "energy-kj_serving": 323,
+          "energy-kj_unit": "kJ",
+          "energy-kj_value": 134.64,
+          "energy_100g": 134.64,
+          "energy_modifier": "~",
+          "energy_serving": 323,
+          "energy_unit": "kJ",
+          "energy_value": 134.64,
+          "fat": 0,
+          "fat_100g": 0,
+          "fat_serving": 0,
+          "fat_unit": "g",
+          "fat_value": 0,
+          "fiber": 0,
+          "fiber_100g": 0,
+          "fiber_serving": 0,
+          "fiber_unit": "g",
+          "fiber_value": 0,
+          "proteins": 5.42,
+          "proteins_100g": 5.42,
+          "proteins_serving": 13,
+          "proteins_unit": "g",
+          "proteins_value": 5.42,
+          "saturated-fat": 0,
+          "saturated-fat_100g": 0,
+          "saturated-fat_serving": 0,
+          "saturated-fat_unit": "g",
+          "saturated-fat_value": 0,
+          "sodium": 0.00012,
+          "sodium_100g": 0.00012,
+          "sodium_serving": 0.000288,
+          "sodium_unit": "g",
+          "sodium_value": 0.00012,
+          "sugars": 2.5,
+          "sugars_100g": 2.5,
+          "sugars_serving": 6,
+          "sugars_unit": "g",
+          "sugars_value": 2.5
+        },
+        "canonicalFieldMeaning": "OFF _100g canonical suffix means per 100 g or 100 mL. This captured record explicitly supplies mL serving/package units, with no contrary mass evidence.",
+        "enteredBasisField": "100g"
+      },
+      "normalizedPanels": [
+        {
+          "id": "off-serving",
+          "basis": "serving",
+          "quantity": {
+            "amount": 240,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 79.2,
+            "saturatedFat": 0,
+            "addedSugar": 0,
+            "totalSugar": 6,
+            "sodium": 0.28800000000000003,
+            "fiber": 0,
+            "protein": 13,
+            "fat": 0,
+            "carbohydrates": 6,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        },
+        {
+          "id": "off-100g",
+          "basis": "100ml",
+          "quantity": {
+            "amount": 100,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 33,
+            "saturatedFat": 0,
+            "addedSugar": 0,
+            "totalSugar": 2.5,
+            "sodium": 0.12000000000000001,
+            "fiber": 0,
+            "protein": 5.42,
+            "fat": 0,
+            "carbohydrates": 2.5,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        },
+        {
+          "id": "off-value",
+          "basis": "100ml",
+          "quantity": {
+            "amount": 100,
+            "unit": "ml"
+          },
+          "nutrients": {
+            "calories": 33,
+            "saturatedFat": 0,
+            "addedSugar": 0,
+            "totalSugar": 2.5,
+            "sodium": 0.12000000000000001,
+            "fiber": 0,
+            "protein": 5.42,
+            "fat": 0,
+            "carbohydrates": 2.5,
+            "freeSugar": null
+          },
+          "energyAccepted": true
+        }
+      ],
+      "servingConversion": {
+        "providerServing": {
+          "description": "1 serving (240 ml)",
+          "amount": 240,
+          "unit": "ml",
+          "grams": null
+        },
+        "ratioTo100mL": 2.4,
+        "displayedNutrients": {
+          "calories": 79.2,
+          "protein": 13,
+          "carbohydrates": 6,
+          "fat": 0,
+          "fiber": 0,
+          "sodium": 0.28800000000000003,
+          "totalSugar": 6,
+          "addedSugar": 0
+        },
+        "rule": "Use the provider serving fields when present; they agree with the reference multiplied by the explicit mL amount, subject to recorded rounding. No g-to-mL conversion."
+      },
+      "selectedDatasetId": "off-100g",
+      "categoryEvidence": {
+        "resolver": {
+          "categories": [],
+          "plantZero": null,
+          "basis": [],
+          "excluded": false,
+          "source": "https://www.santepubliquefrance.fr/sites/default/files/rdd/document/FAQ-updatedAlgo-V11.pdf",
+          "edition": "2025-03-17"
+        },
+        "selected": "beverage",
+        "rule": "volumeOnly && !isOil && !isNuts; no dataset has mass quantity after resolving explicit mL reference metadata",
+        "providerCategories": [
+          {
+            "field": "categories_tags",
+            "values": [
+              "en:dairies",
+              "en:milks-liquid-and-powder",
+              "en:milks",
+              "en:skimmed-milks",
+              "en:lactose-free-milk",
+              "en:Protein"
+            ]
+          },
+          {
+            "field": "categories",
+            "values": [
+              "Skimmed milks, Lactose-free milk, Protein"
+            ]
+          }
+        ]
+      },
+      "normalizedV2Input": {
+        "category": "beverage",
+        "basis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "nutrients": {
+          "calories": {
+            "value": 33,
+            "unit": "kcal"
+          },
+          "addedSugar": {
+            "value": 0,
+            "unit": "g"
+          },
+          "totalSugar": {
+            "value": 2.5,
+            "unit": "g"
+          },
+          "saturatedFat": {
+            "value": 0,
+            "unit": "g"
+          },
+          "sodium": {
+            "value": 0.12000000000000001,
+            "unit": "mg"
+          },
+          "fiber": {
+            "value": 0,
+            "unit": "g"
+          },
+          "protein": {
+            "value": 5.42,
+            "unit": "g"
+          },
+          "fat": {
+            "value": 0,
+            "unit": "g"
+          },
+          "carbohydrates": {
+            "value": 2.5,
+            "unit": "g"
+          }
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0856312002757",
+          "url": "https://world.openfoodfacts.org/product/0856312002757",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-19T18:31:49.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-21T21:48:08.583Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792434709
+            }
+          ]
+        },
+        "grainEvidence": {
+          "status": "not-established",
+          "firstIngredient": "ultra filtered milk",
+          "originalText": "ultra filtered milk, lactase enzyme, vitamin A palmitate, vitamin D3",
+          "identification": "provider-reported-first-ingredient",
+          "percentage": null,
+          "source": {
+            "url": "https://world.openfoodfacts.org/product/0856312002757",
+            "attribution": "Open Food Facts contributors; database licensed under ODbL",
+            "provider": "open-food-facts",
+            "revisionDate": "2026-10-19T18:31:49.000Z",
+            "retrievedAt": "2026-10-21T21:48:08.583Z"
+          }
+        }
+      },
+      "actualV2Output": {
+        "methodId": "trace-us-practical-nutrition",
+        "methodVersion": "2-density-development-2026-10-20",
+        "grade": null,
+        "scoreReady": false,
+        "normalizedPer100": {
+          "calories": 33,
+          "addedSugar": 0,
+          "totalSugar": 2.5,
+          "saturatedFat": 0,
+          "sodium": 0.12000000000000002,
+          "fiber": 0,
+          "protein": 5.42,
+          "fat": 0,
+          "carbohydrates": 2.5
+        },
+        "normalizedBasis": {
+          "amount": 100,
+          "unit": "ml"
+        },
+        "sugarMode": "totalSugar",
+        "sugarBenchmark": {
+          "type": "Trace-density-screens",
+          "addedThresholds": [
+            0,
+            10
+          ],
+          "totalThresholds": [
+            0,
+            10
+          ],
+          "unit": "g per 100 g/ml"
+        },
+        "comparison": {
+          "category": "beverage",
+          "maxAmount": 100,
+          "energyCapKcal": null,
+          "limitingBurden": 0.2,
+          "weightedBurden": 0.1,
+          "strongestBurden": 0.25,
+          "burdens": {
+            "sugar": 0.25,
+            "saturatedFat": 0,
+            "salt": 0
+          },
+          "missingLimitingNutrients": [],
+          "burdenUpperBounds": {
+            "sugar": 1,
+            "saturatedFat": 1,
+            "salt": 1
+          },
+          "saturatedFatBound": null,
+          "energyBurden": 0.55,
+          "energyInput": 33,
+          "energyRule": "beverage density"
+        },
+        "points": {
+          "energy": {
+            "min": 19.25,
+            "max": 19.25,
+            "possible": [
+              19.25
+            ]
+          },
+          "sugar": {
+            "min": 12,
+            "max": 12,
+            "possible": [
+              12
+            ]
+          },
+          "saturatedFat": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "salt": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "fiber": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          },
+          "proteinApplied": {
+            "min": 0.8672000000000001,
+            "max": 0.8672000000000001,
+            "possible": [
+              0.8672000000000001
+            ]
+          },
+          "wholeGrain": {
+            "min": 0,
+            "max": 0,
+            "possible": [
+              0
+            ]
+          }
+        },
+        "excludedNutrients": [],
+        "rawScore": 54.6172,
+        "rawScoreRange": [
+          54.6172,
+          54.6172
+        ],
+        "nutritionScore100": 55,
+        "reasons": [],
+        "warnings": [
+          "Total-sugar density drives the sugar component even though added sugars are reported; both original measurements remain separate."
+        ]
+      },
+      "arithmetic": {
+        "rawCreditsBeforeLimitingAttenuation": {
+          "fiber": 0,
+          "protein": 1.084,
+          "wholeGrain": 0
+        },
+        "limitingDeduction": 12,
+        "energyDeduction": 19.25,
+        "appliedCredits": 0.8672000000000001,
+        "rawScore": 54.6172,
+        "clampedRaw": 54.6172,
+        "roundedWholeNumber": 55
+      },
+      "sourceCaveats": [
+        "Sodium is captured as 0.00012 g per canonical reference and 0.000288 g per serving. The actual g-to-mg normalization gives 0.12 mg and 0.288 mg, respectively. This suspicious source amount is not a demonstrated unit-processing defect; multiplying it by another 1000 would invent a correction.",
+        "The source protein serving is rounded to 13 g versus 5.42 g per reference; the existing comparator reports rounding and keeps the selected panel intact."
+      ],
+      "additionalImplementationCorrectionJustified": false
+    }
+  ]
+}

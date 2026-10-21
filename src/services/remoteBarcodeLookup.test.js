@@ -13,6 +13,16 @@ import {
 } from "./remoteBarcodeLookup";
 
 const BARCODE = "00000000000000";
+const { normalizeOpenFoodFactsProduct, normalizeUsdaFood } = require("../../api/nutrition/_barcodeGateway.cjs");
+const { offRecord, usdaRecord, RETRIEVED_AT } = require("./__fixtures__/nutritionAssessmentInputs.cjs");
+
+// These existing provider-schema fixtures are synthetic, not coverage evidence.
+function assessedResult(provider = "usda", barcode = BARCODE) {
+  const food = provider === "off"
+    ? normalizeOpenFoodFactsProduct(offRecord({ code: barcode }), barcode, RETRIEVED_AT)
+    : normalizeUsdaFood(usdaRecord({ gtinUpc: barcode }), barcode, RETRIEVED_AT);
+  return JSON.parse(JSON.stringify({ status: "found", identifier: { scheme: "gtin", value: barcode }, food }));
+}
 
 function remoteResult(barcode = BARCODE) {
   return {
@@ -219,7 +229,7 @@ test("a fresh canonical cache hit avoids the gateway", async () => {
   const storage = memoryStorage();
   const clock = () => 1000;
   createRemoteBarcodeCache({ storage, clock })
-    .set("012000001291", remoteResult("012000001291"));
+    .set("012000001291", assessedResult("usda", "012000001291"));
   const fetchImpl = jest.fn();
   const service = createRemoteBarcodeLookup({
     storage,
@@ -232,6 +242,132 @@ test("a fresh canonical cache hit avoids the gateway", async () => {
   await expect(service.lookup("00012000001291"))
     .resolves.toMatchObject({ status: "found", cache: { hit: true, stale: false } });
   expect(fetchImpl).not.toHaveBeenCalled();
+});
+
+test.each(["absent", "null"])("an online web lookup refreshes %s legacy assessment evidence once", async state => {
+  const storage = memoryStorage(), clock = () => 1000;
+  const fresh = assessedResult(), legacy = JSON.parse(JSON.stringify(fresh));
+  if (state === "absent") delete legacy.food.assessmentInputs;
+  else legacy.food.assessmentInputs = null;
+  createRemoteBarcodeCache({ storage, clock }).set(BARCODE, legacy);
+  const fetchImpl = jest.fn().mockResolvedValue(gatewayResponse(fresh));
+  const service = createRemoteBarcodeLookup({ storage, clock, fetchImpl,
+    localLookup: () => ({ status: "not-found" }), runtime: { isWeb: true, isOnline: true } });
+  expect((await service.lookup(BARCODE)).food.assessmentInputs).toEqual(fresh.food.assessmentInputs);
+  expect((await service.lookup(BARCODE)).food.assessmentInputs).toEqual(fresh.food.assessmentInputs);
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+  expect(legacy.food.assessmentInputs).toBe(state === "absent" ? undefined : null);
+});
+
+test.each([
+  { isWeb: true, isOnline: false }, { isWeb: false, isOnline: true }, { isOnline: true },
+])("legacy cached reads stay unchanged outside online web lookup: %j", async runtime => {
+  const storage = memoryStorage(), clock = () => 1000, legacy = remoteResult();
+  createRemoteBarcodeCache({ storage, clock }).set(BARCODE, legacy);
+  const fetchImpl = jest.fn();
+  const service = createRemoteBarcodeLookup({ storage, clock, fetchImpl,
+    localLookup: () => ({ status: "not-found" }), runtime });
+  expect((await service.lookup(BARCODE)).food).toEqual(legacy.food);
+  expect(fetchImpl).not.toHaveBeenCalled();
+});
+
+test.each(["unavailable", "not-found", "malformed", "network"])("a failed legacy refresh (%s) retains usable cached food without repeated requests", async failure => {
+  const storage = memoryStorage(), clock = () => 1000, legacy = remoteResult();
+  createRemoteBarcodeCache({ storage, clock }).set(BARCODE, legacy);
+  const fetchImpl = failure === "network" ? jest.fn().mockRejectedValue(new Error("Synthetic offline failure"))
+    : jest.fn().mockResolvedValue(gatewayResponse(failure === "malformed" ? {} : {
+      status: failure, identifier: { scheme: "gtin", value: BARCODE }, food: null }));
+  const service = createRemoteBarcodeLookup({ storage, clock, fetchImpl,
+    localLookup: () => ({ status: "not-found" }), runtime: { isWeb: true, isOnline: true } });
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    expect(await service.lookup(BARCODE)).toMatchObject({ status: "found", cache: { hit: true }, food: legacy.food });
+  }
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+  expect(createRemoteBarcodeCache({ storage, clock }).get(BARCODE).food).toEqual(legacy.food);
+});
+
+test("canonical legacy refreshes share an in-flight request and do not repeat if evidence remains absent", async () => {
+  const storage = memoryStorage(), clock = () => 1000;
+  const barcode = "012000001291", legacy = remoteResult(barcode);
+  createRemoteBarcodeCache({ storage, clock }).set(barcode, legacy);
+  let resolveFetch;
+  const fetchImpl = jest.fn(() => new Promise(resolve => { resolveFetch = resolve; }));
+  const service = createRemoteBarcodeLookup({ storage, clock, fetchImpl,
+    localLookup: () => ({ status: "not-found" }), runtime: { isWeb: true, isOnline: true } });
+  const first = service.lookup(barcode), second = service.lookup("00012000001291");
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+  resolveFetch(gatewayResponse(legacy));
+  const [a, b] = await Promise.all([first, second]);
+  expect(a).toEqual(b);
+  expect((await service.lookup(barcode)).food).toEqual(legacy.food);
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+});
+
+test.each(["off-unknown", "off-volume", "usda-unknown", "usda-unit"])("cached evidence affected by a known normalization gap refreshes: %s", async gap => {
+  const storage = memoryStorage(), clock = () => 1000;
+  const off = gap.startsWith("off"), fresh = assessedResult(off ? "off" : "usda");
+  const legacy = JSON.parse(JSON.stringify(fresh)), input = legacy.food.assessmentInputs;
+  if (off) {
+    const reference = input.datasets.find(dataset => dataset.id === "off-100g");
+    reference.basis = gap === "off-unknown" ? "unknown" : "100g";
+    reference.quantity = gap === "off-unknown" ? null : { amount: 100, unit: "g" };
+    input.serving.find(entry => entry.field === "serving_quantity_unit").value = "ml";
+    input.serving.find(entry => entry.field === "serving_size").value = "30 ml";
+  } else if (gap === "usda-unknown") {
+    const reference = input.datasets.find(dataset => dataset.id === "usda-reference");
+    reference.basis = "unknown"; reference.quantity = null;
+  } else {
+    input.serving.find(entry => entry.field === "servingSizeUnit").value = "GRM";
+    input.datasets.find(dataset => dataset.id === "usda-label-serving").quantity.unit = "GRM";
+  }
+  createRemoteBarcodeCache({ storage, clock }).set(BARCODE, legacy);
+  const fetchImpl = jest.fn().mockResolvedValue(gatewayResponse(fresh));
+  const service = createRemoteBarcodeLookup({ storage, clock, fetchImpl,
+    localLookup: () => ({ status: "not-found" }), runtime: { isWeb: true, isOnline: true } });
+  expect((await service.lookup(BARCODE)).food.assessmentInputs).toEqual(fresh.food.assessmentInputs);
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
+});
+
+test.each(["printed-conflict", "package-conflict", "unknown-unit", "missing-nutrient"])("unresolved source evidence does not trigger a normalization refresh: %s", async condition => {
+  const storage = memoryStorage(), clock = () => 1000, cached = assessedResult("off");
+  const input = cached.food.assessmentInputs;
+  if (condition === "missing-nutrient") {
+    input.datasets.forEach(dataset => { dataset.observations = dataset.observations.filter(entry => entry.nutrient !== "sodium"); });
+  } else {
+    const reference = input.datasets.find(dataset => dataset.id === "off-100g");
+    reference.basis = "unknown"; reference.quantity = null;
+    input.serving.find(entry => entry.field === "serving_quantity_unit").value = condition === "unknown-unit" ? "cup" : "ml";
+    if (condition === "package-conflict") {
+      input.serving.find(entry => entry.field === "serving_size").value = "30 ml";
+      input.serving.push({ field: "product_quantity_unit", value: "g" });
+    }
+  }
+  createRemoteBarcodeCache({ storage, clock }).set(BARCODE, cached);
+  const fetchImpl = jest.fn();
+  const service = createRemoteBarcodeLookup({ storage, clock, fetchImpl,
+    localLookup: () => ({ status: "not-found" }), runtime: { isWeb: true, isOnline: true } });
+  expect((await service.lookup(BARCODE)).food.assessmentInputs).toEqual(input);
+  expect(fetchImpl).not.toHaveBeenCalled();
+});
+
+test("an archived real provider wrapper can refresh legacy memory cache without modifying original observations or saved entries", async () => {
+  const archive = require("../../docs/barcode-grading-grocery-pilot-2026-10-20/results.json");
+  const original = JSON.stringify(archive);
+  const fresh = archive.observations.find(row => row.barcode === "00884912180056").lookup;
+  const legacy = JSON.parse(JSON.stringify(fresh)); delete legacy.food.assessmentInputs;
+  const storage = memoryStorage(), clock = () => 1000;
+  const history = JSON.stringify([{ id: "synthetic-historical-entry", sodium: 0.22 }]);
+  storage.setItem("nutritionEntries", history);
+  createRemoteBarcodeCache({ storage, clock }).set(fresh.identifier.value, legacy);
+  const fetchImpl = jest.fn().mockResolvedValue(gatewayResponse(fresh));
+  const service = createRemoteBarcodeLookup({ storage, clock, fetchImpl,
+    localLookup: () => ({ status: "not-found" }), runtime: { isWeb: true, isOnline: true } });
+  expect((await service.lookup(fresh.identifier.value)).food.assessmentInputs).toEqual(fresh.food.assessmentInputs);
+  expect(storage.getItem("nutritionEntries")).toBe(history);
+  expect(storage.setItem.mock.calls.filter(([key]) => key !== "remoteBarcodeFoodResponses"))
+    .toEqual([["nutritionEntries", history]]);
+  expect(JSON.stringify(archive)).toBe(original);
+  expect(fetchImpl).toHaveBeenCalledTimes(1);
 });
 
 test("offline lookup may return an otherwise valid expired entry only as stale", async () => {

@@ -9,6 +9,126 @@ const candidate = (text = 'ALMONDS. PEANUT FREE.', tags = []) => ({ display: {
 const nutrition = nutritionScore100 => ({ nutritionScore100, grade: null, scoreReady: false });
 const assess = (text, tags = [], n = 80) => assessOverallFoodQuality(candidate(text, tags), nutrition(n));
 
+test('percentage-decorated known ingredients support the existing provisional route without classifying unknowns', () => {
+  const input = candidate('Water 72.57%, fructose 7%, sugar 5%, unknown extract 15.43%.');
+  const original = JSON.stringify(input), result = assessOverallFoodQuality(input, nutrition(80));
+  expect(result.status).toBe('provisional');
+  expect(result.overallScore100).toBe(80);
+  expect(result.additiveAssessment.ordinaryIngredients).toEqual(['water', 'fructose', 'sugar']);
+  expect(result.additiveAssessment.reasons.join(' ')).toContain('unknown extract');
+  expect(result.additiveAssessment.originalIngredientText).toBe(input.display.ingredients.text);
+  expect(JSON.stringify(input)).toBe(original);
+  expect(assess('Unknown extract 100%.').status).toBe('nutrition-only');
+  expect(assess('Water 0%.').status).toBe('nutrition-only');
+  expect(assess('Water 101%.').status).toBe('nutrition-only');
+  expect(assess('').status).toBe('nutrition-only');
+});
+
+// These declarations and provider tags are actual saved API responses. The
+// fixed nutrition(80) is a synthetic control of the ingredient screen only.
+let ingredientCaptures;
+const realIngredientCaptures = () => ingredientCaptures || (ingredientCaptures = require('fs').readFileSync(require('path').resolve(
+  __dirname, '../../docs/barcode-grade-coverage-2026-10-21/raw-responses.jsonl'), 'utf8')
+  .trim().split(/\r?\n/).map(JSON.parse));
+const capturedIngredientCandidate = barcode => {
+  const row = realIngredientCaptures().find(row => row.barcode === barcode);
+  const raw = row.responses.find(response => response.body?.product).body.product;
+  return { display: { ingredients: { text: raw.ingredients_text, language: raw.lang },
+    additives: normalizeOpenFoodFactsAdditives(raw.additives_tags),
+    sourceUrl: row.lookup.food.provenance.sourceUrl, attribution: row.lookup.food.provenance.attribution } };
+};
+
+test.each([
+  ['0675625371189', 'oats', 'reviewed'], ['0021130070121', 'milk', 'provisional'],
+  ['4056489714392', 'walnuts', 'reviewed'], ['0011110024718', 'pecans', 'reviewed'],
+  ['4099100333985', 'peanuts', 'reviewed'], ['0096619196470', 'walnuts', 'reviewed'],
+  ['0856312002757', 'milk', 'provisional'], ['3168930007340', 'peanuts', 'provisional'],
+  ['6111266962187', 'milk', 'provisional'], ['3036811460259', 'water', 'provisional'],
+  ['3270190174356', 'zucchini', 'provisional'], ['5400117582676', 'walnuts', 'provisional'],
+  ['7755073001807', 'milk', 'provisional'],
+])('captured ordinary food %s is screenable without an individual additive safety classification', (barcode, ordinary, status) => {
+  const input = capturedIngredientCandidate(barcode), before = JSON.stringify(input);
+  const r = assessOverallFoodQuality(input, nutrition(80));
+  expect(r).toMatchObject({ status, overallScore100: 80, additiveDeduction: 0 });
+  expect(r.additiveAssessment.ordinaryIngredients).toContain(ordinary);
+  expect(r.additiveAssessment.originalIngredientText).toBe(input.display.ingredients.text);
+  expect(JSON.stringify(input)).toBe(before);
+});
+
+test('captured French phosphoric acid binds the existing assessment while unassessed sweeteners remain unknown', () => {
+  const input = capturedIngredientCandidate('5449000214799');
+  const r = assessOverallFoodQuality(input, nutrition(85));
+  expect(r).toMatchObject({ status: 'provisional', overallScore100: 82, rawOverall: 81.6 });
+  expect(r.deductions.map(item => item.identifier)).toEqual(['E338']);
+  const phosphate = r.additiveAssessment.items.find(item => item.identifier === 'E338');
+  expect(phosphate).toMatchObject({ concernBurden: .2, conflict: false });
+  expect(phosphate.providerIdentifiers).toEqual(['en:e338']);
+  expect(phosphate.origins.some(origin => origin.text?.includes('acide phosphorique'))).toBe(true);
+  expect(r.additiveAssessment.items.find(item => item.identifier === 'E951').concernBurden).toBeNull();
+  expect(r.additiveAssessment.reasons.join(' ')).toContain('declaration review');
+});
+
+test('captured Spanish function/SIN codes corroborate exact identities without invented classifications or duplicated tags', () => {
+  const input = capturedIngredientCandidate('7755073001807');
+  const r = assessOverallFoodQuality(input, nutrition(80));
+  expect(r.status).toBe('provisional'); expect(r.deductions).toHaveLength(0);
+  for (const identifier of ['E202', 'E211', 'E330', 'E955', 'E1442', 'E960a']) {
+    const item = r.additiveAssessment.items.find(item => item.identifier === identifier);
+    expect(item).toMatchObject({ conflict: false, concernBurden: null });
+    expect(item.origins.some(origin => origin.type === 'ingredient-text' && /sin /i.test(origin.text))).toBe(true);
+    expect(r.additiveAssessment.items.filter(item => item.identifier === identifier)).toHaveLength(1);
+  }
+  expect(r.additiveAssessment.items.find(item => item.identifier === 'en:e14xx').concernBurden).toBeNull();
+  expect(r.additiveAssessment.items.find(item => item.identifier === 'E211').conditionResult).toBe('beverage-or-cofactor-unresolved');
+});
+
+test('formatting fixes retain unknown phrases, invalid fractions, negatives and incomplete declarations', () => {
+  expect(assess('_unknown extract_.').status).toBe('nutrition-only');
+  expect(assess('Dry roasted unknown extract.').status).toBe('nutrition-only');
+  expect(assess('Walnuts, unknown extract (12,5%).').status).toBe('provisional');
+  for (const text of ['Water (0%).', 'Water (-1%).', 'Water (101%).', 'Phosphoric acid (0%).']) {
+    const r = assess(text);
+    expect(r.status).toBe('nutrition-only'); expect(r.deductions).toHaveLength(0);
+  }
+  const incomplete = assess('Eau, carotte 26%, oignon 5,7%,');
+  expect(incomplete.status).toBe('provisional');
+  expect(incomplete.additiveAssessment.reasons.join(' ')).toContain('truncated or incomplete');
+  expect(incomplete.additiveAssessment.ordinaryIngredients).toEqual(['water', 'carrots', 'onions']);
+  expect(assess('Sin azúcar.').status).toBe('nutrition-only');
+  expect(assess('Sin 211.').additiveAssessment.items).toHaveLength(0);
+  expect(assess('Sans acide phosphorique.').deductions).toHaveLength(0);
+  expect(assess('Sin sucralose.').additiveAssessment.items).toHaveLength(0);
+  const noCode = assess('Leche, sin conservantes (SIN 211).', ['en:e211']);
+  expect(noCode.additiveAssessment.items.find(item => item.identifier === 'E211'))
+    .toMatchObject({ conflict: true, concernBurden: null });
+  expect(assess('Leche, no contiene conservantes (SIN 211).').additiveAssessment.items).toHaveLength(0);
+  const alternative = assess('Water, regulador de acidez (SIN 338) or regulador de acidez (SIN 339).');
+  expect(alternative.status).toBe('provisional'); expect(alternative.deductions).toHaveLength(0);
+  expect(alternative.additiveAssessment.items.every(item => item.conditionalPresence && item.concernBurden === null)).toBe(true);
+});
+
+test.each(['(0%)', '(101%)', '(-1%)', '(-0,5%)', '0%', '101%'])(
+  'an associated invalid SIN percentage %s cannot establish additive presence', percentage => {
+    const text = `Water, regulador de acidez (SIN 338) ${percentage}.`;
+    for (const tags of [[], ['en:e338']]) {
+      const r = assess(text, tags);
+      expect(r).toMatchObject({ status: 'provisional', overallScore100: 80, deductions: [] });
+      expect(r.additiveAssessment.concernBurden).toBe(0);
+      expect(r.additiveAssessment.originalIngredientText).toBe(text);
+      expect(r.additiveAssessment.reasons.join(' ')).toContain('Unresolved ingredient percentage');
+      expect(r.additiveAssessment.items.map(({ identifier, concernBurden, conflict }) => ({ identifier, concernBurden, conflict })))
+        .toEqual(tags.map(() => ({ identifier: 'E338', concernBurden: null, conflict: true })));
+    }
+  });
+
+test('a valid positive SIN percentage retains identity without supplying an exposure estimate', () => {
+  const text = 'Water, regulador de acidez (SIN 338) (0,1%).';
+  const r = assess(text, ['en:e338']);
+  expect(r.deductions.map(item => item.identifier)).toEqual(['E338']);
+  expect(r.additiveAssessment.items[0]).toMatchObject({ identifier: 'E338', concernBurden: .2, exposure: 'unknown' });
+  expect(r.additiveAssessment.originalIngredientText).toBe(text);
+});
+
 test.each([0, 46, 95, 100])('reviewed composition preserves %s with no bonus or inferred exposure', n => {
   const input = candidate(), before = JSON.stringify(input), result = assessOverallFoodQuality(input, nutrition(n));
   expect(result).toMatchObject({ nutritionScore100: n, overallScore100: n, additiveDeduction: 0,

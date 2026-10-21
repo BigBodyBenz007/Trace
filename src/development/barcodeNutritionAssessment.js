@@ -72,7 +72,14 @@ function assessProviderBarcodeNutrition(candidate, identifier) {
   const isOil = /en:(?:olive-oils|vegetable-oils|oils)(?:\s|$)/.test(tags) && /\boil\b/.test(name);
   const isNuts = !/en:chestnuts(?:\s|$)/.test(tags) && (/en:(?:nuts|seeds|peanut-butters|nut-butters)(?:\s|$)/.test(tags)
     || categoryEvidence.basis.includes('Complete single-nut ingredient declaration.'));
-  const volumeOnly = input.datasets.some(d => d.quantity?.unit === 'ml') && !input.datasets.some(d => d.quantity?.unit === 'g');
+  // An unresolved reference must not erase the provider's mass evidence and
+  // accidentally turn a food (e.g. soup) into a beverage. Keep the existing
+  // volume-only fallback only when the captured measurement evidence agrees.
+  const declaredMass = input.serving.some(entry => ['servingSizeUnit', 'serving_quantity_unit', 'product_quantity_unit'].includes(entry.field)
+    && /^(g|grm|gram|grams)$/i.test(String(entry.value).trim()));
+  const unresolvedMassReference = declaredMass && input.datasets.some(d => d.id === 'off-100g' && d.basis === 'unknown');
+  const volumeOnly = !unresolvedMassReference && input.datasets.some(d => d.quantity?.unit === 'ml')
+    && !input.datasets.some(d => d.quantity?.unit === 'g');
   const drinking = categoryEvidence.categories.includes('beverage') || (!isOil && !isNuts && volumeOnly);
   const category = drinking ? 'beverage' : isOil ? 'oil' : isNuts ? 'nuts' : 'general';
   base.evidence.category = { categories: [category], providerClaims: input.categories,

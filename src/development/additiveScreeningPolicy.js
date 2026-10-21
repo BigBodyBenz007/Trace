@@ -215,11 +215,45 @@ const ORDINARY_INGREDIENTS = new Set((
   'mechanically separated chicken|pork|cultured dextrose|dextrose|distilled white vinegar|cultured celery juice|cherry powder|' +
   'pork with ham|unbleached enriched flour|palm oil|canola oil|chocolate|potatoes|corn|sunflower oil|graham flour|whole grain wheat flour|' +
   'honey|maltodextrin|cheese made with skim milk|cheese cultures|paprika extract color|soy|processed with alkali|source of calcium|' +
-  'enriched flour|skim milk|whey protein|ham|leavening'
+  'enriched flour|skim milk|whey protein|ham|leavening|' +
+  'oats|walnuts|pecans|hazelnuts|pistachios|zucchini|tomatoes|eggplants|red peppers|tomato juice|olive oil|' +
+  'starch|thyme|lemon juice concentrate|bay leaf|white pepper|carrots|leeks|pumpkin|celeriac|butter|cream|yogurt cultures'
 ).split('|'));
 
-const normalize = value => value.toLowerCase().replace(/[.*#]/g, ' ').replace(/[-–]/g, ' ').replace(/\s+/g, ' ').trim();
-const aliases = records.flatMap(record => [...record.aliases, record.id.toLowerCase()].map(alias =>
+const normalize = value => value.toLowerCase().replace(/[.*#_]/g, ' ').replace(/[-–]/g, ' ').replace(/\s+/g, ' ').trim();
+// Lexical identities only: these ordinary foods do not need additive concern
+// classifications. Foreign declarations remain partial in the caller, and any
+// unmatched remainder still stays unknown. No food name establishes absence.
+const ordinaryAliases = new Map([
+  ['pecan halves', 'pecans'], ['pecan', 'pecans'], ['walnut', 'walnuts'],
+  ['eau', 'water'], ['eau gazeifiée', 'carbonated water'], ['cacahuètes', 'peanuts'],
+  ['huile de tournesol', 'sunflower oil'], ['sel', 'salt'], ['sel de mer', 'sea salt'],
+  ['cerneaux de noix', 'walnuts'], ['lait', 'milk'], ['courgettes', 'zucchini'], ['tomates', 'tomatoes'],
+  ['aubergines', 'eggplants'], ['oignons', 'onions'], ['oignon', 'onions'], ['jus de tomates', 'tomato juice'],
+  ['poivrons rouges', 'red peppers'], ['purée de tomates double concentrée', 'tomato puree'],
+  ['purée de tomates', 'tomato puree'], ["huile d'olive vierge", 'olive oil'], ['sucre', 'sugar'],
+  ['amidon', 'starch'], ['thym', 'thyme'], ['jus concentré de citron', 'lemon juice concentrate'],
+  ['ail', 'garlic'], ['laurier', 'bay leaf'], ['poivre blanc', 'white pepper'], ['carotte', 'carrots'],
+  ['poireau', 'leeks'], ['pomme de terre', 'potatoes'], ['potiron', 'pumpkin'], ['céleri rave', 'celeriac'],
+  ['beurre de cuisine', 'butter'], ['crème fraîche', 'cream'],
+  ['leche', 'milk'], ['leche fresca entera', 'milk'], ['leche descremada reconstituida', 'skimmed milk'],
+  ['fructosa', 'fructose'], ['azúcar', 'sugar'], ['cultivos de yogurt', 'yogurt cultures'],
+]);
+function ordinaryIdentity(value) {
+  if (ORDINARY_INGREDIENTS.has(value)) return value;
+  if (ordinaryAliases.has(value)) return ordinaryAliases.get(value);
+  // Remove only bounded preparation/form modifiers, and only accept the result
+  // if the complete remaining identity is already a known ordinary food.
+  const base = value.replace(/^(?:(?:dry roasted|sprouted|gluten free|ultra filtered|fat free)\s+)+/, '');
+  if (ORDINARY_INGREDIENTS.has(base)) return base;
+  if (ordinaryAliases.has(base)) return ordinaryAliases.get(base);
+  if (/^lait(?: frais)?(?: pasteurisé)? demi écrémé(?: à \d+(?:\.\d+)?g\/l de matière grasse)?$/.test(value)) return 'milk';
+  return null;
+}
+// Name translation is not a new assessment: this binds the same phosphoric-acid
+// identity to its existing record, conditions and weight.
+const identityAliases = new Map([['E338', ['acide phosphorique']]]);
+const aliases = records.flatMap(record => [...record.aliases, record.id.toLowerCase(), ...(identityAliases.get(record.id) || [])].map(alias =>
   ({ record, alias: normalize(alias) }))).sort((a, b) => b.alias.length - a.alias.length);
 const escape = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const aliasRegex = alias => new RegExp(`\\b${escape(alias)}\\b`, 'g');
@@ -236,7 +270,10 @@ export function screenIngredientDeclaration(original, providerItems = []) {
   };
   const usable = raw.trim().length > 0;
   let declaration = raw.replace(/^\s*(?:#+\s*)?ingredients\s*:?\s*/i, '')
-    .replace(/\bcontains\s*:[\s\S]*$/i, '').replace(/\bpeanut free\.?\s*$/i, '');
+    .replace(/\bcontains\s*:[\s\S]*$/i, '').replace(/\bpeanut free\.?\s*$/i, '')
+    .replace(/^[^,;()\n]*\.\s*ingrédients?\s*:\s*/i, '')
+    .replace(/^\s*ingrédients?\s*:\s*/i, '')
+    .replace(/\bpeut contenir\s*:[\s\S]*$/i, '');
   // A packaging statement is a different use. Retain it without asserting BHT
   // in the food, or treating unmeasured migration as a dietary exposure.
   declaration = declaration.replace(/\bbht is added to the packaging material to preserve freshness\.?/ig, match => {
@@ -248,19 +285,59 @@ export function screenIngredientDeclaration(original, providerItems = []) {
     else if (')]}'.includes(char) && stack.pop() !== { ')': '(', ']': '[', '}': '{' }[char]) warnings.push('Unbalanced ingredient subgroups.');
   }
   if (stack.length || /,\s*$|\.\.\.|\bomitted\b|\bincomplete\b/i.test(declaration)) warnings.push('Ingredient declaration may be truncated or incomplete.');
+  // Spanish SIN (= International Numbering System) is an identity only inside
+  // an explicit additive-function/code declaration. "sin azúcar" and free
+  // "sin 211" can be absence claims and are never converted into presence.
+  declaration = declaration.replace(/\b(?:edulcorante|agente gelificante|regulador de acidez|conservantes?|almidón modificado|estabilizador)\s*\(\s*SIN\s+([1-9]\d{2,3}[a-h]?(?:i{1,3}|iv|v|vi{1,3}|ix)?)\s*\)/ig, (match, code, offset, input) => {
+    const id = `E${code.toLowerCase()}`;
+    const prefix = input.slice(0, offset).split(/[,;()[\]{}]/).pop();
+    if (/\b(?:no|without|does not contain|sans|sin|no contiene[n]?)\s*$/i.test(prefix)) {
+      negated.add(id);
+      return match;
+    }
+    const percentage = /^\s*(?:\(\s*)?(-?\d+(?:[.,]\d+)?)\s*%(?:\s*\))?/.exec(input.slice(offset + match.length));
+    if (percentage && (Number(percentage[1].replace(',', '.')) <= 0 || Number(percentage[1].replace(',', '.')) > 100)) {
+      unresolved.push(`Unresolved ingredient percentage: ${match}${percentage[0]}`);
+      return match;
+    }
+    const clause = input.slice(0, offset).split(/[,;]/).pop() + match + input.slice(offset + match.length).split(/[,;]/)[0];
+    const conditionalPresence = /\b(?:and\/or|or|ou|o|y\/o)\b/i.test(clause);
+    addFinding(id, { type: 'ingredient-text', text: match }, { conditionalPresence });
+    return '';
+  });
+  // Preserve decimal commas before splitting ingredient delimiters. Attach a
+  // parenthesized percentage to its identity so 0%/invalid percentages cannot
+  // accidentally establish presence of that identity after subgroup splitting.
+  declaration = declaration.replace(/\b(\d+),(\d+)\s*%/g, '$1.$2%')
+    .replace(/([^,;()[\]{}]+?)\s*\(\s*(-?\d+(?:\.\d+)?)\s*%\s*\)/g, '$1 $2%')
+    .replace(/\s+[-–—]\s+/g, ',');
   // Flatten only delimiters. Nested contents are still screened. This is a
   // conservative closed phrase recognizer, not a general ingredient parser.
   for (const part of declaration.split(/[,()[\]{};]+/)) {
-    let residual = normalize(part).replace(/^(?:and |or |and\/or )/, '')
+    // A declared trailing percentage decorates an identity; it must not turn
+    // already-reviewed "water" into unknown "water 72 57%". Never use this
+    // percentage as exposure, remove an unknown identity, or interpret 0% as
+    // evidence of presence. The complete original declaration remains retained.
+    const clean = part.trim().replace(/\.$/, '');
+    const percentage = /(-?\d+(?:\.\d+)?)\s*%\s*$/.exec(clean);
+    if (percentage && (Number(percentage[1]) <= 0 || Number(percentage[1]) > 100)) {
+      unresolved.push(`Unresolved ingredient percentage: ${part.trim()}`);
+      continue;
+    }
+    if (/^\d+(?:\.\d+)?\s*%$/.test(clean) && Number.parseFloat(clean) > 0 && Number.parseFloat(clean) <= 100) continue;
+    const identity = clean.replace(/\s+(\d+(?:\.\d+)?)\s*%\s*$/, (suffix, percent, offset) =>
+      offset > 0 && Number(percent) > 0 && Number(percent) <= 100 ? '' : suffix);
+    let residual = normalize(identity).replace(/^(?:and |or |and\/or )/, '')
       .replace(/^(?:contains )?(?:less than |2% or less of:?\s*)/, '')
       .replace(/^2% of\s*/, '').replace(/\borganic\b/g, '').trim();
     if (!residual) continue;
-    if (ORDINARY_INGREDIENTS.has(residual)) { ordinary.push(residual); continue; }
+    const ordinaryFood = ordinaryIdentity(residual);
+    if (ordinaryFood) { ordinary.push(ordinaryFood); continue; }
     const conditionalPresence = /\band\/or\b|\bor\b/.test(residual);
     for (const { record, alias } of aliases) {
       const re = aliasRegex(alias);
       if (!re.test(residual)) continue;
-      const negative = new RegExp(`(?:\\bno |\\bwithout |\\bdoes not contain )${escape(alias)}\\b|\\b${escape(alias)} free\\b`);
+      const negative = new RegExp(`(?:\\bno |\\bwithout |\\bdoes not contain |\\bsans |\\bsin )${escape(alias)}\\b|\\b${escape(alias)} free\\b`);
       if (negative.test(residual)) { negated.add(record.id); residual = residual.replace(negative, ' '); continue; }
       addFinding(record.id, { type: 'ingredient-text', text: part.trim() }, { conditionalPresence });
       residual = residual.replace(aliasRegex(alias), ' ');
@@ -268,7 +345,8 @@ export function screenIngredientDeclaration(original, providerItems = []) {
     residual = residual.replace(/\b(?:to extend freshness|to prevent separation|to protect taste|for freshness)\b/g, ' ')
       .replace(/\b(?:with|and\/or|and|or)\b/g, '|').replace(/\s+/g, ' ').trim();
     for (const phrase of residual.split('|').map(s => s.trim()).filter(Boolean)) {
-      if (ORDINARY_INGREDIENTS.has(phrase)) ordinary.push(phrase);
+      const food = ordinaryIdentity(phrase);
+      if (food) ordinary.push(food);
       else unresolved.push(`Unreviewed ingredient phrase: ${phrase}`);
     }
   }

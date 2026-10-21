@@ -39,11 +39,12 @@ function energyFor(dataset, datasets) {
   const kjEntry = reported.find(entry => entry.rawUnit?.toLowerCase() === 'kj' && entry.rawValue !== null && entry.rawValue !== '');
   const energyKj = kjAsKcal.value === null ? null : Number(kjEntry.rawValue);
   const quantity = measurementQuantity(dataset);
-  let allowance = 0, kjAllowance = 0;
+  const numericPrecision = { kcal: kcal.value === null ? 0 : halfQuantum(kcal.value),
+    kj: energyKj === null ? 0 : halfQuantum(energyKj), propagatedFrom: [] };
+  let allowance = numericPrecision.kcal, kjAllowance = numericPrecision.kj;
   const ownServing = dataset.basis === 'serving';
   if (ownServing && kcal.value !== null) {
-    allowance = calorieAllowance(kcal.value);
-    if (energyKj !== null) kjAllowance = halfQuantum(energyKj);
+    allowance = Math.max(allowance, calorieAllowance(kcal.value));
   } else if (quantity && kcal.value !== null) {
     // Carry a serving's declaration interval to a per-100 quantity only when
     // units match and its captured kcal actually rescales to this observation.
@@ -61,6 +62,29 @@ function energyFor(dataset, datasets) {
       }
     }
   }
+  if (quantity && kcal.value !== null && energyKj !== null) {
+    // OFF can compute long-decimal serving/reference aliases from the entered
+    // pair. Carry that pair's recorded precision only when BOTH values rescale
+    // exactly on the same dimension. Never borrow rounding from another panel
+    // merely because one energy value matches, or splice kcal and kJ sources.
+    for (const entered of datasets) {
+      const eq = measurementQuantity(entered);
+      if (!eq || eq.unit !== quantity.unit) continue;
+      const observations = entered.observations.filter(entry => entry.nutrient === 'calories' && !qualified(entry)
+        && entry.field?.startsWith('nutriments.') && entry.field.endsWith('_value'));
+      const sourceKcal = getAssessmentDatasetNutrients({ observations:
+        observations.filter(entry => entry.rawUnit?.toLowerCase() === 'kcal') }).calories;
+      const sourceKj = getAssessmentDatasetNutrients({ observations:
+        observations.filter(entry => entry.rawUnit?.toLowerCase() === 'kj') }).calories;
+      if (sourceKcal.status !== 'reported' || sourceKj.status !== 'reported') continue;
+      const sourceJoules = Number(observations.find(entry => entry.rawUnit?.toLowerCase() === 'kj').rawValue);
+      const ratio = quantity.amount / eq.amount;
+      if (!close(sourceKcal.value * ratio, kcal.value) || !close(sourceJoules * ratio, energyKj)) continue;
+      allowance = Math.max(allowance, halfQuantum(sourceKcal.value) * ratio);
+      kjAllowance = Math.max(kjAllowance, halfQuantum(sourceJoules) * ratio);
+      if (entered.id !== dataset.id) numericPrecision.propagatedFrom.push(entered.id);
+    }
+  }
   // 4.184 is physical unit conversion; 4.2 is the unchanged published
   // calculator's convention. A tiny convention difference is not a conflict.
   const low = kcal.value === null ? null : Math.max(0, kcal.value - allowance) * 4.184 - kjAllowance;
@@ -70,7 +94,7 @@ function energyFor(dataset, datasets) {
   return { accepted, energyKj, kcal: kcal.value ?? kjAsKcal.value,
     evidence: { datasetId: dataset.id, quantity: dataset.quantity, observations: entries,
       accepted, acceptedKjInterval: low === null ? null : [low, high],
-      calorieRoundingAllowance: allowance, source: FDA_ENERGY_SOURCE,
+      calorieRoundingAllowance: allowance, numericPrecision, source: FDA_ENERGY_SOURCE,
       excludedQualifiedFields: ignored.map(entry => entry.field),
       qualificationSource: ignored.length ? 'https://openfoodfacts.github.io/documentation/docs/Product-Opener/schemas/schemas/product_nutrition_v3.5/' : null,
       policy: ignored.length ? 'Use unqualified reported energy. Provider-qualified approximations are retained separately; they are not a second label declaration.'

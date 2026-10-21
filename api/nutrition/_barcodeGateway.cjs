@@ -4,7 +4,7 @@
 
 const { normalizeProductIngredients } = require("../../src/services/productIngredients");
 const { normalizeOpenFoodFactsAdditives, unknownAdditives } = require("../../src/services/productAdditives");
-const { captureNutritionAssessmentInputs } = require("./_assessmentInputs.cjs");
+const { captureNutritionAssessmentInputs, resolveOpenFoodFactsReferenceBasis } = require("./_assessmentInputs.cjs");
 
 const USDA_SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search";
 const OPEN_FOOD_FACTS_URL = "https://world.openfoodfacts.org/api/v2/product";
@@ -34,14 +34,14 @@ const SAFE_NUTRITION_BASIS_KINDS = new Set([
   "provider-package",
 ]);
 const MASS_UNITS = Object.freeze({
-  g: ["g", "gram", "grams"],
+  g: ["g", "gram", "grams", "grm"],
   mg: ["mg", "milligram", "milligrams"],
   kg: ["kg", "kilogram", "kilograms"],
   oz: ["oz", "ounce", "ounces"],
   lb: ["lb", "lbs", "pound", "pounds"],
 });
 const VOLUME_UNITS = Object.freeze({
-  ml: ["ml", "milliliter", "milliliters", "millilitre", "millilitres"],
+  ml: ["ml", "milliliter", "milliliters", "millilitre", "millilitres", "mlt"],
   l: ["l", "liter", "liters", "litre", "litres"],
   "fl oz": ["fl oz", "fluid ounce", "fluid ounces"],
   cup: ["cup", "cups"],
@@ -549,6 +549,7 @@ function normalizeUsdaFood(food, barcode, retrievedAt) {
 
   const servingAmount = positiveOrNull(food.servingSize);
   const servingUnit = canonicalMeasureUnit(food.servingSizeUnit);
+  const volumeReference = servingUnit === "ml";
   const servingDescription = textOrNull(food.householdServingFullText)
     || (servingAmount !== null && servingUnit ? `${servingAmount} ${servingUnit}` : null);
 
@@ -561,8 +562,8 @@ function normalizeUsdaFood(food, barcode, retrievedAt) {
     direct: [{ source: "labelNutrients", sourceBasis: "serving", nutrients: labelNutrients }],
     references: [{
       source: "foodNutrients",
-      sourceBasis: "100g",
-      dimension: "mass",
+      sourceBasis: volumeReference ? "100ml" : "100g",
+      dimension: volumeReference ? "volume" : "mass",
       baseAmount: 100,
       nutrients: per100gNutrients,
     }],
@@ -631,6 +632,21 @@ function normalizeOpenFoodFactsProduct(product, barcode, retrievedAt) {
   const displayed = offNutrients(product, "value");
   const per100g = offNutrients(product, "100g");
   const per100ml = offNutrients(product, "100ml");
+  const canonicalReferenceBasis = resolveOpenFoodFactsReferenceBasis(product);
+  const canonicalReference = canonicalReferenceBasis === "unknown" ? null : {
+    source: declared === "100g" && allNutrientCount(per100g) === 0
+      ? "nutriments._value" : "nutriments._100g",
+    sourceBasis: canonicalReferenceBasis === "100ml" ? "100ml" : "100g",
+    dimension: canonicalReferenceBasis === "100ml" ? "volume" : "mass",
+    baseAmount: 100,
+    nutrients: declared === "100g" && allNutrientCount(per100g) === 0 ? displayed : per100g,
+  };
+  const legacyVolumeReference = {
+    source: declared === "100ml" && allNutrientCount(per100ml) === 0
+      ? "nutriments._value" : "nutriments._100ml",
+    sourceBasis: "100ml", dimension: "volume", baseAmount: 100,
+    nutrients: declared === "100ml" && allNutrientCount(per100ml) === 0 ? displayed : per100ml,
+  };
   const productMeasure = measure(productQuantity, productQuantityUnit);
   const packageServing = ["package", "unit"].includes(declared)
     && positiveOrNull(product.servings_per_container) === 1
@@ -654,26 +670,10 @@ function normalizeOpenFoodFactsProduct(product, barcode, retrievedAt) {
         ? [{ source: "nutriments._value", sourceBasis: "serving", nutrients: displayed }]
         : []),
     ],
-    references: [
-      {
-        source: declared === "100g" && allNutrientCount(per100g) === 0
-          ? "nutriments._value"
-          : "nutriments._100g",
-        sourceBasis: "100g",
-        dimension: "mass",
-        baseAmount: 100,
-        nutrients: declared === "100g" && allNutrientCount(per100g) === 0 ? displayed : per100g,
-      },
-      {
-        source: declared === "100ml" && allNutrientCount(per100ml) === 0
-          ? "nutriments._value"
-          : "nutriments._100ml",
-        sourceBasis: "100ml",
-        dimension: "volume",
-        baseAmount: 100,
-        nutrients: declared === "100ml" && allNutrientCount(per100ml) === 0 ? displayed : per100ml,
-      },
-    ],
+    // Preserve existing explicit _100ml handling; canonical OFF _100g also
+    // supplies volume when the provider's consistent measurement evidence says ml.
+    references: (canonicalReferenceBasis === "100ml"
+      ? [legacyVolumeReference, canonicalReference] : [canonicalReference, legacyVolumeReference]).filter(Boolean),
     packageServing,
   });
   const revisionDate = isoDate(product.last_modified_datetime) || unixDate(product.last_modified_t);

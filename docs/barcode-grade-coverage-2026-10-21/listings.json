@@ -1,0 +1,894 @@
+[
+  {
+    "category": "non-alcoholic-beverages",
+    "url": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=non-alcoholic-beverages&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands",
+    "retrievedAt": "2026-10-21T21:37:24.440Z",
+    "status": 200,
+    "sha256": "7d15611ccad76908417d7133ffab142723303c44749e40773af358364dc9762b",
+    "body": {
+      "count": 1034,
+      "page": 1,
+      "page_count": 30,
+      "page_size": 30,
+      "products": [
+        {
+          "brands": "Coca-Cola",
+          "code": "0049000018011",
+          "product_name": "Cherry Coca-Cola"
+        },
+        {
+          "brands": "REIGN",
+          "code": "0815154023269",
+          "product_name": "REIGN Total Body Fuel White Gummy Bear"
+        },
+        {
+          "brands": "Schweppes",
+          "code": "07834608",
+          "product_name": "Ginger Ale"
+        },
+        {
+          "brands": "Coca-Cola",
+          "code": "5449000335159",
+          "product_name": "Coca-Cola Zero"
+        },
+        {
+          "brands": "Grown Right",
+          "code": "0041152102730",
+          "product_name": "Organic Strawberry Lemonade"
+        },
+        {
+          "brands": "Olipop",
+          "code": "0860439001005",
+          "product_name": "Vintage Cola"
+        },
+        {
+          "brands": "Antarctica",
+          "code": "0678963100206",
+          "product_name": "Guarana antarctica"
+        },
+        {
+          "brands": "Too Chico",
+          "code": "0021136181364",
+          "product_name": "Blueberry sparkling water"
+        },
+        {
+          "brands": "Monster",
+          "code": "0070847812715",
+          "product_name": "Java Monster Coffee + Energy"
+        },
+        {
+          "brands": "Coca-Cola",
+          "code": "8901764112263",
+          "product_name": "Coke Zero"
+        },
+        {
+          "brands": "IKEA",
+          "code": "7315122037814",
+          "product_name": "ISKUB Elderflower flavour"
+        },
+        {
+          "brands": "COCA-COLA SERVICES SA/NV",
+          "code": "5449000214799",
+          "product_name": "Coca-Cola sans sucres"
+        },
+        {
+          "brands": "Sappe Public Company Limited",
+          "code": "8850389100684",
+          "product_name": "Mogu lychee"
+        },
+        {
+          "brands": "Sappe Public Company Limited",
+          "code": "8850389111352",
+          "product_name": "Mogu Mogu melon flavored drink"
+        },
+        {
+          "brands": "Waitrose",
+          "code": "01231809",
+          "product_name": "Montain Dew"
+        },
+        {
+          "brands": "Pepsi",
+          "code": "0012000182563",
+          "product_name": "Pepsi"
+        },
+        {
+          "brands": "Coca-Cola, Coca-Cola Original Taste",
+          "code": "0049000050103",
+          "product_name": "Coca Cola"
+        },
+        {
+          "brands": "COCA-COLA SERVICES SA/NV",
+          "code": "5449000000996",
+          "product_name": "Coca-Cola Original"
+        },
+        {
+          "brands": "AriZona",
+          "code": "0613008724221",
+          "product_name": "Arizona Green Tea With Ginseng And Honey"
+        },
+        {
+          "brands": "Dr Pepper",
+          "code": "0078000035308",
+          "product_name": "Dr Pepper Zero Sugar"
+        },
+        {
+          "brands": "Trader Joe's",
+          "code": "00681728",
+          "product_name": "Fresh Squeezed Lemonade"
+        },
+        {
+          "brands": "Trader Joe's",
+          "code": "00377560",
+          "product_name": "Organic Lemonade"
+        },
+        {
+          "brands": "Trader Joe's",
+          "code": "00518574",
+          "product_name": "Triple Ginger Brew"
+        },
+        {
+          "brands": "Trader Joe's",
+          "code": "00124935",
+          "product_name": "Sparkling Apple Cider"
+        },
+        {
+          "brands": "Trader Joe's",
+          "code": "00317375",
+          "product_name": "French Market Sparkling Lemonade"
+        },
+        {
+          "brands": "Trader Joe's",
+          "code": "00792356",
+          "product_name": "Sparkling Matcha Lemonade"
+        },
+        {
+          "brands": "COCA-COLA SERVICES SA/NV, Coca-Cola",
+          "code": "5449000054227",
+          "product_name": "Coca-Cola Original Taste"
+        },
+        {
+          "brands": "OLIPOP",
+          "code": "0850027702896",
+          "product_name": "Cream Soda"
+        },
+        {
+          "brands": "Olipop",
+          "code": "0850027702889",
+          "product_name": "Root beer"
+        },
+        {
+          "brands": "Dr Pepper",
+          "code": "0078000035476",
+          "product_name": "zero sugar"
+        }
+      ],
+      "skip": 0
+    }
+  },
+  {
+    "category": "breakfast-cereals",
+    "url": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands",
+    "retrievedAt": "2026-10-21T21:37:33.485Z",
+    "status": 503,
+    "sha256": "fa13f8614fb6b695b3de3ac03227804dfc6ab25b6fee4ca3eced0c5c79c63c1b",
+    "body": null
+  },
+  {
+    "category": "dairies",
+    "url": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=dairies&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands",
+    "retrievedAt": "2026-10-21T21:37:40.482Z",
+    "status": 200,
+    "sha256": "4065425d037eaed52f7a31757529b79c88d14153576c6d69b7058ca1b4c16045",
+    "body": {
+      "count": 26807,
+      "page": 1,
+      "page_count": 30,
+      "page_size": 30,
+      "products": [
+        {
+          "brands": "Lucerne",
+          "code": "0021130070121",
+          "product_name": "Fat Free Milk"
+        },
+        {
+          "brands": "Woolworths",
+          "code": "9339687411702",
+          "product_name": "Strawberry Yoghurt"
+        },
+        {
+          "brands": "OIKOS PRO",
+          "code": "0036632011411",
+          "product_name": "Oikos Pro"
+        },
+        {
+          "brands": "Mountain Dairy",
+          "code": "0049576000168",
+          "product_name": "Chocolate milk"
+        },
+        {
+          "brands": "Countryside Creamery",
+          "code": "4099100007619",
+          "product_name": "Pure Irish Butter"
+        },
+        {
+          "brands": "Chobani",
+          "code": "0818290015150",
+          "product_name": "Greek Strained Yogurt with Vanilla flavour"
+        },
+        {
+          "brands": "Oikos",
+          "code": "0036632024282",
+          "product_name": "Protein Shake"
+        },
+        {
+          "brands": "Balderson",
+          "code": "0068200960548",
+          "product_name": "2022 Reserve Fromage Cheddar Cheese"
+        },
+        {
+          "brands": "Gutes Land",
+          "code": "4316268741163",
+          "product_name": "Speisequark 20% Fett"
+        },
+        {
+          "brands": "fairlife",
+          "code": "0856312002795",
+          "product_name": "Chocolate Reduced Fat Ultra-filtered Milk"
+        },
+        {
+          "brands": "Simply Nature",
+          "code": "4061459567601",
+          "product_name": "Yogurt Plain"
+        },
+        {
+          "brands": "Fairlife",
+          "code": "0856312002757",
+          "product_name": "Fairlife Nonfat Ultra-Filtered Milk"
+        },
+        {
+          "brands": "Dutch Farms",
+          "code": "0091945045935",
+          "product_name": "Gouda Cracker Cuts"
+        },
+        {
+          "brands": "Dairy Farmers Of America  Inc.",
+          "code": "0070801103033",
+          "product_name": "Real Dairy Power Shake"
+        },
+        {
+          "brands": "Borden",
+          "code": "0053000071402",
+          "product_name": "borden"
+        },
+        {
+          "brands": "Tigo",
+          "code": "7755073001807",
+          "product_name": "Yogurt Griego Bebible Arándano conChía"
+        },
+        {
+          "brands": "Chobani",
+          "code": "0818290012272",
+          "product_name": "Key Lime Crumble"
+        },
+        {
+          "brands": "Chobani",
+          "code": "0818290017741",
+          "product_name": "Chobani Protein Vanilla"
+        },
+        {
+          "brands": "Prairie Farms",
+          "code": "0072730232167",
+          "product_name": "Fat Free Milk"
+        },
+        {
+          "brands": "Breakstone",
+          "code": "0840371200087",
+          "product_name": "Cottage cheese"
+        },
+        {
+          "brands": "Ensure",
+          "code": "0070074692708",
+          "product_name": "Max Protien"
+        },
+        {
+          "brands": "Cuisine & Co.",
+          "code": "7758759000422",
+          "product_name": "Queso Mozzarella Rallado Light"
+        },
+        {
+          "brands": "Kraft",
+          "code": "10227770",
+          "product_name": "Kraft Greek feta"
+        },
+        {
+          "brands": "Chobani flip",
+          "code": "0818290016652",
+          "product_name": "Cookie Dough"
+        },
+        {
+          "brands": "Slate",
+          "code": "0850029742692",
+          "product_name": "Ultra Protein"
+        },
+        {
+          "brands": "Kerrygold",
+          "code": "0767707014302",
+          "product_name": "Pure Irish Butter"
+        },
+        {
+          "brands": "Nancy's",
+          "code": "0043192315507",
+          "product_name": "Probiotic Cottage Cheese"
+        },
+        {
+          "brands": "hyVee",
+          "code": "0075450097320",
+          "product_name": "Small Curd Cottage Cheese"
+        },
+        {
+          "brands": "Nurri",
+          "code": "0811130033727",
+          "product_name": "nufri chocolate milk shake"
+        },
+        {
+          "brands": "Giant",
+          "code": "0688267074363",
+          "product_name": "Traditionally shredded mozzarella cheese"
+        }
+      ],
+      "skip": 0
+    }
+  },
+  {
+    "category": "protein-bars",
+    "url": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=protein-bars&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands",
+    "retrievedAt": "2026-10-21T21:37:49.612Z",
+    "status": 503,
+    "sha256": "fa13f8614fb6b695b3de3ac03227804dfc6ab25b6fee4ca3eced0c5c79c63c1b",
+    "body": null
+  },
+  {
+    "category": "breads",
+    "url": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breads&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands",
+    "retrievedAt": "2026-10-21T21:37:56.779Z",
+    "status": 503,
+    "sha256": "fa13f8614fb6b695b3de3ac03227804dfc6ab25b6fee4ca3eced0c5c79c63c1b",
+    "body": null
+  },
+  {
+    "category": "nuts",
+    "url": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=nuts&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands",
+    "retrievedAt": "2026-10-21T21:38:04.037Z",
+    "status": 200,
+    "sha256": "a4b10e365fbba9ed82e99b66d7d993451dd0b5178e29db4b102b378d06169b84",
+    "body": {
+      "count": 2438,
+      "page": 1,
+      "page_count": 30,
+      "page_size": 30,
+      "products": [
+        {
+          "brands": "Kar's",
+          "code": "0077034009873",
+          "product_name": "Sweet 'N Salty Mix Trail Mix"
+        },
+        {
+          "brands": "Wonderful",
+          "code": "0014113702164",
+          "product_name": "Roasted & Salted Pistachios"
+        },
+        {
+          "brands": "PBfit",
+          "code": "0897922002171",
+          "product_name": "Organic PBfit peanut butter powder"
+        },
+        {
+          "brands": "Planters",
+          "code": "0029000016699",
+          "product_name": "Lightly Salted Mixed Nuts Peanuts, Almonds, Cashews Brazil Nuts & Pecans"
+        },
+        {
+          "brands": "Planters",
+          "code": "0029000072121",
+          "product_name": "Salted Cocktail Peanuts"
+        },
+        {
+          "brands": "Bénénuts",
+          "code": "3168930007340",
+          "product_name": "Bénénuts cacahuètes grillées & salées"
+        },
+        {
+          "brands": "Alesto",
+          "code": "4056489714392",
+          "product_name": "Walnuts"
+        },
+        {
+          "brands": "simple truth",
+          "code": "0011110024718",
+          "product_name": "PECANS HALVES"
+        },
+        {
+          "brands": "Simply Nature",
+          "code": "4099100333985",
+          "product_name": "Creamy Peanut Butter"
+        },
+        {
+          "brands": "Kirkland Signature",
+          "code": "0096619196470",
+          "product_name": "Heart Healthy Mixed Nuts"
+        },
+        {
+          "brands": "BobbySue's Nuts!",
+          "code": "0856666002823",
+          "product_name": "Everything Goes Nuts"
+        },
+        {
+          "brands": "Wonderful",
+          "code": "0014113910446",
+          "product_name": "Wonderful Pistachios"
+        },
+        {
+          "brands": "Southern Grove",
+          "code": "4061459260731",
+          "product_name": "Deluxe Whole Cashews"
+        },
+        {
+          "brands": "Planters",
+          "code": "0029000016682",
+          "product_name": "Mixed Nuts"
+        },
+        {
+          "brands": "Costco Companies Inc.",
+          "code": "0096619107698",
+          "product_name": "Shelled Pistachios"
+        },
+        {
+          "brands": "Delhaize",
+          "code": "5400117582676",
+          "product_name": "Cerneaux de noix"
+        },
+        {
+          "brands": "Kaufland",
+          "code": "4063367621116",
+          "product_name": "Kaufland Nuss Mix"
+        },
+        {
+          "brands": "Planters",
+          "code": "0029000018570",
+          "product_name": "Mixed nuts"
+        },
+        {
+          "brands": "Enna Fruit",
+          "code": "8605042905669"
+        },
+        {
+          "brands": "Kirkland Signature",
+          "code": "0096619142453",
+          "product_name": "Fancy Whole Cashews with Sea Salt"
+        },
+        {
+          "brands": "Members mark",
+          "code": "0193968159108",
+          "product_name": "Praline Pecans"
+        },
+        {
+          "code": "0643700221278",
+          "product_name": "Organic chestnuts"
+        },
+        {
+          "brands": "Star Snacks",
+          "code": "0753519477237",
+          "product_name": "Sizzlin Chipotle Cayenne Peanuts"
+        },
+        {
+          "brands": "Trader Joes",
+          "code": "00687942",
+          "product_name": "A Trio of Almonds"
+        },
+        {
+          "brands": "Trader Joe's",
+          "code": "00509534",
+          "product_name": "Honey Roasted Peanuts"
+        },
+        {
+          "brands": "Kirkland",
+          "code": "0096619605798",
+          "product_name": "Cashews"
+        },
+        {
+          "brands": "NUT-rition",
+          "code": "0029000469587",
+          "product_name": "Planters NUTrition Onega 3 Mix"
+        },
+        {
+          "brands": "Trader Joe's",
+          "code": "00664936",
+          "product_name": "Olive & Herbs Mixed Nuts"
+        },
+        {
+          "brands": "Trader Joe's",
+          "code": "00669153",
+          "product_name": "EVERYTHING but the BAGEL NUT DUO"
+        },
+        {
+          "brands": "Trader Joe's",
+          "code": "00603898",
+          "product_name": "Thai Lime & Chili Cashews"
+        }
+      ],
+      "skip": 0
+    }
+  },
+  {
+    "category": "prepared-meals",
+    "url": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands",
+    "retrievedAt": "2026-10-21T21:38:13.363Z",
+    "status": 503,
+    "sha256": "fa13f8614fb6b695b3de3ac03227804dfc6ab25b6fee4ca3eced0c5c79c63c1b",
+    "body": null
+  },
+  {
+    "category": "snacks",
+    "url": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=snacks&sort_by=last_modified_t&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands",
+    "retrievedAt": "2026-10-21T21:38:20.377Z",
+    "status": 503,
+    "sha256": "fa13f8614fb6b695b3de3ac03227804dfc6ab25b6fee4ca3eced0c5c79c63c1b",
+    "body": null
+  },
+  {
+    "category": "breakfast-cereals",
+    "url": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breakfast-cereals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands",
+    "retrievedAt": "2026-10-21T21:40:39.953Z",
+    "status": 200,
+    "sha256": "71c29d68115d41268d3baa2ad1554c13277927e6817756fcafc451b5efbc8520",
+    "body": {
+      "count": 3854,
+      "page": 1,
+      "page_count": 30,
+      "page_size": 30,
+      "products": [
+        {
+          "brands": "Crownfield",
+          "code": "20621483",
+          "product_name": "Special Flakes Bran Flakes"
+        },
+        {
+          "brands": "Kirkland Signature",
+          "code": "0096619194261",
+          "product_name": "Ancient Grains Probiotic Granola"
+        },
+        {
+          "brands": "Nature's Path Organic",
+          "code": "0058449770565",
+          "product_name": "Pumpkin Seed + Flax Granola"
+        },
+        {
+          "brands": "Post",
+          "code": "0884912004710",
+          "product_name": "grape-nuts cereal"
+        },
+        {
+          "brands": "General Mills",
+          "code": "0016000275263",
+          "product_name": "Cheerios"
+        },
+        {
+          "brands": "General Mills",
+          "code": "0016000170032",
+          "product_name": "Cheerios"
+        },
+        {
+          "brands": "Nature's Path Organic",
+          "code": "0058449770206",
+          "product_name": "Heritage Flakes"
+        },
+        {
+          "brands": "Snacks Generation LLC, nútrail",
+          "code": "0819562022791",
+          "product_name": "nut granola blueberry cinnamon sweet & crunchy"
+        },
+        {
+          "brands": "Cheerios",
+          "code": "0016000435094",
+          "product_name": "Toasted Whole Grain Oat Cereal"
+        },
+        {
+          "brands": "One Degree Organic Foods",
+          "code": "0675625371189",
+          "product_name": "Sprouted Rolled Oats"
+        },
+        {
+          "brands": "Morning Summit",
+          "code": "0016000147652",
+          "product_name": "Lightly Sweetened Maple Berry Blend Cereal"
+        },
+        {
+          "brands": "Quaker Oats",
+          "code": "0030000010402",
+          "product_name": "Old Fashioned Oats"
+        },
+        {
+          "brands": "purely elizabeth.",
+          "code": "0855140002175",
+          "product_name": "ORIGINAL ANCIENT GRAIN GRANOLA"
+        },
+        {
+          "brands": "Crownfield, Brüggen, Lidl",
+          "code": "4056489255499",
+          "product_name": "Schoko Müsli"
+        },
+        {
+          "brands": "General Mills",
+          "code": "0016000124790",
+          "product_name": "Honey Nut Cheerios"
+        },
+        {
+          "brands": "Quaker Oats",
+          "code": "0030000012000",
+          "product_name": "Quick 1-Minute Oats"
+        },
+        {
+          "brands": "Nature's Path",
+          "code": "0058449770213",
+          "product_name": "Heritage Flakes Cereal"
+        },
+        {
+          "brands": "QUAKER",
+          "code": "0030000436073",
+          "product_name": "SIMPLY GRANOLA OATS, HONEY, RAISINS & ALMONDS"
+        },
+        {
+          "brands": "Quaker Oats",
+          "code": "0030000010204",
+          "product_name": "Old Fashioned 100% Whole Grain Rolled Oats"
+        },
+        {
+          "brands": "Catalina Crunch",
+          "code": "0850017468993",
+          "product_name": "Catalina Crunch Cinnamon Toast Protein Cereal"
+        },
+        {
+          "brands": "Purely Elizabeth",
+          "code": "0810589032312",
+          "product_name": "Organic Original Salty-sweet Granola"
+        },
+        {
+          "brands": "Kallo",
+          "code": "5013665117537",
+          "product_name": "Organic Superfruit Crunch"
+        },
+        {
+          "brands": "Millville",
+          "code": "4099100207149",
+          "product_name": "Rolled Oats Old Fashioned"
+        },
+        {
+          "brands": "Cascadian Farm",
+          "code": "0021908120232",
+          "product_name": "Blueberry Almond Crunch Cereal"
+        },
+        {
+          "brands": "Post",
+          "code": "0884912180599",
+          "product_name": "Shredded Wheat"
+        },
+        {
+          "brands": "Bob's Red Mill",
+          "code": "0039978501035",
+          "product_name": "Old Country Style Muesli"
+        },
+        {
+          "brands": "Catalina Crunch",
+          "code": "0860479001522",
+          "product_name": "Cinnamon Toast Protein Cereal"
+        },
+        {
+          "brands": "Bear Naked",
+          "code": "0856416000710",
+          "product_name": "Vanilla Almond Crisp"
+        },
+        {
+          "brands": "KIND",
+          "code": "0602652171864",
+          "product_name": "Oats & Honey With Toasted Coconut"
+        },
+        {
+          "brands": "General Mills",
+          "code": "0016000487727",
+          "product_name": "Cheerios"
+        }
+      ],
+      "skip": 0
+    }
+  },
+  {
+    "category": "protein-bars",
+    "url": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=protein-bars&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands",
+    "retrievedAt": "2026-10-21T21:40:49.510Z",
+    "status": 503,
+    "sha256": "fa13f8614fb6b695b3de3ac03227804dfc6ab25b6fee4ca3eced0c5c79c63c1b",
+    "body": null
+  },
+  {
+    "category": "breads",
+    "url": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=breads&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands",
+    "retrievedAt": "2026-10-21T21:40:56.803Z",
+    "status": 503,
+    "sha256": "fa13f8614fb6b695b3de3ac03227804dfc6ab25b6fee4ca3eced0c5c79c63c1b",
+    "body": null
+  },
+  {
+    "category": "prepared-meals",
+    "url": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=prepared-meals&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands",
+    "retrievedAt": "2026-10-21T21:41:04.010Z",
+    "status": 200,
+    "sha256": "c5ed05cd29fbf571511d93f228ff80f96f33361199260d8cf7c1ce49ecabc7d7",
+    "body": {
+      "count": 20720,
+      "page": 1,
+      "page_count": 30,
+      "page_size": 30,
+      "products": [
+        {
+          "brands": "Jaouda",
+          "code": "6111266962187",
+          "product_name": "Lait frais naturel demi écrémé"
+        },
+        {
+          "brands": "Liebig",
+          "code": "3036811460259",
+          "product_name": "Velouté de légumes"
+        },
+        {
+          "brands": "Carrefour BIO, Carrefour",
+          "code": "3270190174356",
+          "product_name": "Ratatouille"
+        },
+        {
+          "brands": "Carrefour BIO, Carrefour",
+          "code": "3270190174349",
+          "product_name": "Ravioli vegetariens"
+        },
+        {
+          "brands": "Kraft",
+          "code": "0021000658831",
+          "product_name": "mac & cheese"
+        },
+        {
+          "brands": "rlife",
+          "code": "0811620020633",
+          "product_name": "CORE POWER High Protein Milk Shake Chocolate"
+        },
+        {
+          "brands": "Trader Giotto's",
+          "code": "00414234",
+          "product_name": "Fettuccine Alfredo"
+        },
+        {
+          "brands": "Seeds of Change",
+          "code": "0748404287947",
+          "product_name": "Organic Quinoa & Brown Rice with Garlic"
+        },
+        {
+          "brands": "Notre Jardin",
+          "code": "3564700738009",
+          "product_name": "Haricots blancs tomate"
+        },
+        {
+          "brands": "Tasty Bite",
+          "code": "0782733000020",
+          "product_name": "Madras Lentils"
+        },
+        {
+          "brands": "Cassegrain",
+          "code": "0084000901024",
+          "product_name": "Ratatouille"
+        },
+        {
+          "brands": "Hacendado",
+          "code": "8402001010200",
+          "product_name": "Spaghetti integral"
+        },
+        {
+          "brands": "Campbell's",
+          "code": "0051000000118",
+          "product_name": "Tomato Soup"
+        },
+        {
+          "brands": "GOODLES",
+          "code": "0850031990005",
+          "product_name": "Cheddy Mac Creamy Cheddar And Macaroni"
+        },
+        {
+          "brands": "Campbell's",
+          "code": "0051000012517",
+          "product_name": "Chicken Noodle"
+        },
+        {
+          "brands": "Aneto, Aneto 100% Natural",
+          "code": "8410748301000",
+          "product_name": "Vegetables Broth"
+        },
+        {
+          "brands": "Seeds of Change",
+          "code": "0748404420238",
+          "product_name": "Organic Quinoa & Brown Rice with Garlic"
+        },
+        {
+          "brands": "Nissin",
+          "code": "0070662010037",
+          "product_name": "Chicken Ramen Noodle Soup"
+        },
+        {
+          "brands": "Maruchan",
+          "code": "0041789001215",
+          "product_name": "Chicken Ramen"
+        },
+        {
+          "brands": "NONGSHIM",
+          "code": "0031146150601",
+          "product_name": "SHIN RAMYUN"
+        },
+        {
+          "brands": "Velveeta",
+          "code": "0021000658930",
+          "product_name": "ORIGINAL SHELL PASTA & CHEESE SAUCE"
+        },
+        {
+          "brands": "Campbell's",
+          "code": "0051000012616",
+          "product_name": "Cream Of Mushroom Soup"
+        },
+        {
+          "brands": "Nos Régions ont du Talent",
+          "code": "3564709191836",
+          "product_name": "BRANDADE DE MORUE PARMENTIERE DU SUD EST"
+        },
+        {
+          "brands": "Amy's",
+          "code": "0042272005826",
+          "product_name": "Lentil Vegetable Soup"
+        },
+        {
+          "brands": "Italiamo, Lidl",
+          "code": "20525750",
+          "product_name": "Poivrons Grillés Pour Bruschetta"
+        },
+        {
+          "brands": "Annie's",
+          "code": "0013562000043",
+          "product_name": "Shells & White Cheddar Macaroni & Cheese"
+        },
+        {
+          "brands": "Annie's",
+          "code": "0013562300846",
+          "product_name": "Shells & Real Aged Cheddar"
+        },
+        {
+          "brands": "StarKist",
+          "code": "0080000513090",
+          "product_name": "Tuna Creations Lemon Pepper"
+        },
+        {
+          "brands": "Oyakata",
+          "code": "5901384506667",
+          "product_name": "ramen porc tonkotsu"
+        },
+        {
+          "brands": "Royal Asia",
+          "code": "0877971001752",
+          "product_name": "Vegetable Spring Rolls with Edamame"
+        }
+      ],
+      "skip": 0
+    }
+  },
+  {
+    "category": "snacks",
+    "url": "https://world.openfoodfacts.org/api/v2/search?countries_tags_en=united-states&categories_tags_en=snacks&sort_by=unique_scans_n&page_size=30&page=1&fields=code%2Cproduct_name%2Cbrands",
+    "retrievedAt": "2026-10-21T21:41:14.267Z",
+    "status": 503,
+    "sha256": "fa13f8614fb6b695b3de3ac03227804dfc6ab25b6fee4ca3eced0c5c79c63c1b",
+    "body": null
+  }
+]

@@ -57,7 +57,7 @@ export function assessAdditiveProfile(candidate) {
       conflict: Boolean(item.conflict), conditionResult: item.conditionResult, review: item.record };
   });
   const reasons = [...screen.warnings, ...screen.unresolved];
-  if (display.ingredients?.language && display.ingredients.language !== 'en') reasons.push('Provider language metadata differs from this English-only phrase screen; declaration review is partial.');
+  if (display.ingredients?.language && display.ingredients.language !== 'en') reasons.push('This declaration language has only limited phrase matching; declaration review remains partial.');
   if (!attributed) reasons.push('An attributed ingredient source is required; no review is inferred from provider scores.');
   if (!screen.usable) reasons.push('Ingredient evidence is missing; empty or missing provider tags cannot replace it.');
   for (const item of items.filter(item => item.concernBurden === null)) reasons.push(

@@ -1,4 +1,8 @@
 import { reconcileBarcodeDatasets, resolveBarcodeCategory, resolveBarcodePlantContent, FDA_ENERGY_SOURCE, CATEGORY_SOURCE } from './barcodeNutritionEvidence';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const { normalizeOpenFoodFactsProduct } = require('../../api/nutrition/_barcodeGateway.cjs');
 
 // Synthetic boundary controls, not manufacturer nutrition panels.
 const observation = (nutrient, rawValue, rawUnit, field = nutrient) => ({ nutrient, rawValue, rawUnit, field });
@@ -22,6 +26,75 @@ test.each([[160, 709], [190, 1160], [300, 1300], [0, 100], [150, 663]])('rejects
 test('a non-label per-100 quantity does not inherit a flat five-kcal serving tolerance', () => {
   expect(reconcile(dataset(160, 685, 100, '100g')).reasons.length).toBeGreaterThan(0);
 });
+
+test.each([[68, 284], [.3, 1.3], [53, 225]])(
+  'ordinary recorded precision admits compatible per-100 %s kcal/%s kJ', (kcal, kj) => {
+    const result = reconcile(dataset(kcal, kj, 100, '100g'));
+    expect(result.reasons).toEqual([]);
+    expect(result.records[0].energyEvidence.numericPrecision).toMatchObject({
+      kcal: kcal === .3 ? .05 : .5, kj: kj === 1.3 ? .05 : .5,
+    });
+    expect(result.records[0].nutrients.calories.value).toBe(kcal);
+  });
+
+test('long-decimal computed values do not acquire an integer-sized energy allowance', () => {
+  const result = reconcile(dataset(68.123456789, 284.123456789, 100, '100g'));
+  expect(result.records[0].energyEvidence.calorieRoundingAllowance).toBeCloseTo(.0000000005, 15);
+  expect(result.reasons.join(' ')).toContain('Energy observations conflict');
+});
+
+test('entered-pair precision follows matching aliases, never an independently mismatched panel', () => {
+  const reference = dataset(.3, 1.3, 100, '100ml', 'ml');
+  reference.id = 'entered-reference';
+  reference.observations[0].field = 'nutriments.energy-kcal_value';
+  reference.observations[1].field = 'nutriments.energy-kj_value';
+  const serving = dataset(.99, 4.29, 330, 'serving', 'ml');
+  const result = reconcile(reference, serving);
+  expect(result.records[1].energyEvidence).toMatchObject({ accepted: true,
+    numericPrecision: { propagatedFrom: ['entered-reference'] } });
+  expect(result.records[1].energyEvidence.calorieRoundingAllowance).toBeCloseTo(.165, 12);
+  const differentPair = dataset(.99, 5, 330, 'serving', 'ml');
+  expect(reconcile(reference, differentPair).records[1].energyEvidence).toMatchObject({ accepted: false,
+    numericPrecision: { propagatedFrom: [] } });
+  const differentDimension = dataset(.99, 4.29, 330, 'serving', 'g');
+  expect(reconcile(reference, differentDimension).records[1].energyEvidence).toMatchObject({ accepted: false,
+    numericPrecision: { propagatedFrom: [] } });
+});
+
+// These are actual archived OFF HTTP responses from the preselected real-product
+// sample, not synthetic nutrition panels or manufacturer-verified US formulations.
+const realEnergyCaptures = new Map(fs.readFileSync(path.join(__dirname,
+  '../../docs/barcode-grade-coverage-2026-10-21/raw-responses.jsonl'), 'utf8').trim().split(/\r?\n/)
+  .map(line => { const row = JSON.parse(line); return [row.barcode, row]; }));
+test.each([
+  { barcode: '3270190174356', name: 'Ratatouille', accepted: true },
+  { barcode: '5449000214799', name: 'Coca-Cola sans sucres', accepted: true },
+  { barcode: '8850389100684', name: 'Mogu lychee', accepted: true },
+  { barcode: '8402001010200', name: 'Spaghetti integral', accepted: false },
+  { barcode: '0815154023269', name: 'REIGN White Gummy Bear', accepted: false },
+])('captured real energy comparison $barcode ($name) preserves observations', ({ barcode, accepted }) => {
+  const row = realEnergyCaptures.get(barcode);
+  expect(row).toBeDefined();
+  expect(row.evidenceType).toBe('fresh-product-api-response');
+  const product = row.responses.find(response => response.body?.product).body.product;
+  const original = JSON.stringify(product);
+  const food = normalizeOpenFoodFactsProduct(product, barcode, row.lookup.food.provenance.retrievedAt);
+  const originalInputs = JSON.stringify(food.assessmentInputs);
+  const result = reconcileBarcodeDatasets(food.assessmentInputs);
+  const reference = result.records.find(record => record.dataset.id === 'off-100g');
+  expect(reference.energyEvidence.accepted).toBe(accepted);
+  expect(JSON.stringify(product)).toBe(original);
+  expect(JSON.stringify(food.assessmentInputs)).toBe(originalInputs);
+});
+
+test('captured Coca-Cola computed serving retains the entered whole-pair precision', () => {
+  const row = realEnergyCaptures.get('5449000214799');
+  const product = row.responses.find(response => response.body?.product).body.product;
+  const food = normalizeOpenFoodFactsProduct(product, row.barcode, row.lookup.food.provenance.retrievedAt);
+  const serving = reconcileBarcodeDatasets(food.assessmentInputs).records.find(record => record.dataset.id === 'off-serving');
+  expect(serving.energyEvidence).toMatchObject({ accepted: true,
+    numericPrecision: { propagatedFrom: ['off-value'] } });
+});
 test('FDA-compatible declaration and unit-convention interval has deterministic boundaries', () => {
   const ceiling = 165 * 4.2 + .5;
   expect(reconcile(dataset(160, ceiling)).reasons.length).toBeGreaterThan(0); // decimal kJ has its own finer precision
@@ -33,7 +106,12 @@ test('per-serving/per-100 observations are compared after rescaling compatible u
   expect(reconcile(serving, hundred).reasons).toEqual([]);
   expect(reconcile(serving, hundred).records[1].energyEvidence.calorieRoundingAllowance).toBe(20);
   const foreignDimension = dataset(640, 2676, 100, '100ml', 'ml');
-  expect(reconcile(serving, foreignDimension).reasons.length).toBeGreaterThan(0);
+  // This integer pair fits ordinary numeric precision by itself. It must not
+  // inherit the much larger 20-kcal interval from an incompatible mass serving.
+  const foreign = reconcile(serving, foreignDimension).records[1].energyEvidence;
+  expect(foreign).toMatchObject({ accepted: true, calorieRoundingAllowance: .5 });
+  expect(reconcile(serving, dataset(640, 2670, 100, '100ml', 'ml')).records[1]
+    .energyEvidence.accepted).toBe(false);
 });
 test('independent decimal representation rounding is accepted across quantities, not large differences', () => {
   const serving = dataset(150, 645, 30), hundred = dataset(500, 2148.44, 100, '100g');

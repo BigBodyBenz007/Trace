@@ -1,0 +1,2260 @@
+{
+  "capturedFrom": "Existing coverage patch after.json before follow-up edits",
+  "head": "12bc90c32194d9f545bf6d7ca1385a1d7969f0a3",
+  "identified": 100,
+  "nutritionScores": 78,
+  "overallScores": 59,
+  "overallReviewed": 4,
+  "overallProvisional": 55,
+  "products": [
+    {
+      "barcode": "00049000000443",
+      "name": "Coca-Cola",
+      "nutritionScore": 12,
+      "overallScore": 12,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E150c is not corroborated in the available declaration.",
+        "Caramel color (class unspecified): No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch.",
+        "Ammonia caramel (provider-reported class): Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "00049000000450",
+      "name": "Diet coca cola",
+      "nutritionScore": 84,
+      "overallScore": 81,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E150c is not corroborated in the available declaration.",
+        "Caramel color (class unspecified): No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+        "Aspartame: Hazard/exposure and phenylketonuria conditions need a dedicated synthesis; not scored from permission.",
+        "Potassium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+        "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch.",
+        "Ammonia caramel (provider-reported class): Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "00038000196560",
+      "name": "Frosted flakes",
+      "nutritionScore": 36,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-ingredient-declaration"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+      ]
+    },
+    {
+      "barcode": "00038000199929",
+      "name": "Rice Krispies",
+      "nutritionScore": 42,
+      "overallScore": 42,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: tric phosphate"
+      ]
+    },
+    {
+      "barcode": "00884912180056",
+      "name": "Big Biscuit Shredded Wheat",
+      "nutritionScore": 82,
+      "overallScore": 82,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "BHT: Packaging-only declaration; food presence and migration not established."
+      ]
+    },
+    {
+      "barcode": "00689544080008",
+      "name": "Total 0% Milkfat",
+      "nutritionScore": 86,
+      "overallScore": 86,
+      "overallStatus": "reviewed",
+      "ingredientReview": "reviewed",
+      "causes": [],
+      "overallReasons": [
+        "Declaration reviewed. No bonus or safety assurance."
+      ]
+    },
+    {
+      "barcode": "00894700010045",
+      "name": "Nonfat Strawberry on the Bottom Greek Yogurt",
+      "nutritionScore": 80,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-ingredient-declaration"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+      ]
+    },
+    {
+      "barcode": "00888849000012",
+      "name": "Chocolate Chip Cookie Dough",
+      "nutritionScore": 54,
+      "overallScore": 52,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: protein blend",
+        "Unreviewed ingredient phrase: prebiotic fiber",
+        "Unreviewed ingredient phrase: unsweetened chocolate",
+        "Unreviewed ingredient phrase: contains less than 2% of the following:",
+        "Unreviewed ingredient phrase: sunflower",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Lecithins (subtype unspecified): Alternative ingredient presence is unresolved.",
+        "Stevia sweetener (form unspecified): Exact steviol preparation is unspecified; no subtype is invented.",
+        "Sucralose: Processing-dependent assessment unresolved: the captured declaration does not establish prolonged heating conditions."
+      ]
+    },
+    {
+      "barcode": "00016000457232",
+      "name": "Granola Nature Valley Marca Exclusiva Barra Mantequilla De Maní Chocolate",
+      "nutritionScore": 19,
+      "overallScore": 19,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
+      ]
+    },
+    {
+      "barcode": "00013764027176",
+      "name": "organic bread",
+      "nutritionScore": 68,
+      "overallScore": 68,
+      "overallStatus": "reviewed",
+      "ingredientReview": "reviewed",
+      "causes": [],
+      "overallReasons": [
+        "Declaration reviewed. No bonus or safety assurance."
+      ]
+    },
+    {
+      "barcode": "00014100070832",
+      "name": "Hearty White Bread",
+      "nutritionScore": 55,
+      "overallScore": 55,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Mono- and diglycerides of fatty acids: No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe.",
+        "Calcium propionate: No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe.",
+        "Sorbic acid: Current integrated scientific assessment not completed in this batch.",
+        "DATEM: No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe."
+      ]
+    },
+    {
+      "barcode": "00037600110754",
+      "name": "Creamy Peanut Butter",
+      "nutritionScore": 69,
+      "overallScore": 69,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Hydrogenated oil (extent unspecified): Do not infer partially hydrogenated oil or trans-fat exposure."
+      ]
+    },
+    {
+      "barcode": "00041570003831",
+      "name": "Almonds",
+      "nutritionScore": 95,
+      "overallScore": 95,
+      "overallStatus": "reviewed",
+      "ingredientReview": "reviewed",
+      "causes": [],
+      "overallReasons": [
+        "Declaration reviewed. No bonus or safety assurance."
+      ]
+    },
+    {
+      "barcode": "00025800023608",
+      "name": "SANTA FE RICE & BEANS",
+      "nutritionScore": 75,
+      "overallScore": 75,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Ingredient declaration may be truncated or incomplete.",
+        "Modified starch (type unspecified): Modification type is unspecified; do not infer an E-number.",
+        "Xanthan gum: No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe."
+      ]
+    },
+    {
+      "barcode": "00013800103215",
+      "name": "Classic Lasagna with Meat & Sauce",
+      "nutritionScore": 70,
+      "overallScore": 70,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unbalanced ingredient subgroups.",
+        "Modified starch (type unspecified): Modification type is unspecified; do not infer an E-number.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
+      ]
+    },
+    {
+      "barcode": "00044700000632",
+      "name": "wieners",
+      "nutritionScore": 25,
+      "overallScore": 24,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Ingredient declaration may be truncated or incomplete.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
+      ]
+    },
+    {
+      "barcode": "00037600138727",
+      "name": "SPAM Classic",
+      "nutritionScore": 21,
+      "overallScore": 20,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Modified starch (type unspecified): Modification type is unspecified; do not infer an E-number."
+      ]
+    },
+    {
+      "barcode": "00024100106851",
+      "name": "Original Baked Snack Crackers",
+      "nutritionScore": 19,
+      "overallScore": 19,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Ingredient declaration may be truncated or incomplete.",
+        "TBHQ (tert-butylhydroquinone): No weight: this batch reviewed the NTP animal report but has not resolved the broader endpoint/exposure evidence.",
+        "Annatto extract (type unspecified): Bixin/norbixin preparation and assessment scope are unresolved."
+      ]
+    },
+    {
+      "barcode": "00044000060114",
+      "name": "Chocolate Sandwich Cookies",
+      "nutritionScore": 12,
+      "overallScore": 12,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Calcium phosphates (subtype unspecified): Alternative ingredient presence is unresolved.",
+        "Sodium hydrogen carbonate: Alternative ingredient presence is unresolved.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
+      ]
+    },
+    {
+      "barcode": "00028400199148",
+      "name": "Classic",
+      "nutritionScore": 32,
+      "overallScore": 32,
+      "overallStatus": "reviewed",
+      "ingredientReview": "reviewed",
+      "causes": [],
+      "overallReasons": [
+        "Declaration reviewed. No bonus or safety assurance."
+      ]
+    },
+    {
+      "barcode": "0049000018011",
+      "name": "Cherry Coca-Cola",
+      "nutritionScore": 11,
+      "overallScore": 11,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E150a is not corroborated in the available declaration.",
+        "Caramel color (class unspecified): No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch.",
+        "E150a: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0815154023269",
+      "name": "REIGN Total Body Fuel White Gummy Bear",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "partial",
+      "causes": [
+        "energy-source-conflict",
+        "invalid-or-conflicting-nutrient"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Provider identity E331 is not corroborated in the available declaration.",
+        "Provider identity E641 is not corroborated in the available declaration.",
+        "Provider identity E950 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: sodium citrate",
+        "Unreviewed ingredient phrase: l leucine",
+        "Unreviewed ingredient phrase: isoleucine",
+        "Unreviewed ingredient phrase: valine",
+        "Unreviewed ingredient phrase: potassium citrate",
+        "Unreviewed ingredient phrase: acesulfame potassium",
+        "Unreviewed ingredient phrase: vit b3",
+        "Unreviewed ingredient phrase: magnesium lactate",
+        "Unreviewed ingredient phrase: coenzyme q 10",
+        "Unreviewed ingredient phrase: vit b6",
+        "Unreviewed ingredient phrase: cyanocobalamin",
+        "Unreviewed ingredient phrase: vit b12",
+        "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch.",
+        "Sucralose: Processing-dependent assessment unresolved: the captured declaration does not establish prolonged heating conditions.",
+        "Sodium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+        "Potassium sorbate: Current integrated scientific assessment not completed in this batch.",
+        "E331: Presence evidence conflicts or is not corroborated.",
+        "E641: Presence evidence conflicts or is not corroborated.",
+        "E950: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "07834608",
+      "name": "Ginger Ale",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "partial",
+      "causes": [
+        "unknown-or-incompatible-basis"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Provider identity E150a is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: preservative",
+        "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+        "Sodium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+        "Caramel color (class unspecified): No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "E150a: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "5449000335159",
+      "name": "Coca-Cola Zero",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-saturated-fat-or-fat-quality",
+        "missing-sugars",
+        "missing-ingredient-declaration"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+      ]
+    },
+    {
+      "barcode": "0041152102730",
+      "name": "Organic Strawberry Lemonade",
+      "nutritionScore": 7,
+      "overallScore": 7,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: filtered water",
+        "Unreviewed ingredient phrase: lemon juice from concentrate",
+        "Unreviewed ingredient phrase: strawberry juice from concentrate",
+        "Unreviewed ingredient phrase: natural lemon",
+        "Unreviewed ingredient phrase: vegetable juice",
+        "Unreviewed ingredient phrase: color",
+        "Unreviewed ingredient phrase: natural strawberry",
+        "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
+      ]
+    },
+    {
+      "barcode": "0860439001005",
+      "name": "Vintage Cola",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-saturated-fat-or-fat-quality",
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Unreviewed ingredient phrase: purified water",
+        "Unreviewed ingredient phrase: olismart",
+        "Unreviewed ingredient phrase: chicory root",
+        "Unreviewed ingredient phrase: jerusalem artichoke",
+        "Unreviewed ingredient phrase: kudzu root",
+        "Unreviewed ingredient phrase: cassava fiber",
+        "Unreviewed ingredient phrase: cassava syrup",
+        "Unreviewed ingredient phrase: marshmallow root",
+        "Unreviewed ingredient phrase: slippery elm bark",
+        "Unreviewed ingredient phrase: nopal cactus",
+        "Unreviewed ingredient phrase: calendula flower",
+        "Unreviewed ingredient phrase: apple juice",
+        "Unreviewed ingredient phrase: lime juice",
+        "Unreviewed ingredient phrase: natural cola",
+        "Unreviewed ingredient phrase: stevia",
+        "Unreviewed ingredient phrase: pinkrock salt",
+        "Unreviewed ingredient phrase: cassia cinnamon",
+        "Unreviewed ingredient phrase: dairy free caramel essence",
+        "Unreviewed ingredient phrase: vanilla bean essence",
+        "Unreviewed ingredient phrase: alpha galangal root",
+        "Unreviewed ingredient phrase: green tea",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch."
+      ]
+    },
+    {
+      "barcode": "0678963100206",
+      "name": "Guarana antarctica",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "partial",
+      "causes": [
+        "unknown-or-incompatible-basis"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Provider identity E150a is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: preservatives",
+        "Unreviewed ingredient phrase: guarana extract",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial.",
+        "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Sodium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+        "Potassium sorbate: Current integrated scientific assessment not completed in this batch.",
+        "Caramel color (class unspecified): No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+        "E150a: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0021136181364",
+      "name": "Blueberry sparkling water",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "unknown-or-incompatible-basis",
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Unreviewed ingredient phrase: filtered carbonated water",
+        "Unreviewed ingredient phrase: blueberry juice from concentrate",
+        "Unreviewed ingredient phrase: hibiscus extract",
+        "Unreviewed ingredient phrase: magnesium chloride",
+        "Unreviewed ingredient phrase: potassium chloride",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+        "Potassium sorbate: Current integrated scientific assessment not completed in this batch.",
+        "Sodium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation."
+      ]
+    },
+    {
+      "barcode": "0070847812715",
+      "name": "Java Monster Coffee + Energy",
+      "nutritionScore": 18,
+      "overallScore": 17,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E331 is not corroborated in the available declaration.",
+        "Provider identity E401 is not corroborated in the available declaration.",
+        "Provider identity E407 is not corroborated in the available declaration.",
+        "Provider identity E460 is not corroborated in the available declaration.",
+        "Provider identity E460i is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: brewed coffee",
+        "Unreviewed ingredient phrase: filtered water",
+        "Unreviewed ingredient phrase: coffee",
+        "Unreviewed ingredient phrase: condensed skim milk",
+        "Unreviewed ingredient phrase: heavy cream",
+        "Unreviewed ingredient phrase: glucose",
+        "Unreviewed ingredient phrase: taurine",
+        "Unreviewed ingredient phrase: sodium citrate",
+        "Unreviewed ingredient phrase: microcrystalline cellulose",
+        "Unreviewed ingredient phrase: panax ginseng extract",
+        "Unreviewed ingredient phrase: vit c",
+        "Unreviewed ingredient phrase: carrageenan",
+        "Unreviewed ingredient phrase: sodium alginate",
+        "Unreviewed ingredient phrase: vit b3",
+        "Unreviewed ingredient phrase: color added",
+        "Unreviewed ingredient phrase: d glucuronolactone",
+        "Unreviewed ingredient phrase: guarana extract",
+        "Unreviewed ingredient phrase: inositol",
+        "Unreviewed ingredient phrase: l carnitine l tartrate",
+        "Unreviewed ingredient phrase: vit b6",
+        "Unreviewed ingredient phrase: vit b2",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Ascorbic acid: No independent weight; benzoate interaction is evaluated once on the benzoate.",
+        "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch.",
+        "Sucralose: Processing-dependent assessment unresolved: the captured declaration does not establish prolonged heating conditions.",
+        "E331: Presence evidence conflicts or is not corroborated.",
+        "E401: Presence evidence conflicts or is not corroborated.",
+        "E407: Presence evidence conflicts or is not corroborated.",
+        "E460: Presence evidence conflicts or is not corroborated.",
+        "E460i: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "8901764112263",
+      "name": "Coke Zero",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "partial",
+      "causes": [
+        "missing-saturated-fat-or-fat-quality"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Provider identity E100 is not corroborated in the available declaration.",
+        "Provider identity E150d is not corroborated in the available declaration.",
+        "Provider identity E211 is not corroborated in the available declaration.",
+        "Provider identity E331 is not corroborated in the available declaration.",
+        "Provider identity E338 is not corroborated in the available declaration.",
+        "Provider identity E950 is not corroborated in the available declaration.",
+        "Provider identity E955 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: acidity regulators",
+        "Unreviewed ingredient phrase: 338",
+        "Unreviewed ingredient phrase: 331",
+        "Unreviewed ingredient phrase: iii",
+        "Unreviewed ingredient phrase: sweeteners",
+        "Unreviewed ingredient phrase: 955",
+        "Unreviewed ingredient phrase: 950",
+        "Unreviewed ingredient phrase: preservative",
+        "Unreviewed ingredient phrase: 211",
+        "Unreviewed ingredient phrase: 9 2 mg/100 g",
+        "Unreviewed ingredient phrase: colour",
+        "Unreviewed ingredient phrase: 150d",
+        "Unreviewed ingredient phrase: flavours",
+        "Unreviewed ingredient phrase: natural flavouring substances",
+        "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch.",
+        "E100: Presence evidence conflicts or is not corroborated.",
+        "Sulphite ammonia caramel: Presence evidence conflicts or is not corroborated.",
+        "Sodium benzoate: Presence evidence conflicts or is not corroborated.",
+        "E331: Presence evidence conflicts or is not corroborated.",
+        "Phosphoric acid: Presence evidence conflicts or is not corroborated.",
+        "E950: Presence evidence conflicts or is not corroborated.",
+        "Sucralose: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "20621483",
+      "name": "Special Flakes Bran Flakes",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "energy-source-conflict",
+        "invalid-or-conflicting-nutrient",
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Unreviewed ingredient phrase: 80% frumento integrale macinato",
+        "Unreviewed ingredient phrase: 16% crusca di frumento",
+        "Unreviewed ingredient phrase: zucchero",
+        "Unreviewed ingredient phrase: estratto di malto d'orzo",
+        "Unreviewed ingredient phrase: sale può contenere tracce di altri cereali contenenti glutine",
+        "Unreviewed ingredient phrase: frutta a guscio",
+        "Unreviewed ingredient phrase: arachidi e latte",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial."
+      ]
+    },
+    {
+      "barcode": "0096619194261",
+      "name": "Ancient Grains Probiotic Granola",
+      "nutritionScore": 40,
+      "overallScore": 40,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E306 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: whole grain rolled oats",
+        "Unreviewed ingredient phrase: cane sugar",
+        "Unreviewed ingredient phrase: soy oil",
+        "Unreviewed ingredient phrase: khorasan wheat",
+        "Unreviewed ingredient phrase: rolled spelt",
+        "Unreviewed ingredient phrase: inulin",
+        "Unreviewed ingredient phrase: rolled quinoa",
+        "Unreviewed ingredient phrase: rolled amaranth",
+        "Unreviewed ingredient phrase: cinnamon",
+        "Unreviewed ingredient phrase: vanilla",
+        "Unreviewed ingredient phrase: probiotics",
+        "Unreviewed ingredient phrase: bacillus coagulans gbi 30 6086",
+        "Unreviewed ingredient phrase: tocopherols",
+        "Unreviewed ingredient phrase: vitamin e",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "E306: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0058449770565",
+      "name": "Pumpkin Seed + Flax Granola",
+      "nutritionScore": 34,
+      "overallScore": 34,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E306 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: whole grain rolled oats",
+        "Unreviewed ingredient phrase: cane sugar",
+        "Unreviewed ingredient phrase: soy oil",
+        "Unreviewed ingredient phrase: brown rice flour pumpkin seeds",
+        "Unreviewed ingredient phrase: flax seeds oat syrup solids",
+        "Unreviewed ingredient phrase: oat syrup solids",
+        "Unreviewed ingredient phrase: tocopherols",
+        "Unreviewed ingredient phrase: added to enhance freshness",
+        "Unreviewed ingredient phrase: cinnamon contains soy produced in a facility that uses wheat",
+        "Unreviewed ingredient phrase: tree nuts",
+        "E306: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0884912004710",
+      "name": "The Original",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-saturated-fat-or-fat-quality",
+        "missing-ingredient-declaration"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+      ]
+    },
+    {
+      "barcode": "0016000275263",
+      "name": "Original Cheerios",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-saturated-fat-or-fat-quality",
+        "missing-ingredient-declaration"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+      ]
+    },
+    {
+      "barcode": "0016000170032",
+      "name": "Cheerios",
+      "nutritionScore": 52,
+      "overallScore": 52,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E306 is not corroborated in the available declaration.",
+        "Provider identity E340 is not corroborated in the available declaration.",
+        "Provider identity E340iii is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: whole grain oats",
+        "Unreviewed ingredient phrase: tripotassium phosphate vitamin e",
+        "Unreviewed ingredient phrase: mixed tocopherols",
+        "Unreviewed ingredient phrase: added",
+        "Unreviewed ingredient phrase: vitamins",
+        "Unreviewed ingredient phrase: minerals:",
+        "Unreviewed ingredient phrase: zinc",
+        "Unreviewed ingredient phrase: mineral nutrients",
+        "Unreviewed ingredient phrase: sodium ascorbate",
+        "Unreviewed ingredient phrase: a b vitamin",
+        "Unreviewed ingredient phrase: vitamin a",
+        "Unreviewed ingredient phrase: palmitate",
+        "Unreviewed ingredient phrase: vitamin b₁",
+        "Unreviewed ingredient phrase: vitamin d3",
+        "Calcium carbonate: Fortification and purity questions remain unresolved; the EFSA technological-additive assessment is not a blanket review of calcium fortification.",
+        "Ascorbic acid: No independent weight; benzoate interaction is evaluated once on the benzoate.",
+        "E306: Presence evidence conflicts or is not corroborated.",
+        "E340: Presence evidence conflicts or is not corroborated.",
+        "E340iii: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0058449770206",
+      "name": "Heritage Flakes",
+      "nutritionScore": 49,
+      "overallScore": 49,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: kamut khorasan wheat flour",
+        "Unreviewed ingredient phrase: wheat bran",
+        "Unreviewed ingredient phrase: whole wheat meal",
+        "Unreviewed ingredient phrase: cane sugar",
+        "Unreviewed ingredient phrase: whole oat flour",
+        "Unreviewed ingredient phrase: spelt flour",
+        "Unreviewed ingredient phrase: barley flour",
+        "Unreviewed ingredient phrase: whole millet",
+        "Unreviewed ingredient phrase: barley malt extract",
+        "Unreviewed ingredient phrase: quinoa"
+      ]
+    },
+    {
+      "barcode": "0819562022791",
+      "name": "nut granola blueberry cinnamon sweet & crunchy",
+      "nutritionScore": 92,
+      "overallScore": 88,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: sunflower seeds",
+        "Unreviewed ingredient phrase: pumpkin seeds",
+        "Unreviewed ingredient phrase: coconut",
+        "Unreviewed ingredient phrase: pecans",
+        "Unreviewed ingredient phrase: butter",
+        "Unreviewed ingredient phrase: pasteurized cream",
+        "Unreviewed ingredient phrase: dried blueberries",
+        "Unreviewed ingredient phrase: cinnamon",
+        "Unreviewed ingredient phrase: monkfruit extract",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
+      ]
+    },
+    {
+      "barcode": "0016000435094",
+      "name": "Toasted Whole Grain Oat Cereal",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "partial",
+      "causes": [
+        "energy-source-conflict",
+        "invalid-or-conflicting-nutrient"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Provider identity E306 is not corroborated in the available declaration.",
+        "Provider identity E340 is not corroborated in the available declaration.",
+        "Provider identity E340iii is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: whole grain oats",
+        "Unreviewed ingredient phrase: tripotassium phosphate vitamin e",
+        "Unreviewed ingredient phrase: mixed tocopherols",
+        "Unreviewed ingredient phrase: added to preserve freshness",
+        "Unreviewed ingredient phrase: vitamins",
+        "Unreviewed ingredient phrase: minerals",
+        "Unreviewed ingredient phrase: mineral",
+        "Unreviewed ingredient phrase: zinc",
+        "Unreviewed ingredient phrase: sodium ascorbate",
+        "Unreviewed ingredient phrase: vitamin a",
+        "Unreviewed ingredient phrase: palmitate",
+        "Unreviewed ingredient phrase: vitamin d3",
+        "Calcium carbonate: Fortification and purity questions remain unresolved; the EFSA technological-additive assessment is not a blanket review of calcium fortification.",
+        "Ascorbic acid: No independent weight; benzoate interaction is evaluated once on the benzoate.",
+        "E306: Presence evidence conflicts or is not corroborated.",
+        "E340: Presence evidence conflicts or is not corroborated.",
+        "E340iii: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0675625371189",
+      "name": "Sprouted Rolled Oats",
+      "nutritionScore": 74,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Unreviewed ingredient phrase: sprouted gluten free oats"
+      ]
+    },
+    {
+      "barcode": "0021130070121",
+      "name": "Fat Free Milk",
+      "nutritionScore": 2,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Unreviewed ingredient phrase: fat free milk",
+        "Unreviewed ingredient phrase: vitamin a palmitate",
+        "Unreviewed ingredient phrase: vitamin d3"
+      ]
+    },
+    {
+      "barcode": "9339687411702",
+      "name": "Strawberry Yoghurt",
+      "nutritionScore": 74,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-ingredient-declaration"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+      ]
+    },
+    {
+      "barcode": "0036632011411",
+      "name": "Oikos Pro",
+      "nutritionScore": 44,
+      "overallScore": 44,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E440 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: cultured ultra filtered nonfat milk",
+        "Unreviewed ingredient phrase: condensed nonfat milk",
+        "Unreviewed ingredient phrase: cream",
+        "Unreviewed ingredient phrase: less than",
+        "Unreviewed ingredient phrase: pectin",
+        "Unreviewed ingredient phrase: vegetable juice concentrate",
+        "Unreviewed ingredient phrase: for color",
+        "Unreviewed ingredient phrase: stevia extract",
+        "Unreviewed ingredient phrase: lemon juice concentrate",
+        "Unreviewed ingredient phrase: calcium citrate",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "E440: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0049576000168",
+      "name": "Chocolate milk",
+      "nutritionScore": 2,
+      "overallScore": 2,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E407 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: pure cane sugar",
+        "Unreviewed ingredient phrase: carrageenan",
+        "Unreviewed ingredient phrase: vanillin",
+        "Unreviewed ingredient phrase: an",
+        "Modified starch (type unspecified): Modification type is unspecified; do not infer an E-number.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "E407: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "4099100007619",
+      "name": "Pure Irish Butter",
+      "nutritionScore": 2,
+      "overallScore": 2,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: pasteurized cream"
+      ]
+    },
+    {
+      "barcode": "0818290015150",
+      "name": "20g Protein Lowfat Greek Yogurt Vanilla",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-saturated-fat-or-fat-quality",
+        "missing-ingredient-declaration"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+      ]
+    },
+    {
+      "barcode": "0036632024282",
+      "name": "Protein Shake",
+      "nutritionScore": 89,
+      "overallScore": 89,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E332 is not corroborated in the available declaration.",
+        "Provider identity E332ii is not corroborated in the available declaration.",
+        "Provider identity E418 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: filtered water",
+        "Unreviewed ingredient phrase: milk protein concentrate",
+        "Unreviewed ingredient phrase: micellar casein isolate",
+        "Unreviewed ingredient phrase: inulin",
+        "Unreviewed ingredient phrase: cocoa powder",
+        "Unreviewed ingredient phrase: coconut oil",
+        "Unreviewed ingredient phrase: high oleic sunflower oil",
+        "Unreviewed ingredient phrase: potassium citrate",
+        "Unreviewed ingredient phrase: stevia extract",
+        "Unreviewed ingredient phrase: gellan gum",
+        "Unreviewed ingredient phrase: sunflower",
+        "Unreviewed ingredient phrase: vitamin a palmitate",
+        "Unreviewed ingredient phrase: vitamin d3",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "E332: Presence evidence conflicts or is not corroborated.",
+        "E332ii: Presence evidence conflicts or is not corroborated.",
+        "E418: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0068200960548",
+      "name": "2022 Reserve Fromage Cheddar Cheese",
+      "nutritionScore": 14,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-ingredient-declaration"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+      ]
+    },
+    {
+      "barcode": "4316268741163",
+      "name": "Speisequark 20% Fett",
+      "nutritionScore": 74,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-ingredient-declaration"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+      ]
+    },
+    {
+      "barcode": "0856312002795",
+      "name": "Chocolate Reduced Fat Ultra-filtered Milk",
+      "nutritionScore": 3,
+      "overallScore": 3,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E340 is not corroborated in the available declaration.",
+        "Provider identity E340ii is not corroborated in the available declaration.",
+        "Provider identity E407 is not corroborated in the available declaration.",
+        "Provider identity E950 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: reduced fat ultra filtered milk",
+        "Unreviewed ingredient phrase: alkalized cocoa",
+        "Unreviewed ingredient phrase: lactase enzyme",
+        "Unreviewed ingredient phrase: dipotassium phosphate",
+        "Unreviewed ingredient phrase: acesulfame potassium",
+        "Unreviewed ingredient phrase: carrageenan",
+        "Unreviewed ingredient phrase: natural",
+        "Unreviewed ingredient phrase: artificial",
+        "Unreviewed ingredient phrase: vitamin a palmitate",
+        "Unreviewed ingredient phrase: vitamin d3 contains milk",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Sucralose: Processing-dependent assessment unresolved: the captured declaration does not establish prolonged heating conditions.",
+        "E340: Presence evidence conflicts or is not corroborated.",
+        "E340ii: Presence evidence conflicts or is not corroborated.",
+        "E407: Presence evidence conflicts or is not corroborated.",
+        "E950: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0077034009873",
+      "name": "Sweet 'N Salty Mix Trail Mix",
+      "nutritionScore": 71,
+      "overallScore": 71,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unbalanced ingredient subgroups.",
+        "Provider identity E102 is not corroborated in the available declaration.",
+        "Provider identity E110 is not corroborated in the available declaration.",
+        "Provider identity E129 is not corroborated in the available declaration.",
+        "Provider identity E132 is not corroborated in the available declaration.",
+        "Provider identity E133 is not corroborated in the available declaration.",
+        "Provider identity E171 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: raisins",
+        "Unreviewed ingredient phrase: cocoa candies",
+        "Unreviewed ingredient phrase: confectionery coating",
+        "Unreviewed ingredient phrase: hydrogenated palm kernel oil",
+        "Unreviewed ingredient phrase: cocoa powder",
+        "Unreviewed ingredient phrase: whey powder",
+        "Unreviewed ingredient phrase: nonfat milk powder",
+        "Unreviewed ingredient phrase: an emulsifier",
+        "Unreviewed ingredient phrase: vanilla",
+        "Unreviewed ingredient phrase: 1% of gum acacia corn syrup",
+        "Unreviewed ingredient phrase: titanium dioxide",
+        "Unreviewed ingredient phrase: color",
+        "Unreviewed ingredient phrase: confectioner's glaze",
+        "Unreviewed ingredient phrase: yellow 5 lake",
+        "Unreviewed ingredient phrase: red 40 lake",
+        "Unreviewed ingredient phrase: yellow 6 lake",
+        "Unreviewed ingredient phrase: blue 2 lake",
+        "Unreviewed ingredient phrase: yellow 6",
+        "Unreviewed ingredient phrase: blue 1 lake",
+        "Unreviewed ingredient phrase: sunflower kernels",
+        "E102: Presence evidence conflicts or is not corroborated.",
+        "E110: Presence evidence conflicts or is not corroborated.",
+        "E129: Presence evidence conflicts or is not corroborated.",
+        "E132: Presence evidence conflicts or is not corroborated.",
+        "E133: Presence evidence conflicts or is not corroborated.",
+        "E171: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0014113702164",
+      "name": "Roasted & Salted Pistachios",
+      "nutritionScore": 83,
+      "overallScore": 83,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: pistachios"
+      ]
+    },
+    {
+      "barcode": "0897922002171",
+      "name": "Organic PBfit peanut butter powder",
+      "nutritionScore": 67,
+      "overallScore": 67,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: peanut flour",
+        "Unreviewed ingredient phrase: coconut palm sugar"
+      ]
+    },
+    {
+      "barcode": "0029000016699",
+      "name": "Lightly Salted Mixed Nuts Peanuts, Almonds, Cashews Brazil Nuts & Pecans",
+      "nutritionScore": 91,
+      "overallScore": 91,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: cashews",
+        "Unreviewed ingredient phrase: brazil nuts",
+        "Unreviewed ingredient phrase: pecans",
+        "Unreviewed ingredient phrase: peanut oil"
+      ]
+    },
+    {
+      "barcode": "0029000072121",
+      "name": "Salted Cocktail Peanuts",
+      "nutritionScore": 77,
+      "overallScore": 77,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: peanut oil"
+      ]
+    },
+    {
+      "barcode": "3168930007340",
+      "name": "Bénénuts cacahuètes grillées & salées",
+      "nutritionScore": 74,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Unreviewed ingredient phrase: cacahuètes",
+        "Unreviewed ingredient phrase: huile de tournesol",
+        "Unreviewed ingredient phrase: sel",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial."
+      ]
+    },
+    {
+      "barcode": "4056489714392",
+      "name": "Walnuts",
+      "nutritionScore": 95,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Unreviewed ingredient phrase: _walnuts_"
+      ]
+    },
+    {
+      "barcode": "0011110024718",
+      "name": "PECANS HALVES",
+      "nutritionScore": 95,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Unreviewed ingredient phrase: pecan halves"
+      ]
+    },
+    {
+      "barcode": "4099100333985",
+      "name": "Creamy Peanut Butter",
+      "nutritionScore": 87,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Unreviewed ingredient phrase: dry roasted peanuts sea salt"
+      ]
+    },
+    {
+      "barcode": "0096619196470",
+      "name": "Heart Healthy Mixed Nuts",
+      "nutritionScore": 90,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Unreviewed ingredient phrase: dry roasted almonds",
+        "Unreviewed ingredient phrase: walnuts",
+        "Unreviewed ingredient phrase: dry roasted hazelnuts",
+        "Unreviewed ingredient phrase: dry roasted pistachios"
+      ]
+    },
+    {
+      "barcode": "6111266962187",
+      "name": "Lait frais naturel demi écrémé",
+      "nutritionScore": 59,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Unreviewed ingredient phrase: lait frais pasteurisé demi écrémé à 15g/l de matière grasse",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial."
+      ]
+    },
+    {
+      "barcode": "3036811460259",
+      "name": "Velouté de légumes",
+      "nutritionScore": 77,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Ingredient declaration may be truncated or incomplete.",
+        "Unreviewed ingredient phrase: eau",
+        "Unreviewed ingredient phrase: carotte",
+        "Unreviewed ingredient phrase: poireau",
+        "Unreviewed ingredient phrase: oignon 5",
+        "Unreviewed ingredient phrase: 7%",
+        "Unreviewed ingredient phrase: pomme de terre 5",
+        "Unreviewed ingredient phrase: purée de tomates 2",
+        "Unreviewed ingredient phrase: 1%",
+        "Unreviewed ingredient phrase: potiron",
+        "Unreviewed ingredient phrase: céleri rave",
+        "Unreviewed ingredient phrase: beurre de cuisine",
+        "Unreviewed ingredient phrase: crème fraîche",
+        "Unreviewed ingredient phrase: sel",
+        "Unreviewed ingredient phrase: extrait naturel de poivre",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial."
+      ]
+    },
+    {
+      "barcode": "3270190174356",
+      "name": "Ratatouille",
+      "nutritionScore": 79,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Unreviewed ingredient phrase: courgettes",
+        "Unreviewed ingredient phrase: 36%",
+        "Unreviewed ingredient phrase: tomates",
+        "Unreviewed ingredient phrase: 21%",
+        "Unreviewed ingredient phrase: aubergines",
+        "Unreviewed ingredient phrase: oignons",
+        "Unreviewed ingredient phrase: 7 1%",
+        "Unreviewed ingredient phrase: jus de tomates",
+        "Unreviewed ingredient phrase: 6 9%",
+        "Unreviewed ingredient phrase: poivrons rouges",
+        "Unreviewed ingredient phrase: 5 5%",
+        "Unreviewed ingredient phrase: purée de tomates double concentrée",
+        "Unreviewed ingredient phrase: 3 1%",
+        "Unreviewed ingredient phrase: huile d'olive vierge",
+        "Unreviewed ingredient phrase: 2 1%",
+        "Unreviewed ingredient phrase: huile de tournesol",
+        "Unreviewed ingredient phrase: sucre",
+        "Unreviewed ingredient phrase: sel de mer",
+        "Unreviewed ingredient phrase: amidon",
+        "Unreviewed ingredient phrase: thym",
+        "Unreviewed ingredient phrase: jus concentré de citron",
+        "Unreviewed ingredient phrase: ail",
+        "Unreviewed ingredient phrase: 0 2%",
+        "Unreviewed ingredient phrase: laurier",
+        "Unreviewed ingredient phrase: poivre blanc ingrédients issus de l'agriculture biologique",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial."
+      ]
+    },
+    {
+      "barcode": "3270190174349",
+      "name": "Ravioli vegetariens",
+      "nutritionScore": 72,
+      "overallScore": 72,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: eau",
+        "Unreviewed ingredient phrase: ravioli 21",
+        "Unreviewed ingredient phrase: 5%",
+        "Unreviewed ingredient phrase: semoule de _blé_ dur",
+        "Unreviewed ingredient phrase: chapelure",
+        "Unreviewed ingredient phrase: farine de _blé_",
+        "Unreviewed ingredient phrase: sel",
+        "Unreviewed ingredient phrase: oignons",
+        "Unreviewed ingredient phrase: _œufs_",
+        "Unreviewed ingredient phrase: huile de tournesol",
+        "Unreviewed ingredient phrase: persil",
+        "Unreviewed ingredient phrase: épices",
+        "Unreviewed ingredient phrase: cannelle",
+        "Unreviewed ingredient phrase: poivre noir",
+        "Unreviewed ingredient phrase: muscade",
+        "Unreviewed ingredient phrase: girofle",
+        "Unreviewed ingredient phrase: poivre",
+        "Unreviewed ingredient phrase: ail",
+        "Unreviewed ingredient phrase: concentré de tomates",
+        "Unreviewed ingredient phrase: sucre roux",
+        "Unreviewed ingredient phrase: sel de mer",
+        "Unreviewed ingredient phrase: carottes",
+        "Unreviewed ingredient phrase: basilic",
+        "Unreviewed ingredient phrase: _céleri_",
+        "Unreviewed ingredient phrase: romarin",
+        "Unreviewed ingredient phrase: thym",
+        "Unreviewed ingredient phrase: marjolaine",
+        "Unreviewed ingredient phrase: sarriette",
+        "Unreviewed ingredient phrase: jus de citron concentré biologique peut contenir des traces de lait",
+        "Unreviewed ingredient phrase: soja",
+        "Unreviewed ingredient phrase: fruits à coque",
+        "Unreviewed ingredient phrase: poissons et crustacés",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial."
+      ]
+    },
+    {
+      "barcode": "0021000658831",
+      "name": "mac & cheese",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "partial",
+      "causes": [
+        "unknown-or-incompatible-basis"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Provider identity E160b is not corroborated in the available declaration.",
+        "Provider identity E270 is not corroborated in the available declaration.",
+        "Provider identity E451 is not corroborated in the available declaration.",
+        "Provider identity E451i is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: enriched macaroni",
+        "Unreviewed ingredient phrase: durum flour",
+        "Unreviewed ingredient phrase: ferrous sulfate",
+        "Unreviewed ingredient phrase: cheese sauce mix",
+        "Unreviewed ingredient phrase: milkfat",
+        "Unreviewed ingredient phrase: milk protein concentrate",
+        "Unreviewed ingredient phrase: sodium triphosphate",
+        "Unreviewed ingredient phrase: tapioca flour",
+        "Unreviewed ingredient phrase: lactic acid",
+        "Unreviewed ingredient phrase: turmeric",
+        "Unreviewed ingredient phrase: annatto",
+        "Unreviewed ingredient phrase: cheese culture",
+        "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+        "E160b: Presence evidence conflicts or is not corroborated.",
+        "E270: Presence evidence conflicts or is not corroborated.",
+        "E451: Presence evidence conflicts or is not corroborated.",
+        "E451i: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0811620020633",
+      "name": "CORE POWER High Protein Milk Shake Chocolate",
+      "nutritionScore": 47,
+      "overallScore": 47,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E407 is not corroborated in the available declaration.",
+        "Provider identity E466 is not corroborated in the available declaration.",
+        "Provider identity E950 is not corroborated in the available declaration.",
+        "Provider identity E960 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: filtered lowfat grade a milk",
+        "Unreviewed ingredient phrase: alkalized cocoa",
+        "Unreviewed ingredient phrase: lactase enzyme",
+        "Unreviewed ingredient phrase: acesulfame potassium",
+        "Unreviewed ingredient phrase: carrageenan",
+        "Unreviewed ingredient phrase: cellulose gel",
+        "Unreviewed ingredient phrase: cellulose gum",
+        "Unreviewed ingredient phrase: stevia leaf extract",
+        "Unreviewed ingredient phrase: vitamin a palmitate",
+        "Unreviewed ingredient phrase: vitamin d3",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Sucralose: Processing-dependent assessment unresolved: the captured declaration does not establish prolonged heating conditions.",
+        "E407: Presence evidence conflicts or is not corroborated.",
+        "E466: Presence evidence conflicts or is not corroborated.",
+        "E950: Presence evidence conflicts or is not corroborated.",
+        "E960: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "00414234",
+      "name": "Fettuccine Alfredo",
+      "nutritionScore": 53,
+      "overallScore": 53,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Ingredient declaration may be truncated or incomplete.",
+        "Unreviewed ingredient phrase: pasta",
+        "Unreviewed ingredient phrase: lurum wheat semolina",
+        "Unreviewed ingredient phrase: pasteurized eggs",
+        "Unreviewed ingredient phrase: sauce",
+        "Unreviewed ingredient phrase: cream",
+        "Unreviewed ingredient phrase: hard grating cheese",
+        "Unreviewed ingredient phrase: pasteurized milk salt vegetable rennet",
+        "Unreviewed ingredient phrase: lysozyme enzyme from egg white",
+        "Unreviewed ingredient phrase: butter"
+      ]
+    },
+    {
+      "barcode": "0748404287947",
+      "name": "Organic Quinoa & Brown Rice with Garlic",
+      "nutritionScore": 75,
+      "overallScore": 75,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: whole grain brown rice",
+        "Unreviewed ingredient phrase: blend of whole grain quinoa",
+        "Unreviewed ingredient phrase: whole grain red quinoa",
+        "Unreviewed ingredient phrase: whole grain black quinoa",
+        "Unreviewed ingredient phrase: dehydrated garlic",
+        "Unreviewed ingredient phrase: onion powder",
+        "Unreviewed ingredient phrase: minced garlic",
+        "Unreviewed ingredient phrase: parsley",
+        "Unreviewed ingredient phrase: black pepper"
+      ]
+    },
+    {
+      "barcode": "3564700738009",
+      "name": "Haricots blancs tomate",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "energy-source-conflict",
+        "invalid-or-conflicting-nutrient",
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Provider identity en:e14xx is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: eau",
+        "Unreviewed ingredient phrase: haricots blancs trempés",
+        "Unreviewed ingredient phrase: purée de tomates double concentree 3",
+        "Unreviewed ingredient phrase: 6%",
+        "Unreviewed ingredient phrase: sel",
+        "Unreviewed ingredient phrase: amidon modifié de maïs oignon grillé en poudre",
+        "Unreviewed ingredient phrase: arôme naturel traces de soja",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial.",
+        "en:e14xx: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0782733000020",
+      "name": "Madras Lentils",
+      "nutritionScore": 47,
+      "overallScore": 47,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: black lentils",
+        "Unreviewed ingredient phrase: red kidney beans",
+        "Unreviewed ingredient phrase: cream",
+        "Unreviewed ingredient phrase: dried onion",
+        "Unreviewed ingredient phrase: butter",
+        "Unreviewed ingredient phrase: cumin powder",
+        "Unreviewed ingredient phrase: chili pepper powder",
+        "Unreviewed ingredient phrase: dried ginger"
+      ]
+    },
+    {
+      "barcode": "7315122037814",
+      "name": "ISKUB Elderflower flavour",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "unknown-or-incompatible-basis",
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Provider identity E290 is not corroborated in the available declaration.",
+        "Provider identity E296 is not corroborated in the available declaration.",
+        "Provider identity E950 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: fr: boisson rafraîchissante gazeifiée saveur fleur de sureau",
+        "Unreviewed ingredient phrase: avec sucre et édulcorants ingrédients: eau",
+        "Unreviewed ingredient phrase: sirop de sucre inverti",
+        "Unreviewed ingredient phrase: dioxyde de carbone",
+        "Unreviewed ingredient phrase: extrait de fleur de sureau",
+        "Unreviewed ingredient phrase: acidifiants",
+        "Unreviewed ingredient phrase: e296",
+        "Unreviewed ingredient phrase: arôme naturel",
+        "Unreviewed ingredient phrase: édulcorants",
+        "Unreviewed ingredient phrase: e950",
+        "Unreviewed ingredient phrase: extrait de carthame",
+        "Unreviewed ingredient phrase: colorant",
+        "Unreviewed ingredient phrase: a consommer de préférence avant le",
+        "Unreviewed ingredient phrase: bb",
+        "Unreviewed ingredient phrase: / date de pro duction",
+        "Unreviewed ingredient phrase: pd",
+        "Unreviewed ingredient phrase: : voir sur le col de la bouteille conservation : une fois ouvert",
+        "Unreviewed ingredient phrase: conserver au réfrigérateur et consommer dans les 24 heures",
+        "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+        "Sucralose: Processing-dependent assessment unresolved: the captured declaration does not establish prolonged heating conditions.",
+        "Sulphite ammonia caramel: No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+        "E290: Presence evidence conflicts or is not corroborated.",
+        "E296: Presence evidence conflicts or is not corroborated.",
+        "E950: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0016000147652",
+      "name": "Lightly Sweetened Maple Berry Blend Cereal",
+      "nutritionScore": 10,
+      "overallScore": 10,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E306 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: maple syrup",
+        "Unreviewed ingredient phrase: whole grain oats",
+        "Unreviewed ingredient phrase: dried coconut",
+        "Unreviewed ingredient phrase: pumpkin seeds",
+        "Unreviewed ingredient phrase: coconut oil",
+        "Unreviewed ingredient phrase: dried sweetened cranberries",
+        "Unreviewed ingredient phrase: cranberries",
+        "Unreviewed ingredient phrase: dried sweetened cherries",
+        "Unreviewed ingredient phrase: cherries",
+        "Unreviewed ingredient phrase: corn bran",
+        "Unreviewed ingredient phrase: brown sugar syrup",
+        "Unreviewed ingredient phrase: vanilla extract vitamin e",
+        "Unreviewed ingredient phrase: mixed tocopherols",
+        "Unreviewed ingredient phrase: contains almond",
+        "Unreviewed ingredient phrase: coconut",
+        "Unreviewed ingredient phrase: may contain soy",
+        "Unreviewed ingredient phrase: sesame",
+        "E306: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "4061459567601",
+      "name": "Yogurt Plain",
+      "nutritionScore": 70,
+      "overallScore": 70,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: cultured pasteurized grade a whole milk",
+        "Unreviewed ingredient phrase: palmitate",
+        "Unreviewed ingredient phrase: vitamin d3",
+        "Unreviewed ingredient phrase: active yogurt culture",
+        "Unreviewed ingredient phrase: bb 12",
+        "Unreviewed ingredient phrase: lactobacillus bulgaricus",
+        "Unreviewed ingredient phrase: acidophilus"
+      ]
+    },
+    {
+      "barcode": "0856666002823",
+      "name": "Everything Goes Nuts",
+      "nutritionScore": 53,
+      "overallScore": 53,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: cashews",
+        "Unreviewed ingredient phrase: pecans",
+        "Unreviewed ingredient phrase: cane sugar",
+        "Unreviewed ingredient phrase: egg whites",
+        "Unreviewed ingredient phrase: sesame seeds",
+        "Unreviewed ingredient phrase: poppy seeds",
+        "Unreviewed ingredient phrase: onion powder"
+      ]
+    },
+    {
+      "barcode": "0084000901024",
+      "name": "Ratatouille",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-sodium",
+        "missing-ingredient-declaration"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+      ]
+    },
+    {
+      "barcode": "5449000214799",
+      "name": "Coca-Cola sans sucres",
+      "nutritionScore": 85,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Provider identity E331 is not corroborated in the available declaration.",
+        "Provider identity E338 is not corroborated in the available declaration.",
+        "Provider identity E950 is not corroborated in the available declaration.",
+        "Provider identity E960c is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: eau gazeifiée",
+        "Unreviewed ingredient phrase: colorant:",
+        "Unreviewed ingredient phrase: acidifiant: acide phosphorique",
+        "Unreviewed ingredient phrase: édulcorants:",
+        "Unreviewed ingredient phrase: acésulfame k",
+        "Unreviewed ingredient phrase: glycosides de stéviol produits par voie enzymatique",
+        "Unreviewed ingredient phrase: aromes naturels",
+        "Unreviewed ingredient phrase: arôme caféine",
+        "Unreviewed ingredient phrase: correcteur d'acidité: citrates de sodium",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial.",
+        "Sulphite ammonia caramel: No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+        "Aspartame: Hazard/exposure and phenylketonuria conditions need a dedicated synthesis; not scored from permission.",
+        "E331: Presence evidence conflicts or is not corroborated.",
+        "Phosphoric acid: Presence evidence conflicts or is not corroborated.",
+        "E950: Presence evidence conflicts or is not corroborated.",
+        "E960c: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0030000010402",
+      "name": "Old Fashioned Oats",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-saturated-fat-or-fat-quality",
+        "missing-ingredient-declaration"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+      ]
+    },
+    {
+      "barcode": "0856312002757",
+      "name": "Fairlife Nonfat Ultra-Filtered Milk",
+      "nutritionScore": 55,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Unreviewed ingredient phrase: ultra filtered milk",
+        "Unreviewed ingredient phrase: lactase enzyme",
+        "Unreviewed ingredient phrase: vitamin a palmitate",
+        "Unreviewed ingredient phrase: vitamin d3"
+      ]
+    },
+    {
+      "barcode": "0014113910446",
+      "name": "Wonderful Pistachios",
+      "nutritionScore": 44,
+      "overallScore": 44,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: pistachios",
+        "Unreviewed ingredient phrase: pepper",
+        "Unreviewed ingredient phrase: onion powder",
+        "Unreviewed ingredient phrase: yeast extract",
+        "Unreviewed ingredient phrase: lemon juice concentrate",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
+      ]
+    },
+    {
+      "barcode": "8402001010200",
+      "name": "Spaghetti integral",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "energy-source-conflict",
+        "invalid-or-conflicting-nutrient",
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Ingredient declaration may be truncated or incomplete.",
+        "Unreviewed ingredient phrase: sémola integral de trigo duro",
+        "Unreviewed ingredient phrase: gluten",
+        "Unreviewed ingredient phrase: puede contener trazas de huevos",
+        "Unreviewed ingredient phrase: soja y mostaza",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial."
+      ]
+    },
+    {
+      "barcode": "8850389100684",
+      "name": "Mogu lychee",
+      "nutritionScore": 6,
+      "overallScore": 6,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Ingredient declaration may be truncated or incomplete.",
+        "Provider identity E129 is not corroborated in the available declaration.",
+        "Provider identity E327 is not corroborated in the available declaration.",
+        "Provider identity E418 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: lychee juice from concentrate",
+        "Unreviewed ingredient phrase: coconut",
+        "Unreviewed ingredient phrase: sucrose",
+        "Unreviewed ingredient phrase: acidifiers",
+        "Unreviewed ingredient phrase: calcium lactate",
+        "Unreviewed ingredient phrase: lychee",
+        "Unreviewed ingredient phrase: preservative",
+        "Unreviewed ingredient phrase: gelling agent: gellan gum",
+        "Unreviewed ingredient phrase: color: e129",
+        "Unreviewed ingredient phrase: this dye may have adverse effects on activity",
+        "Unreviewed ingredient phrase: attention in children",
+        "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Sodium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+        "E129: Presence evidence conflicts or is not corroborated.",
+        "E327: Presence evidence conflicts or is not corroborated.",
+        "E418: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0855140002175",
+      "name": "ORIGINAL ANCIENT GRAIN GRANOLA",
+      "nutritionScore": 15,
+      "overallScore": 15,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: certified gluten free oats",
+        "Unreviewed ingredient phrase: coconut sugar",
+        "Unreviewed ingredient phrase: coconut oil",
+        "Unreviewed ingredient phrase: sunflower seeds",
+        "Unreviewed ingredient phrase: puffed amaranth",
+        "Unreviewed ingredient phrase: quinoa flakes",
+        "Unreviewed ingredient phrase: chia seeds",
+        "Unreviewed ingredient phrase: cinnamon"
+      ]
+    },
+    {
+      "barcode": "0091945045935",
+      "name": "Gouda Cracker Cuts",
+      "nutritionScore": 18,
+      "overallScore": 18,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: cultured pasteurized milk",
+        "Unreviewed ingredient phrase: color added"
+      ]
+    },
+    {
+      "barcode": "4061459260731",
+      "name": "Deluxe Whole Cashews",
+      "nutritionScore": 82,
+      "overallScore": 82,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: cashews"
+      ]
+    },
+    {
+      "barcode": "0051000000118",
+      "name": "Tomato Soup",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "partial",
+      "causes": [
+        "unknown-or-incompatible-basis"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Provider identity E340 is not corroborated in the available declaration.",
+        "Provider identity E340i is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: potassium chloride",
+        "Unreviewed ingredient phrase: natural flavoring",
+        "Unreviewed ingredient phrase: monopotassium phosphate",
+        "Unreviewed ingredient phrase: celery extract",
+        "Unreviewed ingredient phrase: garlic oil",
+        "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+        "Ascorbic acid: No independent weight; benzoate interaction is evaluated once on the benzoate.",
+        "E340: Presence evidence conflicts or is not corroborated.",
+        "E340i: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "8850389111352",
+      "name": "Mogu Mogu melon flavored drink",
+      "nutritionScore": 8,
+      "overallScore": 8,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E102 is not corroborated in the available declaration.",
+        "Provider identity E327 is not corroborated in the available declaration.",
+        "Provider identity E418 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: nata de coco",
+        "Unreviewed ingredient phrase: acidity regulators",
+        "Unreviewed ingredient phrase: calcium lactate",
+        "Unreviewed ingredient phrase: nature identical",
+        "Unreviewed ingredient phrase: melon",
+        "Unreviewed ingredient phrase: preservative",
+        "Unreviewed ingredient phrase: added gelling agent",
+        "Unreviewed ingredient phrase: gellan gum",
+        "Unreviewed ingredient phrase: artificial colors",
+        "Unreviewed ingredient phrase: tartrazine",
+        "Unreviewed ingredient phrase: brilliant blue",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial.",
+        "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Sodium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+        "E102: Presence evidence conflicts or is not corroborated.",
+        "E327: Presence evidence conflicts or is not corroborated.",
+        "E418: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "4056489255499",
+      "name": "Schoko Müsli",
+      "nutritionScore": 46,
+      "overallScore": 46,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E322 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: 63% hafervollkornflocken",
+        "Unreviewed ingredient phrase: vollmilchschokoladenstückchen",
+        "Unreviewed ingredient phrase: zucker",
+        "Unreviewed ingredient phrase: kakaomasse",
+        "Unreviewed ingredient phrase: vollmilchpulver",
+        "Unreviewed ingredient phrase: kakaobutter",
+        "Unreviewed ingredient phrase: emulgator: lecithine",
+        "Unreviewed ingredient phrase: zartbitterschokoladenplättchen",
+        "Unreviewed ingredient phrase: reis kakao extrudat",
+        "Unreviewed ingredient phrase: reismehl",
+        "Unreviewed ingredient phrase: glukosesirup",
+        "Unreviewed ingredient phrase: fettarmes kakaopulver",
+        "Unreviewed ingredient phrase: speisesalz",
+        "Unreviewed ingredient phrase: knuspermüsli",
+        "Unreviewed ingredient phrase: hafervollkornflocken",
+        "Unreviewed ingredient phrase: palmöl",
+        "Unreviewed ingredient phrase: weizenvollkornflocken",
+        "Unreviewed ingredient phrase: reis extrudat",
+        "Unreviewed ingredient phrase: weizenkleber",
+        "Unreviewed ingredient phrase: malzmehl",
+        "Unreviewed ingredient phrase: gerste",
+        "Unreviewed ingredient phrase: weizen",
+        "Unreviewed ingredient phrase: kokosraspel",
+        "Unreviewed ingredient phrase: kakaohaltiges getränkepulver",
+        "Unreviewed ingredient phrase: natürliches aroma",
+        "Unreviewed ingredient phrase: glukose fruktose sirup",
+        "Unreviewed ingredient phrase: 2% mandeldragee",
+        "Unreviewed ingredient phrase: mandeln",
+        "Unreviewed ingredient phrase: invertzuckersirup",
+        "Unreviewed ingredient phrase: karamellzuckersirup",
+        "Unreviewed ingredient phrase: kann spuren von anderen schalenfrüchten",
+        "Unreviewed ingredient phrase: erdnüssen",
+        "Unreviewed ingredient phrase: soja",
+        "Unreviewed ingredient phrase: sesam",
+        "Unreviewed ingredient phrase: senf und lupinen enthalten",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial.",
+        "Lecithins: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0070801103033",
+      "name": "Real Dairy Power Shake",
+      "nutritionScore": 2,
+      "overallScore": 2,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E127 is not corroborated in the available declaration.",
+        "Provider identity E407 is not corroborated in the available declaration.",
+        "Provider identity E452 is not corroborated in the available declaration.",
+        "Provider identity E452vi is not corroborated in the available declaration.",
+        "Provider identity E466 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: cream",
+        "Unreviewed ingredient phrase: cellulose gel",
+        "Unreviewed ingredient phrase: sodium tripolyphosphate",
+        "Unreviewed ingredient phrase: cellulose gum",
+        "Unreviewed ingredient phrase: carrageenan",
+        "Unreviewed ingredient phrase: red 3",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Mono- and diglycerides of fatty acids: No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe.",
+        "E127: Presence evidence conflicts or is not corroborated.",
+        "E407: Presence evidence conflicts or is not corroborated.",
+        "E452: Presence evidence conflicts or is not corroborated.",
+        "E452vi: Presence evidence conflicts or is not corroborated.",
+        "E466: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0029000016682",
+      "name": "Mixed Nuts",
+      "nutritionScore": 92,
+      "overallScore": 92,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: cashews",
+        "Unreviewed ingredient phrase: hazelnuts",
+        "Unreviewed ingredient phrase: filberts",
+        "Unreviewed ingredient phrase: pecans",
+        "Unreviewed ingredient phrase: peanut oil"
+      ]
+    },
+    {
+      "barcode": "0850031990005",
+      "name": "Cheddy Mac Creamy Cheddar And Macaroni",
+      "nutritionScore": 26,
+      "overallScore": 26,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E160b is not corroborated in the available declaration.",
+        "Provider identity E270 is not corroborated in the available declaration.",
+        "Provider identity E339ii is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: goodles macaroni",
+        "Unreviewed ingredient phrase: chickpea protein",
+        "Unreviewed ingredient phrase: wheat protein",
+        "Unreviewed ingredient phrase: nutrients extracted from",
+        "Unreviewed ingredient phrase: broccoli",
+        "Unreviewed ingredient phrase: spinach",
+        "Unreviewed ingredient phrase: kale",
+        "Unreviewed ingredient phrase: pumpkin",
+        "Unreviewed ingredient phrase: sweet potato",
+        "Unreviewed ingredient phrase: sunflower seed",
+        "Unreviewed ingredient phrase: cranberry",
+        "Unreviewed ingredient phrase: chlorella",
+        "Unreviewed ingredient phrase: maitake mushroom",
+        "Unreviewed ingredient phrase: shiitake mushroom",
+        "Unreviewed ingredient phrase: cheddar cheese blend",
+        "Unreviewed ingredient phrase: buttermilk",
+        "Unreviewed ingredient phrase: disodium phosphate",
+        "Unreviewed ingredient phrase: color",
+        "Unreviewed ingredient phrase: annatto",
+        "Unreviewed ingredient phrase: turmeric",
+        "Unreviewed ingredient phrase: butter",
+        "Unreviewed ingredient phrase: cream",
+        "Unreviewed ingredient phrase: tapioca flour",
+        "Unreviewed ingredient phrase: dried maple syrup",
+        "Unreviewed ingredient phrase: lactic acid",
+        "E160b: Presence evidence conflicts or is not corroborated.",
+        "E270: Presence evidence conflicts or is not corroborated.",
+        "E339ii: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "01231809",
+      "name": "Montain Dew",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "partial",
+      "causes": [
+        "missing-sodium"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Provider identity E102 is not corroborated in the available declaration.",
+        "Provider identity E385 is not corroborated in the available declaration.",
+        "Provider identity E414 is not corroborated in the available declaration.",
+        "Provider identity E440 is not corroborated in the available declaration.",
+        "Provider identity E950 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: concentrated orange juice",
+        "Unreviewed ingredient phrase: citrus pectin",
+        "Unreviewed ingredient phrase: preserves freshness",
+        "Unreviewed ingredient phrase: potassium citrate",
+        "Unreviewed ingredient phrase: sodium citrate",
+        "Unreviewed ingredient phrase: acesulfame potassium",
+        "Unreviewed ingredient phrase: gum arabic",
+        "Unreviewed ingredient phrase: calcium disodium edta",
+        "Unreviewed ingredient phrase: to protect",
+        "Unreviewed ingredient phrase: yellow 5",
+        "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "Potassium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+        "Aspartame: Hazard/exposure and phenylketonuria conditions need a dedicated synthesis; not scored from permission.",
+        "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch.",
+        "Sucralose: Processing-dependent assessment unresolved: the captured declaration does not establish prolonged heating conditions.",
+        "Sodium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+        "E102: Presence evidence conflicts or is not corroborated.",
+        "E385: Presence evidence conflicts or is not corroborated.",
+        "E414: Presence evidence conflicts or is not corroborated.",
+        "E440: Presence evidence conflicts or is not corroborated.",
+        "E950: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0016000124790",
+      "name": "Honey Nut Cheerios",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-saturated-fat-or-fat-quality",
+        "missing-ingredient-declaration"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+      ]
+    },
+    {
+      "barcode": "0053000071402",
+      "name": "borden",
+      "nutritionScore": 23,
+      "overallScore": 23,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: 111 p tal sugars og real carbohydrate 10 letary fiber 0g 0% 1g 0% cludes og added sugars 0% protein 4g omcg 0% 000872 2mg 10% 0% 0% sium omg 3% laily value tells you how much a nutrient a serving of food contributes to a daily diet 2",
+        "Unreviewed ingredient phrase: 000 calories a day is used for general nutrition advice 6695 ingrecents: cultured pasteurized geart skim milk",
+        "Unreviewed ingredient phrase: enzymes 8888"
+      ]
+    },
+    {
+      "barcode": "0096619107698",
+      "name": "Shelled Pistachios",
+      "nutritionScore": 62,
+      "overallScore": 62,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: pistachios"
+      ]
+    },
+    {
+      "barcode": "0051000012517",
+      "name": "Chicken Noodle",
+      "nutritionScore": 25,
+      "overallScore": 24,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Ingredient declaration may be truncated or incomplete.",
+        "Provider identity E621 is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: chicken stock",
+        "Unreviewed ingredient phrase: enriched egg noodles",
+        "Unreviewed ingredient phrase: eggs",
+        "Unreviewed ingredient phrase: ferrous sulfate",
+        "Unreviewed ingredient phrase: chicken meat",
+        "Unreviewed ingredient phrase: : salt",
+        "Unreviewed ingredient phrase: chicken fat",
+        "Unreviewed ingredient phrase: monosodium glutamate",
+        "Unreviewed ingredient phrase: cornstarch",
+        "Unreviewed ingredient phrase: dehydrated chicken broth",
+        "Unreviewed ingredient phrase: cane sugar",
+        "Unreviewed ingredient phrase: flavoring",
+        "Unreviewed ingredient phrase: beta carotene for color",
+        "Unreviewed ingredient phrase: dehydrated onions",
+        "Unreviewed ingredient phrase: yeast extract",
+        "Unreviewed ingredient phrase: dehydrated chicken",
+        "Unreviewed ingredient phrase: onion extract",
+        "Unreviewed ingredient phrase: garlic extract",
+        "Modified starch (type unspecified): Modification type is unspecified; do not infer an E-number.",
+        "E621: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0012000182563",
+      "name": "Pepsi",
+      "nutritionScore": 13,
+      "overallScore": 12,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Provider identity E150a is not corroborated in the available declaration.",
+        "Caramel color (class unspecified): No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+        "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch.",
+        "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+        "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+        "E150a: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "0030000012000",
+      "name": "Quick 1-Minute Oats",
+      "nutritionScore": null,
+      "overallScore": null,
+      "overallStatus": "nutrition-unavailable",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "missing-saturated-fat-or-fat-quality",
+        "missing-ingredient-declaration"
+      ],
+      "overallReasons": [
+        "A nutrition score is unavailable; the ingredient screen remains separate.",
+        "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+      ]
+    },
+    {
+      "barcode": "7755073001807",
+      "name": "Yogurt Griego Bebible Arándano conChía",
+      "nutritionScore": 77,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Provider identity E1442 is not corroborated in the available declaration.",
+        "Provider identity en:e14xx is not corroborated in the available declaration.",
+        "Provider identity E202 is not corroborated in the available declaration.",
+        "Provider identity E211 is not corroborated in the available declaration.",
+        "Provider identity E330 is not corroborated in the available declaration.",
+        "Provider identity E428 is not corroborated in the available declaration.",
+        "Provider identity E440 is not corroborated in the available declaration.",
+        "Provider identity E950 is not corroborated in the available declaration.",
+        "Provider identity E955 is not corroborated in the available declaration.",
+        "Provider identity E960a is not corroborated in the available declaration.",
+        "Unreviewed ingredient phrase: leche fresca entera",
+        "Unreviewed ingredient phrase: leche descremada reconstituida",
+        "Unreviewed ingredient phrase: arándano",
+        "Unreviewed ingredient phrase: chía",
+        "Unreviewed ingredient phrase: fructosa",
+        "Unreviewed ingredient phrase: edulcorante",
+        "Unreviewed ingredient phrase: sin 960a",
+        "Unreviewed ingredient phrase: agente gelificante",
+        "Unreviewed ingredient phrase: sin 440",
+        "Unreviewed ingredient phrase: regulador de acidez",
+        "Unreviewed ingredient phrase: sin 330",
+        "Unreviewed ingredient phrase: conservantes",
+        "Unreviewed ingredient phrase: sin 211",
+        "Unreviewed ingredient phrase: sin 202",
+        "Unreviewed ingredient phrase: azúcar",
+        "Unreviewed ingredient phrase: almidón modificado",
+        "Unreviewed ingredient phrase: sin 1442",
+        "Unreviewed ingredient phrase: gelatina",
+        "Unreviewed ingredient phrase: estabilizador",
+        "Unreviewed ingredient phrase: sin 955",
+        "Unreviewed ingredient phrase: sin 950",
+        "Unreviewed ingredient phrase: cultivos de yogurt",
+        "Unreviewed ingredient phrase: leche",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial.",
+        "E1442: Presence evidence conflicts or is not corroborated.",
+        "en:e14xx: Presence evidence conflicts or is not corroborated.",
+        "Potassium sorbate: Presence evidence conflicts or is not corroborated.",
+        "Sodium benzoate: Presence evidence conflicts or is not corroborated.",
+        "Citric acid: Presence evidence conflicts or is not corroborated.",
+        "E428: Presence evidence conflicts or is not corroborated.",
+        "E440: Presence evidence conflicts or is not corroborated.",
+        "E950: Presence evidence conflicts or is not corroborated.",
+        "Sucralose: Presence evidence conflicts or is not corroborated.",
+        "E960a: Presence evidence conflicts or is not corroborated."
+      ]
+    },
+    {
+      "barcode": "5400117582676",
+      "name": "Cerneaux de noix",
+      "nutritionScore": 95,
+      "overallScore": null,
+      "overallStatus": "nutrition-only",
+      "ingredientReview": "nutrition-only",
+      "causes": [
+        "no-supported-ingredient-review"
+      ],
+      "overallReasons": [
+        "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+        "Unreviewed ingredient phrase: cerneaux de noix ingrédient: cerneaux de noix 100% peut contenir: arachides",
+        "Unreviewed ingredient phrase: autres fruits à coque attention: risque d'étouffement pour les enfants en bas age",
+        "Provider language metadata differs from this English-only phrase screen; declaration review is partial."
+      ]
+    },
+    {
+      "barcode": "8410748301000",
+      "name": "Vegetables Broth",
+      "nutritionScore": 72,
+      "overallScore": 72,
+      "overallStatus": "provisional",
+      "ingredientReview": "partial",
+      "causes": [],
+      "overallReasons": [
+        "Screening incomplete; further review could decrease this score.",
+        "Unreviewed ingredient phrase: onion",
+        "Unreviewed ingredient phrase: carrot",
+        "Unreviewed ingredient phrase: leek",
+        "Unreviewed ingredient phrase: celery",
+        "Unreviewed ingredient phrase: olive oil",
+        "Unreviewed ingredient phrase: 0",
+        "Unreviewed ingredient phrase: 15%"
+      ]
+    }
+  ]
+}

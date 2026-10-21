@@ -79,6 +79,63 @@ test('legacy generic _100ml energy without a declared unit remains unknown in bo
   expect(getAssessmentDatasetNutrients(dataset).calories.value).toBeNull();
 });
 
+test.each([['MLT', 'ml', '100ml'], ['GRM', 'g', '100g']])(
+  'USDA %s serving codes consistently normalize reference nutrition and retain raw evidence', (rawUnit, unit, sourceBasis) => {
+    const product = usdaFood({ servingSize: 250, servingSizeUnit: rawUnit,
+      householdServingFullText: `250 ${unit}` });
+    const original = JSON.stringify(product);
+    const food = normalizeUsdaFood(product, BARCODE, new Date(NOW).toISOString());
+    expect(food.serving).toMatchObject({ amount: 250, unit });
+    expect(food.nutrients.sodium).toBe(375);
+    expect(food.nutrients.calories).toBe(300);
+    expect(food.nutritionBasis).toMatchObject({ kind: 'derived-serving', sourceBasis,
+      sourceQuantity: { amount: 100, unit } });
+    expect(food.assessmentInputs.datasets[0]).toMatchObject({ basis: sourceBasis, quantity: { amount: 100, unit } });
+    expect(food.assessmentInputs.serving).toContainEqual({ field: 'servingSizeUnit', value: rawUnit });
+    expect(normalizeRemoteFood(food)).not.toBeNull();
+    expect(JSON.stringify(product)).toBe(original);
+  });
+
+test.each(['100g', 'serving'])(
+  'OFF canonical _100g volume nutrition is usable with declared %s and an explicit ml serving', declared => {
+    const product = offProduct({ nutrition_data_per: declared, serving_size: '250 ml', serving_quantity: 250,
+      serving_quantity_unit: 'ml', product_quantity: 1000, product_quantity_unit: 'ml',
+      nutriments: { 'energy-kcal_100g': 40, proteins_100g: 0, fat_100g: 0,
+        carbohydrates_100g: 10, sodium_100g: 0.01, sugars_100g: 10 } });
+    const original = JSON.stringify(product);
+    const food = normalizeOpenFoodFactsProduct(product, BARCODE, new Date(NOW).toISOString());
+    expect(food.logReady).toBe(true);
+    expect(food.nutrients).toMatchObject({ calories: 100, carbohydrates: 25, sodium: 25 });
+    expect(food.nutritionBasis).toMatchObject({ kind: 'derived-serving', source: 'nutriments._100g',
+      sourceBasis: '100ml', sourceQuantity: { amount: 100, unit: 'ml', dimension: 'volume' } });
+    expect(food.assessmentInputs.datasets[0]).toMatchObject({ basis: '100ml', quantity: { amount: 100, unit: 'ml' } });
+    expect(normalizeRemoteFood(food)).not.toBeNull();
+    expect(JSON.stringify(product)).toBe(original);
+  });
+
+test('a printed gram/structured ml conflict does not turn the OFF reference into volume', () => {
+  const product = offProduct({ serving_size: '1.5 Cup (40 g)', serving_quantity: 40, serving_quantity_unit: 'ml' });
+  const food = normalizeOpenFoodFactsProduct(product, BARCODE, new Date(NOW).toISOString());
+  expect(food.logReady).toBe(false);
+  expect(food.nutritionBasis).toMatchObject({ kind: 'reference-only', sourceBasis: '100g',
+    sourceQuantity: { amount: 100, unit: 'g', dimension: 'mass' } });
+  expect(food.assessmentInputs.datasets[0]).toMatchObject({ basis: '100g', quantity: { amount: 100, unit: 'g' } });
+});
+
+test('conflicting OFF package/serving dimensions cannot derive logging from an unknown reference', () => {
+  const product = offProduct({ product_quantity: 1000, product_quantity_unit: 'ml' });
+  const original = JSON.stringify(product);
+  const food = normalizeOpenFoodFactsProduct(product, BARCODE, new Date(NOW).toISOString());
+  expect(food.logReady).toBe(false);
+  expect(food.nutrients.calories).toBeNull();
+  expect(food.nutritionBasis).toMatchObject({ kind: 'reference-only', source: 'unavailable', conversionFactor: null });
+  const reference = food.assessmentInputs.datasets.find(d => d.id === 'off-100g');
+  expect(reference).toMatchObject({ basis: 'unknown', quantity: null });
+  expect(reference.observations.find(o => o.nutrient === 'calories').rawValue).toBe(42);
+  expect(normalizeRemoteFood(food)).not.toBeNull();
+  expect(JSON.stringify(product)).toBe(original);
+});
+
 function headers(values = {}) {
   const normalized = Object.fromEntries(
     Object.entries(values).map(([key, value]) => [key.toLowerCase(), String(value)])
@@ -477,7 +534,10 @@ test("allows volume-to-volume conversion from an explicit per-100mL basis", () =
 
 test("rejects mass-to-volume conversion and missing, zero, or ambiguous serving metadata", () => {
   for (const overrides of [
-    { serving_quantity: 250, serving_quantity_unit: "mL", serving_size: "1 bottle" },
+    // The legacy _100g suffix alone can also mean 100 ml. Supply actual
+    // conflicting mass evidence so this remains a mass/volume safety control.
+    { serving_quantity: 250, serving_quantity_unit: "mL", serving_size: "1 bottle",
+      product_quantity: 1000, product_quantity_unit: "g" },
     { serving_quantity: 0, serving_quantity_unit: "g", serving_size: "zero" },
     { serving_quantity: null, serving_quantity_unit: null, serving_size: null },
     { serving_quantity: "many", serving_quantity_unit: "g", serving_size: "some" },

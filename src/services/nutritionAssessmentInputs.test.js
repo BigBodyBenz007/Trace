@@ -137,14 +137,49 @@ test("preserves kJ and original derivation while projecting kcal without prematu
   });
 });
 
-test("serving and reference dimensions are preserved; ambiguous OFF references stay unknown", () => {
-  const record = offRecord({ nutrition_data_per: "100ml", serving_quantity: 250, serving_quantity_unit: "ml" });
-  expect(off(record).assessmentInputs.datasets[0]).toMatchObject({ basis: "100ml", quantity: { amount: 100, unit: "ml" } });
-  record.nutrition_data_per = "serving";
-  const food = off(record);
-  expect(food.assessmentInputs.datasets[0]).toMatchObject({ basis: "unknown", quantity: null });
-  expect(getNutritionAssessmentQuality(food.assessmentInputs).states).toContain("unknown-measurement-basis");
-  expect(getNutritionAssessmentQuality(food.assessmentInputs).missingEssentialNutrients).toHaveLength(3);
+test.each([
+  ["100ml", "ml", "250 ml", "100ml", "100ml"],
+  ["100g", "ml", "250 ml", "100ml", "100ml"],
+  ["serving", "MLT", "250 ml", "100ml", "serving"],
+  ["serving", "GRM", "250 g", "100g", "serving"],
+])("OFF canonical reference uses explicit dimensions while entered %s keeps its own basis (%s)",
+  (declared, rawUnit, description, referenceBasis, enteredBasis) => {
+    const record = offRecord({ nutrition_data_per: declared, serving_size: description,
+      serving_quantity: 250, serving_quantity_unit: rawUnit });
+    record.nutriments.sodium_value = 0.5;
+    record.nutriments.sodium_unit = "g";
+    const original = JSON.stringify(record);
+    const input = off(record).assessmentInputs;
+    expect(input.datasets.find(d => d.id === "off-100g")).toMatchObject({ basis: referenceBasis,
+      quantity: { amount: 100, unit: referenceBasis === "100ml" ? "ml" : "g" } });
+    expect(input.datasets.find(d => d.id === "off-value")).toMatchObject({ basis: enteredBasis,
+      quantity: { amount: enteredBasis === "serving" ? 250 : 100,
+        unit: referenceBasis === "100ml" ? "ml" : "g" } });
+    expect(input.serving).toContainEqual({ field: "serving_quantity_unit", value: rawUnit });
+    expect(JSON.stringify(record)).toBe(original);
+  });
+
+test("OFF package dimension can identify canonical references without inventing a serving", () => {
+  const record = offRecord({ nutrition_data_per: "serving", serving_size: undefined,
+    serving_quantity_unit: undefined, product_quantity: 1000, product_quantity_unit: "ml" });
+  const input = off(record).assessmentInputs;
+  expect(input.datasets[0]).toMatchObject({ basis: "100ml", quantity: { amount: 100, unit: "ml" } });
+  expect(input.serving).toContainEqual({ field: "product_quantity_unit", value: "ml" });
+});
+
+test("OFF missing or conflicting dimensions are not promoted to a volume reference", () => {
+  const unknown = off(offRecord({ nutrition_data_per: "serving", serving_size: undefined,
+    serving_quantity_unit: undefined }));
+  expect(unknown.assessmentInputs.datasets[0]).toMatchObject({ basis: "unknown", quantity: null });
+  const conflicting = off(offRecord({ nutrition_data_per: "serving", serving_size: "250 ml",
+    serving_quantity_unit: "ml", product_quantity_unit: "g" }));
+  expect(conflicting.assessmentInputs.datasets[0]).toMatchObject({ basis: "unknown", quantity: null });
+  // The real Rice Krispies capture has this g/ml conflict. Preserve the existing
+  // declared reference and both original fields instead of treating 40 ml as true.
+  const printedMass = off(offRecord({ serving_size: "1.5 Cup (40 g)", serving_quantity: 40,
+    serving_quantity_unit: "ml", nutrition_data_per: "100g" }));
+  expect(printedMass.assessmentInputs.datasets[0]).toMatchObject({ basis: "100g", quantity: { amount: 100, unit: "g" } });
+  expect(printedMass.assessmentInputs.serving).toContainEqual({ field: "serving_quantity_unit", value: "ml" });
 });
 
 test("unknown entered-value basis and missing units never inherit reference assumptions", () => {
@@ -153,11 +188,23 @@ test("unknown entered-value basis and missing units never inherit reference assu
   expect(data(food).saturatedFat.status).toBe("unsupported-unit");
 });
 
-test("USDA volume or undeclared reference dimensions remain unknown without a density assumption", () => {
-  const food = usda(usdaRecord({ servingSize: 250, servingSizeUnit: "ml" }));
-  expect(food.assessmentInputs.datasets[0]).toMatchObject({ basis: "serving", quantity: { amount: 250, unit: "ml" } });
+test.each([["ml", "ml"], ["MLT", "ml"], ["g", "g"], ["GRM", "g"]])(
+  "USDA branded reference and serving quantities recognize explicit %s without a density assumption", (rawUnit, unit) => {
+    const record = usdaRecord({ servingSize: 250, servingSizeUnit: rawUnit });
+    const original = JSON.stringify(record);
+    const food = usda(record);
+    expect(food.assessmentInputs.datasets[0]).toMatchObject({ basis: "serving", quantity: { amount: 250, unit } });
+    expect(food.assessmentInputs.datasets[1]).toMatchObject({ basis: unit === "ml" ? "100ml" : "100g",
+      quantity: { amount: 100, unit } });
+    expect(food.assessmentInputs.serving).toContainEqual({ field: "servingSizeUnit", value: rawUnit });
+    expect(food.assessmentInputs.limitations).not.toContain("unconfirmed-usda-reference-dimension");
+    expect(JSON.stringify(record)).toBe(original);
+  });
+
+test.each([undefined, "unknown", "cup"])("USDA unknown reference dimension stays unknown: %s", rawUnit => {
+  const food = usda(usdaRecord({ servingSizeUnit: rawUnit }));
   expect(food.assessmentInputs.datasets[1]).toMatchObject({ basis: "unknown", quantity: null });
-  expect(getNutritionAssessmentQuality(food.assessmentInputs).states).toContain("unconfirmed-usda-reference-dimension");
+  expect(food.assessmentInputs.limitations).toContain("unconfirmed-usda-reference-dimension");
 });
 
 test("unrepresentable optional observations fail closed without interrupting food lookup", () => {
