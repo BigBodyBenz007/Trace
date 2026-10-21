@@ -14,7 +14,7 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
     <div className="trace-barcode-grade__headline"><strong aria-label={combined == null ? 'Experimental nutrition rating' : 'Experimental overall rating'} data-unavailable={score == null}>{score == null ? 'Score unavailable' : <>{combined ?? score}<small>/100</small></>}</strong>
       <span>{score == null ? 'Assessment unavailable' : combined == null ? 'Nutrition-only' : 'Experimental overall'}{overall.provisional && <small><b aria-label="Provisional overall score">PROVISIONAL</b></small>}{combined != null && <small aria-label="Experimental nutrition rating">Nutrition {score}/100 · additive deduction {overall.additiveDeduction} {overall.additiveDeduction === 1 ? 'point' : 'points'}</small>}{score != null && <small>Comparison: {Number(assessment.result.normalized.basis.amount.toFixed(1))} {assessment.result.normalized.basis.unit}</small>}</span></div>
     <p aria-label="Overall assessment status">{overall.reason}</p>
-    {overall.deductions.length > 0 && <p aria-label="Additive deduction reasons">{overall.deductions.map(item => `${item.name}: ${item.rationale}`).join(' ')}</p>}
+    {overall.deductions.length > 0 && <p aria-label="Additive deduction reasons">Precautionary findings: {overall.deductions.map(item => item.name).join('; ')}.{overall.additiveDeduction === 0 && ' Finding retained; whole-number score unchanged by rounding.'}</p>}
     {score != null ? <p>{explainNutritionPoints(assessment.result)}</p>
       : <p>{assessment.reasons.slice(0, 3).join(' ')}{assessment.reasons.length > 3 && ' Further gaps are listed below.'}</p>}
     <p className="trace-barcode-grade__confidence">{assessment.confidence}</p>
@@ -22,6 +22,10 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
       <div aria-label="Overall assessment evidence">
         <p>{overall.additiveAssessment.summary} {overall.additiveAssessment.limitation}</p>
         <p>Overall candidate: round(nutrition × (1 − 0.20 × known concern)). Concern is capped at 1. Unassessed items remain unknown; a partial review uses supported deductions only. No organic component.</p>
+        {overall.deductions.length > 0 && <div aria-label="Additive calculation">
+          <ul>{overall.deductions.map(item => <li key={item.identifier}>{item.name} ({item.identifier}): weight {item.weight}; {Number(item.rawDeduction.toFixed(4))} points before rounding. {item.rationale}</li>)}</ul>
+          <p>Total raw deduction: {Number(overall.rawAdditiveDeduction.toFixed(4))}. {overall.nutritionScore100} − {Number(overall.rawAdditiveDeduction.toFixed(4))} = {Number(overall.rawOverall.toFixed(4))}, rounded once to {combined}/100. Contributions share the capped budget proportionally; they are precautionary policy adjustments, not measured harm.</p>
+        </div>}
         {overall.possibleRange && <p aria-label="Possible overall range">Possible range under this budget: {overall.possibleRange.min}–{overall.possibleRange.max}/100. Further review could lower the provisional number; this is not a confidence interval.</p>}
         <p>Policy: {overall.policy.version}. {overall.limitation}</p>
         {overall.additiveAssessment.reviewRule && <p>{overall.additiveAssessment.reviewRule} Source: <a href={overall.additiveAssessment.source.url} target="_blank" rel="noreferrer">{overall.additiveAssessment.source.attribution}</a>.</p>}
@@ -62,6 +66,7 @@ function AdditiveScreeningEvidence({ evidence }) {
   return <ul aria-label="Ingredient screening evidence">{evidence.items.map(item => <li key={item.identifier}>
     <strong>{item.name || item.identifier}</strong> · {item.identifier} · {item.concernBurden === null ? 'Unresolved; no supported weight' : item.concernBurden > 0 ? `Trace ${item.classification} precautionary concern` : 'Reviewed; no qualifying concern identified'}
     <small>Evidence: {item.origins.map(origin => origin.identifier || origin.text).join('; ')}. {item.packagingOnly && 'Packaging statement only. '}{item.conditionalPresence && 'Alternative presence unresolved. '}Exact exposure unknown.</small>
+    {item.origins.some(origin => origin.ambiguousParent) && <small>A shared parent reference does not confirm this specific subtype.</small>}
     {item.review ? <>
       <p>{item.function} {item.review.rationale}</p>
       <p>{item.review.evidence} Conditions: {item.review.conditions} Limitations/conflicting findings: {item.review.conflicts}</p>
@@ -75,20 +80,23 @@ export function BarcodeAdditives({ candidate }) {
   const value = candidate.display.additives;
   const additives = normalizeProductAdditives(value, value?.source);
   const reported = additives?.status === 'reported';
-  const count = reported ? additives.items.length : null;
+  const groups = evidence.items.filter(item => item.providerIdentifiers.length > 0);
+  const count = reported ? groups.length : null;
   const references = reported ? [...new Map(additives.items.filter(item => item.nameReference).map(item =>
     [`${item.nameReference.sourceId}:${item.nameReference.referenceVersion}`, item.nameReference])).values()] : [];
   return <details className="trace-barcode-additives" aria-label="Product additives">
-    <summary>Additives · {count == null ? 'unknown' : count === 0 ? 'empty provider list' : `${count} provider-reported`}</summary>
+    <summary>Additives · {count == null ? 'unknown' : count === 0 ? 'empty provider list' : `${count} provider-reported${count !== additives.items.length ? ' groups' : ''}`}</summary>
     {reported ? <>
       <p>Source: Open Food Facts contributors · structured additives_tags. Presence is provider-reported, not independently confirmed.</p>
       {count === 0 && <p>The provider reports an empty list. This does not prove the product contains no additives.</p>}
       {count > 0 && <p>Verified general functions are listed below; the manufacturer’s purpose and amounts in this product are not confirmed.</p>}
-      <ul>{additives.items.map(item => {
+      {count > 0 && count !== additives.items.length && <p>{additives.items.length} original provider tags grouped into {count} identities. Parent/subtype overlap is counted once; distinct subtypes stay separate.</p>}
+      <ul aria-label="Grouped provider additives">{groups.map(finding => {
+        const members = additives.items.filter(item => finding.providerIdentifiers.includes(item.providerIdentifier));
+        const item = members.find(entry => entry.standardizedIdentifier === finding.identifier) || members[0];
         const info = item.nameReference ? getBarcodeAdditiveInformation(item.standardizedIdentifier) : null;
-        const finding = evidence.items.find(entry => entry.providerIdentifiers.includes(item.providerIdentifier));
-        return <li key={item.providerIdentifier}><strong>{item.standardizedIdentifier || 'Unrecognized identifier'}</strong> — {item.name || finding?.review?.name || 'Name unknown'}
-          <small>Original: {item.providerIdentifier} · {item.source}</small>
+        return <li key={finding.identifier}><strong>{finding.identifier || 'Unrecognized identifier'}</strong> — {finding.name || 'Name unknown'}
+          <small>Original: {members.map(entry => entry.providerIdentifier).join('; ')} · {item.source}</small>
           {info ? <><p>{info.function}<InformationSource source={info.functionSource} /></p>
             {info.concern && <p>Scientific context: {info.concern.text}<InformationSource source={info.concern.source} /></p>}
             {info.regulation ? <p>Verified US provision: {info.regulation.text}<InformationSource source={info.regulation.source} /></p>

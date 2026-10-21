@@ -12,7 +12,7 @@ require.extensions['.js'] = (module, filename) => {
     plugins: [require.resolve('@babel/plugin-transform-modules-commonjs')] }).code, filename);
 };
 const { createBarcodeNutritionCandidate } = require('../src/services/barcodeNutritionSelection');
-const { assessOverallFoodQuality } = require('../src/development/traceOverallFoodQuality');
+const { assessOverallFoodQuality, OVERALL_POLICY } = require('../src/development/traceOverallFoodQuality');
 const { evaluateTraceUsNutritionV2 } = require('../src/development/traceUsNutritionScoringV2');
 const { evaluatePublishedNutrition } = require('../src/development/publishedNutritionScoring');
 const { assessBarcodeNutrition } = require('../src/development/barcodeNutritionAssessment');
@@ -73,7 +73,7 @@ const v2 = evaluateTraceUsNutritionV2({ ...observed, category: 'general' });
 const published = evaluatePublishedNutrition({ ...observed, plantContent: { percent: 51,
   basis: 'Yuka-reported vegetables; conditional assumption, not independently verified', source: 'User screenshot observation' } });
 assert.equal(v2.nutritionScore100, 66); assert.equal(published.nutritionScore100, 75);
-const report = { version: '2-screening-experimental-2026-10-20', offline: true, originalProfiles: 20, additionalComparisons: 1,
+const report = { version: OVERALL_POLICY.version, offline: true, originalProfiles: 20, additionalComparisons: 1,
   nutritionScores: products.filter(p => p.nutritionScore100 !== null).length,
   originalNutritionScores: products.slice(0, 20).filter(p => p.nutritionScore100 !== null).length,
   overallScores: products.filter(p => p.overallScore100 !== null).length,

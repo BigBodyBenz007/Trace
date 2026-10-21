@@ -11,8 +11,9 @@ const webpack = require('webpack');
 const { normalizeOpenFoodFactsProduct } = require('../api/nutrition/_barcodeGateway.cjs');
 const { barcodeGradingRecord, BARCODE, RETRIEVED_AT } = require('../src/development/__fixtures__/barcodeGrading.cjs');
 const root = path.resolve(__dirname, '..');
-const overallReview = process.argv.includes('--overall-review');
-const output = path.join(root, overallReview ? 'artifacts/trace-overall-food-quality-20261020' : 'artifacts/barcode-explanations-polish-20261020');
+const refinement = process.argv.includes('--screening-refinement');
+const overallReview = refinement || process.argv.includes('--overall-review');
+const output = path.join(root, refinement ? 'artifacts/additive-screening-refinement-20261020' : overallReview ? 'artifacts/trace-overall-food-quality-20261020' : 'artifacts/barcode-explanations-polish-20261020');
 const scratch = path.join(root, overallReview ? '.tmp-browser/barcode-overall' : '.tmp-browser/barcode-grading');
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 fs.mkdirSync(output, { recursive: true });
@@ -53,6 +54,7 @@ async function compile(production = false) {
       const archive = require('../docs/barcode-grading-grocery-pilot-2026-10-20/results.json');
       products.almonds = archive.observations.find(row => row.barcode === '00041570003831').lookup.food;
       products.quest = archive.observations.find(row => row.barcode === '00888849000012').lookup.food;
+      products.teddy = require('../docs/trace-nutrition-v2-teddy-2026-10-20.json').lookup.food;
       // Replay the already-approved v2 qualifier recovery, not the legacy
       // pre-repair cache. Raw nutrient values and basis must match exactly.
       products.quest = JSON.parse(JSON.stringify(products.quest));
@@ -80,7 +82,7 @@ async function compile(production = false) {
       function Preview() {
         const [entries, setEntries] = useState([]);
         return <div className="trace-app-shell trace-feature-page trace-feature-page--nutrition">
-          <p>{['almonds', 'quest'].includes(params.get('scenario')) ? 'Archived provider observation; current package not independently verified. Enter ' + (params.get('scenario') === 'quest' ? '00888849000012' : '00041570003831') + ' after Scan Barcode.' : 'Synthetic review controls — no real product assessment. Enter ${BARCODE} after Scan Barcode.'}</p>
+          <p>{['almonds', 'quest', 'teddy'].includes(params.get('scenario')) ? 'Archived provider observation; current package not independently verified. Enter ' + ({quest:'00888849000012', almonds:'00041570003831', teddy:'044000045586'}[params.get('scenario')]) + ' after Scan Barcode.' : 'Synthetic review controls — no real product assessment. Enter ${BARCODE} after Scan Barcode.'}</p>
           <NutritionPage onBack={() => {}} nutritionEntries={entries} nutritionGoals={{ calories: 0, protein: 0, carbohydrates: 0, fat: 0 }}
             saveNutritionEntry={entry => { const saved = { ...entry, id: 'synthetic-' + Date.now() }; window.previewSavedEntry = saved; setEntries([...entries, saved]); return true; }}
             saveNutritionGoals={() => true} barcodeLookupService={lookup} barcodeCamera={camera}
@@ -141,7 +143,7 @@ async function main() {
     const until = async expression => { for (let i = 0; i < 120; i++) { if (await evaluate(expression)) return; await wait(100); } throw new Error('Timed out: ' + expression); };
     const click = text => evaluate(`Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === ${JSON.stringify(text)}).click()`);
     const review = async (scenario = 'eligible', theme = 'modern-heirloom', flag = true) => {
-      const lookupCode = scenario === 'almonds' ? '00041570003831' : scenario === 'quest' ? '00888849000012' : BARCODE;
+      const lookupCode = { almonds: '00041570003831', quest: '00888849000012', teddy: '044000045586' }[scenario] || BARCODE;
       await client.send('Page.navigate', { url: `${base}/?scenario=${scenario}&theme=${theme}${flag ? '&barcodeGrading=1' : ''}` });
       await until(`Array.from(document.querySelectorAll('button')).some(b => b.textContent.trim() === 'Scan Barcode')`);
       await click('Scan Barcode');
@@ -186,6 +188,18 @@ async function main() {
       assert(await evaluate(`(() => { const score = document.querySelector('[aria-label="Experimental overall rating"]'); const denominator = score.querySelector('small').getBoundingClientRect(); const line = score.getBoundingClientRect(); return line.height < 50 && denominator.height < 25 && denominator.right <= score.parentElement.getBoundingClientRect().right; })()`), 'Whole score denominator must remain on one line');
       assert(await evaluate(`Array.from(document.querySelectorAll('.trace-barcode-grade details, .trace-barcode-additives')).every(el => !el.open)`));
       await capture('mobile-provisional-390x844.png');
+      if (refinement) {
+        await review('teddy');
+        assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental overall rating"]').textContent`), '44/100');
+        assert(await evaluate(`document.querySelector('[aria-label="Experimental nutrition rating"]').textContent.includes('Nutrition 46/100 · additive deduction 2 points')`));
+        assert(await evaluate(`document.querySelector('[aria-label="Provisional overall score"]') && Array.from(document.querySelectorAll('.trace-barcode-grade details, .trace-barcode-additives')).every(el => !el.open)`));
+        assert(await evaluate(`document.querySelector('[aria-label="Experimental nutrition assessment"]').getBoundingClientRect().bottom < 844`));
+        await capture('mobile-teddy-390x844.png');
+        await evaluate(`document.querySelector('.trace-barcode-additives').open = true; document.querySelector('.trace-barcode-additives').scrollIntoView({block:'start'})`);
+        assert.equal(await evaluate(`document.querySelector('[aria-label="Grouped provider additives"]').children.length`), 2);
+        assert(await evaluate(`document.querySelector('[aria-label="Grouped provider additives"]').textContent.includes('en:e500; en:e500ii')`));
+        await capture('mobile-teddy-additives-390x844.png');
+      }
     }
     await review('unresolved');
     assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental nutrition rating"]').textContent`), 'Score unavailable');
@@ -200,7 +214,7 @@ async function main() {
     const themes = ['modern-heirloom', 'river', 'haunted-forest', 'gnome-village', 'desert-journey', 'outer-space-journey', 'to-kingdoms-ahead'];
     const themeBackgrounds = [];
     for (const theme of themes) {
-      await review('eligible', theme);
+      await review(refinement ? 'teddy' : 'eligible', theme);
       assert(await evaluate(`Array.from(document.querySelectorAll('.trace-barcode-grade details, .trace-barcode-additives')).every(el => !el.open)`), theme + ': collapsed');
       assert(await evaluate(`document.documentElement.scrollWidth <= innerWidth && document.querySelector('.trace-barcode-dialog__content').scrollWidth <= document.querySelector('.trace-barcode-dialog__content').clientWidth + 1`), theme + ': overflow');
       assert.equal(await evaluate('document.documentElement.dataset.traceShellTheme'), theme);
@@ -210,9 +224,10 @@ async function main() {
     await client.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 960, deviceScaleFactor: 1, mobile: false });
     await review(); await capture('desktop-review-1280x960.png');
     if (overallReview) { await review('quest'); await capture('desktop-provisional-1280x960.png'); }
+    if (refinement) { await review('teddy'); await capture('desktop-teddy-1280x960.png'); }
     await review('eligible', 'modern-heirloom', false);
     assert.equal(await evaluate(`Boolean(document.querySelector('[aria-label="Experimental nutrition assessment"]'))`), false);
-    const report = { mobile: '390x844', desktop: '1280x960', screenshots: overallReview ? 8 : 5, themes, controls, disclosuresStartCollapsed: true, foodLoggingAndServing: true, scoresAbsentFromSavedEntry: true, noFlagExcludesGrading: true, synthetic: true, archivedAlmondComparison: overallReview, archivedNonzeroQuestScreen: overallReview, physicalDeviceTest: false };
+    const report = { mobile: '390x844', desktop: '1280x960', screenshots: refinement ? 11 : overallReview ? 8 : 5, themes, controls, disclosuresStartCollapsed: true, foodLoggingAndServing: true, scoresAbsentFromSavedEntry: true, noFlagExcludesGrading: true, synthetic: true, archivedAlmondComparison: overallReview, archivedNonzeroQuestScreen: overallReview, archivedTeddyScreen: refinement, physicalDeviceTest: false };
     fs.writeFileSync(path.join(output, 'visual-checks.json'), JSON.stringify(report, null, 2)); console.log(JSON.stringify(report));
   } finally { if (client) { try { await client.send('Browser.close'); } catch { /* already closed */ } client.close(); } if (browser.exitCode === null) browser.kill(); server.close(); }
 }

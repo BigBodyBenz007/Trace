@@ -1,8 +1,8 @@
 # Experimental overall food-quality ingredient screen
 
-Development-only policy revision, reviewed 2026-10-20. Starting HEAD:
-`7b6188dc0a96e663d443f55320ff193d8f828ee1`. Preserves and completes the existing
-eight-file overall candidate, including its unchanged 20% adjustment budget.
+Development-only policy refinement, reviewed 2026-10-20. Starting HEAD:
+`b095a4e93f61e07175fefd58ee0c681ba0a667c3`. Preserves the working combined
+assessment, including its unchanged 20% adjustment budget and concern weights.
 Nutrition v2, its source vectors, eligibility and all 21 saved nutrition results
 are unchanged. No provider records or historical research archives are rewritten.
 Public `grade=null`, `scoreReady=false`; no experimental scores enter food logging.
@@ -14,13 +14,40 @@ Of the same 21 captured observations: **20 nutrition scores**, **4 reviewed over
 ingredient evidence), and **1 nutrition unavailable** (Diet Coke, existing basis gap).
 The original twenty retain 19 nutrition scores; Teddy remains the additional comparison.
 Ingredient coverage, independently of nutrition availability: 4 reviewed, 15 partial,
-2 without usable evidence. Six scored observations have supported raw deductions;
-five have lower whole-number ratings. No synthetic fixture contributes to these counts.
-The previous candidate supported only the almond declaration; it had one overall result.
+2 without usable evidence. Seven scored observations have supported raw deductions;
+six have lower whole-number ratings. Previously those counts were six and five.
+No synthetic fixture contributes to these counts. A reviewed declaration is not
+independently verified composition, a completed exposure assessment or a safety finding.
+
+## Teddy and identity corrections
+
+The captured Open Food Facts record for `044000045586` declares soy lecithin,
+calcium carbonate ("source of calcium"), baking soda and natural flavor. Its tags
+are `en:e322`, `en:e322i`, `en:e500`, `en:e500ii`. Previously lecithin had weight
+0; bicarbonate, calcium carbonate and unspecified flavor were null. Thus the known
+sum was 0 and provisional overall equaled nutrition 46. This was incomplete
+classification, not a different nutrition input or rounding error.
+
+The new bicarbonate limited weight 0.2 yields `46 * (1 - 0.20 * 0.2) = 44.16`,
+rounded once to **44**, a displayed deduction of **2**. Calcium carbonate and
+flavor constituents remain unresolved; the possible budget range is **37–44**.
+Teddy is still provisional. Yuka's observed 36 is not used as a target and is not
+a verified matched formulation/source edition. No invented additives or quantities.
+
+The screen and disclosure now group E322/E322i and E500/E500ii while preserving
+all four original tags. A parent is not an additional occurrence. Explicit E322i
+and E322ii, or E500i/E500ii/E500iii, remain distinct; generic parent text cannot
+corroborate competing subtypes. Shared ambiguous provenance is retained and labeled,
+not promoted into specific presence. Negations and alternative-use qualifications
+survive grouping. The existing provider normalization, original eight verified-name
+reference entries and saved/cache formats are unchanged. EFSA's
+[lecithin identity section 3.1.1](https://efsa.onlinelibrary.wiley.com/doi/10.2903/j.efsa.2017.4742)
+explicitly distinguishes JECFA INS 322i and 322ii and covers both in its assessment;
+the local notes do not create new historical name-reference bindings.
 
 ## Exact policy
 
-`trace-overall-declared-profile`, version `2-screening-experimental-2026-10-20`:
+`trace-overall-declared-profile`, version `3-screening-experimental-2026-10-20`:
 
 ```text
 N = unchanged whole-number Trace Nutrition v2 score
@@ -44,6 +71,10 @@ never gives a bonus, organic points or an assumed nonorganic status.
 The maximum raw deduction is **20% of the nutrition score, not 20 points**.
 For nutrition 50, the cap is 10 raw points; for nutrition 100, it is 20.
 Final whole-number rounding can change the displayed deduction by up to half a point.
+The expandable calculation allocates raw deductions as
+`N * 0.20 * individualWeight / max(1, sumWeights)`. This preserves the same capped
+formula, shares a saturated budget proportionally, and never rounds each additive
+separately. An individual contribution is a policy adjustment, not measured harm.
 Checkpoint approval preserves this development implementation; it does not validate
 its scientific classifications or calibration for consumer release.
 
@@ -98,6 +129,32 @@ development policy notes, not additions to the legal registry or claims of US ap
   [EFSA 2017](https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.5045)
   found no concern at reported uses. Trace does not extrapolate findings to every
   emulsifier or infer trans fats from this identity.
+- **E500ii sodium bicarbonate: 0.2, limited preliminary evidence.** The same
+  [2024 primary cancer paper](https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338)
+  explicitly names sodium bicarbonate, although it reports the broad code E500.
+  Its result is a premenopausal breast-cancer subgroup association (HR 1.48,
+  95% CI 1.07–2.05), not a general-population finding or proof of causation.
+  The previous screen recorded this result but assigned null because consumer
+  population was unknown. This refinement applies the existing limited-precaution
+  tier consistently to that documented signal, without assuming any user's
+  subgroup, exposure or outcome. It is a contestable experimental policy judgment,
+  not a demonstrated defect in the food or a regulator-assigned deduction.
+  [FDA's SCOGS inventory](https://www.hfpappexternal.fda.gov/scripts/fdcc/index.cfm?order=ASC&search=CARBON&set=SCOGS&sort=Sortsubstance)
+  records independent expert report 26 (1975), conclusion type 1 for sodium
+  bicarbonate at then-current/expected uses; that contrary historical conclusion
+  remains attached and does not address the newer cohort. Multiple testing,
+  confounding, intake errors and replication needs remain explicit. Neither the
+  study nor weight transfers to sodium carbonate, sesquicarbonate or generic E500.
+- **E282 calcium propionate: 0.2.** A US
+  [randomized crossover study](https://pubmed.ncbi.nlm.nih.gov/34312159/)
+  (2021-07-26, doi:10.1136/bmjdrc-2021-002336) tested 1500 mg calcium propionate
+  in 28 healthy adults. Acute counterregulatory hormone responses and glucose
+  production under hypoglycemic clamp are surrogate endpoints, not incident
+  diabetes or evidence about a bread serving. The small, short study supports
+  only limited precaution under this policy; no quantity is assigned to a food.
+  [EFSA 2014](https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2014.3779)
+  found no concern at assessed maximum food-use concentrations. Both findings
+  remain visible. No transfer to other propionate salts or gut-produced propionate.
 - **E322 lecithins, E422 glycerol, E1200 polydextrose: 0** for this general-grocery
   batch, based on the linked scientific assessments, not authorization alone.
   [Lecithins](https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742),
@@ -124,38 +181,39 @@ not automatically cause deductions. No Yuka product risk label is imported into 
 Nutrition is the previous baseline; overall is the new screened result. Provisional
 numbers include only supported deductions and are not completed additive-risk assessments.
 
-| Captured profile | Nutrition baseline | Overall | Coverage | Applied weights |
-| --- | ---: | ---: | --- | --- |
-| Coca-Cola Original Taste | 12 | 12 | provisional | E338 (0.2) |
-| Diet Coke | Unavailable | Unavailable | nutrition-unavailable | None supported |
-| Kellogg's Frosted Flakes | 36 | Unavailable | nutrition-only | None supported |
-| Kellogg's Rice Krispies | 42 | 42 | provisional | None supported |
-| Post Shredded Wheat Original Big Biscuit | 82 | 82 | provisional | None supported |
-| FAGE Total 0% Plain Greek Yogurt | 87 | 87 | reviewed | None supported |
-| Chobani Strawberry on the Bottom Greek Yogurt | 80 | Unavailable | nutrition-only | None supported |
-| Quest Chocolate Chip Cookie Dough Protein Bar | 54 | 52 | provisional | E968 (0.2) |
-| Nature Valley Peanut Butter Dark Chocolate Protein Bars | 19 | 19 | provisional | None supported |
-| Dave's Killer Bread 100% Whole Wheat | 68 | 68 | reviewed | None supported |
-| Pepperidge Farm Farmhouse Hearty White Bread | 55 | 51 | provisional | E471 (0.2), E472e (0.2) |
-| Skippy Creamy Peanut Butter | 69 | 69 | provisional | None supported |
-| Blue Diamond Whole Natural Almonds | 95 | 95 | reviewed | None supported |
-| Smart Ones Santa Fe Rice & Beans | 75 | 72 | provisional | E415 (0.2) |
-| Stouffer's Classic Lasagna with Meat & Sauce | 70 | 70 | provisional | None supported |
-| Oscar Mayer Classic Wieners | 25 | 24 | provisional | E339 (0.2) |
-| SPAM Classic | 23 | 22 | provisional | E250 (0.2) |
-| Cheez-It Original | 19 | 19 | provisional | None supported |
-| OREO Original | 12 | 12 | provisional | None supported |
-| Lay's Classic Potato Chips | 32 | 32 | reviewed | None supported |
-| Teddy Grahams | 46 | 46 | provisional | None supported |
+| Captured profile | Nutrition | Previous overall | Overall now | Displayed deduction | Identified screening items | Supported findings | Remaining gaps |
+| --- | ---: | ---: | ---: | ---: | --- | --- | --- |
+| Coca-Cola Original Taste | 12 | 12 | 12 | 0 | caramel-color, E338, flavor-mixture, caffeine, E150c | E338 (limited 0.2) | caramel-color; flavor-mixture; caffeine; E150c |
+| Diet Coke | ? | ? | ? | ? | caramel-color, E951, E338, E212, flavor-mixture, E330, caffeine | None supported | caramel-color; E951; E212; flavor-mixture; E330; caffeine; nutrition basis unresolved |
+| Kellogg's Frosted Flakes | 36 | ? | ? | ? | None identified | None supported | ingredient evidence missing |
+| Kellogg's Rice Krispies | 42 | 42 | 42 | 0 | None identified | None supported | declaration gaps |
+| Post Shredded Wheat Original Big Biscuit | 82 | 82 | 82 | 0 | BHT (packaging only) | None supported | BHT |
+| FAGE Total 0% Plain Greek Yogurt | 87 | 87 | 87 | 0 | None identified | None supported | No unresolved declaration identities; exposure/formulation unverified |
+| Chobani Strawberry on the Bottom Greek Yogurt | 80 | ? | ? | ? | None identified | None supported | ingredient evidence missing |
+| Quest Chocolate Chip Cookie Dough Protein Bar | 54 | 52 | 52 | 2 | E1200, E968, E422, flavor-mixture, E960-unspecified, E955, E322i | E968 (limited 0.2) | flavor-mixture; E960-unspecified; E955 |
+| Nature Valley Peanut Butter Dark Chocolate Protein Bars | 19 | 19 | 19 | 0 | flavor-mixture, E422, E322i | None supported | flavor-mixture; declaration gaps |
+| Dave's Killer Bread 100% Whole Wheat | 68 | 68 | 68 | 0 | None identified | None supported | No unresolved declaration identities; exposure/formulation unverified |
+| Pepperidge Farm Farmhouse Hearty White Bread | 55 | 51 | 48 | 7 | E471, E282, E200, E472e, E322i | E471 (limited 0.2), E282 (limited 0.2), E472e (limited 0.2) | E200 |
+| Skippy Creamy Peanut Butter | 69 | 69 | 69 | 0 | hydrogenated-oil | None supported | hydrogenated-oil |
+| Blue Diamond Whole Natural Almonds | 95 | 95 | 95 | 0 | None identified | None supported | No unresolved declaration identities; exposure/formulation unverified |
+| Smart Ones Santa Fe Rice & Beans | 75 | 72 | 72 | 3 | modified-starch, E415 | E415 (limited 0.2) | modified-starch; declaration gaps |
+| Stouffer's Classic Lasagna with Meat & Sauce | 70 | 70 | 70 | 0 | modified-starch, flavor-mixture | None supported | modified-starch; flavor-mixture; declaration gaps |
+| Oscar Mayer Classic Wieners | 25 | 24 | 24 | 1 | E339, flavor-mixture | E339 (limited 0.2) | flavor-mixture; declaration gaps |
+| SPAM Classic | 23 | 22 | 22 | 1 | modified-starch, E250 | E250 (limited 0.2) | modified-starch |
+| Cheez-It Original | 19 | 19 | 19 | 0 | E319, E160b-unspecified, E322i | None supported | E319; E160b-unspecified; declaration gaps |
+| OREO Original | 12 | 12 | 12 | 0 | E341, E500ii, flavor-mixture, E322i | None supported | E341; E500ii; flavor-mixture |
+| Lay's Classic Potato Chips | 32 | 32 | 32 | 0 | None identified | None supported | No unresolved declaration identities; exposure/formulation unverified |
+| Teddy Grahams | 46 | 46 | 44 | 2 | E170, E500ii, flavor-mixture, E322i | E500ii (limited 0.2) | E170; flavor-mixture |
 
 Actual supported arithmetic (no product-specific score overrides):
 
-- **Coca-Cola Original Taste**: 12 * (1 - 0.20 * 0.2) = 11.52 -> **12**. Displayed deduction: 0 point(s); before rounding: 0.48. Applied: E338 Phosphoric acid.
-- **Quest Chocolate Chip Cookie Dough Protein Bar**: 54 * (1 - 0.20 * 0.2) = 51.84 -> **52**. Displayed deduction: 2 point(s); before rounding: 2.16. Applied: E968 Erythritol.
-- **Pepperidge Farm Farmhouse Hearty White Bread**: 55 * (1 - 0.20 * 0.4) = 50.6 -> **51**. Displayed deduction: 4 point(s); before rounding: 4.4. Applied: E471 Mono- and diglycerides of fatty acids; E472e DATEM.
-- **Smart Ones Santa Fe Rice & Beans**: 75 * (1 - 0.20 * 0.2) = 72 -> **72**. Displayed deduction: 3 point(s); before rounding: 3. Applied: E415 Xanthan gum.
-- **Oscar Mayer Classic Wieners**: 25 * (1 - 0.20 * 0.2) = 24 -> **24**. Displayed deduction: 1 point(s); before rounding: 1. Applied: E339 Sodium phosphates (subtype unspecified).
-- **SPAM Classic**: 23 * (1 - 0.20 * 0.2) = 22.08 -> **22**. Displayed deduction: 1 point(s); before rounding: 0.92. Applied: E250 Sodium nitrite.
+- **Coca-Cola Original Taste**: 12 * (1 - 0.20 * 0.2) = 11.52 -> **12**. Displayed deduction: 0 point(s); before rounding: 0.48. Applied: E338 Phosphoric acid (0.48 raw points).
+- **Quest Chocolate Chip Cookie Dough Protein Bar**: 54 * (1 - 0.20 * 0.2) = 51.84 -> **52**. Displayed deduction: 2 point(s); before rounding: 2.16. Applied: E968 Erythritol (2.16 raw points).
+- **Pepperidge Farm Farmhouse Hearty White Bread**: 55 * (1 - 0.20 * 0.6) = 48.4 -> **48**. Displayed deduction: 7 point(s); before rounding: 6.6. Applied: E471 Mono- and diglycerides of fatty acids (2.2 raw points); E282 Calcium propionate (2.2 raw points); E472e DATEM (2.2 raw points).
+- **Smart Ones Santa Fe Rice & Beans**: 75 * (1 - 0.20 * 0.2) = 72 -> **72**. Displayed deduction: 3 point(s); before rounding: 3. Applied: E415 Xanthan gum (3 raw points).
+- **Oscar Mayer Classic Wieners**: 25 * (1 - 0.20 * 0.2) = 24 -> **24**. Displayed deduction: 1 point(s); before rounding: 1. Applied: E339 Sodium phosphates (subtype unspecified) (1 raw points).
+- **SPAM Classic**: 23 * (1 - 0.20 * 0.2) = 22.08 -> **22**. Displayed deduction: 1 point(s); before rounding: 0.92. Applied: E250 Sodium nitrite (0.92 raw points).
+- **Teddy Grahams**: 46 * (1 - 0.20 * 0.2) = 44.16 -> **44**. Displayed deduction: 2 point(s); before rounding: 1.84. Applied: E500ii Sodium hydrogen carbonate (baking soda) (1.84 raw points).
 
 Coca-Cola's raw deduction disappears in whole-number rounding; it is **not** reported
 as a zero-concern product. Diet Coke's ingredient screen finds phosphoric acid, but
@@ -177,11 +235,18 @@ cannot create a nutrition/overall rating while its existing nutrition basis is u
 - Natural/artificial flavor constituents, starch modification, stevia preparation,
   annatto type and oil hydrogenation extent remain unspecified. No nitrite from celery,
   no assumed trans fat, and no guessing unknown substances by chemical-sounding names.
-- Calcium propionate, sorbic acid, aspartame and caffeine need more complete scientific
+- Sorbic acid, aspartame and caffeine need more complete scientific
   synthesis; function or permission alone does not set their weight.
-- Baking soda's observational cancer finding was a specific premenopausal subgroup;
-  population applicability is not assumed for every user. Calcium carbonate's science
-  remains unassessed here. Rice Krispies' ambiguous "tric phosphate" is not silently
+- Baking soda's limited precaution retains its specific subgroup and conflicting
+  historical assessment; it is not generalized into a clinical finding for every user.
+  Calcium carbonate remains null after a narrower source review: [EFSA 2023](https://efsa.onlinelibrary.wiley.com/doi/10.2903/j.efsa.2023.8106),
+  sections 1.1.3 and 4, assesses technological additive uses, explicitly excluding
+  safety as a calcium fortificant/supplement, and flags aluminium impurity concerns.
+  Teddy's declaration says "source of calcium". Neither the technological-use
+  conclusion nor a hypothetical impurity is silently assigned to that fortification
+  use. FDA's historical SCOGS carbonate conclusion is also retained. No measured
+  contaminants, total calcium exposure or completed fortification synthesis exist.
+  Rice Krispies' ambiguous "tric phosphate" is not silently
   identified as calcium phosphate. OREO's "and/or" calcium phosphate remains conditional.
 - Truncated/mismatched subingredient lists remain partial. A complete-looking declaration
   still does not exclude incidental/exempt ingredients; see [FDA ingredient-label explanation](https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients).
@@ -212,35 +277,36 @@ There are **no verified matched overall-score pairs**. Neither number is a tunin
 
 Same compact layout and existing disclosures, collapsed by default. Overall when
 supported; separate nutrition subtotal and whole-number additive deduction. Partial
-scores visibly say PROVISIONAL and can decrease. Plain-English deduction reasons appear
-without expanding. Evidence, unknown items and the remaining range are expandable.
+scores visibly say PROVISIONAL and can decrease. The short opening names the screened
+substance and shows the total whole-number deduction; study narratives, raw per-rule
+deductions, conflicting findings, unknowns and remaining range stay expandable.
+Findings remain visible even when rounding leaves the displayed deduction at zero.
 No letter ratings, safety badges, risk colors or organic bonus. All seven themes use
-the existing styles; one CSS rule prevents the prominent /100 denominator wrapping
+the existing styles; the existing CSS rule prevents the prominent /100 denominator wrapping
 on a narrow screen. No scanner/camera, nutrition/logging/storage or theme changes.
 
 The existing development + loopback + explicit URL opt-in gate is unchanged. No runtime
 network requests, migrations or score persistence. Original source text, provider IDs,
 legacy/missing/empty additive states and formulation uncertainty are retained.
 
-Exact ten-file inventory (the original eight, the batch policy and a denominator wrapping fix):
+Exact nine-file refinement inventory (all already tracked):
 
-- src/development/additiveScreeningPolicy.js (new)
-- src/development/traceOverallFoodQuality.js (new)
-- src/development/traceOverallFoodQuality.test.js (new)
+- src/development/additiveScreeningPolicy.js
+- src/development/traceOverallFoodQuality.js
+- src/development/traceOverallFoodQuality.test.js
 - src/development/BarcodeNutritionReview.jsx
-- src/development/BarcodeNutritionReview.css
 - src/development/BarcodeNutritionReview.test.jsx
-- scripts/replay-overall-food-quality.cjs (new)
+- scripts/replay-overall-food-quality.cjs
 - scripts/verify-barcode-grading.cjs
-- docs/trace-overall-food-quality-2026-10-20.json (new)
-- docs/trace-overall-food-quality.md (new)
+- docs/trace-overall-food-quality-2026-10-20.json
+- docs/trace-overall-food-quality.md
 
 `npm.cmd start`, open http://localhost:3000/?barcodeGrading=1 -> Nutrition -> Scan Barcode.
 Existing network provider availability still applies. No feature is exposed in production.
 For offline repeatable UI review (fresh bundle, no installed dependencies):
 
 ```powershell
-node scripts/verify-barcode-grading.cjs --overall-review --serve
+node scripts/verify-barcode-grading.cjs --screening-refinement --serve
 ```
 
 Open http://127.0.0.1:4175/?barcodeGrading=1&scenario=quest and enter 00888849000012.
@@ -248,6 +314,10 @@ This is the archived Quest observation; expected nutrition 54, provisional overa
 Use scenario=almonds / barcode 00041570003831 for the reviewed 95 profile. Default
 scenario is labeled synthetic. Camera is stubbed; logging is memory-only in an isolated
 origin/profile. Ctrl+C stops the server. Never use an old bundle after source changes.
+For the captured Teddy record, use `scenario=teddy` and enter `044000045586`:
+nutrition 46, deduction 2, provisional overall 44. Expand Additives to see two
+provider identity groups from the four original tags, plus the ingredient-text
+screen. Expand Score details for 1.84 raw points and the remaining 37–44 range.
 Offline replay: `node scripts/replay-overall-food-quality.cjs` asserts all v2 results
 unchanged through both the engine and integrated adapter, and writes only the existing
 overall report. It prohibits network calls. The oldest lookup archive predates the
@@ -255,18 +325,21 @@ approved energy-qualifier recovery; replay and visual fixtures reuse the exact s
 qualifiers from the approved v2 source dataset after asserting identical raw values
 and units. They do not modify nutrient values, source archives or application behavior.
 
-Validation progress/logs are saved under artifacts/additive-screening-20261020/;
-visual checks use artifacts/trace-overall-food-quality-20261020/. No commit, push,
+Refinement progress/logs and visual checks are saved under
+artifacts/additive-screening-refinement-20261020/. Prior checkpoint artifacts remain
+unchanged. No commit, push,
 deployment, dependency installation or user browser-storage access is performed.
 
 ## Completed focused validation
 
-- 212 tests pass across 9 suites (latest result per suite), including policy/alias/conditional rules, current integrated review, unchanged v2/adapters, scanner and ingredient behavior, real Nutrition handoff/serving math, saved payload isolation and production CommonJS repair.
+- 221 tests pass across 9 suites, including source-specific rules, actual Teddy grouping/arithmetic, distinct siblings, ambiguous parent evidence, conditional/negated presence, raw contributions under the cap, current integrated review, unchanged v2/adapters, scanner and ingredient behavior, real Nutrition handoff/serving math, saved payload isolation and production CommonJS repair.
 - Seven JavaScript/JSX/CJS files: zero lint errors and warnings. JS/JSX/CJS and CSS parse; report JSON and whitespace checks pass.
 - Offline replay checks all 21 engine results and integrated-adapter results against the unchanged approved nutrition baseline.
-- Isolated Chrome checks pass at 390x844 and 1280x960; all seven themes fit, disclosures start collapsed, whole /100 denominator stays on one line, and both food controls remain unobstructed. Eight screenshots include real Quest 52/54 and almond 95. Memory-only saved entries omit experimental fields. No user browser profile or archive is accessed.
+- Isolated Chrome checks pass at 390x844 and 1280x960; all seven themes fit, disclosures start collapsed, whole /100 denominator stays on one line, and both food controls remain unobstructed. Eleven screenshots include actual captured Teddy 44/46, its grouped disclosure, Quest 52/54 and almond 95. Memory-only saved entries omit experimental fields. No user browser profile or archive is accessed.
 - Focused production scanner dependency graph (343 modules) excludes the development review, nutrition engines and additive screening policy. No full production build.
-- Baseline hashes/status confirm unrelated files and original archives unchanged; HEAD remains 7b6188dc0a96e663d443f55320ff193d8f828ee1 and index empty.
+- Baseline hashes/status confirm unrelated files and original archives unchanged; HEAD remains b095a4e93f61e07175fefd58ee0c681ba0a667c3 and index empty.
 - Only routine Babel large-catalog formatting notices and Git LF/CRLF notices; no failed final checks. The small captured sample does not establish national coverage. Source/US-formulation and scientific gaps above remain.
 
-Screenshots: artifacts/trace-overall-food-quality-20261020/mobile-provisional-390x844.png and desktop-provisional-1280x960.png. Progress, baseline and focused results remain under artifacts/additive-screening-20261020/.
+Screenshots: artifacts/additive-screening-refinement-20261020/mobile-teddy-390x844.png,
+desktop-teddy-1280x960.png and mobile-teddy-additives-390x844.png. Baseline,
+before/after replay results and focused validation remain in the same directory.

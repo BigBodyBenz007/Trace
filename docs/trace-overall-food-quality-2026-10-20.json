@@ -1,5 +1,5 @@
 {
-  "version": "2-screening-experimental-2026-10-20",
+  "version": "3-screening-experimental-2026-10-20",
   "offline": true,
   "originalProfiles": 20,
   "additionalComparisons": 1,
@@ -10,8 +10,8 @@
   "provisionalOverall": 14,
   "nutritionOnly": 2,
   "nutritionUnavailable": 1,
-  "supportedDeductionProfiles": 6,
-  "roundedScoreDecreases": 5,
+  "supportedDeductionProfiles": 7,
+  "roundedScoreDecreases": 6,
   "products": [
     {
       "name": "Coca-Cola Original Taste",
@@ -19,7 +19,7 @@
       "nutritionScore100": 12,
       "overallScore100": 12,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "reason": "Screening incomplete; further review could decrease this score.",
       "concernKnown": 0.2,
       "rawOverall": 11.52,
       "rawAdditiveDeduction": 0.4800000000000004,
@@ -33,6 +33,7 @@
           "identifier": "E338",
           "name": "Phosphoric acid",
           "weight": 0.2,
+          "rawDeduction": 0.4800000000000001,
           "rationale": "Added phosphates receive a limited precautionary weight: total dietary intake can exceed EFSA’s reference in some age groups. This does not establish excess intake from this product.",
           "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
           "sources": [
@@ -824,7 +825,7 @@
       "nutritionScore100": 42,
       "overallScore100": 42,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "reason": "Screening incomplete; further review could decrease this score.",
       "concernKnown": 0,
       "rawOverall": 42,
       "rawAdditiveDeduction": 0,
@@ -877,7 +878,7 @@
       "nutritionScore100": 82,
       "overallScore100": 82,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "reason": "Screening incomplete; further review could decrease this score.",
       "concernKnown": 0,
       "rawOverall": 82,
       "rawAdditiveDeduction": 0,
@@ -969,7 +970,7 @@
       "nutritionScore100": 87,
       "overallScore100": 87,
       "status": "reviewed",
-      "reason": "Declaration reviewed under this experimental policy. No bonus or safety assurance is implied.",
+      "reason": "Declaration reviewed. No bonus or safety assurance.",
       "concernKnown": 0,
       "rawOverall": 87,
       "rawAdditiveDeduction": 0,
@@ -1043,7 +1044,7 @@
       "nutritionScore100": 54,
       "overallScore100": 52,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "reason": "Screening incomplete; further review could decrease this score.",
       "concernKnown": 0.2,
       "rawOverall": 51.839999999999996,
       "rawAdditiveDeduction": 2.1600000000000037,
@@ -1057,6 +1058,7 @@
           "identifier": "E968",
           "name": "Erythritol",
           "weight": 0.2,
+          "rawDeduction": 2.16,
           "rationale": "Limited precaution: dose-related laxative effects and an unresolved cardiovascular signal warrant screening; no harmful exposure is established.",
           "conditions": "Added erythritol. EFSA’s 0.5 g/kg/day ADI addresses diarrhoea; quantity and intake here are unknown.",
           "sources": [
@@ -1341,82 +1343,6 @@
             }
           },
           {
-            "identifier": "E322",
-            "providerIdentifier": "en:e322",
-            "providerIdentifiers": [
-              "en:e322",
-              "en:e322i"
-            ],
-            "name": "Lecithins",
-            "nameVerified": true,
-            "provider": "open-food-facts",
-            "origins": [
-              {
-                "type": "ingredient-text",
-                "text": "SOY LECITHIN"
-              },
-              {
-                "type": "provider-tag",
-                "identifier": "en:e322",
-                "provider": "open-food-facts"
-              },
-              {
-                "type": "provider-tag",
-                "identifier": "en:e322i",
-                "provider": "open-food-facts"
-              }
-            ],
-            "function": "Emulsifier — helps ingredients mix and stay mixed.",
-            "scientificContext": null,
-            "usProvision": null,
-            "historicalEvents": [],
-            "concernBurden": 0,
-            "classification": "reviewed",
-            "exposure": "unknown",
-            "conditionalPresence": false,
-            "packagingOnly": false,
-            "conflict": false,
-            "conditionResult": "not-conditional",
-            "review": {
-              "id": "E322",
-              "name": "Lecithins",
-              "aliases": [
-                "soy lecithin",
-                "soya lecithin",
-                "lecithin",
-                "lecithins",
-                "e322i"
-              ],
-              "function": "Emulsifier; helps ingredients mix.",
-              "classification": "reviewed",
-              "weight": 0,
-              "rationale": "No qualifying concern identified for general food use under this batch policy.",
-              "sources": [
-                {
-                  "publisher": "EFSA",
-                  "jurisdiction": "EU",
-                  "title": "Lecithins re-evaluation",
-                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
-                  "edition": "2017-04-07; amended 2021-04-22",
-                  "reviewedOn": "2026-10-20"
-                },
-                {
-                  "publisher": "FDA",
-                  "jurisdiction": "US",
-                  "title": "Types of Food Ingredients",
-                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
-                  "edition": "Ingredient function table; undated live page",
-                  "reviewedOn": "2026-10-20"
-                }
-              ],
-              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
-              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
-              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
-              "condition": null,
-              "reviewedOn": "2026-10-20"
-            }
-          },
-          {
             "identifier": "E960-unspecified",
             "providerIdentifier": null,
             "providerIdentifiers": [],
@@ -1532,6 +1458,80 @@
               "condition": null,
               "reviewedOn": "2026-10-20"
             }
+          },
+          {
+            "identifier": "E322i",
+            "providerIdentifier": "en:e322i",
+            "providerIdentifiers": [
+              "en:e322i",
+              "en:e322"
+            ],
+            "name": "Lecithins",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322i",
+                "provider": "open-food-facts"
+              },
+              {
+                "type": "ingredient-text",
+                "text": "SOY LECITHIN",
+                "groupedFrom": "E322",
+                "ambiguousParent": false
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322",
+                "provider": "open-food-facts",
+                "groupedFrom": "E322",
+                "ambiguousParent": false
+              }
+            ],
+            "function": "Emulsifier — helps ingredients mix and stay mixed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E322i",
+              "name": "Lecithins",
+              "aliases": [],
+              "function": "Emulsifier; helps ingredients mix.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified for general food use under this batch policy.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Lecithins re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
+                  "edition": "2017-04-07; amended 2021-04-22",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
+              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
+              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
           }
         ],
         "reasons": [
@@ -1562,7 +1562,7 @@
       "nutritionScore100": 19,
       "overallScore100": 19,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "reason": "Screening incomplete; further review could decrease this score.",
       "concernKnown": 0,
       "rawOverall": 19,
       "rawAdditiveDeduction": 0,
@@ -1578,86 +1578,6 @@
         "providerState": "reported-identifiers",
         "concernBurden": 0,
         "items": [
-          {
-            "identifier": "E322",
-            "providerIdentifier": "en:e322",
-            "providerIdentifiers": [
-              "en:e322",
-              "en:e322i"
-            ],
-            "name": "Lecithins",
-            "nameVerified": true,
-            "provider": "open-food-facts",
-            "origins": [
-              {
-                "type": "ingredient-text",
-                "text": "soy lecithin"
-              },
-              {
-                "type": "ingredient-text",
-                "text": "Soy Lecithin"
-              },
-              {
-                "type": "provider-tag",
-                "identifier": "en:e322",
-                "provider": "open-food-facts"
-              },
-              {
-                "type": "provider-tag",
-                "identifier": "en:e322i",
-                "provider": "open-food-facts"
-              }
-            ],
-            "function": "Emulsifier — helps ingredients mix and stay mixed.",
-            "scientificContext": null,
-            "usProvision": null,
-            "historicalEvents": [],
-            "concernBurden": 0,
-            "classification": "reviewed",
-            "exposure": "unknown",
-            "conditionalPresence": false,
-            "packagingOnly": false,
-            "conflict": false,
-            "conditionResult": "not-conditional",
-            "review": {
-              "id": "E322",
-              "name": "Lecithins",
-              "aliases": [
-                "soy lecithin",
-                "soya lecithin",
-                "lecithin",
-                "lecithins",
-                "e322i"
-              ],
-              "function": "Emulsifier; helps ingredients mix.",
-              "classification": "reviewed",
-              "weight": 0,
-              "rationale": "No qualifying concern identified for general food use under this batch policy.",
-              "sources": [
-                {
-                  "publisher": "EFSA",
-                  "jurisdiction": "EU",
-                  "title": "Lecithins re-evaluation",
-                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
-                  "edition": "2017-04-07; amended 2021-04-22",
-                  "reviewedOn": "2026-10-20"
-                },
-                {
-                  "publisher": "FDA",
-                  "jurisdiction": "US",
-                  "title": "Types of Food Ingredients",
-                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
-                  "edition": "Ingredient function table; undated live page",
-                  "reviewedOn": "2026-10-20"
-                }
-              ],
-              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
-              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
-              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
-              "condition": null,
-              "reviewedOn": "2026-10-20"
-            }
-          },
           {
             "identifier": "flavor-mixture",
             "providerIdentifier": null,
@@ -1784,6 +1704,86 @@
               "condition": null,
               "reviewedOn": "2026-10-20"
             }
+          },
+          {
+            "identifier": "E322i",
+            "providerIdentifier": "en:e322i",
+            "providerIdentifiers": [
+              "en:e322i",
+              "en:e322"
+            ],
+            "name": "Lecithins",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322i",
+                "provider": "open-food-facts"
+              },
+              {
+                "type": "ingredient-text",
+                "text": "soy lecithin",
+                "groupedFrom": "E322",
+                "ambiguousParent": false
+              },
+              {
+                "type": "ingredient-text",
+                "text": "Soy Lecithin",
+                "groupedFrom": "E322",
+                "ambiguousParent": false
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322",
+                "provider": "open-food-facts",
+                "groupedFrom": "E322",
+                "ambiguousParent": false
+              }
+            ],
+            "function": "Emulsifier — helps ingredients mix and stay mixed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E322i",
+              "name": "Lecithins",
+              "aliases": [],
+              "function": "Emulsifier; helps ingredients mix.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified for general food use under this batch policy.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Lecithins re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
+                  "edition": "2017-04-07; amended 2021-04-22",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
+              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
+              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
           }
         ],
         "reasons": [
@@ -1830,7 +1830,7 @@
       "nutritionScore100": 68,
       "overallScore100": 68,
       "status": "reviewed",
-      "reason": "Declaration reviewed under this experimental policy. No bonus or safety assurance is implied.",
+      "reason": "Declaration reviewed. No bonus or safety assurance.",
       "concernKnown": 0,
       "rawOverall": 68,
       "rawAdditiveDeduction": 0,
@@ -1873,22 +1873,23 @@
       "name": "Pepperidge Farm Farmhouse Hearty White Bread",
       "barcode": "00014100070832",
       "nutritionScore100": 55,
-      "overallScore100": 51,
+      "overallScore100": 48,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
-      "concernKnown": 0.4,
-      "rawOverall": 50.599999999999994,
-      "rawAdditiveDeduction": 4.400000000000006,
-      "additiveDeduction": 4,
+      "reason": "Screening incomplete; further review could decrease this score.",
+      "concernKnown": 0.6,
+      "rawOverall": 48.4,
+      "rawAdditiveDeduction": 6.600000000000001,
+      "additiveDeduction": 7,
       "possibleRange": {
         "min": 44,
-        "max": 51
+        "max": 48
       },
       "deductions": [
         {
           "identifier": "E471",
           "name": "Mono- and diglycerides of fatty acids",
           "weight": 0.2,
+          "rawDeduction": 2.2,
           "rationale": "Limited precaution for prospective human cancer associations; additive-specific causation and product exposure are not established.",
           "conditions": "Explicitly declared added mono/diglycerides, not naturally occurring fats or every emulsifier. No inference of trans fats or package concentration.",
           "sources": [
@@ -1919,9 +1920,36 @@
           ]
         },
         {
+          "identifier": "E282",
+          "name": "Calcium propionate",
+          "weight": 0.2,
+          "rawDeduction": 2.2,
+          "rationale": "Limited precaution for short-term human metabolic effects; chronic disease or harmful product exposure has not been demonstrated.",
+          "conditions": "Explicit calcium propionate only. The experimental dose and clamp conditions are not assigned to a food or consumer; no extrapolation to naturally produced gut propionate or every propionate salt.",
+          "sources": [
+            {
+              "publisher": "Adler et al.; BMJ Open Diabetes Research & Care",
+              "jurisdiction": "US",
+              "title": "Acute effects of the food preservative propionic acid on glucose metabolism in humans",
+              "url": "https://pubmed.ncbi.nlm.nih.gov/34312159/",
+              "edition": "2021-07-26;9:e002336; doi:10.1136/bmjdrc-2021-002336; randomized crossover study",
+              "reviewedOn": "2026-10-20"
+            },
+            {
+              "publisher": "EFSA",
+              "jurisdiction": "EU",
+              "title": "Propionic acid and propionates re-evaluation",
+              "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2014.3779",
+              "edition": "2014-07-22; abstract and conclusions",
+              "reviewedOn": "2026-10-20"
+            }
+          ]
+        },
+        {
           "identifier": "E472e",
           "name": "DATEM",
           "weight": 0.2,
+          "rawDeduction": 2.2,
           "rationale": "Limited precaution for an uncertain prospective human diabetes association; this is a screening signal, not demonstrated harm.",
           "conditions": "Explicit DATEM use. Reported cohort intake is not assigned to the product or consumer.",
           "sources": [
@@ -1940,7 +1968,7 @@
       "additives": {
         "status": "partial",
         "providerState": "reported-identifiers",
-        "concernBurden": 0.4,
+        "concernBurden": 0.6,
         "items": [
           {
             "identifier": "E471",
@@ -2027,8 +2055,8 @@
             "scientificContext": null,
             "usProvision": null,
             "historicalEvents": [],
-            "concernBurden": null,
-            "classification": null,
+            "concernBurden": 0.2,
+            "classification": "limited",
             "exposure": "unknown",
             "conditionalPresence": false,
             "packagingOnly": false,
@@ -2041,22 +2069,30 @@
                 "calcium propionate"
               ],
               "function": "Preservative.",
-              "classification": null,
-              "weight": null,
-              "rationale": "Scientific evidence review remains incomplete; function alone supplies no weight.",
+              "classification": "limited",
+              "weight": 0.2,
+              "rationale": "Limited precaution for short-term human metabolic effects; chronic disease or harmful product exposure has not been demonstrated.",
               "sources": [
                 {
-                  "publisher": "FDA",
+                  "publisher": "Adler et al.; BMJ Open Diabetes Research & Care",
                   "jurisdiction": "US",
-                  "title": "Types of Food Ingredients",
-                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
-                  "edition": "Ingredient function table; undated live page",
+                  "title": "Acute effects of the food preservative propionic acid on glucose metabolism in humans",
+                  "url": "https://pubmed.ncbi.nlm.nih.gov/34312159/",
+                  "edition": "2021-07-26;9:e002336; doi:10.1136/bmjdrc-2021-002336; randomized crossover study",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Propionic acid and propionates re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2014.3779",
+                  "edition": "2014-07-22; abstract and conclusions",
                   "reviewedOn": "2026-10-20"
                 }
               ],
-              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
-              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
-              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "evidence": "Randomized placebo-controlled crossover study in 28 healthy adults using 1500 mg calcium propionate: acute counterregulatory hormone changes, with increased endogenous glucose production under induced hypoglycemia. These are surrogate responses, not diabetes outcomes.",
+              "conditions": "Explicit calcium propionate only. The experimental dose and clamp conditions are not assigned to a food or consumer; no extrapolation to naturally produced gut propionate or every propionate salt.",
+              "conflicts": "Small acute study; long-term dietary clinical relevance is unresolved. EFSA 2014 found no concern at assessed maximum food-use concentrations; the trial does not establish that ordinary consumption causes disease.",
               "condition": null,
               "reviewedOn": "2026-10-20"
             }
@@ -2108,82 +2144,6 @@
               "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
               "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
               "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
-              "condition": null,
-              "reviewedOn": "2026-10-20"
-            }
-          },
-          {
-            "identifier": "E322",
-            "providerIdentifier": "en:e322",
-            "providerIdentifiers": [
-              "en:e322",
-              "en:e322i"
-            ],
-            "name": "Lecithins",
-            "nameVerified": true,
-            "provider": "open-food-facts",
-            "origins": [
-              {
-                "type": "ingredient-text",
-                "text": "soy lecithin"
-              },
-              {
-                "type": "provider-tag",
-                "identifier": "en:e322",
-                "provider": "open-food-facts"
-              },
-              {
-                "type": "provider-tag",
-                "identifier": "en:e322i",
-                "provider": "open-food-facts"
-              }
-            ],
-            "function": "Emulsifier — helps ingredients mix and stay mixed.",
-            "scientificContext": null,
-            "usProvision": null,
-            "historicalEvents": [],
-            "concernBurden": 0,
-            "classification": "reviewed",
-            "exposure": "unknown",
-            "conditionalPresence": false,
-            "packagingOnly": false,
-            "conflict": false,
-            "conditionResult": "not-conditional",
-            "review": {
-              "id": "E322",
-              "name": "Lecithins",
-              "aliases": [
-                "soy lecithin",
-                "soya lecithin",
-                "lecithin",
-                "lecithins",
-                "e322i"
-              ],
-              "function": "Emulsifier; helps ingredients mix.",
-              "classification": "reviewed",
-              "weight": 0,
-              "rationale": "No qualifying concern identified for general food use under this batch policy.",
-              "sources": [
-                {
-                  "publisher": "EFSA",
-                  "jurisdiction": "EU",
-                  "title": "Lecithins re-evaluation",
-                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
-                  "edition": "2017-04-07; amended 2021-04-22",
-                  "reviewedOn": "2026-10-20"
-                },
-                {
-                  "publisher": "FDA",
-                  "jurisdiction": "US",
-                  "title": "Types of Food Ingredients",
-                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
-                  "edition": "Ingredient function table; undated live page",
-                  "reviewedOn": "2026-10-20"
-                }
-              ],
-              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
-              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
-              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
               "condition": null,
               "reviewedOn": "2026-10-20"
             }
@@ -2245,10 +2205,83 @@
               "condition": null,
               "reviewedOn": "2026-10-20"
             }
+          },
+          {
+            "identifier": "E322i",
+            "providerIdentifier": "en:e322i",
+            "providerIdentifiers": [
+              "en:e322i",
+              "en:e322"
+            ],
+            "name": "Lecithins",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322i",
+                "provider": "open-food-facts"
+              },
+              {
+                "type": "ingredient-text",
+                "text": "soy lecithin",
+                "groupedFrom": "E322",
+                "ambiguousParent": false
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322",
+                "provider": "open-food-facts",
+                "groupedFrom": "E322",
+                "ambiguousParent": false
+              }
+            ],
+            "function": "Emulsifier — helps ingredients mix and stay mixed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E322i",
+              "name": "Lecithins",
+              "aliases": [],
+              "function": "Emulsifier; helps ingredients mix.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified for general food use under this batch policy.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Lecithins re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
+                  "edition": "2017-04-07; amended 2021-04-22",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
+              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
+              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
           }
         ],
         "reasons": [
-          "Calcium propionate: Scientific evidence review remains incomplete; function alone supplies no weight.",
           "Sorbic acid: Current integrated scientific assessment not completed in this batch."
         ],
         "source": {
@@ -2286,7 +2319,7 @@
       "nutritionScore100": 69,
       "overallScore100": 69,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "reason": "Screening incomplete; further review could decrease this score.",
       "concernKnown": 0,
       "rawOverall": 69,
       "rawAdditiveDeduction": 0,
@@ -2382,7 +2415,7 @@
       "nutritionScore100": 95,
       "overallScore100": 95,
       "status": "reviewed",
-      "reason": "Declaration reviewed under this experimental policy. No bonus or safety assurance is implied.",
+      "reason": "Declaration reviewed. No bonus or safety assurance.",
       "concernKnown": 0,
       "rawOverall": 95,
       "rawAdditiveDeduction": 0,
@@ -2416,7 +2449,7 @@
       "nutritionScore100": 75,
       "overallScore100": 72,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "reason": "Screening incomplete; further review could decrease this score.",
       "concernKnown": 0.2,
       "rawOverall": 72,
       "rawAdditiveDeduction": 3,
@@ -2430,6 +2463,7 @@
           "identifier": "E415",
           "name": "Xanthan gum",
           "weight": 0.2,
+          "rawDeduction": 3,
           "rationale": "Limited precaution for a human observational diabetes signal; it does not establish causation or a harmful amount in this product.",
           "conditions": "Chronic dietary additive intake in adults; not evidence about infant thickeners or this package’s dose. No exposure is assigned.",
           "sources": [
@@ -2646,7 +2680,7 @@
       "nutritionScore100": 70,
       "overallScore100": 70,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "reason": "Screening incomplete; further review could decrease this score.",
       "concernKnown": 0,
       "rawOverall": 70,
       "rawAdditiveDeduction": 0,
@@ -2827,7 +2861,7 @@
       "nutritionScore100": 25,
       "overallScore100": 24,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "reason": "Screening incomplete; further review could decrease this score.",
       "concernKnown": 0.2,
       "rawOverall": 24,
       "rawAdditiveDeduction": 1,
@@ -2841,6 +2875,7 @@
           "identifier": "E339",
           "name": "Sodium phosphates (subtype unspecified)",
           "weight": 0.2,
+          "rawDeduction": 1,
           "rationale": "Added phosphates receive a limited precautionary weight: total dietary intake can exceed EFSA’s reference in some age groups. This does not establish excess intake from this product.",
           "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
           "sources": [
@@ -3003,7 +3038,7 @@
       "nutritionScore100": 23,
       "overallScore100": 22,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "reason": "Screening incomplete; further review could decrease this score.",
       "concernKnown": 0.2,
       "rawOverall": 22.08,
       "rawAdditiveDeduction": 0.9200000000000017,
@@ -3017,6 +3052,7 @@
           "identifier": "E250",
           "name": "Sodium nitrite",
           "weight": 0.2,
+          "rawDeduction": 0.9200000000000002,
           "rationale": "Limited precaution for explicitly declared nitrite in meat: nitrosamine formation and high-intake uncertainty; not a claim that this package causes cancer.",
           "conditions": "Applies only when the declaration establishes meat use. Nitrite amount, nitrosamines and exposure remain unknown.",
           "sources": [
@@ -3191,7 +3227,7 @@
       "nutritionScore100": 19,
       "overallScore100": 19,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "reason": "Screening incomplete; further review could decrease this score.",
       "concernKnown": 0,
       "rawOverall": 19,
       "rawAdditiveDeduction": 0,
@@ -3312,29 +3348,33 @@
             }
           },
           {
-            "identifier": "E322",
-            "providerIdentifier": "en:e322",
+            "identifier": "E322i",
+            "providerIdentifier": "en:e322i",
             "providerIdentifiers": [
-              "en:e322",
-              "en:e322i"
+              "en:e322i",
+              "en:e322"
             ],
             "name": "Lecithins",
-            "nameVerified": true,
+            "nameVerified": false,
             "provider": "open-food-facts",
             "origins": [
-              {
-                "type": "ingredient-text",
-                "text": "soy lecithin"
-              },
-              {
-                "type": "provider-tag",
-                "identifier": "en:e322",
-                "provider": "open-food-facts"
-              },
               {
                 "type": "provider-tag",
                 "identifier": "en:e322i",
                 "provider": "open-food-facts"
+              },
+              {
+                "type": "ingredient-text",
+                "text": "soy lecithin",
+                "groupedFrom": "E322",
+                "ambiguousParent": false
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322",
+                "provider": "open-food-facts",
+                "groupedFrom": "E322",
+                "ambiguousParent": false
               }
             ],
             "function": "Emulsifier — helps ingredients mix and stay mixed.",
@@ -3349,15 +3389,9 @@
             "conflict": false,
             "conditionResult": "not-conditional",
             "review": {
-              "id": "E322",
+              "id": "E322i",
               "name": "Lecithins",
-              "aliases": [
-                "soy lecithin",
-                "soya lecithin",
-                "lecithin",
-                "lecithins",
-                "e322i"
-              ],
+              "aliases": [],
               "function": "Emulsifier; helps ingredients mix.",
               "classification": "reviewed",
               "weight": 0,
@@ -3433,7 +3467,7 @@
       "nutritionScore100": 12,
       "overallScore100": 12,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "reason": "Screening incomplete; further review could decrease this score.",
       "concernKnown": 0,
       "rawOverall": 12,
       "rawAdditiveDeduction": 0,
@@ -3511,13 +3545,13 @@
           },
           {
             "identifier": "E500ii",
-            "providerIdentifier": "en:e500",
+            "providerIdentifier": "en:e500ii",
             "providerIdentifiers": [
-              "en:e500",
-              "en:e500ii"
+              "en:e500ii",
+              "en:e500"
             ],
-            "name": "Sodium hydrogen carbonate (baking soda)",
-            "nameVerified": false,
+            "name": "Sodium hydrogen carbonate",
+            "nameVerified": true,
             "provider": "open-food-facts",
             "origins": [
               {
@@ -3526,13 +3560,15 @@
               },
               {
                 "type": "provider-tag",
-                "identifier": "en:e500",
+                "identifier": "en:e500ii",
                 "provider": "open-food-facts"
               },
               {
                 "type": "provider-tag",
-                "identifier": "en:e500ii",
-                "provider": "open-food-facts"
+                "identifier": "en:e500",
+                "provider": "open-food-facts",
+                "groupedFrom": "E500",
+                "ambiguousParent": false
               }
             ],
             "function": "Leavening agent — helps baked foods rise.",
@@ -3551,21 +3587,14 @@
               "name": "Sodium hydrogen carbonate (baking soda)",
               "aliases": [
                 "baking soda",
-                "sodium bicarbonate"
+                "sodium bicarbonate",
+                "sodium hydrogen carbonate"
               ],
               "function": "Leavening agent.",
-              "classification": null,
-              "weight": null,
-              "rationale": "A cohort subgroup association concerns premenopausal women; it is not generalized to every consumer, and no applicable population is established here.",
+              "classification": "limited",
+              "weight": 0.2,
+              "rationale": "Limited precaution for a population-specific observational signal, not established harm from baking soda or this product.",
               "sources": [
-                {
-                  "publisher": "FDA",
-                  "jurisdiction": "US",
-                  "title": "Types of Food Ingredients",
-                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
-                  "edition": "Ingredient function table; undated live page",
-                  "reviewedOn": "2026-10-20"
-                },
                 {
                   "publisher": "Sellem et al.; PLOS Medicine",
                   "jurisdiction": "FR",
@@ -3573,87 +3602,19 @@
                   "url": "https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338",
                   "edition": "2024-02-13;21(2):e1004338; main results and sensitivity analyses",
                   "reviewedOn": "2026-10-20"
-                }
-              ],
-              "evidence": "French adult observational cohort; premenopausal breast-cancer subgroup HR 1.48 (95% CI 1.07–2.05). Not a product-risk estimate.",
-              "conditions": "Specific premenopausal subgroup and chronic intake; consumer applicability is not established. Unknown weight.",
-              "conflicts": "Subgroup/multiple-testing, residual confounding and exposure measurement limit inference; replication is needed. No blanket penalty or safety finding.",
-              "condition": null,
-              "reviewedOn": "2026-10-20"
-            }
-          },
-          {
-            "identifier": "E322",
-            "providerIdentifier": "en:e322",
-            "providerIdentifiers": [
-              "en:e322",
-              "en:e322i"
-            ],
-            "name": "Lecithins",
-            "nameVerified": true,
-            "provider": "open-food-facts",
-            "origins": [
-              {
-                "type": "ingredient-text",
-                "text": "soy lecithin"
-              },
-              {
-                "type": "provider-tag",
-                "identifier": "en:e322",
-                "provider": "open-food-facts"
-              },
-              {
-                "type": "provider-tag",
-                "identifier": "en:e322i",
-                "provider": "open-food-facts"
-              }
-            ],
-            "function": "Emulsifier — helps ingredients mix and stay mixed.",
-            "scientificContext": null,
-            "usProvision": null,
-            "historicalEvents": [],
-            "concernBurden": 0,
-            "classification": "reviewed",
-            "exposure": "unknown",
-            "conditionalPresence": false,
-            "packagingOnly": false,
-            "conflict": false,
-            "conditionResult": "not-conditional",
-            "review": {
-              "id": "E322",
-              "name": "Lecithins",
-              "aliases": [
-                "soy lecithin",
-                "soya lecithin",
-                "lecithin",
-                "lecithins",
-                "e322i"
-              ],
-              "function": "Emulsifier; helps ingredients mix.",
-              "classification": "reviewed",
-              "weight": 0,
-              "rationale": "No qualifying concern identified for general food use under this batch policy.",
-              "sources": [
-                {
-                  "publisher": "EFSA",
-                  "jurisdiction": "EU",
-                  "title": "Lecithins re-evaluation",
-                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
-                  "edition": "2017-04-07; amended 2021-04-22",
-                  "reviewedOn": "2026-10-20"
                 },
                 {
-                  "publisher": "FDA",
+                  "publisher": "FDA-hosted SCOGS inventory; independent expert committee",
                   "jurisdiction": "US",
-                  "title": "Types of Food Ingredients",
-                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
-                  "edition": "Ingredient function table; undated live page",
+                  "title": "Carbonate salts, SCOGS report 26",
+                  "url": "https://www.hfpappexternal.fda.gov/scripts/fdcc/index.cfm?order=ASC&search=CARBON&set=SCOGS&sort=Sortsubstance",
+                  "edition": "1975; sodium bicarbonate CAS 144-55-8, calcium carbonate CAS 471-34-1; conclusion type 1; historical inventory summary",
                   "reviewedOn": "2026-10-20"
                 }
               ],
-              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
-              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
-              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
+              "evidence": "The 2024 French cohort explicitly names sodium bicarbonate (reported as E500): premenopausal breast-cancer subgroup HR 1.48 (95% CI 1.07–2.05). This is not a general-population result or a causal experiment.",
+              "conditions": "The existing limited-precaution tier screens the reported subgroup signal; it does not assume the user belongs to that subgroup. No intake, exposure or individual risk is inferred. Generic E500 and other carbonates do not acquire this finding.",
+              "conflicts": "Subgroup analyses, multiple testing, confounding and intake measurement limit inference; independent replication is needed. FDA-hosted SCOGS report 26 (1975) records a no-hazard-concern conclusion for then-current/expected uses. That historical assessment is not a review of the 2024 signal.",
               "condition": null,
               "reviewedOn": "2026-10-20"
             }
@@ -3712,11 +3673,85 @@
               "condition": null,
               "reviewedOn": "2026-10-20"
             }
+          },
+          {
+            "identifier": "E322i",
+            "providerIdentifier": "en:e322i",
+            "providerIdentifiers": [
+              "en:e322i",
+              "en:e322"
+            ],
+            "name": "Lecithins",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322i",
+                "provider": "open-food-facts"
+              },
+              {
+                "type": "ingredient-text",
+                "text": "soy lecithin",
+                "groupedFrom": "E322",
+                "ambiguousParent": false
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322",
+                "provider": "open-food-facts",
+                "groupedFrom": "E322",
+                "ambiguousParent": false
+              }
+            ],
+            "function": "Emulsifier — helps ingredients mix and stay mixed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E322i",
+              "name": "Lecithins",
+              "aliases": [],
+              "function": "Emulsifier; helps ingredients mix.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified for general food use under this batch policy.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Lecithins re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
+                  "edition": "2017-04-07; amended 2021-04-22",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
+              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
+              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
           }
         ],
         "reasons": [
           "Calcium phosphates (subtype unspecified): Alternative ingredient presence is unresolved.",
-          "Sodium hydrogen carbonate (baking soda): Alternative ingredient presence is unresolved.",
+          "Sodium hydrogen carbonate: Alternative ingredient presence is unresolved.",
           "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
         ],
         "source": {
@@ -3757,7 +3792,7 @@
       "nutritionScore100": 32,
       "overallScore100": 32,
       "status": "reviewed",
-      "reason": "Declaration reviewed under this experimental policy. No bonus or safety assurance is implied.",
+      "reason": "Declaration reviewed. No bonus or safety assurance.",
       "concernKnown": 0,
       "rawOverall": 32,
       "rawAdditiveDeduction": 0,
@@ -3795,23 +3830,50 @@
       "name": "Teddy Grahams",
       "barcode": "044000045586",
       "nutritionScore100": 46,
-      "overallScore100": 46,
+      "overallScore100": 44,
       "status": "provisional",
-      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
-      "concernKnown": 0,
-      "rawOverall": 46,
-      "rawAdditiveDeduction": 0,
-      "additiveDeduction": 0,
+      "reason": "Screening incomplete; further review could decrease this score.",
+      "concernKnown": 0.2,
+      "rawOverall": 44.16,
+      "rawAdditiveDeduction": 1.8400000000000034,
+      "additiveDeduction": 2,
       "possibleRange": {
         "min": 37,
-        "max": 46
+        "max": 44
       },
-      "deductions": [],
+      "deductions": [
+        {
+          "identifier": "E500ii",
+          "name": "Sodium hydrogen carbonate (baking soda)",
+          "weight": 0.2,
+          "rawDeduction": 1.8400000000000003,
+          "rationale": "Limited precaution for a population-specific observational signal, not established harm from baking soda or this product.",
+          "conditions": "The existing limited-precaution tier screens the reported subgroup signal; it does not assume the user belongs to that subgroup. No intake, exposure or individual risk is inferred. Generic E500 and other carbonates do not acquire this finding.",
+          "sources": [
+            {
+              "publisher": "Sellem et al.; PLOS Medicine",
+              "jurisdiction": "FR",
+              "title": "Emulsifiers and cancer: NutriNet-Santé",
+              "url": "https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338",
+              "edition": "2024-02-13;21(2):e1004338; main results and sensitivity analyses",
+              "reviewedOn": "2026-10-20"
+            },
+            {
+              "publisher": "FDA-hosted SCOGS inventory; independent expert committee",
+              "jurisdiction": "US",
+              "title": "Carbonate salts, SCOGS report 26",
+              "url": "https://www.hfpappexternal.fda.gov/scripts/fdcc/index.cfm?order=ASC&search=CARBON&set=SCOGS&sort=Sortsubstance",
+              "edition": "1975; sodium bicarbonate CAS 144-55-8, calcium carbonate CAS 471-34-1; conclusion type 1; historical inventory summary",
+              "reviewedOn": "2026-10-20"
+            }
+          ]
+        }
+      ],
       "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
       "additives": {
         "status": "partial",
         "providerState": "reported-identifiers",
-        "concernBurden": 0,
+        "concernBurden": 0.2,
         "items": [
           {
             "identifier": "E170",
@@ -3846,33 +3908,41 @@
               "function": "Mineral source / other technical use.",
               "classification": null,
               "weight": null,
-              "rationale": "Scientific screening not completed; mineral addition is not automatically harmless.",
+              "rationale": "Fortification and purity questions remain unresolved; the EFSA technological-additive assessment is not a blanket review of calcium fortification.",
               "sources": [
                 {
-                  "publisher": "FDA",
+                  "publisher": "FDA-hosted SCOGS inventory; independent expert committee",
                   "jurisdiction": "US",
-                  "title": "Types of Food Ingredients",
-                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
-                  "edition": "Ingredient function table; undated live page",
+                  "title": "Carbonate salts, SCOGS report 26",
+                  "url": "https://www.hfpappexternal.fda.gov/scripts/fdcc/index.cfm?order=ASC&search=CARBON&set=SCOGS&sort=Sortsubstance",
+                  "edition": "1975; sodium bicarbonate CAS 144-55-8, calcium carbonate CAS 471-34-1; conclusion type 1; historical inventory summary",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Calcium carbonate follow-up",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2023.8106",
+                  "edition": "2023-07-27; sections 1.1.3 and 4",
                   "reviewedOn": "2026-10-20"
                 }
               ],
-              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
-              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
-              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "evidence": "EFSA 2023 found no concern for calcium carbonate per se at reported technological uses, but flagged aluminium impurity exposure. Its assessment explicitly excludes safety as a calcium fortificant/supplement. Historical SCOGS report 26 records conclusion type 1.",
+              "conditions": "The Teddy declaration calls this a source of calcium. Do not transfer the technological-use conclusion to a completed fortification review, or infer an aluminium level in this package.",
+              "conflicts": "No measured contaminants or total calcium exposure; neither a contaminant penalty nor an unconditional zero-concern classification is supported here.",
               "condition": null,
               "reviewedOn": "2026-10-20"
             }
           },
           {
             "identifier": "E500ii",
-            "providerIdentifier": "en:e500",
+            "providerIdentifier": "en:e500ii",
             "providerIdentifiers": [
-              "en:e500",
-              "en:e500ii"
+              "en:e500ii",
+              "en:e500"
             ],
-            "name": "Sodium hydrogen carbonate (baking soda)",
-            "nameVerified": false,
+            "name": "Sodium hydrogen carbonate",
+            "nameVerified": true,
             "provider": "open-food-facts",
             "origins": [
               {
@@ -3881,21 +3951,23 @@
               },
               {
                 "type": "provider-tag",
-                "identifier": "en:e500",
+                "identifier": "en:e500ii",
                 "provider": "open-food-facts"
               },
               {
                 "type": "provider-tag",
-                "identifier": "en:e500ii",
-                "provider": "open-food-facts"
+                "identifier": "en:e500",
+                "provider": "open-food-facts",
+                "groupedFrom": "E500",
+                "ambiguousParent": false
               }
             ],
             "function": "Leavening agent — helps baked foods rise.",
             "scientificContext": null,
             "usProvision": null,
             "historicalEvents": [],
-            "concernBurden": null,
-            "classification": null,
+            "concernBurden": 0.2,
+            "classification": "limited",
             "exposure": "unknown",
             "conditionalPresence": false,
             "packagingOnly": false,
@@ -3906,21 +3978,14 @@
               "name": "Sodium hydrogen carbonate (baking soda)",
               "aliases": [
                 "baking soda",
-                "sodium bicarbonate"
+                "sodium bicarbonate",
+                "sodium hydrogen carbonate"
               ],
               "function": "Leavening agent.",
-              "classification": null,
-              "weight": null,
-              "rationale": "A cohort subgroup association concerns premenopausal women; it is not generalized to every consumer, and no applicable population is established here.",
+              "classification": "limited",
+              "weight": 0.2,
+              "rationale": "Limited precaution for a population-specific observational signal, not established harm from baking soda or this product.",
               "sources": [
-                {
-                  "publisher": "FDA",
-                  "jurisdiction": "US",
-                  "title": "Types of Food Ingredients",
-                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
-                  "edition": "Ingredient function table; undated live page",
-                  "reviewedOn": "2026-10-20"
-                },
                 {
                   "publisher": "Sellem et al.; PLOS Medicine",
                   "jurisdiction": "FR",
@@ -3928,87 +3993,19 @@
                   "url": "https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338",
                   "edition": "2024-02-13;21(2):e1004338; main results and sensitivity analyses",
                   "reviewedOn": "2026-10-20"
-                }
-              ],
-              "evidence": "French adult observational cohort; premenopausal breast-cancer subgroup HR 1.48 (95% CI 1.07–2.05). Not a product-risk estimate.",
-              "conditions": "Specific premenopausal subgroup and chronic intake; consumer applicability is not established. Unknown weight.",
-              "conflicts": "Subgroup/multiple-testing, residual confounding and exposure measurement limit inference; replication is needed. No blanket penalty or safety finding.",
-              "condition": null,
-              "reviewedOn": "2026-10-20"
-            }
-          },
-          {
-            "identifier": "E322",
-            "providerIdentifier": "en:e322",
-            "providerIdentifiers": [
-              "en:e322",
-              "en:e322i"
-            ],
-            "name": "Lecithins",
-            "nameVerified": true,
-            "provider": "open-food-facts",
-            "origins": [
-              {
-                "type": "ingredient-text",
-                "text": "SOY LECITHIN"
-              },
-              {
-                "type": "provider-tag",
-                "identifier": "en:e322",
-                "provider": "open-food-facts"
-              },
-              {
-                "type": "provider-tag",
-                "identifier": "en:e322i",
-                "provider": "open-food-facts"
-              }
-            ],
-            "function": "Emulsifier — helps ingredients mix and stay mixed.",
-            "scientificContext": null,
-            "usProvision": null,
-            "historicalEvents": [],
-            "concernBurden": 0,
-            "classification": "reviewed",
-            "exposure": "unknown",
-            "conditionalPresence": false,
-            "packagingOnly": false,
-            "conflict": false,
-            "conditionResult": "not-conditional",
-            "review": {
-              "id": "E322",
-              "name": "Lecithins",
-              "aliases": [
-                "soy lecithin",
-                "soya lecithin",
-                "lecithin",
-                "lecithins",
-                "e322i"
-              ],
-              "function": "Emulsifier; helps ingredients mix.",
-              "classification": "reviewed",
-              "weight": 0,
-              "rationale": "No qualifying concern identified for general food use under this batch policy.",
-              "sources": [
-                {
-                  "publisher": "EFSA",
-                  "jurisdiction": "EU",
-                  "title": "Lecithins re-evaluation",
-                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
-                  "edition": "2017-04-07; amended 2021-04-22",
-                  "reviewedOn": "2026-10-20"
                 },
                 {
-                  "publisher": "FDA",
+                  "publisher": "FDA-hosted SCOGS inventory; independent expert committee",
                   "jurisdiction": "US",
-                  "title": "Types of Food Ingredients",
-                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
-                  "edition": "Ingredient function table; undated live page",
+                  "title": "Carbonate salts, SCOGS report 26",
+                  "url": "https://www.hfpappexternal.fda.gov/scripts/fdcc/index.cfm?order=ASC&search=CARBON&set=SCOGS&sort=Sortsubstance",
+                  "edition": "1975; sodium bicarbonate CAS 144-55-8, calcium carbonate CAS 471-34-1; conclusion type 1; historical inventory summary",
                   "reviewedOn": "2026-10-20"
                 }
               ],
-              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
-              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
-              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
+              "evidence": "The 2024 French cohort explicitly names sodium bicarbonate (reported as E500): premenopausal breast-cancer subgroup HR 1.48 (95% CI 1.07–2.05). This is not a general-population result or a causal experiment.",
+              "conditions": "The existing limited-precaution tier screens the reported subgroup signal; it does not assume the user belongs to that subgroup. No intake, exposure or individual risk is inferred. Generic E500 and other carbonates do not acquire this finding.",
+              "conflicts": "Subgroup analyses, multiple testing, confounding and intake measurement limit inference; independent replication is needed. FDA-hosted SCOGS report 26 (1975) records a no-hazard-concern conclusion for then-current/expected uses. That historical assessment is not a review of the 2024 signal.",
               "condition": null,
               "reviewedOn": "2026-10-20"
             }
@@ -4067,11 +4064,84 @@
               "condition": null,
               "reviewedOn": "2026-10-20"
             }
+          },
+          {
+            "identifier": "E322i",
+            "providerIdentifier": "en:e322i",
+            "providerIdentifiers": [
+              "en:e322i",
+              "en:e322"
+            ],
+            "name": "Lecithins",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322i",
+                "provider": "open-food-facts"
+              },
+              {
+                "type": "ingredient-text",
+                "text": "SOY LECITHIN",
+                "groupedFrom": "E322",
+                "ambiguousParent": false
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322",
+                "provider": "open-food-facts",
+                "groupedFrom": "E322",
+                "ambiguousParent": false
+              }
+            ],
+            "function": "Emulsifier — helps ingredients mix and stay mixed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E322i",
+              "name": "Lecithins",
+              "aliases": [],
+              "function": "Emulsifier; helps ingredients mix.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified for general food use under this batch policy.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Lecithins re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
+                  "edition": "2017-04-07; amended 2021-04-22",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
+              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
+              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
           }
         ],
         "reasons": [
-          "Calcium carbonate: Scientific screening not completed; mineral addition is not automatically harmless.",
-          "Sodium hydrogen carbonate (baking soda): A cohort subgroup association concerns premenopausal women; it is not generalized to every consumer, and no applicable population is established here.",
+          "Calcium carbonate: Fortification and purity questions remain unresolved; the EFSA technological-additive assessment is not a blanket review of calcium fortification.",
           "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
         ],
         "source": {

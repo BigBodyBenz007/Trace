@@ -5,7 +5,7 @@ import { getBarcodeAdditiveInformation } from './barcodeReviewInformation';
 import { screenIngredientDeclaration } from './additiveScreeningPolicy';
 
 export const OVERALL_POLICY = Object.freeze({
-  id: 'trace-overall-declared-profile', version: '2-screening-experimental-2026-10-20',
+  id: 'trace-overall-declared-profile', version: '3-screening-experimental-2026-10-20',
   nutritionWeight: .8, maximumRelativeAdditiveDeduction: .2,
   exposureSource: 'https://www.fda.gov/consumers/consumer-updates/food-safe-if-it-has-chemicals',
 });
@@ -41,8 +41,9 @@ export function assessAdditiveProfile(candidate) {
     : data.items.length ? 'reported-identifiers' : 'provider-reported-empty';
   const attributed = text(source.url) && text(source.attribution) && !candidate?.customFood;
   const items = screen.items.map(item => {
-    const info = getBarcodeAdditiveInformation(item.id);
-    const provider = reported ? data.items.find(entry => item.origins.some(origin => origin.identifier === entry.providerIdentifier)) : null;
+    const info = getBarcodeAdditiveInformation(/^E322i{1,2}$/.test(item.id) ? 'E322' : item.id);
+    const matches = reported ? data.items.filter(entry => item.origins.some(origin => origin.identifier === entry.providerIdentifier)) : [];
+    const provider = matches.find(entry => entry.standardizedIdentifier === item.id) || matches[0];
     const weight = attributed ? item.concernBurden : null;
     return { identifier: item.id, providerIdentifier: provider?.providerIdentifier || null,
       providerIdentifiers: item.origins.filter(o => o.type === 'provider-tag').map(o => o.identifier),
@@ -83,6 +84,7 @@ export function assessOverallFoodQuality(candidate, nutrition) {
   const raw = supported ? score * (1 - OVERALL_POLICY.maximumRelativeAdditiveDeduction * additives.concernBurden) : null;
   const rounded = raw === null ? null : Math.round(raw);
   const provisional = supported && additives.status === 'partial';
+  const totalWeight = additives.items.reduce((sum, item) => sum + (item.concernBurden ?? 0), 0);
   return freeze({ policy: OVERALL_POLICY, grade: null, scoreReady: false, scanMatchEligible: false,
     status: !usable ? 'nutrition-unavailable' : !supported ? 'nutrition-only' : provisional ? 'provisional' : 'reviewed',
     nutritionScore100: usable ? score : null, overallScore100: rounded, provisional,
@@ -90,12 +92,15 @@ export function assessOverallFoodQuality(candidate, nutrition) {
     rawAdditiveDeduction: supported ? score - raw : null,
     possibleRange: provisional ? { min: Math.round(.8 * score), max: rounded } : null,
     deductions: supported ? additives.items.filter(item => item.concernBurden > 0).map(item => ({
-      identifier: item.identifier, name: item.name, weight: item.concernBurden,
+      identifier: item.identifier, name: item.review.name, weight: item.concernBurden,
+      // Allocate the capped budget proportionally, independent of item order.
+      // These raw contributions are not separately rounded scores or risk estimates.
+      rawDeduction: score * OVERALL_POLICY.maximumRelativeAdditiveDeduction * item.concernBurden / Math.max(1, totalWeight),
       rationale: item.review.rationale, conditions: item.review.conditions, sources: item.review.sources,
     })) : [], additiveAssessment: additives,
     reason: !usable ? 'A nutrition score is unavailable; the ingredient screen remains separate.'
       : !supported ? 'Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.'
-        : provisional ? 'PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.'
-          : 'Declaration reviewed under this experimental policy. No bonus or safety assurance is implied.',
+        : provisional ? 'Screening incomplete; further review could decrease this score.'
+          : 'Declaration reviewed. No bonus or safety assurance.',
     limitation: 'Experimental precautionary screening policy, not a validated health score or measured probability/severity of harm. Unknown exposure remains unknown. No organic component.' });
 }

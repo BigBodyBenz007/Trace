@@ -34,6 +34,14 @@ const diabetes = source('Salame et al.; Lancet Diabetes & Endocrinology', 'FR',
 const cancer = source('Sellem et al.; PLOS Medicine', 'FR',
   'Emulsifiers and cancer: NutriNet-Santé', 'https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338',
   '2024-02-13;21(2):e1004338; main results and sensitivity analyses');
+const carbonateReview = source('FDA-hosted SCOGS inventory; independent expert committee', 'US',
+  'Carbonate salts, SCOGS report 26',
+  'https://www.hfpappexternal.fda.gov/scripts/fdcc/index.cfm?order=ASC&search=CARBON&set=SCOGS&sort=Sortsubstance',
+  '1975; sodium bicarbonate CAS 144-55-8, calcium carbonate CAS 471-34-1; conclusion type 1; historical inventory summary');
+const propionateTrial = source('Adler et al.; BMJ Open Diabetes Research & Care', 'US',
+  'Acute effects of the food preservative propionic acid on glucose metabolism in humans',
+  'https://pubmed.ncbi.nlm.nih.gov/34312159/',
+  '2021-07-26;9:e002336; doi:10.1136/bmjdrc-2021-002336; randomized crossover study');
 
 const records = [];
 const add = (id, name, aliases, fn, classification, rationale, sources, evidence, conditions, conflicts, condition = null) => {
@@ -60,12 +68,18 @@ add('E250', 'Sodium nitrite', ['sodium nitrite'], 'Preservative in cured meat.',
   'EFSA toxicology/exposure assessment; NCI describes human meat-pattern associations and possible nitrosation mechanisms, not additive-specific causation.',
   'Applies only when the declaration establishes meat use. Nitrite amount, nitrosamines and exposure remain unknown.',
   'EFSA found low nitrosamine concern from nitrite used at permitted levels and protective ADIs, with a slight exceedance for highly exposed children. Meat-pattern evidence cannot isolate nitrite.', 'meat');
-add('E322', 'Lecithins', ['soy lecithin', 'soya lecithin', 'lecithin', 'lecithins', 'e322i'],
+add('E322', 'Lecithins (subtype unspecified)', ['soy lecithin', 'soya lecithin', 'lecithin', 'lecithins'],
   'Emulsifier; helps ingredients mix.', 'reviewed', 'No qualifying concern identified for general food use under this batch policy.',
   [efsa('Lecithins re-evaluation', '2017.4742', '2017-04-07; amended 2021-04-22'), types],
   'Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.',
   'General grocery use, not individual allergy suitability or a review of infant formula.',
   'Soy/egg allergen suitability remains separate; no claim of universal safety.');
+// The general lecithin assessment covers ordinary and partially hydrolysed
+// lecithins. Keep explicit subtypes separate; a parent tag is not another dose.
+for (const [id, name, aliases] of [
+  ['E322i', 'Lecithins', []],
+  ['E322ii', 'Partially hydrolysed lecithins', ['partially hydrolysed lecithins', 'partially hydrolyzed lecithins', 'hydrolysed lecithin', 'hydrolyzed lecithin']],
+]) records.push({ ...records.find(record => record.id === 'E322'), id, name, aliases });
 add('E422', 'Glycerol', ['vegetable glycerin', 'glycerin', 'glycerol'], 'Humectant; retains moisture.', 'reviewed',
   'No qualifying concern identified for refined food-grade glycerol at assessed uses.',
   [efsa('Glycerol re-evaluation', '2017.4720', '2017-03-15'), efsa('Glycerol specification follow-up', '2022.7353', '2022-06-20')],
@@ -120,18 +134,31 @@ add('E472e', 'DATEM', ['datem'], 'Emulsifier.', 'limited',
   'French adult cohort: diabetes HR 1.04 per 100 mg/day (95% CI 1.00–1.08, p=0.042), not a randomized trial.',
   'Explicit DATEM use. Reported cohort intake is not assigned to the product or consumer.',
   'Small borderline association, correlated exposures and residual confounding require replication. It neither overturns regulatory assessments nor establishes a harmful dose.');
+add('E500ii', 'Sodium hydrogen carbonate (baking soda)', ['baking soda', 'sodium bicarbonate', 'sodium hydrogen carbonate'],
+  'Leavening agent.', 'limited',
+  'Limited precaution for a population-specific observational signal, not established harm from baking soda or this product.', [cancer, carbonateReview],
+  'The 2024 French cohort explicitly names sodium bicarbonate (reported as E500): premenopausal breast-cancer subgroup HR 1.48 (95% CI 1.07–2.05). This is not a general-population result or a causal experiment.',
+  'The existing limited-precaution tier screens the reported subgroup signal; it does not assume the user belongs to that subgroup. No intake, exposure or individual risk is inferred. Generic E500 and other carbonates do not acquire this finding.',
+  'Subgroup analyses, multiple testing, confounding and intake measurement limit inference; independent replication is needed. FDA-hosted SCOGS report 26 (1975) records a no-hazard-concern conclusion for then-current/expected uses. That historical assessment is not a review of the 2024 signal.');
+add('E282', 'Calcium propionate', ['calcium propionate'], 'Preservative.', 'limited',
+  'Limited precaution for short-term human metabolic effects; chronic disease or harmful product exposure has not been demonstrated.',
+  [propionateTrial, efsa('Propionic acid and propionates re-evaluation', '2014.3779', '2014-07-22; abstract and conclusions')],
+  'Randomized placebo-controlled crossover study in 28 healthy adults using 1500 mg calcium propionate: acute counterregulatory hormone changes, with increased endogenous glucose production under induced hypoglycemia. These are surrogate responses, not diabetes outcomes.',
+  'Explicit calcium propionate only. The experimental dose and clamp conditions are not assigned to a food or consumer; no extrapolation to naturally produced gut propionate or every propionate salt.',
+  'Small acute study; long-term dietary clinical relevance is unresolved. EFSA 2014 found no concern at assessed maximum food-use concentrations; the trial does not establish that ordinary consumption causes disease.');
 
 // Identity/function review only. Specific uncompleted assessment stays null,
 // rather than zero on the strength of food-use permission or a familiar name.
 for (const [id, name, aliases, fn, gap] of [
-  ['E282', 'Calcium propionate', ['calcium propionate'], 'Preservative.', 'Scientific evidence review remains incomplete; function alone supplies no weight.'],
   ['E200', 'Sorbic acid', ['sorbic acid'], 'Preservative.', 'Current integrated scientific assessment not completed in this batch.'],
   ['E202', 'Potassium sorbate', ['potassium sorbate'], 'Preservative.', 'Current integrated scientific assessment not completed in this batch.'],
   ['E951', 'Aspartame', ['aspartame'], 'Sweetener.', 'Hazard/exposure and phenylketonuria conditions need a dedicated synthesis; not scored from permission.'],
   ['E960-unspecified', 'Stevia sweetener (form unspecified)', ['stevia sweetener'], 'Sweetener.', 'Exact steviol preparation is unspecified; no subtype is invented.'],
   ['E160b-unspecified', 'Annatto extract (type unspecified)', ['annatto extract color', 'annatto extract'], 'Color.', 'Bixin/norbixin preparation and assessment scope are unresolved.'],
-  ['E170', 'Calcium carbonate', ['calcium carbonate'], 'Mineral source / other technical use.', 'Scientific screening not completed; mineral addition is not automatically harmless.'],
-  ['E500ii', 'Sodium hydrogen carbonate (baking soda)', ['baking soda', 'sodium bicarbonate'], 'Leavening agent.', 'A cohort subgroup association concerns premenopausal women; it is not generalized to every consumer, and no applicable population is established here.'],
+  ['E170', 'Calcium carbonate', ['calcium carbonate'], 'Mineral source / other technical use.', 'Fortification and purity questions remain unresolved; the EFSA technological-additive assessment is not a blanket review of calcium fortification.'],
+  ['E500', 'Sodium carbonates (subtype unspecified)', ['sodium carbonates'], 'Acidity control / leavening.', 'The parent group does not establish bicarbonate; no transfer of a subtype-specific association.'],
+  ['E500i', 'Sodium carbonate', ['sodium carbonate'], 'Acidity control.', 'Distinct from sodium bicarbonate; its scientific screen remains incomplete.'],
+  ['E500iii', 'Sodium sesquicarbonate', ['sodium sesquicarbonate'], 'Acidity control.', 'Distinct carbonate subtype; no bicarbonate finding is transferred.'],
   ['E300', 'Ascorbic acid', ['ascorbic acid', 'vitamin c'], 'Antioxidant/nutrient.', 'No independent weight; benzoate interaction is evaluated once on the benzoate.'],
   ['E315', 'Erythorbic acid', ['erythorbic acid'], 'Antioxidant.', 'No independent weight; benzoate interaction is evaluated once on the benzoate.'],
   ['E330', 'Citric acid', ['citric acid'], 'Acidity control.', 'Scientific screen incomplete; citric acid is not vitamin C.'],
@@ -142,13 +169,11 @@ for (const [id, name, aliases, fn, gap] of [
   ['BHT', 'BHT', ['bht', 'butylated hydroxytoluene'], 'Antioxidant.', 'Packaging statement is not food presence; migration/scientific assessment not completed.'],
 ]) add(id, name, aliases, fn, null, gap, [types], 'Identity/function evidence only; insufficient scientific synthesis for a weight.',
   'General batch screen; no concentration, subtype or exposure is assumed.', 'No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.');
-// Preserve the actual subgroup evidence without assigning a population-specific
-// effect to every barcode user, and without claiming that a null is reassuring.
-const bicarbonate = records.find(record => record.id === 'E500ii');
-bicarbonate.sources.push(cancer);
-bicarbonate.evidence = 'French adult observational cohort; premenopausal breast-cancer subgroup HR 1.48 (95% CI 1.07–2.05). Not a product-risk estimate.';
-bicarbonate.conditions = 'Specific premenopausal subgroup and chronic intake; consumer applicability is not established. Unknown weight.';
-bicarbonate.conflicts = 'Subgroup/multiple-testing, residual confounding and exposure measurement limit inference; replication is needed. No blanket penalty or safety finding.';
+const calcium = records.find(record => record.id === 'E170');
+calcium.sources = [carbonateReview, efsa('Calcium carbonate follow-up', '2023.8106', '2023-07-27; sections 1.1.3 and 4')];
+calcium.evidence = 'EFSA 2023 found no concern for calcium carbonate per se at reported technological uses, but flagged aluminium impurity exposure. Its assessment explicitly excludes safety as a calcium fortificant/supplement. Historical SCOGS report 26 records conclusion type 1.';
+calcium.conditions = 'The Teddy declaration calls this a source of calcium. Do not transfer the technological-use conclusion to a completed fortification review, or infer an aluminium level in this package.';
+calcium.conflicts = 'No measured contaminants or total calcium exposure; neither a contaminant penalty nor an unconditional zero-concern classification is supported here.';
 
 const freeze = v => { if (v && typeof v === 'object') { Object.values(v).forEach(freeze); Object.freeze(v); } return v; };
 export const ADDITIVE_SCREENING_POLICY = freeze(records);
@@ -229,21 +254,31 @@ export function screenIngredientDeclaration(original, providerItems = []) {
       else unresolved.push(`Unreviewed ingredient phrase: ${phrase}`);
     }
   }
-  // Parent/subtype tags can describe the same occurrence. Only resolve the
-  // broad carbonate group when the declaration or tags identify bicarbonate.
-  const hasBicarbonate = findings.has('E500ii') || providerItems.some(item => item.standardizedIdentifier === 'E500ii');
   for (const item of providerItems) {
-    let id = item.standardizedIdentifier || item.providerIdentifier;
-    if (id === 'E322i') id = 'E322';
-    if (id === 'E500' && hasBicarbonate) id = 'E500ii';
-    addFinding(id, { type: 'provider-tag', identifier: item.providerIdentifier, provider: item.source });
+    addFinding(item.standardizedIdentifier || item.providerIdentifier,
+      { type: 'provider-tag', identifier: item.providerIdentifier, provider: item.source });
+  }
+  // Fold only a documented parent/child overlap, never siblings. With multiple
+  // subtypes, retain the broad evidence on each as non-corroborating provenance;
+  // it cannot establish which subtype a generic text phrase describes.
+  for (const [parent, children] of [['E322', ['E322i', 'E322ii']], ['E500', ['E500i', 'E500ii', 'E500iii']]]) {
+    const broad = findings.get(parent), present = children.filter(id => findings.has(id));
+    if (negated.has(parent)) present.forEach(id => negated.add(id));
+    if (!broad || !present.length) continue;
+    for (const id of present) {
+      const child = findings.get(id);
+      child.origins.push(...broad.origins.map(origin => ({ ...origin, groupedFrom: parent,
+        ambiguousParent: present.length > 1 || (origin.type === 'ingredient-text' && (parent === 'E500' || id === 'E322ii')) })));
+      if (broad.conditionalPresence) child.conditionalPresence = true;
+    }
+    findings.delete(parent);
   }
   for (const id of negated) if (findings.has(id)) {
     findings.get(id).conflict = true;
     warnings.push(`Conflicting ingredient negation and presence evidence: ${id}.`);
   }
   for (const finding of findings.values()) {
-    if (usable && !finding.origins.some(origin => origin.type !== 'provider-tag')) {
+    if (usable && !finding.origins.some(origin => origin.type !== 'provider-tag' && !origin.ambiguousParent)) {
       finding.conflict = true;
       warnings.push(`Provider identity ${finding.id} is not corroborated in the available declaration.`);
     }

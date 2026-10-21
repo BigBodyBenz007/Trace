@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import BarcodeScannerDialog from '../components/BarcodeScannerDialog';
 import NutritionPage from '../components/NutritionPage';
 import { createBarcodeNutritionCandidate } from '../services/barcodeNutritionSelection';
@@ -87,6 +87,44 @@ test('a real nitrite finding shows its deduction and limitations with the provis
   expect(screen.getByLabelText('Additive deduction reasons')).toHaveTextContent('Sodium nitrite');
   expect(screen.getByLabelText('Score details & limitations')).not.toHaveAttribute('open');
   expect(screen.getByLabelText('Overall assessment evidence')).toHaveTextContent('low nitrosamine concern');
+});
+
+test('actual Teddy review groups aliases and keeps a concise provisional summary with expandable arithmetic', () => {
+  const archive = require('../../docs/trace-nutrition-v2-teddy-2026-10-20.json');
+  const c = createBarcodeNutritionCandidate(archive.lookup);
+  render(<><BarcodeNutritionReview candidate={c} identifier={archive.lookup.identifier} /><BarcodeAdditives candidate={c} /></>);
+  expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('44/100');
+  expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 46/100 · additive deduction 2 points');
+  expect(screen.getByLabelText('Overall assessment status').textContent.length).toBeLessThan(100);
+  expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
+  expect(screen.getByLabelText('Additive deduction reasons')).toHaveTextContent('baking soda');
+  expect(screen.getByLabelText('Additive deduction reasons')).not.toHaveTextContent('HR 1.48');
+  const details = screen.getByLabelText('Score details & limitations');
+  expect(details).not.toHaveAttribute('open');
+  expect(screen.getByLabelText('Additive calculation')).toHaveTextContent('1.84 points before rounding');
+  expect(screen.getByLabelText('Additive calculation')).toHaveTextContent('rounded once to 44/100');
+  expect(screen.getByLabelText('Possible overall range')).toHaveTextContent('37–44/100');
+  const additives = screen.getByLabelText('Product additives');
+  expect(additives).not.toHaveAttribute('open');
+  fireEvent.click(screen.getByText('Additives · 2 provider-reported groups'));
+  const grouped = screen.getByLabelText('Grouped provider additives');
+  expect(within(grouped).getAllByRole('listitem')).toHaveLength(2);
+  expect(grouped).toHaveTextContent('en:e322; en:e322i');
+  expect(grouped).toHaveTextContent('en:e500; en:e500ii');
+  expect(additives).toHaveTextContent('premenopausal');
+  expect(additives).toHaveTextContent('not a general-population result');
+  expect(additives).toHaveTextContent('1975');
+  expect(additives).toHaveTextContent('Flavor mixture');
+  expect(additives).toHaveTextContent('Fortification and purity questions remain unresolved');
+});
+
+test('raw finding remains disclosed when rounding leaves the main whole-number score unchanged', () => {
+  const archive = require('../../docs/barcode-grading-grocery-pilot-2026-10-20/results.json');
+  const row = archive.observations.find(r => r.barcode === '00049000000443');
+  const c = createBarcodeNutritionCandidate(row.lookup);
+  render(<BarcodeNutritionReview candidate={c} identifier={row.lookup.identifier} />);
+  expect(screen.getByLabelText('Additive deduction reasons')).toHaveTextContent('unchanged by rounding');
+  expect(screen.getByLabelText('Additive calculation')).toHaveTextContent('0.48 points before rounding');
 });
 test('product switching resets disclosures and never transfers an earlier score', async () => {
   const onUseFood = jest.fn(); dialog(jest.fn().mockResolvedValueOnce({ status: 'found', food: food() })

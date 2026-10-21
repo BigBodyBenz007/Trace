@@ -60,16 +60,93 @@ test('multiple distinct additives accumulate and cap at the unchanged 20% budget
 test('aliases and repeated ingredient/tag occurrences count once, including parent/subtype tags', () => {
   const result = assess('Pork, sodium nitrite, sodium nitrite, soy lecithin, baking soda.',
     ['en:e250', 'en:e322', 'en:e322i', 'en:e500', 'en:e500ii']);
-  expect(result.additiveAssessment.items.map(i => i.identifier)).toEqual(['E250', 'E322', 'E500ii']);
-  expect(result.additiveAssessment.concernBurden).toBe(.2);
-  expect(result.deductions).toHaveLength(1);
-  expect(result.additiveAssessment.items[1].providerIdentifiers).toEqual(['en:e322', 'en:e322i']);
+  expect(result.additiveAssessment.items.map(i => i.identifier)).toEqual(['E250', 'E500ii', 'E322i']);
+  expect(result.additiveAssessment.concernBurden).toBe(.4);
+  expect(result.deductions).toHaveLength(2);
+  expect([...result.additiveAssessment.items.find(i => i.identifier === 'E322i').providerIdentifiers].sort()).toEqual(['en:e322', 'en:e322i']);
 });
 
 test('unresolved parent carbonate tags do not acquire a subtype', () => {
   const result = assess('Water, salt.', ['en:e500']);
   expect(result.status).toBe('provisional');
-  expect(result.additiveAssessment.items[0]).toMatchObject({ identifier: 'E500', name: null, concernBurden: null });
+  expect(result.additiveAssessment.items[0]).toMatchObject({ identifier: 'E500', name: 'Sodium carbonates (subtype unspecified)', concernBurden: null });
+});
+
+test('carbonate siblings stay distinct; broad tags and text cannot supply bicarbonate evidence', () => {
+  const r = assess('Water, sodium carbonate, sodium bicarbonate.', ['en:e500', 'en:e500i', 'en:e500ii']);
+  expect(r.additiveAssessment.items.map(i => i.identifier)).toEqual(['E500i', 'E500ii']);
+  expect(r.deductions.map(i => i.identifier)).toEqual(['E500ii']);
+  expect(r.additiveAssessment.items.every(i => i.providerIdentifiers.includes('en:e500'))).toBe(true);
+  const broad = assess('Water, sodium carbonates.', ['en:e500', 'en:e500ii']);
+  expect(broad.deductions).toHaveLength(0);
+  expect(broad.additiveAssessment.items[0]).toMatchObject({ identifier: 'E500ii', conflict: true });
+  expect(assess('Water, no sodium bicarbonate.', ['en:e500', 'en:e500ii']).deductions).toHaveLength(0);
+});
+
+test('lecithin subtypes are not merged with each other or inferred from a broad declaration', () => {
+  const r = assess('Water, E322i, partially hydrolysed lecithins.', ['en:e322', 'en:e322i', 'en:e322ii']);
+  expect(r.additiveAssessment.items.map(i => i.identifier).sort()).toEqual(['E322i', 'E322ii']);
+  expect(r.additiveAssessment.items.every(i => i.concernBurden === 0)).toBe(true);
+  const ambiguous = assess('Water, lecithins.', ['en:e322', 'en:e322i', 'en:e322ii']);
+  expect(ambiguous.status).toBe('provisional');
+  expect(ambiguous.additiveAssessment.items.every(i => i.concernBurden === null)).toBe(true);
+  expect(assess('Water, no lecithins.', ['en:e322', 'en:e322i']).additiveAssessment.items[0].concernBurden).toBeNull();
+});
+
+test('bicarbonate concern retains its exact subgroup, study identity and contrary historical assessment', () => {
+  const r = assess('Water, baking soda.', ['en:e500', 'en:e500ii']);
+  expect(r.deductions).toHaveLength(1);
+  expect(r.deductions[0]).toMatchObject({ identifier: 'E500ii', weight: .2, rawDeduction: 3.2 });
+  const review = r.additiveAssessment.items[0].review;
+  expect(review.evidence).toMatch(/premenopausal.*1.48/);
+  expect(review.evidence).toContain('not a general-population result');
+  expect(review.conflicts).toContain('1975');
+  expect(review.sources.map(s => s.url)).toEqual(expect.arrayContaining([
+    expect.stringContaining('pmed.1004338'), expect.stringContaining('set=SCOGS')]));
+  expect(assess('Water, sodium carbonate.').deductions).toHaveLength(0);
+});
+
+test('calcium propionate screen is supported by the exact human substance, not all propionates', () => {
+  const r = assess('Flour, calcium propionate.');
+  expect(r.deductions[0]).toMatchObject({ identifier: 'E282', weight: .2 });
+  const review = r.additiveAssessment.items[0].review;
+  expect(review.evidence).toContain('28 healthy adults');
+  expect(review.evidence).toContain('1500 mg calcium propionate');
+  expect(review.conflicts).toContain('long-term dietary clinical relevance');
+  expect(assess('Flour, sodium propionate.').deductions).toHaveLength(0);
+});
+
+test('calcium fortification remains unknown; technological-use findings are not misapplied', () => {
+  const r = assess('Flour, calcium carbonate (source of calcium).');
+  expect(r.additiveAssessment.items[0]).toMatchObject({ identifier: 'E170', concernBurden: null });
+  expect(r.additiveAssessment.items[0].review.evidence).toContain('excludes safety as a calcium fortificant');
+  expect(r.deductions).toHaveLength(0);
+});
+
+test('individual raw contributions sum to the capped deduction without order-dependent rounding', () => {
+  const text = 'Pork, sodium nitrite, erythritol, phosphoric acid, sodium phosphate, calcium phosphate, baking soda.';
+  const r = assess(text, [], 46);
+  expect(r.rawAdditiveDeduction).toBeCloseTo(9.2);
+  expect(r.deductions.reduce((sum, item) => sum + item.rawDeduction, 0)).toBeCloseTo(r.rawAdditiveDeduction);
+  const reversed = assess(text.split(', ').reverse().join(', '), [], 46);
+  expect(reversed.overallScore100).toBe(r.overallScore100);
+  expect(reversed.deductions.map(i => [i.identifier, i.rawDeduction]).sort())
+    .toEqual(r.deductions.map(i => [i.identifier, i.rawDeduction]).sort());
+});
+
+test('actual Teddy tags become two groups, retain unknowns and apply only the supported bicarbonate finding', () => {
+  const { createBarcodeNutritionCandidate } = require('../services/barcodeNutritionSelection');
+  const archive = require('../../docs/trace-nutrition-v2-teddy-2026-10-20.json');
+  const c = createBarcodeNutritionCandidate(archive.lookup), before = JSON.stringify(c);
+  const r = assessOverallFoodQuality(c, nutrition(46));
+  expect(r).toMatchObject({ nutritionScore100: 46, overallScore100: 44, rawOverall: 44.16,
+    additiveDeduction: 2, status: 'provisional', possibleRange: { min: 37, max: 44 }, grade: null, scoreReady: false });
+  expect(r.deductions.map(i => i.identifier)).toEqual(['E500ii']);
+  expect(r.deductions[0].rawDeduction).toBeCloseTo(1.84);
+  expect([...r.additiveAssessment.items.find(i => i.identifier === 'E322i').providerIdentifiers].sort()).toEqual(['en:e322', 'en:e322i']);
+  expect([...r.additiveAssessment.items.find(i => i.identifier === 'E500ii').providerIdentifiers].sort()).toEqual(['en:e500', 'en:e500ii']);
+  expect(r.additiveAssessment.items.filter(i => i.concernBurden === null).map(i => i.identifier).sort()).toEqual(['E170', 'flavor-mixture']);
+  expect(JSON.stringify(c)).toBe(before);
 });
 
 test('vitamin C/benzoate concern stays conditional and is applied only once to the benzoate', () => {
@@ -181,11 +258,11 @@ test('real replay preserves every v2 score and separately counts assessed, parti
   const v2 = require('../../docs/trace-nutrition-v2-comparison-2026-10-20.json');
   expect(report).toMatchObject({ originalNutritionScores: 19, nutritionScores: 20, overallScores: 18,
     reviewedOverall: 4, provisionalOverall: 14, nutritionOnly: 2, nutritionUnavailable: 1,
-    supportedDeductionProfiles: 6, roundedScoreDecreases: 5 });
+    supportedDeductionProfiles: 7, roundedScoreDecreases: 6 });
   expect(report.products.map(p => p.nutritionScore100)).toEqual(v2.products.map(p => p.after.nutritionScore100));
   expect(report.products.filter(p => p.additiveDeduction > 0).map(p => [p.name, p.nutritionScore100, p.overallScore100]))
-    .toEqual([['Quest Chocolate Chip Cookie Dough Protein Bar', 54, 52], ['Pepperidge Farm Farmhouse Hearty White Bread', 55, 51],
-      ['Smart Ones Santa Fe Rice & Beans', 75, 72], ['Oscar Mayer Classic Wieners', 25, 24], ['SPAM Classic', 23, 22]]);
+    .toEqual([['Quest Chocolate Chip Cookie Dough Protein Bar', 54, 52], ['Pepperidge Farm Farmhouse Hearty White Bread', 55, 48],
+      ['Smart Ones Santa Fe Rice & Beans', 75, 72], ['Oscar Mayer Classic Wieners', 25, 24], ['SPAM Classic', 23, 22], ['Teddy Grahams', 46, 44]]);
   expect(report.stouffersComparison).toMatchObject({ matchingProductEvidence: false, classicNutritionV2: 70,
     meatLovers: { nutritionV2: 66, publishedNutrition: 75, traceOverall: null, vegetableVerification: 'Yuka-reported assumption only' } });
 });
