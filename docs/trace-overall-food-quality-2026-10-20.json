@@ -1,0 +1,4147 @@
+{
+  "version": "2-screening-experimental-2026-10-20",
+  "offline": true,
+  "originalProfiles": 20,
+  "additionalComparisons": 1,
+  "nutritionScores": 20,
+  "originalNutritionScores": 19,
+  "overallScores": 18,
+  "reviewedOverall": 4,
+  "provisionalOverall": 14,
+  "nutritionOnly": 2,
+  "nutritionUnavailable": 1,
+  "supportedDeductionProfiles": 6,
+  "roundedScoreDecreases": 5,
+  "products": [
+    {
+      "name": "Coca-Cola Original Taste",
+      "barcode": "00049000000443",
+      "nutritionScore100": 12,
+      "overallScore100": 12,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0.2,
+      "rawOverall": 11.52,
+      "rawAdditiveDeduction": 0.4800000000000004,
+      "additiveDeduction": 0,
+      "possibleRange": {
+        "min": 10,
+        "max": 12
+      },
+      "deductions": [
+        {
+          "identifier": "E338",
+          "name": "Phosphoric acid",
+          "weight": 0.2,
+          "rationale": "Added phosphates receive a limited precautionary weight: total dietary intake can exceed EFSA’s reference in some age groups. This does not establish excess intake from this product.",
+          "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
+          "sources": [
+            {
+              "publisher": "EFSA",
+              "jurisdiction": "EU",
+              "title": "New advice on phosphates",
+              "url": "https://www.efsa.europa.eu/en/press/news/190612",
+              "edition": "2019-06-12; assessment 2019.5674",
+              "reviewedOn": "2026-10-20"
+            }
+          ]
+        }
+      ],
+      "confidence": "Foreign or multi-market record: this assesses only its supplied nutrition profile. The exact US formulation is not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "reported-identifiers",
+        "concernBurden": 0.2,
+        "items": [
+          {
+            "identifier": "caramel-color",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Caramel color (class unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "caramel color"
+              }
+            ],
+            "function": "Color.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "caramel-color",
+              "name": "Caramel color (class unspecified)",
+              "aliases": [
+                "caramel color",
+                "caramel colour"
+              ],
+              "function": "Color.",
+              "classification": null,
+              "weight": null,
+              "rationale": "No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Questions & Answers About 4-MEI",
+                  "url": "https://www.fda.gov/food/food-additives-petitions/questions-answers-about-4-mei",
+                  "edition": "Undated live explanation",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "FDA discusses high-dose animal findings for 4-MEI; no human product-specific study.",
+              "conditions": "4-MEI can occur in Class III/IV. Generic caramel color does not establish a class or byproduct amount.",
+              "conflicts": "FDA finds no immediate/short-term concern at expected food levels and does not recommend dietary changes. Animal hazard is not measured dietary risk.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E338",
+            "providerIdentifier": "en:e338",
+            "providerIdentifiers": [
+              "en:e338"
+            ],
+            "name": "Phosphoric acid",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "phosphoric acid"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e338",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Acidity/texture control or mineral addition; exact product purpose unconfirmed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0.2,
+            "classification": "limited",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E338",
+              "name": "Phosphoric acid",
+              "aliases": [
+                "phosphoric acid"
+              ],
+              "function": "Acidity/texture control or mineral addition; exact product purpose unconfirmed.",
+              "classification": "limited",
+              "weight": 0.2,
+              "rationale": "Added phosphates receive a limited precautionary weight: total dietary intake can exceed EFSA’s reference in some age groups. This does not establish excess intake from this product.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "New advice on phosphates",
+                  "url": "https://www.efsa.europa.eu/en/press/news/190612",
+                  "edition": "2019-06-12; assessment 2019.5674",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated toxicology and dietary exposure assessment; kidney effects inform the reference, not a clinical trial of this product.",
+              "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
+              "conflicts": "Phosphorus is essential. Some modeled intakes exceed the ADI; that is not proof of an adverse outcome or a US restriction.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "flavor-mixture",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Flavor mixture (constituents unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "natural flavors"
+              }
+            ],
+            "function": "Flavor.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "flavor-mixture",
+              "name": "Flavor mixture (constituents unspecified)",
+              "aliases": [
+                "natural flavors",
+                "natural flavor",
+                "artificial flavor",
+                "flavors",
+                "flavor"
+              ],
+              "function": "Flavor.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Constituents are not named; no speculative identities.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "caffeine",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Caffeine",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "caffeine"
+              }
+            ],
+            "function": "Stimulant/flavor ingredient.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "caffeine",
+              "name": "Caffeine",
+              "aliases": [
+                "caffeine"
+              ],
+              "function": "Stimulant/flavor ingredient.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Population/dose-dependent effects not assigned a general additive weight in this batch.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E150c",
+            "providerIdentifier": "en:e150c",
+            "providerIdentifiers": [
+              "en:e150c"
+            ],
+            "name": "Ammonia caramel (provider-reported class)",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "provider-tag",
+                "identifier": "en:e150c",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Color.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": true,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E150c",
+              "name": "Ammonia caramel (provider-reported class)",
+              "aliases": [],
+              "function": "Color.",
+              "classification": null,
+              "weight": null,
+              "rationale": "No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Questions & Answers About 4-MEI",
+                  "url": "https://www.fda.gov/food/food-additives-petitions/questions-answers-about-4-mei",
+                  "edition": "Undated live explanation",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "FDA discusses high-dose animal findings for 4-MEI; no human product-specific study.",
+              "conditions": "4-MEI can occur in Class III/IV. Generic caramel color does not establish a class or byproduct amount.",
+              "conflicts": "FDA finds no immediate/short-term concern at expected food levels and does not recommend dietary changes. Animal hazard is not measured dietary risk.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "Provider identity E150c is not corroborated in the available declaration.",
+          "Caramel color (class unspecified): No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+          "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch.",
+          "Ammonia caramel (provider-reported class): Presence evidence conflicts or is not corroborated."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00049000000443",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "carbonated water, high fructose corn syrup, caramel color, phosphoric acid, natural flavors, caffeine",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "carbonated water",
+          "high fructose corn syrup"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Diet Coke",
+      "barcode": "00049000000450",
+      "nutritionScore100": null,
+      "overallScore100": null,
+      "status": "nutrition-unavailable",
+      "reason": "A nutrition score is unavailable; the ingredient screen remains separate.",
+      "concernKnown": 0.2,
+      "rawOverall": null,
+      "rawAdditiveDeduction": null,
+      "additiveDeduction": null,
+      "possibleRange": null,
+      "deductions": [],
+      "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "unknown",
+        "concernBurden": 0.2,
+        "items": [
+          {
+            "identifier": "caramel-color",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Caramel color (class unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "CARAMEL COLOR"
+              }
+            ],
+            "function": "Color.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "caramel-color",
+              "name": "Caramel color (class unspecified)",
+              "aliases": [
+                "caramel color",
+                "caramel colour"
+              ],
+              "function": "Color.",
+              "classification": null,
+              "weight": null,
+              "rationale": "No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Questions & Answers About 4-MEI",
+                  "url": "https://www.fda.gov/food/food-additives-petitions/questions-answers-about-4-mei",
+                  "edition": "Undated live explanation",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "FDA discusses high-dose animal findings for 4-MEI; no human product-specific study.",
+              "conditions": "4-MEI can occur in Class III/IV. Generic caramel color does not establish a class or byproduct amount.",
+              "conflicts": "FDA finds no immediate/short-term concern at expected food levels and does not recommend dietary changes. Animal hazard is not measured dietary risk.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E951",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Aspartame",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "ASPARTAME"
+              }
+            ],
+            "function": "Sweetener.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E951",
+              "name": "Aspartame",
+              "aliases": [
+                "aspartame"
+              ],
+              "function": "Sweetener.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Hazard/exposure and phenylketonuria conditions need a dedicated synthesis; not scored from permission.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E338",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Phosphoric acid",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "PHOSPHORIC ACID"
+              }
+            ],
+            "function": "Acidity/texture control or mineral addition; exact product purpose unconfirmed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0.2,
+            "classification": "limited",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E338",
+              "name": "Phosphoric acid",
+              "aliases": [
+                "phosphoric acid"
+              ],
+              "function": "Acidity/texture control or mineral addition; exact product purpose unconfirmed.",
+              "classification": "limited",
+              "weight": 0.2,
+              "rationale": "Added phosphates receive a limited precautionary weight: total dietary intake can exceed EFSA’s reference in some age groups. This does not establish excess intake from this product.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "New advice on phosphates",
+                  "url": "https://www.efsa.europa.eu/en/press/news/190612",
+                  "edition": "2019-06-12; assessment 2019.5674",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated toxicology and dietary exposure assessment; kidney effects inform the reference, not a clinical trial of this product.",
+              "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
+              "conflicts": "Phosphorus is essential. Some modeled intakes exceed the ADI; that is not proof of an adverse outcome or a US restriction.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E212",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Potassium benzoate",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "POTASSIUM BENZOATE"
+              }
+            ],
+            "function": "Preservative.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "beverage-or-cofactor-unresolved",
+            "review": {
+              "id": "E212",
+              "name": "Potassium benzoate",
+              "aliases": [
+                "potassium benzoate"
+              ],
+              "function": "Preservative.",
+              "classification": "limited",
+              "weight": 0.2,
+              "rationale": "Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Benzene in beverages",
+                  "url": "https://www.fda.gov/food/environmental-contaminants-food/questions-and-answers-occurrence-benzene-soft-drinks-and-other-beverages",
+                  "edition": "Historical 2005–May 2007 survey; undated live explanation",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "FDA analytical beverage survey and formation explanation, not human disease evidence for this product.",
+              "conditions": "Requires a beverage plus ascorbic/erythorbic acid evidence; heat/light can encourage formation. Missing cofactors remain unresolved.",
+              "conflicts": "FDA’s historical survey did not indicate a consumer safety concern; ingredient presence does not establish benzene.",
+              "condition": "benzoate-beverage",
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "flavor-mixture",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Flavor mixture (constituents unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "NATURAL FLAVORS"
+              }
+            ],
+            "function": "Flavor.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "flavor-mixture",
+              "name": "Flavor mixture (constituents unspecified)",
+              "aliases": [
+                "natural flavors",
+                "natural flavor",
+                "artificial flavor",
+                "flavors",
+                "flavor"
+              ],
+              "function": "Flavor.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Constituents are not named; no speculative identities.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E330",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Citric acid",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "CITRIC ACID"
+              }
+            ],
+            "function": "Acidity regulator — helps control acidity.",
+            "scientificContext": null,
+            "usProvision": {
+              "source": {
+                "title": "21 CFR 184.1033",
+                "url": "https://www.ecfr.gov/current/title-21/section-184.1033",
+                "provision": "(b)–(d)",
+                "edition": "Reviewed text current through 2026-10-16; eCFR is authoritative but unofficial; linked text may change",
+                "reviewedOn": "2026-10-20",
+                "jurisdiction": "US",
+                "publisher": "FDA",
+                "verification": "directly-reviewed"
+              },
+              "text": "This US provision describes food use under good manufacturing practice, subject to identity and purity specifications and prior-sanction qualifications. It does not verify this product’s use or compliance."
+            },
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E330",
+              "name": "Citric acid",
+              "aliases": [
+                "citric acid"
+              ],
+              "function": "Acidity control.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Scientific screen incomplete; citric acid is not vitamin C.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "caffeine",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Caffeine",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "CAFFEINE."
+              }
+            ],
+            "function": "Stimulant/flavor ingredient.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "caffeine",
+              "name": "Caffeine",
+              "aliases": [
+                "caffeine"
+              ],
+              "function": "Stimulant/flavor ingredient.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Population/dose-dependent effects not assigned a general additive weight in this batch.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "Caramel color (class unspecified): No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+          "Aspartame: Hazard/exposure and phenylketonuria conditions need a dedicated synthesis; not scored from permission.",
+          "Potassium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+          "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+          "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch."
+        ],
+        "source": {
+          "url": "https://fdc.nal.usda.gov/food-details/2743965/nutrients",
+          "attribution": "USDA FoodData Central (public domain / CC0)"
+        },
+        "originalIngredientText": "CARBONATED WATER, CARAMEL COLOR, ASPARTAME, PHOSPHORIC ACID, POTASSIUM BENZOATE (TO PROTECT TASTE), NATURAL FLAVORS, CITRIC ACID, CAFFEINE.",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "carbonated water"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Kellogg's Frosted Flakes",
+      "barcode": "00038000196560",
+      "nutritionScore100": 36,
+      "overallScore100": null,
+      "status": "nutrition-only",
+      "reason": "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+      "concernKnown": null,
+      "rawOverall": null,
+      "rawAdditiveDeduction": null,
+      "additiveDeduction": null,
+      "possibleRange": null,
+      "deductions": [],
+      "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+      "additives": {
+        "status": "nutrition-only",
+        "providerState": "unknown",
+        "concernBurden": null,
+        "items": [],
+        "reasons": [
+          "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00038000196560",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": null,
+        "exposure": "unknown",
+        "ordinaryIngredients": [],
+        "reviewRule": null,
+        "summary": "No usable reviewed ingredient assessment. Nutrition-only; unknown additives are not treated as harmless.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Kellogg's Rice Krispies",
+      "barcode": "00038000199929",
+      "nutritionScore100": 42,
+      "overallScore100": 42,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0,
+      "rawOverall": 42,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
+      "possibleRange": {
+        "min": 34,
+        "max": 42
+      },
+      "deductions": [],
+      "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "provider-reported-empty",
+        "concernBurden": 0,
+        "items": [],
+        "reasons": [
+          "Unreviewed ingredient phrase: tric phosphate"
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00038000199929",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "Rice, sugar, salt, malt flavor, iron (tric phosphate), niacinamide, vitamin B6 (pyridoxine hydrochloride), vitamin B2 (riboflavin), vitamin B1 (thiamine hydrochloride), folic acid, vitamin D, vitamin B12.",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "rice",
+          "sugar",
+          "salt",
+          "malt flavor",
+          "iron",
+          "niacinamide",
+          "vitamin b6",
+          "pyridoxine hydrochloride",
+          "vitamin b2",
+          "riboflavin",
+          "vitamin b1",
+          "thiamine hydrochloride",
+          "folic acid",
+          "vitamin d",
+          "vitamin b12"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Post Shredded Wheat Original Big Biscuit",
+      "barcode": "00884912180056",
+      "nutritionScore100": 82,
+      "overallScore100": 82,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0,
+      "rawOverall": 82,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
+      "possibleRange": {
+        "min": 66,
+        "max": 82
+      },
+      "deductions": [],
+      "confidence": "Foreign or multi-market record: this assesses only its supplied nutrition profile. The exact US formulation is not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "provider-reported-empty",
+        "concernBurden": 0,
+        "items": [
+          {
+            "identifier": "BHT",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "BHT",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "packaging-declaration",
+                "text": "bht is added to the packaging material to preserve freshness."
+              }
+            ],
+            "function": "Antioxidant.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": true,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "BHT",
+              "name": "BHT",
+              "aliases": [
+                "bht",
+                "butylated hydroxytoluene"
+              ],
+              "function": "Antioxidant.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Packaging statement is not food presence; migration/scientific assessment not completed.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "BHT: Packaging-only declaration; food presence and migration not established."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00884912180056",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "Whole grain wheat. bht is added to the packaging material to preserve freshness.",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "whole grain wheat"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "FAGE Total 0% Plain Greek Yogurt",
+      "barcode": "00689544080008",
+      "nutritionScore100": 87,
+      "overallScore100": 87,
+      "status": "reviewed",
+      "reason": "Declaration reviewed under this experimental policy. No bonus or safety assurance is implied.",
+      "concernKnown": 0,
+      "rawOverall": 87,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
+      "possibleRange": null,
+      "deductions": [],
+      "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+      "additives": {
+        "status": "reviewed",
+        "providerState": "unknown",
+        "concernBurden": 0,
+        "items": [],
+        "reasons": [],
+        "source": {
+          "url": "https://fdc.nal.usda.gov/food-details/2757146/nutrients",
+          "attribution": "USDA FoodData Central (public domain / CC0)"
+        },
+        "originalIngredientText": "## Ingredients Grade A Pasteurized Skimmed Milk, Live Active Yogurt Cultures (l. Bulgaricus, S. Thermophilus, L. Acidophilus, Bifidus, L. Casei).",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "grade a pasteurized skimmed milk",
+          "live active yogurt cultures",
+          "l bulgaricus",
+          "s thermophilus",
+          "l acidophilus",
+          "bifidus",
+          "l casei"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Available declaration screened under this policy; no unresolved relevant identities. This is not a safety assurance.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Chobani Strawberry on the Bottom Greek Yogurt",
+      "barcode": "00894700010045",
+      "nutritionScore100": 80,
+      "overallScore100": null,
+      "status": "nutrition-only",
+      "reason": "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+      "concernKnown": null,
+      "rawOverall": null,
+      "rawAdditiveDeduction": null,
+      "additiveDeduction": null,
+      "possibleRange": null,
+      "deductions": [],
+      "confidence": "Manufacturer-attributed catalog profile assessed using US zero-fat label rounding; current US formulation/package match is not independently verified.",
+      "additives": {
+        "status": "nutrition-only",
+        "providerState": "not-collected",
+        "concernBurden": null,
+        "items": [],
+        "reasons": [
+          "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+        ],
+        "source": {
+          "url": "https://www.chobani.com/products/yogurt/greek/strawberry-cup",
+          "attribution": "Manufacturer"
+        },
+        "originalIngredientText": null,
+        "exposure": "unknown",
+        "ordinaryIngredients": [],
+        "reviewRule": null,
+        "summary": "No usable reviewed ingredient assessment. Nutrition-only; unknown additives are not treated as harmless.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Quest Chocolate Chip Cookie Dough Protein Bar",
+      "barcode": "00888849000012",
+      "nutritionScore100": 54,
+      "overallScore100": 52,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0.2,
+      "rawOverall": 51.839999999999996,
+      "rawAdditiveDeduction": 2.1600000000000037,
+      "additiveDeduction": 2,
+      "possibleRange": {
+        "min": 43,
+        "max": 52
+      },
+      "deductions": [
+        {
+          "identifier": "E968",
+          "name": "Erythritol",
+          "weight": 0.2,
+          "rationale": "Limited precaution: dose-related laxative effects and an unresolved cardiovascular signal warrant screening; no harmful exposure is established.",
+          "conditions": "Added erythritol. EFSA’s 0.5 g/kg/day ADI addresses diarrhoea; quantity and intake here are unknown.",
+          "sources": [
+            {
+              "publisher": "NIH",
+              "jurisdiction": "US",
+              "title": "Erythritol and cardiovascular events",
+              "url": "https://www.nih.gov/news-events/nih-research-matters/erythritol-cardiovascular-events",
+              "edition": "2023-03-14; study doi:10.1038/s41591-023-02223-9",
+              "reviewedOn": "2026-10-20"
+            },
+            {
+              "publisher": "EFSA",
+              "jurisdiction": "EU",
+              "title": "Erythritol re-evaluation summary",
+              "url": "https://www.efsa.europa.eu/en/plain-language-summary/re-evaluation-erythritol-e-968-food-additive",
+              "edition": "2023-12-20",
+              "reviewedOn": "2026-10-20"
+            }
+          ]
+        }
+      ],
+      "confidence": "Foreign or multi-market record: this assesses only its supplied nutrition profile. The exact US formulation is not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "reported-identifiers",
+        "concernBurden": 0.2,
+        "items": [
+          {
+            "identifier": "E1200",
+            "providerIdentifier": "en:e1200",
+            "providerIdentifiers": [
+              "en:e1200"
+            ],
+            "name": "Polydextrose",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "POLYDEXTROSE"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e1200",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Bulking/texture ingredient.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E1200",
+              "name": "Polydextrose",
+              "aliases": [
+                "polydextrose"
+              ],
+              "function": "Bulking/texture ingredient.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified at assessed food uses.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Polydextrose re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2021.6363",
+                  "edition": "2021-01-08; amended 2021-03-05",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Animal toxicity and human gastrointestinal data integrated with exposure estimates; no numerical ADI needed.",
+              "conditions": "Reported food uses; high-dose gastrointestinal effects are not assumed in this package.",
+              "conflicts": "EFSA recommended tighter contaminant specifications; no product contaminant measurements are available.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E968",
+            "providerIdentifier": "en:e968",
+            "providerIdentifiers": [
+              "en:e968"
+            ],
+            "name": "Erythritol",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "ERYTHRITOL"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e968",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Sweetener.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0.2,
+            "classification": "limited",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E968",
+              "name": "Erythritol",
+              "aliases": [
+                "erythritol"
+              ],
+              "function": "Sweetener.",
+              "classification": "limited",
+              "weight": 0.2,
+              "rationale": "Limited precaution: dose-related laxative effects and an unresolved cardiovascular signal warrant screening; no harmful exposure is established.",
+              "sources": [
+                {
+                  "publisher": "NIH",
+                  "jurisdiction": "US",
+                  "title": "Erythritol and cardiovascular events",
+                  "url": "https://www.nih.gov/news-events/nih-research-matters/erythritol-cardiovascular-events",
+                  "edition": "2023-03-14; study doi:10.1038/s41591-023-02223-9",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Erythritol re-evaluation summary",
+                  "url": "https://www.efsa.europa.eu/en/plain-language-summary/re-evaluation-erythritol-e-968-food-additive",
+                  "edition": "2023-12-20",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Human observational cardiovascular associations, small ingestion study (8 volunteers), platelet experiments and animal thrombosis work; human diarrhoea studies.",
+              "conditions": "Added erythritol. EFSA’s 0.5 g/kg/day ADI addresses diarrhoea; quantity and intake here are unknown.",
+              "conflicts": "EFSA found no established causal link between dietary erythritol and cardiovascular disease; circulating levels may not represent dietary intake.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E422",
+            "providerIdentifier": "en:e422",
+            "providerIdentifiers": [
+              "en:e422"
+            ],
+            "name": "Glycerol",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "GLYCERIN"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e422",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Humectant; retains moisture.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E422",
+              "name": "Glycerol",
+              "aliases": [
+                "vegetable glycerin",
+                "glycerin",
+                "glycerol"
+              ],
+              "function": "Humectant; retains moisture.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified for refined food-grade glycerol at assessed uses.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Glycerol re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4720",
+                  "edition": "2017-03-15",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Glycerol specification follow-up",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2022.7353",
+                  "edition": "2022-06-20",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Toxicology/exposure evaluation with follow-up assessment of manufacturing impurities.",
+              "conditions": "Ordinary food-grade use; impurity concentrations and manufacturing conditions here are unknown.",
+              "conflicts": "EFSA recommended tighter impurity specifications; this is not evidence of contamination in the product.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "flavor-mixture",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Flavor mixture (constituents unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "NATURAL FLAVORS"
+              }
+            ],
+            "function": "Flavor.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "flavor-mixture",
+              "name": "Flavor mixture (constituents unspecified)",
+              "aliases": [
+                "natural flavors",
+                "natural flavor",
+                "artificial flavor",
+                "flavors",
+                "flavor"
+              ],
+              "function": "Flavor.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Constituents are not named; no speculative identities.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E322",
+            "providerIdentifier": "en:e322",
+            "providerIdentifiers": [
+              "en:e322",
+              "en:e322i"
+            ],
+            "name": "Lecithins",
+            "nameVerified": true,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "SOY LECITHIN"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322",
+                "provider": "open-food-facts"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322i",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Emulsifier — helps ingredients mix and stay mixed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E322",
+              "name": "Lecithins",
+              "aliases": [
+                "soy lecithin",
+                "soya lecithin",
+                "lecithin",
+                "lecithins",
+                "e322i"
+              ],
+              "function": "Emulsifier; helps ingredients mix.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified for general food use under this batch policy.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Lecithins re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
+                  "edition": "2017-04-07; amended 2021-04-22",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
+              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
+              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E960-unspecified",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Stevia sweetener (form unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "STEVIA SWEETENER"
+              }
+            ],
+            "function": "Sweetener.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E960-unspecified",
+              "name": "Stevia sweetener (form unspecified)",
+              "aliases": [
+                "stevia sweetener"
+              ],
+              "function": "Sweetener.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Exact steviol preparation is unspecified; no subtype is invented.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E955",
+            "providerIdentifier": "en:e955",
+            "providerIdentifiers": [
+              "en:e955"
+            ],
+            "name": "Sucralose",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "SUCRALOSE."
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e955",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Sweetener.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E955",
+              "name": "Sucralose",
+              "aliases": [
+                "sucralose"
+              ],
+              "function": "Sweetener.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Processing-dependent assessment unresolved: the captured declaration does not establish prolonged heating conditions.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Sucralose: current uses and heating uncertainty",
+                  "url": "https://www.efsa.europa.eu/en/news/efsa-finds-sucralose-safe-when-used-currently-authorised-cannot-confirm-safety-extending-its",
+                  "edition": "2026-02-17",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "EFSA integrated assessment and thermal chemistry findings.",
+              "conditions": "Prolonged high-temperature processing is a specific uncertainty, not inferred from a bar or baked-food name.",
+              "conflicts": "EFSA confirmed current assessed uses and ADI; could not confirm proposed wider fine-bakery uses. Uncertainty is not demonstrated harm.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+          "Stevia sweetener (form unspecified): Exact steviol preparation is unspecified; no subtype is invented.",
+          "Sucralose: Processing-dependent assessment unresolved: the captured declaration does not establish prolonged heating conditions."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00888849000012",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "WHEY PROTEIN ISOLATE, MILK PROTEIN ISOLATE, POLYDEXTROSE, ALMONDS, ERYTHRITOL, GLYCERIN, COCOA BUTTER, NATURAL FLAVORS, SOY LECITHIN, STEVIA SWEETENER, SUCRALOSE.",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "whey protein isolate",
+          "milk protein isolate",
+          "almonds",
+          "cocoa butter"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Nature Valley Peanut Butter Dark Chocolate Protein Bars",
+      "barcode": "00016000457232",
+      "nutritionScore100": 19,
+      "overallScore100": 19,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0,
+      "rawOverall": 19,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
+      "possibleRange": {
+        "min": 15,
+        "max": 19
+      },
+      "deductions": [],
+      "confidence": "Foreign or multi-market record: this assesses only its supplied nutrition profile. The exact US formulation is not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "reported-identifiers",
+        "concernBurden": 0,
+        "items": [
+          {
+            "identifier": "E322",
+            "providerIdentifier": "en:e322",
+            "providerIdentifiers": [
+              "en:e322",
+              "en:e322i"
+            ],
+            "name": "Lecithins",
+            "nameVerified": true,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "soy lecithin"
+              },
+              {
+                "type": "ingredient-text",
+                "text": "Soy Lecithin"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322",
+                "provider": "open-food-facts"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322i",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Emulsifier — helps ingredients mix and stay mixed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E322",
+              "name": "Lecithins",
+              "aliases": [
+                "soy lecithin",
+                "soya lecithin",
+                "lecithin",
+                "lecithins",
+                "e322i"
+              ],
+              "function": "Emulsifier; helps ingredients mix.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified for general food use under this batch policy.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Lecithins re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
+                  "edition": "2017-04-07; amended 2021-04-22",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
+              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
+              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "flavor-mixture",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Flavor mixture (constituents unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "natural flavor"
+              },
+              {
+                "type": "ingredient-text",
+                "text": "Natural Flavor."
+              }
+            ],
+            "function": "Flavor.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "flavor-mixture",
+              "name": "Flavor mixture (constituents unspecified)",
+              "aliases": [
+                "natural flavors",
+                "natural flavor",
+                "artificial flavor",
+                "flavors",
+                "flavor"
+              ],
+              "function": "Flavor.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Constituents are not named; no speculative identities.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E422",
+            "providerIdentifier": "en:e422",
+            "providerIdentifiers": [
+              "en:e422"
+            ],
+            "name": "Glycerol",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "Vegetable Glycerin"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e422",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Humectant; retains moisture.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E422",
+              "name": "Glycerol",
+              "aliases": [
+                "vegetable glycerin",
+                "glycerin",
+                "glycerol"
+              ],
+              "function": "Humectant; retains moisture.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified for refined food-grade glycerol at assessed uses.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Glycerol re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4720",
+                  "edition": "2017-03-15",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Glycerol specification follow-up",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2022.7353",
+                  "edition": "2022-06-20",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Toxicology/exposure evaluation with follow-up assessment of manufacturing impurities.",
+              "conditions": "Ordinary food-grade use; impurity concentrations and manufacturing conditions here are unknown.",
+              "conflicts": "EFSA recommended tighter impurity specifications; this is not evidence of contamination in the product.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "Provider language metadata differs from this English-only phrase screen; declaration review is partial.",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00016000457232",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "Roasted Peanuts, Soy Protein Isolate, Chicory Root Extract, Semisweet Chocolate Chips (sugar, chocolate liquor, cocoa butter, soy lecithin, natural flavor), Vegetable Oils (palm, palm kernel, canola, peanut), Sugar, Corn Syrup, Whey Protein Concentrate, Fructose, Peanut Butter (peanuts, salt), Cocoa, Vegetable Glycerin, Rice Starch, Soy Lecithin, Salt, Corn Starch, Natural Flavor.",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "roasted peanuts",
+          "soy protein isolate",
+          "chicory root extract",
+          "semisweet chocolate chips",
+          "sugar",
+          "chocolate liquor",
+          "cocoa butter",
+          "vegetable oils",
+          "palm",
+          "palm kernel",
+          "canola",
+          "peanut",
+          "corn syrup",
+          "whey protein concentrate",
+          "fructose",
+          "peanut butter",
+          "peanuts",
+          "salt",
+          "cocoa",
+          "rice starch",
+          "corn starch"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Dave's Killer Bread 100% Whole Wheat",
+      "barcode": "00013764027176",
+      "nutritionScore100": 68,
+      "overallScore100": 68,
+      "status": "reviewed",
+      "reason": "Declaration reviewed under this experimental policy. No bonus or safety assurance is implied.",
+      "concernKnown": 0,
+      "rawOverall": 68,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
+      "possibleRange": null,
+      "deductions": [],
+      "confidence": "Foreign or multi-market record: this assesses only its supplied nutrition profile. The exact US formulation is not independently verified.",
+      "additives": {
+        "status": "reviewed",
+        "providerState": "provider-reported-empty",
+        "concernBurden": 0,
+        "items": [],
+        "reasons": [],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00013764027176",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "Organic whole wheat (organic whole wheat flour, organic cracked whole wheat), water, organic dried cane syrup (sugar), organic expeller pressed canola oil, organic wheat gluten, organic molasses, organic cultured whole wheat, sea salt, yeast.",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "whole wheat",
+          "whole wheat flour",
+          "cracked whole wheat",
+          "water",
+          "dried cane syrup",
+          "sugar",
+          "expeller pressed canola oil",
+          "wheat gluten",
+          "molasses",
+          "cultured whole wheat",
+          "sea salt",
+          "yeast"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Available declaration screened under this policy; no unresolved relevant identities. This is not a safety assurance.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Pepperidge Farm Farmhouse Hearty White Bread",
+      "barcode": "00014100070832",
+      "nutritionScore100": 55,
+      "overallScore100": 51,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0.4,
+      "rawOverall": 50.599999999999994,
+      "rawAdditiveDeduction": 4.400000000000006,
+      "additiveDeduction": 4,
+      "possibleRange": {
+        "min": 44,
+        "max": 51
+      },
+      "deductions": [
+        {
+          "identifier": "E471",
+          "name": "Mono- and diglycerides of fatty acids",
+          "weight": 0.2,
+          "rationale": "Limited precaution for prospective human cancer associations; additive-specific causation and product exposure are not established.",
+          "conditions": "Explicitly declared added mono/diglycerides, not naturally occurring fats or every emulsifier. No inference of trans fats or package concentration.",
+          "sources": [
+            {
+              "publisher": "Sellem et al.; PLOS Medicine",
+              "jurisdiction": "FR",
+              "title": "Emulsifiers and cancer: NutriNet-Santé",
+              "url": "https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338",
+              "edition": "2024-02-13;21(2):e1004338; main results and sensitivity analyses",
+              "reviewedOn": "2026-10-20"
+            },
+            {
+              "publisher": "EFSA",
+              "jurisdiction": "EU",
+              "title": "Mono- and diglycerides re-evaluation",
+              "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.5045",
+              "edition": "2017-11-10",
+              "reviewedOn": "2026-10-20"
+            },
+            {
+              "publisher": "FDA",
+              "jurisdiction": "US",
+              "title": "Types of Food Ingredients",
+              "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+              "edition": "Ingredient function table; undated live page",
+              "reviewedOn": "2026-10-20"
+            }
+          ]
+        },
+        {
+          "identifier": "E472e",
+          "name": "DATEM",
+          "weight": 0.2,
+          "rationale": "Limited precaution for an uncertain prospective human diabetes association; this is a screening signal, not demonstrated harm.",
+          "conditions": "Explicit DATEM use. Reported cohort intake is not assigned to the product or consumer.",
+          "sources": [
+            {
+              "publisher": "Salame et al.; Lancet Diabetes & Endocrinology",
+              "jurisdiction": "FR",
+              "title": "Emulsifiers and type 2 diabetes: NutriNet-Santé",
+              "url": "https://pubmed.ncbi.nlm.nih.gov/38663950/",
+              "edition": "2024 May;12(5):339–349; doi:10.1016/S2213-8587(24)00086-X; primary abstract",
+              "reviewedOn": "2026-10-20"
+            }
+          ]
+        }
+      ],
+      "confidence": "Foreign or multi-market record: this assesses only its supplied nutrition profile. The exact US formulation is not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "reported-identifiers",
+        "concernBurden": 0.4,
+        "items": [
+          {
+            "identifier": "E471",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Mono- and diglycerides of fatty acids",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "monoglycerides"
+              }
+            ],
+            "function": "Emulsifier.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0.2,
+            "classification": "limited",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E471",
+              "name": "Mono- and diglycerides of fatty acids",
+              "aliases": [
+                "monoglycerides",
+                "mono and diglycerides"
+              ],
+              "function": "Emulsifier.",
+              "classification": "limited",
+              "weight": 0.2,
+              "rationale": "Limited precaution for prospective human cancer associations; additive-specific causation and product exposure are not established.",
+              "sources": [
+                {
+                  "publisher": "Sellem et al.; PLOS Medicine",
+                  "jurisdiction": "FR",
+                  "title": "Emulsifiers and cancer: NutriNet-Santé",
+                  "url": "https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338",
+                  "edition": "2024-02-13;21(2):e1004338; main results and sensitivity analyses",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Mono- and diglycerides re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.5045",
+                  "edition": "2017-11-10",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "French adult observational cohort: overall cancer HR 1.15 high versus low intake (95% CI 1.04–1.27), with breast/prostate associations; animal toxicology in EFSA review.",
+              "conditions": "Explicitly declared added mono/diglycerides, not naturally occurring fats or every emulsifier. No inference of trans fats or package concentration.",
+              "conflicts": "EFSA’s 2017 assessment found no concern at reported uses. Residual confounding, exposure errors and replication needs preclude a causal or individual cancer-risk claim.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E282",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Calcium propionate",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "calcium propionate and sorbic acid to extend freshness"
+              }
+            ],
+            "function": "Preservative.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E282",
+              "name": "Calcium propionate",
+              "aliases": [
+                "calcium propionate"
+              ],
+              "function": "Preservative.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Scientific evidence review remains incomplete; function alone supplies no weight.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E200",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Sorbic acid",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "calcium propionate and sorbic acid to extend freshness"
+              }
+            ],
+            "function": "Preservative.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E200",
+              "name": "Sorbic acid",
+              "aliases": [
+                "sorbic acid"
+              ],
+              "function": "Preservative.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Current integrated scientific assessment not completed in this batch.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E322",
+            "providerIdentifier": "en:e322",
+            "providerIdentifiers": [
+              "en:e322",
+              "en:e322i"
+            ],
+            "name": "Lecithins",
+            "nameVerified": true,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "soy lecithin"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322",
+                "provider": "open-food-facts"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322i",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Emulsifier — helps ingredients mix and stay mixed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E322",
+              "name": "Lecithins",
+              "aliases": [
+                "soy lecithin",
+                "soya lecithin",
+                "lecithin",
+                "lecithins",
+                "e322i"
+              ],
+              "function": "Emulsifier; helps ingredients mix.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified for general food use under this batch policy.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Lecithins re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
+                  "edition": "2017-04-07; amended 2021-04-22",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
+              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
+              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E472e",
+            "providerIdentifier": "en:e472e",
+            "providerIdentifiers": [
+              "en:e472e"
+            ],
+            "name": "DATEM",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "datem"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e472e",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Emulsifier.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0.2,
+            "classification": "limited",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E472e",
+              "name": "DATEM",
+              "aliases": [
+                "datem"
+              ],
+              "function": "Emulsifier.",
+              "classification": "limited",
+              "weight": 0.2,
+              "rationale": "Limited precaution for an uncertain prospective human diabetes association; this is a screening signal, not demonstrated harm.",
+              "sources": [
+                {
+                  "publisher": "Salame et al.; Lancet Diabetes & Endocrinology",
+                  "jurisdiction": "FR",
+                  "title": "Emulsifiers and type 2 diabetes: NutriNet-Santé",
+                  "url": "https://pubmed.ncbi.nlm.nih.gov/38663950/",
+                  "edition": "2024 May;12(5):339–349; doi:10.1016/S2213-8587(24)00086-X; primary abstract",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "French adult cohort: diabetes HR 1.04 per 100 mg/day (95% CI 1.00–1.08, p=0.042), not a randomized trial.",
+              "conditions": "Explicit DATEM use. Reported cohort intake is not assigned to the product or consumer.",
+              "conflicts": "Small borderline association, correlated exposures and residual confounding require replication. It neither overturns regulatory assessments nor establishes a harmful dose.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "Calcium propionate: Scientific evidence review remains incomplete; function alone supplies no weight.",
+          "Sorbic acid: Current integrated scientific assessment not completed in this batch."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00014100070832",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "Enriched wheat flour (flour, niacin, reduced iron, thiamine mononitrate, riboflavin, folic acid), water, sugar, yeast, contains 2% or less of: soybean oil, salt, monoglycerides, calcium propionate and sorbic acid to extend freshness, malted barley flour, whey* (milk), soy lecithin, datem, wheat gluten.",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "enriched wheat flour",
+          "flour",
+          "niacin",
+          "reduced iron",
+          "thiamine mononitrate",
+          "riboflavin",
+          "folic acid",
+          "water",
+          "sugar",
+          "yeast",
+          "soybean oil",
+          "salt",
+          "malted barley flour",
+          "whey",
+          "milk",
+          "wheat gluten"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Skippy Creamy Peanut Butter",
+      "barcode": "00037600110754",
+      "nutritionScore100": 69,
+      "overallScore100": 69,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0,
+      "rawOverall": 69,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
+      "possibleRange": {
+        "min": 55,
+        "max": 69
+      },
+      "deductions": [],
+      "confidence": "Foreign or multi-market record: this assesses only its supplied nutrition profile. The exact US formulation is not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "provider-reported-empty",
+        "concernBurden": 0,
+        "items": [
+          {
+            "identifier": "hydrogenated-oil",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Hydrogenated oil (extent unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "hydrogenated vegetable oil"
+              }
+            ],
+            "function": "Texture/stability.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "hydrogenated-oil",
+              "name": "Hydrogenated oil (extent unspecified)",
+              "aliases": [
+                "hydrogenated vegetable oil"
+              ],
+              "function": "Texture/stability.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Do not infer partially hydrogenated oil or trans-fat exposure.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "Hydrogenated oil (extent unspecified): Do not infer partially hydrogenated oil or trans-fat exposure."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00037600110754",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "roasted peanuts, sugar, hydrogenated vegetable oil (cottonseed, soybean and rapeseed oil) to prevent separation, salt.",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "roasted peanuts",
+          "sugar",
+          "cottonseed",
+          "soybean",
+          "rapeseed oil",
+          "salt"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Blue Diamond Whole Natural Almonds",
+      "barcode": "00041570003831",
+      "nutritionScore100": 95,
+      "overallScore100": 95,
+      "status": "reviewed",
+      "reason": "Declaration reviewed under this experimental policy. No bonus or safety assurance is implied.",
+      "concernKnown": 0,
+      "rawOverall": 95,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
+      "possibleRange": null,
+      "deductions": [],
+      "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+      "additives": {
+        "status": "reviewed",
+        "providerState": "provider-reported-empty",
+        "concernBurden": 0,
+        "items": [],
+        "reasons": [],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00041570003831",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "ALMONDS. PEANUT FREE.",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "almonds"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Available declaration screened under this policy; no unresolved relevant identities. This is not a safety assurance.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Smart Ones Santa Fe Rice & Beans",
+      "barcode": "00025800023608",
+      "nutritionScore100": 75,
+      "overallScore100": 72,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0.2,
+      "rawOverall": 72,
+      "rawAdditiveDeduction": 3,
+      "additiveDeduction": 3,
+      "possibleRange": {
+        "min": 60,
+        "max": 72
+      },
+      "deductions": [
+        {
+          "identifier": "E415",
+          "name": "Xanthan gum",
+          "weight": 0.2,
+          "rationale": "Limited precaution for a human observational diabetes signal; it does not establish causation or a harmful amount in this product.",
+          "conditions": "Chronic dietary additive intake in adults; not evidence about infant thickeners or this package’s dose. No exposure is assigned.",
+          "sources": [
+            {
+              "publisher": "Salame et al.; Lancet Diabetes & Endocrinology",
+              "jurisdiction": "FR",
+              "title": "Emulsifiers and type 2 diabetes: NutriNet-Santé",
+              "url": "https://pubmed.ncbi.nlm.nih.gov/38663950/",
+              "edition": "2024 May;12(5):339–349; doi:10.1016/S2213-8587(24)00086-X; primary abstract",
+              "reviewedOn": "2026-10-20"
+            },
+            {
+              "publisher": "EFSA",
+              "jurisdiction": "EU",
+              "title": "Xanthan gum re-evaluation",
+              "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4909",
+              "edition": "2017-07-14",
+              "reviewedOn": "2026-10-20"
+            },
+            {
+              "publisher": "FDA",
+              "jurisdiction": "US",
+              "title": "Types of Food Ingredients",
+              "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+              "edition": "Ingredient function table; undated live page",
+              "reviewedOn": "2026-10-20"
+            }
+          ]
+        }
+      ],
+      "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "reported-identifiers",
+        "concernBurden": 0.2,
+        "items": [
+          {
+            "identifier": "modified-starch",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Modified starch (type unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "MODIFIED CORNSTARCH"
+              }
+            ],
+            "function": "Texture ingredient.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "modified-starch",
+              "name": "Modified starch (type unspecified)",
+              "aliases": [
+                "modified potato starch",
+                "modified food starch",
+                "modified cornstarch"
+              ],
+              "function": "Texture ingredient.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Modification type is unspecified; do not infer an E-number.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E415",
+            "providerIdentifier": "en:e415",
+            "providerIdentifiers": [
+              "en:e415"
+            ],
+            "name": "Xanthan gum",
+            "nameVerified": true,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "XANTHAN GUM"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e415",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Thickener and stabilizer — helps maintain texture.",
+            "scientificContext": null,
+            "usProvision": {
+              "source": {
+                "title": "21 CFR 172.695",
+                "url": "https://www.ecfr.gov/current/title-21/section-172.695",
+                "provision": "(a)–(f), especially (e)–(f)",
+                "edition": "Reviewed text current through 2026-10-16; eCFR is authoritative but unofficial; linked text may change",
+                "reviewedOn": "2026-10-20",
+                "jurisdiction": "US",
+                "publisher": "FDA",
+                "verification": "directly-reviewed"
+              },
+              "text": "This US provision permits specified texture-related uses under good manufacturing practice where food standards do not preclude them. Manufacturing, purity, food-grade labeling and directions conditions apply; product compliance is not established."
+            },
+            "historicalEvents": [],
+            "concernBurden": 0.2,
+            "classification": "limited",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E415",
+              "name": "Xanthan gum",
+              "aliases": [
+                "xanthan gum"
+              ],
+              "function": "Thickener and stabilizer.",
+              "classification": "limited",
+              "weight": 0.2,
+              "rationale": "Limited precaution for a human observational diabetes signal; it does not establish causation or a harmful amount in this product.",
+              "sources": [
+                {
+                  "publisher": "Salame et al.; Lancet Diabetes & Endocrinology",
+                  "jurisdiction": "FR",
+                  "title": "Emulsifiers and type 2 diabetes: NutriNet-Santé",
+                  "url": "https://pubmed.ncbi.nlm.nih.gov/38663950/",
+                  "edition": "2024 May;12(5):339–349; doi:10.1016/S2213-8587(24)00086-X; primary abstract",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Xanthan gum re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4909",
+                  "edition": "2017-07-14",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "French adult prospective cohort, not a trial: diabetes HR 1.08 per 500 mg/day (95% CI 1.02–1.14); animal and short human data in EFSA review.",
+              "conditions": "Chronic dietary additive intake in adults; not evidence about infant thickeners or this package’s dose. No exposure is assigned.",
+              "conflicts": "EFSA found no concern at assessed general-food uses. Cohort confounding, intake errors, correlated additives and lack of independent replication limit causal/US extrapolation.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "Ingredient declaration may be truncated or incomplete.",
+          "Modified starch (type unspecified): Modification type is unspecified; do not infer an E-number."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00025800023608",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "SEASONED RICE (COOKED ENRICHED WHITE RICE [WATER, ENRICHED RICE (WHITE RICE, IRON, NIACIN, THIAMINE MONONITRATE, FOLIC ACID)], TOMATO PASTE, WATER, ONIONS, GARLIC,SPICES, CARROT JUICE CONCENTRATE, CORN OIL, SALT, PAPRIKA, MODIFIED CORNSTARCH, XANTHAN GUM,",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "seasoned rice",
+          "cooked enriched white rice",
+          "water",
+          "enriched rice",
+          "white rice",
+          "iron",
+          "niacin",
+          "thiamine mononitrate",
+          "folic acid",
+          "tomato paste",
+          "onions",
+          "garlic",
+          "spices",
+          "carrot juice concentrate",
+          "corn oil",
+          "salt",
+          "paprika"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Stouffer's Classic Lasagna with Meat & Sauce",
+      "barcode": "00013800103215",
+      "nutritionScore100": 70,
+      "overallScore100": 70,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0,
+      "rawOverall": 70,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
+      "possibleRange": {
+        "min": 56,
+        "max": 70
+      },
+      "deductions": [],
+      "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "provider-reported-empty",
+        "concernBurden": 0,
+        "items": [
+          {
+            "identifier": "modified-starch",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Modified starch (type unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "2% OR LESS OF MODIFIED FOOD STARCH"
+              },
+              {
+                "type": "ingredient-text",
+                "text": "PART-SKIM MOZZARELLA CHEESE AND MODIFIED CORNSTARCH"
+              },
+              {
+                "type": "ingredient-text",
+                "text": "MODIFIED CORNSTARCH"
+              }
+            ],
+            "function": "Texture ingredient.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "modified-starch",
+              "name": "Modified starch (type unspecified)",
+              "aliases": [
+                "modified potato starch",
+                "modified food starch",
+                "modified cornstarch"
+              ],
+              "function": "Texture ingredient.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Modification type is unspecified; do not infer an E-number.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "flavor-mixture",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Flavor mixture (constituents unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "FLAVORS"
+              }
+            ],
+            "function": "Flavor.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "flavor-mixture",
+              "name": "Flavor mixture (constituents unspecified)",
+              "aliases": [
+                "natural flavors",
+                "natural flavor",
+                "artificial flavor",
+                "flavors",
+                "flavor"
+              ],
+              "function": "Flavor.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Constituents are not named; no speculative identities.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "Unbalanced ingredient subgroups.",
+          "Modified starch (type unspecified): Modification type is unspecified; do not infer an E-number.",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00013800103215",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "TOMATO PUREE (WATER, TOMATO PASTE), COOKED PASTA (WATER, SEMOLINA WHEAT FLOUR), COOKED BEEF, WATER, LOW-MOISTURE PART-SKIM MOZZARELLA CHEESE (CULTURED PART-SKIM MILK, SALT, ENZYMES), DRY CURD COTTAGE CHEESE (CULTURED SKIM MILK, ENZYMES), 2% OR LESS OF MODIFIED FOOD STARCH, PART-SKIM MOZZARELLA CHEESE AND MODIFIED CORNSTARCH (PART-SKIM MOZZARELLA CHEESE (CULTURED MILK, SALT, ENZYMES], MODIFIED CORNSTARCH, NONFAT MILK, FLAVORS), SOY SAUCE (WATER, SOYBEANS, WHEAT, SALT), WHEAT FLOUR, DRIED ONIONS, SALT, SUGAR, PARMESAN CHEESE (CULTURED MILK, SALT, ENZYMES), SPICES, GARLIC POWDER. CONTAINS: WHEAT, MILK, SOY.",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "tomato puree",
+          "water",
+          "tomato paste",
+          "cooked pasta",
+          "semolina wheat flour",
+          "cooked beef",
+          "low moisture part skim mozzarella cheese",
+          "cultured part skim milk",
+          "salt",
+          "enzymes",
+          "dry curd cottage cheese",
+          "cultured skim milk",
+          "part skim mozzarella cheese",
+          "cultured milk",
+          "nonfat milk",
+          "soy sauce",
+          "soybeans",
+          "wheat",
+          "wheat flour",
+          "dried onions",
+          "sugar",
+          "parmesan cheese",
+          "spices",
+          "garlic powder"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Oscar Mayer Classic Wieners",
+      "barcode": "00044700000632",
+      "nutritionScore100": 25,
+      "overallScore100": 24,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0.2,
+      "rawOverall": 24,
+      "rawAdditiveDeduction": 1,
+      "additiveDeduction": 1,
+      "possibleRange": {
+        "min": 20,
+        "max": 24
+      },
+      "deductions": [
+        {
+          "identifier": "E339",
+          "name": "Sodium phosphates (subtype unspecified)",
+          "weight": 0.2,
+          "rationale": "Added phosphates receive a limited precautionary weight: total dietary intake can exceed EFSA’s reference in some age groups. This does not establish excess intake from this product.",
+          "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
+          "sources": [
+            {
+              "publisher": "EFSA",
+              "jurisdiction": "EU",
+              "title": "New advice on phosphates",
+              "url": "https://www.efsa.europa.eu/en/press/news/190612",
+              "edition": "2019-06-12; assessment 2019.5674",
+              "reviewedOn": "2026-10-20"
+            }
+          ]
+        }
+      ],
+      "confidence": "Foreign or multi-market record: this assesses only its supplied nutrition profile. The exact US formulation is not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "provider-reported-empty",
+        "concernBurden": 0.2,
+        "items": [
+          {
+            "identifier": "E339",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Sodium phosphates (subtype unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "sodium phosphate"
+              }
+            ],
+            "function": "Acidity/texture control or mineral addition; exact product purpose unconfirmed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0.2,
+            "classification": "limited",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E339",
+              "name": "Sodium phosphates (subtype unspecified)",
+              "aliases": [
+                "sodium phosphate",
+                "sodium phosphates"
+              ],
+              "function": "Acidity/texture control or mineral addition; exact product purpose unconfirmed.",
+              "classification": "limited",
+              "weight": 0.2,
+              "rationale": "Added phosphates receive a limited precautionary weight: total dietary intake can exceed EFSA’s reference in some age groups. This does not establish excess intake from this product.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "New advice on phosphates",
+                  "url": "https://www.efsa.europa.eu/en/press/news/190612",
+                  "edition": "2019-06-12; assessment 2019.5674",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated toxicology and dietary exposure assessment; kidney effects inform the reference, not a clinical trial of this product.",
+              "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
+              "conflicts": "Phosphorus is essential. Some modeled intakes exceed the ADI; that is not proof of an adverse outcome or a US restriction.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "flavor-mixture",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Flavor mixture (constituents unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "flavor"
+              }
+            ],
+            "function": "Flavor.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "flavor-mixture",
+              "name": "Flavor mixture (constituents unspecified)",
+              "aliases": [
+                "natural flavors",
+                "natural flavor",
+                "artificial flavor",
+                "flavors",
+                "flavor"
+              ],
+              "function": "Flavor.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Constituents are not named; no speculative identities.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "Ingredient declaration may be truncated or incomplete.",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00044700000632",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "mechanically separated turkey, mechanically separated chicken, pork, water, cultured dextrose*, contains less than 2% of dextrose, salt, corn syrup, distilled white vinegar*, cultured celery juice*, sodium phosphate, cherry powder, flavor,",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "mechanically separated turkey",
+          "mechanically separated chicken",
+          "pork",
+          "water",
+          "cultured dextrose",
+          "dextrose",
+          "salt",
+          "corn syrup",
+          "distilled white vinegar",
+          "cultured celery juice",
+          "cherry powder"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "SPAM Classic",
+      "barcode": "00037600138727",
+      "nutritionScore100": 23,
+      "overallScore100": 22,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0.2,
+      "rawOverall": 22.08,
+      "rawAdditiveDeduction": 0.9200000000000017,
+      "additiveDeduction": 1,
+      "possibleRange": {
+        "min": 18,
+        "max": 22
+      },
+      "deductions": [
+        {
+          "identifier": "E250",
+          "name": "Sodium nitrite",
+          "weight": 0.2,
+          "rationale": "Limited precaution for explicitly declared nitrite in meat: nitrosamine formation and high-intake uncertainty; not a claim that this package causes cancer.",
+          "conditions": "Applies only when the declaration establishes meat use. Nitrite amount, nitrosamines and exposure remain unknown.",
+          "sources": [
+            {
+              "publisher": "EFSA",
+              "jurisdiction": "EU",
+              "title": "Nitrites and nitrates re-evaluation",
+              "url": "https://www.efsa.europa.eu/en/press/news/170615",
+              "edition": "2017-06-15; nitrite assessment 2017.4786",
+              "reviewedOn": "2026-10-20"
+            },
+            {
+              "publisher": "NCI/NIH",
+              "jurisdiction": "US",
+              "title": "Red meat and colorectal DNA damage",
+              "url": "https://www.cancer.gov/news-events/cancer-currents-blog/2021/red-meat-colorectal-cancer-genetic-signature",
+              "edition": "2021-07-22",
+              "reviewedOn": "2026-10-20"
+            }
+          ]
+        }
+      ],
+      "confidence": "Foreign or multi-market record: this assesses only its supplied nutrition profile. The exact US formulation is not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "reported-identifiers",
+        "concernBurden": 0.2,
+        "items": [
+          {
+            "identifier": "modified-starch",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Modified starch (type unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "modified potato starch"
+              }
+            ],
+            "function": "Texture ingredient.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "modified-starch",
+              "name": "Modified starch (type unspecified)",
+              "aliases": [
+                "modified potato starch",
+                "modified food starch",
+                "modified cornstarch"
+              ],
+              "function": "Texture ingredient.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Modification type is unspecified; do not infer an E-number.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E250",
+            "providerIdentifier": "en:e250",
+            "providerIdentifiers": [
+              "en:e250"
+            ],
+            "name": "Sodium nitrite",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "sodium nitrite"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e250",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Preservative in cured meat.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0.2,
+            "classification": "limited",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "meat-use-established",
+            "review": {
+              "id": "E250",
+              "name": "Sodium nitrite",
+              "aliases": [
+                "sodium nitrite"
+              ],
+              "function": "Preservative in cured meat.",
+              "classification": "limited",
+              "weight": 0.2,
+              "rationale": "Limited precaution for explicitly declared nitrite in meat: nitrosamine formation and high-intake uncertainty; not a claim that this package causes cancer.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Nitrites and nitrates re-evaluation",
+                  "url": "https://www.efsa.europa.eu/en/press/news/170615",
+                  "edition": "2017-06-15; nitrite assessment 2017.4786",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "NCI/NIH",
+                  "jurisdiction": "US",
+                  "title": "Red meat and colorectal DNA damage",
+                  "url": "https://www.cancer.gov/news-events/cancer-currents-blog/2021/red-meat-colorectal-cancer-genetic-signature",
+                  "edition": "2021-07-22",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "EFSA toxicology/exposure assessment; NCI describes human meat-pattern associations and possible nitrosation mechanisms, not additive-specific causation.",
+              "conditions": "Applies only when the declaration establishes meat use. Nitrite amount, nitrosamines and exposure remain unknown.",
+              "conflicts": "EFSA found low nitrosamine concern from nitrite used at permitted levels and protective ADIs, with a slight exceedance for highly exposed children. Meat-pattern evidence cannot isolate nitrite.",
+              "condition": "meat",
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "Modified starch (type unspecified): Modification type is unspecified; do not infer an E-number."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00037600138727",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "pork with ham, salt, water, modified potato starch, sugar, sodium nitrite",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "pork with ham",
+          "salt",
+          "water",
+          "sugar"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Cheez-It Original",
+      "barcode": "00024100106851",
+      "nutritionScore100": 19,
+      "overallScore100": 19,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0,
+      "rawOverall": 19,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
+      "possibleRange": {
+        "min": 15,
+        "max": 19
+      },
+      "deductions": [],
+      "confidence": "Foreign or multi-market record: this assesses only its supplied nutrition profile. The exact US formulation is not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "reported-identifiers",
+        "concernBurden": 0,
+        "items": [
+          {
+            "identifier": "E319",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "TBHQ (tert-butylhydroquinone)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "soybean and palm oil with tbhq for freshness"
+              }
+            ],
+            "function": "Antioxidant; delays rancidity.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E319",
+              "name": "TBHQ (tert-butylhydroquinone)",
+              "aliases": [
+                "tbhq",
+                "tert butylhydroquinone"
+              ],
+              "function": "Antioxidant; delays rancidity.",
+              "classification": null,
+              "weight": null,
+              "rationale": "No weight: this batch reviewed the NTP animal report but has not resolved the broader endpoint/exposure evidence.",
+              "sources": [
+                {
+                  "publisher": "NTP",
+                  "jurisdiction": "US",
+                  "title": "TR-459 t-Butylhydroquinone",
+                  "url": "https://ntp.niehs.nih.gov/publications/reports/tr/tr459",
+                  "edition": "May 1997; abstract and conclusions",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Rat/mouse feed and genotoxicity studies, not human clinical outcomes.",
+              "conditions": "NTP TR-459 is a historical animal study; dietary concentration in this product is unknown.",
+              "conflicts": "No evidence of carcinogenic activity in the two-year studies; high-dose noncancer effects do not establish ordinary dietary risk.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E160b-unspecified",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Annatto extract (type unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "annatto extract color"
+              }
+            ],
+            "function": "Color.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E160b-unspecified",
+              "name": "Annatto extract (type unspecified)",
+              "aliases": [
+                "annatto extract color",
+                "annatto extract"
+              ],
+              "function": "Color.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Bixin/norbixin preparation and assessment scope are unresolved.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E322",
+            "providerIdentifier": "en:e322",
+            "providerIdentifiers": [
+              "en:e322",
+              "en:e322i"
+            ],
+            "name": "Lecithins",
+            "nameVerified": true,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "soy lecithin"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322",
+                "provider": "open-food-facts"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322i",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Emulsifier — helps ingredients mix and stay mixed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E322",
+              "name": "Lecithins",
+              "aliases": [
+                "soy lecithin",
+                "soya lecithin",
+                "lecithin",
+                "lecithins",
+                "e322i"
+              ],
+              "function": "Emulsifier; helps ingredients mix.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified for general food use under this batch policy.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Lecithins re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
+                  "edition": "2017-04-07; amended 2021-04-22",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
+              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
+              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "Ingredient declaration may be truncated or incomplete.",
+          "TBHQ (tert-butylhydroquinone): No weight: this batch reviewed the NTP animal report but has not resolved the broader endpoint/exposure evidence.",
+          "Annatto extract (type unspecified): Bixin/norbixin preparation and assessment scope are unresolved."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00024100106851",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "enriched flour (wheat flour, niacin, reduced iron, vitamin b1 [thiamin mononitrate], vitamin b2 [riboflavin], folic acid), vegetable oil (soybean and palm oil with tbhq for freshness), cheese made with skim milk (skim milk, whey protein, cheese cultures, salt, enzymes, annatto extract color), contains 2% or less of salt, paprika, yeast, paprika extract color, soy lecithin,",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "enriched flour",
+          "wheat flour",
+          "niacin",
+          "reduced iron",
+          "vitamin b1",
+          "thiamin mononitrate",
+          "vitamin b2",
+          "riboflavin",
+          "folic acid",
+          "vegetable oil",
+          "soybean",
+          "palm oil",
+          "cheese made with skim milk",
+          "skim milk",
+          "whey protein",
+          "cheese cultures",
+          "salt",
+          "enzymes",
+          "paprika",
+          "yeast",
+          "paprika extract color"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "OREO Original",
+      "barcode": "00044000060114",
+      "nutritionScore100": 12,
+      "overallScore100": 12,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0,
+      "rawOverall": 12,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
+      "possibleRange": {
+        "min": 10,
+        "max": 12
+      },
+      "deductions": [],
+      "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "reported-identifiers",
+        "concernBurden": 0,
+        "items": [
+          {
+            "identifier": "E341",
+            "providerIdentifier": "en:e341",
+            "providerIdentifiers": [
+              "en:e341"
+            ],
+            "name": "Calcium phosphates (subtype unspecified)",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "baking soda and/or calcium phosphate"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e341",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Acidity/texture control or mineral addition; exact product purpose unconfirmed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": true,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E341",
+              "name": "Calcium phosphates (subtype unspecified)",
+              "aliases": [
+                "calcium phosphate",
+                "calcium phosphates",
+                "tricalcium phosphate"
+              ],
+              "function": "Acidity/texture control or mineral addition; exact product purpose unconfirmed.",
+              "classification": "limited",
+              "weight": 0.2,
+              "rationale": "Added phosphates receive a limited precautionary weight: total dietary intake can exceed EFSA’s reference in some age groups. This does not establish excess intake from this product.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "New advice on phosphates",
+                  "url": "https://www.efsa.europa.eu/en/press/news/190612",
+                  "edition": "2019-06-12; assessment 2019.5674",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated toxicology and dietary exposure assessment; kidney effects inform the reference, not a clinical trial of this product.",
+              "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
+              "conflicts": "Phosphorus is essential. Some modeled intakes exceed the ADI; that is not proof of an adverse outcome or a US restriction.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E500ii",
+            "providerIdentifier": "en:e500",
+            "providerIdentifiers": [
+              "en:e500",
+              "en:e500ii"
+            ],
+            "name": "Sodium hydrogen carbonate (baking soda)",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "baking soda and/or calcium phosphate"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e500",
+                "provider": "open-food-facts"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e500ii",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Leavening agent — helps baked foods rise.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": true,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E500ii",
+              "name": "Sodium hydrogen carbonate (baking soda)",
+              "aliases": [
+                "baking soda",
+                "sodium bicarbonate"
+              ],
+              "function": "Leavening agent.",
+              "classification": null,
+              "weight": null,
+              "rationale": "A cohort subgroup association concerns premenopausal women; it is not generalized to every consumer, and no applicable population is established here.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "Sellem et al.; PLOS Medicine",
+                  "jurisdiction": "FR",
+                  "title": "Emulsifiers and cancer: NutriNet-Santé",
+                  "url": "https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338",
+                  "edition": "2024-02-13;21(2):e1004338; main results and sensitivity analyses",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "French adult observational cohort; premenopausal breast-cancer subgroup HR 1.48 (95% CI 1.07–2.05). Not a product-risk estimate.",
+              "conditions": "Specific premenopausal subgroup and chronic intake; consumer applicability is not established. Unknown weight.",
+              "conflicts": "Subgroup/multiple-testing, residual confounding and exposure measurement limit inference; replication is needed. No blanket penalty or safety finding.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E322",
+            "providerIdentifier": "en:e322",
+            "providerIdentifiers": [
+              "en:e322",
+              "en:e322i"
+            ],
+            "name": "Lecithins",
+            "nameVerified": true,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "soy lecithin"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322",
+                "provider": "open-food-facts"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322i",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Emulsifier — helps ingredients mix and stay mixed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E322",
+              "name": "Lecithins",
+              "aliases": [
+                "soy lecithin",
+                "soya lecithin",
+                "lecithin",
+                "lecithins",
+                "e322i"
+              ],
+              "function": "Emulsifier; helps ingredients mix.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified for general food use under this batch policy.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Lecithins re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
+                  "edition": "2017-04-07; amended 2021-04-22",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
+              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
+              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "flavor-mixture",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Flavor mixture (constituents unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "artificial flavor."
+              }
+            ],
+            "function": "Flavor.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "flavor-mixture",
+              "name": "Flavor mixture (constituents unspecified)",
+              "aliases": [
+                "natural flavors",
+                "natural flavor",
+                "artificial flavor",
+                "flavors",
+                "flavor"
+              ],
+              "function": "Flavor.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Constituents are not named; no speculative identities.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "Calcium phosphates (subtype unspecified): Alternative ingredient presence is unresolved.",
+          "Sodium hydrogen carbonate (baking soda): Alternative ingredient presence is unresolved.",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00044000060114",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "Unbleached enriched flour (wheat flour, niacin, reduced iron, thiamine mononitrate [vitamin B1], riboflavin [vitamin B2], folic acid), sugar, palm oil, soybean oil and/or canola oil, cocoa (processed with alkali), high fructose corn syrup, leavening (baking soda and/or calcium phosphate), salt, soy lecithin, chocolate, artificial flavor.",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "unbleached enriched flour",
+          "wheat flour",
+          "niacin",
+          "reduced iron",
+          "thiamine mononitrate",
+          "vitamin b1",
+          "riboflavin",
+          "vitamin b2",
+          "folic acid",
+          "sugar",
+          "palm oil",
+          "soybean oil",
+          "canola oil",
+          "cocoa",
+          "processed with alkali",
+          "high fructose corn syrup",
+          "leavening",
+          "salt",
+          "chocolate"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Lay's Classic Potato Chips",
+      "barcode": "00028400199148",
+      "nutritionScore100": 32,
+      "overallScore100": 32,
+      "status": "reviewed",
+      "reason": "Declaration reviewed under this experimental policy. No bonus or safety assurance is implied.",
+      "concernKnown": 0,
+      "rawOverall": 32,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
+      "possibleRange": null,
+      "deductions": [],
+      "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+      "additives": {
+        "status": "reviewed",
+        "providerState": "provider-reported-empty",
+        "concernBurden": 0,
+        "items": [],
+        "reasons": [],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/00028400199148",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "POTATOES, VEGETABLE OIL (CANOLA, CORN, SOYBEAN AND/OR SUNFLOWER OIL), AND SALT",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "potatoes",
+          "vegetable oil",
+          "canola",
+          "corn",
+          "soybean",
+          "sunflower oil",
+          "salt"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Available declaration screened under this policy; no unresolved relevant identities. This is not a safety assurance.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    },
+    {
+      "name": "Teddy Grahams",
+      "barcode": "044000045586",
+      "nutritionScore100": 46,
+      "overallScore100": 46,
+      "status": "provisional",
+      "reason": "PROVISIONAL — includes only supported additive deductions and could decrease after review. Unknown items are not assumed harmless.",
+      "concernKnown": 0,
+      "rawOverall": 46,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
+      "possibleRange": {
+        "min": 37,
+        "max": 46
+      },
+      "deductions": [],
+      "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
+      "additives": {
+        "status": "partial",
+        "providerState": "reported-identifiers",
+        "concernBurden": 0,
+        "items": [
+          {
+            "identifier": "E170",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Calcium carbonate",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "CALCIUM CARBONATE"
+              }
+            ],
+            "function": "Mineral source / other technical use.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E170",
+              "name": "Calcium carbonate",
+              "aliases": [
+                "calcium carbonate"
+              ],
+              "function": "Mineral source / other technical use.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Scientific screening not completed; mineral addition is not automatically harmless.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E500ii",
+            "providerIdentifier": "en:e500",
+            "providerIdentifiers": [
+              "en:e500",
+              "en:e500ii"
+            ],
+            "name": "Sodium hydrogen carbonate (baking soda)",
+            "nameVerified": false,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "BAKING SODA"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e500",
+                "provider": "open-food-facts"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e500ii",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Leavening agent — helps baked foods rise.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E500ii",
+              "name": "Sodium hydrogen carbonate (baking soda)",
+              "aliases": [
+                "baking soda",
+                "sodium bicarbonate"
+              ],
+              "function": "Leavening agent.",
+              "classification": null,
+              "weight": null,
+              "rationale": "A cohort subgroup association concerns premenopausal women; it is not generalized to every consumer, and no applicable population is established here.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "Sellem et al.; PLOS Medicine",
+                  "jurisdiction": "FR",
+                  "title": "Emulsifiers and cancer: NutriNet-Santé",
+                  "url": "https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338",
+                  "edition": "2024-02-13;21(2):e1004338; main results and sensitivity analyses",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "French adult observational cohort; premenopausal breast-cancer subgroup HR 1.48 (95% CI 1.07–2.05). Not a product-risk estimate.",
+              "conditions": "Specific premenopausal subgroup and chronic intake; consumer applicability is not established. Unknown weight.",
+              "conflicts": "Subgroup/multiple-testing, residual confounding and exposure measurement limit inference; replication is needed. No blanket penalty or safety finding.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "E322",
+            "providerIdentifier": "en:e322",
+            "providerIdentifiers": [
+              "en:e322",
+              "en:e322i"
+            ],
+            "name": "Lecithins",
+            "nameVerified": true,
+            "provider": "open-food-facts",
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "SOY LECITHIN"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322",
+                "provider": "open-food-facts"
+              },
+              {
+                "type": "provider-tag",
+                "identifier": "en:e322i",
+                "provider": "open-food-facts"
+              }
+            ],
+            "function": "Emulsifier — helps ingredients mix and stay mixed.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": 0,
+            "classification": "reviewed",
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "E322",
+              "name": "Lecithins",
+              "aliases": [
+                "soy lecithin",
+                "soya lecithin",
+                "lecithin",
+                "lecithins",
+                "e322i"
+              ],
+              "function": "Emulsifier; helps ingredients mix.",
+              "classification": "reviewed",
+              "weight": 0,
+              "rationale": "No qualifying concern identified for general food use under this batch policy.",
+              "sources": [
+                {
+                  "publisher": "EFSA",
+                  "jurisdiction": "EU",
+                  "title": "Lecithins re-evaluation",
+                  "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742",
+                  "edition": "2017-04-07; amended 2021-04-22",
+                  "reviewedOn": "2026-10-20"
+                },
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Integrated assessment including animal toxicity and choline exposure; no numerical ADI needed at assessed uses.",
+              "conditions": "General grocery use, not individual allergy suitability or a review of infant formula.",
+              "conflicts": "Soy/egg allergen suitability remains separate; no claim of universal safety.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          },
+          {
+            "identifier": "flavor-mixture",
+            "providerIdentifier": null,
+            "providerIdentifiers": [],
+            "name": "Flavor mixture (constituents unspecified)",
+            "nameVerified": false,
+            "provider": null,
+            "origins": [
+              {
+                "type": "ingredient-text",
+                "text": "NATURAL FLAVOR."
+              }
+            ],
+            "function": "Flavor.",
+            "scientificContext": null,
+            "usProvision": null,
+            "historicalEvents": [],
+            "concernBurden": null,
+            "classification": null,
+            "exposure": "unknown",
+            "conditionalPresence": false,
+            "packagingOnly": false,
+            "conflict": false,
+            "conditionResult": "not-conditional",
+            "review": {
+              "id": "flavor-mixture",
+              "name": "Flavor mixture (constituents unspecified)",
+              "aliases": [
+                "natural flavors",
+                "natural flavor",
+                "artificial flavor",
+                "flavors",
+                "flavor"
+              ],
+              "function": "Flavor.",
+              "classification": null,
+              "weight": null,
+              "rationale": "Constituents are not named; no speculative identities.",
+              "sources": [
+                {
+                  "publisher": "FDA",
+                  "jurisdiction": "US",
+                  "title": "Types of Food Ingredients",
+                  "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
+                  "edition": "Ingredient function table; undated live page",
+                  "reviewedOn": "2026-10-20"
+                }
+              ],
+              "evidence": "Identity/function evidence only; insufficient scientific synthesis for a weight.",
+              "conditions": "General batch screen; no concentration, subtype or exposure is assumed.",
+              "conflicts": "No numerical inference from authorization, foreign restrictions, allergy suitability or review activity.",
+              "condition": null,
+              "reviewedOn": "2026-10-20"
+            }
+          }
+        ],
+        "reasons": [
+          "Calcium carbonate: Scientific screening not completed; mineral addition is not automatically harmless.",
+          "Sodium hydrogen carbonate (baking soda): A cohort subgroup association concerns premenopausal women; it is not generalized to every consumer, and no applicable population is established here.",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
+        ],
+        "source": {
+          "url": "https://world.openfoodfacts.org/product/044000045586",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL"
+        },
+        "originalIngredientText": "GRAHAM FLOUR (WHOLE GRAIN WHEAT FLOUR), UNBLEACHED ENRICHED FLOUR (WHEAT FLOUR, NIACIN, REDUCED IRON, THIAMINE MONONITRATE {VITAMIN B1}, RIBOFLAVIN {VITAMIN B2}, FOLIC ACID), SUGAR, CANOLA OIL, HONEY, CALCIUM CARBONATE (SOURCE OF CALCIUM), MALTODEXTRIN, BAKING SODA, SALT, SOY LECITHIN, NATURAL FLAVOR.",
+        "exposure": "unknown",
+        "ordinaryIngredients": [
+          "graham flour",
+          "whole grain wheat flour",
+          "unbleached enriched flour",
+          "wheat flour",
+          "niacin",
+          "reduced iron",
+          "thiamine mononitrate",
+          "vitamin b1",
+          "riboflavin",
+          "vitamin b2",
+          "folic acid",
+          "sugar",
+          "canola oil",
+          "honey",
+          "source of calcium",
+          "maltodextrin",
+          "salt"
+        ],
+        "reviewRule": "Closed ordinary-ingredient vocabulary plus sourced identity-specific scientific screening; no product-name defaults.",
+        "summary": "Partially reviewed. Only supported deductions are included; unassessed items remain unknown.",
+        "limitation": "This screens the captured declaration, not independently verified package contents, chemical absence, exposure, safety or current legal compliance."
+      }
+    }
+  ],
+  "stouffersComparison": {
+    "matchingProductEvidence": false,
+    "classicGtin": "00013800103215",
+    "classicNutritionV2": 70,
+    "meatLovers": {
+      "source": "User-provided Yuka screenshot observations",
+      "gtin": null,
+      "organicStatus": "unknown",
+      "servingGrams": 215,
+      "observedPanel": {
+        "calories": 340,
+        "totalSugar": 5,
+        "saturatedFat": 7,
+        "sodium": 760,
+        "protein": 16,
+        "fiber": 2
+      },
+      "nutritionV2": 66,
+      "publishedNutrition": 75,
+      "conditionalVegetablePercent": 51,
+      "vegetableVerification": "Yuka-reported assumption only",
+      "yukaOverallObserved": 45,
+      "traceOverall": null,
+      "additivesObserved": 7,
+      "yukaHighRiskObservations": [
+        "sodium nitrite",
+        "BHA",
+        "BHT"
+      ],
+      "limitation": "No independently verified additive classifications or complete assessment; no comparison of matched overall scores."
+    }
+  },
+  "teddyYukaComparison": {
+    "score100": 36,
+    "source": "User-verified score supplied in task; not independently fetched",
+    "role": "Benchmark only, not calibration target; nutrition/additive/organic components differ",
+    "matchingProductEvidence": false,
+    "limitation": "User-reported Yuka 36 does not establish its GTIN, formulation or matching source edition; no matched overall-score comparison."
+  }
+}

@@ -11,8 +11,9 @@ const webpack = require('webpack');
 const { normalizeOpenFoodFactsProduct } = require('../api/nutrition/_barcodeGateway.cjs');
 const { barcodeGradingRecord, BARCODE, RETRIEVED_AT } = require('../src/development/__fixtures__/barcodeGrading.cjs');
 const root = path.resolve(__dirname, '..');
-const output = path.join(root, 'artifacts/barcode-explanations-polish-20261020');
-const scratch = path.join(root, '.tmp-browser/barcode-grading');
+const overallReview = process.argv.includes('--overall-review');
+const output = path.join(root, overallReview ? 'artifacts/trace-overall-food-quality-20261020' : 'artifacts/barcode-explanations-polish-20261020');
+const scratch = path.join(root, overallReview ? '.tmp-browser/barcode-overall' : '.tmp-browser/barcode-grading');
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 fs.mkdirSync(output, { recursive: true });
 fs.mkdirSync(scratch, { recursive: true });
@@ -48,6 +49,23 @@ async function compile(production = false) {
   else {
     const products = Object.fromEntries(['eligible', 'unresolved', 'unknown-additives'].map(scenario =>
       [scenario, normalizeOpenFoodFactsProduct(barcodeGradingRecord(scenario), BARCODE, RETRIEVED_AT)]));
+    if (overallReview) {
+      const archive = require('../docs/barcode-grading-grocery-pilot-2026-10-20/results.json');
+      products.almonds = archive.observations.find(row => row.barcode === '00041570003831').lookup.food;
+      products.quest = archive.observations.find(row => row.barcode === '00888849000012').lookup.food;
+      // Replay the already-approved v2 qualifier recovery, not the legacy
+      // pre-repair cache. Raw nutrient values and basis must match exactly.
+      products.quest = JSON.parse(JSON.stringify(products.quest));
+      const approved = require('../docs/trace-nutrition-v2-comparison-2026-10-20.json')
+        .products.find(row => row.barcode === '00888849000012').after.evidence.originalDataset;
+      const retained = products.quest.assessmentInputs.datasets.find(d => d.id === approved.id);
+      assert(retained);
+      for (const entry of retained.observations) {
+        const verified = approved.observations.find(o => o.field === entry.field);
+        assert(verified); assert.deepEqual(entry.rawValue, verified.rawValue); assert.equal(entry.enteredUnit, verified.enteredUnit);
+        entry.derivation = verified.derivation;
+      }
+    }
     fs.writeFileSync(entry, `
       import React, { useState } from 'react';
       import { createRoot } from 'react-dom/client';
@@ -62,7 +80,7 @@ async function compile(production = false) {
       function Preview() {
         const [entries, setEntries] = useState([]);
         return <div className="trace-app-shell trace-feature-page trace-feature-page--nutrition">
-          <p>Synthetic review controls — no real product assessment. Enter ${BARCODE} after Scan Barcode.</p>
+          <p>{['almonds', 'quest'].includes(params.get('scenario')) ? 'Archived provider observation; current package not independently verified. Enter ' + (params.get('scenario') === 'quest' ? '00888849000012' : '00041570003831') + ' after Scan Barcode.' : 'Synthetic review controls — no real product assessment. Enter ${BARCODE} after Scan Barcode.'}</p>
           <NutritionPage onBack={() => {}} nutritionEntries={entries} nutritionGoals={{ calories: 0, protein: 0, carbohydrates: 0, fat: 0 }}
             saveNutritionEntry={entry => { const saved = { ...entry, id: 'synthetic-' + Date.now() }; window.previewSavedEntry = saved; setEntries([...entries, saved]); return true; }}
             saveNutritionGoals={() => true} barcodeLookupService={lookup} barcodeCamera={camera}
@@ -88,7 +106,7 @@ async function compile(production = false) {
   });
   if (production) {
     const modules = stats.toJson({ all: false, modules: true }).modules.map(module => module.name);
-    assert(!modules.some(name => /BarcodeNutritionReview|barcodeNutritionAssessment|traceNutritionConversion|updatedNutritionScoring/.test(name)), 'Experimental modules must be absent from production dependency graph');
+    assert(!modules.some(name => /BarcodeNutritionReview|barcodeNutritionAssessment|traceNutritionConversion|updatedNutritionScoring|traceOverallFoodQuality|traceUsNutritionScoring|additiveScreeningPolicy/.test(name)), 'Experimental modules must be absent from production dependency graph');
     fs.writeFileSync(path.join(output, 'production-gating.json'), JSON.stringify({ target: 'real BarcodeScannerDialog', experimentalModulesAbsent: true, modules: modules.length }, null, 2));
     console.log('Targeted production gating passed; experimental modules absent.');
   }
@@ -123,11 +141,12 @@ async function main() {
     const until = async expression => { for (let i = 0; i < 120; i++) { if (await evaluate(expression)) return; await wait(100); } throw new Error('Timed out: ' + expression); };
     const click = text => evaluate(`Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === ${JSON.stringify(text)}).click()`);
     const review = async (scenario = 'eligible', theme = 'modern-heirloom', flag = true) => {
+      const lookupCode = scenario === 'almonds' ? '00041570003831' : scenario === 'quest' ? '00888849000012' : BARCODE;
       await client.send('Page.navigate', { url: `${base}/?scenario=${scenario}&theme=${theme}${flag ? '&barcodeGrading=1' : ''}` });
       await until(`Array.from(document.querySelectorAll('button')).some(b => b.textContent.trim() === 'Scan Barcode')`);
       await click('Scan Barcode');
       await until(`Boolean(document.querySelector('.trace-barcode-dialog__manual input'))`);
-      await evaluate(`(() => { const el = document.querySelector('.trace-barcode-dialog__manual input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, '${BARCODE}'); el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
+      await evaluate(`(() => { const el = document.querySelector('.trace-barcode-dialog__manual input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, '${lookupCode}'); el.dispatchEvent(new Event('input', { bubbles: true })); })()`);
       await wait(80); await click('Look Up Barcode');
       await until(`Boolean(document.querySelector('[aria-label="Barcode product review"]'))`);
       await wait(100);
@@ -136,7 +155,7 @@ async function main() {
     await client.send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true });
     await review();
     assert(await evaluate(`Array.from(document.querySelectorAll('.trace-barcode-grade details, .trace-barcode-additives')).every(el => !el.open) && Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Ingredients').getAttribute('aria-expanded') === 'false'`), 'All disclosures start collapsed');
-    assert(await evaluate(String.raw`/^\d+\/100$/.test(document.querySelector('[aria-label="Experimental nutrition rating"]').textContent)`));
+    assert(await evaluate(String.raw`/^\d+\/100$/.test((document.querySelector('[aria-label="Experimental overall rating"]') || document.querySelector('[aria-label="Experimental nutrition rating"]')).textContent)`));
     assert(await evaluate(`document.querySelector('[aria-label="Experimental nutrition assessment"]').getBoundingClientRect().bottom < 844`), 'Score and confidence should be visible on the opening mobile review');
     await capture('mobile-eligible-390x844.png');
     await evaluate(`document.querySelector('.trace-barcode-additives').open = true; document.querySelector('.trace-barcode-additives').scrollIntoView({block:'nearest'})`);
@@ -153,6 +172,21 @@ async function main() {
     assert.equal(controls.length, 2);
     assert(controls.every(control => control.unobstructed), 'Return to Food Search must not obstruct logging controls');
     await capture('mobile-controls-390x844.png');
+    if (overallReview) {
+      await review('almonds');
+      assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental overall rating"]').textContent`), '95/100');
+      assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental nutrition rating"]').textContent`), 'Nutrition 95/100 · additive deduction 0 points');
+      assert(await evaluate(`Array.from(document.querySelectorAll('.trace-barcode-grade details, .trace-barcode-additives')).every(el => !el.open)`));
+      await capture('mobile-overall-390x844.png');
+      await review('quest');
+      assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental overall rating"]').textContent`), '52/100');
+      assert(await evaluate(`document.querySelector('[aria-label="Provisional overall score"]').textContent.includes('PROVISIONAL')`));
+      assert(await evaluate(`document.querySelector('[aria-label="Experimental nutrition rating"]').textContent.includes('Nutrition 54/100 · additive deduction 2 points')`));
+      assert(await evaluate(`document.querySelector('[aria-label="Additive deduction reasons"]').textContent.includes('Erythritol')`));
+      assert(await evaluate(`(() => { const score = document.querySelector('[aria-label="Experimental overall rating"]'); const denominator = score.querySelector('small').getBoundingClientRect(); const line = score.getBoundingClientRect(); return line.height < 50 && denominator.height < 25 && denominator.right <= score.parentElement.getBoundingClientRect().right; })()`), 'Whole score denominator must remain on one line');
+      assert(await evaluate(`Array.from(document.querySelectorAll('.trace-barcode-grade details, .trace-barcode-additives')).every(el => !el.open)`));
+      await capture('mobile-provisional-390x844.png');
+    }
     await review('unresolved');
     assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental nutrition rating"]').textContent`), 'Score unavailable');
     await capture('mobile-unresolved-390x844.png');
@@ -162,7 +196,7 @@ async function main() {
     await wait(100); await click('Save Entry');
     await until('Boolean(window.previewSavedEntry)');
     const saved = await evaluate('window.previewSavedEntry');
-    assert.equal(saved.calories, 240); assert(!/nutritionScore100|methodVersion|"grade"|scoreReady/.test(JSON.stringify(saved)));
+    assert.equal(saved.calories, 240); assert(!/nutritionScore100|overallScore100|concernBurden|additiveDeduction|methodVersion|"grade"|scoreReady/.test(JSON.stringify(saved)));
     const themes = ['modern-heirloom', 'river', 'haunted-forest', 'gnome-village', 'desert-journey', 'outer-space-journey', 'to-kingdoms-ahead'];
     const themeBackgrounds = [];
     for (const theme of themes) {
@@ -175,9 +209,10 @@ async function main() {
     assert.equal(new Set(themeBackgrounds).size, 7, 'All seven theme palettes must apply to the new panel');
     await client.send('Emulation.setDeviceMetricsOverride', { width: 1280, height: 960, deviceScaleFactor: 1, mobile: false });
     await review(); await capture('desktop-review-1280x960.png');
+    if (overallReview) { await review('quest'); await capture('desktop-provisional-1280x960.png'); }
     await review('eligible', 'modern-heirloom', false);
     assert.equal(await evaluate(`Boolean(document.querySelector('[aria-label="Experimental nutrition assessment"]'))`), false);
-    const report = { mobile: '390x844', desktop: '1280x960', screenshots: 5, themes, controls, disclosuresStartCollapsed: true, foodLoggingAndServing: true, scoresAbsentFromSavedEntry: true, noFlagExcludesGrading: true, synthetic: true, physicalDeviceTest: false };
+    const report = { mobile: '390x844', desktop: '1280x960', screenshots: overallReview ? 8 : 5, themes, controls, disclosuresStartCollapsed: true, foodLoggingAndServing: true, scoresAbsentFromSavedEntry: true, noFlagExcludesGrading: true, synthetic: true, archivedAlmondComparison: overallReview, archivedNonzeroQuestScreen: overallReview, physicalDeviceTest: false };
     fs.writeFileSync(path.join(output, 'visual-checks.json'), JSON.stringify(report, null, 2)); console.log(JSON.stringify(report));
   } finally { if (client) { try { await client.send('Browser.close'); } catch { /* already closed */ } client.close(); } if (browser.exitCode === null) browser.kill(); server.close(); }
 }

@@ -2,18 +2,32 @@ import { assessBarcodeNutrition } from './barcodeNutritionAssessment';
 import { normalizeProductAdditives } from '../services/productAdditives';
 import { getAdditiveNameSource } from '../services/additiveNameReference';
 import { explainNutritionPoints, getBarcodeAdditiveInformation } from './barcodeReviewInformation';
+import { assessAdditiveProfile, assessOverallFoodQuality } from './traceOverallFoodQuality';
 import './BarcodeNutritionReview.css';
 
 export default function BarcodeNutritionReview({ candidate, identifier }) {
   const assessment = assessBarcodeNutrition(candidate, identifier);
   const score = assessment.nutritionScore100;
+  const overall = assessOverallFoodQuality(candidate, assessment);
+  const combined = overall.overallScore100;
   return <section className="trace-barcode-grade" aria-label="Experimental nutrition assessment">
-    <div className="trace-barcode-grade__headline"><strong aria-label="Experimental nutrition rating" data-unavailable={score == null}>{score == null ? 'Score unavailable' : <>{score}<small>/100</small></>}</strong>
-      <span>Experimental nutrition{score != null && <small>Comparison: {Number(assessment.result.normalized.basis.amount.toFixed(1))} {assessment.result.normalized.basis.unit}</small>}</span></div>
-    {score != null ? <p>{explainNutritionPoints(assessment.result)} Nutrition only; additive assessment is incomplete.</p>
+    <div className="trace-barcode-grade__headline"><strong aria-label={combined == null ? 'Experimental nutrition rating' : 'Experimental overall rating'} data-unavailable={score == null}>{score == null ? 'Score unavailable' : <>{combined ?? score}<small>/100</small></>}</strong>
+      <span>{score == null ? 'Assessment unavailable' : combined == null ? 'Nutrition-only' : 'Experimental overall'}{overall.provisional && <small><b aria-label="Provisional overall score">PROVISIONAL</b></small>}{combined != null && <small aria-label="Experimental nutrition rating">Nutrition {score}/100 · additive deduction {overall.additiveDeduction} {overall.additiveDeduction === 1 ? 'point' : 'points'}</small>}{score != null && <small>Comparison: {Number(assessment.result.normalized.basis.amount.toFixed(1))} {assessment.result.normalized.basis.unit}</small>}</span></div>
+    <p aria-label="Overall assessment status">{overall.reason}</p>
+    {overall.deductions.length > 0 && <p aria-label="Additive deduction reasons">{overall.deductions.map(item => `${item.name}: ${item.rationale}`).join(' ')}</p>}
+    {score != null ? <p>{explainNutritionPoints(assessment.result)}</p>
       : <p>{assessment.reasons.slice(0, 3).join(' ')}{assessment.reasons.length > 3 && ' Further gaps are listed below.'}</p>}
     <p className="trace-barcode-grade__confidence">{assessment.confidence}</p>
     <details aria-label="Score details & limitations"><summary>Score details &amp; limitations</summary>
+      <div aria-label="Overall assessment evidence">
+        <p>{overall.additiveAssessment.summary} {overall.additiveAssessment.limitation}</p>
+        <p>Overall candidate: round(nutrition × (1 − 0.20 × known concern)). Concern is capped at 1. Unassessed items remain unknown; a partial review uses supported deductions only. No organic component.</p>
+        {overall.possibleRange && <p aria-label="Possible overall range">Possible range under this budget: {overall.possibleRange.min}–{overall.possibleRange.max}/100. Further review could lower the provisional number; this is not a confidence interval.</p>}
+        <p>Policy: {overall.policy.version}. {overall.limitation}</p>
+        {overall.additiveAssessment.reviewRule && <p>{overall.additiveAssessment.reviewRule} Source: <a href={overall.additiveAssessment.source.url} target="_blank" rel="noreferrer">{overall.additiveAssessment.source.attribution}</a>.</p>}
+        <ul>{overall.additiveAssessment.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
+        <AdditiveScreeningEvidence evidence={overall.additiveAssessment} />
+      </div>
       <p>GTIN: {identifier?.value || 'Unknown'}. Source: {candidate.display.attribution}. Edition: {candidate.display.assessmentInputs?.source?.revisionDate || 'Undated'}.</p>
       <p>{candidate.display.basisMessage} Package: {candidate.display.packageQuantity || 'Unknown'}. Servings per container: {candidate.display.servingsPerContainer ?? 'Unknown'}.</p>
       <ul>{assessment.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>
@@ -44,7 +58,20 @@ function InformationSource({ source }) {
   return <small><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a> · {source.jurisdiction} · {source.provision} · {source.edition} · Reviewed {source.reviewedOn}</small>;
 }
 
+function AdditiveScreeningEvidence({ evidence }) {
+  return <ul aria-label="Ingredient screening evidence">{evidence.items.map(item => <li key={item.identifier}>
+    <strong>{item.name || item.identifier}</strong> · {item.identifier} · {item.concernBurden === null ? 'Unresolved; no supported weight' : item.concernBurden > 0 ? `Trace ${item.classification} precautionary concern` : 'Reviewed; no qualifying concern identified'}
+    <small>Evidence: {item.origins.map(origin => origin.identifier || origin.text).join('; ')}. {item.packagingOnly && 'Packaging statement only. '}{item.conditionalPresence && 'Alternative presence unresolved. '}Exact exposure unknown.</small>
+    {item.review ? <>
+      <p>{item.function} {item.review.rationale}</p>
+      <p>{item.review.evidence} Conditions: {item.review.conditions} Limitations/conflicting findings: {item.review.conflicts}</p>
+      {item.review.sources.map(source => <p key={source.url}><a href={source.url} target="_blank" rel="noreferrer">{source.publisher}: {source.title}</a> · {source.jurisdiction} · {source.edition} · Reviewed {source.reviewedOn}</p>)}
+    </> : <p>No reviewed local identity/scientific classification. Unknown does not mean harmless.</p>}
+  </li>)}</ul>;
+}
+
 export function BarcodeAdditives({ candidate }) {
+  const evidence = assessAdditiveProfile(candidate);
   const value = candidate.display.additives;
   const additives = normalizeProductAdditives(value, value?.source);
   const reported = additives?.status === 'reported';
@@ -59,14 +86,22 @@ export function BarcodeAdditives({ candidate }) {
       {count > 0 && <p>Verified general functions are listed below; the manufacturer’s purpose and amounts in this product are not confirmed.</p>}
       <ul>{additives.items.map(item => {
         const info = item.nameReference ? getBarcodeAdditiveInformation(item.standardizedIdentifier) : null;
-        return <li key={item.providerIdentifier}><strong>{item.standardizedIdentifier || 'Unrecognized identifier'}</strong> — {item.name || 'Name unknown'}
+        const finding = evidence.items.find(entry => entry.providerIdentifiers.includes(item.providerIdentifier));
+        return <li key={item.providerIdentifier}><strong>{item.standardizedIdentifier || 'Unrecognized identifier'}</strong> — {item.name || finding?.review?.name || 'Name unknown'}
           <small>Original: {item.providerIdentifier} · {item.source}</small>
           {info ? <><p>{info.function}<InformationSource source={info.functionSource} /></p>
             {info.concern && <p>Scientific context: {info.concern.text}<InformationSource source={info.concern.source} /></p>}
             {info.regulation ? <p>Verified US provision: {info.regulation.text}<InformationSource source={info.regulation.source} /></p>
               : <p>US regulatory conditions have not been reviewed here for this identifier.</p>}
             <p>Scientific assessment incomplete; no product-specific risk conclusion.</p>
-          </> : <p>Identity not verified in this reference; function, scientific assessment and US regulatory conditions remain unknown.</p>}
+          </> : finding?.review ? <p>Local screening note and its sources appear below. This does not add a historical name-reference entry or establish US authorization.</p>
+            : <p>Identity not verified in this reference; function, scientific assessment and US regulatory conditions remain unknown.</p>}
+          {finding?.historicalEvents.map(event => <div key={event.eventId}>
+            <p>Historical regulatory evidence · {event.jurisdiction} · {event.substance}. Published {event.dates.publishedOn}; effective {event.dates.effectiveOn}; compliance date {event.dates.complianceOn || 'not a universal deadline'}. Reviewed {event.reviewedOn}. {event.scope}</p>
+            <ul>{event.qualifications.map(qualification => <li key={qualification}>{qualification}</li>)}</ul>
+            {event.sources.map(source => <p key={`${source.sourceId}:${source.editionId}`}><a href={source.url} target="_blank" rel="noreferrer">{source.title}</a> · {source.editionId} · {source.provisions.join('; ')}. Source currency: {source.verification.currency}.</p>)}
+            <p>{event.limitations.join(' ')} No automatic score deduction or product-compliance conclusion.</p>
+          </div>)}
         </li>;
       })}</ul>
       {references.map(reference => {
@@ -74,6 +109,8 @@ export function BarcodeAdditives({ candidate }) {
         return source ? <p key={`${reference.sourceId}:${reference.referenceVersion}`}>Verified name reference: <a href={source.url} target="_blank" rel="noreferrer">{source.title || source.documentTitle}</a> · {reference.jurisdiction} · publication {reference.sourcePublicationDate} · {reference.referenceVersion}. Name matching does not establish regulatory authorization.</p> : null;
       })}
     </> : <p>Structured additive information is unavailable or incomplete. Absence of data does not establish absence of additives.</p>}
-    <p>Additive assessment incomplete; no combined food-quality score or additive-risk penalty. Missing or empty provider data earns no automatic safety credit. Dated source information is not a finding about product safety or current compliance. Historical regulatory events are not evaluated here.</p>
+    <p>{evidence.summary} Missing or empty provider data earns no automatic safety credit. Dated legal evidence is separate from scientific risk and does not establish current product compliance.</p>
+    <p>Ingredient-text screening also includes explicitly named substances absent from provider tags. Aliases count once; functions describe general uses, not confirmed manufacturer intent.</p>
+    <AdditiveScreeningEvidence evidence={evidence} />
   </details>;
 }

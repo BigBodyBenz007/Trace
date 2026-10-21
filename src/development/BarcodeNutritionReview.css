@@ -2,6 +2,7 @@
 .trace-barcode-grade__headline { display: flex; align-items: center; gap: 12px; }
 .trace-barcode-grade__headline strong { font-size: 38px; line-height: 1.1; font-variant-numeric: tabular-nums; }
 .trace-barcode-grade__headline strong small { font-size: 15px; font-weight: 400; }
+.trace-barcode-grade__headline > strong { flex-shrink: 0; white-space: nowrap; }
 .trace-barcode-grade__headline strong[data-unavailable="true"] { font-size: 20px; }
 .trace-barcode-grade__headline span { font-weight: 600; }
 .trace-barcode-grade__headline span small, .trace-barcode-additives li small { display: block; font-weight: 400; }
