@@ -892,12 +892,13 @@ function NutritionPage({
               dataBasis: food.remote.dataBasis,
               unknownFields: [...food.remote.unknownFields],
               ...(food.nutritionCorrection ? { nutritionCorrection: food.nutritionCorrection } : {}),
-              ...(food.remote.ingredients === undefined
+              ...(food.ingredientSource ? { ingredientSource: food.ingredientSource } : {}),
+              ...(food.ingredients === undefined
                 ? {}
-                : { ingredients: { ...food.remote.ingredients } }),
-              ...(food.remote.additives === undefined
+                : { ingredients: { ...food.ingredients } }),
+              ...(food.additives === undefined
                 ? {}
-                : { additives: food.remote.additives }),
+                : { additives: food.additives }),
               ...(food.remote.assessmentInputs === undefined
                 ? {}
                 : { assessmentInputs: food.remote.assessmentInputs }),
@@ -1469,7 +1470,7 @@ function NutritionPage({
                   <> · <a href={foodReference.sourceUrl} rel="noreferrer noopener" target="_blank">View source</a></>
                 )}
                 {foodReference.nutritionCorrection && (
-                  <> · Verified nutrition correction: <a href={foodReference.nutritionCorrection.source.url} rel="noreferrer noopener" target="_blank">Manufacturer label</a> ({foodReference.nutritionCorrection.source.updatedOn})</>
+                  <> · Verified nutrition correction: <a href={foodReference.nutritionCorrection.source.url} rel="noreferrer noopener" target="_blank">Manufacturer label</a> ({foodReference.nutritionCorrection.source.updatedOn || `reviewed ${foodReference.nutritionCorrection.source.verifiedAt.slice(0, 10)}; label undated`})</>
                 )}
               </p>
             )}

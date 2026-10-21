@@ -9,6 +9,7 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
   const assessment = assessBarcodeNutrition(candidate, identifier);
   const providerAssessment = assessment.evidence.originalProviderAssessment || assessment;
   const reviewedLabel = assessment.evidence.reviewedManufacturerLabel;
+  const replacement = reviewedLabel?.mode === 'replacement-panel';
   const score = assessment.nutritionScore100;
   const overall = assessOverallFoodQuality(candidate, assessment);
   const combined = overall.overallScore100;
@@ -28,18 +29,29 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
       <p className="trace-barcode-grade__confidence">{overall.provisional && 'Additive review incomplete. '}{confidence}</p>
     </div>
     {reviewedLabel && <p aria-label="Manufacturer label correction">
-      Honey · 10 oz. Added sugars corrected to 7 g per 30 g using the <a href={reviewedLabel.source.url} target="_blank" rel="noreferrer">manufacturer label</a>.
-      {' '}Review, score and new food entries use this value; original provider values remain in source details.
+      {replacement ? <>{reviewedLabel.identity.name}. Full nutrition panel and ingredients use the <a href={reviewedLabel.source.url} target="_blank" rel="noreferrer">US manufacturer label</a> ({reviewedLabel.serving.description}).
+        {' '}Package revision unconfirmed; original provider facts are retained.</>
+        : <>Honey · 10 oz. Added sugars corrected to 7 g per 30 g using the <a href={reviewedLabel.source.url} target="_blank" rel="noreferrer">manufacturer label</a>.
+          {' '}Review, score and new food entries use this value; original provider values remain in source details.</>}
     </p>}
     <details aria-label="Score details & limitations"><summary>Score details &amp; limitations</summary>
       {reviewedLabel && <details aria-label="Manufacturer label comparison"><summary>Manufacturer label comparison</summary>
-        <p>{reviewedLabel.identity.brand} {reviewedLabel.identity.name}. UPC {reviewedLabel.identity.gtin}; {reviewedLabel.identity.packageQuantity} (283 g).
+        {replacement ? <>
+          <p>{reviewedLabel.identity.brand} {reviewedLabel.identity.name}. UPC {reviewedLabel.identity.gtin}; {reviewedLabel.identity.packageQuantity}.
+            {' '}{reviewedLabel.source.edition}. Reviewed {reviewedLabel.source.verifiedAt.slice(0, 10)}. {reviewedLabel.qualification}</p>
+          <p><a href={reviewedLabel.source.nutritionUrl} target="_blank" rel="noreferrer">Manufacturer nutrition panel</a>{' · '}
+            <a href={reviewedLabel.source.ingredientsUrl} target="_blank" rel="noreferrer">Manufacturer ingredients</a>. Nutrition and ingredient screening use this same reviewed reference; older provider tags are retained separately.</p>
+          <ul>{reviewedLabel.qualifications.map(value => <li key={value}>{value}</li>)}</ul>
+          <p>Original provider nutrition: {providerAssessment.nutritionScore100 ?? 'unavailable'}/100. Historical food entries are unchanged.</p>
+          <p>Original provider ingredients: {candidate.selection.remote.ingredients?.text || 'Unavailable'}.</p>
+          <p>Original provider additive identifiers: {candidate.selection.remote.additives?.items?.map(item => item.providerIdentifier).join('; ') || 'Unavailable'}.</p>
+        </> : <><p>{reviewedLabel.identity.brand} {reviewedLabel.identity.name}. UPC {reviewedLabel.identity.gtin}; {reviewedLabel.identity.packageQuantity} (283 g).
           {' '}Label updated {reviewedLabel.source.updatedOn}; reviewed {reviewedLabel.source.verifiedAt.slice(0, 10)}. {reviewedLabel.qualification}</p>
         <p><a href={reviewedLabel.source.nutritionUrl} target="_blank" rel="noreferrer">Manufacturer nutrition panel</a>{' · '}
           <a href={reviewedLabel.source.ingredientsUrl} target="_blank" rel="noreferrer">Manufacturer ingredients</a>. Other listed macronutrients match the provider panel;
           {' '}saturated fat is 0 g per serving. Total sugars and added sugars are separately declared at 7 g each.</p>
         <p>Provider added-sugars_100g: 7 g; 7 × 30/100 = 2.1 g per serving. Manufacturer added sugars: 7 g per 30 g = 23.3333 g per 100 g.
-          {' '}Original provider assessment: {providerAssessment.nutritionScore100}/100. Original ingredients, additive identifiers and provider snapshot are retained. Historical food entries are unchanged.</p>
+          {' '}Original provider assessment: {providerAssessment.nutritionScore100}/100. Original ingredients, additive identifiers and provider snapshot are retained. Historical food entries are unchanged.</p></>}
       </details>}
       {score != null && <p aria-label={combined != null ? 'Experimental nutrition rating' : 'Nutrition subtotal'}>Nutrition {score}/100{combined != null && <> · additive deduction {overall.additiveDeduction} {overall.additiveDeduction === 1 ? 'point' : 'points'}</>}. Comparison: {Number(assessment.result.normalized.basis.amount.toFixed(1))} {assessment.result.normalized.basis.unit}.</p>}
       <p>{explainNutritionPoints(assessment.result)}</p>

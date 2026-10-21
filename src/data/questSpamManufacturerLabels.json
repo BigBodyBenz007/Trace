@@ -1,0 +1,176 @@
+[
+  {
+    "id": "quest-us-manufacturer-panel-reviewed-2026-10-21",
+    "mode": "replacement-panel",
+    "identity": {
+      "gtin": "888849000012",
+      "brand": "Quest",
+      "name": "Chocolate Chip Cookie Dough Protein Bar",
+      "flavor": "Chocolate Chip Cookie Dough",
+      "market": "US",
+      "packageQuantity": "60g",
+      "packageGrams": 60
+    },
+    "matchingProviderName": "Chocolate Chip Cookie Dough",
+    "source": {
+      "url": "https://www.questnutrition.com/products/chocolate-chip-cookie-dough-protein-bar",
+      "nutritionUrl": "https://www.questnutrition.com/products/chocolate-chip-cookie-dough-protein-bar",
+      "ingredientsUrl": "https://www.questnutrition.com/products/chocolate-chip-cookie-dough-protein-bar",
+      "attribution": "Quest Nutrition US manufacturer Nutrition Facts table",
+      "updatedOn": null,
+      "verifiedAt": "2026-10-21T18:39:00.233Z",
+      "verification": "direct-manufacturer-panel",
+      "edition": "Undated live product-page Nutrition Facts table, reviewed 2026-10-21",
+      "dateScope": "Retrieval/review date is not a label publication or package revision date."
+    },
+    "serving": {
+      "description": "1 bar (60 g)",
+      "amount": 60,
+      "unit": "g"
+    },
+    "servingsPerContainer": null,
+    "nutrients": {
+      "calories": 190,
+      "saturatedFat": 3,
+      "sodium": 220,
+      "fiber": 12,
+      "protein": 21,
+      "totalSugar": 1,
+      "addedSugar": 0,
+      "fat": 9,
+      "carbohydrates": 22
+    },
+    "ingredients": {
+      "text": "PROTEIN BLEND (MILK PROTEIN ISOLATE, WHEY PROTEIN ISOLATE), POLYDEXTROSE (PREBIOTIC FIBER), ALMONDS, WATER, UNSWEETENED CHOCOLATE, ERYTHRITOL, COCOA BUTTER, GLYCERIN. CONTAINS LESS THAN 2% OF THE FOLLOWING: NATURAL FLAVORS, SALT, LECITHIN (SUNFLOWER AND/OR SOY LECITHIN), STEVIA SWEETENER, SUCRALOSE.",
+      "language": "en"
+    },
+    "sourceArtifacts": [
+      {
+        "url": "https://www.questnutrition.com/products/chocolate-chip-cookie-dough-protein-bar",
+        "sha256": "c37ab8964794197b1fbf4e31769a510c3e8fdeabbac0c2e595466b94e72a2a8d"
+      }
+    ],
+    "identityEvidence": "Official product variant data assigns UPC 888849000012 to Chocolate Chip Cookie Dough protein bars; the pictured bar is 2.12 oz (60 g). The same barcode is reused across listed outer-box options, so outer count is not established. US shipping and US Nutrition Facts table.",
+    "qualifications": [
+      "The explicit Nutrition Facts table and accompanying ingredient declaration supply one coherent panel. Embedded JSON-LD description conflicts (200 kcal, 200 mg sodium, 14 g fiber, 21 g carbohydrate); it is not combined with this panel.",
+      "Outer box count and physical package revision are unconfirmed."
+    ],
+    "qualification": "US manufacturer reference for this exact UPC, not proof of the scanned physical package revision or a non-US formulation. Original provider ingredients, additive tags, measurements and provenance remain separately retained.",
+    "providerObservation": {
+      "provider": "open-food-facts",
+      "recordId": "0888849000012",
+      "revisionDate": "2026-10-09T18:21:58.000Z",
+      "sourceUrl": "https://world.openfoodfacts.org/product/00888849000012",
+      "name": "Chocolate Chip Cookie Dough",
+      "brand": "Quest",
+      "packageQuantity": "60g",
+      "serving": {
+        "description": "1 serving (60 g)",
+        "amount": 60,
+        "unit": "g",
+        "grams": 60
+      },
+      "nutrients": {
+        "calories": 190,
+        "protein": 21,
+        "carbohydrates": 22,
+        "fat": 9,
+        "sodium": 0.22,
+        "fiber": 12,
+        "totalSugar": 1,
+        "addedSugar": 0
+      },
+      "ingredients": {
+        "text": "WHEY PROTEIN ISOLATE, MILK PROTEIN ISOLATE, POLYDEXTROSE, ALMONDS, ERYTHRITOL, GLYCERIN, COCOA BUTTER, NATURAL FLAVORS, SOY LECITHIN, STEVIA SWEETENER, SUCRALOSE.",
+        "language": "en"
+      }
+    }
+  },
+  {
+    "id": "spam-us-manufacturer-panel-reviewed-2026-10-21",
+    "mode": "replacement-panel",
+    "identity": {
+      "gtin": "037600138727",
+      "brand": "SPAM",
+      "name": "SPAM Classic",
+      "flavor": "Classic",
+      "market": "US",
+      "packageQuantity": "12 oz (340 g)",
+      "packageGrams": 340
+    },
+    "matchingProviderName": "SPAM Classic",
+    "source": {
+      "url": "https://smartlabel.hormelfoods.com/product-info/00037600138727",
+      "nutritionUrl": "https://smartlabel.hormelfoods.com/product-info/00037600138727#nutritionTab",
+      "ingredientsUrl": "https://smartlabel.hormelfoods.com/product-info/00037600138727#ingredientsTab",
+      "attribution": "Hormel Foods / SPAM US SmartLabel",
+      "updatedOn": null,
+      "verifiedAt": "2026-10-21T18:39:05.920Z",
+      "verification": "direct-manufacturer-panel",
+      "edition": "SmartLabel page retrieved 2026-10-21; footer says Information updated on 21-Oct-2026; package revision undetermined",
+      "dateScope": "Retrieval/review date is not a label publication or package revision date."
+    },
+    "serving": {
+      "description": "56 g",
+      "amount": 56,
+      "unit": "g"
+    },
+    "servingsPerContainer": 6,
+    "nutrients": {
+      "calories": 180,
+      "saturatedFat": 6,
+      "sodium": 770,
+      "fiber": 0,
+      "protein": 7,
+      "totalSugar": 1,
+      "addedSugar": 1,
+      "fat": 16,
+      "carbohydrates": 1
+    },
+    "ingredients": {
+      "text": "Pork, Salt, Water, Modified Potato Starch, Sugar, Sodium Nitrite.",
+      "language": "en"
+    },
+    "sourceArtifacts": [
+      {
+        "url": "https://smartlabel.hormelfoods.com/product-info/00037600138727",
+        "sha256": "81ac3e171e18f4afd998d233dce257ff92509b26a30fd5f5ab861b24bd038e6d"
+      }
+    ],
+    "identityEvidence": "Exact-GTIN SmartLabel URL and displayed UPC 037600138727; linked manufacturer photo shows SPAM Classic 12 oz (340 g). US Nutrition Facts panel: 6 servings, 56 g.",
+    "qualifications": [
+      "The displayed page-update footer is not evidence of when the package formulation changed.",
+      "The current US manufacturer panel replaces the entire older captured provider panel; original quantities are not rescaled or spliced."
+    ],
+    "qualification": "US manufacturer reference for this exact UPC, not proof of the scanned physical package revision or a non-US formulation. Original provider ingredients, additive tags, measurements and provenance remain separately retained.",
+    "providerObservation": {
+      "provider": "open-food-facts",
+      "recordId": "0037600138727",
+      "revisionDate": "2026-09-23T21:42:26.000Z",
+      "sourceUrl": "https://world.openfoodfacts.org/product/00037600138727",
+      "name": "SPAM Classic",
+      "brand": "SPAM",
+      "packageQuantity": "12 oz (340 g)",
+      "serving": {
+        "description": "1 portion (56.699 g)",
+        "amount": 56.699,
+        "unit": "g",
+        "grams": 56.699
+      },
+      "nutrients": {
+        "calories": 182,
+        "protein": 8.5,
+        "carbohydrates": 1.81,
+        "fat": 13.8,
+        "sodium": 1.36,
+        "fiber": 0,
+        "totalSugar": 0.737,
+        "addedSugar": null
+      },
+      "ingredients": {
+        "text": "pork with ham, salt, water, modified potato starch, sugar, sodium nitrite",
+        "language": "en"
+      }
+    }
+  }
+]

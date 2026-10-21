@@ -4,6 +4,7 @@ import { reconcileBarcodeDatasets, resolveBarcodeCategory } from './barcodeNutri
 import { evaluateTraceUsNutritionV2 as evaluatePracticalUsNutrition } from './traceUsNutritionScoringV2';
 import { assessAdditiveEvidence, resolveGrainEvidence } from './traceFoodQualityEvidence';
 import { applyVerifiedNutritionToAssessment } from './verifiedBarcodeNutritionAssessment';
+import { getAppliedVerifiedNutritionCorrection } from '../services/verifiedProductNutritionCorrections';
 
 const UNITS = { calories: 'kcal', saturatedFat: 'g', addedSugar: 'g', totalSugar: 'g', sodium: 'mg', fiber: 'g', protein: 'g', fat: 'g', carbohydrates: 'g' };
 const freeze = value => { if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); } return value; };
@@ -35,7 +36,7 @@ function assessCatalogProfile(candidate, identifier, base) {
         excludedNutrients: result.excludedNutrients ?? [], source, usZeroFatLabelServing: zeroFatLabel } } });
 }
 
-export function assessBarcodeNutrition(candidate, identifier) {
+function assessProviderBarcodeNutrition(candidate, identifier) {
   const display = candidate?.display || {};
   const input = normalizeNutritionAssessmentInputs(display.assessmentInputs);
   const base = { grade: null, scoreReady: false, scanMatchEligible: false, nutritionScore100: null,
@@ -111,6 +112,14 @@ export function assessBarcodeNutrition(candidate, identifier) {
   base.warnings.push(...result.warnings);
   base.evidence.assessment = { methodId: result.methodId, methodVersion: result.methodVersion,
     sugarMode: result.sugarMode ?? null, excludedNutrients: [...new Set([...excludedFromPanel, ...(result.excludedNutrients ?? [])])], source: { ...input.source } };
-  return applyVerifiedNutritionToAssessment(candidate, identifier,
-    freeze({ ...base, result, nutritionScore100: result.nutritionScore100, reasons: result.reasons }));
+  return freeze({ ...base, result, nutritionScore100: result.nutritionScore100, reasons: result.reasons });
+}
+
+export function assessBarcodeNutrition(candidate, identifier) {
+  // Resolve the independent manufacturer panel even when an older cached
+  // provider panel cannot be scored. Keep that entire original result separate.
+  const replacement = getAppliedVerifiedNutritionCorrection(candidate, identifier)?.mode === 'replacement-panel';
+  const original = replacement ? { ...candidate, display: { ...candidate.display,
+    ingredients: candidate.selection.remote.ingredients, additives: candidate.selection.remote.additives } } : candidate;
+  return applyVerifiedNutritionToAssessment(candidate, identifier, assessProviderBarcodeNutrition(original, identifier));
 }

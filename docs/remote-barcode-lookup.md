@@ -465,3 +465,14 @@ Pepperidge's competing energy/sugar panels, bounded fiber/sugar declarations,
 and regional or package mismatches. Manufacturer observations are comparison
 evidence, not automatically promoted Trace product facts. The existing exact
 Teddy correction remains unchanged at 7 g added sugar/30 g and provisional 20.
+
+Subsequent exact-product review now adds coherent US manufacturer-panel replacements
+for Quest Chocolate Chip Cookie Dough UPC `888849000012` and SPAM Classic UPC
+`037600138727`. The original batch archive and scores above remain historical
+source-only comparisons. Current review and new entries use 220 mg sodium/60 g
+and 770 mg/56 g respectively, with each manufacturer's full panel and ingredients.
+Original provider fields/tags remain separate; expired cached observations cannot
+bypass an applicable local reference. See the
+[two-product correction report](quest-spam-nutrition-corrections-2026-10-21.md)
+for exact matching guards, source-edition uncertainty, unchanged scoring rules,
+new-entry persistence and complete dependency inventory.

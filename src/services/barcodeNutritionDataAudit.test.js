@@ -35,7 +35,9 @@ test.each(comparison.products.slice(0, 20))('already-normalized score replay (by
   entries.forEach(entry => {
     entry.derivation = approved.observations.find(o => o.field === entry.field).derivation;
   });
-  const candidate = createBarcodeNutritionCandidate(lookup);
+  // Historical batch assertions retain the captured provider panel. Reviewed
+  // manufacturer replacements have separate raw-to-logging integration tests.
+  const candidate = createBarcodeNutritionCandidate(lookup, { applyVerifiedCorrections: false });
   const before = JSON.stringify(candidate);
   const assessment = assessBarcodeNutrition(candidate, lookup.identifier);
   const overall = assessOverallFoodQuality(candidate, assessment);
@@ -67,7 +69,7 @@ test.each(energyArchive.products)('captured raw OFF nutrients traverse gateway a
   Object.entries(lookup.food.nutrients).filter(([, value]) => value !== null).forEach(([key, value]) => {
     expect(food.nutrients[key]).toBeCloseTo(value, 7);
   });
-  const candidate = createBarcodeNutritionCandidate({ ...lookup, food });
+  const candidate = createBarcodeNutritionCandidate({ ...lookup, food }, { applyVerifiedCorrections: false });
   expect(assessBarcodeNutrition(candidate, lookup.identifier).nutritionScore100)
     .toBe(comparison.products.find(p => p.barcode === row.barcode).after.nutritionScore100);
   expect(JSON.stringify(row.body.product)).toBe(original);

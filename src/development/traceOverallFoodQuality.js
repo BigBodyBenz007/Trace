@@ -35,7 +35,8 @@ export function assessAdditiveProfile(candidate) {
   const display = candidate?.display || {}, value = display.additives;
   const data = normalizeProductAdditives(value, value?.source);
   const reported = data?.status === 'reported';
-  const source = { url: display.sourceUrl || null, attribution: display.attribution || null };
+  const source = { url: display.ingredientSource?.url || display.sourceUrl || null,
+    attribution: display.ingredientSource?.attribution || display.attribution || null };
   const screen = screenIngredientDeclaration(display.ingredients?.text, reported ? data.items : []);
   const providerState = value == null ? 'not-collected' : !reported ? 'unknown'
     : data.items.length ? 'reported-identifiers' : 'provider-reported-empty';

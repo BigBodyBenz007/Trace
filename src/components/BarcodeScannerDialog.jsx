@@ -807,7 +807,7 @@ export default function BarcodeScannerDialog({
             <BarcodeIngredients
               key={lookupIdentifier?.value}
               ingredients={candidate.display.ingredients}
-              attribution={candidate.customFood?.providerSourceSnapshot?.provenance?.attribution || candidate.display.attribution}
+              attribution={candidate.customFood?.providerSourceSnapshot?.provenance?.attribution || candidate.display.ingredientSource?.attribution || candidate.display.attribution}
             />
             {grading && <grading.BarcodeAdditives key={`additives:${lookupIdentifier?.value}`} candidate={candidate} />}
             {grading && reviewActions}

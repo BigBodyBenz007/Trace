@@ -52,7 +52,8 @@ function remoteCandidate(result, applyVerifiedCorrections) {
     ...(assessmentInputs === undefined ? {} : { assessmentInputs }),
   };
   const reliable = SAFE_REMOTE_BASIS_KINDS.has(food.nutritionBasis?.kind);
-  const serving = selectedServing(food);
+  let serving = selectedServing(food);
+  let servingsPerContainer = food.servingsPerContainer;
   const nutrients = reliable
     ? { ...food.nutrients }
     : Object.fromEntries(NUTRITION_ENTRY_NUTRIENT_KEYS.map((key) => [key, null]));
@@ -67,7 +68,7 @@ function remoteCandidate(result, applyVerifiedCorrections) {
     unknownFields: food.unknownFields,
     provenance: food.provenance,
   });
-  const adaptedUnknownFields = [...new Set([
+  let adaptedUnknownFields = [...new Set([
     ...food.unknownFields,
     ...NUTRITION_ENTRY_NUTRIENT_KEYS
       .filter((key) => nutrients[key] === null)
@@ -82,6 +83,18 @@ function remoteCandidate(result, applyVerifiedCorrections) {
   if (nutritionCorrection) nutritionCorrection.changes.forEach(({ nutrient, correctedValue }) => {
     nutrients[nutrient] = correctedValue;
   });
+  const replacement = nutritionCorrection?.mode === 'replacement-panel' ? nutritionCorrection.manufacturerPanel : null;
+  if (replacement) {
+    serving = { ...replacement.serving, grams: replacement.serving.amount };
+    servingsPerContainer = replacement.servingsPerContainer;
+    ingredientFields.ingredients = replacement.ingredients;
+    ingredientFields.ingredientSource = replacement.source;
+    // Provider tags belong to the old declaration, retained in remote. Do not
+    // attach them to this newer ingredient edition or fabricate replacement tags.
+    delete ingredientFields.additives;
+    adaptedUnknownFields = adaptedUnknownFields.filter(field => !field.startsWith('nutrients.')
+      && (field !== 'servingsPerContainer' || servingsPerContainer === null));
+  }
   const selection = canUse ? immutableCopy({
     id: `remote-barcode:${food.provider.id}:${food.provider.recordId}`,
     sourceType: "remote-barcode",
@@ -95,7 +108,7 @@ function remoteCandidate(result, applyVerifiedCorrections) {
     ...(nutritionCorrection ? { nutritionCorrection } : {}),
     packaged: {
       packageSize: food.packageQuantity,
-      servingsPerContainer: food.servingsPerContainer,
+      servingsPerContainer,
     },
     remote: providerSnapshot,
     provenance: {
@@ -124,9 +137,11 @@ function remoteCandidate(result, applyVerifiedCorrections) {
       brand: food.brand,
       name: food.name,
       packageQuantity: food.packageQuantity,
-      servingsPerContainer: food.servingsPerContainer,
+      servingsPerContainer,
       servingDescription: serving.description,
-      basisMessage: basisMessage(food, serving.description, reliable) + (nutritionCorrection
+      basisMessage: replacement
+        ? `Nutrition shown for ${serving.description} using ${replacement.source.attribution} (${replacement.source.edition}). Manufacturer ingredients use the same reviewed edition; original provider facts remain in the source snapshot. The physical package revision is unconfirmed.`
+        : basisMessage(food, serving.description, reliable) + (nutritionCorrection
         ? ` Added sugars corrected using ${nutritionCorrection.source.attribution} (label edition ${nutritionCorrection.source.updatedOn}); original provider values are retained in the source snapshot.` : ""),
       nutrients,
       ...(nutritionCorrection ? { nutritionCorrection } : {}),

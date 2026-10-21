@@ -82,8 +82,8 @@ test('a real nitrite finding shows its deduction and limitations with the provis
   }
   const c = createBarcodeNutritionCandidate(copy);
   render(<BarcodeNutritionReview candidate={c} identifier={row.lookup.identifier} />);
-  expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('22/100');
-  expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 23/100');
+  expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('20/100');
+  expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 21/100');
   expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('additive deduction 1 point');
   expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
   expect(screen.getByLabelText('Additive deduction reasons')).toHaveTextContent('nitrite in processed meat');

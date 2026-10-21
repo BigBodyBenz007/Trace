@@ -9,7 +9,7 @@ export function applyVerifiedNutritionToAssessment(candidate, identifier, provid
   if (!correction) return providerAssessment;
   const label = correction.manufacturerPanel;
   const source = { url: label.source.url, attribution: label.source.attribution,
-    revisionDate: label.source.updatedOn, retrievedAt: label.source.verifiedAt };
+    revisionDate: label.source.updatedOn, retrievedAt: label.source.verifiedAt, edition: label.source.edition || label.source.updatedOn };
   const nutrients = Object.fromEntries(Object.entries(label.nutrients).map(([nutrient, value]) =>
     [nutrient, { value, unit: nutrient === 'calories' ? 'kcal' : nutrient === 'sodium' ? 'mg' : 'g' }]));
   const result = evaluateTraceUsNutritionV2({ category: 'general', basis: label.serving,
@@ -20,7 +20,8 @@ export function applyVerifiedNutritionToAssessment(candidate, identifier, provid
     evidence: { ...providerAssessment.evidence,
       selectedDatasetId: label.id,
       originalDataset: { id: label.id, basis: 'serving', quantity: label.serving, nutrients },
-      assessment: { ...providerAssessment.evidence.assessment, source, sugarMode: result.sugarMode },
+      assessment: { methodId: result.methodId, methodVersion: result.methodVersion,
+        excludedNutrients: result.excludedNutrients, source, sugarMode: result.sugarMode },
       reviewedManufacturerLabel: label,
       // Full original normalized evidence, sugar fields and score remain separate.
       originalProviderAssessment: providerAssessment } });
