@@ -5,7 +5,7 @@ import { getBarcodeAdditiveInformation } from './barcodeReviewInformation';
 import { screenIngredientDeclaration } from './additiveScreeningPolicy';
 
 export const OVERALL_POLICY = Object.freeze({
-  id: 'trace-overall-declared-profile', version: '3-screening-experimental-2026-10-20',
+  id: 'trace-overall-declared-profile', version: '4-general-evidence-experimental-2026-10-20',
   nutritionWeight: .8, maximumRelativeAdditiveDeduction: .2,
   exposureSource: 'https://www.fda.gov/consumers/consumer-updates/food-safe-if-it-has-chemicals',
 });
@@ -93,6 +93,7 @@ export function assessOverallFoodQuality(candidate, nutrition) {
     possibleRange: provisional ? { min: Math.round(.8 * score), max: rounded } : null,
     deductions: supported ? additives.items.filter(item => item.concernBurden > 0).map(item => ({
       identifier: item.identifier, name: item.review.name, weight: item.concernBurden,
+      summary: item.review.consumerSummary,
       // Allocate the capped budget proportionally, independent of item order.
       // These raw contributions are not separately rounded scores or risk estimates.
       rawDeduction: score * OVERALL_POLICY.maximumRelativeAdditiveDeduction * item.concernBurden / Math.max(1, totalWeight),

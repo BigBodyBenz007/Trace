@@ -2,6 +2,26 @@
 const list = values => values.length < 3 ? values.join(' and ')
   : `${values.slice(0, -1).join(', ')}, and ${values[values.length - 1]}`;
 
+// Presentation only: rank guaranteed, actually applied point contributions.
+// No new nutrient thresholds, estimated values or scoring calculations.
+export function getNutritionHighlights(result) {
+  if (result?.nutritionScore100 == null) return [];
+  const points = result.points || {}, fatRich = ['nuts', 'oil', 'fats-nuts-seeds'].includes(result.methodCategory);
+  const applied = key => Number.isFinite(points[key]?.min) && points[key].min > 0 ? points[key].min : 0;
+  const factors = [
+    ['energy', fatRich ? 0 : applied('energy'), result.methodCategory === 'beverage' ? 'Calories lower the score.' : 'Calorie density lowers the score.'],
+    ['sugar', applied('sugar'), result.sugarMode === 'addedSugar' ? 'Added sugars lower the score.' : 'Total sugars lower the score.'],
+    ['saturatedFat', applied('saturatedFat') + (fatRich ? applied('energy') : 0), 'Saturated fat lowers the score.'],
+    ['salt', applied('salt'), 'Sodium lowers the score.'],
+    ['fiber', applied('fiber'), 'Fiber helps the score.'],
+    ['proteinApplied', applied('proteinApplied'), 'Protein helps the score.'],
+    ['wholeGrain', applied('wholeGrain'), 'Whole grains help the score.'],
+  ];
+  return factors.map(([key, contribution, text], order) => ({ key, contribution, text, order }))
+    .filter(item => item.contribution > 0).sort((a, b) => b.contribution - a.contribution || a.order - b.order)
+    .slice(0, 3).map(({ order, ...item }) => item);
+}
+
 export function explainNutritionPoints(result) {
   if (result?.nutritionScore100 == null) return null;
   const points = result.points || {};

@@ -41,7 +41,7 @@ test('the approved weights and budget are explicit; they are not Yuka risk label
 
 test.each([['Carbonated water, phosphoric acid.', 'E338'], ['Water, erythritol.', 'E968'],
   ['Pork, sodium nitrite.', 'E250'], ['Pork, sodium phosphate.', 'E339'],
-  ['Water, xanthan gum.', 'E415'], ['Water, monoglycerides.', 'E471'], ['Water, datem.', 'E472e']])(
+  ['Water, calcium phosphate.', 'E341']])(
   'supported nonzero screening applies without inventing concentration: %s', (text, id) => {
     const result = assess(text);
     expect(result).toMatchObject({ overallScore100: 77, rawOverall: 76.8, additiveDeduction: 3 });
@@ -61,8 +61,8 @@ test('aliases and repeated ingredient/tag occurrences count once, including pare
   const result = assess('Pork, sodium nitrite, sodium nitrite, soy lecithin, baking soda.',
     ['en:e250', 'en:e322', 'en:e322i', 'en:e500', 'en:e500ii']);
   expect(result.additiveAssessment.items.map(i => i.identifier)).toEqual(['E250', 'E500ii', 'E322i']);
-  expect(result.additiveAssessment.concernBurden).toBe(.4);
-  expect(result.deductions).toHaveLength(2);
+  expect(result.additiveAssessment.concernBurden).toBe(.2);
+  expect(result.deductions).toHaveLength(1);
   expect([...result.additiveAssessment.items.find(i => i.identifier === 'E322i').providerIdentifiers].sort()).toEqual(['en:e322', 'en:e322i']);
 });
 
@@ -75,7 +75,7 @@ test('unresolved parent carbonate tags do not acquire a subtype', () => {
 test('carbonate siblings stay distinct; broad tags and text cannot supply bicarbonate evidence', () => {
   const r = assess('Water, sodium carbonate, sodium bicarbonate.', ['en:e500', 'en:e500i', 'en:e500ii']);
   expect(r.additiveAssessment.items.map(i => i.identifier)).toEqual(['E500i', 'E500ii']);
-  expect(r.deductions.map(i => i.identifier)).toEqual(['E500ii']);
+  expect(r.deductions).toHaveLength(0);
   expect(r.additiveAssessment.items.every(i => i.providerIdentifiers.includes('en:e500'))).toBe(true);
   const broad = assess('Water, sodium carbonates.', ['en:e500', 'en:e500ii']);
   expect(broad.deductions).toHaveLength(0);
@@ -93,10 +93,10 @@ test('lecithin subtypes are not merged with each other or inferred from a broad 
   expect(assess('Water, no lecithins.', ['en:e322', 'en:e322i']).additiveAssessment.items[0].concernBurden).toBeNull();
 });
 
-test('bicarbonate concern retains its exact subgroup, study identity and contrary historical assessment', () => {
+test('bicarbonate subgroup evidence remains internal and cannot supply a general food deduction', () => {
   const r = assess('Water, baking soda.', ['en:e500', 'en:e500ii']);
-  expect(r.deductions).toHaveLength(1);
-  expect(r.deductions[0]).toMatchObject({ identifier: 'E500ii', weight: .2, rawDeduction: 3.2 });
+  expect(r.deductions).toHaveLength(0);
+  expect(r.additiveAssessment.items[0]).toMatchObject({ identifier: 'E500ii', concernBurden: null, classification: null });
   const review = r.additiveAssessment.items[0].review;
   expect(review.evidence).toMatch(/premenopausal.*1.48/);
   expect(review.evidence).toContain('not a general-population result');
@@ -106,14 +106,34 @@ test('bicarbonate concern retains its exact subgroup, study identity and contrar
   expect(assess('Water, sodium carbonate.').deductions).toHaveLength(0);
 });
 
-test('calcium propionate screen is supported by the exact human substance, not all propionates', () => {
+test('calcium propionate acute surrogate evidence stays sourced without a general food deduction', () => {
   const r = assess('Flour, calcium propionate.');
-  expect(r.deductions[0]).toMatchObject({ identifier: 'E282', weight: .2 });
+  expect(r.deductions).toHaveLength(0);
+  expect(r.additiveAssessment.items[0]).toMatchObject({ identifier: 'E282', concernBurden: null, classification: null });
   const review = r.additiveAssessment.items[0].review;
   expect(review.evidence).toContain('28 healthy adults');
   expect(review.evidence).toContain('1500 mg calcium propionate');
   expect(review.conflicts).toContain('long-term dietary clinical relevance');
   expect(assess('Flour, sodium propionate.').deductions).toHaveLength(0);
+});
+
+test.each([['baking soda', 'E500ii'], ['calcium propionate', 'E282'], ['xanthan gum', 'E415'],
+  ['monoglycerides', 'E471'], ['datem', 'E472e']])('the same general-evidence standard applies to %s', (phrase, id) => {
+  const r = assess(`Flour, ${phrase}.`);
+  expect(r).toMatchObject({ nutritionScore100: 80, overallScore100: 80, status: 'provisional', deductions: [] });
+  const item = r.additiveAssessment.items.find(i => i.identifier === id);
+  expect(item).toMatchObject({ concernBurden: null, classification: null, review: { weight: null, classification: null } });
+  expect(item.review.rationale).toContain('No general food-score deduction');
+  expect(item.review.sources.length).toBeGreaterThan(0);
+  expect(item.review.evidence).toBeTruthy();
+  expect(item.review.conflicts).toBeTruthy();
+});
+
+test('erythritol retains the established digestive endpoint without using the preliminary cardiovascular signal', () => {
+  const r = assess('Water, erythritol.');
+  expect(r.deductions[0].summary).toContain('higher intakes');
+  expect(r.deductions[0].rationale).toContain('cardiovascular associations do not supply this deduction');
+  expect(r.additiveAssessment.items[0].review.conflicts).toContain('no established causal link');
 });
 
 test('calcium fortification remains unknown; technological-use findings are not misapplied', () => {
@@ -134,18 +154,17 @@ test('individual raw contributions sum to the capped deduction without order-dep
     .toEqual(r.deductions.map(i => [i.identifier, i.rawDeduction]).sort());
 });
 
-test('actual Teddy tags become two groups, retain unknowns and apply only the supported bicarbonate finding', () => {
+test('actual Teddy retains two provider groups and an overall score without an unsupported bicarbonate deduction', () => {
   const { createBarcodeNutritionCandidate } = require('../services/barcodeNutritionSelection');
   const archive = require('../../docs/trace-nutrition-v2-teddy-2026-10-20.json');
   const c = createBarcodeNutritionCandidate(archive.lookup), before = JSON.stringify(c);
   const r = assessOverallFoodQuality(c, nutrition(46));
-  expect(r).toMatchObject({ nutritionScore100: 46, overallScore100: 44, rawOverall: 44.16,
-    additiveDeduction: 2, status: 'provisional', possibleRange: { min: 37, max: 44 }, grade: null, scoreReady: false });
-  expect(r.deductions.map(i => i.identifier)).toEqual(['E500ii']);
-  expect(r.deductions[0].rawDeduction).toBeCloseTo(1.84);
+  expect(r).toMatchObject({ nutritionScore100: 46, overallScore100: 46, rawOverall: 46,
+    additiveDeduction: 0, status: 'provisional', possibleRange: { min: 37, max: 46 }, grade: null, scoreReady: false });
+  expect(r.deductions).toHaveLength(0);
   expect([...r.additiveAssessment.items.find(i => i.identifier === 'E322i').providerIdentifiers].sort()).toEqual(['en:e322', 'en:e322i']);
   expect([...r.additiveAssessment.items.find(i => i.identifier === 'E500ii').providerIdentifiers].sort()).toEqual(['en:e500', 'en:e500ii']);
-  expect(r.additiveAssessment.items.filter(i => i.concernBurden === null).map(i => i.identifier).sort()).toEqual(['E170', 'flavor-mixture']);
+  expect(r.additiveAssessment.items.filter(i => i.concernBurden === null).map(i => i.identifier).sort()).toEqual(['E170', 'E500ii', 'flavor-mixture']);
   expect(JSON.stringify(c)).toBe(before);
 });
 
@@ -258,11 +277,10 @@ test('real replay preserves every v2 score and separately counts assessed, parti
   const v2 = require('../../docs/trace-nutrition-v2-comparison-2026-10-20.json');
   expect(report).toMatchObject({ originalNutritionScores: 19, nutritionScores: 20, overallScores: 18,
     reviewedOverall: 4, provisionalOverall: 14, nutritionOnly: 2, nutritionUnavailable: 1,
-    supportedDeductionProfiles: 7, roundedScoreDecreases: 6 });
+    supportedDeductionProfiles: 4, roundedScoreDecreases: 3 });
   expect(report.products.map(p => p.nutritionScore100)).toEqual(v2.products.map(p => p.after.nutritionScore100));
   expect(report.products.filter(p => p.additiveDeduction > 0).map(p => [p.name, p.nutritionScore100, p.overallScore100]))
-    .toEqual([['Quest Chocolate Chip Cookie Dough Protein Bar', 54, 52], ['Pepperidge Farm Farmhouse Hearty White Bread', 55, 48],
-      ['Smart Ones Santa Fe Rice & Beans', 75, 72], ['Oscar Mayer Classic Wieners', 25, 24], ['SPAM Classic', 23, 22], ['Teddy Grahams', 46, 44]]);
+    .toEqual([['Quest Chocolate Chip Cookie Dough Protein Bar', 54, 52], ['Oscar Mayer Classic Wieners', 25, 24], ['SPAM Classic', 23, 22]]);
   expect(report.stouffersComparison).toMatchObject({ matchingProductEvidence: false, classicNutritionV2: 70,
     meatLovers: { nutritionV2: 66, publishedNutrition: 75, traceOverall: null, vegetableVerification: 'Yuka-reported assumption only' } });
 });

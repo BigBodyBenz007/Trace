@@ -11,9 +11,10 @@ const webpack = require('webpack');
 const { normalizeOpenFoodFactsProduct } = require('../api/nutrition/_barcodeGateway.cjs');
 const { barcodeGradingRecord, BARCODE, RETRIEVED_AT } = require('../src/development/__fixtures__/barcodeGrading.cjs');
 const root = path.resolve(__dirname, '..');
-const refinement = process.argv.includes('--screening-refinement');
+const simpleReview = process.argv.includes('--simple-review');
+const refinement = simpleReview || process.argv.includes('--screening-refinement');
 const overallReview = refinement || process.argv.includes('--overall-review');
-const output = path.join(root, refinement ? 'artifacts/additive-screening-refinement-20261020' : overallReview ? 'artifacts/trace-overall-food-quality-20261020' : 'artifacts/barcode-explanations-polish-20261020');
+const output = path.join(root, simpleReview ? 'artifacts/food-grade-simplification-20261020' : refinement ? 'artifacts/additive-screening-refinement-20261020' : overallReview ? 'artifacts/trace-overall-food-quality-20261020' : 'artifacts/barcode-explanations-polish-20261020');
 const scratch = path.join(root, overallReview ? '.tmp-browser/barcode-overall' : '.tmp-browser/barcode-grading');
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 fs.mkdirSync(output, { recursive: true });
@@ -55,17 +56,21 @@ async function compile(production = false) {
       products.almonds = archive.observations.find(row => row.barcode === '00041570003831').lookup.food;
       products.quest = archive.observations.find(row => row.barcode === '00888849000012').lookup.food;
       products.teddy = require('../docs/trace-nutrition-v2-teddy-2026-10-20.json').lookup.food;
+      products.stouffers = archive.observations.find(row => row.barcode === '00013800103215').lookup.food;
       // Replay the already-approved v2 qualifier recovery, not the legacy
       // pre-repair cache. Raw nutrient values and basis must match exactly.
-      products.quest = JSON.parse(JSON.stringify(products.quest));
-      const approved = require('../docs/trace-nutrition-v2-comparison-2026-10-20.json')
-        .products.find(row => row.barcode === '00888849000012').after.evidence.originalDataset;
-      const retained = products.quest.assessmentInputs.datasets.find(d => d.id === approved.id);
-      assert(retained);
-      for (const entry of retained.observations) {
-        const verified = approved.observations.find(o => o.field === entry.field);
-        assert(verified); assert.deepEqual(entry.rawValue, verified.rawValue); assert.equal(entry.enteredUnit, verified.enteredUnit);
-        entry.derivation = verified.derivation;
+      for (const [scenario, barcode] of [['quest', '00888849000012'], ['stouffers', '00013800103215']]) {
+        products[scenario] = JSON.parse(JSON.stringify(products[scenario]));
+        const row = require('../docs/trace-nutrition-v2-comparison-2026-10-20.json').products.find(row => row.barcode === barcode);
+        const approved = row.qualificationReview && row.after.evidence.originalDataset;
+        if (!approved) continue;
+        const retained = products[scenario].assessmentInputs.datasets.find(d => d.id === approved.id);
+        assert(retained);
+        for (const entry of retained.observations) {
+          const verified = approved.observations.find(o => o.field === entry.field);
+          assert(verified); assert.deepEqual(entry.rawValue, verified.rawValue); assert.equal(entry.enteredUnit, verified.enteredUnit);
+          entry.derivation = verified.derivation;
+        }
       }
     }
     fs.writeFileSync(entry, `
@@ -82,7 +87,7 @@ async function compile(production = false) {
       function Preview() {
         const [entries, setEntries] = useState([]);
         return <div className="trace-app-shell trace-feature-page trace-feature-page--nutrition">
-          <p>{['almonds', 'quest', 'teddy'].includes(params.get('scenario')) ? 'Archived provider observation; current package not independently verified. Enter ' + ({quest:'00888849000012', almonds:'00041570003831', teddy:'044000045586'}[params.get('scenario')]) + ' after Scan Barcode.' : 'Synthetic review controls — no real product assessment. Enter ${BARCODE} after Scan Barcode.'}</p>
+          <p>{['almonds', 'quest', 'teddy', 'stouffers'].includes(params.get('scenario')) ? 'Archived provider observation; current package not independently verified. Enter ' + ({quest:'00888849000012', almonds:'00041570003831', teddy:'044000045586', stouffers:'00013800103215'}[params.get('scenario')]) + ' after Scan Barcode.' : 'Synthetic review controls — no real product assessment. Enter ${BARCODE} after Scan Barcode.'}</p>
           <NutritionPage onBack={() => {}} nutritionEntries={entries} nutritionGoals={{ calories: 0, protein: 0, carbohydrates: 0, fat: 0 }}
             saveNutritionEntry={entry => { const saved = { ...entry, id: 'synthetic-' + Date.now() }; window.previewSavedEntry = saved; setEntries([...entries, saved]); return true; }}
             saveNutritionGoals={() => true} barcodeLookupService={lookup} barcodeCamera={camera}
@@ -143,7 +148,7 @@ async function main() {
     const until = async expression => { for (let i = 0; i < 120; i++) { if (await evaluate(expression)) return; await wait(100); } throw new Error('Timed out: ' + expression); };
     const click = text => evaluate(`Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === ${JSON.stringify(text)}).click()`);
     const review = async (scenario = 'eligible', theme = 'modern-heirloom', flag = true) => {
-      const lookupCode = { almonds: '00041570003831', quest: '00888849000012', teddy: '044000045586' }[scenario] || BARCODE;
+      const lookupCode = { almonds: '00041570003831', quest: '00888849000012', teddy: '044000045586', stouffers: '00013800103215' }[scenario] || BARCODE;
       await client.send('Page.navigate', { url: `${base}/?scenario=${scenario}&theme=${theme}${flag ? '&barcodeGrading=1' : ''}` });
       await until(`Array.from(document.querySelectorAll('button')).some(b => b.textContent.trim() === 'Scan Barcode')`);
       await click('Scan Barcode');
@@ -177,21 +182,23 @@ async function main() {
     if (overallReview) {
       await review('almonds');
       assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental overall rating"]').textContent`), '95/100');
-      assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental nutrition rating"]').textContent`), 'Nutrition 95/100 · additive deduction 0 points');
+      assert(await evaluate(`document.querySelector('[aria-label="Experimental nutrition rating"]').textContent.includes('Nutrition 95/100 · additive deduction 0 points')`));
       assert(await evaluate(`Array.from(document.querySelectorAll('.trace-barcode-grade details, .trace-barcode-additives')).every(el => !el.open)`));
       await capture('mobile-overall-390x844.png');
       await review('quest');
       assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental overall rating"]').textContent`), '52/100');
-      assert(await evaluate(`document.querySelector('[aria-label="Provisional overall score"]').textContent.includes('PROVISIONAL')`));
+      assert(await evaluate(`document.querySelector('[aria-label="Provisional overall score"]').textContent.toLowerCase().includes('provisional')`));
       assert(await evaluate(`document.querySelector('[aria-label="Experimental nutrition rating"]').textContent.includes('Nutrition 54/100 · additive deduction 2 points')`));
       assert(await evaluate(`document.querySelector('[aria-label="Additive deduction reasons"]').textContent.includes('Erythritol')`));
+      assert(await evaluate(`(() => { const subtotal=document.querySelector('[aria-label="Experimental nutrition rating"]'); return subtotal.closest('details')?.open===false && !document.querySelector('[aria-label="Opening score summary"]').contains(subtotal); })()`), 'Nutrition breakdown must be inside the collapsed details, outside the opening summary');
       assert(await evaluate(`(() => { const score = document.querySelector('[aria-label="Experimental overall rating"]'); const denominator = score.querySelector('small').getBoundingClientRect(); const line = score.getBoundingClientRect(); return line.height < 50 && denominator.height < 25 && denominator.right <= score.parentElement.getBoundingClientRect().right; })()`), 'Whole score denominator must remain on one line');
       assert(await evaluate(`Array.from(document.querySelectorAll('.trace-barcode-grade details, .trace-barcode-additives')).every(el => !el.open)`));
       await capture('mobile-provisional-390x844.png');
       if (refinement) {
         await review('teddy');
-        assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental overall rating"]').textContent`), '44/100');
-        assert(await evaluate(`document.querySelector('[aria-label="Experimental nutrition rating"]').textContent.includes('Nutrition 46/100 · additive deduction 2 points')`));
+        assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental overall rating"]').textContent`), '46/100');
+        assert(await evaluate(`document.querySelector('[aria-label="Experimental nutrition rating"]').textContent.includes('Nutrition 46/100 · additive deduction 0 points')`));
+        assert(await evaluate(`(() => { const opening=document.querySelector('[aria-label="Opening score summary"]'); return opening.querySelectorAll('li').length<=3 && opening.textContent.trim().split(/\\s+/).length<90 && !/baking soda|premenopausal|deduction|HR 1.48/i.test(opening.textContent); })()`));
         assert(await evaluate(`document.querySelector('[aria-label="Provisional overall score"]') && Array.from(document.querySelectorAll('.trace-barcode-grade details, .trace-barcode-additives')).every(el => !el.open)`));
         assert(await evaluate(`document.querySelector('[aria-label="Experimental nutrition assessment"]').getBoundingClientRect().bottom < 844`));
         await capture('mobile-teddy-390x844.png');
@@ -199,6 +206,12 @@ async function main() {
         assert.equal(await evaluate(`document.querySelector('[aria-label="Grouped provider additives"]').children.length`), 2);
         assert(await evaluate(`document.querySelector('[aria-label="Grouped provider additives"]').textContent.includes('en:e500; en:e500ii')`));
         await capture('mobile-teddy-additives-390x844.png');
+        if (simpleReview) {
+          await review('stouffers');
+          assert.equal(await evaluate(`document.querySelector('[aria-label="Experimental overall rating"]').textContent`), '70/100');
+          assert(await evaluate(`document.querySelector('[aria-label="Main nutrition factors"]').children.length <= 3`));
+          await capture('mobile-stouffers-390x844.png');
+        }
       }
     }
     await review('unresolved');
@@ -225,9 +238,10 @@ async function main() {
     await review(); await capture('desktop-review-1280x960.png');
     if (overallReview) { await review('quest'); await capture('desktop-provisional-1280x960.png'); }
     if (refinement) { await review('teddy'); await capture('desktop-teddy-1280x960.png'); }
+    if (simpleReview) { await review('stouffers'); await capture('desktop-stouffers-1280x960.png'); }
     await review('eligible', 'modern-heirloom', false);
     assert.equal(await evaluate(`Boolean(document.querySelector('[aria-label="Experimental nutrition assessment"]'))`), false);
-    const report = { mobile: '390x844', desktop: '1280x960', screenshots: refinement ? 11 : overallReview ? 8 : 5, themes, controls, disclosuresStartCollapsed: true, foodLoggingAndServing: true, scoresAbsentFromSavedEntry: true, noFlagExcludesGrading: true, synthetic: true, archivedAlmondComparison: overallReview, archivedNonzeroQuestScreen: overallReview, archivedTeddyScreen: refinement, physicalDeviceTest: false };
+    const report = { mobile: '390x844', desktop: '1280x960', screenshots: simpleReview ? 13 : refinement ? 11 : overallReview ? 8 : 5, themes, controls, disclosuresStartCollapsed: true, foodLoggingAndServing: true, scoresAbsentFromSavedEntry: true, noFlagExcludesGrading: true, synthetic: true, archivedAlmondComparison: overallReview, archivedNonzeroQuestScreen: overallReview, archivedTeddyScreen: refinement, archivedStouffersScreen: simpleReview, physicalDeviceTest: false };
     fs.writeFileSync(path.join(output, 'visual-checks.json'), JSON.stringify(report, null, 2)); console.log(JSON.stringify(report));
   } finally { if (client) { try { await client.send('Browser.close'); } catch { /* already closed */ } client.close(); } if (browser.exitCode === null) browser.kill(); server.close(); }
 }

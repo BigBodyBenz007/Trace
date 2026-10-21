@@ -59,7 +59,7 @@ for (const [id, name, aliases] of [
   'Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.',
   'Phosphorus is essential. Some modeled intakes exceed the ADI; that is not proof of an adverse outcome or a US restriction.');
 add('E968', 'Erythritol', ['erythritol'], 'Sweetener.', 'limited',
-  'Limited precaution: dose-related laxative effects and an unresolved cardiovascular signal warrant screening; no harmful exposure is established.', [erythritol, erythritolEfsa],
+  'Limited precaution for established dose-related laxative effects in human studies. Preliminary cardiovascular associations do not supply this deduction; no harmful exposure is established.', [erythritol, erythritolEfsa],
   'Human observational cardiovascular associations, small ingestion study (8 volunteers), platelet experiments and animal thrombosis work; human diarrhoea studies.',
   'Added erythritol. EFSA’s 0.5 g/kg/day ADI addresses diarrhoea; quantity and intake here are unknown.',
   'EFSA found no established causal link between dietary erythritol and cardiovascular disease; circulating levels may not represent dietary intake.');
@@ -174,6 +174,24 @@ calcium.sources = [carbonateReview, efsa('Calcium carbonate follow-up', '2023.81
 calcium.evidence = 'EFSA 2023 found no concern for calcium carbonate per se at reported technological uses, but flagged aluminium impurity exposure. Its assessment explicitly excludes safety as a calcium fortificant/supplement. Historical SCOGS report 26 records conclusion type 1.';
 calcium.conditions = 'The Teddy declaration calls this a source of calcium. Do not transfer the technological-use conclusion to a completed fortification review, or infer an aluminium level in this package.';
 calcium.conflicts = 'No measured contaminants or total calcium exposure; neither a contaminant penalty nor an unconditional zero-concern classification is supported here.';
+
+// General food-score adjustments need an integrated food-use assessment with an
+// adverse-effect reference/mechanism or an established human adverse effect.
+// A lone cohort/subgroup association or acute surrogate response is insufficient.
+// Keep these identities and their evidence; null is not a safety classification.
+for (const id of ['E500ii', 'E282', 'E415', 'E471', 'E472e']) {
+  const record = records.find(entry => entry.id === id);
+  record.classification = null;
+  record.weight = null;
+  record.rationale = 'No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe.';
+  if (id === 'E500ii') record.conditions = 'Premenopausal subgroup and chronic intake only. No general-population, individual-risk or product-harm inference; generic E500 and other carbonates do not acquire this finding.';
+}
+for (const id of ['E338', 'E339', 'E341']) records.find(record => record.id === id).consumerSummary =
+  'Added phosphates are considered; total dietary intake matters.';
+records.find(record => record.id === 'E250').consumerSummary = 'Added nitrite in processed meat contributes to the adjustment.';
+records.find(record => record.id === 'E968').consumerSummary = 'Erythritol can cause digestive upset at higher intakes; the amount here is unknown.';
+for (const id of ['E211', 'E212']) records.find(record => record.id === id).consumerSummary =
+  'Benzoate and vitamin C can form benzene under some conditions; none is measured here.';
 
 const freeze = v => { if (v && typeof v === 'object') { Object.values(v).forEach(freeze); Object.freeze(v); } return v; };
 export const ADDITIVE_SCREENING_POLICY = freeze(records);

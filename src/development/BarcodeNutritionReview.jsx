@@ -1,7 +1,7 @@
 import { assessBarcodeNutrition } from './barcodeNutritionAssessment';
 import { normalizeProductAdditives } from '../services/productAdditives';
 import { getAdditiveNameSource } from '../services/additiveNameReference';
-import { explainNutritionPoints, getBarcodeAdditiveInformation } from './barcodeReviewInformation';
+import { explainNutritionPoints, getNutritionHighlights, getBarcodeAdditiveInformation } from './barcodeReviewInformation';
 import { assessAdditiveProfile, assessOverallFoodQuality } from './traceOverallFoodQuality';
 import './BarcodeNutritionReview.css';
 
@@ -10,21 +10,32 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
   const score = assessment.nutritionScore100;
   const overall = assessOverallFoodQuality(candidate, assessment);
   const combined = overall.overallScore100;
+  const factors = getNutritionHighlights(assessment.result);
+  const market = assessment.evidence.market?.status;
+  const confidence = market === 'unknown' ? 'Product market is unknown.'
+    : market === 'foreign-or-multi-market' ? 'Multi-market record; US formulation unconfirmed.' : 'US formulation unconfirmed.';
   return <section className="trace-barcode-grade" aria-label="Experimental nutrition assessment">
-    <div className="trace-barcode-grade__headline"><strong aria-label={combined == null ? 'Experimental nutrition rating' : 'Experimental overall rating'} data-unavailable={score == null}>{score == null ? 'Score unavailable' : <>{combined ?? score}<small>/100</small></>}</strong>
-      <span>{score == null ? 'Assessment unavailable' : combined == null ? 'Nutrition-only' : 'Experimental overall'}{overall.provisional && <small><b aria-label="Provisional overall score">PROVISIONAL</b></small>}{combined != null && <small aria-label="Experimental nutrition rating">Nutrition {score}/100 · additive deduction {overall.additiveDeduction} {overall.additiveDeduction === 1 ? 'point' : 'points'}</small>}{score != null && <small>Comparison: {Number(assessment.result.normalized.basis.amount.toFixed(1))} {assessment.result.normalized.basis.unit}</small>}</span></div>
-    <p aria-label="Overall assessment status">{overall.reason}</p>
-    {overall.deductions.length > 0 && <p aria-label="Additive deduction reasons">Precautionary findings: {overall.deductions.map(item => item.name).join('; ')}.{overall.additiveDeduction === 0 && ' Finding retained; whole-number score unchanged by rounding.'}</p>}
-    {score != null ? <p>{explainNutritionPoints(assessment.result)}</p>
-      : <p>{assessment.reasons.slice(0, 3).join(' ')}{assessment.reasons.length > 3 && ' Further gaps are listed below.'}</p>}
-    <p className="trace-barcode-grade__confidence">{assessment.confidence}</p>
+    <div aria-label="Opening score summary">
+      <div className="trace-barcode-grade__headline"><strong aria-label={combined == null ? 'Experimental nutrition rating' : 'Experimental overall rating'} data-unavailable={score == null}>{score == null ? 'Score unavailable' : <>{combined ?? score}<small>/100</small></>}</strong>
+        <span>{score == null ? 'Assessment unavailable' : combined == null ? 'Nutrition only' : 'Overall score'}<small>Development preview</small>{overall.provisional && <small aria-label="Provisional overall score">Provisional</small>}</span></div>
+      {factors.length > 0 && <ul aria-label="Main nutrition factors">{factors.map(factor => <li key={factor.key}>{factor.text}</li>)}</ul>}
+      <p aria-label="Overall assessment status">{score == null ? assessment.reasons[0] || 'Nutrition information is incomplete.'
+        : combined == null ? 'Nutrition-only. Additive information is needed for an overall score.'
+          : overall.deductions.length ? 'Nutrition drives this score, with an additive adjustment.' : 'Nutrition drives this score.'}</p>
+      {overall.deductions.length > 0 && <p aria-label="Additive deduction reasons">{overall.deductions.slice(0, 2).map(item => item.summary).join(' ')}{overall.deductions.length > 2 && ' More additive notes in details.'}</p>}
+      <p className="trace-barcode-grade__confidence">{overall.provisional && 'Additive review incomplete. '}{confidence}</p>
+    </div>
     <details aria-label="Score details & limitations"><summary>Score details &amp; limitations</summary>
+      {score != null && <p aria-label={combined != null ? 'Experimental nutrition rating' : 'Nutrition subtotal'}>Nutrition {score}/100{combined != null && <> · additive deduction {overall.additiveDeduction} {overall.additiveDeduction === 1 ? 'point' : 'points'}</>}. Comparison: {Number(assessment.result.normalized.basis.amount.toFixed(1))} {assessment.result.normalized.basis.unit}.</p>}
+      <p>{explainNutritionPoints(assessment.result)}</p>
+      <p>{assessment.confidence} {overall.reason}</p>
       <div aria-label="Overall assessment evidence">
         <p>{overall.additiveAssessment.summary} {overall.additiveAssessment.limitation}</p>
         <p>Overall candidate: round(nutrition × (1 − 0.20 × known concern)). Concern is capped at 1. Unassessed items remain unknown; a partial review uses supported deductions only. No organic component.</p>
         {overall.deductions.length > 0 && <div aria-label="Additive calculation">
           <ul>{overall.deductions.map(item => <li key={item.identifier}>{item.name} ({item.identifier}): weight {item.weight}; {Number(item.rawDeduction.toFixed(4))} points before rounding. {item.rationale}</li>)}</ul>
           <p>Total raw deduction: {Number(overall.rawAdditiveDeduction.toFixed(4))}. {overall.nutritionScore100} − {Number(overall.rawAdditiveDeduction.toFixed(4))} = {Number(overall.rawOverall.toFixed(4))}, rounded once to {combined}/100. Contributions share the capped budget proportionally; they are precautionary policy adjustments, not measured harm.</p>
+          {overall.additiveDeduction === 0 && <p>Finding retained; whole-number score unchanged by rounding.</p>}
         </div>}
         {overall.possibleRange && <p aria-label="Possible overall range">Possible range under this budget: {overall.possibleRange.min}–{overall.possibleRange.max}/100. Further review could lower the provisional number; this is not a confidence interval.</p>}
         <p>Policy: {overall.policy.version}. {overall.limitation}</p>

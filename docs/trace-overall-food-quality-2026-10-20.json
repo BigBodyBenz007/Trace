@@ -1,5 +1,5 @@
 {
-  "version": "3-screening-experimental-2026-10-20",
+  "version": "4-general-evidence-experimental-2026-10-20",
   "offline": true,
   "originalProfiles": 20,
   "additionalComparisons": 1,
@@ -10,8 +10,8 @@
   "provisionalOverall": 14,
   "nutritionOnly": 2,
   "nutritionUnavailable": 1,
-  "supportedDeductionProfiles": 7,
-  "roundedScoreDecreases": 6,
+  "supportedDeductionProfiles": 4,
+  "roundedScoreDecreases": 3,
   "products": [
     {
       "name": "Coca-Cola Original Taste",
@@ -33,6 +33,7 @@
           "identifier": "E338",
           "name": "Phosphoric acid",
           "weight": 0.2,
+          "summary": "Added phosphates are considered; total dietary intake matters.",
           "rawDeduction": 0.4800000000000001,
           "rationale": "Added phosphates receive a limited precautionary weight: total dietary intake can exceed EFSA’s reference in some age groups. This does not establish excess intake from this product.",
           "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
@@ -169,7 +170,8 @@
               "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
               "conflicts": "Phosphorus is essential. Some modeled intakes exceed the ADI; that is not proof of an adverse outcome or a US restriction.",
               "condition": null,
-              "reviewedOn": "2026-10-20"
+              "reviewedOn": "2026-10-20",
+              "consumerSummary": "Added phosphates are considered; total dietary intake matters."
             }
           },
           {
@@ -539,7 +541,8 @@
               "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
               "conflicts": "Phosphorus is essential. Some modeled intakes exceed the ADI; that is not proof of an adverse outcome or a US restriction.",
               "condition": null,
-              "reviewedOn": "2026-10-20"
+              "reviewedOn": "2026-10-20",
+              "consumerSummary": "Added phosphates are considered; total dietary intake matters."
             }
           },
           {
@@ -590,7 +593,8 @@
               "conditions": "Requires a beverage plus ascorbic/erythorbic acid evidence; heat/light can encourage formation. Missing cofactors remain unresolved.",
               "conflicts": "FDA’s historical survey did not indicate a consumer safety concern; ingredient presence does not establish benzene.",
               "condition": "benzoate-beverage",
-              "reviewedOn": "2026-10-20"
+              "reviewedOn": "2026-10-20",
+              "consumerSummary": "Benzoate and vitamin C can form benzene under some conditions; none is measured here."
             }
           },
           {
@@ -1058,8 +1062,9 @@
           "identifier": "E968",
           "name": "Erythritol",
           "weight": 0.2,
+          "summary": "Erythritol can cause digestive upset at higher intakes; the amount here is unknown.",
           "rawDeduction": 2.16,
-          "rationale": "Limited precaution: dose-related laxative effects and an unresolved cardiovascular signal warrant screening; no harmful exposure is established.",
+          "rationale": "Limited precaution for established dose-related laxative effects in human studies. Preliminary cardiovascular associations do not supply this deduction; no harmful exposure is established.",
           "conditions": "Added erythritol. EFSA’s 0.5 g/kg/day ADI addresses diarrhoea; quantity and intake here are unknown.",
           "sources": [
             {
@@ -1193,7 +1198,7 @@
               "function": "Sweetener.",
               "classification": "limited",
               "weight": 0.2,
-              "rationale": "Limited precaution: dose-related laxative effects and an unresolved cardiovascular signal warrant screening; no harmful exposure is established.",
+              "rationale": "Limited precaution for established dose-related laxative effects in human studies. Preliminary cardiovascular associations do not supply this deduction; no harmful exposure is established.",
               "sources": [
                 {
                   "publisher": "NIH",
@@ -1216,7 +1221,8 @@
               "conditions": "Added erythritol. EFSA’s 0.5 g/kg/day ADI addresses diarrhoea; quantity and intake here are unknown.",
               "conflicts": "EFSA found no established causal link between dietary erythritol and cardiovascular disease; circulating levels may not represent dietary intake.",
               "condition": null,
-              "reviewedOn": "2026-10-20"
+              "reviewedOn": "2026-10-20",
+              "consumerSummary": "Erythritol can cause digestive upset at higher intakes; the amount here is unknown."
             }
           },
           {
@@ -1873,102 +1879,23 @@
       "name": "Pepperidge Farm Farmhouse Hearty White Bread",
       "barcode": "00014100070832",
       "nutritionScore100": 55,
-      "overallScore100": 48,
+      "overallScore100": 55,
       "status": "provisional",
       "reason": "Screening incomplete; further review could decrease this score.",
-      "concernKnown": 0.6,
-      "rawOverall": 48.4,
-      "rawAdditiveDeduction": 6.600000000000001,
-      "additiveDeduction": 7,
+      "concernKnown": 0,
+      "rawOverall": 55,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
       "possibleRange": {
         "min": 44,
-        "max": 48
+        "max": 55
       },
-      "deductions": [
-        {
-          "identifier": "E471",
-          "name": "Mono- and diglycerides of fatty acids",
-          "weight": 0.2,
-          "rawDeduction": 2.2,
-          "rationale": "Limited precaution for prospective human cancer associations; additive-specific causation and product exposure are not established.",
-          "conditions": "Explicitly declared added mono/diglycerides, not naturally occurring fats or every emulsifier. No inference of trans fats or package concentration.",
-          "sources": [
-            {
-              "publisher": "Sellem et al.; PLOS Medicine",
-              "jurisdiction": "FR",
-              "title": "Emulsifiers and cancer: NutriNet-Santé",
-              "url": "https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338",
-              "edition": "2024-02-13;21(2):e1004338; main results and sensitivity analyses",
-              "reviewedOn": "2026-10-20"
-            },
-            {
-              "publisher": "EFSA",
-              "jurisdiction": "EU",
-              "title": "Mono- and diglycerides re-evaluation",
-              "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.5045",
-              "edition": "2017-11-10",
-              "reviewedOn": "2026-10-20"
-            },
-            {
-              "publisher": "FDA",
-              "jurisdiction": "US",
-              "title": "Types of Food Ingredients",
-              "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
-              "edition": "Ingredient function table; undated live page",
-              "reviewedOn": "2026-10-20"
-            }
-          ]
-        },
-        {
-          "identifier": "E282",
-          "name": "Calcium propionate",
-          "weight": 0.2,
-          "rawDeduction": 2.2,
-          "rationale": "Limited precaution for short-term human metabolic effects; chronic disease or harmful product exposure has not been demonstrated.",
-          "conditions": "Explicit calcium propionate only. The experimental dose and clamp conditions are not assigned to a food or consumer; no extrapolation to naturally produced gut propionate or every propionate salt.",
-          "sources": [
-            {
-              "publisher": "Adler et al.; BMJ Open Diabetes Research & Care",
-              "jurisdiction": "US",
-              "title": "Acute effects of the food preservative propionic acid on glucose metabolism in humans",
-              "url": "https://pubmed.ncbi.nlm.nih.gov/34312159/",
-              "edition": "2021-07-26;9:e002336; doi:10.1136/bmjdrc-2021-002336; randomized crossover study",
-              "reviewedOn": "2026-10-20"
-            },
-            {
-              "publisher": "EFSA",
-              "jurisdiction": "EU",
-              "title": "Propionic acid and propionates re-evaluation",
-              "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2014.3779",
-              "edition": "2014-07-22; abstract and conclusions",
-              "reviewedOn": "2026-10-20"
-            }
-          ]
-        },
-        {
-          "identifier": "E472e",
-          "name": "DATEM",
-          "weight": 0.2,
-          "rawDeduction": 2.2,
-          "rationale": "Limited precaution for an uncertain prospective human diabetes association; this is a screening signal, not demonstrated harm.",
-          "conditions": "Explicit DATEM use. Reported cohort intake is not assigned to the product or consumer.",
-          "sources": [
-            {
-              "publisher": "Salame et al.; Lancet Diabetes & Endocrinology",
-              "jurisdiction": "FR",
-              "title": "Emulsifiers and type 2 diabetes: NutriNet-Santé",
-              "url": "https://pubmed.ncbi.nlm.nih.gov/38663950/",
-              "edition": "2024 May;12(5):339–349; doi:10.1016/S2213-8587(24)00086-X; primary abstract",
-              "reviewedOn": "2026-10-20"
-            }
-          ]
-        }
-      ],
+      "deductions": [],
       "confidence": "Foreign or multi-market record: this assesses only its supplied nutrition profile. The exact US formulation is not independently verified.",
       "additives": {
         "status": "partial",
         "providerState": "reported-identifiers",
-        "concernBurden": 0.6,
+        "concernBurden": 0,
         "items": [
           {
             "identifier": "E471",
@@ -1987,8 +1914,8 @@
             "scientificContext": null,
             "usProvision": null,
             "historicalEvents": [],
-            "concernBurden": 0.2,
-            "classification": "limited",
+            "concernBurden": null,
+            "classification": null,
             "exposure": "unknown",
             "conditionalPresence": false,
             "packagingOnly": false,
@@ -2002,9 +1929,9 @@
                 "mono and diglycerides"
               ],
               "function": "Emulsifier.",
-              "classification": "limited",
-              "weight": 0.2,
-              "rationale": "Limited precaution for prospective human cancer associations; additive-specific causation and product exposure are not established.",
+              "classification": null,
+              "weight": null,
+              "rationale": "No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe.",
               "sources": [
                 {
                   "publisher": "Sellem et al.; PLOS Medicine",
@@ -2055,8 +1982,8 @@
             "scientificContext": null,
             "usProvision": null,
             "historicalEvents": [],
-            "concernBurden": 0.2,
-            "classification": "limited",
+            "concernBurden": null,
+            "classification": null,
             "exposure": "unknown",
             "conditionalPresence": false,
             "packagingOnly": false,
@@ -2069,9 +1996,9 @@
                 "calcium propionate"
               ],
               "function": "Preservative.",
-              "classification": "limited",
-              "weight": 0.2,
-              "rationale": "Limited precaution for short-term human metabolic effects; chronic disease or harmful product exposure has not been demonstrated.",
+              "classification": null,
+              "weight": null,
+              "rationale": "No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe.",
               "sources": [
                 {
                   "publisher": "Adler et al.; BMJ Open Diabetes Research & Care",
@@ -2172,8 +2099,8 @@
             "scientificContext": null,
             "usProvision": null,
             "historicalEvents": [],
-            "concernBurden": 0.2,
-            "classification": "limited",
+            "concernBurden": null,
+            "classification": null,
             "exposure": "unknown",
             "conditionalPresence": false,
             "packagingOnly": false,
@@ -2186,9 +2113,9 @@
                 "datem"
               ],
               "function": "Emulsifier.",
-              "classification": "limited",
-              "weight": 0.2,
-              "rationale": "Limited precaution for an uncertain prospective human diabetes association; this is a screening signal, not demonstrated harm.",
+              "classification": null,
+              "weight": null,
+              "rationale": "No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe.",
               "sources": [
                 {
                   "publisher": "Salame et al.; Lancet Diabetes & Endocrinology",
@@ -2282,7 +2209,10 @@
           }
         ],
         "reasons": [
-          "Sorbic acid: Current integrated scientific assessment not completed in this batch."
+          "Mono- and diglycerides of fatty acids: No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe.",
+          "Calcium propionate: No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe.",
+          "Sorbic acid: Current integrated scientific assessment not completed in this batch.",
+          "DATEM: No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe."
         ],
         "source": {
           "url": "https://world.openfoodfacts.org/product/00014100070832",
@@ -2447,58 +2377,23 @@
       "name": "Smart Ones Santa Fe Rice & Beans",
       "barcode": "00025800023608",
       "nutritionScore100": 75,
-      "overallScore100": 72,
+      "overallScore100": 75,
       "status": "provisional",
       "reason": "Screening incomplete; further review could decrease this score.",
-      "concernKnown": 0.2,
-      "rawOverall": 72,
-      "rawAdditiveDeduction": 3,
-      "additiveDeduction": 3,
+      "concernKnown": 0,
+      "rawOverall": 75,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
       "possibleRange": {
         "min": 60,
-        "max": 72
+        "max": 75
       },
-      "deductions": [
-        {
-          "identifier": "E415",
-          "name": "Xanthan gum",
-          "weight": 0.2,
-          "rawDeduction": 3,
-          "rationale": "Limited precaution for a human observational diabetes signal; it does not establish causation or a harmful amount in this product.",
-          "conditions": "Chronic dietary additive intake in adults; not evidence about infant thickeners or this package’s dose. No exposure is assigned.",
-          "sources": [
-            {
-              "publisher": "Salame et al.; Lancet Diabetes & Endocrinology",
-              "jurisdiction": "FR",
-              "title": "Emulsifiers and type 2 diabetes: NutriNet-Santé",
-              "url": "https://pubmed.ncbi.nlm.nih.gov/38663950/",
-              "edition": "2024 May;12(5):339–349; doi:10.1016/S2213-8587(24)00086-X; primary abstract",
-              "reviewedOn": "2026-10-20"
-            },
-            {
-              "publisher": "EFSA",
-              "jurisdiction": "EU",
-              "title": "Xanthan gum re-evaluation",
-              "url": "https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4909",
-              "edition": "2017-07-14",
-              "reviewedOn": "2026-10-20"
-            },
-            {
-              "publisher": "FDA",
-              "jurisdiction": "US",
-              "title": "Types of Food Ingredients",
-              "url": "https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients",
-              "edition": "Ingredient function table; undated live page",
-              "reviewedOn": "2026-10-20"
-            }
-          ]
-        }
-      ],
+      "deductions": [],
       "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
       "additives": {
         "status": "partial",
         "providerState": "reported-identifiers",
-        "concernBurden": 0.2,
+        "concernBurden": 0,
         "items": [
           {
             "identifier": "modified-starch",
@@ -2589,8 +2484,8 @@
               "text": "This US provision permits specified texture-related uses under good manufacturing practice where food standards do not preclude them. Manufacturing, purity, food-grade labeling and directions conditions apply; product compliance is not established."
             },
             "historicalEvents": [],
-            "concernBurden": 0.2,
-            "classification": "limited",
+            "concernBurden": null,
+            "classification": null,
             "exposure": "unknown",
             "conditionalPresence": false,
             "packagingOnly": false,
@@ -2603,9 +2498,9 @@
                 "xanthan gum"
               ],
               "function": "Thickener and stabilizer.",
-              "classification": "limited",
-              "weight": 0.2,
-              "rationale": "Limited precaution for a human observational diabetes signal; it does not establish causation or a harmful amount in this product.",
+              "classification": null,
+              "weight": null,
+              "rationale": "No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe.",
               "sources": [
                 {
                   "publisher": "Salame et al.; Lancet Diabetes & Endocrinology",
@@ -2642,7 +2537,8 @@
         ],
         "reasons": [
           "Ingredient declaration may be truncated or incomplete.",
-          "Modified starch (type unspecified): Modification type is unspecified; do not infer an E-number."
+          "Modified starch (type unspecified): Modification type is unspecified; do not infer an E-number.",
+          "Xanthan gum: No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe."
         ],
         "source": {
           "url": "https://world.openfoodfacts.org/product/00025800023608",
@@ -2875,6 +2771,7 @@
           "identifier": "E339",
           "name": "Sodium phosphates (subtype unspecified)",
           "weight": 0.2,
+          "summary": "Added phosphates are considered; total dietary intake matters.",
           "rawDeduction": 1,
           "rationale": "Added phosphates receive a limited precautionary weight: total dietary intake can exceed EFSA’s reference in some age groups. This does not establish excess intake from this product.",
           "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
@@ -2945,7 +2842,8 @@
               "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
               "conflicts": "Phosphorus is essential. Some modeled intakes exceed the ADI; that is not proof of an adverse outcome or a US restriction.",
               "condition": null,
-              "reviewedOn": "2026-10-20"
+              "reviewedOn": "2026-10-20",
+              "consumerSummary": "Added phosphates are considered; total dietary intake matters."
             }
           },
           {
@@ -3052,6 +2950,7 @@
           "identifier": "E250",
           "name": "Sodium nitrite",
           "weight": 0.2,
+          "summary": "Added nitrite in processed meat contributes to the adjustment.",
           "rawDeduction": 0.9200000000000002,
           "rationale": "Limited precaution for explicitly declared nitrite in meat: nitrosamine formation and high-intake uncertainty; not a claim that this package causes cancer.",
           "conditions": "Applies only when the declaration establishes meat use. Nitrite amount, nitrosamines and exposure remain unknown.",
@@ -3197,7 +3096,8 @@
               "conditions": "Applies only when the declaration establishes meat use. Nitrite amount, nitrosamines and exposure remain unknown.",
               "conflicts": "EFSA found low nitrosamine concern from nitrite used at permitted levels and protective ADIs, with a slight exceedance for highly exposed children. Meat-pattern evidence cannot isolate nitrite.",
               "condition": "meat",
-              "reviewedOn": "2026-10-20"
+              "reviewedOn": "2026-10-20",
+              "consumerSummary": "Added nitrite in processed meat contributes to the adjustment."
             }
           }
         ],
@@ -3540,7 +3440,8 @@
               "conditions": "Added phosphate only, not naturally occurring phosphorus. The 40 mg phosphorus/kg/day group ADI concerns all sources; it excludes moderate/severe kidney impairment.",
               "conflicts": "Phosphorus is essential. Some modeled intakes exceed the ADI; that is not proof of an adverse outcome or a US restriction.",
               "condition": null,
-              "reviewedOn": "2026-10-20"
+              "reviewedOn": "2026-10-20",
+              "consumerSummary": "Added phosphates are considered; total dietary intake matters."
             }
           },
           {
@@ -3591,9 +3492,9 @@
                 "sodium hydrogen carbonate"
               ],
               "function": "Leavening agent.",
-              "classification": "limited",
-              "weight": 0.2,
-              "rationale": "Limited precaution for a population-specific observational signal, not established harm from baking soda or this product.",
+              "classification": null,
+              "weight": null,
+              "rationale": "No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe.",
               "sources": [
                 {
                   "publisher": "Sellem et al.; PLOS Medicine",
@@ -3613,7 +3514,7 @@
                 }
               ],
               "evidence": "The 2024 French cohort explicitly names sodium bicarbonate (reported as E500): premenopausal breast-cancer subgroup HR 1.48 (95% CI 1.07–2.05). This is not a general-population result or a causal experiment.",
-              "conditions": "The existing limited-precaution tier screens the reported subgroup signal; it does not assume the user belongs to that subgroup. No intake, exposure or individual risk is inferred. Generic E500 and other carbonates do not acquire this finding.",
+              "conditions": "Premenopausal subgroup and chronic intake only. No general-population, individual-risk or product-harm inference; generic E500 and other carbonates do not acquire this finding.",
               "conflicts": "Subgroup analyses, multiple testing, confounding and intake measurement limit inference; independent replication is needed. FDA-hosted SCOGS report 26 (1975) records a no-hazard-concern conclusion for then-current/expected uses. That historical assessment is not a review of the 2024 signal.",
               "condition": null,
               "reviewedOn": "2026-10-20"
@@ -3830,50 +3731,23 @@
       "name": "Teddy Grahams",
       "barcode": "044000045586",
       "nutritionScore100": 46,
-      "overallScore100": 44,
+      "overallScore100": 46,
       "status": "provisional",
       "reason": "Screening incomplete; further review could decrease this score.",
-      "concernKnown": 0.2,
-      "rawOverall": 44.16,
-      "rawAdditiveDeduction": 1.8400000000000034,
-      "additiveDeduction": 2,
+      "concernKnown": 0,
+      "rawOverall": 46,
+      "rawAdditiveDeduction": 0,
+      "additiveDeduction": 0,
       "possibleRange": {
         "min": 37,
-        "max": 44
+        "max": 46
       },
-      "deductions": [
-        {
-          "identifier": "E500ii",
-          "name": "Sodium hydrogen carbonate (baking soda)",
-          "weight": 0.2,
-          "rawDeduction": 1.8400000000000003,
-          "rationale": "Limited precaution for a population-specific observational signal, not established harm from baking soda or this product.",
-          "conditions": "The existing limited-precaution tier screens the reported subgroup signal; it does not assume the user belongs to that subgroup. No intake, exposure or individual risk is inferred. Generic E500 and other carbonates do not acquire this finding.",
-          "sources": [
-            {
-              "publisher": "Sellem et al.; PLOS Medicine",
-              "jurisdiction": "FR",
-              "title": "Emulsifiers and cancer: NutriNet-Santé",
-              "url": "https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338",
-              "edition": "2024-02-13;21(2):e1004338; main results and sensitivity analyses",
-              "reviewedOn": "2026-10-20"
-            },
-            {
-              "publisher": "FDA-hosted SCOGS inventory; independent expert committee",
-              "jurisdiction": "US",
-              "title": "Carbonate salts, SCOGS report 26",
-              "url": "https://www.hfpappexternal.fda.gov/scripts/fdcc/index.cfm?order=ASC&search=CARBON&set=SCOGS&sort=Sortsubstance",
-              "edition": "1975; sodium bicarbonate CAS 144-55-8, calcium carbonate CAS 471-34-1; conclusion type 1; historical inventory summary",
-              "reviewedOn": "2026-10-20"
-            }
-          ]
-        }
-      ],
+      "deductions": [],
       "confidence": "Provider reports US availability; exact regional formulation and current package contents are not independently verified.",
       "additives": {
         "status": "partial",
         "providerState": "reported-identifiers",
-        "concernBurden": 0.2,
+        "concernBurden": 0,
         "items": [
           {
             "identifier": "E170",
@@ -3966,8 +3840,8 @@
             "scientificContext": null,
             "usProvision": null,
             "historicalEvents": [],
-            "concernBurden": 0.2,
-            "classification": "limited",
+            "concernBurden": null,
+            "classification": null,
             "exposure": "unknown",
             "conditionalPresence": false,
             "packagingOnly": false,
@@ -3982,9 +3856,9 @@
                 "sodium hydrogen carbonate"
               ],
               "function": "Leavening agent.",
-              "classification": "limited",
-              "weight": 0.2,
-              "rationale": "Limited precaution for a population-specific observational signal, not established harm from baking soda or this product.",
+              "classification": null,
+              "weight": null,
+              "rationale": "No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe.",
               "sources": [
                 {
                   "publisher": "Sellem et al.; PLOS Medicine",
@@ -4004,7 +3878,7 @@
                 }
               ],
               "evidence": "The 2024 French cohort explicitly names sodium bicarbonate (reported as E500): premenopausal breast-cancer subgroup HR 1.48 (95% CI 1.07–2.05). This is not a general-population result or a causal experiment.",
-              "conditions": "The existing limited-precaution tier screens the reported subgroup signal; it does not assume the user belongs to that subgroup. No intake, exposure or individual risk is inferred. Generic E500 and other carbonates do not acquire this finding.",
+              "conditions": "Premenopausal subgroup and chronic intake only. No general-population, individual-risk or product-harm inference; generic E500 and other carbonates do not acquire this finding.",
               "conflicts": "Subgroup analyses, multiple testing, confounding and intake measurement limit inference; independent replication is needed. FDA-hosted SCOGS report 26 (1975) records a no-hazard-concern conclusion for then-current/expected uses. That historical assessment is not a review of the 2024 signal.",
               "condition": null,
               "reviewedOn": "2026-10-20"
@@ -4142,6 +4016,7 @@
         ],
         "reasons": [
           "Calcium carbonate: Fortification and purity questions remain unresolved; the EFSA technological-additive assessment is not a blanket review of calcium fortification.",
+          "Sodium hydrogen carbonate: No general food-score deduction: the available observational or preliminary evidence does not establish an applicable general-consumer concern. Evidence is retained for internal review, not classified as safe.",
           "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
         ],
         "source": {

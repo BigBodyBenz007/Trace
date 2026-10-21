@@ -1,345 +1,196 @@
-# Experimental overall food-quality ingredient screen
+# Experimental combined food-quality preview
 
-Development-only policy refinement, reviewed 2026-10-20. Starting HEAD:
-`b095a4e93f61e07175fefd58ee0c681ba0a667c3`. Preserves the working combined
-assessment, including its unchanged 20% adjustment budget and concern weights.
-Nutrition v2, its source vectors, eligibility and all 21 saved nutrition results
-are unchanged. No provider records or historical research archives are rewritten.
-Public `grade=null`, `scoreReady=false`; no experimental scores enter food logging.
+Development-only simplification, 2026-10-20. Starting HEAD:
+`f01de8f86624af73de6d57589f15a0b2f74b1032`. This updates the existing combined
+assessment; Nutrition v2, nutrition inputs, eligibility, caches and saved records
+are unchanged. Public `grade=null`, `scoreReady=false`. No consumer-release approval.
 
-## Actual result
+## Opening result
 
-Of the same 21 captured observations: **20 nutrition scores**, **4 reviewed overall**,
-**14 provisional overall**, **2 nutrition-only** (Frosted Flakes and Chobani, missing
-ingredient evidence), and **1 nutrition unavailable** (Diet Coke, existing basis gap).
-The original twenty retain 19 nutrition scores; Teddy remains the additional comparison.
-Ingredient coverage, independently of nutrition availability: 4 reviewed, 15 partial,
-2 without usable evidence. Seven scored observations have supported raw deductions;
-six have lower whole-number ratings. Previously those counts were six and five.
-No synthetic fixture contributes to these counts. A reviewed declaration is not
-independently verified composition, a completed exposure assessment or a safety finding.
+One prominent whole-number overall score. Up to three short nutrition factors
+appear immediately below, selected by the magnitude of actually applied point
+contributions. No new nutrient thresholds or calculations. Unknown/ranged values
+with zero guaranteed contribution never become a claimed factor. Nut/oil
+saturated-fat energy and fat-quality contributions share one readable factor.
+The complete nutrient explanation remains in details.
 
-## Teddy and identity corrections
+A short additive note appears only for an applied, supported concern. No opening
+baking-soda warning, cohort hazard ratios, source editions or technical calculation.
+A small Provisional label and 'Additive review incomplete' preserve uncertainty;
+source/formulation uncertainty remains one short line, with full context in details.
+The existing nutrition grid, Ingredients/Additives disclosures, controls, scrolling,
+seven themes and compact panel are preserved. No new cards or visible letter grades.
 
-The captured Open Food Facts record for `044000045586` declares soy lecithin,
-calcium carbonate ("source of calcium"), baking soda and natural flavor. Its tags
-are `en:e322`, `en:e322i`, `en:e500`, `en:e500ii`. Previously lecithin had weight
-0; bicarbonate, calcium carbonate and unspecified flavor were null. Thus the known
-sum was 0 and provisional overall equaled nutrition 46. This was incomplete
-classification, not a different nutrition input or rounding error.
+Nutrition subtotal, additive deduction, exact raw contributions/rounding, full
+scientific evidence, contrary findings, source attribution and possible remaining
+budget range are in the existing default-collapsed Score details & limitations.
+Nutrition-only/unavailable states remain explicitly identified when an overall
+score cannot be supported. Missing additive evidence does not block nutrition.
+A reviewed declaration is not certified safety or independently verified contents.
 
-The new bicarbonate limited weight 0.2 yields `46 * (1 - 0.20 * 0.2) = 44.16`,
-rounded once to **44**, a displayed deduction of **2**. Calcium carbonate and
-flavor constituents remain unresolved; the possible budget range is **37–44**.
-Teddy is still provisional. Yuka's observed 36 is not used as a target and is not
-a verified matched formulation/source edition. No invented additives or quantities.
+## Same combined formula; revised evidence application
 
-The screen and disclosure now group E322/E322i and E500/E500ii while preserving
-all four original tags. A parent is not an additional occurrence. Explicit E322i
-and E322ii, or E500i/E500ii/E500iii, remain distinct; generic parent text cannot
-corroborate competing subtypes. Shared ambiguous provenance is retained and labeled,
-not promoted into specific presence. Negations and alternative-use qualifications
-survive grouping. The existing provider normalization, original eight verified-name
-reference entries and saved/cache formats are unchanged. EFSA's
-[lecithin identity section 3.1.1](https://efsa.onlinelibrary.wiley.com/doi/10.2903/j.efsa.2017.4742)
-explicitly distinguishes JECFA INS 322i and 322ii and covers both in its assessment;
-the local notes do not create new historical name-reference bindings.
-
-## Exact policy
-
-`trace-overall-declared-profile`, version `3-screening-experimental-2026-10-20`:
+Policy `trace-overall-declared-profile`, version
+`4-general-evidence-experimental-2026-10-20`. The mathematical budget and weights
+are unchanged:
 
 ```text
-N = unchanged whole-number Trace Nutrition v2 score
-weight = 0 reviewed / 0.2 limited / 0.5 moderate / 1 substantial / null unassessed
+N = unchanged whole-number Nutrition v2 result
+weight = 0 reviewed / 0.2 limited / 0.5 moderate / 1 substantial / null unresolved
 ConcernKnown = min(1, sum of applicable distinct known weights)
 rawOverall = N * (1 - 0.20 * ConcernKnown)
 overall = Math.round(rawOverall)
-displayed additive deduction = N - overall
-partial possible range = Math.round(0.80*N) through overall
+displayed deduction = N - overall
+individual raw deduction = N * 0.20 * weight / max(1, sumWeights)
+provisional possible range = round(0.80*N) through overall
 ```
 
-The relative weights borrow 6:15:30 from
-[Yuka's published deductions](https://help.yuka.io/l/en/article/yth80j3vle-sources-analysis-of-food-additives).
-[Yuka's classification criteria](https://help.yuka.io/l/en/article/uell2r13f8-classification-food-additives)
-consider seriousness, evidence and estimated exposure. Trace does not copy their
-classifications, risk-free label, formula or cap of 49. The weights and 20% cap are
-an approved experimental precautionary policy, not measured probabilities or
-severity of harm. The raw result retains at least 80% of nutrition before whole-number rounding. The policy
-never gives a bonus, organic points or an assumed nonorganic status.
+The maximum is 20% of nutrition, not 20 points. Round the combined result once;
+individual raw contributions are not separately rounded. No organic component,
+product-specific override or tuning to Yuka. The weights are Trace's experimental
+precautionary policy, not regulator-assigned penalties or measured health risk.
 
-The maximum raw deduction is **20% of the nutrition score, not 20 points**.
-For nutrition 50, the cap is 10 raw points; for nutrition 100, it is 20.
-Final whole-number rounding can change the displayed deduction by up to half a point.
-The expandable calculation allocates raw deductions as
-`N * 0.20 * individualWeight / max(1, sumWeights)`. This preserves the same capped
-formula, shares a saturated budget proportionally, and never rounds each additive
-separately. An individual contribution is a policy adjustment, not measured harm.
-Checkpoint approval preserves this development implementation; it does not validate
-its scientific classifications or calibration for consumer release.
+A numerical adjustment needs an integrated food-use assessment describing an
+adverse-effect reference/mechanism, or an established human adverse effect.
+An isolated observational/subgroup association or short acute surrogate response
+alone does not support a general consumer-food penalty. No new risk taxonomy,
+provider request, exposure estimate or eligibility gate was introduced.
 
-Current nonzero batch classifications are **limited only**. No moderate/substantial
-finding is forced into the data. Those approved weight levels remain defined;
-synthetic tests exercise accumulation and the cap, not claimed real-world coverage.
+| Identity | Numerical decision | Reason and limits |
+| --- | --- | --- |
+| E500ii baking soda | Remove 0.2; classification/weight null | Observational premenopausal subgroup does not establish a general consumer concern. |
+| E282 calcium propionate | Remove 0.2; null | Small acute human surrogate-response study does not establish chronic dietary harm. |
+| E415 xanthan gum | Remove 0.2; null | Single prospective observational signal, with contrary integrated food-use assessment. |
+| E471 mono/diglycerides | Remove 0.2; null | Observational associations and unresolved confounding/replication do not establish additive-specific causation. |
+| E472e DATEM | Remove 0.2; null | Small borderline cohort association, without sufficient general-consumer evidence. |
+| E338/E339/E341 added phosphates | Retain existing 0.2 each | Integrated assessment identifies high-intake kidney effects and an intake reference. It concerns all dietary phosphorus; package quantity/excess is unknown. |
+| E250 sodium nitrite in declared meat use | Retain conditional 0.2 | Integrated nitrosation/exposure assessment supports limited precaution; permitted-use nitrosamine contribution was considered low concern. No additive-specific cancer causation or package risk is inferred. |
+| E968 erythritol | Retain 0.2 for digestive endpoint | Established dose-related laxative effects in human studies. Preliminary cardiovascular associations no longer supply the rationale for a deduction. Intake here is unknown. |
+| E211/E212 benzoate + explicit vitamin C/erythorbic-acid beverage evidence | Retain conditional 0.2 | Established benzene-formation mechanism, not an isolated epidemiological association. FDA's historical survey found no consumer safety concern; ingredients do not prove benzene in a package. No scored observation here triggers this condition. |
 
-Unknown items stay null and are excluded only from the *known* sum. A mixed,
-source-attributed declaration can be screened without package-specific laboratory
-testing. Fully reviewed means no unresolved relevant identities in the available
-declaration under this small policy, not certified safety or complete chemistry.
-A partial review uses supported deductions, prominently says **PROVISIONAL**, and
-may decrease after review. The details retain the full remaining budget range;
-that range is not a statistical confidence interval. Missing/entirely unassessed
-evidence yields no overall rating and never blocks an available nutrition score.
+Removed weights stay null, not 'safe' or zero-concern. Their original identity,
+function, study estimates, conditions, conflicting findings, source URLs/editions
+and review dates remain in the internal expandable review. All previously unknown
+identities remain unknown. No transfer from calcium propionate to calcium carbonate;
+fortification/purity questions for E170 remain unresolved. Packaging-only BHT is
+not a food ingredient; aliases/parent tags do not multiply deductions or merge
+sibling substances. E322/E322i and E500/E500ii grouping remains intact.
 
-## Scientific classifications and limits
+Sources checked narrowly against the existing notes:
 
-Each batch record in `src/development/additiveScreeningPolicy.js` retains its exact
-aliases, function, classification/weight, rationale, source URL/edition, review date,
-human/animal evidence, applicability and conflicting findings. These are local
-development policy notes, not additions to the legal registry or claims of US approval.
+- [2024 primary cancer cohort](https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338): E500 sodium bicarbonate subgroup and E471 associations, not causal product effects.
+- [2024 diabetes cohort](https://pubmed.ncbi.nlm.nih.gov/38663950/): E415/E472e observational findings.
+- [2021 calcium-propionate experiment](https://pubmed.ncbi.nlm.nih.gov/34312159/): acute surrogate endpoints in 28 adults; no product dose assigned.
+- [EFSA phosphates 2019](https://www.efsa.europa.eu/en/press/news/190612): integrated all-source exposure and kidney-effect reference.
+- [EFSA nitrites 2017](https://www.efsa.europa.eu/en/press/news/170615): preserves low permitted-use concern and high-intake qualifications.
+- [EFSA erythritol 2023](https://www.efsa.europa.eu/en/plain-language-summary/re-evaluation-erythritol-e-968-food-additive): established digestive endpoint versus unproven dietary cardiovascular causation.
+- [FDA benzene explanation](https://www.fda.gov/food/environmental-contaminants-food/questions-and-answers-occurrence-benzene-soft-drinks-and-other-beverages): formation conditions and historical survey limits.
 
-- **Added E338/E339/E341 phosphates: 0.2 each when explicitly identified.**
-  [EFSA 2019](https://www.efsa.europa.eu/en/press/news/190612) found that total dietary
-  intake may exceed its reference in some age groups. Phosphorus is essential;
-  this does not establish excess intake from a package. Its group reference includes
-  natural sources and excludes moderate/severe kidney impairment. The screen applies
-  only to added phosphate identities, not every naturally occurring phosphorus source.
-- **E968 erythritol: 0.2.** [NIH 2023](https://www.nih.gov/news-events/nih-research-matters/erythritol-cardiovascular-events)
-  describes human associations and mechanistic work, including a small ingestion
-  study, not a trial proving clinical harm. [EFSA December 2023](https://www.efsa.europa.eu/en/plain-language-summary/re-evaluation-erythritol-e-968-food-additive)
-  found no established dietary cardiovascular causation and set a dose-related
-  diarrhoea reference. The limited precaution retains both findings and unknown exposure.
-- **E250 nitrite in explicitly declared meat use: 0.2.**
-  [EFSA 2017](https://www.efsa.europa.eu/en/press/news/170615) describes nitrosation,
-  high-intake uncertainties and low concern from permitted additive uses.
-  [NCI 2021](https://www.cancer.gov/news-events/cancer-currents-blog/2021/red-meat-colorectal-cancer-genetic-signature)
-  discusses meat-associated human findings and possible mechanisms, not isolated
-  additive causation. No nitrite is inferred from cultured celery juice; no product
-  cancer risk, harmful dose or nitrosamine amount is claimed.
-- **E415 xanthan and E472e DATEM: 0.2 each.** The
-  [2024 French prospective diabetes cohort](https://pubmed.ncbi.nlm.nih.gov/38663950/)
-  reports associations for both. These are limited screening signals, not causal
-  conclusions. DATEM's association is small and borderline. Confounding, correlated
-  exposures, intake error and replication/US generalizability remain material.
-  [EFSA's xanthan assessment](https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4909)
-  reached a different general-food conclusion from toxicology/refined exposure.
-- **E471 mono/diglycerides: 0.2.** A
-  [2024 prospective cancer study](https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338)
-  reports adult intake associations needing replication; it does not isolate causation.
-  [EFSA 2017](https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.5045)
-  found no concern at reported uses. Trace does not extrapolate findings to every
-  emulsifier or infer trans fats from this identity.
-- **E500ii sodium bicarbonate: 0.2, limited preliminary evidence.** The same
-  [2024 primary cancer paper](https://journals.plos.org/plosmedicine/article?id=10.1371/journal.pmed.1004338)
-  explicitly names sodium bicarbonate, although it reports the broad code E500.
-  Its result is a premenopausal breast-cancer subgroup association (HR 1.48,
-  95% CI 1.07–2.05), not a general-population finding or proof of causation.
-  The previous screen recorded this result but assigned null because consumer
-  population was unknown. This refinement applies the existing limited-precaution
-  tier consistently to that documented signal, without assuming any user's
-  subgroup, exposure or outcome. It is a contestable experimental policy judgment,
-  not a demonstrated defect in the food or a regulator-assigned deduction.
-  [FDA's SCOGS inventory](https://www.hfpappexternal.fda.gov/scripts/fdcc/index.cfm?order=ASC&search=CARBON&set=SCOGS&sort=Sortsubstance)
-  records independent expert report 26 (1975), conclusion type 1 for sodium
-  bicarbonate at then-current/expected uses; that contrary historical conclusion
-  remains attached and does not address the newer cohort. Multiple testing,
-  confounding, intake errors and replication needs remain explicit. Neither the
-  study nor weight transfers to sodium carbonate, sesquicarbonate or generic E500.
-- **E282 calcium propionate: 0.2.** A US
-  [randomized crossover study](https://pubmed.ncbi.nlm.nih.gov/34312159/)
-  (2021-07-26, doi:10.1136/bmjdrc-2021-002336) tested 1500 mg calcium propionate
-  in 28 healthy adults. Acute counterregulatory hormone responses and glucose
-  production under hypoglycemic clamp are surrogate endpoints, not incident
-  diabetes or evidence about a bread serving. The small, short study supports
-  only limited precaution under this policy; no quantity is assigned to a food.
-  [EFSA 2014](https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2014.3779)
-  found no concern at assessed maximum food-use concentrations. Both findings
-  remain visible. No transfer to other propionate salts or gut-produced propionate.
-- **E322 lecithins, E422 glycerol, E1200 polydextrose: 0** for this general-grocery
-  batch, based on the linked scientific assessments, not authorization alone.
-  [Lecithins](https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4742),
-  [glycerol](https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2017.4720),
-  [its 2022 follow-up](https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2022.7353),
-  and [polydextrose](https://efsa.onlinelibrary.wiley.com/doi/abs/10.2903/j.efsa.2021.6363)
-  retain reported-use limits, contaminant-specification qualifications and gastrointestinal
-  considerations. Allergy suitability is separate. Zero is no qualifying concern in
-  this review, not proof of no risk at every dose or for every population.
-- **Benzoates E211/E212: conditional 0.2 only with explicit beverage/cofactor evidence.**
-  [FDA's historical beverage survey/explanation](https://www.fda.gov/food/environmental-contaminants-food/questions-and-answers-occurrence-benzene-soft-drinks-and-other-beverages)
-  describes benzoate plus ascorbic/erythorbic acid, with heat/light encouraging benzene
-  formation, but no survey-level consumer concern. The interaction is counted once
-  on the benzoate; citric acid is not vitamin C. Unestablished conditions stay null.
-  No real scored observation in this batch triggers this rule.
+These judgments do not imply FDA endorsement, current legal compliance, harmful
+exposure or a safe/unsafe product classification. Full source notes remain in
+`src/development/additiveScreeningPolicy.js` and the existing replay JSON.
 
-These source-based judgments do not claim current regulatory compliance. Historical
-legal events and the original eight name bindings remain unchanged, shown only with
-existing exact identifier/source bindings and dated qualifications. Foreign rules do
-not automatically cause deductions. No Yuka product risk label is imported into policy.
+## All 21 observations
 
-## The same 21 observations
+20 nutrition results (19/20 original groceries plus Teddy); 18 combined results:
+4 declaration-reviewed and 14 provisional. Frosted Flakes and Chobani remain
+nutrition-only for missing ingredient evidence. Diet Coke's existing nutrition
+basis gap remains unresolved. Four raw deductions, three displayed reductions;
+Coca-Cola's 0.48 raw point reduction rounds back to 12 and stays in details.
 
-Nutrition is the previous baseline; overall is the new screened result. Provisional
-numbers include only supported deductions and are not completed additive-risk assessments.
+| Captured profile | Nutrition (unchanged) | Previous overall | Current overall | Deduction | Review |
+| --- | ---: | ---: | ---: | ---: | --- |
+| Coca-Cola Original Taste | 12 | 12 | 12 | 0 | provisional |
+| Diet Coke | Unavailable | Unavailable | Unavailable | Unavailable | nutrition-unavailable |
+| Kellogg's Frosted Flakes | 36 | Unavailable | Unavailable | Unavailable | nutrition-only |
+| Kellogg's Rice Krispies | 42 | 42 | 42 | 0 | provisional |
+| Post Shredded Wheat Original Big Biscuit | 82 | 82 | 82 | 0 | provisional |
+| FAGE Total 0% Plain Greek Yogurt | 87 | 87 | 87 | 0 | reviewed |
+| Chobani Strawberry on the Bottom Greek Yogurt | 80 | Unavailable | Unavailable | Unavailable | nutrition-only |
+| Quest Chocolate Chip Cookie Dough Protein Bar | 54 | 52 | 52 | 2 | provisional |
+| Nature Valley Peanut Butter Dark Chocolate Protein Bars | 19 | 19 | 19 | 0 | provisional |
+| Dave's Killer Bread 100% Whole Wheat | 68 | 68 | 68 | 0 | reviewed |
+| Pepperidge Farm Farmhouse Hearty White Bread | 55 | 48 | 55 | 0 | provisional |
+| Skippy Creamy Peanut Butter | 69 | 69 | 69 | 0 | provisional |
+| Blue Diamond Whole Natural Almonds | 95 | 95 | 95 | 0 | reviewed |
+| Smart Ones Santa Fe Rice & Beans | 75 | 72 | 75 | 0 | provisional |
+| Stouffer's Classic Lasagna with Meat & Sauce | 70 | 70 | 70 | 0 | provisional |
+| Oscar Mayer Classic Wieners | 25 | 24 | 24 | 1 | provisional |
+| SPAM Classic | 23 | 22 | 22 | 1 | provisional |
+| Cheez-It Original | 19 | 19 | 19 | 0 | provisional |
+| OREO Original | 12 | 12 | 12 | 0 | provisional |
+| Lay's Classic Potato Chips | 32 | 32 | 32 | 0 | reviewed |
+| Teddy Grahams | 46 | 44 | 46 | 0 | provisional |
 
-| Captured profile | Nutrition | Previous overall | Overall now | Displayed deduction | Identified screening items | Supported findings | Remaining gaps |
-| --- | ---: | ---: | ---: | ---: | --- | --- | --- |
-| Coca-Cola Original Taste | 12 | 12 | 12 | 0 | caramel-color, E338, flavor-mixture, caffeine, E150c | E338 (limited 0.2) | caramel-color; flavor-mixture; caffeine; E150c |
-| Diet Coke | ? | ? | ? | ? | caramel-color, E951, E338, E212, flavor-mixture, E330, caffeine | None supported | caramel-color; E951; E212; flavor-mixture; E330; caffeine; nutrition basis unresolved |
-| Kellogg's Frosted Flakes | 36 | ? | ? | ? | None identified | None supported | ingredient evidence missing |
-| Kellogg's Rice Krispies | 42 | 42 | 42 | 0 | None identified | None supported | declaration gaps |
-| Post Shredded Wheat Original Big Biscuit | 82 | 82 | 82 | 0 | BHT (packaging only) | None supported | BHT |
-| FAGE Total 0% Plain Greek Yogurt | 87 | 87 | 87 | 0 | None identified | None supported | No unresolved declaration identities; exposure/formulation unverified |
-| Chobani Strawberry on the Bottom Greek Yogurt | 80 | ? | ? | ? | None identified | None supported | ingredient evidence missing |
-| Quest Chocolate Chip Cookie Dough Protein Bar | 54 | 52 | 52 | 2 | E1200, E968, E422, flavor-mixture, E960-unspecified, E955, E322i | E968 (limited 0.2) | flavor-mixture; E960-unspecified; E955 |
-| Nature Valley Peanut Butter Dark Chocolate Protein Bars | 19 | 19 | 19 | 0 | flavor-mixture, E422, E322i | None supported | flavor-mixture; declaration gaps |
-| Dave's Killer Bread 100% Whole Wheat | 68 | 68 | 68 | 0 | None identified | None supported | No unresolved declaration identities; exposure/formulation unverified |
-| Pepperidge Farm Farmhouse Hearty White Bread | 55 | 51 | 48 | 7 | E471, E282, E200, E472e, E322i | E471 (limited 0.2), E282 (limited 0.2), E472e (limited 0.2) | E200 |
-| Skippy Creamy Peanut Butter | 69 | 69 | 69 | 0 | hydrogenated-oil | None supported | hydrogenated-oil |
-| Blue Diamond Whole Natural Almonds | 95 | 95 | 95 | 0 | None identified | None supported | No unresolved declaration identities; exposure/formulation unverified |
-| Smart Ones Santa Fe Rice & Beans | 75 | 72 | 72 | 3 | modified-starch, E415 | E415 (limited 0.2) | modified-starch; declaration gaps |
-| Stouffer's Classic Lasagna with Meat & Sauce | 70 | 70 | 70 | 0 | modified-starch, flavor-mixture | None supported | modified-starch; flavor-mixture; declaration gaps |
-| Oscar Mayer Classic Wieners | 25 | 24 | 24 | 1 | E339, flavor-mixture | E339 (limited 0.2) | flavor-mixture; declaration gaps |
-| SPAM Classic | 23 | 22 | 22 | 1 | modified-starch, E250 | E250 (limited 0.2) | modified-starch |
-| Cheez-It Original | 19 | 19 | 19 | 0 | E319, E160b-unspecified, E322i | None supported | E319; E160b-unspecified; declaration gaps |
-| OREO Original | 12 | 12 | 12 | 0 | E341, E500ii, flavor-mixture, E322i | None supported | E341; E500ii; flavor-mixture |
-| Lay's Classic Potato Chips | 32 | 32 | 32 | 0 | None identified | None supported | No unresolved declaration identities; exposure/formulation unverified |
-| Teddy Grahams | 46 | 46 | 44 | 2 | E170, E500ii, flavor-mixture, E322i | E500ii (limited 0.2) | E170; flavor-mixture |
+Only three changes: Teddy 44 -> 46 (bicarbonate), Pepperidge Farm 48 -> 55
+(mono/diglycerides, calcium propionate, DATEM), Smart Ones 72 -> 75 (xanthan).
+Nutrition for all 21 is unchanged. All three remain provisional, not clean/safe
+reviews. No source observations or archived nutrient values are altered.
 
-Actual supported arithmetic (no product-specific score overrides):
+Stouffer's captured Classic Lasagna with Meat & Sauce stays 70 overall/nutrition.
+It is not the Meat Lovers Large Size screenshot observation: that separate panel
+has Nutrition v2 66 and preserved published-method nutrition 75 only conditional
+on Yuka's unverified 51% vegetable claim. Its overall remains unknown. Yuka's
+observed overall scores (Meat Lovers 45, Teddy 36) are not matched formulations
+or calibration targets.
 
-- **Coca-Cola Original Taste**: 12 * (1 - 0.20 * 0.2) = 11.52 -> **12**. Displayed deduction: 0 point(s); before rounding: 0.48. Applied: E338 Phosphoric acid (0.48 raw points).
-- **Quest Chocolate Chip Cookie Dough Protein Bar**: 54 * (1 - 0.20 * 0.2) = 51.84 -> **52**. Displayed deduction: 2 point(s); before rounding: 2.16. Applied: E968 Erythritol (2.16 raw points).
-- **Pepperidge Farm Farmhouse Hearty White Bread**: 55 * (1 - 0.20 * 0.6) = 48.4 -> **48**. Displayed deduction: 7 point(s); before rounding: 6.6. Applied: E471 Mono- and diglycerides of fatty acids (2.2 raw points); E282 Calcium propionate (2.2 raw points); E472e DATEM (2.2 raw points).
-- **Smart Ones Santa Fe Rice & Beans**: 75 * (1 - 0.20 * 0.2) = 72 -> **72**. Displayed deduction: 3 point(s); before rounding: 3. Applied: E415 Xanthan gum (3 raw points).
-- **Oscar Mayer Classic Wieners**: 25 * (1 - 0.20 * 0.2) = 24 -> **24**. Displayed deduction: 1 point(s); before rounding: 1. Applied: E339 Sodium phosphates (subtype unspecified) (1 raw points).
-- **SPAM Classic**: 23 * (1 - 0.20 * 0.2) = 22.08 -> **22**. Displayed deduction: 1 point(s); before rounding: 0.92. Applied: E250 Sodium nitrite (0.92 raw points).
-- **Teddy Grahams**: 46 * (1 - 0.20 * 0.2) = 44.16 -> **44**. Displayed deduction: 2 point(s); before rounding: 1.84. Applied: E500ii Sodium hydrogen carbonate (baking soda) (1.84 raw points).
+## Scope, files and local preview
 
-Coca-Cola's raw deduction disappears in whole-number rounding; it is **not** reported
-as a zero-concern product. Diet Coke's ingredient screen finds phosphoric acid, but
-cannot create a nutrition/overall rating while its existing nutrition basis is unresolved.
+The existing development + loopback + explicit URL flag gate is unchanged.
+No scanner/camera, logging, storage, native iOS, theme or Nutrition v2 changes.
+No runtime network calls for grading and no migrations or score persistence.
+Source/US formulation uncertainty, missing ingredients, partial/truncated lists,
+unknown flavors/modification types and historical legal qualifications remain.
+The separate archived Quest sodium source-quality concern is not repaired or
+replaced with an assumed value in this task.
 
-## Specific gaps retained
-
-- Frosted Flakes and Chobani have no usable captured ingredient declaration.
-- Generic caramel color does not identify its class or 4-MEI exposure; original OFF
-  E150c/E150d claims remain attributed, uncorroborated by class-unspecified text.
-  [FDA's animal/high-dose context and dietary advice](https://www.fda.gov/food/food-additives-petitions/questions-answers-about-4-mei)
-  do not automatically establish a product penalty.
-- Sucralose remains null: [EFSA February 2026](https://www.efsa.europa.eu/en/news/efsa-finds-sucralose-safe-when-used-currently-authorised-cannot-confirm-safety-extending-its)
-  distinguishes assessed uses from prolonged heating uncertainty. A protein bar name
-  does not establish how it was processed.
-- TBHQ remains null after reviewing [NTP TR-459](https://ntp.niehs.nih.gov/publications/reports/tr/tr459):
-  no evidence of carcinogenic activity in the long-term animal studies does not complete
-  other endpoint/exposure synthesis. Packaging-only BHT is not inferred to be in food.
-- Natural/artificial flavor constituents, starch modification, stevia preparation,
-  annatto type and oil hydrogenation extent remain unspecified. No nitrite from celery,
-  no assumed trans fat, and no guessing unknown substances by chemical-sounding names.
-- Sorbic acid, aspartame and caffeine need more complete scientific
-  synthesis; function or permission alone does not set their weight.
-- Baking soda's limited precaution retains its specific subgroup and conflicting
-  historical assessment; it is not generalized into a clinical finding for every user.
-  Calcium carbonate remains null after a narrower source review: [EFSA 2023](https://efsa.onlinelibrary.wiley.com/doi/10.2903/j.efsa.2023.8106),
-  sections 1.1.3 and 4, assesses technological additive uses, explicitly excluding
-  safety as a calcium fortificant/supplement, and flags aluminium impurity concerns.
-  Teddy's declaration says "source of calcium". Neither the technological-use
-  conclusion nor a hypothetical impurity is silently assigned to that fortification
-  use. FDA's historical SCOGS carbonate conclusion is also retained. No measured
-  contaminants, total calcium exposure or completed fortification synthesis exist.
-  Rice Krispies' ambiguous "tric phosphate" is not silently
-  identified as calcium phosphate. OREO's "and/or" calcium phosphate remains conditional.
-- Truncated/mismatched subingredient lists remain partial. A complete-looking declaration
-  still does not exclude incidental/exempt ingredients; see [FDA ingredient-label explanation](https://www.fda.gov/food/food-additives-and-gras-ingredients-information-consumers/types-food-ingredients).
-  This is a closed English vocabulary, not a universal parser. Language conflicts remain
-  explicit. Empty provider tags are never used as proof of absence.
-
-The amounts are unknown but are not a blanket prerequisite for precautionary screening.
-A separate existing source-quality issue remains: the archived Quest provider snapshot
-reports sodium_serving=0.00022 g (about 0.2 mg for the captured serving), an unusually
-low value that warrants checking against the actual US package. This task preserves
-that input and its approved nutrition score; it does not substitute an assumed value.
-
-No hazard association becomes demonstrated harm. Remaining gaps concern particular
-identities, conditions or incomplete synthesis, not a demand to lab-test every product.
-
-## Stouffer's / Yuka comparison
-
-Captured Classic Lasagna with Meat & Sauce (GTIN 00013800103215; 297 g package) stays
-nutrition 70, now provisional overall 70. It is not the Meat Lovers Large Size screenshot
-observation (215 g serving): nutrition v2 66; preserved published-method nutrition 75 only
-conditional on Yuka's reported, independently unverified 51% vegetable content.
-Meat Lovers overall remains unknown: no full attributed ingredient list/GTIN. Its seven
-additives and Yuka high-risk descriptions for nitrite/BHA/BHT are Yuka observations only.
-Yuka 45 is overall. Teddy's Yuka 36 also lacks matching formulation/GTIN evidence.
-There are **no verified matched overall-score pairs**. Neither number is a tuning target.
-
-## Interface, scope and local review
-
-Same compact layout and existing disclosures, collapsed by default. Overall when
-supported; separate nutrition subtotal and whole-number additive deduction. Partial
-scores visibly say PROVISIONAL and can decrease. The short opening names the screened
-substance and shows the total whole-number deduction; study narratives, raw per-rule
-deductions, conflicting findings, unknowns and remaining range stay expandable.
-Findings remain visible even when rounding leaves the displayed deduction at zero.
-No letter ratings, safety badges, risk colors or organic bonus. All seven themes use
-the existing styles; the existing CSS rule prevents the prominent /100 denominator wrapping
-on a narrow screen. No scanner/camera, nutrition/logging/storage or theme changes.
-
-The existing development + loopback + explicit URL opt-in gate is unchanged. No runtime
-network requests, migrations or score persistence. Original source text, provider IDs,
-legacy/missing/empty additive states and formulation uncertainty are retained.
-
-Exact nine-file refinement inventory (all already tracked):
+Exact modified files:
 
 - src/development/additiveScreeningPolicy.js
 - src/development/traceOverallFoodQuality.js
 - src/development/traceOverallFoodQuality.test.js
 - src/development/BarcodeNutritionReview.jsx
 - src/development/BarcodeNutritionReview.test.jsx
-- scripts/replay-overall-food-quality.cjs
+- src/development/barcodeReviewInformation.js
+- src/development/barcodeReviewInformation.test.js
 - scripts/verify-barcode-grading.cjs
 - docs/trace-overall-food-quality-2026-10-20.json
 - docs/trace-overall-food-quality.md
 
-`npm.cmd start`, open http://localhost:3000/?barcodeGrading=1 -> Nutrition -> Scan Barcode.
-Existing network provider availability still applies. No feature is exposed in production.
-For offline repeatable UI review (fresh bundle, no installed dependencies):
+Existing application: `npm.cmd start`, open
+http://localhost:3000/?barcodeGrading=1 -> Nutrition -> Scan Barcode.
+
+Offline integrated preview (archived records, stub camera, memory-only logging):
 
 ```powershell
-node scripts/verify-barcode-grading.cjs --screening-refinement --serve
+node scripts/verify-barcode-grading.cjs --simple-review --serve
 ```
 
-Open http://127.0.0.1:4175/?barcodeGrading=1&scenario=quest and enter 00888849000012.
-This is the archived Quest observation; expected nutrition 54, provisional overall 52.
-Use scenario=almonds / barcode 00041570003831 for the reviewed 95 profile. Default
-scenario is labeled synthetic. Camera is stubbed; logging is memory-only in an isolated
-origin/profile. Ctrl+C stops the server. Never use an old bundle after source changes.
-For the captured Teddy record, use `scenario=teddy` and enter `044000045586`:
-nutrition 46, deduction 2, provisional overall 44. Expand Additives to see two
-provider identity groups from the four original tags, plus the ingredient-text
-screen. Expand Score details for 1.84 raw points and the remaining 37–44 range.
-Offline replay: `node scripts/replay-overall-food-quality.cjs` asserts all v2 results
-unchanged through both the engine and integrated adapter, and writes only the existing
-overall report. It prohibits network calls. The oldest lookup archive predates the
-approved energy-qualifier recovery; replay and visual fixtures reuse the exact stored
-qualifiers from the approved v2 source dataset after asserting identical raw values
-and units. They do not modify nutrient values, source archives or application behavior.
+Open http://127.0.0.1:4175/?barcodeGrading=1&scenario=teddy and enter
+`044000045586` (overall 46). Use `scenario=stouffers`, barcode `00013800103215`
+(overall 70), or `scenario=quest`, barcode `00888849000012` (overall 52).
+Default scenario is explicitly synthetic. Stop with Ctrl+C; no existing user
+browser profile/storage is accessed. Do not reuse an old bundle after editing.
 
-Refinement progress/logs and visual checks are saved under
-artifacts/additive-screening-refinement-20261020/. Prior checkpoint artifacts remain
-unchanged. No commit, push,
-deployment, dependency installation or user browser-storage access is performed.
+Offline replay: `node scripts/replay-overall-food-quality.cjs`. It prohibits
+network calls, asserts engine and integrated-adapter nutrition against all saved
+v2 results, and writes only the existing overall JSON. Legacy approximate-energy
+qualifiers are recovered from the already-approved source metadata after exact
+raw-value/unit assertions; no nutrient facts are invented.
 
-## Completed focused validation
+Validation progress and screenshots are under
+`artifacts/food-grade-simplification-20261020/`. Historical research, prior
+checkpoint artifacts and unrelated work are preserved. No commit/push/deployment.
 
-- 221 tests pass across 9 suites, including source-specific rules, actual Teddy grouping/arithmetic, distinct siblings, ambiguous parent evidence, conditional/negated presence, raw contributions under the cap, current integrated review, unchanged v2/adapters, scanner and ingredient behavior, real Nutrition handoff/serving math, saved payload isolation and production CommonJS repair.
-- Seven JavaScript/JSX/CJS files: zero lint errors and warnings. JS/JSX/CJS and CSS parse; report JSON and whitespace checks pass.
-- Offline replay checks all 21 engine results and integrated-adapter results against the unchanged approved nutrition baseline.
-- Isolated Chrome checks pass at 390x844 and 1280x960; all seven themes fit, disclosures start collapsed, whole /100 denominator stays on one line, and both food controls remain unobstructed. Eleven screenshots include actual captured Teddy 44/46, its grouped disclosure, Quest 52/54 and almond 95. Memory-only saved entries omit experimental fields. No user browser profile or archive is accessed.
-- Focused production scanner dependency graph (343 modules) excludes the development review, nutrition engines and additive screening policy. No full production build.
-- Baseline hashes/status confirm unrelated files and original archives unchanged; HEAD remains b095a4e93f61e07175fefd58ee0c681ba0a667c3 and index empty.
-- Only routine Babel large-catalog formatting notices and Git LF/CRLF notices; no failed final checks. The small captured sample does not establish national coverage. Source/US-formulation and scientific gaps above remain.
+## Validation results
 
-Screenshots: artifacts/additive-screening-refinement-20261020/mobile-teddy-390x844.png,
-desktop-teddy-1280x960.png and mobile-teddy-additives-390x844.png. Baseline,
-before/after replay results and focused validation remain in the same directory.
+- 248 unique tests pass across 10 focused suites using the latest result for each suite. One existing scanner-recovery lookup timed out in the combined run; its unchanged 56-test suite passed on isolated rerun. Initial and rerun logs are both retained.
+- All 21 saved observations replay through the unchanged v2 engine and integrated adapter. Only the three additive-policy score changes listed above occur.
+- Eight changed code files: zero lint errors/warnings. JavaScript/JSX/CJS syntax, JSON, existing CSS syntax and whitespace checks pass.
+- Isolated Chrome checks pass at 390x844 and 1280x960 with all seven themes, 13 screenshots, default-collapsed disclosures, hidden nutrition subtotal, compact opening reasons, and unobstructed Use This Food/Scan Again controls. Real archived Teddy, Quest, almonds and Stouffer's Classic are included; remaining controls are synthetic.
+- The browser checks preserve serving math and memory-only logging with no experimental scores in saved payloads. No user browser profile, restored archive or storage was accessed.
+- Production/test URL-flag gating and the CommonJS startup regression tests pass. Gate and shared startup-repair files remain unchanged. No full production build or deployment was run.
+- Baseline hashes/status preserve all 62 unrelated entries, historical research, scanner, nutrition calculation/storage files and themes. HEAD remains the starting commit; the index is empty.
+
+Screenshots: `artifacts/food-grade-simplification-20261020/mobile-teddy-390x844.png`,
+`mobile-provisional-390x844.png` (Quest) and `desktop-stouffers-1280x960.png`.

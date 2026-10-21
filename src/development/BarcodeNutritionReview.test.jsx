@@ -43,7 +43,8 @@ test('the reviewed almond profile shows overall and separate nutrition without o
   render(<><BarcodeNutritionReview candidate={c} identifier={row.lookup.identifier} /><BarcodeAdditives candidate={c} /></>);
   expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('95/100');
   expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 95/100');
-  expect(screen.getByLabelText('Overall assessment status')).toHaveTextContent('No bonus');
+  expect(screen.getByLabelText('Overall assessment status')).toHaveTextContent('Nutrition drives this score');
+  expect(screen.getByLabelText('Experimental nutrition rating')).not.toBeVisible();
   expect(screen.getByLabelText('Score details & limitations')).not.toHaveAttribute('open');
   expect(screen.getByLabelText('Product additives')).not.toHaveAttribute('open');
   expect(screen.getByLabelText('Overall assessment evidence')).toHaveTextContent('not independently verified');
@@ -54,7 +55,8 @@ test('partial ingredient review displays a provisional overall score and keeps n
   expect(screen.getByLabelText('Experimental overall rating').textContent).toMatch(/^\d+\/100$/);
   expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition');
   expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
-  expect(screen.getByLabelText('Overall assessment status')).toHaveTextContent('could decrease');
+  expect(screen.getByLabelText('Overall assessment status')).toHaveTextContent('Nutrition drives this score');
+  expect(screen.getByLabelText('Opening score summary')).toHaveTextContent('Additive review incomplete');
   expect(screen.getByLabelText('Possible overall range')).toHaveTextContent('not a confidence interval');
   expect(screen.getByLabelText('Overall assessment evidence')).toHaveTextContent('No reviewed local identity');
 });
@@ -84,26 +86,35 @@ test('a real nitrite finding shows its deduction and limitations with the provis
   expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 23/100');
   expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('additive deduction 1 point');
   expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
-  expect(screen.getByLabelText('Additive deduction reasons')).toHaveTextContent('Sodium nitrite');
+  expect(screen.getByLabelText('Additive deduction reasons')).toHaveTextContent('nitrite in processed meat');
   expect(screen.getByLabelText('Score details & limitations')).not.toHaveAttribute('open');
   expect(screen.getByLabelText('Overall assessment evidence')).toHaveTextContent('low nitrosamine concern');
 });
 
-test('actual Teddy review groups aliases and keeps a concise provisional summary with expandable arithmetic', () => {
+test('actual Teddy shows one score and three reasons without a generic baking-soda warning', () => {
   const archive = require('../../docs/trace-nutrition-v2-teddy-2026-10-20.json');
   const c = createBarcodeNutritionCandidate(archive.lookup);
   render(<><BarcodeNutritionReview candidate={c} identifier={archive.lookup.identifier} /><BarcodeAdditives candidate={c} /></>);
-  expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('44/100');
-  expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 46/100 · additive deduction 2 points');
-  expect(screen.getByLabelText('Overall assessment status').textContent.length).toBeLessThan(100);
+  expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('46/100');
+  expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 46/100 · additive deduction 0 points');
+  expect(screen.getByLabelText('Experimental nutrition rating')).not.toBeVisible();
+  const opening = screen.getByLabelText('Opening score summary');
+  expect(within(opening).getAllByRole('listitem')).toHaveLength(3);
+  expect(opening).toHaveTextContent('Calorie density lowers the score');
+  expect(opening).toHaveTextContent('Total sugars lower the score');
+  expect(opening).toHaveTextContent('Whole grains help');
+  expect(opening).not.toHaveTextContent(/baking soda|sodium hydrogen|premenopausal|HR 1.48|deduction 0|46\/100.*46\/100/);
+  expect(opening.textContent.split(/\s+/).length).toBeLessThan(90);
   expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
-  expect(screen.getByLabelText('Additive deduction reasons')).toHaveTextContent('baking soda');
-  expect(screen.getByLabelText('Additive deduction reasons')).not.toHaveTextContent('HR 1.48');
+  expect(screen.queryByLabelText('Additive deduction reasons')).not.toBeInTheDocument();
   const details = screen.getByLabelText('Score details & limitations');
   expect(details).not.toHaveAttribute('open');
-  expect(screen.getByLabelText('Additive calculation')).toHaveTextContent('1.84 points before rounding');
-  expect(screen.getByLabelText('Additive calculation')).toHaveTextContent('rounded once to 44/100');
-  expect(screen.getByLabelText('Possible overall range')).toHaveTextContent('37–44/100');
+  expect(screen.getByLabelText('Possible overall range')).toHaveTextContent('37–46/100');
+  fireEvent.click(screen.getByText('Score details & limitations'));
+  expect(screen.getByLabelText('Experimental nutrition rating')).toBeVisible();
+  expect(details).toHaveTextContent('premenopausal');
+  expect(details).toHaveTextContent('No general food-score deduction');
+  fireEvent.click(screen.getByText('Score details & limitations'));
   const additives = screen.getByLabelText('Product additives');
   expect(additives).not.toHaveAttribute('open');
   fireEvent.click(screen.getByText('Additives · 2 provider-reported groups'));
@@ -123,7 +134,8 @@ test('raw finding remains disclosed when rounding leaves the main whole-number s
   const row = archive.observations.find(r => r.barcode === '00049000000443');
   const c = createBarcodeNutritionCandidate(row.lookup);
   render(<BarcodeNutritionReview candidate={c} identifier={row.lookup.identifier} />);
-  expect(screen.getByLabelText('Additive deduction reasons')).toHaveTextContent('unchanged by rounding');
+  expect(screen.getByLabelText('Score details & limitations')).toHaveTextContent('unchanged by rounding');
+  expect(screen.getByLabelText('Additive deduction reasons')).toHaveTextContent('total dietary intake matters');
   expect(screen.getByLabelText('Additive calculation')).toHaveTextContent('0.48 points before rounding');
 });
 test('product switching resets disclosures and never transfers an earlier score', async () => {
