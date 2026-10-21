@@ -401,3 +401,67 @@ Retrospective research scripts may explicitly use
 reproduce historical source-only results. Normal application lookup uses the
 corrected default. No storage migration, automatic provider update or public
 grading activation is introduced.
+
+### Batch unit audit, 2026-10-21
+
+The [twenty-product comparison](grocery-nutrition-data-audit-2026-10-21.json)
+preserves the original panels and records manufacturer comparisons, package and
+edition conflicts, and before/after nutrition and overall scores. There are 17
+manufacturer-panel comparisons, one secondary-only comparison and two incomplete
+exact-package comparisons; these are not 17 independently verified formulation
+matches. No additional product-specific overlay was justified by a complete
+matching source edition. The original 19/20 nutrition coverage and all displayed
+nutrition/overall integers remain unchanged; that does not certify their inputs.
+
+The audit reproduced two shared gateway defects using explicitly synthetic
+API-contract fixtures. OFF's normalized `_100g` and `_serving` weight
+fields are already in grams; the contributor's `_unit` applies to `_value`.
+Likewise normalized `energy` is kJ even when the entered `_value` is kcal. The
+gateway now follows those schema units, agreeing with the existing assessment
+capture. See the [official OFF nutrient schema](https://openfoodfacts.github.io/documentation/docs/Product-Opener/schemas/schemas/product_nutrition/).
+This changes new lookup/review/selection facts, not scoring equations. Entered
+units and original raw observations remain in `assessmentInputs`; existing
+caches and historical food entries are not migrated or rewritten.
+
+The implementation review separates validation paths: twenty tests start with
+already-normalized archived lookups and bypass the changed gateway. Twelve
+additional tests reprocess captured raw OFF nutrients, joining category/market
+metadata from the same archived lookup, through the gateway and nutrition
+assessment. They verify unchanged logging values and nutrition scores. Complete
+raw responses are not available here for the other eight profiles. All seventeen
+OFF lookups have gram-based entered weight units and explicit kcal fields; two
+USDA records and one catalog record bypass OFF normalization. This explains the
+unchanged twenty-profile scores without claiming twenty raw-response replays.
+
+The review also corrects entered `energy-kcal_value` handling: its explicit unit
+must be honored, including kJ conversion; unsupported units stay unknown.
+Normalized `energy-kcal_100g`/`_serving` remain kcal regardless of the entered
+display unit. `_value` fields are not assigned normalized-field semantics.
+Trace's older `_100ml` extension is not a canonical OFF field (`_100g` can itself
+describe 100 mL). Its prior explicit-unit gateway handling is preserved, with
+matching assessment capture; generic legacy energy without a unit stays unknown.
+
+A constructed-fixture test runs the actual gateway lookup with a mocked provider
+response, product review, Use This Food, Nutrition serving edits, new-entry save,
+read and reopen/edit. It preserves original normalized observations and entered
+units in saved provenance, preserves an existing historical record, and persists
+no scores. Only test memory storage is used; no interactive browser is launched.
+
+The complete patch now requires six files: the original five plus the existing
+`api/nutrition/_assessmentInputs.cjs` capture module. No new runtime dependency,
+product override, scoring rule or migration was added. Quest/SPAM retain their
+captured values and scores. Multi-market/formulation uncertainty is visible in
+the opening experimental review; consistency warnings remain in collapsed details.
+The manufacturer sodium discrepancies in this audit are not automatically
+attached as product-specific runtime warnings.
+
+These unit defects do not explain the original sample's suspicious sodium:
+Quest's raw provider value is already 0.00022 g per bar (0.22 mg), and SPAM's is
+0.00136 g per serving (1.36 mg). Current manufacturer panels disagree, but
+ingredients/editions and, for SPAM, multiple nutrients and serving quantities
+also differ. A blanket multiplication or partial replacement is not justified.
+Other unresolved cases include Rice Krispies' gram/mL serving conflict,
+Pepperidge's competing energy/sugar panels, bounded fiber/sugar declarations,
+and regional or package mismatches. Manufacturer observations are comparison
+evidence, not automatically promoted Trace product facts. The existing exact
+Teddy correction remains unchanged at 7 g added sugar/30 g and provisional 20.

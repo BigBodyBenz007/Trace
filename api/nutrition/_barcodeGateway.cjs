@@ -261,12 +261,16 @@ function offNutrient(product, nutrient, suffix, targetUnit) {
     return { valid: true, value: null };
   }
   if (targetUnit === "kcal") return parsePublishedNumber(nutriments[key]);
-  const publishedUnit = firstPublished(nutriments, [
-    `${nutrient}_${suffix}_unit`,
-    `${nutrient}_unit`,
+  // OFF standardizes _100g/_serving weight fields to grams. _unit
+  // describes the contributor's _value, not those already-converted fields.
+  // Keep the entered units in assessmentInputs; do not convert them twice.
+  // _100ml is an older Trace compatibility extension, not an OFF canonical
+  // field. Preserve its existing explicit-unit handling rather than assuming
+  // the canonical field semantics apply to a differently defined field.
+  const publishedUnit = ["100g", "serving"].includes(suffix) ? "g" : firstPublished(nutriments, [
+    `${nutrient}_${suffix}_unit`, `${nutrient}_unit`,
   ]);
-  const defaultUnit = nutrient === "sodium" ? "g" : "g";
-  return convertWeight(nutriments[key], publishedUnit || defaultUnit, targetUnit);
+  return convertWeight(nutriments[key], publishedUnit || "g", targetUnit);
 }
 
 function offCalories(product, suffix) {
@@ -276,13 +280,23 @@ function offCalories(product, suffix) {
   }
   const kcalKey = `energy-kcal_${suffix}`;
   if (Object.prototype.hasOwnProperty.call(nutriments, kcalKey)) {
+    // Only normalized energy-kcal fields have guaranteed kcal units. Entered
+    // _value fields still use their explicitly supplied unit, like assessment.
+    if (suffix === "value") {
+      const unit = normalizeUnit(firstPublished(nutriments, ["energy-kcal_value_unit", "energy-kcal_unit"])) || "kcal";
+      if (["kj", "kilojoule", "kilojoules"].includes(unit)) {
+        return parsePublishedNumber(nutriments[kcalKey], 1 / 4.184);
+      }
+      if (!["kcal", "kilocalorie", "kilocalories"].includes(unit)) return { valid: false, value: null };
+    }
     return parsePublishedNumber(nutriments[kcalKey]);
   }
   const energyKey = `energy_${suffix}`;
   if (!Object.prototype.hasOwnProperty.call(nutriments, energyKey)) {
     return { valid: true, value: null };
   }
-  const unit = normalizeUnit(firstPublished(nutriments, [
+  // The normalized energy alias is kJ even if energy_value was entered as kcal.
+  const unit = ["100g", "serving"].includes(suffix) ? "kj" : normalizeUnit(firstPublished(nutriments, [
     `energy_${suffix}_unit`,
     "energy_unit",
   ]));

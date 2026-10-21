@@ -1,0 +1,1781 @@
+{
+  "asOf": "2026-10-21",
+  "head": "5ad3fd785f874fe439e5b430259468ff809c1960",
+  "scope": "Original twenty captured grocery profiles; batch comparison, not certification of current packages.",
+  "units": {
+    "calories": "kcal",
+    "sodium": "mg",
+    "otherNutrients": "g"
+  },
+  "originalProviderSources": "Open Food Facts contributors (ODbL), USDA FoodData Central (CC0), existing manufacturer-attributed Chobani catalog. Original archives unchanged.",
+  "methodology": "Use original panels and existing approved energy-qualifier recovery. Compare only documented quantities. Do not mix label editions, infer density or treat bounds as exact.",
+  "officialSchema": "https://openfoodfacts.github.io/documentation/docs/Product-Opener/schemas/schemas/product_nutrition/",
+  "implementedCorrections": [
+    "OFF canonical _100g/_serving weight fields use schema grams; entered display units apply only to _value.",
+    "OFF canonical _100g/_serving energy alias uses kJ; entered energy units apply only to _value.",
+    "Entered energy-kcal_value honors its explicit unit and rejects unsupported units; canonical energy-kcal fields remain kcal.",
+    "The legacy Trace _100ml extension retains explicit-unit handling; its assessment capture agrees with logging and unknown generic energy units stay unknown."
+  ],
+  "finding": "Neither shared defect is responsible for the suspicious original twenty values: archived weight units are already grams and energy uses explicit kcal. No additional exact-product overrides justified by matched editions. Original nutrition and overall integers unchanged.",
+  "nutritionScoresBefore": 19,
+  "nutritionScoresAfter": 19,
+  "products": [
+    {
+      "name": "Coca-Cola Original Taste",
+      "barcode": "00049000000443",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0049000000443",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00049000000443",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0049000000443",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-05-09T18:13:38.000Z",
+        "retrievedAt": "2026-10-20T17:59:52.097Z"
+      },
+      "nameReturned": "Coca-Cola",
+      "brand": "Coca-Cola",
+      "package": "20 fl oz",
+      "serving": {
+        "description": "591 ml",
+        "amount": 591,
+        "unit": "ml",
+        "grams": null
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 250,
+        "protein": 0,
+        "carbohydrates": 63,
+        "fat": 0,
+        "sodium": 20,
+        "fiber": null,
+        "totalSugar": 63,
+        "addedSugar": null
+      },
+      "scoring": {
+        "calories": 42.3011844331641,
+        "addedSugar": 20.8333333333333,
+        "totalSugar": 10.6598984771574,
+        "saturatedFat": null,
+        "sodium": 3.3840947546531304,
+        "fiber": null,
+        "protein": 0,
+        "fat": 0,
+        "carbohydrates": 10.6598984771574
+      },
+      "score": 12,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": null,
+        "source": "https://www.coca-cola.com/us/en/brands/coca-cola/products/original?redirect=true",
+        "panel": {
+          "amount": 20,
+          "unit": "fl oz",
+          "nutrients": {
+            "calories": 240,
+            "saturatedFat": null,
+            "sodium": 75,
+            "fiber": null,
+            "protein": 0,
+            "totalSugar": 65,
+            "addedSugar": 65,
+            "fat": 0,
+            "carbohydrates": 65
+          }
+        },
+        "finding": "US 20 fl oz panel differs: 240 vs 250 kcal, 65 vs 63 g total sugar, 75 vs 20 mg sodium. Provider market is Guyana; added sugars contradict total sugars in assessment evidence. No US formulation substitution."
+      },
+      "before": {
+        "nutrition": 12,
+        "overall": 12
+      },
+      "after": {
+        "nutrition": 12,
+        "overall": 12
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Diet Coke",
+      "barcode": "00049000000450",
+      "provider": {
+        "id": "usda-fdc",
+        "recordId": "2743965",
+        "attribution": "USDA FoodData Central"
+      },
+      "source": {
+        "sourceUrl": "https://fdc.nal.usda.gov/food-details/2743965/nutrients",
+        "provider": "USDA FoodData Central",
+        "providerRecordId": "2743965",
+        "attribution": "USDA FoodData Central (public domain / CC0)",
+        "revisionDate": "2025-09-18T00:00:00.000Z",
+        "retrievedAt": "2026-10-20T17:59:53.054Z"
+      },
+      "nameReturned": "Diet Coke Bottle, 20 fl oz",
+      "brand": "Coca-Cola",
+      "package": "20.0 OZA",
+      "serving": {
+        "description": "1 Bottle",
+        "amount": 591,
+        "unit": "mlt",
+        "grams": null
+      },
+      "basis": "100g",
+      "logging": {
+        "calories": 0,
+        "protein": 0,
+        "carbohydrates": 0,
+        "fat": 0,
+        "sodium": 12,
+        "fiber": null,
+        "totalSugar": 0,
+        "addedSugar": 0
+      },
+      "score": null,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": null,
+        "source": "https://www.coca-cola.com/us/en/brands/diet-coke/products",
+        "panel": null,
+        "finding": "Available official text is the 12 fl oz can; selected observation is a 20 fl oz bottle. USDA serving unit mlt/reference dimension remains unresolved. Do not scale a different package or assume g/mL density."
+      },
+      "before": {
+        "nutrition": null,
+        "overall": null
+      },
+      "after": {
+        "nutrition": null,
+        "overall": null
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Kellogg's Frosted Flakes",
+      "barcode": "00038000196560",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0038000196560",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00038000196560",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0038000196560",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-03-04T15:28:10.000Z",
+        "retrievedAt": "2026-10-20T17:59:54.336Z"
+      },
+      "nameReturned": "Frosted flakes",
+      "brand": "Kellogg's",
+      "package": null,
+      "serving": {
+        "description": null,
+        "amount": null,
+        "unit": null,
+        "grams": null
+      },
+      "basis": "100g",
+      "logging": {
+        "calories": 351.35135135135,
+        "protein": 5.4054054054054,
+        "carbohydrates": 89.189189189189,
+        "fat": 0,
+        "sodium": 513.51351351352,
+        "fiber": 2.7027027027027,
+        "totalSugar": 32.432432432432,
+        "addedSugar": null
+      },
+      "scoring": {
+        "calories": 351.35135135135,
+        "addedSugar": null,
+        "totalSugar": 32.432432432432,
+        "saturatedFat": 0,
+        "sodium": 513.51351351352,
+        "fiber": 2.7027027027027,
+        "protein": 5.4054054054054,
+        "fat": 0,
+        "carbohydrates": 89.189189189189
+      },
+      "score": 36,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": "capture:2026-10-19:wk-frosted-flakes-16903a",
+        "source": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000196560",
+        "archivedEvidence": {
+          "id": "primary-capture:wk-frosted-flakes-16903a",
+          "locator": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000196560",
+          "sha256": "8eb5960b8199e8d41e7e3882510e36810c7441b1a2b17043c6672137de5bfd41"
+        },
+        "panel": {
+          "amount": 37,
+          "unit": "g",
+          "nutrients": {
+            "calories": 130,
+            "saturatedFat": 0,
+            "addedSugar": 12,
+            "totalSugar": 12,
+            "sodium": 190,
+            "fiber": 1,
+            "protein": 2,
+            "fat": 0,
+            "carbohydrates": 33
+          }
+        },
+        "finding": "Captured reference rescales to the manufacturer 37 g panel within representation precision; added sugars are absent rather than zero. Source has no captured package or serving metadata. No repeat of Teddy added-sugar basis error established."
+      },
+      "before": {
+        "nutrition": 36,
+        "overall": null
+      },
+      "after": {
+        "nutrition": 36,
+        "overall": null
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Kellogg's Rice Krispies",
+      "barcode": "00038000199929",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0038000199929",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00038000199929",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0038000199929",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-10-09T20:19:07.000Z",
+        "retrievedAt": "2026-10-20T17:59:55.263Z"
+      },
+      "nameReturned": "Rice Krispies",
+      "brand": "Kellogg's",
+      "package": "9 oz",
+      "serving": {
+        "description": "1.5 Cup (40 g)",
+        "amount": 40,
+        "unit": "ml",
+        "grams": null
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 150,
+        "protein": 3,
+        "carbohydrates": 36,
+        "fat": 0,
+        "sodium": 200,
+        "fiber": 0,
+        "totalSugar": 4,
+        "addedSugar": 4
+      },
+      "scoring": {
+        "calories": 375,
+        "addedSugar": 10,
+        "totalSugar": 10,
+        "saturatedFat": 0,
+        "sodium": 500,
+        "fiber": 0,
+        "protein": 7.5,
+        "fat": 0,
+        "carbohydrates": 90
+      },
+      "score": 42,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": "capture:2026-10-19:wk-rice-krispies-15973c",
+        "source": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000199929",
+        "archivedEvidence": {
+          "id": "primary-capture:wk-rice-krispies-15973c",
+          "locator": "https://smartlabel.wkkellogg.com/Product/Index?gtin=00038000199929",
+          "sha256": "19ed9013b577b127ea67915e5274503fe5414d32ed8838ee1a44e206716c5077"
+        },
+        "panel": {
+          "amount": 40,
+          "unit": "g",
+          "nutrients": {
+            "calories": 150,
+            "saturatedFat": 0,
+            "addedSugar": 4,
+            "totalSugar": 4,
+            "sodium": 200,
+            "fiber": 0,
+            "protein": 3,
+            "fat": 0,
+            "carbohydrates": 36
+          }
+        },
+        "finding": "All numeric 40 g panel values match. Provider text says 40 g but structured serving says 40 ml. Original manufacturer archive also flags package heading versus servings-per-container conflict. Preserve source conflict; do not silently rewrite serving dimension."
+      },
+      "before": {
+        "nutrition": 42,
+        "overall": 42
+      },
+      "after": {
+        "nutrition": 42,
+        "overall": 42
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Post Shredded Wheat Original Big Biscuit",
+      "barcode": "00884912180056",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0884912180056",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00884912180056",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0884912180056",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-05-18T02:00:00.000Z",
+        "retrievedAt": "2026-10-20T17:59:56.334Z"
+      },
+      "nameReturned": "Big Biscuit Shredded Wheat",
+      "brand": "Post",
+      "package": "15 oz",
+      "serving": {
+        "description": "2 biscuits (51 g)",
+        "amount": 51,
+        "unit": "g",
+        "grams": 51
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 180,
+        "protein": 6,
+        "carbohydrates": 41,
+        "fat": 1,
+        "sodium": 0,
+        "fiber": 7,
+        "totalSugar": 0,
+        "addedSugar": 0
+      },
+      "scoring": {
+        "calories": 352.941176470588,
+        "addedSugar": 0,
+        "totalSugar": 0,
+        "saturatedFat": 0,
+        "sodium": 0,
+        "fiber": 13.7254901960784,
+        "protein": 11.7647058823529,
+        "fat": 1.96078431372549,
+        "carbohydrates": 80.3921568627451
+      },
+      "score": 82,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": "capture:2026-10-19:post-big-biscuit-sbb101",
+        "source": "https://www.postconsumerbrands.com/brands/shredded-wheat/products/shredded-wheat-original-big-biscuit-cereal/",
+        "archivedEvidence": {
+          "id": "primary-capture:post-big-biscuit-sbb101",
+          "locator": "https://www.postconsumerbrands.com/brands/shredded-wheat/products/shredded-wheat-original-big-biscuit-cereal/",
+          "sha256": "f95c75e8d36a40e0e3abcead2a4a2033a9f60faebaeb747363adb33d160a8acc"
+        },
+        "panel": {
+          "amount": 51,
+          "unit": "g",
+          "nutrients": {
+            "calories": 170,
+            "saturatedFat": 0,
+            "addedSugar": 0,
+            "totalSugar": 0,
+            "sodium": 0,
+            "fiber": 7,
+            "protein": 6,
+            "fat": 1,
+            "carbohydrates": 41
+          }
+        },
+        "finding": "Manufacturer 170 vs captured 180 kcal per 51 g; other reported core values match. Manufacturer family page does not establish exact UPC/package/edition for replacement. Not a demonstrated kJ conversion defect."
+      },
+      "before": {
+        "nutrition": 82,
+        "overall": 82
+      },
+      "after": {
+        "nutrition": 82,
+        "overall": 82
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "FAGE Total 0% Plain Greek Yogurt",
+      "barcode": "00689544080008",
+      "provider": {
+        "id": "usda-fdc",
+        "recordId": "2757146",
+        "attribution": "USDA FoodData Central"
+      },
+      "source": {
+        "sourceUrl": "https://fdc.nal.usda.gov/food-details/2757146/nutrients",
+        "provider": "USDA FoodData Central",
+        "providerRecordId": "2757146",
+        "attribution": "USDA FoodData Central (public domain / CC0)",
+        "revisionDate": "2026-04-23T00:00:00.000Z",
+        "retrievedAt": "2026-10-20T17:59:57.254Z"
+      },
+      "nameReturned": "FAGE Total 0% Milkfat All Natural Nonfat Greek Strained Yogurt - 6 oz",
+      "brand": "Fage",
+      "package": null,
+      "serving": {
+        "description": "150 g",
+        "amount": 150,
+        "unit": "g",
+        "grams": 150
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 79.94999999999999,
+        "protein": 16.049999999999997,
+        "carbohydrates": 4.995,
+        "fat": 0,
+        "sodium": 55.050000000000004,
+        "fiber": 0,
+        "totalSugar": 4.995,
+        "addedSugar": null
+      },
+      "scoring": {
+        "calories": 53.3,
+        "addedSugar": null,
+        "totalSugar": 3.33,
+        "saturatedFat": 0,
+        "sodium": 36.7,
+        "fiber": 0,
+        "protein": 10.7,
+        "fat": 0,
+        "carbohydrates": 3.33
+      },
+      "score": 87,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": "capture:2026-10-19:fage-total0-150g",
+        "source": "https://usa.fage/nutrition",
+        "archivedEvidence": {
+          "id": "primary-capture:fage-total0-150g",
+          "locator": "https://usa.fage/nutrition",
+          "sha256": "56be6d8529575d8bc9fa91dffa847bf02b24234ac4c79baee81116fedc087882"
+        },
+        "panel": {
+          "amount": 150,
+          "unit": "g",
+          "nutrients": {
+            "calories": 80,
+            "saturatedFat": 0,
+            "addedSugar": 0,
+            "totalSugar": 5,
+            "sodium": 55,
+            "fiber": 0,
+            "protein": 16,
+            "fat": 0,
+            "carbohydrates": 5
+          }
+        },
+        "finding": "53.3 kcal/100 g and other reference decimals rescale to 79.95 kcal, 16.05 g protein, 55.05 mg sodium per 150 g, consistent with rounded 80/16/55. USDA title says 6 oz, selection was 5.3 oz; no exact edition match. Missing added sugars remain missing."
+      },
+      "before": {
+        "nutrition": 87,
+        "overall": 87
+      },
+      "after": {
+        "nutrition": 87,
+        "overall": 87
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Chobani Strawberry on the Bottom Greek Yogurt",
+      "barcode": "00894700010045",
+      "source": {
+        "source": "official-manufacturer",
+        "sourceId": "Chobani Nonfat Strawberry 5.3 oz",
+        "confidence": "manufacturer-and-secondary-match",
+        "label": "Manufacturer",
+        "catalogVersion": 1,
+        "catalogBatch": "yogurt-dairy-phase-1a",
+        "verification": {
+          "status": "complete",
+          "sourceType": "official-manufacturer",
+          "sourceUrl": "https://www.chobani.com/products/yogurt/greek/strawberry-cup",
+          "sourceReference": "Chobani Nonfat Strawberry 5.3 oz",
+          "accessedAt": "2026-09-03",
+          "secondarySources": [
+            {
+              "sourceType": "trusted-retailer",
+              "sourceUrl": "https://www.kroger.com/p/chobani-non-fat-strawberry-on-the-bottom-yogurt-5-3-oz/0089470001004",
+              "sourceReference": "Chobani Nonfat Strawberry 5.3 oz exact package, UPC, and Nutrition Facts",
+              "identifierSourceValue": "0089470001004",
+              "identifierNormalization": "Removed Kroger's two retailer-padding zeros and restored the UPC-A GS1 check digit.",
+              "accessedAt": "2026-09-03"
+            }
+          ]
+        },
+        "completeness": "complete",
+        "unknownNutrients": []
+      },
+      "nameReturned": "Nonfat Strawberry on the Bottom Greek Yogurt",
+      "brand": "Chobani",
+      "serving": {
+        "amount": 1,
+        "unit": "serving",
+        "description": "1 container (5.3 oz)",
+        "grams": 150
+      },
+      "logging": {
+        "calories": 110,
+        "protein": 11,
+        "carbohydrates": 15,
+        "fat": 0,
+        "sodium": 60,
+        "fiber": 1,
+        "totalSugar": 14,
+        "addedSugar": 9
+      },
+      "scoring": {
+        "calories": 110,
+        "addedSugar": 9,
+        "totalSugar": 14,
+        "saturatedFat": null,
+        "sodium": 60,
+        "fiber": 1,
+        "protein": 11,
+        "fat": 0,
+        "carbohydrates": 15
+      },
+      "score": 80,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": null,
+        "source": "https://www.chobani.com/products/yogurt/greek/strawberry-cup",
+        "panel": {
+          "amount": 150,
+          "unit": "g",
+          "nutrients": {
+            "calories": 110,
+            "saturatedFat": 0,
+            "sodium": 55,
+            "fiber": {
+              "qualifier": "less-than",
+              "value": 1,
+              "unit": "g",
+              "exactValue": null
+            },
+            "protein": 11,
+            "totalSugar": 14,
+            "addedSugar": 9,
+            "fat": 0,
+            "carbohydrates": 15
+          }
+        },
+        "finding": "Catalog reports 60 mg sodium and 1 g fiber; current manufacturer page reports 55 mg and <1 g. Other core values agree. Different dated source observations; <1 g is not an exact 1 g or zero. No forced replacement or scoring value invented."
+      },
+      "before": {
+        "nutrition": 80,
+        "overall": null
+      },
+      "after": {
+        "nutrition": 80,
+        "overall": null
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Quest Chocolate Chip Cookie Dough Protein Bar",
+      "barcode": "00888849000012",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0888849000012",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00888849000012",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0888849000012",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-10-09T18:21:58.000Z",
+        "retrievedAt": "2026-10-20T17:59:58.908Z"
+      },
+      "nameReturned": "Chocolate Chip Cookie Dough",
+      "brand": "Quest",
+      "package": "60g",
+      "serving": {
+        "description": "1 serving (60 g)",
+        "amount": 60,
+        "unit": "g",
+        "grams": 60
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 190,
+        "protein": 21,
+        "carbohydrates": 22,
+        "fat": 9,
+        "sodium": 0.22,
+        "fiber": 12,
+        "totalSugar": 1,
+        "addedSugar": 0
+      },
+      "scoring": {
+        "calories": 316.666666666667,
+        "addedSugar": 0,
+        "totalSugar": 1.66666666666667,
+        "saturatedFat": 5,
+        "sodium": 0.366666666666667,
+        "fiber": 20,
+        "protein": 35,
+        "fat": 15,
+        "carbohydrates": 36.6666666666667
+      },
+      "score": 54,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": null,
+        "source": "https://www.questnutrition.com/products/chocolate-chip-cookie-dough-protein-bar",
+        "panel": {
+          "amount": 60,
+          "unit": "g",
+          "nutrients": {
+            "calories": 190,
+            "saturatedFat": 3,
+            "sodium": 220,
+            "fiber": 12,
+            "protein": 21,
+            "totalSugar": 1,
+            "addedSugar": 0,
+            "fat": 9,
+            "carbohydrates": 22
+          }
+        },
+        "finding": "Provider itself contains 0.00022 g sodium/serving, correctly converted by Trace to 0.22 mg. Manufacturer says 220 mg. Ingredients differ (protein order, water/chocolate/salt and other list details), markets mix France/US, manufacturer box variants share the listed barcode. Clear source discrepancy, not a Trace g-to-mg error; no unverified cross-edition correction."
+      },
+      "before": {
+        "nutrition": 54,
+        "overall": 52
+      },
+      "after": {
+        "nutrition": 54,
+        "overall": 52
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Nature Valley Peanut Butter Dark Chocolate Protein Bars",
+      "barcode": "00016000457232",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0016000457232",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00016000457232",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0016000457232",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-09-28T17:17:24.000Z",
+        "retrievedAt": "2026-10-20T17:59:59.825Z"
+      },
+      "nameReturned": "Granola Nature Valley Marca Exclusiva Barra Mantequilla De Maní Chocolate",
+      "brand": "NATURE VALLEY MARCA EXCLUSIVA",
+      "package": "201 g",
+      "serving": {
+        "description": "1 bar (40 g)",
+        "amount": 40,
+        "unit": "g",
+        "grams": 40
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 197,
+        "protein": 10,
+        "carbohydrates": 15.2,
+        "fat": 12,
+        "sodium": 160,
+        "fiber": 6,
+        "totalSugar": 7.2,
+        "addedSugar": 5.2
+      },
+      "scoring": {
+        "calories": 492,
+        "addedSugar": 13,
+        "totalSugar": 18,
+        "saturatedFat": 8.8,
+        "sodium": 400,
+        "fiber": 15,
+        "protein": 25,
+        "fat": 30,
+        "carbohydrates": 38
+      },
+      "score": 19,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": null,
+        "source": "https://www.naturevalley.com/products/peanut-butter-dark-chocolate-protein-chewy-bars",
+        "panel": {
+          "amount": 40,
+          "unit": "g",
+          "nutrients": {
+            "calories": 190,
+            "saturatedFat": 3.5,
+            "sodium": 170,
+            "fiber": 6,
+            "protein": 10,
+            "totalSugar": 7,
+            "addedSugar": 5,
+            "fat": 12,
+            "carbohydrates": 15
+          }
+        },
+        "finding": "US 5-bar/7.1 oz family panel differs from captured Colombian 201 g record: 190 vs 197 kcal, 170 vs 160 mg sodium, 5 vs 5.2 g added sugar. Do not merge regional formulations."
+      },
+      "before": {
+        "nutrition": 19,
+        "overall": 19
+      },
+      "after": {
+        "nutrition": 19,
+        "overall": 19
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Dave's Killer Bread 100% Whole Wheat",
+      "barcode": "00013764027176",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0013764027176",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00013764027176",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0013764027176",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-06-06T04:00:29.000Z",
+        "retrievedAt": "2026-10-20T18:00:00.710Z"
+      },
+      "nameReturned": "organic bread",
+      "brand": "Dave's Killer Bread",
+      "package": "25 oz",
+      "serving": {
+        "description": "1 slice (42 g)",
+        "amount": 42,
+        "unit": "g",
+        "grams": 42
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 100,
+        "protein": 4,
+        "carbohydrates": 21,
+        "fat": 1.5,
+        "sodium": 160,
+        "fiber": 3,
+        "totalSugar": 4,
+        "addedSugar": 4
+      },
+      "scoring": {
+        "calories": 238.095238095238,
+        "addedSugar": 9.52380952380952,
+        "totalSugar": 9.52380952380952,
+        "saturatedFat": 0,
+        "sodium": 380.95238095238096,
+        "fiber": 7.14285714285714,
+        "protein": 9.52380952380952,
+        "fat": 3.57142857142857,
+        "carbohydrates": 50
+      },
+      "score": 68,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": "capture:2026-10-19:dkb-100ww-label",
+        "source": "https://images.squarespace-cdn.com/content/v1/5f44410f4070506a20db3f2b/830a7308-17e5-4dc1-907d-ecad5766d243/DKB%2B100%25%2BWW%2BNFP.jpg",
+        "archivedEvidence": {
+          "id": "primary-capture:dkb-100ww-label",
+          "locator": "https://images.squarespace-cdn.com/content/v1/5f44410f4070506a20db3f2b/830a7308-17e5-4dc1-907d-ecad5766d243/DKB%2B100%25%2BWW%2BNFP.jpg",
+          "sha256": "a23d4e7cfed6f6bc9eef867c02e946ecd3654896f18b90dc01f8ab2df0b4cccc"
+        },
+        "panel": {
+          "amount": 42,
+          "unit": "g",
+          "nutrients": {
+            "calories": 100,
+            "saturatedFat": 0,
+            "addedSugar": 4,
+            "totalSugar": 4,
+            "sodium": 160,
+            "fiber": 3,
+            "protein": 4,
+            "fat": 1.5,
+            "carbohydrates": 21
+          }
+        },
+        "finding": "Manufacturer 42 g panel matches captured nutrients, allowing per-100 g/serving decimal representation. No product correction justified. Generic provider name/category still does not independently prove the package formulation."
+      },
+      "before": {
+        "nutrition": 68,
+        "overall": 68
+      },
+      "after": {
+        "nutrition": 68,
+        "overall": 68
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Pepperidge Farm Farmhouse Hearty White Bread",
+      "barcode": "00014100070832",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0014100070832",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00014100070832",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0014100070832",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-05-20T22:38:05.000Z",
+        "retrievedAt": "2026-10-20T18:00:01.642Z"
+      },
+      "nameReturned": "Hearty White Bread",
+      "brand": "Pepperidge Farm Farmhouse",
+      "package": "24 oz (1.5 lbs) (680g)",
+      "serving": {
+        "description": "49.0g",
+        "amount": 49,
+        "unit": "g",
+        "grams": 49
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 114,
+        "protein": 4,
+        "carbohydrates": 26,
+        "fat": 1,
+        "sodium": 230,
+        "fiber": 1,
+        "totalSugar": 4,
+        "addedSugar": null
+      },
+      "scoring": {
+        "calories": 232.142857142857,
+        "addedSugar": 10.7142857142857,
+        "totalSugar": 8.16326530612245,
+        "saturatedFat": 0,
+        "sodium": 469.387755102041,
+        "fiber": 2.04081632653061,
+        "protein": 8.16326530612245,
+        "fat": 2.04081632653061,
+        "carbohydrates": 53.0612244897959
+      },
+      "score": 55,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": null,
+        "source": "https://www.pepperidgefarm.com/product/farmhouse-hearty-white-bread/",
+        "secondarySource": "https://www.heb.com/product-detail/pepperidge-farm-farmhouse-hearty-white-sliced-bread/387618",
+        "panel": null,
+        "finding": "Official response did not expose its Nutrition Facts. Existing secondary retailer label reports 130 kcal/49 g vs provider aggregate 114; provider added 5.25 g exceeds total 4 g and is already excluded. Competing packaging input panels were documented in prior energy audit. Full official edition not verified; retain conflict."
+      },
+      "before": {
+        "nutrition": 55,
+        "overall": 55
+      },
+      "after": {
+        "nutrition": 55,
+        "overall": 55
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Skippy Creamy Peanut Butter",
+      "barcode": "00037600110754",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0037600110754",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00037600110754",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0037600110754",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-08-27T15:44:26.000Z",
+        "retrievedAt": "2026-10-20T18:00:02.660Z"
+      },
+      "nameReturned": "Creamy Peanut Butter",
+      "brand": "Skippy",
+      "package": "16.3oz",
+      "serving": {
+        "description": "1 serving (32 g)",
+        "amount": 32,
+        "unit": "g",
+        "grams": 32
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 190,
+        "protein": 7.01,
+        "carbohydrates": 6.02,
+        "fat": 16,
+        "sodium": 150,
+        "fiber": 2,
+        "totalSugar": 3,
+        "addedSugar": 2
+      },
+      "scoring": {
+        "calories": 593.75,
+        "addedSugar": 6.25,
+        "totalSugar": 9.38,
+        "saturatedFat": 9.38,
+        "sodium": 468,
+        "fiber": 6.25,
+        "protein": 21.9,
+        "fat": 50,
+        "carbohydrates": 18.8
+      },
+      "score": 69,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": null,
+        "source": "https://www.peanutbutter.com/product/creamy-peanut-butter/",
+        "panel": {
+          "amount": 32,
+          "unit": "g",
+          "nutrients": {
+            "calories": 190,
+            "saturatedFat": 3,
+            "sodium": 150,
+            "fiber": 2,
+            "protein": 7,
+            "totalSugar": 3,
+            "addedSugar": 2,
+            "fat": 16,
+            "carbohydrates": 6
+          }
+        },
+        "finding": "Matches within provider reference/serving rounding (7.01 g protein, 6.02 g carbohydrate). No missing data filled or rescaling defect established."
+      },
+      "before": {
+        "nutrition": 69,
+        "overall": 69
+      },
+      "after": {
+        "nutrition": 69,
+        "overall": 69
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Blue Diamond Whole Natural Almonds",
+      "barcode": "00041570003831",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0041570003831",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00041570003831",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0041570003831",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2025-09-29T01:18:56.000Z",
+        "retrievedAt": "2026-10-20T18:00:03.675Z"
+      },
+      "nameReturned": "Almonds",
+      "brand": "Blue Diamond",
+      "package": "28 g",
+      "serving": {
+        "description": "1 serving (28.349 g)",
+        "amount": 28.349,
+        "unit": "g",
+        "grams": 28.349
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 160,
+        "protein": 6,
+        "carbohydrates": 6,
+        "fat": 14,
+        "sodium": 0,
+        "fiber": 3,
+        "totalSugar": 1,
+        "addedSugar": 0
+      },
+      "scoring": {
+        "calories": 564.393805777982,
+        "addedSugar": 0,
+        "totalSugar": 3.52746128611239,
+        "saturatedFat": 3.52746128611239,
+        "sodium": 0,
+        "fiber": 10.5823838583372,
+        "protein": 21.1647677166743,
+        "fat": 49.3844580055734,
+        "carbohydrates": 21.1647677166743
+      },
+      "score": 95,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": "capture:2026-10-19:blue-diamond-whole-natural",
+        "source": "https://www.bluediamond.com/brand/blue-diamond/snack-almonds/classic-flavors/whole-natural/",
+        "archivedEvidence": {
+          "id": "primary-capture:blue-diamond-whole-natural",
+          "locator": "https://www.bluediamond.com/brand/blue-diamond/snack-almonds/classic-flavors/whole-natural/",
+          "sha256": "77eba00da8f53e64ab881e98ada0654b4d06f39e795bea7027971211aaa3976a"
+        },
+        "panel": {
+          "amount": 28,
+          "unit": "g",
+          "nutrients": {
+            "calories": 160,
+            "saturatedFat": 1,
+            "addedSugar": 0,
+            "totalSugar": 1,
+            "sodium": 0,
+            "fiber": 3,
+            "protein": 6,
+            "fat": 14,
+            "carbohydrates": 6
+          }
+        },
+        "officialUpcSource": "https://smartlabel.bluediamond.com/041570003831-0002-en-US/index.html",
+        "finding": "Declared per-serving nutrient numbers agree with manufacturer 28 g panel, but provider uses 28.349 g (ounce conversion) and package 28 g instead of selected 6 oz. No invented package or serving replacement."
+      },
+      "before": {
+        "nutrition": 95,
+        "overall": 95
+      },
+      "after": {
+        "nutrition": 95,
+        "overall": 95
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Smart Ones Santa Fe Rice & Beans",
+      "barcode": "00025800023608",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0025800023608",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00025800023608",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0025800023608",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-05-18T17:54:22.000Z",
+        "retrievedAt": "2026-10-20T18:00:04.570Z"
+      },
+      "nameReturned": "SANTA FE RICE & BEANS",
+      "brand": "Smart Ones",
+      "package": "255 g",
+      "serving": {
+        "description": "1 package (255 g)",
+        "amount": 255,
+        "unit": "g",
+        "grams": 255
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 300,
+        "protein": 10,
+        "carbohydrates": 53,
+        "fat": 5,
+        "sodium": 681,
+        "fiber": 5.99,
+        "totalSugar": 5,
+        "addedSugar": 0
+      },
+      "scoring": {
+        "calories": 117.647058823529,
+        "addedSugar": 0,
+        "totalSugar": 1.96,
+        "saturatedFat": 0.98,
+        "sodium": 267,
+        "fiber": 2.34980392156863,
+        "protein": 3.92,
+        "fat": 1.96,
+        "carbohydrates": 20.8
+      },
+      "score": 75,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": "capture:2026-10-19:kraft-smart-ones-025800023608",
+        "source": "https://www.kraftheinz.com/smart-ones/products/00025800023608-santa-fe-rice-beans-with-zucchini-zesty-green-chile-sour-cream-sauce-mozzarella-cheese-frozen-meal",
+        "archivedEvidence": {
+          "id": "primary-capture:kraft-smart-ones-025800023608",
+          "locator": "https://www.kraftheinz.com/smart-ones/products/00025800023608-santa-fe-rice-beans-with-zucchini-zesty-green-chile-sour-cream-sauce-mozzarella-cheese-frozen-meal",
+          "sha256": "d0fdee12a139cde51c61ed3b71e831374e73cbec262e7eedd1d5bc4434c855f0"
+        },
+        "panel": {
+          "amount": 255,
+          "unit": "g",
+          "nutrients": {
+            "calories": 300,
+            "saturatedFat": 2.5,
+            "addedSugar": 0,
+            "totalSugar": 5,
+            "sodium": 680,
+            "fiber": 6,
+            "protein": 10,
+            "fat": 5,
+            "carbohydrates": 53
+          }
+        },
+        "finding": "Matches 255 g panel with provider reference rounding: sodium 681 vs 680 mg and minor nutrient decimal differences. Ingredient list is truncated. No numerical source correction justified."
+      },
+      "before": {
+        "nutrition": 75,
+        "overall": 75
+      },
+      "after": {
+        "nutrition": 75,
+        "overall": 75
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Stouffer's Classic Lasagna with Meat & Sauce",
+      "barcode": "00013800103215",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0013800103215",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00013800103215",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0013800103215",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-09-17T15:20:16.000Z",
+        "retrievedAt": "2026-10-20T18:00:05.539Z"
+      },
+      "nameReturned": "Classic Lasagna with Meat & Sauce",
+      "brand": "Stouffer's",
+      "package": "297g",
+      "serving": {
+        "description": "1 package (297 g)",
+        "amount": 297,
+        "unit": "g",
+        "grams": 297
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 360,
+        "protein": 22,
+        "carbohydrates": 40,
+        "fat": 12,
+        "sodium": 1010,
+        "fiber": 3,
+        "totalSugar": 7,
+        "addedSugar": 1
+      },
+      "scoring": {
+        "calories": 121.212121212121,
+        "addedSugar": 0.336700336700337,
+        "totalSugar": 2.35690235690236,
+        "saturatedFat": 2.02020202020202,
+        "sodium": 340.06734006734,
+        "fiber": 1.01010101010101,
+        "protein": 7.40740740740741,
+        "fat": 4.04040404040404,
+        "carbohydrates": 13.4680134680135
+      },
+      "score": 70,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": null,
+        "source": "https://www.goodnes.com/stouffers/",
+        "attemptedPanelUrls": [
+          "https://www.goodnes.com/stouffers/products/lasagna-with-meat-sauce/",
+          "https://www.goodnes.com/stouffers/products/lasagna-meat-sauce/"
+        ],
+        "panel": null,
+        "finding": "Exact 297 g Classic manufacturer panel not recovered from attempted official URLs. Keep captured Classic data separate from Meat Lovers screenshot; cannot certify current panel or substitute it."
+      },
+      "before": {
+        "nutrition": 70,
+        "overall": 70
+      },
+      "after": {
+        "nutrition": 70,
+        "overall": 70
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Oscar Mayer Classic Wieners",
+      "barcode": "00044700000632",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0044700000632",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00044700000632",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0044700000632",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-06-02T19:52:35.000Z",
+        "retrievedAt": "2026-10-20T18:00:06.474Z"
+      },
+      "nameReturned": "wieners",
+      "brand": "oscar mayer",
+      "package": "10 saucisses 16oz",
+      "serving": {
+        "description": "1 link (45 g)",
+        "amount": 45,
+        "unit": "g",
+        "grams": 45
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 120,
+        "protein": 5,
+        "carbohydrates": 1,
+        "fat": 10,
+        "sodium": 410,
+        "fiber": null,
+        "totalSugar": 1,
+        "addedSugar": 1
+      },
+      "scoring": {
+        "calories": 266.666666666667,
+        "addedSugar": 2.22222222222222,
+        "totalSugar": 2.22222222222222,
+        "saturatedFat": 6.66666666666667,
+        "sodium": 911.111111111111,
+        "fiber": null,
+        "protein": 11.1111111111111,
+        "fat": 22.2222222222222,
+        "carbohydrates": 2.22222222222222
+      },
+      "score": 25,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": "capture:2026-10-19:oscar-mayer-044700000632",
+        "source": "https://www.oscarmayer.com/products/00044700000632-classic-wieners-hot-dogs",
+        "archivedEvidence": {
+          "id": "primary-capture:oscar-mayer-044700000632",
+          "locator": "https://www.oscarmayer.com/products/00044700000632-classic-wieners-hot-dogs",
+          "sha256": "7b0cf2fa828b1d133a37381cc9ac0c9123c87cdb7b94e963ef3fa6d2e2ab2071"
+        },
+        "panel": {
+          "amount": 45,
+          "unit": "g",
+          "nutrients": {
+            "calories": 120,
+            "saturatedFat": 3.5,
+            "addedSugar": 0,
+            "totalSugar": 0,
+            "sodium": 430,
+            "fiber": 0,
+            "protein": 5,
+            "fat": 10,
+            "carbohydrates": 1
+          }
+        },
+        "finding": "Exact official UPC family panel: 3.5 vs captured 3 g saturated fat, 430 vs 410 mg sodium, total/added sugar 0 vs 1 g, fiber 0 vs missing. Other fields agree. Different ingredient declarations/editions remain unresolved; not a general unit conversion error."
+      },
+      "before": {
+        "nutrition": 25,
+        "overall": 24
+      },
+      "after": {
+        "nutrition": 25,
+        "overall": 24
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "SPAM Classic",
+      "barcode": "00037600138727",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0037600138727",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00037600138727",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0037600138727",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-09-23T21:42:26.000Z",
+        "retrievedAt": "2026-10-20T18:03:38.359Z"
+      },
+      "nameReturned": "SPAM Classic",
+      "brand": "SPAM",
+      "package": "12 oz (340 g)",
+      "serving": {
+        "description": "1 portion (56.699 g)",
+        "amount": 56.699,
+        "unit": "g",
+        "grams": 56.699
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 182,
+        "protein": 8.5,
+        "carbohydrates": 1.81,
+        "fat": 13.8,
+        "sodium": 1.36,
+        "fiber": 0,
+        "totalSugar": 0.737,
+        "addedSugar": null
+      },
+      "scoring": {
+        "calories": 321.428571428572,
+        "addedSugar": 1.78571428571429,
+        "totalSugar": 1.3,
+        "saturatedFat": 9.7,
+        "sodium": 2.4,
+        "fiber": 0,
+        "protein": 15,
+        "fat": 24.3,
+        "carbohydrates": 3.2
+      },
+      "score": 23,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": "Information updated on 20-Oct-2026",
+        "source": "https://smartlabel.hormelfoods.com/product-info/00037600138727",
+        "panel": {
+          "amount": 56,
+          "unit": "g",
+          "nutrients": {
+            "calories": 180,
+            "saturatedFat": 6,
+            "sodium": 770,
+            "fiber": 0,
+            "protein": 7,
+            "totalSugar": 1,
+            "addedSugar": 1,
+            "fat": 16,
+            "carbohydrates": 1
+          }
+        },
+        "finding": "Exact UPC manufacturer panel differs substantially: 770 mg sodium/56 g vs provider 1.36 mg/56.699 g, 16 vs 13.8 g fat, 6 vs about 5.5 g saturated fat, 7 vs 8.5 g protein. Provider raw sodium is 0.00136 g, not 1.36 g. Multiplying by 1000 would give 1360 mg, not this label. Mixed markets, different serving/panel/recipe; no safe blanket repair."
+      },
+      "before": {
+        "nutrition": 23,
+        "overall": 22
+      },
+      "after": {
+        "nutrition": 23,
+        "overall": 22
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Cheez-It Original",
+      "barcode": "00024100106851",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0024100106851",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00024100106851",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0024100106851",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-05-31T17:45:06.000Z",
+        "retrievedAt": "2026-10-20T18:00:08.601Z"
+      },
+      "nameReturned": "Original Baked Snack Crackers",
+      "brand": "Cheez-It",
+      "package": "12.4oz",
+      "serving": {
+        "description": "27 crackers (30 g)",
+        "amount": 30,
+        "unit": "g",
+        "grams": 30
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 150,
+        "protein": 3,
+        "carbohydrates": 17,
+        "fat": 8.01,
+        "sodium": 230,
+        "fiber": 0.999,
+        "totalSugar": 0,
+        "addedSugar": 0
+      },
+      "scoring": {
+        "calories": 500,
+        "addedSugar": 0,
+        "totalSugar": 0,
+        "saturatedFat": 5,
+        "sodium": 768,
+        "fiber": 3.33,
+        "protein": 10,
+        "fat": 26.7,
+        "carbohydrates": 56.7
+      },
+      "score": 19,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": "Direct opened edition NLI 16025b, 2024-11-06; search rendering NLI 19535, 2026-09-09",
+        "source": "https://smartlabel.kelloggs.com/Product/Index/00024100106851",
+        "panel": {
+          "amount": 30,
+          "unit": "g",
+          "nutrients": {
+            "calories": 150,
+            "saturatedFat": 1.5,
+            "sodium": 230,
+            "fiber": {
+              "qualifier": "less-than",
+              "value": 1,
+              "unit": "g",
+              "exactValue": null
+            },
+            "protein": 3,
+            "totalSugar": 0,
+            "addedSugar": 0,
+            "fat": 8,
+            "carbohydrates": 17
+          }
+        },
+        "finding": "Direct official opened edition agrees at 230 mg sodium/17 g carbohydrate but declares fiber <1 g; provider has 0.999 g, not proven exact. Search rendering exposes another official edition at 200 mg/18 g. Do not pick an edition by desired score."
+      },
+      "before": {
+        "nutrition": 19,
+        "overall": 19
+      },
+      "after": {
+        "nutrition": 19,
+        "overall": 19
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "OREO Original",
+      "barcode": "00044000060114",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0044000060114",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00044000060114",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0044000060114",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-10-19T17:22:47.000Z",
+        "retrievedAt": "2026-10-20T18:03:49.527Z"
+      },
+      "nameReturned": "Chocolate Sandwich Cookies",
+      "brand": "Oreo",
+      "package": "13.29 oz",
+      "serving": {
+        "description": "3 cookies (34 g)",
+        "amount": 34,
+        "unit": "g",
+        "grams": 34
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 160,
+        "protein": 1,
+        "carbohydrates": 25,
+        "fat": 7,
+        "sodium": 130,
+        "fiber": 1,
+        "totalSugar": 14,
+        "addedSugar": 13
+      },
+      "scoring": {
+        "calories": 470.588235294118,
+        "addedSugar": 38.2352941176471,
+        "totalSugar": 41.1764705882353,
+        "saturatedFat": 5.88235294117647,
+        "sodium": 382.352941176471,
+        "fiber": 2.94117647058824,
+        "protein": 2.94117647058824,
+        "fat": 20.5882352941176,
+        "carbohydrates": 73.5294117647059
+      },
+      "score": 12,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": "2024-07-05",
+        "source": "https://smartlabel.mondelez.info/044000060114-0003-en-US/index.html",
+        "nutritionSource": "https://smartlabel.mondelez.info/044000060114-0003-en-US/7b6cc06a-082b-4805-911a-d6a6a64d407e-nutrition.html",
+        "panel": {
+          "amount": 34,
+          "unit": "g",
+          "nutrients": {
+            "calories": 160,
+            "saturatedFat": 2,
+            "sodium": 130,
+            "fiber": {
+              "qualifier": "less-than",
+              "value": 1,
+              "unit": "g",
+              "exactValue": null
+            },
+            "protein": 1,
+            "totalSugar": 14,
+            "addedSugar": 13,
+            "fat": 7,
+            "carbohydrates": 25
+          }
+        },
+        "finding": "Exact UPC 13.29 oz/34 g panel agrees on core values and 13 g added sugars; fiber is <1 g, not exact provider 1 g. Original energy qualifiers and competing packaging panels retained. No new exact fiber value fabricated."
+      },
+      "before": {
+        "nutrition": 12,
+        "overall": 12
+      },
+      "after": {
+        "nutrition": 12,
+        "overall": 12
+      },
+      "correctionApplied": false
+    },
+    {
+      "name": "Lay's Classic Potato Chips",
+      "barcode": "00028400199148",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0028400199148",
+        "attribution": "Open Food Facts contributors"
+      },
+      "source": {
+        "sourceUrl": "https://world.openfoodfacts.org/product/00028400199148",
+        "provider": "Open Food Facts",
+        "providerRecordId": "0028400199148",
+        "attribution": "Open Food Facts contributors; database licensed under ODbL",
+        "revisionDate": "2026-05-25T20:55:28.000Z",
+        "retrievedAt": "2026-10-20T18:04:00.497Z"
+      },
+      "nameReturned": "Classic",
+      "brand": "Lay's",
+      "package": "8 OZ (226.8 g)",
+      "serving": {
+        "description": "15 chips (28 g)",
+        "amount": 28,
+        "unit": "g",
+        "grams": 28
+      },
+      "basis": "serving",
+      "logging": {
+        "calories": 160,
+        "protein": 2,
+        "carbohydrates": 15,
+        "fat": 10,
+        "sodium": 140,
+        "fiber": 1,
+        "totalSugar": 1,
+        "addedSugar": 0
+      },
+      "scoring": {
+        "calories": 571.428571428572,
+        "addedSugar": 0,
+        "totalSugar": 3.57142857142857,
+        "saturatedFat": 5.35714285714286,
+        "sodium": 500,
+        "fiber": 3.57142857142857,
+        "protein": 7.14285714285714,
+        "fat": 35.7142857142857,
+        "carbohydrates": 53.5714285714286
+      },
+      "score": 32,
+      "manufacturerComparison": {
+        "verifiedOn": "2026-10-21",
+        "edition": "2025-09-05",
+        "source": "https://smartlabel.pepsico.info/028400199148-0047-en-US/index.html",
+        "nutritionSource": "https://smartlabel.pepsico.info/028400199148-0047-en-US/dcab6ae5-1f29-4490-bb11-c8bbb7ae2da9-nutrition.html",
+        "panel": {
+          "amount": 28,
+          "unit": "g",
+          "nutrients": {
+            "calories": 160,
+            "saturatedFat": 1.5,
+            "sodium": 140,
+            "fiber": 1,
+            "protein": 2,
+            "totalSugar": {
+              "qualifier": "less-than",
+              "value": 1,
+              "unit": "g",
+              "exactValue": null
+            },
+            "addedSugar": null,
+            "fat": 10,
+            "carbohydrates": 15
+          }
+        },
+        "finding": "Exact UPC 8 oz/28 g panel agrees on calories, saturated fat, sodium, fiber and protein. Manufacturer total sugar is <1 g, not exact provider 1 g; added sugar is not significant, not an invented exact value. Do not replace with zero."
+      },
+      "before": {
+        "nutrition": 32,
+        "overall": 32
+      },
+      "after": {
+        "nutrition": 32,
+        "overall": 32
+      },
+      "correctionApplied": false
+    }
+  ],
+  "sourceArtifacts": [
+    {
+      "file": "artifacts/grocery-nutrition-batch-20261021/quest.html",
+      "sha256": "b82b15e7b18660186439e9460b99e1509811f9168bc49d95fc2d77509f7bcfc4"
+    },
+    {
+      "file": "artifacts/grocery-nutrition-batch-20261021/spam.html",
+      "sha256": "73aea1441beb6cd88a5a08864d76fb3b36b9a5d5f65710e9462a6387941da94b"
+    },
+    {
+      "file": "artifacts/grocery-nutrition-batch-20261021/pepperidge.html",
+      "sha256": "b2d924bd16d7faf11039be4e8b7fc14fd21bc1c527765f198061320b9457302b"
+    },
+    {
+      "file": "artifacts/grocery-nutrition-batch-20261021/oreo.html",
+      "sha256": "16bc26b796aed16a9a01f618550a0d0d7348b3033a4bba70c48061960f3bb866"
+    },
+    {
+      "file": "artifacts/grocery-nutrition-batch-20261021/lays.html",
+      "sha256": "d125b5e7e3d260b482c967978f29446203d36ace6dd4e0c56f8884d64fbeaad8"
+    },
+    {
+      "file": "artifacts/grocery-nutrition-batch-20261021/oreo-nutrition.html",
+      "sha256": "b70a9871cc7e53a72eaa37863009cb7b3085dd053c2f9e97025c21f53fb19c5a"
+    },
+    {
+      "file": "artifacts/grocery-nutrition-batch-20261021/lays-nutrition.html",
+      "sha256": "76e07dee74fed4f71449e603b4c3cbde1992d15155fc3f194b67503f0db04b13"
+    }
+  ],
+  "limitations": [
+    "17 manufacturer nutrient-panel comparisons, one secondary-only comparison, two incomplete exact-package comparisons; not 17 independently verified UPC/formulation matches.",
+    "Manufacturer bounds and source/edition conflicts remain explicit. No conditional manufacturer score is substituted for a captured product score.",
+    "No application storage, historical records, grading math, additive policy or runtime provider requests added. Existing Teddy correction remains separate and unchanged."
+  ],
+  "implementationReview": {
+    "date": "2026-10-21",
+    "originalRegressionExamples": [
+      {
+        "type": "constructed fixture",
+        "field": "sodium_100g",
+        "raw": 0.5,
+        "schemaUnit": "g",
+        "enteredUnit": "mg",
+        "enteredValue": 500,
+        "serving": "30 g",
+        "nutrient": "sodium",
+        "previous": 0.15,
+        "corrected": 150,
+        "expectedReference": {
+          "amount": 100,
+          "unit": "g",
+          "value": 500,
+          "nutrientUnit": "mg"
+        },
+        "expectedPer30g": 150
+      },
+      {
+        "type": "constructed fixture",
+        "field": "sodium_100g",
+        "raw": 0.5,
+        "schemaUnit": "g",
+        "enteredUnit": "mcg",
+        "enteredValue": 500000,
+        "serving": "30 g",
+        "nutrient": "sodium",
+        "previous": 0.00015,
+        "corrected": 150,
+        "expectedReference": {
+          "amount": 100,
+          "unit": "g",
+          "value": 500,
+          "nutrientUnit": "mg"
+        },
+        "expectedPer30g": 150
+      },
+      {
+        "type": "constructed fixture",
+        "field": "energy_100g",
+        "raw": 502.08,
+        "schemaUnit": "kJ",
+        "enteredUnit": "kcal",
+        "enteredValue": 120,
+        "serving": "30 g",
+        "nutrient": "calories",
+        "previous": 150.624,
+        "corrected": 35.99999999999999,
+        "expectedReference": {
+          "amount": 100,
+          "unit": "g",
+          "value": 120,
+          "nutrientUnit": "kcal"
+        },
+        "expectedPer30g": 36
+      }
+    ],
+    "normalizedReplayCount": 20,
+    "rawNutrientGatewayAndAssessmentReplayCount": 12,
+    "rawReplayQualification": "Original raw nutrient/serving fields plus category/market/identity metadata rejoined from the same archived normalized lookup; not a full original HTTP response.",
+    "normalizedOnlyProfiles": [
+      "Coca-Cola Original Taste",
+      "Diet Coke",
+      "FAGE Total 0% Plain Greek Yogurt",
+      "Chobani Strawberry on the Bottom Greek Yogurt",
+      "Blue Diamond Whole Natural Almonds",
+      "Stouffer's Classic Lasagna with Meat & Sauce",
+      "Cheez-It Original",
+      "Lay's Classic Potato Chips"
+    ],
+    "unchangedScoreExplanation": "All 17 OFF captures use gram entered weight units and explicit kcal fields. Two USDA records and one local catalog record bypass OFF normalization. Assessment canonical units and scoring inputs were already correct. No captured nutrient values or scoring rules changed.",
+    "fieldSemantics": {
+      "weightCanonical": "_100g/_serving: grams for the supported weight nutrients only",
+      "energyCanonical": "energy/energy-kj: kJ; energy-kcal: kcal",
+      "entered": "_value: declared unit, never blindly treated as a normalized field",
+      "legacy": "_100ml is a Trace compatibility extension, not a canonical OFF field; explicit units preserved, generic energy without units remains unknown"
+    },
+    "suspectProfiles": [
+      {
+        "name": "Quest Chocolate Chip Cookie Dough Protein Bar",
+        "loggingSodiumMg": 0.22,
+        "nutrition": 54,
+        "overall": 52,
+        "confidence": "Foreign or multi-market record: this assesses only its supplied nutrition profile. The exact US formulation is not independently verified.",
+        "excluded": [],
+        "manufacturerSodiumMismatchRuntimeWarning": false
+      },
+      {
+        "name": "SPAM Classic",
+        "loggingSodiumMg": 1.36,
+        "nutrition": 23,
+        "overall": 22,
+        "confidence": "Foreign or multi-market record: this assesses only its supplied nutrition profile. The exact US formulation is not independently verified.",
+        "excluded": [
+          "addedSugar"
+        ],
+        "manufacturerSodiumMismatchRuntimeWarning": false
+      }
+    ],
+    "formPath": "Constructed provider fixture -> actual lookupRemoteBarcode (mocked provider HTTP only) -> scanner review -> Use This Food -> Nutrition form -> append/read/reopen/update with test memory storage. Correct sodium: 150 mg/serving, 300 mg/two, 75 mg/half. Original observations and entered units retained; historical synthetic entry unchanged.",
+    "requiredCommitFiles": [
+      "api/nutrition/_barcodeGateway.cjs",
+      "api/nutrition/_assessmentInputs.cjs",
+      "src/services/remoteBarcodeGateway.test.js",
+      "src/services/barcodeNutritionDataAudit.test.js",
+      "docs/grocery-nutrition-data-audit-2026-10-21.json",
+      "docs/remote-barcode-lookup.md"
+    ],
+    "publicGrade": null,
+    "publicScoreReady": false
+  }
+}

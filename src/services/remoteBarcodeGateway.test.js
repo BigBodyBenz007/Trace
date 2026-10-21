@@ -8,10 +8,76 @@ const {
   normalizeUsdaFood,
 } = require("../../api/nutrition/_barcodeGateway.cjs");
 const { normalizeRemoteFood } = require("./remoteFoodModel");
+const { getAssessmentDatasetNutrients } = require("./nutritionAssessmentInputs");
 
 const BARCODE = "00000000000000";
 const OTHER_BARCODE = "00012000001291";
 const NOW = Date.parse("2026-09-03T12:00:00.000Z");
+
+test.each(["mg", "mcg"])("normalized OFF weight fields do not inherit entered %s units", enteredUnit => {
+  const product = offProduct();
+  Object.assign(product.nutriments, {
+    sodium_100g: 0.5, sodium_unit: enteredUnit,
+    sodium_value: enteredUnit === "mg" ? 500 : 500000,
+    sugars_100g: 10, sugars_unit: "mg", sugars_value: 10000,
+  });
+  const original = JSON.stringify(product);
+  const food = normalizeOpenFoodFactsProduct(product, BARCODE, new Date(NOW).toISOString());
+  expect(food.nutrients.sodium).toBeCloseTo(150, 10);
+  expect(food.nutrients.totalSugar).toBeCloseTo(3, 10);
+  const reference = food.assessmentInputs.datasets.find(d => d.id === "off-100g");
+  expect(reference.observations.find(o => o.nutrient === "sodium")).toMatchObject({
+    rawValue: 0.5, rawUnit: "g", enteredUnit,
+  });
+  expect(JSON.stringify(product)).toBe(original);
+});
+
+test("normalized OFF energy is kJ even when the contributor entered kcal", () => {
+  const product = offProduct();
+  delete product.nutriments["energy-kcal_100g"];
+  Object.assign(product.nutriments, { energy_100g: 502.08, energy_unit: "kcal", energy_value: 120 });
+  const food = normalizeOpenFoodFactsProduct(product, BARCODE, new Date(NOW).toISOString());
+  expect(food.nutrients.calories).toBeCloseTo(36, 10);
+});
+
+test.each([
+  ['normalized kcal', '100g', { 'energy-kcal_100g': 120, 'energy-kcal_unit': 'kJ' }, 36],
+  ['normalized kJ alias', '100g', { energy_100g: 502.08, energy_unit: 'kcal' }, 36],
+  ['entered kcal alias', 'value', { energy_value: 120, energy_unit: 'kcal' }, 36],
+  ['entered kJ alias', 'value', { energy_value: 502.08, energy_unit: 'kJ' }, 36],
+  ['entered energy-kcal with kJ unit', 'value', { 'energy-kcal_value': 502.08, 'energy-kcal_unit': 'kJ' }, 36],
+  ['unsupported entered energy unit', 'value', { 'energy-kcal_value': 120, 'energy-kcal_unit': 'unknown' }, null],
+])('OFF energy semantics stay distinct: %s', (_, suffix, energy, expected) => {
+  const nutriments = { ...energy, [`proteins_${suffix}`]: 4, [`carbohydrates_${suffix}`]: 20, [`fat_${suffix}`]: 3 };
+  const food = normalizeOpenFoodFactsProduct(offProduct({ nutriments }), BARCODE, new Date(NOW).toISOString());
+  expect(food.nutrients.calories).toEqual(expected === null ? null : expect.any(Number));
+  expect(food.nutrients.calories === null ? null : Number(food.nutrients.calories.toFixed(8))).toBe(expected);
+});
+
+test('legacy explicit _100ml fields retain their prior units; they are not canonical OFF _100g fields', () => {
+  const food = normalizeOpenFoodFactsProduct(offProduct({
+    nutrition_data_per: '100ml', serving_size: '250 mL', serving_quantity: 250, serving_quantity_unit: 'ml',
+    nutriments: { energy_100ml: 40, energy_100ml_unit: 'kcal',
+      sodium_100ml: 20, sodium_100ml_unit: 'mg', proteins_100ml: 1, fat_100ml: 1, carbohydrates_100ml: 8 },
+  }), BARCODE, new Date(NOW).toISOString());
+  expect(food.nutrients.calories).toBe(100);
+  expect(food.nutrients.sodium).toBe(50);
+  const dataset = food.assessmentInputs.datasets.find(d => d.id === 'off-100ml');
+  expect(getAssessmentDatasetNutrients(dataset).calories.value).toBe(40);
+  expect(getAssessmentDatasetNutrients(dataset).sodium.value).toBe(20);
+  expect(dataset.observations.find(o => o.nutrient === 'sodium'))
+    .toMatchObject({ rawValue: 20, rawUnit: 'mg', unitSource: 'provider' });
+});
+
+test('legacy generic _100ml energy without a declared unit remains unknown in both paths', () => {
+  const food = normalizeOpenFoodFactsProduct(offProduct({
+    nutrition_data_per: '100ml', serving_size: '250 mL', serving_quantity: 250, serving_quantity_unit: 'ml',
+    nutriments: { energy_100ml: 40, proteins_100ml: 1, fat_100ml: 1, carbohydrates_100ml: 8 },
+  }), BARCODE, new Date(NOW).toISOString());
+  expect(food.nutrients.calories).toBeNull();
+  const dataset = food.assessmentInputs.datasets.find(d => d.id === 'off-100ml');
+  expect(getAssessmentDatasetNutrients(dataset).calories.value).toBeNull();
+});
 
 function headers(values = {}) {
   const normalized = Object.fromEntries(

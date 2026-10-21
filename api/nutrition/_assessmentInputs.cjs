@@ -131,9 +131,15 @@ function offDatasets(record) {
       const standardUnit = key === "energy-kcal" ? "kcal"
         : ["energy", "energy-kj"].includes(key) ? "kJ" : "g";
       const explicit = nutrients[`${field}_unit`];
-      const unit = suffix === "value" ? explicit ?? enteredUnit : standardUnit;
+      // Canonical OFF _100g/_serving fields have schema units. Trace's older
+      // _100ml compatibility fields retain explicit units, as in the gateway;
+      // do not apply canonical OFF semantics to this differently defined field.
+      const schemaUnit = ["100g", "serving"].includes(suffix);
+      const legacyDefault = suffix === "100ml" && key !== "energy" ? standardUnit : null;
+      const unit = schemaUnit ? standardUnit : explicit ?? enteredUnit ?? legacyDefault;
       observations.push(observation(nutrient, nutrients[field], unit, `nutriments.${field}`, {
-        unitSource: suffix === "value" ? (unit == null ? "unknown" : "provider") : "provider-schema",
+        unitSource: schemaUnit || (legacyDefault && explicit == null && enteredUnit == null)
+          ? "provider-schema" : unit == null ? "unknown" : "provider",
         enteredUnit,
         derivation: offEnergyDerivation(nutrients, key, suffix),
       }));
