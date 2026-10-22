@@ -36,6 +36,37 @@ test('development without explicit opt-in retains original review', async () => 
   await lookup(); expect(screen.queryByLabelText('Experimental nutrition rating')).not.toBeInTheDocument();
 });
 
+test('compact review has a single fixed action set, readable name and collapsed secondary nutrition', async () => {
+  const archive = require('../services/__fixtures__/manufacturerProviderLookups.json');
+  const result = archive.observations.find(row => row.request.body.barcode === '888849000012').response;
+  dialog(jest.fn(async () => result));
+  const article = await lookup('888849000012', { timeout: 5000 });
+  expect(within(article).getByRole('heading')).toHaveTextContent('Quest · Chocolate Chip Cookie Dough Protein Bar');
+  expect(screen.getByRole('button', { name: 'Use This Food' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: 'Scan Again' })).toBeEnabled();
+  expect(within(article).queryByRole('button', { name: 'Use This Food' })).not.toBeInTheDocument();
+  expect(screen.getAllByRole('button', { name: 'Return to Food Search' })).toHaveLength(1);
+  expect(within(article).getByText('220 mg')).not.toBeVisible();
+  fireEvent.click(screen.getByText('More nutrition & provider details'));
+  expect(within(article).getByText('220 mg')).toBeVisible();
+  expect(screen.getByLabelText('Score evidence scope')).toHaveTextContent('manufacturer label');
+  expect(screen.getByLabelText('Manufacturer label correction')).not.toBeVisible();
+});
+
+test('incomplete development review preserves disabled saving and specific fixed-footer recovery', async () => {
+  const raw = barcodeGradingRecord();
+  Object.keys(raw.nutriments).filter(key => key.startsWith('carbohydrates')).forEach(key => delete raw.nutriments[key]);
+  const incomplete = normalizeOpenFoodFactsProduct(raw, BARCODE, RETRIEVED_AT);
+  dialog(jest.fn(async () => ({ status: 'incomplete', identifier, food: incomplete })));
+  await lookup();
+  expect(screen.getByRole('button', { name: 'Use This Food' })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Complete This Food' })).toBeEnabled();
+  expect(screen.getByText('Needed to log: carbohydrates per serving.')).toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Complete This Food' }));
+  expect(screen.getByRole('button', { name: 'Save Barcode Food' })).toBeInTheDocument();
+  expect(screen.getByLabelText('Carbohydrates (g)')).toHaveValue(null);
+});
+
 test('the reviewed almond profile shows overall and separate nutrition without opening evidence', () => {
   const archive = require('../../docs/barcode-grading-grocery-pilot-2026-10-20/results.json');
   const row = archive.observations.find(r => r.barcode === '00041570003831');
@@ -130,6 +161,9 @@ test('actual Teddy uses its reviewed manufacturer sugars, retains provider data 
   expect(screen.getByLabelText('Possible overall range')).toHaveTextContent('16–20/100');
   expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('Honey · 10 oz');
   expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('7 g per 30 g');
+  expect(opening).toHaveTextContent('Reference overall score');
+  expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('score compares the full manufacturer reference');
+  expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('New entries retain other provider values');
   expect(details).toHaveTextContent('Original provider added sugars: 2.1 g per 30 g');
   expect(screen.getByLabelText('Manufacturer label comparison')).not.toHaveAttribute('open');
   expect(c.selection.nutrients.addedSugar).toBe(7);
@@ -160,7 +194,7 @@ test.each(['development', 'production'])('manufacturer correction reaches review
   await lookup(archive.barcode, { timeout: 5000 });
   expect(screen.queryByLabelText('Experimental overall rating')?.textContent || null).toBe(environment === 'development' ? '20/100' : null);
   expect(Boolean(screen.queryByLabelText('Experimental nutrition assessment'))).toBe(environment === 'development');
-  expect(screen.queryByLabelText('Manufacturer label correction')?.textContent.includes('new food entries use this value') || false).toBe(environment === 'development');
+  expect(screen.queryByLabelText('Score evidence scope')?.textContent.includes('other values from provider') || false).toBe(environment === 'development');
   expect(within(screen.getByRole('article', { name: 'Barcode product review' })).getAllByText('7 g')).toHaveLength(2);
   fireEvent.click(screen.getByRole('button', { name: 'Use This Food' }));
   const selected = onUseFood.mock.calls[0][0];

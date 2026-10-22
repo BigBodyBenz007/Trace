@@ -2,6 +2,21 @@
 const list = values => values.length < 3 ? values.join(' and ')
   : `${values.slice(0, -1).join(', ')}, and ${values[values.length - 1]}`;
 
+// Display only. The raw provider name/brand remain in source details and records.
+// Prefer the readable identity from an already-applicable verified correction.
+export function getBarcodeReviewName(candidate) {
+  const identity = candidate.display.nutritionCorrection?.manufacturerPanel?.identity;
+  const rawName = identity?.name || candidate.display.name || 'Food';
+  const key = text => text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+  const parts = rawName.split(/,\s*/).filter(Boolean);
+  const name = parts.filter((part, index) => !parts.slice(0, index).some(previous => key(previous) === key(part))).join(', ');
+  const readable = name === name.toUpperCase() && /[A-Z]/.test(name)
+    ? name.toLowerCase().replace(/\b[a-z]/g, letter => letter.toUpperCase()) : name;
+  const brand = (identity?.brand || candidate.display.brand || '').replace(/,?\s+(?:LLC|Inc\.?|Ltd\.?)$/i, '').trim();
+  return !brand || key(readable).startsWith(key(brand) + ' ') || key(readable) === key(brand)
+    ? readable : `${brand} · ${readable}`;
+}
+
 // Presentation only: rank guaranteed, actually applied point contributions.
 // No new nutrient thresholds, estimated values or scoring calculations.
 export function getNutritionHighlights(result) {

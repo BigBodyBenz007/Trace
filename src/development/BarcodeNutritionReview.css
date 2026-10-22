@@ -20,3 +20,12 @@
 .trace-barcode-dialog--grading #trace-barcode-description, .trace-barcode-dialog--grading .trace-barcode-dialog__camera, .trace-barcode-dialog--grading .trace-barcode-dialog__manual, .trace-barcode-dialog--grading .trace-barcode-dialog__status { display: none; }
 .trace-barcode-dialog--grading .trace-barcode-dialog__header { padding-top: 12px; padding-bottom: 6px; }
 .trace-barcode-dialog--grading .trace-barcode-dialog__header h2 { font-size: 20px; }
+.trace-barcode-dialog--grading .trace-barcode-dialog__product { margin-top: 6px; padding: 12px; }
+.trace-barcode-dialog--grading .trace-barcode-dialog__product h3 { font-size: 1.1rem; line-height: 1.35; text-align: left; }
+.trace-barcode-dialog--grading .trace-barcode-dialog__eyebrow { display: none; }
+.trace-barcode-dialog--grading .trace-barcode-grade { font-size: 0.875rem; line-height: 1.4; }
+.trace-barcode-dialog--grading .trace-barcode-dialog__product > .trace-barcode-dialog__nutrients { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.trace-barcode-dialog--grading .trace-barcode-dialog__nutrients dt { font-size: 0.75rem; text-transform: none; }
+.trace-barcode-dialog__nutrition-details { font-size: 0.9rem; line-height: 1.4; margin: 8px 0; }
+.trace-barcode-dialog__nutrition-details summary { cursor: pointer; min-height: 36px; align-content: center; }
+.trace-barcode-dialog__nutrition-details a { color: inherit; text-decoration: underline; }

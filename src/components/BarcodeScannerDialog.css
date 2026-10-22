@@ -39,6 +39,7 @@
 }
 
 .trace-barcode-dialog__header {
+  flex-shrink: 0;
   align-items: start;
   display: flex;
   gap: 16px;
@@ -264,6 +265,31 @@
 
 .trace-barcode-dialog__footer button {
   width: 100%;
+}
+
+.trace-barcode-dialog--review .trace-barcode-dialog__footer .trace-barcode-dialog__review-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.trace-barcode-dialog--review .trace-barcode-dialog__secondary-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.trace-barcode-dialog--review .trace-barcode-dialog__secondary-actions button {
+  background: transparent;
+  border-color: transparent;
+  font-size: 0.88rem;
+  padding: 6px;
+}
+
+.trace-barcode-dialog__footer p {
+  font-size: 0.9rem;
+  line-height: 1.4;
+  margin: 0 0 8px;
 }
 
 .trace-barcode-dialog--reduced-motion,

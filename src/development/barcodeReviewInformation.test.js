@@ -1,4 +1,14 @@
-import { explainNutritionPoints, getNutritionHighlights, getBarcodeAdditiveInformation } from './barcodeReviewInformation';
+import { explainNutritionPoints, getNutritionHighlights, getBarcodeAdditiveInformation, getBarcodeReviewName } from './barcodeReviewInformation';
+
+test('readable review names deduplicate provider repetition without dropping distinct variants', () => {
+  const display = { name: 'CHOCOLATE CHIP COOKIE DOUGH PROTEIN BAR, CHOCOLATE CHIP COOKIE DOUGH PROTEIN BAR', brand: 'Example, LLC' };
+  expect(getBarcodeReviewName({ display })).toBe('Example · Chocolate Chip Cookie Dough Protein Bar');
+  expect(display.name).toContain(', CHOCOLATE');
+  expect(getBarcodeReviewName({ display: { name: 'SPAM Classic', brand: 'SPAM' } })).toBe('SPAM Classic');
+  expect(getBarcodeReviewName({ display: { name: 'Yogurt, Strawberry', brand: 'Example' } })).toContain('Strawberry');
+  expect(getBarcodeReviewName({ display: { name: 'りんご, みかん', brand: '' } })).toBe('りんご, みかん');
+  expect(getBarcodeReviewName({ display: { ...display, nutritionCorrection: { manufacturerPanel: { identity: { name: 'Honey Graham Snacks', brand: 'Example' } } } } })).toBe('Example · Honey Graham Snacks');
+});
 
 const point = (min, max = min) => ({ min, max });
 const result = points => ({ nutritionScore100: 64, methodCategory: 'general', points });

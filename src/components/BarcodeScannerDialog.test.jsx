@@ -464,8 +464,9 @@ test("unsafe reference-only nutrition stays incomplete and recovery leaves label
 
   const review = await screen.findByRole("article", { name: "Barcode product review" });
   expect(review).toHaveTextContent(/did not supply enough compatible serving data/i);
-  expect(within(review).getByRole("button", { name: "Use This Food" })).toBeDisabled();
-  fireEvent.click(within(review).getByRole("button", { name: "Complete This Food" }));
+  expect(screen.getByRole("button", { name: "Use This Food" })).toBeDisabled();
+  expect(screen.getByRole('button', { name: 'Scan Again' })).toBeEnabled();
+  fireEvent.click(screen.getByRole("button", { name: "Complete This Food" }));
   expect(screen.getByLabelText("Calories")).toHaveValue(null);
   expect(screen.getByLabelText("Protein (g)")).toHaveValue(null);
   expect(screen.getByLabelText("Serving unit")).toHaveValue("custom");

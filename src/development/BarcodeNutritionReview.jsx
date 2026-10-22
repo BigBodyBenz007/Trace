@@ -5,6 +5,7 @@ import { explainNutritionPoints, getNutritionHighlights, getBarcodeAdditiveInfor
 import { assessAdditiveProfile, assessOverallFoodQuality } from './traceOverallFoodQuality';
 import './BarcodeNutritionReview.css';
 export { assessLookupForGrading } from './barcodeAssessmentFallback';
+export { getBarcodeReviewName } from './barcodeReviewInformation';
 
 export default function BarcodeNutritionReview({ candidate, identifier }) {
   const assessment = assessBarcodeNutrition(candidate, identifier);
@@ -17,12 +18,12 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
   const combined = overall.overallScore100;
   const factors = getNutritionHighlights(assessment.result);
   const market = assessment.evidence.market?.status;
-  const confidence = reviewedLabel ? replacement ? 'Manufacturer label checked; package revision unconfirmed.' : 'Sugar facts checked; package revision unconfirmed.' : market === 'unknown' ? 'Product market is unknown.'
+  const confidence = reviewedLabel ? 'Package revision unconfirmed.' : market === 'unknown' ? 'Product market is unknown.'
     : market === 'foreign-or-multi-market' ? 'Multi-market record; US formulation unconfirmed.' : 'US formulation unconfirmed.';
   return <section className="trace-barcode-grade" aria-label="Experimental nutrition assessment">
     <div aria-label="Opening score summary">
       <div className="trace-barcode-grade__headline"><strong aria-label={combined == null ? 'Experimental nutrition rating' : 'Experimental overall rating'} data-unavailable={score == null}>{score == null ? 'Score unavailable' : <>{combined ?? score}<small>/100</small></>}</strong>
-        <span>{score == null ? 'Assessment unavailable' : combined == null ? 'Nutrition only' : 'Overall score'}<small>Development preview</small>{overall.provisional && <small aria-label="Provisional overall score">Provisional</small>}</span></div>
+        <span>{score == null ? 'Assessment unavailable' : combined == null ? 'Nutrition only' : reviewedLabel && !replacement ? 'Reference overall score' : 'Overall score'}<small>Development preview</small>{overall.provisional && <small aria-label="Provisional overall score">Provisional</small>}</span></div>
       {factors.length > 0 && <ul aria-label="Main nutrition factors">{factors.map(factor => <li key={factor.key}>{factor.text}</li>)}</ul>}
       <p aria-label="Overall assessment status">{score == null ? assessment.reasons[0] || 'Nutrition information is incomplete.'
         : combined == null ? 'Nutrition-only. Additive information is needed for an overall score.'
@@ -30,13 +31,21 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
       {overall.deductions.length > 0 && <p aria-label="Additive deduction reasons">{overall.deductions.slice(0, 2).map(item => item.summary).join(' ')}{overall.deductions.length > 2 && ' More additive notes in details.'}</p>}
       <p className="trace-barcode-grade__confidence">{overall.provisional && 'Additive review incomplete. '}{confidence}</p>
     </div>
+    {reviewedLabel && <p aria-label="Score evidence scope">
+      {replacement ? <>Nutrition &amp; ingredients: <a href={reviewedLabel.source.url} target="_blank" rel="noreferrer">manufacturer label</a>.</>
+        : <>Score: manufacturer reference. Logging: <a href={reviewedLabel.source.url} target="_blank" rel="noreferrer">corrected sugars</a>; other values from provider.</>}
+    </p>}
+    {assessment.result?.sugarMode === 'totalSugar'
+      && (assessment.result.normalized.originalNutrients?.addedSugar == null || assessment.result.excludedNutrients?.includes('addedSugar'))
+      && <p aria-label="Sugar basis note">Added sugars unavailable or unusable; score uses total sugars.</p>}
+    <details aria-label="Score details & limitations"><summary>Score details &amp; limitations</summary>
     {reviewedLabel && <p aria-label="Manufacturer label correction">
       {replacement ? <>{reviewedLabel.identity.name}. Full nutrition panel and ingredients use the <a href={reviewedLabel.source.url} target="_blank" rel="noreferrer">US manufacturer label</a> ({reviewedLabel.serving.description}).
         {' '}Package revision unconfirmed; original provider facts are retained.</>
         : <>Honey · 10 oz. Added sugars corrected to 7 g per 30 g using the <a href={reviewedLabel.source.url} target="_blank" rel="noreferrer">manufacturer label</a>.
-          {' '}Review, score and new food entries use this value; original provider values remain in source details.</>}
+          {' '}The score compares the full manufacturer reference. New entries retain other provider values, which are not independently verified.</>}
     </p>}
-    <details aria-label="Score details & limitations"><summary>Score details &amp; limitations</summary>
+      <p>Original product name: {candidate.display.name}. Brand: {candidate.display.brand || 'Unknown'}.</p>
       {candidate.display.sourceSelection && <p aria-label="Source selection evidence">
         {candidate.display.sourceSelection.reason} Original: {candidate.display.sourceSelection.preferred.food?.name || 'No usable record'}.
         {' '}Provider checks: {candidate.display.sourceSelection.providerAttempts.map(entry => `${entry.provider}: ${entry.status}`).join('; ') || 'Cached evidence only'}.
