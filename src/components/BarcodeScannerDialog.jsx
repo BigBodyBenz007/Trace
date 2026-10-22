@@ -178,7 +178,9 @@ export default function BarcodeScannerDialog({
 
     let result;
     try {
-      result = await barcodeLookup.lookup(barcode);
+      result = grading
+        ? await barcodeLookup.lookup(barcode, { assess: grading.assessLookupForGrading })
+        : await barcodeLookup.lookup(barcode);
     } catch (error) {
       result = { status: "unavailable", identifier: { scheme: "gtin", value: barcode }, food: null };
     }
@@ -199,7 +201,7 @@ export default function BarcodeScannerDialog({
     acceptedBarcodeRef.current = false;
     setMessage("");
     setErrorMessage(LOOKUP_MESSAGES[result?.status] || LOOKUP_MESSAGES.unavailable);
-  }, [barcodeLookup, releaseCamera]);
+  }, [barcodeLookup, releaseCamera, grading]);
   submitBarcodeRef.current = submitBarcode;
 
   const startCamera = useCallback(async ({

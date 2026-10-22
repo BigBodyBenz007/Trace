@@ -1,0 +1,3651 @@
+{
+  "head": "8fd1803291f073b5c2b6d3bdb9ab817cae876c48",
+  "evaluated": 27,
+  "transportErrors": 4,
+  "interpretation": "Each complete live gateway alternative is independently assessed through the existing candidate and scoring functions, without catalog precedence, nutrient/ingredient splicing or identity promotion. Captures are normalized gateway evidence, not raw upstream USDA search responses. Comparison identifies candidate evidence only; the shared fallback must validate identity and select records.",
+  "products": [
+    {
+      "barcode": "00038000196560",
+      "name": "Frosted flakes",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:46:33.153Z",
+      "httpStatus": 200,
+      "status": "incomplete",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0038000196560",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Frosted flakes",
+        "brand": "Kellogg's",
+        "package": null,
+        "serving": {
+          "description": null,
+          "amount": null,
+          "unit": null,
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": 36,
+        "overall": null,
+        "causes": [
+          "missing-ingredient-declaration"
+        ]
+      },
+      "candidate": {
+        "logReady": false,
+        "nutrition": 36,
+        "overall": null,
+        "overallStatus": "nutrition-only",
+        "nutritionReasons": [],
+        "overallReasons": [
+          "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+          "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+        ],
+        "causes": [
+          "missing-ingredient-declaration"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "United States"
+              ]
+            }
+          ],
+          "status": "provider-reported-us",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:plant-based-foods-and-beverages",
+                "en:plant-based-foods",
+                "en:breakfasts",
+                "en:cereals-and-potatoes",
+                "en:cereals-and-their-products",
+                "en:breakfast-cereals",
+                "en:flakes",
+                "en:cereal-flakes",
+                "en:extruded-cereals",
+                "en:extruded-flakes",
+                "en:corn-flakes"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Corn flakes"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0038000196560",
+          "url": "https://world.openfoodfacts.org/product/00038000196560",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-03-04T15:28:10.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:46:34.155Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1772638090
+            }
+          ]
+        },
+        "ingredients": {
+          "text": null,
+          "language": null
+        },
+        "nutrients": {
+          "calories": null,
+          "protein": null,
+          "carbohydrates": null,
+          "fat": null,
+          "sodium": null,
+          "fiber": null,
+          "totalSugar": null,
+          "addedSugar": null
+        }
+      }
+    },
+    {
+      "barcode": "00894700010045",
+      "name": "Nonfat Strawberry on the Bottom Greek Yogurt",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:46:37.473Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "usda-fdc",
+        "recordId": "2756974",
+        "attribution": "USDA FoodData Central"
+      },
+      "product": {
+        "name": "Chobani Strawberry on the Bottom Non- Fat Greek Yogurt",
+        "brand": "Chobani",
+        "package": null,
+        "serving": {
+          "description": "150 g",
+          "amount": 150,
+          "unit": "g",
+          "grams": 150
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "packaged-food",
+        "nutrition": 80,
+        "overall": null,
+        "causes": [
+          "missing-ingredient-declaration"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "Saturated fat is missing or unsupported.",
+          "Unmeasured components can change the numerical score."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Unreviewed ingredient phrase: cultured nonfat milk",
+          "Unreviewed ingredient phrase: cane sugar",
+          "Unreviewed ingredient phrase: strawberries",
+          "Unreviewed ingredient phrase: fruit pectin",
+          "Unreviewed ingredient phrase: guar gum",
+          "Unreviewed ingredient phrase: fruit",
+          "Unreviewed ingredient phrase: vegetable juice concentrate",
+          "Unreviewed ingredient phrase: for color",
+          "Unreviewed ingredient phrase: locust bean gum",
+          "Unreviewed ingredient phrase: lemon juiceingre concentrate",
+          "Unreviewed ingredient phrase: 6 live",
+          "Unreviewed ingredient phrase: active cultures: s thermophilus",
+          "Unreviewed ingredient phrase: l",
+          "Unreviewed ingredient phrase: rhamnosus",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities."
+        ],
+        "causes": [
+          "missing-saturated-fat-or-fat-quality"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "marketCountry",
+              "values": [
+                "United States"
+              ]
+            }
+          ],
+          "status": "provider-reported-us",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "foodCategory",
+              "values": [
+                "Milk/Milk Substitutes"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "usda-fdc",
+          "recordId": "2756974",
+          "url": "https://fdc.nal.usda.gov/food-details/2756974/nutrients",
+          "attribution": "USDA FoodData Central (public domain / CC0)",
+          "revisionDate": null,
+          "publicationDate": "2026-04-23T00:00:00.000Z",
+          "retrievedAt": "2026-10-22T00:46:37.165Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "publishedDate",
+              "value": "2026-04-23"
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "Cultured Nonfat Milk, Cane Sugar, Strawberries, Water, Fruit Pectin, Natural Flavors, Guar Gum, Fruit and Vegetable Juice Concentrate (for Color), Locust Bean Gum, Lemon Juiceingre Concentrate, 6 Live and Active Cultures: S. Thermophilus, L. Bulgaricus, L. Acidophilus, Bifidus, L. Casei, and L, Rhamnosus.",
+          "language": null
+        },
+        "nutrients": {
+          "calories": 109.94999999999999,
+          "protein": 10.995000000000001,
+          "carbohydrates": 16.049999999999997,
+          "fat": 0,
+          "sodium": 64.94999999999999,
+          "fiber": 1.0005000000000002,
+          "totalSugar": 9,
+          "addedSugar": null
+        }
+      }
+    },
+    {
+      "barcode": "0815154023269",
+      "name": "REIGN Total Body Fuel White Gummy Bear",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:46:41.806Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "usda-fdc",
+        "recordId": "2604285",
+        "attribution": "USDA FoodData Central"
+      },
+      "product": {
+        "name": "WHITE GUMMY BEAR ENERGY DRINK",
+        "brand": "Energy Beverages LLC",
+        "package": null,
+        "serving": {
+          "description": "1 can",
+          "amount": 473,
+          "unit": "ml",
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "energy-source-conflict",
+          "invalid-or-conflicting-nutrient"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "Saturated fat is missing or unsupported.",
+          "Unmeasured components can change the numerical score."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Unreviewed ingredient phrase: sodium citrate",
+          "Unreviewed ingredient phrase: l leucine",
+          "Unreviewed ingredient phrase: l isoleucine",
+          "Unreviewed ingredient phrase: l valine",
+          "Unreviewed ingredient phrase: preservative",
+          "Unreviewed ingredient phrase: potassium citrate",
+          "Unreviewed ingredient phrase: acesulfame potassium",
+          "Unreviewed ingredient phrase: vit b3",
+          "Unreviewed ingredient phrase: magnesium lactate",
+          "Unreviewed ingredient phrase: coenzyme q 10",
+          "Unreviewed ingredient phrase: vit b6",
+          "Unreviewed ingredient phrase: cyanocobalamin",
+          "Unreviewed ingredient phrase: vit b12",
+          "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+          "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch.",
+          "Sucralose: Processing-dependent assessment unresolved: the captured declaration does not establish prolonged heating conditions.",
+          "Sodium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+          "Potassium sorbate: Current integrated scientific assessment not completed in this batch."
+        ],
+        "causes": [
+          "missing-saturated-fat-or-fat-quality"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "marketCountry",
+              "values": [
+                "United States"
+              ]
+            }
+          ],
+          "status": "provider-reported-us",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "beverage"
+          ],
+          "providerClaims": [
+            {
+              "field": "foodCategory",
+              "values": [
+                "Sport Drinks"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace beverage comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "usda-fdc",
+          "recordId": "2604285",
+          "url": "https://fdc.nal.usda.gov/food-details/2604285/nutrients",
+          "attribution": "USDA FoodData Central (public domain / CC0)",
+          "revisionDate": "2023-06-23T00:00:00.000Z",
+          "publicationDate": "2023-07-13T00:00:00.000Z",
+          "retrievedAt": "2026-10-22T00:46:41.603Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "modifiedDate",
+              "value": "2023-06-23"
+            },
+            {
+              "field": "publishedDate",
+              "value": "2023-07-13"
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "CARBONATED WATER, CITRIC ACID, SODIUM CITRATE, NATURAL FLAVORS, L-LEUCINE, CAFFEINE, L-ISOLEUCINE, L-VALINE, SUCRALOSE, SODIUM BENZOATE (PRESERVATIVE), POTASSIUM CITRATE, POTASSIUM SORBATE (PRESERVATIVE), ACESULFAME POTASSIUM, NIACINAMIDE (VIT. B3), MAGNESIUM LACTATE, COENZYME Q-10, PYRIDOXINE HYDROCHLORIDE (VIT. B6), CYANOCOBALAMIN (VIT. B12)",
+          "language": null
+        },
+        "nutrients": {
+          "calories": 9.46,
+          "protein": 0,
+          "carbohydrates": 2.9799,
+          "fat": 0,
+          "sodium": 198.66000000000003,
+          "fiber": null,
+          "totalSugar": 0,
+          "addedSugar": 0
+        }
+      }
+    },
+    {
+      "barcode": "07834608",
+      "name": "Ginger Ale",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:46:46.109Z",
+      "httpStatus": 200,
+      "status": "incomplete",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "07834608",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Ginger Ale",
+        "brand": "Schweppes",
+        "package": null,
+        "serving": {
+          "description": null,
+          "amount": null,
+          "unit": null,
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "unknown-or-incompatible-basis"
+        ]
+      },
+      "candidate": {
+        "logReady": false,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "A known compatible mass or volume measurement basis is missing; no density is assumed."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Provider identity E150a is not corroborated in the available declaration.",
+          "Unreviewed ingredient phrase: preservative",
+          "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+          "Sodium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+          "Caramel color (class unspecified): No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+          "E150a: Presence evidence conflicts or is not corroborated."
+        ],
+        "causes": [
+          "unknown-or-incompatible-basis"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "United States"
+              ]
+            }
+          ],
+          "status": "provider-reported-us",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "beverage"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:beverages-and-beverages-preparations",
+                "en:beverages",
+                "en:non-alcoholic-beverages",
+                "en:carbonated-drinks",
+                "en:soft-drinks",
+                "en:sodas"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Sodas"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace beverage comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "07834608",
+          "url": "https://world.openfoodfacts.org/product/07834608",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-19T17:45:30.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:46:45.932Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792431930
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "carbonated water, high fructose corn syrup, citric acid, sodium benzoate (preservative), caramel color, natural flavors.",
+          "language": "en"
+        },
+        "nutrients": {
+          "calories": null,
+          "protein": null,
+          "carbohydrates": null,
+          "fat": null,
+          "sodium": null,
+          "fiber": null,
+          "totalSugar": null,
+          "addedSugar": null
+        }
+      }
+    },
+    {
+      "barcode": "5449000335159",
+      "name": "Coca-Cola Zero",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:46:50.626Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "5449000335159",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Coca-Cola Zero",
+        "brand": "Coca-Cola",
+        "package": null,
+        "serving": {
+          "description": "450 ml",
+          "amount": 450,
+          "unit": "ml",
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "missing-saturated-fat-or-fat-quality",
+          "missing-sugars",
+          "missing-ingredient-declaration"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "Added sugars and total sugars are missing or unsupported.",
+          "Saturated fat is missing or unsupported.",
+          "Unmeasured components can change the numerical score."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+        ],
+        "causes": [
+          "missing-saturated-fat-or-fat-quality",
+          "missing-sugars",
+          "missing-ingredient-declaration"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:kazakhstan",
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "Kazakhstan, United States"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "beverage"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:beverages-and-beverages-preparations",
+                "en:beverages",
+                "en:non-alcoholic-beverages",
+                "en:artificially-sweetened-beverages",
+                "en:carbonated-drinks",
+                "en:soft-drinks",
+                "en:diet-beverages",
+                "en:sodas",
+                "en:colas",
+                "en:diet-sodas",
+                "en:carbonated-soft-drinks-without-fruit-juice",
+                "en:carbonated-soft-drink-without-fruit-juice-without-sugar-and-with-artificial-sweeteners",
+                "en:diet-cola-soft-drink"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Carbonated soft drink without fruit juice without sugar and with artificial sweeteners, Diet cola soft drink"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace beverage comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "5449000335159",
+          "url": "https://world.openfoodfacts.org/product/5449000335159",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-19T07:50:36.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:46:50.869Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792396236
+            }
+          ]
+        },
+        "ingredients": {
+          "text": null,
+          "language": null
+        },
+        "nutrients": {
+          "calories": 0.9,
+          "protein": 0,
+          "carbohydrates": 0,
+          "fat": 0,
+          "sodium": 0,
+          "fiber": null,
+          "totalSugar": null,
+          "addedSugar": null
+        }
+      }
+    },
+    {
+      "barcode": "0860439001005",
+      "name": "Vintage Cola",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:46:54.937Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "usda-fdc",
+        "recordId": "2584828",
+        "attribution": "USDA FoodData Central"
+      },
+      "product": {
+        "name": "VINTAGE COLA SPARKLING SODA, COLA",
+        "brand": "Olipop",
+        "package": null,
+        "serving": {
+          "description": "1 Can (355 mL)",
+          "amount": 355,
+          "unit": "ml",
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "missing-saturated-fat-or-fat-quality",
+          "no-supported-ingredient-review"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "Saturated fat is missing or unsupported.",
+          "Unmeasured components can change the numerical score."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Unreviewed ingredient phrase: olismart",
+          "Unreviewed ingredient phrase: cassava root fiber",
+          "Unreviewed ingredient phrase: chicory root inulin",
+          "Unreviewed ingredient phrase: jerusalem artichoke inulin",
+          "Unreviewed ingredient phrase: nopal cactus",
+          "Unreviewed ingredient phrase: calendula flower",
+          "Unreviewed ingredient phrase: kudzu root",
+          "Unreviewed ingredient phrase: marshmallow root",
+          "Unreviewed ingredient phrase: slippery elm bark",
+          "Unreviewed ingredient phrase: cassava root syrup",
+          "Unreviewed ingredient phrase: apple juice concentrate",
+          "Unreviewed ingredient phrase: lime juice",
+          "Unreviewed ingredient phrase: natural cola",
+          "Unreviewed ingredient phrase: alpinia galanga root",
+          "Unreviewed ingredient phrase: stevia leaf",
+          "Unreviewed ingredient phrase: himalayan pink salt",
+          "Unreviewed ingredient phrase: green tea",
+          "Unreviewed ingredient phrase: natural vanilla",
+          "Unreviewed ingredient phrase: natural caramel",
+          "Unreviewed ingredient phrase: cinnamon",
+          "Unreviewed ingredient phrase: extract",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+          "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch."
+        ],
+        "causes": [
+          "missing-saturated-fat-or-fat-quality"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "marketCountry",
+              "values": [
+                "United States"
+              ]
+            }
+          ],
+          "status": "provider-reported-us",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "beverage"
+          ],
+          "providerClaims": [
+            {
+              "field": "foodCategory",
+              "values": [
+                "Other Drinks"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace beverage comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "usda-fdc",
+          "recordId": "2584828",
+          "url": "https://fdc.nal.usda.gov/food-details/2584828/nutrients",
+          "attribution": "USDA FoodData Central (public domain / CC0)",
+          "revisionDate": "2023-05-23T00:00:00.000Z",
+          "publicationDate": "2023-06-29T00:00:00.000Z",
+          "retrievedAt": "2026-10-22T00:46:54.609Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "modifiedDate",
+              "value": "2023-05-23"
+            },
+            {
+              "field": "publishedDate",
+              "value": "2023-06-29"
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "CARBONATED WATER, OLISMART (CASSAVA ROOT FIBER, CHICORY ROOT INULIN, JERUSALEM ARTICHOKE INULIN, NOPAL CACTUS*, CALENDULA FLOWER*, KUDZU ROOT*, MARSHMALLOW ROOT*, SLIPPERY ELM BARK*), CASSAVA ROOT SYRUP, APPLE JUICE CONCENTRATE, LIME JUICE, ORGANIC NATURAL COLA FLAVOR, ALPINIA GALANGA ROOT*, STEVIA LEAF*, HIMALAYAN PINK SALT, GREEN TEA CAFFEINE*, NATURAL VANILLA FLAVOR, NATURAL CARAMEL FLAVOR, CINNAMON*, *EXTRACT",
+          "language": null
+        },
+        "nutrients": {
+          "calories": 35.5,
+          "protein": 0,
+          "carbohydrates": 16.010499999999997,
+          "fat": 0,
+          "sodium": 24.849999999999998,
+          "fiber": 8.875,
+          "totalSugar": 1.988,
+          "addedSugar": null
+        }
+      }
+    },
+    {
+      "barcode": "0678963100206",
+      "name": "Guarana antarctica",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:46:59.252Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0678963100206",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Guarana antarctica",
+        "brand": "Antarctica",
+        "package": null,
+        "serving": {
+          "description": "1 can (355 g)",
+          "amount": 355,
+          "unit": "g",
+          "grams": 355
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "unknown-or-incompatible-basis"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "A known compatible mass or volume measurement basis is missing; no density is assumed."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Provider identity E150a is not corroborated in the available declaration.",
+          "Unreviewed ingredient phrase: preservatives",
+          "Unreviewed ingredient phrase: guarana extract",
+          "This declaration language has only limited phrase matching; declaration review remains partial.",
+          "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+          "Sodium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+          "Potassium sorbate: Current integrated scientific assessment not completed in this batch.",
+          "Caramel color (class unspecified): No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+          "E150a: Presence evidence conflicts or is not corroborated."
+        ],
+        "causes": [
+          "unknown-or-incompatible-basis"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:france",
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "France, États-Unis"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "beverage"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:beverages-and-beverages-preparations",
+                "en:beverages",
+                "en:non-alcoholic-beverages",
+                "en:carbonated-drinks",
+                "en:soft-drinks",
+                "en:sodas"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Sodas"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace beverage comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0678963100206",
+          "url": "https://world.openfoodfacts.org/product/0678963100206",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-18T20:37:31.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:46:59.267Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792355851
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "Carbonated water, sugar, citric acid, natural flavor, preservatives (sodium benzoate, potassium sorbate), guarana extract, caramel color.",
+          "language": "fr"
+        },
+        "nutrients": {
+          "calories": 355,
+          "protein": 0,
+          "carbohydrates": 92.3,
+          "fat": 0,
+          "sodium": 106,
+          "fiber": null,
+          "totalSugar": 92.3,
+          "addedSugar": 92.3
+        }
+      }
+    },
+    {
+      "barcode": "0021136181364",
+      "name": "Blueberry sparkling water",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:03.559Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0021136181364",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Blueberry sparkling water",
+        "brand": "Too Chico",
+        "package": null,
+        "serving": {
+          "description": "12 oz",
+          "amount": 340.1942775,
+          "unit": "g",
+          "grams": 340.1942775
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "unknown-or-incompatible-basis",
+          "no-supported-ingredient-review"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "A known compatible mass or volume measurement basis is missing; no density is assumed."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Unreviewed ingredient phrase: filtered carbonated water",
+          "Unreviewed ingredient phrase: blueberry juice from concentrate",
+          "Unreviewed ingredient phrase: hibiscus extract",
+          "Unreviewed ingredient phrase: magnesium chloride",
+          "Unreviewed ingredient phrase: potassium chloride",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+          "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+          "Potassium sorbate: Current integrated scientific assessment not completed in this batch.",
+          "Sodium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation."
+        ],
+        "causes": [
+          "unknown-or-incompatible-basis",
+          "no-supported-ingredient-review"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "United States"
+              ]
+            }
+          ],
+          "status": "provider-reported-us",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "beverage"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:beverages-and-beverages-preparations",
+                "en:plant-based-foods-and-beverages",
+                "en:beverages",
+                "en:fruit-based-foods-and-beverages",
+                "en:non-alcoholic-beverages",
+                "en:plant-based-beverages",
+                "en:carbonated-drinks",
+                "en:fruit-based-beverages",
+                "en:soft-drinks",
+                "en:sodas",
+                "en:fruit-sodas",
+                "en:sodas-with-exotic-fruits"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Sodas with exotic fruits"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace beverage comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0021136181364",
+          "url": "https://world.openfoodfacts.org/product/0021136181364",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-18T15:54:03.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:47:03.633Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792338843
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "Filtered carbonated water, blueberry juice from concentrate, hibiscus extract, natural flavors, citric acid, potassium sorbate, sodium benzoate, magnesium chloride, potassium chloride.",
+          "language": "en"
+        },
+        "nutrients": {
+          "calories": 34,
+          "protein": 0,
+          "carbohydrates": 3.4,
+          "fat": 0,
+          "sodium": 102,
+          "fiber": 0,
+          "totalSugar": 0,
+          "addedSugar": 0
+        }
+      }
+    },
+    {
+      "barcode": "8901764112263",
+      "name": "Coke Zero",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:07.870Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "8901764112263",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Coke Zero",
+        "brand": "Coca-Cola",
+        "package": null,
+        "serving": {
+          "description": "200 ml",
+          "amount": 200,
+          "unit": "ml",
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "missing-saturated-fat-or-fat-quality"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "Saturated fat is missing or unsupported.",
+          "Unmeasured components can change the numerical score."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Provider identity E100 is not corroborated in the available declaration.",
+          "Provider identity E150d is not corroborated in the available declaration.",
+          "Provider identity E211 is not corroborated in the available declaration.",
+          "Provider identity E331 is not corroborated in the available declaration.",
+          "Provider identity E338 is not corroborated in the available declaration.",
+          "Provider identity E950 is not corroborated in the available declaration.",
+          "Provider identity E955 is not corroborated in the available declaration.",
+          "Unreviewed ingredient phrase: acidity regulators",
+          "Unreviewed ingredient phrase: 338",
+          "Unreviewed ingredient phrase: 331",
+          "Unreviewed ingredient phrase: iii",
+          "Unreviewed ingredient phrase: sweeteners",
+          "Unreviewed ingredient phrase: 955",
+          "Unreviewed ingredient phrase: 950",
+          "Unreviewed ingredient phrase: preservative",
+          "Unreviewed ingredient phrase: 211",
+          "Unreviewed ingredient phrase: 9 2 mg/100 g",
+          "Unreviewed ingredient phrase: colour",
+          "Unreviewed ingredient phrase: 150d",
+          "Unreviewed ingredient phrase: flavours",
+          "Unreviewed ingredient phrase: natural flavouring substances",
+          "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch.",
+          "E100: Presence evidence conflicts or is not corroborated.",
+          "Sulphite ammonia caramel: Presence evidence conflicts or is not corroborated.",
+          "Sodium benzoate: Presence evidence conflicts or is not corroborated.",
+          "E331: Presence evidence conflicts or is not corroborated.",
+          "Phosphoric acid: Presence evidence conflicts or is not corroborated.",
+          "E950: Presence evidence conflicts or is not corroborated.",
+          "Sucralose: Presence evidence conflicts or is not corroborated."
+        ],
+        "causes": [
+          "missing-saturated-fat-or-fat-quality"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:india",
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "India, United States"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "beverage"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:beverages-and-beverages-preparations",
+                "en:beverages",
+                "en:non-alcoholic-beverages",
+                "en:artificially-sweetened-beverages",
+                "en:carbonated-drinks",
+                "en:soft-drinks",
+                "en:diet-beverages",
+                "en:sodas",
+                "en:colas",
+                "en:diet-sodas",
+                "en:diet-cola-soft-drink"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Diet cola soft drink"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace beverage comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "8901764112263",
+          "url": "https://world.openfoodfacts.org/product/8901764112263",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-18T01:16:58.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:47:07.494Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792286218
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "Carbonated water, acidity regulators (338, 331(iii)), sweeteners (955, 950), preservative (211), caffeine (9.2 mg/100 g), colour (150d), flavours (natural flavouring substances).",
+          "language": "en"
+        },
+        "nutrients": {
+          "calories": 0,
+          "protein": 0,
+          "carbohydrates": 0,
+          "fat": 0,
+          "sodium": 15,
+          "fiber": null,
+          "totalSugar": 0,
+          "addedSugar": 0
+        }
+      }
+    },
+    {
+      "barcode": "20621483",
+      "name": "Special Flakes Bran Flakes",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:12.239Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "usda-fdc",
+        "recordId": "732658",
+        "attribution": "USDA FoodData Central"
+      },
+      "product": {
+        "name": "BRAN FLAKES CEREAL",
+        "brand": "LIDL",
+        "package": null,
+        "serving": {
+          "description": "1 cup",
+          "amount": 61,
+          "unit": "g",
+          "grams": 61
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "energy-source-conflict",
+          "invalid-or-conflicting-nutrient",
+          "no-supported-ingredient-review"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": 53,
+        "overall": 53,
+        "overallStatus": "provisional",
+        "nutritionReasons": [],
+        "overallReasons": [
+          "Screening incomplete; further review could decrease this score.",
+          "Unreviewed ingredient phrase: wheat bran",
+          "Unreviewed ingredient phrase: barley malt extract"
+        ],
+        "causes": [],
+        "market": {
+          "claims": [
+            {
+              "field": "marketCountry",
+              "values": [
+                "United States"
+              ]
+            }
+          ],
+          "status": "provider-reported-us",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "foodCategory",
+              "values": [
+                "Cereal"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "usda-fdc",
+          "recordId": "732658",
+          "url": "https://fdc.nal.usda.gov/food-details/732658/nutrients",
+          "attribution": "USDA FoodData Central (public domain / CC0)",
+          "revisionDate": "2019-08-22T00:00:00.000Z",
+          "publicationDate": "2019-12-06T00:00:00.000Z",
+          "retrievedAt": "2026-10-22T00:47:12.201Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "modifiedDate",
+              "value": "2019-08-22"
+            },
+            {
+              "field": "publishedDate",
+              "value": "2019-12-06"
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "WHOLE GRAIN WHEAT, WHEAT BRAN, SUGAR, BARLEY MALT EXTRACT, SALT, HONEY.",
+          "language": null
+        },
+        "nutrients": {
+          "calories": 220.21,
+          "protein": 7.015,
+          "carbohydrates": 38.979,
+          "fat": 1.0004,
+          "sodium": 150.06,
+          "fiber": 10.004,
+          "totalSugar": 10.004,
+          "addedSugar": 7.991
+        }
+      }
+    },
+    {
+      "barcode": "0884912004710",
+      "name": "The Original",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:16.543Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0884912004710",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "grape-nuts cereal",
+        "brand": "Post",
+        "package": null,
+        "serving": {
+          "description": "1 portion (58 g)",
+          "amount": 58,
+          "unit": "g",
+          "grams": 58
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "packaged-food",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "missing-saturated-fat-or-fat-quality",
+          "missing-ingredient-declaration"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "Selected energy declarations conflict beyond supported rounding.",
+          "calories is conflicting in the selected panel."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Unreviewed ingredient phrase: dried yeast",
+          "Unreviewed ingredient phrase: vitamins",
+          "Unreviewed ingredient phrase: minerals: reduced iron",
+          "Unreviewed ingredient phrase: zinc oxide",
+          "Unreviewed ingredient phrase: source of zinc"
+        ],
+        "causes": [
+          "energy-source-conflict",
+          "invalid-or-conflicting-nutrient"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:panama",
+                "en:united-states",
+                "en:world"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "Panama, United States, world"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:plant-based-foods-and-beverages",
+                "en:plant-based-foods",
+                "en:breakfasts",
+                "en:cereals-and-potatoes",
+                "en:cereals-and-their-products",
+                "en:breakfast-cereals"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Breakfast cereals"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0884912004710",
+          "url": "https://world.openfoodfacts.org/product/0884912004710",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-05-23T13:00:07.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:47:16.436Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1779541207
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "whole grain wheat flour, malted barley flour, salt, dried yeast, vitamins and minerals: reduced iron, niacinamide, zinc oxide (source of zinc), vitamin b6, thiamin mononitrate (vitamin b1), folic acid.",
+          "language": "en"
+        },
+        "nutrients": {
+          "calories": 200,
+          "protein": 6,
+          "carbohydrates": 46,
+          "fat": 1.5,
+          "sodium": 270,
+          "fiber": 7,
+          "totalSugar": 5,
+          "addedSugar": 0
+        }
+      }
+    },
+    {
+      "barcode": "0016000275263",
+      "name": "Original Cheerios",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:20.857Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0016000275263",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Cheerios",
+        "brand": "General Mills",
+        "package": null,
+        "serving": {
+          "description": "1 ½ cup (39 g)",
+          "amount": 39,
+          "unit": "g",
+          "grams": 39
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "packaged-food",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "missing-saturated-fat-or-fat-quality",
+          "missing-ingredient-declaration"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": 52,
+        "overall": 52,
+        "overallStatus": "provisional",
+        "nutritionReasons": [],
+        "overallReasons": [
+          "Screening incomplete; further review could decrease this score.",
+          "Provider identity E340 is not corroborated in the available declaration.",
+          "Provider identity E340iii is not corroborated in the available declaration.",
+          "Unreviewed ingredient phrase: whole grain oats corn starch",
+          "Unreviewed ingredient phrase: tripotassium phosphate vitamin e",
+          "Unreviewed ingredient phrase: mixed tocopherols",
+          "Unreviewed ingredient phrase: added to preserve freshness vitamins",
+          "Unreviewed ingredient phrase: minerals:",
+          "Unreviewed ingredient phrase: zinc",
+          "Unreviewed ingredient phrase: mineral nutrients",
+          "Unreviewed ingredient phrase: sodium ascorbate",
+          "Unreviewed ingredient phrase: a b vitamin",
+          "Unreviewed ingredient phrase: vitamin a",
+          "Unreviewed ingredient phrase: palmitate",
+          "Unreviewed ingredient phrase: vitamin b₁",
+          "Unreviewed ingredient phrase: vitamin d3",
+          "Calcium carbonate: Fortification and purity questions remain unresolved; the EFSA technological-additive assessment is not a blanket review of calcium fortification.",
+          "Ascorbic acid: No independent weight; benzoate interaction is evaluated once on the benzoate.",
+          "E340: Presence evidence conflicts or is not corroborated.",
+          "E340iii: Presence evidence conflicts or is not corroborated."
+        ],
+        "causes": [],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:mexico",
+                "en:united-states",
+                "en:world"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "Mexico, United States, world"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:plant-based-foods-and-beverages",
+                "en:plant-based-foods",
+                "en:breakfasts",
+                "en:cereals-and-potatoes",
+                "en:cereals-and-their-products",
+                "en:breakfast-cereals",
+                "en:extruded-cereals"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Extruded cereals"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0016000275263",
+          "url": "https://world.openfoodfacts.org/product/0016000275263",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-08-26T19:45:58.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:47:20.828Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1787773558
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "Whole Grain Oats. Corn Starch, Sugar, Salt, Tripotassium Phosphate. Vitamin E (mixed tocopherols) Added to Preserve Freshness. Vitamins and Minerals: Calcium Carbonate, Iron and Zinc (mineral nutrients), Vitamin C (sodium ascorbate), A B Vitamin (niacinamide), Vitamin B6 (pyridoxine hydrochloride), Vitamin A (palmitate), Vitamin B₁ (thiamin mononitrate), A B Vitamin (folic acid), Vitamin B12, Vitamin D3.",
+          "language": "en"
+        },
+        "nutrients": {
+          "calories": 140,
+          "protein": 5,
+          "carbohydrates": 29,
+          "fat": 2.5,
+          "sodium": 190,
+          "fiber": 4,
+          "totalSugar": 2,
+          "addedSugar": 1
+        }
+      }
+    },
+    {
+      "barcode": "0016000435094",
+      "name": "Toasted Whole Grain Oat Cereal",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:25.169Z",
+      "httpStatus": 200,
+      "status": "incomplete",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0016000435094",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Toasted Whole Grain Oat Cereal",
+        "brand": "Cheerios",
+        "package": null,
+        "serving": {
+          "description": "1 1/2 cup/taza (39 g)",
+          "amount": 39,
+          "unit": "ml",
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "energy-source-conflict",
+          "invalid-or-conflicting-nutrient"
+        ]
+      },
+      "candidate": {
+        "logReady": false,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "Selected energy declarations conflict beyond supported rounding.",
+          "calories is conflicting in the selected panel."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Provider identity E306 is not corroborated in the available declaration.",
+          "Provider identity E340 is not corroborated in the available declaration.",
+          "Provider identity E340iii is not corroborated in the available declaration.",
+          "Unreviewed ingredient phrase: whole grain oats",
+          "Unreviewed ingredient phrase: tripotassium phosphate vitamin e",
+          "Unreviewed ingredient phrase: mixed tocopherols",
+          "Unreviewed ingredient phrase: added to preserve freshness",
+          "Unreviewed ingredient phrase: vitamins",
+          "Unreviewed ingredient phrase: minerals",
+          "Unreviewed ingredient phrase: mineral",
+          "Unreviewed ingredient phrase: zinc",
+          "Unreviewed ingredient phrase: sodium ascorbate",
+          "Unreviewed ingredient phrase: vitamin a",
+          "Unreviewed ingredient phrase: palmitate",
+          "Unreviewed ingredient phrase: vitamin d3",
+          "Calcium carbonate: Fortification and purity questions remain unresolved; the EFSA technological-additive assessment is not a blanket review of calcium fortification.",
+          "Ascorbic acid: No independent weight; benzoate interaction is evaluated once on the benzoate.",
+          "E306: Presence evidence conflicts or is not corroborated.",
+          "E340: Presence evidence conflicts or is not corroborated.",
+          "E340iii: Presence evidence conflicts or is not corroborated."
+        ],
+        "causes": [
+          "energy-source-conflict",
+          "invalid-or-conflicting-nutrient"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:bolivia",
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "Bolivia, United States"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:plant-based-foods-and-beverages",
+                "en:plant-based-foods",
+                "en:breakfasts",
+                "en:cereals-and-potatoes",
+                "en:specific-products",
+                "en:cereals-and-their-products",
+                "en:products-for-specific-diets",
+                "en:breakfast-cereals",
+                "en:products-without-gluten",
+                "en:extruded-cereals",
+                "en:breakfast-cereals-puffed-cereals-wholemeal-fortified-with-vitamins-and-chemical-elements"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Products without gluten, Extruded cereals, Breakfast cereals puffed cereals wholemeal fortified with vitamins and chemical elements"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0016000435094",
+          "url": "https://world.openfoodfacts.org/product/0016000435094",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-05-26T14:06:44.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:47:24.832Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1779804404
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "Whole Grain Oats, Corn Starch, Sugar, Salt, Tripotassium Phosphate. Vitamin E (mixed tocopherols) (Added to Preserve Freshness). Vitamins and Minerals [Calcium Carbonate, Iron (mineral), Zinc (mineral), Vitamin C (sodium ascorbate), niacinamide, Vitamin B6 (pyridoxine hydrochloride), Vitamin A (palmitate), Vitamin B1 (thiamin mononitrate), folic acid, Vitamin B12, Vitamin D3].",
+          "language": "en"
+        },
+        "nutrients": {
+          "calories": 140,
+          "protein": 1.95,
+          "carbohydrates": null,
+          "fat": 0.975,
+          "sodium": 74.1,
+          "fiber": 1.56,
+          "totalSugar": 0.78,
+          "addedSugar": null
+        }
+      }
+    },
+    {
+      "barcode": "9339687411702",
+      "name": "Strawberry Yoghurt",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:29.480Z",
+      "httpStatus": 200,
+      "status": "incomplete",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "9339687411702",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Strawberry Yoghurt",
+        "brand": "Woolworths",
+        "package": null,
+        "serving": {
+          "description": null,
+          "amount": null,
+          "unit": null,
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": 74,
+        "overall": null,
+        "causes": [
+          "missing-ingredient-declaration"
+        ]
+      },
+      "candidate": {
+        "logReady": false,
+        "nutrition": 74,
+        "overall": null,
+        "overallStatus": "nutrition-only",
+        "nutritionReasons": [],
+        "overallReasons": [
+          "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+          "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+        ],
+        "causes": [
+          "missing-ingredient-declaration"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "United States"
+              ]
+            }
+          ],
+          "status": "provider-reported-us",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:dairies",
+                "en:fermented-foods",
+                "en:desserts",
+                "en:fermented-milk-products",
+                "en:dairy-desserts",
+                "en:fermented-dairy-desserts",
+                "en:yogurts",
+                "en:fermented-dairy-desserts-with-fruits",
+                "en:fruit-yogurts"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Fruit yogurts"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "9339687411702",
+          "url": "https://world.openfoodfacts.org/product/9339687411702",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-19T23:00:10.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:47:29.463Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792450810
+            }
+          ]
+        },
+        "ingredients": {
+          "text": null,
+          "language": null
+        },
+        "nutrients": {
+          "calories": null,
+          "protein": null,
+          "carbohydrates": null,
+          "fat": null,
+          "sodium": null,
+          "fiber": null,
+          "totalSugar": null,
+          "addedSugar": null
+        }
+      }
+    },
+    {
+      "barcode": "0818290015150",
+      "name": "20g Protein Lowfat Greek Yogurt Vanilla",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:33.804Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0818290015150",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Greek Strained Yogurt with Vanilla flavour",
+        "brand": "Chobani",
+        "package": null,
+        "serving": {
+          "description": "1 serving (190 g)",
+          "amount": 190,
+          "unit": "g",
+          "grams": 190
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "packaged-food",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "missing-saturated-fat-or-fat-quality",
+          "missing-ingredient-declaration"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": 80,
+        "overall": 80,
+        "overallStatus": "provisional",
+        "nutritionReasons": [],
+        "overallReasons": [
+          "Screening incomplete; further review could decrease this score.",
+          "Provider identity E410 is not corroborated in the available declaration.",
+          "Provider identity E412 is not corroborated in the available declaration.",
+          "Provider identity E440 is not corroborated in the available declaration.",
+          "Unreviewed ingredient phrase: cultured lowfat milk",
+          "Unreviewed ingredient phrase: : vanilla extract",
+          "Unreviewed ingredient phrase: chicory root fiber",
+          "Unreviewed ingredient phrase: lactase",
+          "Unreviewed ingredient phrase: fruit pectin",
+          "Unreviewed ingredient phrase: stevia extract",
+          "Unreviewed ingredient phrase: guar gum",
+          "Unreviewed ingredient phrase: locust bean gum",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+          "E410: Presence evidence conflicts or is not corroborated.",
+          "E412: Presence evidence conflicts or is not corroborated.",
+          "E440: Presence evidence conflicts or is not corroborated."
+        ],
+        "causes": [],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "United States"
+              ]
+            }
+          ],
+          "status": "provider-reported-us",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:dairies",
+                "en:fermented-foods",
+                "en:desserts",
+                "en:fermented-milk-products",
+                "en:dairy-desserts",
+                "en:fermented-dairy-desserts",
+                "en:yogurts",
+                "en:greek-style-yogurts",
+                "en:low-fat-yogurts"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Greek-style yogurts, Low-fat yogurts"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0818290015150",
+          "url": "https://world.openfoodfacts.org/product/0818290015150",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-21T15:09:44.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:47:33.433Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792595384
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "Cultured lowfat milk, water, less than 2% of: vanilla extract, chicory root fiber, natural flavors, lactase**, fruit pectin, sea salt, stevia extract, guar gum, lemon juice concentrate, locust bean gum",
+          "language": "en"
+        },
+        "nutrients": {
+          "calories": 266,
+          "protein": 38,
+          "carbohydrates": 17.1,
+          "fat": 5.7,
+          "sodium": 190,
+          "fiber": 3.8,
+          "totalSugar": 13.3,
+          "addedSugar": 0
+        }
+      }
+    },
+    {
+      "barcode": "0068200960548",
+      "name": "2022 Reserve Fromage Cheddar Cheese",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:38.128Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0068200960548",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "2022 Reserve Fromage Cheddar Cheese",
+        "brand": "Balderson",
+        "package": null,
+        "serving": {
+          "description": "3 cm cube (30 g)",
+          "amount": 30,
+          "unit": "g",
+          "grams": 30
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": 14,
+        "overall": null,
+        "causes": [
+          "missing-ingredient-declaration"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": 14,
+        "overall": null,
+        "overallStatus": "nutrition-only",
+        "nutritionReasons": [],
+        "overallReasons": [
+          "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+          "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+        ],
+        "causes": [
+          "missing-ingredient-declaration"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "United States"
+              ]
+            }
+          ],
+          "status": "provider-reported-us",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:dairies",
+                "en:fermented-foods",
+                "en:fermented-milk-products",
+                "en:cheeses",
+                "en:cow-cheeses"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Cow cheeses"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0068200960548",
+          "url": "https://world.openfoodfacts.org/product/0068200960548",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-19T19:25:31.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:47:38.276Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792437931
+            }
+          ]
+        },
+        "ingredients": {
+          "text": null,
+          "language": null
+        },
+        "nutrients": {
+          "calories": 130,
+          "protein": 7,
+          "carbohydrates": 1,
+          "fat": 10,
+          "sodium": 210,
+          "fiber": 0,
+          "totalSugar": 0,
+          "addedSugar": null
+        }
+      }
+    },
+    {
+      "barcode": "4316268741163",
+      "name": "Speisequark 20% Fett",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:42.649Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "4316268741163",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Speisequark 20% Fett",
+        "brand": "Gutes Land",
+        "package": null,
+        "serving": {
+          "description": "250.0g",
+          "amount": 250,
+          "unit": "g",
+          "grams": 250
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": 74,
+        "overall": null,
+        "causes": [
+          "missing-ingredient-declaration"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": 74,
+        "overall": null,
+        "overallStatus": "nutrition-only",
+        "nutritionReasons": [],
+        "overallReasons": [
+          "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+          "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+        ],
+        "causes": [
+          "missing-ingredient-declaration"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "Vereinigte Staaten von Amerika"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:dairies",
+                "en:fermented-foods",
+                "en:fermented-milk-products",
+                "en:cheeses",
+                "en:cream-cheeses",
+                "en:quarks"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "en:Cream cheeses, Quark"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "4316268741163",
+          "url": "https://world.openfoodfacts.org/product/4316268741163",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-19T19:03:59.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:47:42.590Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792436639
+            }
+          ]
+        },
+        "ingredients": {
+          "text": null,
+          "language": null
+        },
+        "nutrients": {
+          "calories": 248,
+          "protein": 26.5,
+          "carbohydrates": 9.75,
+          "fat": 10.8,
+          "sodium": 90,
+          "fiber": null,
+          "totalSugar": 9.75,
+          "addedSugar": null
+        }
+      }
+    },
+    {
+      "barcode": "0021000658831",
+      "name": "mac & cheese",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:46.970Z",
+      "httpStatus": 200,
+      "status": "incomplete",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0021000658831",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "mac & cheese",
+        "brand": "Kraft",
+        "package": null,
+        "serving": {
+          "description": "2.2 0z (62 g)",
+          "amount": 62,
+          "unit": "g",
+          "grams": 62
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "unknown-or-incompatible-basis"
+        ]
+      },
+      "candidate": {
+        "logReady": false,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "A known compatible mass or volume measurement basis is missing; no density is assumed."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Provider identity E160b is not corroborated in the available declaration.",
+          "Provider identity E270 is not corroborated in the available declaration.",
+          "Provider identity E451 is not corroborated in the available declaration.",
+          "Provider identity E451i is not corroborated in the available declaration.",
+          "Unreviewed ingredient phrase: enriched macaroni",
+          "Unreviewed ingredient phrase: durum flour",
+          "Unreviewed ingredient phrase: ferrous sulfate",
+          "Unreviewed ingredient phrase: cheese sauce mix",
+          "Unreviewed ingredient phrase: milkfat",
+          "Unreviewed ingredient phrase: milk protein concentrate",
+          "Unreviewed ingredient phrase: sodium triphosphate",
+          "Unreviewed ingredient phrase: tapioca flour",
+          "Unreviewed ingredient phrase: lactic acid",
+          "Unreviewed ingredient phrase: turmeric",
+          "Unreviewed ingredient phrase: annatto",
+          "Unreviewed ingredient phrase: cheese culture",
+          "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+          "E160b: Presence evidence conflicts or is not corroborated.",
+          "E270: Presence evidence conflicts or is not corroborated.",
+          "E451: Presence evidence conflicts or is not corroborated.",
+          "E451i: Presence evidence conflicts or is not corroborated."
+        ],
+        "causes": [
+          "unknown-or-incompatible-basis"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:france",
+                "en:germany",
+                "en:united-kingdom",
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "France, Germany, United Kingdom, United States"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:plant-based-foods-and-beverages",
+                "en:plant-based-foods",
+                "en:meals",
+                "en:pasta-dishes",
+                "en:pastas",
+                "en:macaroni-and-cheese"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Pastas, Macaroni and cheese"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0021000658831",
+          "url": "https://world.openfoodfacts.org/product/0021000658831",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-21T23:23:22.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:47:46.992Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792625002
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "ENRICHED MACARONI (WHEAT FLOUR, DURUM FLOUR, NIACIN, FERROUS SULFATE [IRON], THIAMIN MONONITRATE [VITAMIN B1], RIBOFLAVIN [VITAMIN B2], FOLIC ACID), CHEESE SAUCE MIX (WHEY, MILKFAT, SALT, MILK PROTEIN CONCENTRATE, SODIUM TRIPHOSPHATE, TAPIOCA FLOUR, CITRIC ACID, CALCIUM PHOSPHATE, SODIUM PHOSPHATE, LACTIC ACID, PAPRIKA, TURMERIC, ANNATTO, CHEESE CULTURE, ENZYMES)",
+          "language": "en"
+        },
+        "nutrients": {
+          "calories": null,
+          "protein": null,
+          "carbohydrates": null,
+          "fat": null,
+          "sodium": null,
+          "fiber": null,
+          "totalSugar": null,
+          "addedSugar": null
+        }
+      }
+    },
+    {
+      "barcode": "3564700738009",
+      "name": "Haricots blancs tomate",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:51.273Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "3564700738009",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Haricots blancs tomate",
+        "brand": "Notre Jardin",
+        "package": null,
+        "serving": {
+          "description": "200 g",
+          "amount": 200,
+          "unit": "g",
+          "grams": 200
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "energy-source-conflict",
+          "invalid-or-conflicting-nutrient"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "Selected energy declarations conflict beyond supported rounding.",
+          "calories is conflicting in the selected panel."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Provider identity en:e14xx is not corroborated in the available declaration.",
+          "Unreviewed ingredient phrase: haricots blancs trempés",
+          "Unreviewed ingredient phrase: purée de tomates double concentree",
+          "Unreviewed ingredient phrase: amidon modifié de maïs oignon grillé en poudre",
+          "Unreviewed ingredient phrase: arôme naturel traces de soja",
+          "This declaration language has only limited phrase matching; declaration review remains partial.",
+          "en:e14xx: Presence evidence conflicts or is not corroborated."
+        ],
+        "causes": [
+          "energy-source-conflict",
+          "invalid-or-conflicting-nutrient"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:france",
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "France, États-Unis"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "nuts"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:plant-based-foods-and-beverages",
+                "en:plant-based-foods",
+                "en:fruits-and-vegetables-based-foods",
+                "en:legumes-and-their-products",
+                "en:vegetable-based-foods-and-beverages",
+                "en:canned-foods",
+                "en:legumes",
+                "en:meals",
+                "en:seeds",
+                "en:vegetables-based-foods",
+                "en:canned-plant-based-foods",
+                "en:legume-seeds",
+                "en:canned-vegetables",
+                "en:prepared-vegetables",
+                "en:pulses",
+                "en:common-beans",
+                "en:baked-beans-in-tomato-sauce",
+                "en:canned-legumes",
+                "en:white-beans",
+                "en:canned-common-beans"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Plats préparés, Légumes en conserve, Haricots à la tomate, Haricots blancs, Haricots blancs en conserve"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace nuts comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "3564700738009",
+          "url": "https://world.openfoodfacts.org/product/3564700738009",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-06-01T16:49:50.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:47:50.900Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1780332590
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "Eau, haricots blancs trempés 45 %, purée de tomates double concentree 3,6%, sel, amidon modifié de maïs. oignon grillé en poudre, arôme naturel. Traces de soja.",
+          "language": "fr"
+        },
+        "nutrients": {
+          "calories": 150,
+          "protein": 9.8,
+          "carbohydrates": 24,
+          "fat": 1,
+          "sodium": 720,
+          "fiber": 10.2,
+          "totalSugar": 2.4,
+          "addedSugar": 0
+        }
+      }
+    },
+    {
+      "barcode": "7315122037814",
+      "name": "ISKUB Elderflower flavour",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:55.586Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "7315122037814",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "ISKUB Elderflower flavour",
+        "brand": "IKEA",
+        "package": null,
+        "serving": {
+          "description": "100g",
+          "amount": 100,
+          "unit": "g",
+          "grams": 100
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "unknown-or-incompatible-basis",
+          "no-supported-ingredient-review"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "A known compatible mass or volume measurement basis is missing; no density is assumed."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Provider identity E290 is not corroborated in the available declaration.",
+          "Provider identity E296 is not corroborated in the available declaration.",
+          "Provider identity E950 is not corroborated in the available declaration.",
+          "Unreviewed ingredient phrase: fr: boisson rafraîchissante gazeifiée saveur fleur de sureau",
+          "Unreviewed ingredient phrase: avec sucre et édulcorants ingrédients: eau",
+          "Unreviewed ingredient phrase: sirop de sucre inverti",
+          "Unreviewed ingredient phrase: dioxyde de carbone",
+          "Unreviewed ingredient phrase: extrait de fleur de sureau",
+          "Unreviewed ingredient phrase: acidifiants",
+          "Unreviewed ingredient phrase: e296",
+          "Unreviewed ingredient phrase: arôme naturel",
+          "Unreviewed ingredient phrase: édulcorants",
+          "Unreviewed ingredient phrase: e950",
+          "Unreviewed ingredient phrase: extrait de carthame",
+          "Unreviewed ingredient phrase: colorant",
+          "Unreviewed ingredient phrase: a consommer de préférence avant le",
+          "Unreviewed ingredient phrase: bb",
+          "Unreviewed ingredient phrase: / date de pro",
+          "Unreviewed ingredient phrase: duction",
+          "Unreviewed ingredient phrase: pd",
+          "Unreviewed ingredient phrase: : voir sur le col de la bouteille conservation : une fois ouvert",
+          "Unreviewed ingredient phrase: conserver au réfrigérateur et consommer dans les 24 heures",
+          "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+          "Sucralose: Processing-dependent assessment unresolved: the captured declaration does not establish prolonged heating conditions.",
+          "Sulphite ammonia caramel: No numerical classification: caramel class/byproduct and long-term exposure questions are not resolved here.",
+          "E290: Presence evidence conflicts or is not corroborated.",
+          "E296: Presence evidence conflicts or is not corroborated.",
+          "E950: Presence evidence conflicts or is not corroborated."
+        ],
+        "causes": [
+          "unknown-or-incompatible-basis",
+          "no-supported-ingredient-review"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "United States"
+              ]
+            }
+          ],
+          "status": "provider-reported-us",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "beverage"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:beverages-and-beverages-preparations",
+                "en:beverages",
+                "en:non-alcoholic-beverages",
+                "en:carbonated-drinks",
+                "en:soft-drinks",
+                "en:carbonated-soft-drinks-without-fruit-juice",
+                "en:carbonated-soft-drinks-without-fruit-juice-with-sugar"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Carbonated soft drinks without fruit juice with sugar"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace beverage comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "7315122037814",
+          "url": "https://world.openfoodfacts.org/product/7315122037814",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-10-17T18:34:12.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:47:55.544Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1792262052
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "FR: Boisson rafraîchissante gazeifiée saveur fleur de sureau, avec sucre et édulcorants Ingrédients: Eau, sirop de sucre inverti, dioxyde de carbone, extrait de fleur de sureau, acidifiants (E330, E296), arôme naturel, édulcorants (E955, E950), extrait de carthame, colorant (E150d). A consommer de préférence avant le (BB)/ Date de pro - duction (PD): Voir sur le col de la bouteille Conservation : Une fois ouvert, conserver au réfrigérateur et consommer dans les 24 heures.",
+          "language": "en"
+        },
+        "nutrients": {
+          "calories": 10,
+          "protein": 0,
+          "carbohydrates": 2.3,
+          "fat": 0,
+          "sodium": 0,
+          "fiber": null,
+          "totalSugar": 2.3,
+          "addedSugar": null
+        }
+      }
+    },
+    {
+      "barcode": "0084000901024",
+      "name": "Ratatouille",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:47:59.923Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0084000901024",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Ratatouille",
+        "brand": "Cassegrain",
+        "package": null,
+        "serving": {
+          "description": "185.0g",
+          "amount": 185,
+          "unit": "g",
+          "grams": 185
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "missing-sodium",
+          "missing-ingredient-declaration"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "Sodium is missing or unsupported.",
+          "Unmeasured components can change the numerical score."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Ingredient evidence is missing; empty or missing provider tags cannot replace it."
+        ],
+        "causes": [
+          "missing-sodium",
+          "missing-ingredient-declaration"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:france",
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "France, États-Unis"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:plant-based-foods-and-beverages",
+                "en:plant-based-foods",
+                "en:meals",
+                "en:prepared-vegetables",
+                "en:ratatouille"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Ratatouilles"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0084000901024",
+          "url": "https://world.openfoodfacts.org/product/0084000901024",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-03-26T13:28:08.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:47:59.940Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1774531688
+            }
+          ]
+        },
+        "ingredients": {
+          "text": null,
+          "language": null
+        },
+        "nutrients": {
+          "calories": 152,
+          "protein": 2.77,
+          "carbohydrates": 10.7,
+          "fat": 9.99,
+          "sodium": null,
+          "fiber": 3.88,
+          "totalSugar": 10.7,
+          "addedSugar": null
+        }
+      }
+    },
+    {
+      "barcode": "0030000010402",
+      "name": "Old Fashioned Oats",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:48:04.225Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0030000010402",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Old Fashioned Oats",
+        "brand": "Quaker Oats",
+        "package": null,
+        "serving": {
+          "description": "1/2 cup dry (40 g)",
+          "amount": 40,
+          "unit": "ml",
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "packaged-food",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "missing-saturated-fat-or-fat-quality",
+          "missing-ingredient-declaration"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": 88,
+        "overall": null,
+        "overallStatus": "nutrition-only",
+        "nutritionReasons": [],
+        "overallReasons": [
+          "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+          "Unreviewed ingredient phrase: whole grain rolled oats"
+        ],
+        "causes": [
+          "no-supported-ingredient-review"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:united-states",
+                "en:world"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "United States, world"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "nuts"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:plant-based-foods-and-beverages",
+                "en:plant-based-foods",
+                "en:breakfasts",
+                "en:cereals-and-potatoes",
+                "en:seeds",
+                "en:cereals-and-their-products",
+                "en:breakfast-cereals",
+                "en:cereal-grains",
+                "en:flakes",
+                "en:cereal-flakes",
+                "en:rolled-flakes",
+                "en:rolled-oats"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Cereal grains, Rolled oats"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace nuts comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0030000010402",
+          "url": "https://world.openfoodfacts.org/product/0030000010402",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-08-10T16:11:39.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:48:03.835Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1786378299
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "whole grain rolled oats",
+          "language": "en"
+        },
+        "nutrients": {
+          "calories": 150,
+          "protein": 5,
+          "carbohydrates": 27,
+          "fat": 3,
+          "sodium": 0,
+          "fiber": 4,
+          "totalSugar": 1,
+          "addedSugar": 0
+        }
+      }
+    },
+    {
+      "barcode": "8402001010200",
+      "name": "Spaghetti integral",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:48:08.557Z",
+      "httpStatus": 200,
+      "status": "incomplete",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "8402001010200",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Spaghetti integral",
+        "brand": "Hacendado",
+        "package": null,
+        "serving": {
+          "description": null,
+          "amount": null,
+          "unit": null,
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "energy-source-conflict",
+          "invalid-or-conflicting-nutrient",
+          "no-supported-ingredient-review"
+        ]
+      },
+      "candidate": {
+        "logReady": false,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "Selected energy declarations conflict beyond supported rounding.",
+          "calories is conflicting in the selected panel."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Ingredient declaration may be truncated or incomplete.",
+          "Unreviewed ingredient phrase: sémola integral de trigo duro",
+          "Unreviewed ingredient phrase: gluten",
+          "Unreviewed ingredient phrase: puede contener trazas de huevos",
+          "Unreviewed ingredient phrase: soja y mostaza",
+          "This declaration language has only limited phrase matching; declaration review remains partial."
+        ],
+        "causes": [
+          "energy-source-conflict",
+          "invalid-or-conflicting-nutrient",
+          "no-supported-ingredient-review"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:spain",
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "España, Estados Unidos"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:plant-based-foods-and-beverages",
+                "en:plant-based-foods",
+                "en:cereals-and-potatoes",
+                "en:meals",
+                "en:cereals-and-their-products",
+                "en:pasta-dishes",
+                "en:pastas",
+                "en:cereal-pastas",
+                "en:durum-wheat-pasta",
+                "en:spaghetti",
+                "en:whole-or-semi-whole-durum-wheat-pasta",
+                "en:durum-wheat-spaghetti",
+                "en:whole-or-semi-whole-durum-wheat-spaghetti"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Platos de pasta, Espaguetis de trigo duro, Espaguetis de trigo duro integrales o semi-integrales"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "8402001010200",
+          "url": "https://world.openfoodfacts.org/product/8402001010200",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-05-17T11:21:50.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:48:08.516Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1779016910
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "Sémola integral de trigo duro (gluten). Puede contener trazas de huevos, soja y mostaza,",
+          "language": "es"
+        },
+        "nutrients": {
+          "calories": null,
+          "protein": null,
+          "carbohydrates": null,
+          "fat": null,
+          "sodium": null,
+          "fiber": null,
+          "totalSugar": null,
+          "addedSugar": null
+        }
+      }
+    },
+    {
+      "barcode": "0051000000118",
+      "name": "Tomato Soup",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:48:12.867Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0051000000118",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Tomato Soup",
+        "brand": "Campbell's",
+        "package": null,
+        "serving": {
+          "description": "1 Serving (120 ml)",
+          "amount": 120,
+          "unit": "ml",
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "unknown-or-incompatible-basis"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "A known compatible mass or volume measurement basis is missing; no density is assumed."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Provider identity E340 is not corroborated in the available declaration.",
+          "Provider identity E340i is not corroborated in the available declaration.",
+          "Unreviewed ingredient phrase: potassium chloride",
+          "Unreviewed ingredient phrase: natural flavoring",
+          "Unreviewed ingredient phrase: monopotassium phosphate",
+          "Unreviewed ingredient phrase: celery extract",
+          "Unreviewed ingredient phrase: garlic oil",
+          "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+          "Ascorbic acid: No independent weight; benzoate interaction is evaluated once on the benzoate.",
+          "E340: Presence evidence conflicts or is not corroborated.",
+          "E340i: Presence evidence conflicts or is not corroborated."
+        ],
+        "causes": [
+          "unknown-or-incompatible-basis"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:germany",
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "Germany, United States"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:plant-based-foods-and-beverages",
+                "en:plant-based-foods",
+                "en:fruits-and-vegetables-based-foods",
+                "en:meals",
+                "en:soups",
+                "en:vegetable-soups",
+                "en:tomato-soups"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Tomato soups"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0051000000118",
+          "url": "https://world.openfoodfacts.org/product/0051000000118",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-08-04T18:22:52.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:48:12.490Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1785867772
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "tomato puree (water, tomato paste), high fructose corn syrup, wheat flour, water, salt, potassium chloride, citric acid, natural flavoring, ascorbic acid (vitamin c), monopotassium phosphate, celery extract, garlic oil",
+          "language": "en"
+        },
+        "nutrients": {
+          "calories": 90,
+          "protein": 2,
+          "carbohydrates": 20,
+          "fat": 0,
+          "sodium": 480,
+          "fiber": 2,
+          "totalSugar": 12,
+          "addedSugar": 8
+        }
+      }
+    },
+    {
+      "barcode": "01231809",
+      "name": "Montain Dew",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:48:17.177Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "usda-fdc",
+        "recordId": "2673798",
+        "attribution": "USDA FoodData Central"
+      },
+      "product": {
+        "name": "DIET SODA",
+        "brand": "Pepsi-Cola North America Inc.",
+        "package": null,
+        "serving": {
+          "description": "12 fl oz",
+          "amount": 360,
+          "unit": "ml",
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "open-food-facts",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "missing-sodium"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": null,
+        "overall": null,
+        "overallStatus": "nutrition-unavailable",
+        "nutritionReasons": [
+          "Saturated fat is missing or unsupported.",
+          "Unmeasured components can change the numerical score."
+        ],
+        "overallReasons": [
+          "A nutrition score is unavailable; the ingredient screen remains separate.",
+          "Unreviewed ingredient phrase: concentrated orange juice",
+          "Unreviewed ingredient phrase: preserves freshness",
+          "Unreviewed ingredient phrase: citrus pectin",
+          "Unreviewed ingredient phrase: potassium citrate",
+          "Unreviewed ingredient phrase: sodium citrate",
+          "Unreviewed ingredient phrase: acesulfame potassium",
+          "Unreviewed ingredient phrase: gum arabic",
+          "Unreviewed ingredient phrase: calcium disodium edta",
+          "Unreviewed ingredient phrase: to protect",
+          "Unreviewed ingredient phrase: yellow 5",
+          "Citric acid: Scientific screen incomplete; citric acid is not vitamin C.",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+          "Potassium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation.",
+          "Aspartame: Hazard/exposure and phenylketonuria conditions need a dedicated synthesis; not scored from permission.",
+          "Caffeine: Population/dose-dependent effects not assigned a general additive weight in this batch.",
+          "Sucralose: Processing-dependent assessment unresolved: the captured declaration does not establish prolonged heating conditions.",
+          "Sodium benzoate: Conditional limited precaution for benzoate plus vitamin C/erythorbic acid in a beverage: conditions can favor benzene formation."
+        ],
+        "causes": [
+          "missing-saturated-fat-or-fat-quality"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "marketCountry",
+              "values": [
+                "United States"
+              ]
+            }
+          ],
+          "status": "provider-reported-us",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "beverage"
+          ],
+          "providerClaims": [
+            {
+              "field": "foodCategory",
+              "values": [
+                "Soda"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace beverage comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "usda-fdc",
+          "recordId": "2673798",
+          "url": "https://fdc.nal.usda.gov/food-details/2673798/nutrients",
+          "attribution": "USDA FoodData Central (public domain / CC0)",
+          "revisionDate": "2023-10-05T00:00:00.000Z",
+          "publicationDate": "2023-11-16T00:00:00.000Z",
+          "retrievedAt": "2026-10-22T00:48:17.008Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "modifiedDate",
+              "value": "2023-10-05"
+            },
+            {
+              "field": "publishedDate",
+              "value": "2023-11-16"
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "CARBONATED WATER, CONCENTRATED ORANGE JUICE, CITRIC ACID, NATURAL FLAVOR, POTASSIUM BENZOATE (PRESERVES FRESHNESS), CITRUS PECTIN, ASPARTAME, POTASSIUM CITRATE, CAFFEINE, SODIUM CITRATE, ACESULFAME POTASSIUM, SUCRALOSE, GUM ARABIC, SODIUM BENZOATE (PRESERVES FRESHNESS), CALCIUM DISODIUM EDTA (TO PROTECT FLAVOR), YELLOW 5.",
+          "language": null
+        },
+        "nutrients": {
+          "calories": 0,
+          "protein": 0,
+          "carbohydrates": 1.0080000000000002,
+          "fat": 0,
+          "sodium": 50.4,
+          "fiber": null,
+          "totalSugar": 0,
+          "addedSugar": 0
+        }
+      }
+    },
+    {
+      "barcode": "0016000124790",
+      "name": "Honey Nut Cheerios",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:48:21.497Z",
+      "httpStatus": 200,
+      "status": "incomplete",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0016000124790",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Honey Nut Cheerios",
+        "brand": "General Mills",
+        "package": null,
+        "serving": {
+          "description": "1 cup (37 g)",
+          "amount": 37,
+          "unit": "ml",
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "packaged-food",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "missing-saturated-fat-or-fat-quality",
+          "missing-ingredient-declaration"
+        ]
+      },
+      "candidate": {
+        "logReady": false,
+        "nutrition": 39,
+        "overall": 39,
+        "overallStatus": "provisional",
+        "nutritionReasons": [],
+        "overallReasons": [
+          "Screening incomplete; further review could decrease this score.",
+          "Provider identity E340 is not corroborated in the available declaration.",
+          "Provider identity E340iii is not corroborated in the available declaration.",
+          "Unreviewed ingredient phrase: whole grain oats",
+          "Unreviewed ingredient phrase: brown sugar syrup",
+          "Unreviewed ingredient phrase: tripotassium phosphate",
+          "Unreviewed ingredient phrase: natural almond",
+          "Unreviewed ingredient phrase: vitamin e",
+          "Unreviewed ingredient phrase: sodium ascorbate",
+          "Unreviewed ingredient phrase: zinc",
+          "Unreviewed ingredient phrase: mineral nutrients",
+          "Unreviewed ingredient phrase: vitamin a",
+          "Unreviewed ingredient phrase: palmitate",
+          "Unreviewed ingredient phrase: vitamin b13",
+          "Unreviewed ingredient phrase: vitamin d3",
+          "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+          "Calcium carbonate: Fortification and purity questions remain unresolved; the EFSA technological-additive assessment is not a blanket review of calcium fortification.",
+          "Ascorbic acid: No independent weight; benzoate interaction is evaluated once on the benzoate.",
+          "E340: Presence evidence conflicts or is not corroborated.",
+          "E340iii: Presence evidence conflicts or is not corroborated."
+        ],
+        "causes": [],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:united-states"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "United States"
+              ]
+            }
+          ],
+          "status": "provider-reported-us",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "nuts"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:plant-based-foods-and-beverages",
+                "en:plant-based-foods",
+                "en:breakfasts",
+                "en:cereals-and-potatoes",
+                "en:seeds",
+                "en:cereals-and-their-products",
+                "en:breakfast-cereals",
+                "en:cereal-grains",
+                "en:extruded-cereals"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Cereal grains, Extruded cereals"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace nuts comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0016000124790",
+          "url": "https://world.openfoodfacts.org/product/0016000124790",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-09-30T18:00:48.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:48:21.310Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1790791248
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "Whole Grain Oats, Sugar, Corn Starch, Honey, Brown Sugar Syrup, Salt, Tripotassium Phosphate, Canola Oil, Natural Almond Flavor, Vitamin E, Calcium Carbonate, Vitamin C, sodium ascorbate, Iron, Zinc, mineral nutrients, niacinamide, Vitamin B6, pyridoxine hydrochloride, Vitamin B1, thiamin mononitrate, Vitamin A, palmitate, Vitamin B2, riboflavin, folic acid, Vitamin B13, Vitamin D3",
+          "language": "en"
+        },
+        "nutrients": {
+          "calories": 140,
+          "protein": 3,
+          "carbohydrates": null,
+          "fat": 2,
+          "sodium": 210,
+          "fiber": 3,
+          "totalSugar": 12,
+          "addedSugar": 12
+        }
+      }
+    },
+    {
+      "barcode": "0030000012000",
+      "name": "Quick 1-Minute Oats",
+      "evidenceType": "captured-live-normalized-gateway-response",
+      "capturedAt": "2026-10-22T00:48:25.878Z",
+      "httpStatus": 200,
+      "status": "found",
+      "provider": {
+        "id": "open-food-facts",
+        "recordId": "0030000012000",
+        "attribution": "Open Food Facts contributors"
+      },
+      "product": {
+        "name": "Quick 1-Minute Oats",
+        "brand": "Quaker Oats",
+        "package": null,
+        "serving": {
+          "description": "0.5 cup dry (40 g)",
+          "amount": 40,
+          "unit": "ml",
+          "grams": null
+        },
+        "market": null
+      },
+      "previous": {
+        "provider": "packaged-food",
+        "nutrition": null,
+        "overall": null,
+        "causes": [
+          "missing-saturated-fat-or-fat-quality",
+          "missing-ingredient-declaration"
+        ]
+      },
+      "candidate": {
+        "logReady": true,
+        "nutrition": 74,
+        "overall": null,
+        "overallStatus": "nutrition-only",
+        "nutritionReasons": [],
+        "overallReasons": [
+          "Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.",
+          "Unreviewed ingredient phrase: whole grain rolled oats"
+        ],
+        "causes": [
+          "no-supported-ingredient-review"
+        ],
+        "market": {
+          "claims": [
+            {
+              "field": "countries_tags",
+              "values": [
+                "en:canada",
+                "en:france",
+                "en:united-states",
+                "en:world"
+              ]
+            },
+            {
+              "field": "countries",
+              "values": [
+                "Canada, France, United States, world"
+              ]
+            }
+          ],
+          "status": "foreign-or-multi-market",
+          "exactUsFormulationVerified": false
+        },
+        "category": {
+          "categories": [
+            "general"
+          ],
+          "providerClaims": [
+            {
+              "field": "categories_tags",
+              "values": [
+                "en:plant-based-foods-and-beverages",
+                "en:plant-based-foods",
+                "en:breakfasts",
+                "en:cereals-and-potatoes",
+                "en:cereals-and-their-products",
+                "en:breakfast-cereals",
+                "en:flakes",
+                "en:cereal-flakes",
+                "en:rolled-flakes",
+                "en:rolled-oats"
+              ]
+            },
+            {
+              "field": "categories",
+              "values": [
+                "Rolled oats"
+              ]
+            }
+          ],
+          "basis": [
+            "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+          ]
+        },
+        "source": {
+          "provider": "open-food-facts",
+          "recordId": "0030000012000",
+          "url": "https://world.openfoodfacts.org/product/0030000012000",
+          "attribution": "Open Food Facts contributors; database licensed under ODbL",
+          "revisionDate": "2026-09-21T14:10:45.000Z",
+          "publicationDate": null,
+          "retrievedAt": "2026-10-22T00:48:25.871Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "last_modified_t",
+              "value": 1789999845
+            }
+          ]
+        },
+        "ingredients": {
+          "text": "Whole Grain Rolled Oats",
+          "language": "en"
+        },
+        "nutrients": {
+          "calories": 150,
+          "protein": 5,
+          "carbohydrates": 27,
+          "fat": 3,
+          "sodium": 0,
+          "fiber": 4,
+          "totalSugar": 1,
+          "addedSugar": 0
+        }
+      }
+    }
+  ]
+}

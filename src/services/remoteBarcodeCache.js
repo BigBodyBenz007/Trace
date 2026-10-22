@@ -118,7 +118,7 @@ export function createRemoteBarcodeCache({
     });
   }
 
-  function set(value, result) {
+  function set(value, result, { preserveAge = false } = {}) {
     const normalizedBarcode = normalizeGtin(value);
     const key = canonicalGtinKey(normalizedBarcode);
     const normalizedResult = normalizeRemoteLookupResult(result);
@@ -131,13 +131,15 @@ export function createRemoteBarcodeCache({
     ) return false;
 
     const now = safeNow(clock);
-    const next = normalizedEntries().filter((entry) => entry.key !== key);
+    const entries = normalizedEntries();
+    const previous = preserveAge ? entries.find(entry => entry.key === key) : null;
+    const next = entries.filter((entry) => entry.key !== key);
     next.push({
       key,
       identifier: { scheme: "gtin", value: normalizedBarcode },
       result: normalizedResult,
-      storedAt: now,
-      expiresAt: now + safeTtl,
+      storedAt: previous ? previous.storedAt : now,
+      expiresAt: previous ? previous.expiresAt : now + safeTtl,
       lastAccessedAt: now,
     });
     next.sort((left, right) => right.lastAccessedAt - left.lastAccessedAt);

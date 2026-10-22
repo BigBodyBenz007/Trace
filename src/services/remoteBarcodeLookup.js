@@ -3,6 +3,7 @@ import { canonicalGtinKey, normalizeGtin } from "./productIdentifiers";
 import { createRemoteBarcodeCache } from "./remoteBarcodeCache";
 import { immutableCopy, normalizeRemoteLookupResult } from "./remoteFoodModel";
 import { detectRuntimePlatform } from "./runtimePlatform";
+import { bareBarcodeLookup, barcodeAssessmentTier, barcodeSourceKey, chooseBarcodeSource } from "./barcodeSourceSelection";
 
 export const REMOTE_BARCODE_ENDPOINT = "/api/nutrition/barcode";
 export const REMOTE_BARCODE_REQUEST_TIMEOUT_MS = 9000;
@@ -80,6 +81,8 @@ export function createRemoteBarcodeLookup({
 } = {}) {
   const cache = createRemoteBarcodeCache({ storage, clock });
   const inFlight = new Map();
+  const providerRequests = new Map();
+  const nextRetryAt = new Map();
   // Older valid v2 records predate optional capture or its basis fixes. Refresh
   // them once online instead of hiding newer evidence for the cache lifetime.
   // This is an in-memory attempt marker, not a cache or saved-record migration.
@@ -90,37 +93,59 @@ export function createRemoteBarcodeLookup({
     ? endpoint
     : REMOTE_BARCODE_ENDPOINT;
 
-  async function requestRemote(barcode, fallback = null) {
+  function rememberAttempts(barcode, result, provider) {
+    const now = clock();
+    const header = result.retryAfter;
+    const parsed = typeof header === "string"
+      ? /^\d+$/.test(header) ? now + Number(header) * 1000 : Date.parse(header) : NaN;
+    const limitedProvider = provider || result.providerAttempts?.find(entry => entry.status === result.status)?.provider;
+    for (const entry of result.providerAttempts || []) {
+      nextRetryAt.set(`${canonicalGtinKey(barcode)}:${entry.provider}`,
+        Math.max(now + 60000, entry.provider === limitedProvider && Number.isFinite(parsed) ? parsed : 0));
+    }
+  }
+
+  async function requestRemote(barcode, fallback = null, provider = null) {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), requestTimeoutMs);
     try {
       const response = await fetchImpl(gatewayEndpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ barcode }),
+        body: JSON.stringify({ barcode, ...(provider ? { provider } : {}) }),
         credentials: "same-origin",
         signal: controller.signal,
       });
       const payload = await readBoundedResponse(response, responseMaxBytes);
-      const result = normalizeRemoteLookupResult(payload);
-      if (!result) return fallback || safeResult("unavailable", { scheme: "gtin", value: barcode });
+      let result = normalizeRemoteLookupResult(payload);
+      if (!result || canonicalGtinKey(result.identifier?.value) !== canonicalGtinKey(barcode)) {
+        result = safeResult("unavailable", { scheme: "gtin", value: barcode });
+      }
+      if (provider && !result.providerAttempts?.some(entry => entry.provider === provider)) {
+        result = immutableCopy({ ...result, providerAttempts: [{ provider, status: result.status }] });
+      }
+      rememberAttempts(barcode, result, provider);
       if (["found", "incomplete"].includes(result.status)) {
-        cache.set(barcode, result);
+        if (!provider) cache.set(barcode, result);
         return result;
       }
-      return fallback || result;
+      return fallback ? immutableCopy({ ...fallback, gatewayStatus: result.status,
+        providerAttempts: result.providerAttempts || [] }) : result;
     } catch (error) {
       const runtimeState = typeof runtime === "function" ? runtime() : runtime;
-      return fallback || safeResult(
+      const result = safeResult(
         runtimeState?.isOnline === false ? "offline" : "unavailable",
-        { scheme: "gtin", value: barcode }
+        { scheme: "gtin", value: barcode },
+        provider ? { providerAttempts: [{ provider, status: "unavailable" }] } : {}
       );
+      rememberAttempts(barcode, result, provider);
+      return fallback ? immutableCopy({ ...fallback, gatewayStatus: result.status }) : result;
     } finally {
       clearTimeout(timeout);
     }
   }
 
-  async function lookup(value) {
+  async function lookupPreferred(value) {
     const barcode = normalizeGtin(value);
     if (!barcode) return safeResult("invalid");
 
@@ -154,9 +179,79 @@ export function createRemoteBarcodeLookup({
       legacyRefreshAttempts.add(key);
     }
     if (!inFlight.has(key)) {
-      inFlight.set(key, requestRemote(barcode, cached).finally(() => inFlight.delete(key)));
+      const retained = cached || cache.get(barcode, { allowExpired: true });
+      inFlight.set(key, requestRemote(barcode, retained).finally(() => inFlight.delete(key)));
     }
     return inFlight.get(key);
+  }
+
+  // Keep raw provider priority in the cache. A development assessment chooses a
+  // whole effective record at read time; ordinary logging keeps its prior order.
+  function mergeEvidence(primary, extra, chosen) {
+    const alternatives = [], seen = new Set([barcodeSourceKey(primary)]);
+    for (const candidate of [chosen, ...(primary.alternatives || []), extra, ...(extra.alternatives || [])]) {
+      if (!candidate?.food || seen.has(barcodeSourceKey(candidate))) continue;
+      seen.add(barcodeSourceKey(candidate));
+      const bare = bareBarcodeLookup(candidate);
+      if (alternatives.length < 3 && new TextEncoder().encode(JSON.stringify({ ...primary, alternatives: [...alternatives, bare] })).byteLength <= 60 * 1024) alternatives.push(bare);
+    }
+    const attempts = new Map();
+    for (const entry of [...(primary.providerAttempts || []), ...(extra.providerAttempts || [])]) attempts.set(entry.provider, entry);
+    return immutableCopy({ ...primary, alternatives, providerAttempts: [...attempts.values()] });
+  }
+
+  async function lookup(value, { assess } = {}) {
+    const preferred = await lookupPreferred(value);
+    if (typeof assess !== "function" || preferred.source === "user" || preferred.status === "invalid"
+      || barcodeAssessmentTier(preferred, assess) === 2) return preferred;
+    const barcode = normalizeGtin(value), key = canonicalGtinKey(barcode);
+    const state = typeof runtime === "function" ? runtime() : runtime;
+    const offline = state?.isOnline === false;
+    let evidence = cache.get(barcode, { allowExpired: offline }) || (preferred.food?.sourceType === "remote-barcode" ? preferred : null);
+    let attempts = [...(evidence?.providerAttempts || preferred.providerAttempts || [])];
+    let candidates = [...(preferred.alternatives || [])];
+    const addEvidence = result => {
+      if (!result) return;
+      candidates.push(...(result.food ? [result] : []), ...(result.alternatives || []).map(candidate =>
+        result.stale ? { ...candidate, stale: true } : candidate));
+      attempts = [...new Map([...attempts, ...(result.providerAttempts || [])].map(entry => [entry.provider, entry])).values()];
+    };
+    addEvidence(evidence);
+    let chosen = chooseBarcodeSource(preferred, candidates, assess, attempts, offline);
+    if (barcodeAssessmentTier(chosen, assess) === 2 || offline || state?.isWeb !== true) return chosen;
+
+    // Catalog hits have not contacted the gateway at all. Keep its default
+    // provider order for this first request; then request only missing evidence.
+    if (preferred.source === "local" && !evidence) {
+      if (!inFlight.has(key)) inFlight.set(key, requestRemote(barcode).finally(() => inFlight.delete(key)));
+      const remote = await inFlight.get(key);
+      evidence = remote.food ? remote : null;
+      addEvidence(remote);
+      chosen = chooseBarcodeSource(preferred, candidates, assess, attempts);
+      if (barcodeAssessmentTier(chosen, assess) === 2) return chosen;
+    }
+    for (const provider of ["usda-fdc", "open-food-facts"]) {
+      const known = attempts.find(entry => entry.provider === provider);
+      const alreadyPresent = [preferred, ...candidates].some(result => result.food?.provider?.id === provider);
+      const requestKey = `${key}:${provider}`;
+      if (alreadyPresent || known?.status === "not-found"
+        || clock() < (nextRetryAt.get(requestKey) || 0)) continue;
+      if (!providerRequests.has(requestKey)) {
+        providerRequests.set(requestKey, requestRemote(barcode, null, provider).finally(() => providerRequests.delete(requestKey)));
+      }
+      const alternative = await providerRequests.get(requestKey);
+      addEvidence(alternative);
+      chosen = chooseBarcodeSource(preferred, candidates, assess, attempts);
+      if (evidence?.food) {
+        evidence = mergeEvidence(evidence, alternative, chosen);
+        cache.set(barcode, evidence, { preserveAge: true });
+      } else if (alternative.food) {
+        evidence = alternative;
+        cache.set(barcode, evidence);
+      }
+      if (barcodeAssessmentTier(chosen, assess) === 2) break;
+    }
+    return chosen;
   }
 
   return Object.freeze({ lookup });

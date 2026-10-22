@@ -225,6 +225,7 @@ const normalize = value => value.toLowerCase().replace(/[.*#_]/g, ' ').replace(/
 // classifications. Foreign declarations remain partial in the caller, and any
 // unmatched remainder still stays unknown. No food name establishes absence.
 const ordinaryAliases = new Map([
+  ['whole grain rolled oats', 'oats'],
   ['pecan halves', 'pecans'], ['pecan', 'pecans'], ['walnut', 'walnuts'],
   ['eau', 'water'], ['eau gazeifiée', 'carbonated water'], ['cacahuètes', 'peanuts'],
   ['huile de tournesol', 'sunflower oil'], ['sel', 'salt'], ['sel de mer', 'sea salt'],

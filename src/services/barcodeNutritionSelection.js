@@ -230,7 +230,12 @@ function localCandidate(result) {
 // Normal lookup/selection always applies reviewed fact corrections.
 export function createBarcodeNutritionCandidate(result, { applyVerifiedCorrections = true } = {}) {
   if (!result || !["found", "incomplete"].includes(result.status) || !result.food) return null;
-  return result.food.sourceType === "remote-barcode"
+  const candidate = result.food.sourceType === "remote-barcode"
     ? remoteCandidate(result, applyVerifiedCorrections)
     : localCandidate(result);
+  if (!candidate || !result.sourceSelection) return candidate;
+  return immutableCopy({ ...candidate,
+    display: { ...candidate.display, sourceSelection: result.sourceSelection },
+    selection: candidate.selection ? { ...candidate.selection, sourceSelection: result.sourceSelection } : null,
+  });
 }

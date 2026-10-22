@@ -329,7 +329,21 @@ export function normalizeRemoteFood(food) {
   });
 }
 
-export function normalizeRemoteLookupResult(result) {
+function lookupEvidence(result, identifier) {
+  const alternatives = [];
+  if (Array.isArray(result.alternatives)) {
+    for (const raw of result.alternatives.slice(0, 3)) {
+      const candidate = normalizeRemoteLookupResult(raw, { evidence: false });
+      if (candidate?.food && canonicalGtinKey(candidate.identifier?.value) === canonicalGtinKey(identifier?.value)) alternatives.push(candidate);
+    }
+  }
+  const providerAttempts = Array.isArray(result.providerAttempts) ? result.providerAttempts.slice(0, 4)
+    .filter(entry => plainObject(entry) && PROVIDERS.has(entry.provider) && LOOKUP_STATUSES.has(entry.status))
+    .map(entry => ({ provider: entry.provider, status: entry.status })) : [];
+  return { ...(alternatives.length ? { alternatives } : {}), ...(providerAttempts.length ? { providerAttempts } : {}) };
+}
+
+export function normalizeRemoteLookupResult(result, { evidence = true } = {}) {
   if (!plainObject(result) || !LOOKUP_STATUSES.has(result.status)) return null;
   const identifiers = result.identifier === null
     ? Object.freeze([])
@@ -344,7 +358,7 @@ export function normalizeRemoteLookupResult(result) {
       return null;
     }
     if ((result.status === "found") !== food.logReady) return null;
-    return deepFreeze({ status: result.status, identifier, food });
+    return deepFreeze({ status: result.status, identifier, food, ...(evidence ? lookupEvidence(result, identifier) : {}) });
   }
 
   if (result.food !== null && result.food !== undefined) return null;
@@ -357,5 +371,6 @@ export function normalizeRemoteLookupResult(result) {
     identifier,
     food: null,
     ...(retryAfter ? { retryAfter } : {}),
+    ...(evidence ? lookupEvidence(result, identifier) : {}),
   });
 }

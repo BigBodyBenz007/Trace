@@ -11,6 +11,9 @@ const OPEN_FOOD_FACTS_URL = "https://world.openfoodfacts.org/api/v2/product";
 const REQUEST_TIMEOUT_MS = 4000;
 const MAX_REQUEST_BYTES = 2048;
 const MAX_PROVIDER_RESPONSE_BYTES = 256 * 1024;
+const MAX_LOOKUP_EVIDENCE_BYTES = 60 * 1024;
+const MAX_LOOKUP_ALTERNATIVES = 3;
+const SUPPORTED_PROVIDERS = new Set(["usda-fdc", "open-food-facts"]);
 const GTIN_LENGTHS = new Set([8, 12, 13, 14]);
 const NUTRIENT_KEYS = Object.freeze([
   "calories",
@@ -777,6 +780,36 @@ function lookupResult(status, barcode, food = null, extra = {}) {
   });
 }
 
+// Keep already-fetched records as whole editions. The gateway does not decide
+// whether their evidence supports an experimental assessment or rank scores.
+function withCandidateEvidence(preferred, results, providerAttempts) {
+  const base = { ...preferred };
+  delete base.alternatives;
+  delete base.providerAttempts;
+  const output = { ...base,
+    ...(providerAttempts ? { providerAttempts } : {}) };
+  const seen = new Set();
+  if (preferred.food) seen.add(`${preferred.food.provider.id}:${preferred.food.provider.recordId}`);
+  const alternatives = [];
+  for (const result of results) {
+    for (const candidate of [result, ...(result.alternatives || [])]) {
+      if (!["found", "incomplete"].includes(candidate.status) || !candidate.food
+        || canonicalGtin(candidate.identifier?.value) !== canonicalGtin(preferred.identifier?.value)) continue;
+      const key = `${candidate.food.provider.id}:${candidate.food.provider.recordId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      const bare = { status: candidate.status, identifier: candidate.identifier, food: candidate.food };
+      if (alternatives.length >= MAX_LOOKUP_ALTERNATIVES) continue;
+      // Leave room below the browser's existing 64 KiB transport limit. An
+      // oversized alternative is omitted without discarding the preferred food.
+      if (Buffer.byteLength(JSON.stringify({ ...output, alternatives: [...alternatives, bare] }), "utf8")
+        > MAX_LOOKUP_EVIDENCE_BYTES) continue;
+      alternatives.push(bare);
+    }
+  }
+  return deepFreeze({ ...output, ...(alternatives.length ? { alternatives } : {}) });
+}
+
 async function lookupUsda({ barcode, fetchImpl, apiKey, now, timeoutMs, maxBytes }) {
   if (!textOrNull(apiKey)) return lookupResult("unconfigured", barcode);
   const response = await fetchProviderJson({
@@ -801,10 +834,12 @@ async function lookupUsda({ barcode, fetchImpl, apiKey, now, timeoutMs, maxBytes
     .filter((food) => String(food?.dataType || "").toLowerCase() === "branded")
     .filter((food) => canonicalGtin(food?.gtinUpc) === canonicalGtin(barcode))
     .sort((left, right) => revisionTimestamp(right) - revisionTimestamp(left));
+  const normalized = [];
   for (const candidate of candidates) {
     const food = normalizeUsdaFood(candidate, barcode, retrievedAt);
-    if (food) return lookupResult(food.logReady ? "found" : "incomplete", barcode, food);
+    if (food) normalized.push(lookupResult(food.logReady ? "found" : "incomplete", barcode, food));
   }
+  if (normalized.length) return withCandidateEvidence(normalized[0], normalized);
   return lookupResult("not-found", barcode);
 }
 
@@ -865,6 +900,7 @@ function preferredFailure(usda, openFoodFacts, barcode) {
 
 async function lookupRemoteBarcode({
   barcode,
+  provider,
   fetchImpl = globalThis.fetch,
   env = process.env,
   now = Date.now,
@@ -873,28 +909,25 @@ async function lookupRemoteBarcode({
 } = {}) {
   const normalized = normalizeGtin(barcode);
   if (!normalized) return lookupResult("invalid", null);
+  if (provider !== undefined && !SUPPORTED_PROVIDERS.has(provider)) return lookupResult("invalid", normalized);
   if (typeof fetchImpl !== "function") return lookupResult("unavailable", normalized);
 
-  const usda = await lookupUsda({
-    barcode: normalized,
-    fetchImpl,
-    apiKey: env?.USDA_FDC_API_KEY,
-    now,
-    timeoutMs,
-    maxBytes,
-  });
-  if (usda.status === "found") return usda;
+  const options = { barcode: normalized, fetchImpl, now, timeoutMs, maxBytes };
+  const requestUsda = () => lookupUsda({ ...options, apiKey: env?.USDA_FDC_API_KEY });
+  const requestOpenFoodFacts = () => lookupOpenFoodFacts({ ...options, userAgent: env?.OPEN_FOOD_FACTS_USER_AGENT });
+  if (provider) {
+    const result = await (provider === "usda-fdc" ? requestUsda() : requestOpenFoodFacts());
+    return withCandidateEvidence(result, [result], [{ provider, status: result.status }]);
+  }
 
-  const openFoodFacts = await lookupOpenFoodFacts({
-    barcode: normalized,
-    fetchImpl,
-    userAgent: env?.OPEN_FOOD_FACTS_USER_AGENT,
-    now,
-    timeoutMs,
-    maxBytes,
-  });
-  if (openFoodFacts.status === "found") return openFoodFacts;
-  return preferredFailure(usda, openFoodFacts, normalized);
+  const usda = await requestUsda();
+  const providerAttempts = [{ provider: "usda-fdc", status: usda.status }];
+  if (usda.status === "found") return withCandidateEvidence(usda, [usda], providerAttempts);
+
+  const openFoodFacts = await requestOpenFoodFacts();
+  providerAttempts.push({ provider: "open-food-facts", status: openFoodFacts.status });
+  const preferred = openFoodFacts.status === "found" ? openFoodFacts : preferredFailure(usda, openFoodFacts, normalized);
+  return withCandidateEvidence(preferred, [usda, openFoodFacts], providerAttempts);
 }
 
 function setResponseHeaders(response) {
@@ -921,8 +954,9 @@ function parseRequestBody(request) {
     const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return { invalid: true };
     const keys = Object.keys(parsed);
-    if (keys.length !== 1 || keys[0] !== "barcode") return { invalid: true };
-    return { barcode: parsed.barcode };
+    if (!keys.includes("barcode") || keys.some(key => !["barcode", "provider"].includes(key))
+      || (keys.includes("provider") && !SUPPORTED_PROVIDERS.has(parsed.provider))) return { invalid: true };
+    return { barcode: parsed.barcode, ...(keys.includes("provider") ? { provider: parsed.provider } : {}) };
   } catch (error) {
     return { invalid: true };
   }
@@ -944,7 +978,7 @@ function createHandler({ lookup = lookupRemoteBarcode } = {}) {
     if (body.invalid || !barcode) return send(response, 400, lookupResult("invalid", null));
 
     try {
-      return send(response, 200, await lookup({ barcode }));
+      return send(response, 200, await lookup({ barcode, ...(body.provider ? { provider: body.provider } : {}) }));
     } catch (error) {
       return send(response, 200, lookupResult("unavailable", barcode));
     }

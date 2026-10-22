@@ -4,6 +4,7 @@ import { getAdditiveNameSource } from '../services/additiveNameReference';
 import { explainNutritionPoints, getNutritionHighlights, getBarcodeAdditiveInformation } from './barcodeReviewInformation';
 import { assessAdditiveProfile, assessOverallFoodQuality } from './traceOverallFoodQuality';
 import './BarcodeNutritionReview.css';
+export { assessLookupForGrading } from './barcodeAssessmentFallback';
 
 export default function BarcodeNutritionReview({ candidate, identifier }) {
   const assessment = assessBarcodeNutrition(candidate, identifier);
@@ -36,6 +37,10 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
           {' '}Review, score and new food entries use this value; original provider values remain in source details.</>}
     </p>}
     <details aria-label="Score details & limitations"><summary>Score details &amp; limitations</summary>
+      {candidate.display.sourceSelection && <p aria-label="Source selection evidence">
+        {candidate.display.sourceSelection.reason} Original: {candidate.display.sourceSelection.preferred.food?.name || 'No usable record'}.
+        {' '}Provider checks: {candidate.display.sourceSelection.providerAttempts.map(entry => `${entry.provider}: ${entry.status}`).join('; ') || 'Cached evidence only'}.
+      </p>}
       {reviewedLabel && <details aria-label="Manufacturer label comparison"><summary>Manufacturer label comparison</summary>
         {replacement ? <>
           <p>{reviewedLabel.identity.brand} {reviewedLabel.identity.name}. UPC {reviewedLabel.identity.gtin}; {reviewedLabel.identity.packageQuantity}.

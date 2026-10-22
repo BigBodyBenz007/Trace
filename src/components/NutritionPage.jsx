@@ -831,6 +831,7 @@ function NutritionPage({
       source: food.provenance.source,
       sourceId: food.provenance.sourceId,
       confidence: food.provenance.confidence,
+      ...(food.sourceSelection ? { sourceSelection: food.sourceSelection } : {}),
       ...(food.identifiers?.length
         ? { identifiers: food.identifiers.map((identifier) => ({ ...identifier })) }
         : {}),
