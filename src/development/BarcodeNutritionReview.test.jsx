@@ -91,6 +91,24 @@ test('a real nitrite finding shows its deduction and limitations with the provis
   expect(screen.getByLabelText('Overall assessment evidence')).toHaveTextContent('low nitrosamine concern');
 });
 
+test('captured USDA Teddy details retain actual provider rounding and the partial correction scope', () => {
+  const captured = require('../services/__fixtures__/manufacturerProviderLookups.json');
+  const lookup = captured.observations.find(row => row.request.body.barcode === '044000045586').response;
+  const c = createBarcodeNutritionCandidate(lookup);
+  render(<BarcodeNutritionReview candidate={c} identifier={lookup.identifier} />);
+  expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('20/100');
+  expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
+  const details = screen.getByLabelText('Manufacturer label comparison');
+  expect(details).not.toHaveAttribute('open');
+  expect(details).toHaveTextContent('Original provider added sugars: 6.99 g per 30 g');
+  expect(details).toHaveTextContent('Supporting manufacturer total sugar: 7 g');
+  expect(details).toHaveTextContent('remaining provider nutrients are retained, not independently verified');
+  expect(details).not.toHaveTextContent('2.1 g');
+  expect(c.display.nutrients.calories).toBe(lookup.food.nutrients.calories);
+  expect(c.display.nutrients.addedSugar).toBe(7);
+  expect(c.display.nutrients.totalSugar).toBe(7);
+});
+
 test('actual Teddy uses its reviewed manufacturer sugars, retains provider data and keeps details collapsed', () => {
   const archive = require('../../docs/trace-nutrition-v2-teddy-2026-10-20.json');
   const c = createBarcodeNutritionCandidate(archive.lookup);
@@ -112,7 +130,7 @@ test('actual Teddy uses its reviewed manufacturer sugars, retains provider data 
   expect(screen.getByLabelText('Possible overall range')).toHaveTextContent('16–20/100');
   expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('Honey · 10 oz');
   expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('7 g per 30 g');
-  expect(details).toHaveTextContent('2.1 g per serving');
+  expect(details).toHaveTextContent('Original provider added sugars: 2.1 g per 30 g');
   expect(screen.getByLabelText('Manufacturer label comparison')).not.toHaveAttribute('open');
   expect(c.selection.nutrients.addedSugar).toBe(7);
   fireEvent.click(screen.getByText('Score details & limitations'));

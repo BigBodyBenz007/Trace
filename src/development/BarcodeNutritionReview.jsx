@@ -10,12 +10,13 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
   const providerAssessment = assessment.evidence.originalProviderAssessment || assessment;
   const reviewedLabel = assessment.evidence.reviewedManufacturerLabel;
   const replacement = reviewedLabel?.mode === 'replacement-panel';
+  const correction = candidate.display.nutritionCorrection;
   const score = assessment.nutritionScore100;
   const overall = assessOverallFoodQuality(candidate, assessment);
   const combined = overall.overallScore100;
   const factors = getNutritionHighlights(assessment.result);
   const market = assessment.evidence.market?.status;
-  const confidence = reviewedLabel ? 'Manufacturer label checked; package revision unconfirmed.' : market === 'unknown' ? 'Product market is unknown.'
+  const confidence = reviewedLabel ? replacement ? 'Manufacturer label checked; package revision unconfirmed.' : 'Sugar facts checked; package revision unconfirmed.' : market === 'unknown' ? 'Product market is unknown.'
     : market === 'foreign-or-multi-market' ? 'Multi-market record; US formulation unconfirmed.' : 'US formulation unconfirmed.';
   return <section className="trace-barcode-grade" aria-label="Experimental nutrition assessment">
     <div aria-label="Opening score summary">
@@ -48,9 +49,10 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
         </> : <><p>{reviewedLabel.identity.brand} {reviewedLabel.identity.name}. UPC {reviewedLabel.identity.gtin}; {reviewedLabel.identity.packageQuantity} (283 g).
           {' '}Label updated {reviewedLabel.source.updatedOn}; reviewed {reviewedLabel.source.verifiedAt.slice(0, 10)}. {reviewedLabel.qualification}</p>
         <p><a href={reviewedLabel.source.nutritionUrl} target="_blank" rel="noreferrer">Manufacturer nutrition panel</a>{' · '}
-          <a href={reviewedLabel.source.ingredientsUrl} target="_blank" rel="noreferrer">Manufacturer ingredients</a>. Other listed macronutrients match the provider panel;
-          {' '}saturated fat is 0 g per serving. Total sugars and added sugars are separately declared at 7 g each.</p>
-        <p>Provider added-sugars_100g: 7 g; 7 × 30/100 = 2.1 g per serving. Manufacturer added sugars: 7 g per 30 g = 23.3333 g per 100 g.
+          <a href={reviewedLabel.source.ingredientsUrl} target="_blank" rel="noreferrer">Manufacturer ingredients</a>. The ingredient declaration matches this supporting reference; remaining provider nutrients are retained, not independently verified.
+          {' '}The score compares the separately reviewed label. Manufacturer total sugars and added sugars are separately declared at 7 g each.</p>
+        <p>Original provider added sugars: {correction.originalProviderNutrients.addedSugar ?? 'unknown'} g per 30 g. Manufacturer added sugars: 7 g per 30 g.
+          {correction.changes.some(change => change.nutrient === 'totalSugar') && <> Supporting manufacturer total sugar: 7 g, replacing the rounded provider value of {correction.originalProviderNutrients.totalSugar} g to preserve added/total consistency.</>}
           {' '}Original provider assessment: {providerAssessment.nutritionScore100}/100. Original ingredients, additive identifiers and provider snapshot are retained. Historical food entries are unchanged.</p></>}
       </details>}
       {score != null && <p aria-label={combined != null ? 'Experimental nutrition rating' : 'Nutrition subtotal'}>Nutrition {score}/100{combined != null && <> · additive deduction {overall.additiveDeduction} {overall.additiveDeduction === 1 ? 'point' : 'points'}</>}. Comparison: {Number(assessment.result.normalized.basis.amount.toFixed(1))} {assessment.result.normalized.basis.unit}.</p>}

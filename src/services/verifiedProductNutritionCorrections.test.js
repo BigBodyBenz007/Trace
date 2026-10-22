@@ -69,23 +69,31 @@ test.each([
   ['a different package', food => { food.packageQuantity = '2.75 oz'; }],
   ['a different serving', food => { food.serving.amount = 28; food.serving.grams = 28; }],
   ['foreign formulation', food => { food.assessmentInputs.markets = [{ field: 'countries_tags', values: ['en:france'] }]; }],
-  ['a mixed market', food => { food.assessmentInputs.markets[0].values.push('en:france'); }],
-  ['an unknown market', food => { food.assessmentInputs.markets = []; }],
   ['missing ingredients', food => { food.ingredients = null; }],
   ['different ingredients', food => { food.ingredients.text += ' COCOA.'; }],
   ['an incomplete list', food => { food.ingredients.text = 'GRAHAM FLOUR, SUGAR...'; }],
-  ['missing added sugar', food => { food.nutrients.addedSugar = null; }],
   ['a different nutrient panel', food => { food.nutrients.calories = 140; }],
-  ['missing panel evidence', food => { delete food.assessmentInputs; }],
-  ['an already corrected provider value', food => { food.nutrients.addedSugar = 7; }],
   ['invalid provenance', food => { food.assessmentInputs.source.url = 'https://example.com/unknown'; }],
 ])('does not substitute a label for %s', (_, mutate) => {
   const food = clone(archive.lookup.food);
   mutate(food);
   expect(resolveVerifiedNutritionCorrection(food)).toBeNull();
 });
-test('stale or manually edited candidates cannot inherit the correction', () => {
-  expect(resolveVerifiedNutritionCorrection(archive.lookup.food, { stale: true })).toBeNull();
+test.each([
+  ['additional sales markets', food => { food.assessmentInputs.markets[0].values.push('en:france'); }],
+  ['unknown provider market', food => { food.assessmentInputs.markets = []; }],
+  ['missing added sugar', food => { food.nutrients.addedSugar = null; }],
+  ['legacy absence of the optional assessment wrapper', food => { delete food.assessmentInputs; }],
+  ['an already correct provider value', food => { food.nutrients.addedSugar = 7; }],
+])('verified identity and ingredient scope do not require %s to match one captured OFF fingerprint', (_, mutate) => {
+  // Constructed matcher controls. They test correction scope rather than
+  // representing another captured response or a verified current package.
+  const food = clone(archive.lookup.food); mutate(food);
+  expect(resolveVerifiedNutritionCorrection(food)?.id).toBe(label.id);
+});
+
+test('stale source evidence stays stale without suppressing the independent local reference; edited candidates cannot forge it', () => {
+  expect(resolveVerifiedNutritionCorrection(archive.lookup.food, { stale: true })?.id).toBe(label.id);
   const c = clone(candidate());
   c.customFood = {};
   expect(getAppliedVerifiedNutritionCorrection(c, archive.lookup.identifier)).toBeNull();

@@ -37,33 +37,60 @@ function isVerifiedReplacementPanel(panel) {
       || (Number.isFinite(observation.nutrients[key]) && observation.nutrients[key] >= 0)));
 }
 
-function resolveReplacementPanel(food, panel, identifier) {
-  const key = canonicalGtinKey(panel.identity.gtin), observed = panel.providerObservation;
+const nameTokens = value => [...new Set(String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ')
+  .split(' ').filter(token => token && !['made', 'with', 'real'].includes(token)))].sort().join(' ');
+const brandWords = value => words(String(value || '').replace(/\b(?:nutrition|llc|inc|company|corporation)\b/gi, ''));
+
+function packageMatches(value, panel) {
+  if (!value) return true; // Missing packaging is not a different formulation.
+  if ([panel.identity.packageQuantity, panel.providerObservation.packageQuantity].some(expected => words(value) === words(expected))) return true;
+  const grams = [...String(value).matchAll(/(\d+(?:\.\d+)?)\s*(?:g|grams?)\b/gi)].map(match => Number(match[1]));
+  return grams.some(amount => close(amount, panel.identity.packageGrams ?? Number.parseFloat(panel.identity.packageQuantity)));
+}
+
+// Product identity is independent of the provider's display brand, record-id
+// scheme (USDA uses FDC ids), revision and nutrient fingerprint. A different
+// observed edition is retained, not relabeled as the manufacturer edition.
+function productScope(food, panel, identifier) {
+  const key = canonicalGtinKey(panel.identity.gtin), provider = food.provider?.id;
+  const brands = [panel.identity.brand, panel.providerObservation.brand, ...(panel.matchingProviderBrands || [])];
+  if (!['open-food-facts', 'usda-fdc'].includes(provider) || food.identifiers?.length !== 1
+    || canonicalGtinKey(food.identifiers[0].value) !== key
+    || (identifier && canonicalGtinKey(identifier.value) !== key)
+    || (provider === 'open-food-facts' && canonicalGtinKey(food.provider.recordId) !== key)
+    || food.provenance?.providerRecordId !== food.provider.recordId
+    || (food.brand && !brands.some(brand => brand && brandWords(brand) === brandWords(food.brand)))
+    || ![panel.identity.name, panel.matchingProviderName, panel.providerObservation.name].some(name => name && nameTokens(food.name) === nameTokens(name))
+    || !packageMatches(food.packageQuantity, panel)
+    || food.dataBasis !== 'serving' || food.serving?.unit !== 'g'
+    || ![panel.serving.amount, panel.providerObservation.serving?.amount].some(amount => close(food.serving.amount, amount))
+    || (food.serving.grams != null && !close(food.serving.amount, food.serving.grams))) return null;
+  try {
+    const url = new URL(food.provenance.sourceUrl);
+    if (url.protocol !== 'https:' || url.username || url.password
+      || !(provider === 'usda-fdc' ? url.hostname === 'fdc.nal.usda.gov' : url.hostname === 'world.openfoodfacts.org')) return null;
+  } catch { return null; }
   const input = normalizeNutritionAssessmentInputs(food.assessmentInputs, food);
-  if (!input || food.identifiers.length !== 1 || (identifier && canonicalGtinKey(identifier.value) !== key)
-    || food.provider?.id !== observed.provider || canonicalGtinKey(food.provider.recordId) !== key
-    || words(food.name) !== words(observed.name) || words(food.brand) !== words(observed.brand)
-    || words(food.packageQuantity) !== words(observed.packageQuantity)
-    || food.dataBasis !== 'serving' || food.serving?.unit !== observed.serving.unit
-    || !close(food.serving.amount, observed.serving.amount) || !close(food.serving.grams, observed.serving.grams)
-    || food.provenance?.revisionDate !== observed.revisionDate
-    || canonicalGtinKey(input.identity.providerGtin) !== key || input.identity.name !== food.name || input.identity.brand !== food.brand
-    || input.source.provider !== observed.provider || canonicalGtinKey(input.source.recordId) !== key
-    || input.source.url !== food.provenance.sourceUrl || input.source.revisionDate !== observed.revisionDate
-    || !input.markets.some(entry => entry.values.includes('en:united-states'))
-    || !NUTRITION_ENTRY_NUTRIENT_KEYS.every(nutrient => observed.nutrients[nutrient] === null
-      ? food.nutrients[nutrient] === null : close(food.nutrients[nutrient], observed.nutrients[nutrient]))) return null;
-  // This reviewed captured observation can also arrive from an expired cache.
-  // Its stale flag remains visible; the local verified reference is not stale
-  // provider evidence and is applied after cache retrieval, without migration.
-  return immutableCopy({ schemaVersion: 1, mode: 'replacement-panel', id: panel.id,
-    basis: panel.serving, product: panel.identity,
-    changes: NUTRITION_ENTRY_NUTRIENT_KEYS.map(nutrient => ({ nutrient, unit: units[nutrient] || 'g',
-      originalValue: food.nutrients[nutrient], correctedValue: panel.nutrients[nutrient] })),
+  // An absent legacy wrapper is different from a present invalid capture. The
+  // remote normalizer retains malformed captures as null; do not erase that
+  // provenance conflict by treating it as ordinary legacy absence.
+  if (food.assessmentInputs !== undefined && !input) return null;
+  if (input?.identity.providerGtin && canonicalGtinKey(input.identity.providerGtin) !== key) return null;
+  const us = new Set(['unitedstates', 'unitedstatesofamerica', 'us', 'usa']);
+  const markets = input?.markets.flatMap(entry => entry.values) || [];
+  // A multi-market sales list including the US does not establish a distinct
+  // foreign formulation. Foreign-only claims remain an explicit contradiction.
+  if (markets.length && !markets.some(value => us.has(words(value.replace(/^en:/, ''))))) return null;
+  return { input };
+}
+
+function originalObservation(food, panel, changes) {
+  return { schemaVersion: 1, id: panel.id, basis: panel.serving, product: panel.identity, changes,
     source: panel.source, manufacturerPanel: panel, originalProviderNutrients: food.nutrients,
     originalProviderServing: food.serving, originalProviderSource: food.provenance,
+    originalProviderIdentifiers: food.identifiers,
     originalProviderIngredients: food.ingredients, originalProviderAdditives: food.additives,
-    scope: panel.qualification });
+    scope: panel.qualification };
 }
 
 export function isVerifiedManufacturerNutritionPanel(panel) {
@@ -94,47 +121,42 @@ export function isVerifiedManufacturerNutritionPanel(panel) {
   } catch { return false; }
 }
 
-export function resolveVerifiedNutritionCorrection(food, { identifier, stale = false } = {}) {
+export function resolveVerifiedNutritionCorrection(food, { identifier } = {}) {
   const key = canonicalGtinKey(food?.identifiers?.[0]?.value);
   const panel = VERIFIED_NUTRITION_PANELS.find(value => canonicalGtinKey(value.identity.gtin) === key);
-  if (panel?.mode === 'replacement-panel') return isVerifiedManufacturerNutritionPanel(panel)
-    ? resolveReplacementPanel(food, panel, identifier) : null;
-  if (!panel || !isVerifiedManufacturerNutritionPanel(panel) || stale || food.identifiers.length !== 1
-    || (identifier && canonicalGtinKey(identifier.value) !== key)
-    || food.provider?.id !== panel.providerObservation.provider
-    || canonicalGtinKey(food.provider.recordId) !== key
-    || words(food.name) !== words(panel.matchingProviderName)
-    || words(food.brand) !== words(panel.identity.brand)
-    || words(food.packageQuantity) !== words(panel.identity.packageQuantity)
-    || food.dataBasis !== 'serving' || food.serving?.unit !== panel.serving.unit
-    || !close(food.serving.amount, panel.serving.amount) || !close(food.serving.grams, panel.serving.amount)
-    || food.ingredients?.language !== panel.ingredients.language
-    || words(food.ingredients?.text) !== words(panel.ingredients.text)) return null;
-  const input = normalizeNutritionAssessmentInputs(food.assessmentInputs, food);
-  const markets = input?.markets.flatMap(entry => entry.values) || [];
-  if (!input || input.source.cacheStale || canonicalGtinKey(input.identity.providerGtin) !== key
-    || !markets.length || !markets.every(value => ['en:united-states', 'United States', 'United States of America', 'US', 'USA'].includes(value))) return null;
-  const reference = input.datasets.find(dataset => dataset.basis === '100g');
-  if (!reference || panel.serving.unit !== 'g') return null;
-  // Qualified OFF energy approximations are not independent label declarations.
-  // Retain the originals; never suppress an unqualified conflicting energy fact.
-  const reported = getAssessmentDatasetNutrients({ ...reference, observations: reference.observations.filter(entry =>
-    entry.nutrient !== 'calories' || !entry.derivation?.startsWith('off:modifier:')) });
-  const changes = new Map(panel.corrections.map(change => [change.nutrient, change]));
-  // Match the entire known panel, including saturated fat. Missing, conflicting
-  // or changed facts cannot silently inherit a historical label correction.
-  for (const [nutrient, value] of Object.entries(panel.nutrients)) {
-    const original = changes.get(nutrient)?.originalValue ?? value;
-    const measurement = reported[nutrient];
-    if (!measurement || measurement.status !== 'reported'
-      || !close(measurement.value, original * 100 / panel.serving.amount)
-      || (nutrient !== 'saturatedFat' && !close(food.nutrients?.[nutrient], original))) return null;
+  if (!panel || !isVerifiedManufacturerNutritionPanel(panel)) return null;
+  const scope = productScope(food, panel, identifier);
+  if (!scope) return null;
+  if (panel.mode === 'replacement-panel') return immutableCopy({
+    ...originalObservation(food, panel, NUTRITION_ENTRY_NUTRIENT_KEYS.map(nutrient => ({ nutrient, unit: units[nutrient] || 'g',
+      originalValue: food.nutrients[nutrient], correctedValue: panel.nutrients[nutrient] }))), mode: 'replacement-panel' });
+
+  // A nutrient-only correction cannot replace a different ingredient edition.
+  // Absent language metadata is not contradictory when the declaration matches.
+  if (!food.ingredients?.text || words(food.ingredients.text) !== words(panel.ingredients.text)) return null;
+  const correctedKeys = new Set(panel.corrections.map(change => change.nutrient));
+  const labelCompatible = (value, labelValue) => close(value, labelValue) || Math.round(value) === labelValue;
+  // USDA references can carry rounding from per-100 values (129.9 kcal, 6.99 g
+  // sugar, etc.). This checks compatibility with this existing integer label,
+  // not whether the entire provider panel has been independently verified.
+  for (const [nutrient, value] of Object.entries(food.nutrients)) {
+    if (value !== null && !correctedKeys.has(nutrient) && !labelCompatible(value, panel.nutrients[nutrient])) return null;
   }
-  return immutableCopy({ schemaVersion: 1, id: panel.id, basis: panel.serving,
-    product: panel.identity, changes: panel.corrections, source: panel.source,
-    manufacturerPanel: panel, originalProviderNutrients: food.nutrients,
-    originalProviderSource: food.provenance,
-    scope: 'Verified nutrient correction for new selections and entries; not a score or proof of the physical package revision.' });
+  for (const dataset of scope.input?.datasets || []) {
+    if (dataset.quantity?.unit !== 'g') continue;
+    const saturatedFat = getAssessmentDatasetNutrients(dataset).saturatedFat;
+    if (saturatedFat.status === 'reported' && !labelCompatible(saturatedFat.value * panel.serving.amount / dataset.quantity.amount, panel.nutrients.saturatedFat)) return null;
+  }
+  const changes = panel.corrections.map(change => ({ ...change, originalValue: food.nutrients[change.nutrient] }));
+  const addedSugar = changes.find(change => change.nutrient === 'addedSugar')?.correctedValue;
+  // 7 g added sugar must not be logged above a rounded USDA total of 6.99 g.
+  // Use the separately verified total-sugar fact, explicitly, rather than
+  // weakening sugar validation, rounding all nutrients, or replacing the panel.
+  if (food.nutrients.totalSugar !== null && addedSugar > food.nutrients.totalSugar) changes.push({
+    nutrient: 'totalSugar', unit: 'g', originalValue: food.nutrients.totalSugar, correctedValue: panel.nutrients.totalSugar,
+    reason: 'Supporting manufacturer total-sugar fact preserves added/total coherence after provider reference rounding.' });
+  return immutableCopy({ ...originalObservation(food, panel, changes), mode: 'nutrient-correction',
+    scope: 'Only the listed sugar facts are corrected from the reviewed manufacturer label. Other provider values and the matching ingredient declaration are retained; the physical package revision is unconfirmed.' });
 }
 
 export function getAppliedVerifiedNutritionCorrection(candidate, identifier) {

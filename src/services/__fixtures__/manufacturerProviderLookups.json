@@ -1,0 +1,541 @@
+{
+  "schemaVersion": 1,
+  "scope": "Existing Quest and Teddy exact-product manufacturer correction provider-path regression evidence.",
+  "disclaimer": "These are complete parsed responses from the deployed Trace normalized barcode gateway, not original upstream USDA HTTP responses. Original captured assessment observations, entered units, ingredient declarations and provider provenance remain in each response. Retrieval dates are not manufacturer label or physical package edition dates.",
+  "observations": [
+    {
+      "evidenceType": "captured-live-gateway-response",
+      "capturedAt": "2026-10-22T00:05:28.187Z",
+      "request": {
+        "url": "https://trace-umber.vercel.app/api/nutrition/barcode",
+        "method": "POST",
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "barcode": "888849000012"
+        }
+      },
+      "httpStatus": 200,
+      "response": {
+        "status": "found",
+        "identifier": {
+          "scheme": "gtin",
+          "value": "888849000012"
+        },
+        "food": {
+          "sourceType": "remote-barcode",
+          "dataType": "branded",
+          "identifiers": [
+            {
+              "scheme": "gtin",
+              "value": "888849000012"
+            }
+          ],
+          "provider": {
+            "id": "usda-fdc",
+            "recordId": "2629232",
+            "attribution": "USDA FoodData Central"
+          },
+          "brand": "Quest Nutrition, LLC",
+          "name": "CHOCOLATE CHIP COOKIE DOUGH PROTEIN BAR, CHOCOLATE CHIP COOKIE DOUGH",
+          "ingredients": {
+            "text": "PROTEIN BLEND (MILK PROTEIN ISOLATE, WHEY PROTEIN ISOLATE), SOLUBLE CORN FIBER, ALMONDS, WATER, UNSWEETENED CHOCOLATE, ERYTHRITOL, NATURAL FLAVORS, COCOA BUTTER. CONTAINS LESS THAN 2% OF THE FOLLOWING: SEA SALT, SUNFLOWER LECITHIN, STEVIA SWEETENER, SUCRALOSE.",
+            "language": null
+          },
+          "additives": {
+            "status": "unknown",
+            "source": "usda-fdc",
+            "sourceField": null,
+            "items": null
+          },
+          "packageQuantity": "2.12 oz/60 g",
+          "serving": {
+            "description": "1 bar",
+            "amount": 60,
+            "unit": "g",
+            "grams": 60
+          },
+          "servingsPerContainer": null,
+          "nutrients": {
+            "calories": 199.79999999999998,
+            "protein": 21,
+            "carbohydrates": 21,
+            "fat": 9,
+            "fiber": 13.98,
+            "sodium": 199.79999999999998,
+            "totalSugar": 1.002,
+            "addedSugar": 0
+          },
+          "dataBasis": "serving",
+          "nutritionBasis": {
+            "kind": "derived-serving",
+            "source": "foodNutrients",
+            "sourceBasis": "100g",
+            "sourceQuantity": {
+              "amount": 100,
+              "unit": "g",
+              "dimension": "mass"
+            },
+            "servingQuantity": {
+              "amount": 60,
+              "unit": "g",
+              "dimension": "mass"
+            },
+            "conversionFactor": 0.6,
+            "sourceNutrients": {
+              "calories": 333,
+              "protein": 35,
+              "carbohydrates": 35,
+              "fat": 15,
+              "fiber": 23.3,
+              "sodium": 333,
+              "totalSugar": 1.67,
+              "addedSugar": 0
+            }
+          },
+          "provenance": {
+            "sourceUrl": "https://fdc.nal.usda.gov/food-details/2629232/nutrients",
+            "provider": "USDA FoodData Central",
+            "providerRecordId": "2629232",
+            "attribution": "USDA FoodData Central (public domain / CC0)",
+            "revisionDate": "2023-08-31T00:00:00.000Z",
+            "retrievedAt": "2026-10-22T00:05:27.403Z"
+          },
+          "completeness": "partial",
+          "unknownFields": [
+            "servingsPerContainer"
+          ],
+          "logReady": true,
+          "assessmentInputs": {
+            "schemaVersion": 1,
+            "identification": "provider-reported",
+            "identity": {
+              "gtin": "888849000012",
+              "providerGtin": "888849000012",
+              "name": "CHOCOLATE CHIP COOKIE DOUGH PROTEIN BAR, CHOCOLATE CHIP COOKIE DOUGH",
+              "brand": "Quest Nutrition, LLC"
+            },
+            "source": {
+              "provider": "usda-fdc",
+              "recordId": "2629232",
+              "url": "https://fdc.nal.usda.gov/food-details/2629232/nutrients",
+              "attribution": "USDA FoodData Central (public domain / CC0)",
+              "revisionDate": "2023-07-05T00:00:00.000Z",
+              "publicationDate": "2023-08-31T00:00:00.000Z",
+              "retrievedAt": "2026-10-22T00:05:27.403Z",
+              "cacheStale": false,
+              "dates": [
+                {
+                  "field": "modifiedDate",
+                  "value": "2023-07-05"
+                },
+                {
+                  "field": "publishedDate",
+                  "value": "2023-08-31"
+                }
+              ]
+            },
+            "markets": [
+              {
+                "field": "marketCountry",
+                "values": [
+                  "United States"
+                ]
+              }
+            ],
+            "categories": [
+              {
+                "field": "foodCategory",
+                "values": [
+                  "Snack, Energy & Granola Bars"
+                ]
+              }
+            ],
+            "serving": [
+              {
+                "field": "servingSize",
+                "value": 60
+              },
+              {
+                "field": "servingSizeUnit",
+                "value": "GRM"
+              },
+              {
+                "field": "householdServingFullText",
+                "value": "1 bar"
+              }
+            ],
+            "ingredients": {
+              "field": "ingredients",
+              "language": null,
+              "textAvailable": true
+            },
+            "datasets": [
+              {
+                "id": "usda-reference",
+                "basis": "100g",
+                "quantity": {
+                  "amount": 100,
+                  "unit": "g"
+                },
+                "observations": [
+                  {
+                    "nutrient": "protein",
+                    "rawValue": 35,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[0].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "fat",
+                    "rawValue": 15,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[1].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "carbohydrates",
+                    "rawValue": 35,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[2].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "calories",
+                    "rawValue": 333,
+                    "rawUnit": "KCAL",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[3].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "totalSugar",
+                    "rawValue": 1.67,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[4].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "fiber",
+                    "rawValue": 23.3,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[5].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "sodium",
+                    "rawValue": 333,
+                    "rawUnit": "MG",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[9].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "addedSugar",
+                    "rawValue": 0,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[11].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "saturatedFat",
+                    "rawValue": 5,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[14].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  }
+                ]
+              }
+            ],
+            "foodGroups": [],
+            "limitations": []
+          }
+        }
+      }
+    },
+    {
+      "evidenceType": "captured-live-gateway-response",
+      "capturedAt": "2026-10-22T00:05:29.557Z",
+      "request": {
+        "url": "https://trace-umber.vercel.app/api/nutrition/barcode",
+        "method": "POST",
+        "headers": {
+          "content-type": "application/json"
+        },
+        "body": {
+          "barcode": "044000045586"
+        }
+      },
+      "httpStatus": 200,
+      "response": {
+        "status": "found",
+        "identifier": {
+          "scheme": "gtin",
+          "value": "044000045586"
+        },
+        "food": {
+          "sourceType": "remote-barcode",
+          "dataType": "branded",
+          "identifiers": [
+            {
+              "scheme": "gtin",
+              "value": "044000045586"
+            }
+          ],
+          "provider": {
+            "id": "usda-fdc",
+            "recordId": "2500838",
+            "attribution": "USDA FoodData Central"
+          },
+          "brand": "Nabisco Biscuit Company",
+          "name": "HONEY GRAHAM SNACKS, HONEY",
+          "ingredients": {
+            "text": "GRAHAM FLOUR (WHOLE GRAIN WHEAT FLOUR), UNBLEACHED ENRICHED FLOUR (WHEAT FLOUR, NIACIN, REDUCED IRON, THIAMINE MONONITRATE {VITAMIN B1}, RIBOFLAVIN {VITAMIN B2}, FOLIC ACID), SUGAR, CANOLA OIL, HONEY, CALCIUM CARBONATE (SOURCE OF CALCIUM), MALTODEXTRIN, BAKING SODA, SALT, SOY LECITHIN, NATURAL FLAVOR.",
+            "language": null
+          },
+          "additives": {
+            "status": "unknown",
+            "source": "usda-fdc",
+            "sourceField": null,
+            "items": null
+          },
+          "packageQuantity": "10 OZ/283 g",
+          "serving": {
+            "description": "24 pieces",
+            "amount": 30,
+            "unit": "g",
+            "grams": 30
+          },
+          "servingsPerContainer": null,
+          "nutrients": {
+            "calories": 129.9,
+            "protein": 2.001,
+            "carbohydrates": 21.99,
+            "fat": 3.99,
+            "fiber": 0.9899999999999999,
+            "sodium": 90,
+            "totalSugar": 6.99,
+            "addedSugar": 6.99
+          },
+          "dataBasis": "serving",
+          "nutritionBasis": {
+            "kind": "derived-serving",
+            "source": "foodNutrients",
+            "sourceBasis": "100g",
+            "sourceQuantity": {
+              "amount": 100,
+              "unit": "g",
+              "dimension": "mass"
+            },
+            "servingQuantity": {
+              "amount": 30,
+              "unit": "g",
+              "dimension": "mass"
+            },
+            "conversionFactor": 0.3,
+            "sourceNutrients": {
+              "calories": 433,
+              "protein": 6.67,
+              "carbohydrates": 73.3,
+              "fat": 13.3,
+              "fiber": 3.3,
+              "sodium": 300,
+              "totalSugar": 23.3,
+              "addedSugar": 23.3
+            }
+          },
+          "provenance": {
+            "sourceUrl": "https://fdc.nal.usda.gov/food-details/2500838/nutrients",
+            "provider": "USDA FoodData Central",
+            "providerRecordId": "2500838",
+            "attribution": "USDA FoodData Central (public domain / CC0)",
+            "revisionDate": "2023-03-16T00:00:00.000Z",
+            "retrievedAt": "2026-10-22T00:05:27.798Z"
+          },
+          "completeness": "partial",
+          "unknownFields": [
+            "servingsPerContainer"
+          ],
+          "logReady": true,
+          "assessmentInputs": {
+            "schemaVersion": 1,
+            "identification": "provider-reported",
+            "identity": {
+              "gtin": "044000045586",
+              "providerGtin": "044000045586",
+              "name": "HONEY GRAHAM SNACKS, HONEY",
+              "brand": "Nabisco Biscuit Company"
+            },
+            "source": {
+              "provider": "usda-fdc",
+              "recordId": "2500838",
+              "url": "https://fdc.nal.usda.gov/food-details/2500838/nutrients",
+              "attribution": "USDA FoodData Central (public domain / CC0)",
+              "revisionDate": "2023-02-08T00:00:00.000Z",
+              "publicationDate": "2023-03-16T00:00:00.000Z",
+              "retrievedAt": "2026-10-22T00:05:27.798Z",
+              "cacheStale": false,
+              "dates": [
+                {
+                  "field": "modifiedDate",
+                  "value": "2023-02-08"
+                },
+                {
+                  "field": "publishedDate",
+                  "value": "2023-03-16"
+                }
+              ]
+            },
+            "markets": [
+              {
+                "field": "marketCountry",
+                "values": [
+                  "United States"
+                ]
+              }
+            ],
+            "categories": [
+              {
+                "field": "foodCategory",
+                "values": [
+                  "Cookies & Biscuits"
+                ]
+              }
+            ],
+            "serving": [
+              {
+                "field": "servingSize",
+                "value": 30
+              },
+              {
+                "field": "servingSizeUnit",
+                "value": "GRM"
+              },
+              {
+                "field": "householdServingFullText",
+                "value": "24 pieces"
+              }
+            ],
+            "ingredients": {
+              "field": "ingredients",
+              "language": null,
+              "textAvailable": true
+            },
+            "datasets": [
+              {
+                "id": "usda-reference",
+                "basis": "100g",
+                "quantity": {
+                  "amount": 100,
+                  "unit": "g"
+                },
+                "observations": [
+                  {
+                    "nutrient": "protein",
+                    "rawValue": 6.67,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[0].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "fat",
+                    "rawValue": 13.3,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[1].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "carbohydrates",
+                    "rawValue": 73.3,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[2].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "calories",
+                    "rawValue": 433,
+                    "rawUnit": "KCAL",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[3].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "totalSugar",
+                    "rawValue": 23.3,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[4].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "fiber",
+                    "rawValue": 3.3,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[5].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "sodium",
+                    "rawValue": 300,
+                    "rawUnit": "MG",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[9].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "addedSugar",
+                    "rawValue": 23.3,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[11].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  },
+                  {
+                    "nutrient": "saturatedFat",
+                    "rawValue": 0,
+                    "rawUnit": "G",
+                    "unitSource": "provider",
+                    "enteredUnit": null,
+                    "field": "foodNutrients[14].value",
+                    "derivation": "Calculated from value per serving size measure"
+                  }
+                ]
+              }
+            ],
+            "foodGroups": [],
+            "limitations": []
+          }
+        }
+      }
+    }
+  ]
+}

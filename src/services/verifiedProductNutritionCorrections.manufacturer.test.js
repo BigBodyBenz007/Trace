@@ -188,8 +188,7 @@ test.each([
   ['a different flavor', c => { c.food.name = 'Chocolate Brownie'; }],
   ['a different package', c => { c.food.packageQuantity = 'Different size'; }],
   ['a different serving', c => { c.food.serving.grams = 40; }],
-  ['a different provider panel', c => { c.food.nutrients.sodium = 200; }],
-  ['a different provider edition', c => { c.food.provenance.revisionDate = '2020-01-01T00:00:00.000Z'; }],
+  ['an internally inconsistent provider nutrient wrapper', c => { c.food.nutrients.sodium = 200; }],
   ['a foreign-only claim', c => { c.food.assessmentInputs.markets = [{ field: 'countries_tags', values: ['en:france'] }]; }],
 ])('does not apply the US reference to %s', async (_, mutate) => {
   const lookup = clone(await lookupCaptured(panels[0])); mutate(lookup);
@@ -204,6 +203,16 @@ test('old ingredient text alone does not disqualify a verified current UPC panel
   expect(getAppliedVerifiedNutritionCorrection(edited, lookup.identifier)).toBeNull();
   const wrongSource = clone(candidate); wrongSource.display.sourceUrl = 'https://example.com';
   expect(getAppliedVerifiedNutritionCorrection(wrongSource, lookup.identifier)).toBeNull();
+});
+
+test('the manufacturer reference is bound to product identity, not one captured OFF revision date', async () => {
+  // Constructed source-edition control, not a newly captured source revision.
+  const lookup = clone(await lookupCaptured(panels[0]));
+  lookup.food.provenance.revisionDate = '2020-01-01T00:00:00.000Z';
+  lookup.food.assessmentInputs.source.revisionDate = lookup.food.provenance.revisionDate;
+  const candidate = createBarcodeNutritionCandidate(lookup);
+  expect(candidate.display.nutritionCorrection?.id).toBe(panels[0].id);
+  expect(candidate.selection.remote.provenance.revisionDate).toBe('2020-01-01T00:00:00.000Z');
 });
 
 test.each([

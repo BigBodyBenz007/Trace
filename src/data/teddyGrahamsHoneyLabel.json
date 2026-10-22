@@ -68,6 +68,7 @@
     "nutritionPhotoUploadedAt": "2024-08-25T13:42:46.000Z"
   },
   "matchingProviderName": "Graham Snacks",
+  "matchingProviderBrands": ["Nabisco Biscuit Company"],
   "corrections": [
     { "nutrient": "addedSugar", "unit": "g", "originalValue": 2.1, "correctedValue": 7 }
   ],

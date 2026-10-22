@@ -74,12 +74,14 @@ function remoteCandidate(result, applyVerifiedCorrections) {
       .filter((key) => nutrients[key] === null)
       .map((key) => `nutrients.${key}`),
   ])];
-  const canUse = result.status === "found"
+  const providerCanUse = result.status === "found"
     && food.logReady
     && reliable
     && REQUIRED_NUTRIENTS.every((key) => nutrients[key] !== null);
-  const nutritionCorrection = canUse && applyVerifiedCorrections
+  const resolvedCorrection = applyVerifiedCorrections
     ? resolveVerifiedNutritionCorrection(food, { identifier: result.identifier, stale: result.stale }) : null;
+  const nutritionCorrection = providerCanUse || resolvedCorrection?.mode === 'replacement-panel' ? resolvedCorrection : null;
+  const canUse = providerCanUse || nutritionCorrection?.mode === 'replacement-panel';
   if (nutritionCorrection) nutritionCorrection.changes.forEach(({ nutrient, correctedValue }) => {
     nutrients[nutrient] = correctedValue;
   });
@@ -125,7 +127,7 @@ function remoteCandidate(result, applyVerifiedCorrections) {
   }) : null;
 
   return immutableCopy({
-    status: canUse ? result.status : "incomplete",
+    status: canUse ? "found" : "incomplete",
     stale: result.stale === true,
     canUse,
     selection,
@@ -142,7 +144,7 @@ function remoteCandidate(result, applyVerifiedCorrections) {
       basisMessage: replacement
         ? `Nutrition shown for ${serving.description} using ${replacement.source.attribution} (${replacement.source.edition}). Manufacturer ingredients use the same reviewed edition; original provider facts remain in the source snapshot. The physical package revision is unconfirmed.`
         : basisMessage(food, serving.description, reliable) + (nutritionCorrection
-        ? ` Added sugars corrected using ${nutritionCorrection.source.attribution} (label edition ${nutritionCorrection.source.updatedOn}); original provider values are retained in the source snapshot.` : ""),
+        ? ` ${nutritionCorrection.changes.map(change => change.nutrient === 'addedSugar' ? 'Added sugars' : 'Supporting total sugars').join(' and ')} corrected using ${nutritionCorrection.source.attribution} (label edition ${nutritionCorrection.source.updatedOn}); other provider nutrients and original observations are retained.` : ""),
       nutrients,
       ...(nutritionCorrection ? { nutritionCorrection } : {}),
       providerNutritionBasis: food.dataBasis,

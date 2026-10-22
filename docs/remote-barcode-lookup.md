@@ -382,19 +382,86 @@ The browser selection adapter can apply a reviewed, exact-product fact overlay
 after provider normalization. `src/services/verifiedProductNutritionCorrections.js`
 contains no network or grading code; `src/data/teddyGrahamsHoneyLabel.json` retains
 the initial manufacturer panel, source edition, verification timestamp and hashes.
-The UPC, provider identity, US-only market claims, package, serving, full ingredient
-sequence and remaining nutrient panel must match. Unknown/conflicting/changed
-evidence or stale records do not inherit a correction. This is independent of
-the development-only grading gate.
+One shared resolver checks the equivalent UPC/GTIN, product name/variant, compatible
+mass serving, known package evidence and consistent provider provenance. It accepts
+supported OFF and USDA observations without requiring the same provider name,
+record-id scheme, captured revision or nutrient fingerprint. Provider brand spellings
+use the existing brand plus explicitly recorded aliases; Teddy's captured USDA
+manufacturer display name is recorded as matching metadata, not a new product
+override or nutrient reference. Explicit unrelated brands are rejected. Missing market/package
+metadata is not a contradiction; a foreign-only market, different product/variant,
+incompatible known package/serving or mismatched provenance remains excluded.
+Multi-market sales tags including the US do not establish a different formulation.
+Provider ranking is unchanged: configured USDA first, OFF fallback. The coverage
+checkpoint did not change that order; normal provider variation exposed the old
+OFF-only matching limitation. This is independent of the grading gate.
 
 For matching Teddy Grahams Honey 10-oz records, added sugars change from the OFF
 2.1 g to the manufacturer-declared 7 g per 30 g. Review and selection share the
 corrected nutrients; new entries use the same precise serving basis. The original
-OFF response/cache and `selection.remote` snapshot remain unchanged. A separate
+provider response/cache and `selection.remote` snapshot remain unchanged. A separate
 `nutritionCorrection` on the selection, review and new saved food reference records
 which field changed and which manufacturer source supplied it. The complete panel
 and original provider values remain accessible without relabeling OFF as the
 manufacturer. Existing saved entries never re-run this overlay.
+
+Quest/SPAM use the complete existing manufacturer nutrition panel and its accompanying
+ingredients. Old provider ingredients/tags stay separate; they do not assess the
+newer manufacturer edition. A changed provider nutrient fingerprint or revision
+does not invalidate independently reviewed manufacturer evidence for the same
+verified product. The physical package revision remains unconfirmed.
+
+Teddy remains a **partial sugar correction**, not a whole-panel replacement. Its
+ingredient declaration must match the supporting reference, and known remaining
+nutrients must agree at the manufacturer's displayed integer precision; null
+language metadata is not a mismatch. Captured USDA FDC 2500838 supplies 23.3 g
+added/total sugar per 100 g, yielding 6.99 g per 30 g. Added sugar becomes 7 g.
+Because 7 g added cannot be saved above 6.99 g total, the existing manufacturer
+total-sugar fact (7 g) is explicitly recorded as a supporting change. No general
+sugar-validation tolerance or blanket nutrient rounding is introduced. The other
+USDA nutrients and original ingredients remain intact. The experimental score
+continues its separately attributed supporting manufacturer-label comparison
+(20, provisional); that does not verify the entire provider panel.
+
+Fresh, cached and expired/offline observations pass through this resolver after
+lookup. Staleness remains visible but does not invalidate the local reference.
+Missing optional assessment capture alone does not block a supported correction.
+No cache clearing, provider-priority change, runtime evidence request, historical
+migration or public grading activation occurs.
+
+### Provider-path regression evidence, 2026-10-21
+
+`src/services/__fixtures__/manufacturerProviderLookups.json` contains two complete
+parsed **live Trace gateway responses**, USDA Quest FDC 2629232 and Teddy FDC
+2500838. They are not complete upstream USDA HTTP captures; assessment observations
+retain the original available fields/units. OFF tests also use captured raw bodies
+from the existing 100-product archive and the earlier normalized Teddy observation.
+Metadata-absence, foreign-market and variant controls are explicitly constructed.
+
+| Captured path | Original observation per serving | Effective reference/value |
+|---|---|---|
+| Quest USDA, 60 g | 199.8 mg sodium | Complete reviewed Quest panel: 220 mg |
+| Quest OFF, 60 g | 0.22 mg sodium | Same complete panel: 220 mg |
+| SPAM OFF, 56.699 g | 1.36 mg sodium | Complete Hormel panel: 770 mg per 56 g |
+| Teddy USDA, 30 g | 6.99 g added/total | Partial sugar correction: 7 g each |
+| Teddy OFF, 30 g | 2.1 g added, 7 g total | Partial correction: 7 g added; total unchanged |
+
+Quest's USDA ingredient list uses soluble corn fiber; the selected manufacturer
+table/declaration uses polydextrose and glycerin. The whole manufacturer edition
+is selected coherently, not mixed with USDA ingredients. The previously documented
+Quest table-versus-JSON-LD disagreement and undated/package-revision limitations
+remain unresolved. Numerical differences do not establish erroneous USDA data.
+
+Focused provider-path verification passes 125 correction/cache/logging tests plus
+26 review/production-gating/CommonJS checks (151 distinct tests). Half/one/two
+servings, equivalent identifiers, missing legacy wrappers, malformed provenance,
+unrelated variants/brands, original snapshots and historical entries are covered.
+Quest USDA changes from nutrition/overall 53/51 to 54/52 using the coherent
+manufacturer edition; Teddy USDA stays 20/20. Existing corrected OFF outcomes
+remain Quest 54/52, SPAM 21/20 and Teddy 20/20. Provider-only replay numbers with
+corrections explicitly disabled are comparisons, not prior effective OFF results.
+No scoring formula, additive rule, provider ranking or storage contract changes.
+
 
 Retrospective research scripts may explicitly use
 `createBarcodeNutritionCandidate(result, { applyVerifiedCorrections: false })` to
