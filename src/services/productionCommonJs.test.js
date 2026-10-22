@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const babel = require('@babel/core');
 
-test.each(['additiveNameReference.js', 'nutritionAssessmentInputs.js'])(
+test.each(['additiveNameReference.js', 'nutritionAssessmentInputs.js', 'sodiumSaltEvidence.js'])(
   '%s retains CommonJS exports under the production browser transform', file => {
     const filename = path.join(__dirname, file);
     const source = fs.readFileSync(filename, 'utf8');

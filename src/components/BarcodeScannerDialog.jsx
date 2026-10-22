@@ -773,6 +773,19 @@ export default function BarcodeScannerDialog({
               <p>Servings per container: {candidate.display.servingsPerContainer}</p>
             )}
             <p>{grading ? `Nutrition per ${candidate.display.servingDescription}.` : candidate.display.basisMessage}</p>
+            {candidate.display.nutritionConflicts?.length > 0 && <div aria-label="Unresolved sodium evidence">
+              <p>{(!grading || candidate.display.nutritionCorrection) && <>{candidate.display.nutritionConflicts[0].message}{' '}</>}
+                {candidate.canUse ? 'Other available nutrition can still be logged.' : 'Complete the missing fields to log this food.'}</p>
+              <details aria-label="Sodium and salt evidence"><summary>Sodium &amp; salt evidence</summary>
+                {candidate.display.nutritionConflicts.map(conflict => <p key={conflict.datasetId}>
+                  {conflict.datasetId} ({conflict.quantity.amount} {conflict.quantity.unit}):{' '}
+                  {conflict.observations.map(o => `${o.field}: ${o.rawValue} ${o.rawUnit}`).join('; ')}.
+                  {' '}{conflict.qualification}{' '}
+                  <a href={conflict.source.url} target="_blank" rel="noreferrer noopener">{conflict.source.attribution}</a>{' · '}
+                  <a href={conflict.methodUrl} target="_blank" rel="noreferrer noopener">Conversion reference</a>.
+                </p>)}
+              </details>
+            </div>}
             {candidate.stale && (
               <p className="trace-barcode-dialog__unknowns">
                 Offline cached result: this provider record is past Trace's normal cache age. Review it carefully.

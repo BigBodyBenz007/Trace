@@ -5,6 +5,7 @@ import { canonicalGtinKey } from './productIdentifiers';
 import { immutableCopy } from './remoteFoodModel';
 import { NUTRITION_ENTRY_NUTRIENT_KEYS } from './nutritionCalculation';
 import { getAssessmentDatasetNutrients, iso, normalizeNutritionAssessmentInputs } from './nutritionAssessmentInputs';
+import { findSodiumSaltConflicts } from './sodiumSaltEvidence';
 
 export const VERIFIED_NUTRITION_PANELS = immutableCopy([teddyLabel, ...manufacturerLabels]);
 const words = value => typeof value === 'string' ? value.toLowerCase().replace(/[^a-z0-9]/g, '') : '';
@@ -178,6 +179,10 @@ export function getAppliedVerifiedNutritionCorrection(candidate, identifier) {
     || !close(selection.serving?.grams, correction.basis.amount) || selection.serving?.unit !== correction.basis.unit)) return null;
   const expected = { ...correction.originalProviderNutrients,
     ...Object.fromEntries(correction.changes.map(change => [change.nutrient, change.correctedValue])) };
+  // A partial sugar overlay still applies when separate provider evidence makes
+  // sodium unresolved. Recompute that evidence; never trust a cached conflict flag.
+  if (correction.mode !== 'replacement-panel' && !correction.changes.some(change => change.nutrient === 'sodium')
+    && findSodiumSaltConflicts(selection.remote.assessmentInputs).length) expected.sodium = null;
   return Object.entries(expected).every(([nutrient, value]) =>
     value === null ? display.nutrients[nutrient] === null && selection.nutrients[nutrient] === null
       : close(display.nutrients[nutrient], value) && close(selection.nutrients[nutrient], value)) ? correction : null;

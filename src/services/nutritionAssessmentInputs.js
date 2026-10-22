@@ -5,9 +5,10 @@ const MAX_ASSESSMENT_BYTES = 12 * 1024;
 const NUTRIENT_UNITS = Object.freeze({
   calories: "kcal", saturatedFat: "g", addedSugar: "g", totalSugar: "g",
   sodium: "mg", fiber: "g", protein: "g", fat: "g", carbohydrates: "g",
-  freeSugar: "g",
+  freeSugar: "g", salt: "g",
 });
-const PROFILE_NUTRIENTS = Object.freeze(Object.keys(NUTRIENT_UNITS).filter((key) => key !== "freeSugar"));
+// Salt is optional consistency evidence, never another required scoring input.
+const PROFILE_NUTRIENTS = Object.freeze(Object.keys(NUTRIENT_UNITS).filter((key) => !["freeSugar", "salt"].includes(key)));
 const ESSENTIAL_PROFILE_NUTRIENTS = Object.freeze(["saturatedFat", "addedSugar", "sodium"]);
 const PROVIDERS = new Set(["usda-fdc", "open-food-facts"]);
 const BASES = new Set(["serving", "100g", "100ml", "package", "unknown"]);

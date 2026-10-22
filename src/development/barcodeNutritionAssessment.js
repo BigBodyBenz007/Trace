@@ -5,6 +5,7 @@ import { evaluateTraceUsNutritionV2 as evaluatePracticalUsNutrition } from './tr
 import { assessAdditiveEvidence, resolveGrainEvidence } from './traceFoodQualityEvidence';
 import { applyVerifiedNutritionToAssessment } from './verifiedBarcodeNutritionAssessment';
 import { getAppliedVerifiedNutritionCorrection } from '../services/verifiedProductNutritionCorrections';
+import { findSodiumSaltConflicts, SODIUM_SALT_MESSAGE } from '../services/sodiumSaltEvidence';
 
 const UNITS = { calories: 'kcal', saturatedFat: 'g', addedSugar: 'g', totalSugar: 'g', sodium: 'mg', fiber: 'g', protein: 'g', fat: 'g', carbohydrates: 'g' };
 const freeze = value => { if (value && typeof value === 'object') { Object.values(value).forEach(freeze); Object.freeze(value); } return value; };
@@ -67,6 +68,9 @@ function assessProviderBarcodeNutrition(candidate, identifier) {
   base.evidence.market = { claims: input.markets, status: usOnly ? 'provider-reported-us' : claims.length ? 'foreign-or-multi-market' : 'unknown', exactUsFormulationVerified: false };
   if (!usOnly) base.warnings.push('US formulation is unverified. No regional records or manufacturer panels are merged.');
   if (candidate?.stale || input.source.cacheStale) base.warnings.push('This is an older cached observation, not verified current package data.');
+  const nutritionConflicts = findSodiumSaltConflicts(input);
+  if (nutritionConflicts.length) return freeze({ ...base, reasons: [SODIUM_SALT_MESSAGE],
+    evidence: { ...base.evidence, nutritionConflicts } });
   const categoryEvidence = resolveBarcodeCategory(input, display);
   const tags = input.categories.flatMap(entry => entry.values).join(' ');
   const name = input.identity.name.toLowerCase();

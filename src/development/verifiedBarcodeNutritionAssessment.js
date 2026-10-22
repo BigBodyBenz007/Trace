@@ -26,6 +26,7 @@ export function applyVerifiedNutritionToAssessment(candidate, identifier, provid
       assessment: { methodId: result.methodId, methodVersion: result.methodVersion,
         excludedNutrients: result.excludedNutrients, source, sugarMode: result.sugarMode },
       reviewedManufacturerLabel: label,
+      nutritionConflicts: partial ? providerAssessment.evidence.nutritionConflicts || [] : [],
       correctionScope: { mode: correction.mode, changes: correction.changes, manufacturerReferenceComparison: partial },
       // Full original normalized evidence, sugar fields and score remain separate.
       originalProviderAssessment: providerAssessment } });

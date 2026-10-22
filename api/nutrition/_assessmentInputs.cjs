@@ -13,7 +13,7 @@ const LABEL_NAMES = { calories: "calories", saturatedFat: "saturatedFat", addedS
   fiber: "fiber", protein: "protein", fat: "fat", carbohydrates: "carbohydrates" };
 const OFF_NAMES = { "energy-kcal": "calories", "energy-kj": "calories", energy: "calories",
   "saturated-fat": "saturatedFat", "added-sugars": "addedSugar", sugars: "totalSugar",
-  sodium: "sodium", fiber: "fiber", proteins: "protein", fat: "fat",
+  sodium: "sodium", salt: "salt", fiber: "fiber", proteins: "protein", fat: "fat",
   carbohydrates: "carbohydrates", "free-sugars": "freeSugar" };
 
 function raw(value, limit = 128) {
@@ -89,7 +89,7 @@ function observation(nutrient, value, unit, field, {
 }
 
 function offEnergyDerivation(nutrients, key, suffix) {
-  if (!["energy", "energy-kj", "energy-kcal"].includes(key)) return null;
+  if (!["energy", "energy-kj", "energy-kcal", "sodium", "salt"].includes(key)) return null;
   let modifier = string(nutrients[`${key}_modifier`], 32);
   // energy is the legacy kJ alias, not an independent label declaration. A
   // missing alias qualifier must not upgrade the same approximate kJ value.

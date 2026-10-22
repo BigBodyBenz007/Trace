@@ -2,6 +2,7 @@ import { NUTRITION_ENTRY_NUTRIENT_KEYS } from "./nutritionCalculation";
 import { immutableCopy, normalizeRemoteFood } from "./remoteFoodModel";
 import { getNutritionAssessmentQuality, normalizeNutritionAssessmentInputs } from "./nutritionAssessmentInputs";
 import { resolveVerifiedNutritionCorrection } from "./verifiedProductNutritionCorrections";
+import { findSodiumSaltConflicts } from "./sodiumSaltEvidence";
 
 const REQUIRED_NUTRIENTS = ["calories", "protein", "carbohydrates", "fat"];
 const SAFE_REMOTE_BASIS_KINDS = new Set([
@@ -97,6 +98,13 @@ function remoteCandidate(result, applyVerifiedCorrections) {
     adaptedUnknownFields = adaptedUnknownFields.filter(field => !field.startsWith('nutrients.')
       && (field !== 'servingsPerContainer' || servingsPerContainer === null));
   }
+  // Inspect only the retained provider panel. A complete manufacturer panel
+  // supersedes it; never compare that replacement sodium with old provider salt.
+  const nutritionConflicts = replacement ? [] : findSodiumSaltConflicts(assessmentInputs);
+  if (nutritionConflicts.length) {
+    nutrients.sodium = null;
+    adaptedUnknownFields = [...new Set([...adaptedUnknownFields, 'nutrients.sodium'])];
+  }
   const selection = canUse ? immutableCopy({
     id: `remote-barcode:${food.provider.id}:${food.provider.recordId}`,
     sourceType: "remote-barcode",
@@ -107,6 +115,7 @@ function remoteCandidate(result, applyVerifiedCorrections) {
     ...ingredientFields,
     serving,
     nutrients,
+    ...(nutritionConflicts.length ? { nutritionConflicts } : {}),
     ...(nutritionCorrection ? { nutritionCorrection } : {}),
     packaged: {
       packageSize: food.packageQuantity,
@@ -146,6 +155,7 @@ function remoteCandidate(result, applyVerifiedCorrections) {
         : basisMessage(food, serving.description, reliable) + (nutritionCorrection
         ? ` ${nutritionCorrection.changes.map(change => change.nutrient === 'addedSugar' ? 'Added sugars' : 'Supporting total sugars').join(' and ')} corrected using ${nutritionCorrection.source.attribution} (label edition ${nutritionCorrection.source.updatedOn}); other provider nutrients and original observations are retained.` : ""),
       nutrients,
+      ...(nutritionConflicts.length ? { nutritionConflicts } : {}),
       ...(nutritionCorrection ? { nutritionCorrection } : {}),
       providerNutritionBasis: food.dataBasis,
       attribution: food.provenance.attribution,

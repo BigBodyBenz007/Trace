@@ -893,6 +893,7 @@ function NutritionPage({
               dataBasis: food.remote.dataBasis,
               unknownFields: [...food.remote.unknownFields],
               ...(food.nutritionCorrection ? { nutritionCorrection: food.nutritionCorrection } : {}),
+              ...(food.nutritionConflicts ? { nutritionConflicts: food.nutritionConflicts } : {}),
               ...(food.ingredientSource ? { ingredientSource: food.ingredientSource } : {}),
               ...(food.ingredients === undefined
                 ? {}
