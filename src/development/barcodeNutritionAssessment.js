@@ -23,7 +23,8 @@ function assessCatalogProfile(candidate, identifier, base) {
   const nutrients = Object.fromEntries(Object.entries(UNITS).map(([key, unit]) => [key, { value: food.nutrients[key] ?? null, unit }]));
   const zeroFatLabel = food.provenance?.source === 'official-manufacturer' && food.nutrients.fat === 0;
   const result = evaluatePracticalUsNutrition({ basis, category: basis?.unit === 'ml' ? 'beverage' : 'general',
-    nutrients, source, usZeroFatLabelServing: zeroFatLabel, grainEvidence: resolveGrainEvidence(display.ingredients, source) });
+    nutrients, source, productEvidence: { name: food.name, categories: food.categories, source },
+    usZeroFatLabelServing: zeroFatLabel, grainEvidence: resolveGrainEvidence(display.ingredients, source) });
   return freeze({ ...base, confidence: result.comparison?.saturatedFatBound
     ? 'Manufacturer-attributed catalog profile assessed using US zero-fat label rounding; current US formulation/package match is not independently verified.'
     : 'Existing manufacturer-attributed catalog profile; current US formulation and package match are not independently verified by this assessment.',
@@ -115,6 +116,7 @@ function assessProviderBarcodeNutrition(candidate, identifier) {
   }
   if (reasons.length) return freeze({ ...base, reasons });
   const result = evaluatePracticalUsNutrition({ category, basis: { ...selected.quantity }, nutrients, source: { ...input.source },
+    productEvidence: { name: input.identity.name, categories: input.categories, source: { ...input.source } },
     grainEvidence: resolveGrainEvidence(display.ingredients, input.source) });
   base.warnings.push(...result.warnings);
   base.evidence.assessment = { methodId: result.methodId, methodVersion: result.methodVersion,

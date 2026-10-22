@@ -5,6 +5,16 @@ This is an independent numerical nutrition model, not Yuka's algorithm, an
 official Nutri-Score conversion, an FDA endorsement, or a validated health-risk
 measure. Public `grade` remains `null` and `scoreReady` remains `false`.
 
+The development-only milk adjustment **2.1-milk-development-2026-10-21** prefers
+usable declared added sugars (including zero) for source-classified fluid dairy
+milk and transfers the existing 80–600 kcal energy ramp to **100 mL**. No mass
+density or lactose is guessed; total sugars remain the explicit fallback.
+Other categories, weights and safeguards are unchanged. See the
+[calibration report](nutrition-v2-calibration-2026-10-21.md#implemented-milk-only-adjustment)
+for eligibility evidence, the unchanged 16-reference inputs, all four changed
+captured-corpus scores, limitations, reproducible checks and full file inventory.
+Food observations are cached; assessments are recomputed, not migrated or saved.
+
 ## What changed and why
 
 The previous development model used a small, energy-capped comparison portion.

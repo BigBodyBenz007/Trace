@@ -37,6 +37,9 @@ export function explainNutritionPoints(result) {
       .filter(([key]) => applied(key)).map(([, label]) => label);
     const sentences = [lower.length ? `This score is lowered by ${list(lower)}.` : 'The measured limiting nutrients do not lower this score.'];
     if (higher.length) sentences.push(`It is raised by ${list(higher)}.`);
+    if (result.comparison.milkDrinkPolicyApplied) sentences.push(result.sugarMode === 'addedSugar'
+      ? 'The milk rule uses declared added sugars, including zero, rather than total sugars.'
+      : 'The milk rule uses total sugars because usable added sugars are unavailable; naturally occurring sugars are not estimated.');
     if (result.sugarMode === 'totalSugar' && !applied('sugar')) sentences.push(hasUsableAdded
       ? 'Total sugars are screened separately from the reported added sugars.' : 'Total sugars are screened separately because added sugars are unavailable or inconsistent.');
     if (result.normalized.nutrients.fiber === null || result.normalized.nutrients.protein === null) sentences.push('Missing fiber or protein earns no credit.');

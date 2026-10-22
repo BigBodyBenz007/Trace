@@ -94,6 +94,7 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
       </details>}
       {assessment.result && <p>Trace US nutrition model: {assessment.result.methodVersion}. Independent development calculation; FDA guidance informs the references, not this numerical formula.</p>}
       {assessment.result?.sugarMode && <p>Sugar input: {assessment.result.sugarMode === 'addedSugar' ? 'Added sugars' : assessment.result.sugarMode === 'totalSugar' ? 'Total sugars, not an estimate of added sugars' : 'Unknown; no sugar value has been assumed'}. {assessment.result.sugarMode === 'totalSugar' && 'The total-sugar reference is Trace-specific; FDA has no total-sugar Daily Value.'}</p>}
+      {assessment.result?.comparison?.milkDrinkPolicyApplied && <p>Source-identified milk drink: the experimental energy ramp is 80–600 kcal per 100 mL. Measured volume is preserved; no mass-to-volume conversion or lactose estimate is used. Source classification does not verify the panel or US formulation.</p>}
       {assessment.result && <ul>{Object.entries(assessment.result.points).filter(([key]) =>
         ['energy', 'sugar', 'saturatedFat', 'salt', 'fiber', 'proteinApplied', 'wholeGrain', 'plant', 'nonNutritiveSweeteners'].includes(key))
           .map(([key, value]) => <li key={key}>{key}: {value.min === value.max ? Number(value.min.toFixed(2)) : `${value.min}–${value.max}`} points</li>)}</ul>}

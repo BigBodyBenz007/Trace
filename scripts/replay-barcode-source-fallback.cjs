@@ -3,11 +3,16 @@
 const fs = require('node:fs');
 const path = require('node:path');
 const assert = require('node:assert/strict');
+const { execFileSync } = require('node:child_process');
 const babel = require('@babel/core');
 const root = path.resolve(__dirname, '..');
 const folder = path.join(root, 'docs/barcode-source-fallback-2026-10-21');
 const originalFolder = path.join(root, 'docs/barcode-grade-coverage-2026-10-21');
 const requestedMode = process.argv[2] || 'all';
+// Optional output file supports later bounded replays without overwriting the
+// original source-fallback evidence. Input captures and source policy stay fixed.
+const outputFile = process.argv[3] ? path.resolve(root, process.argv[3]) : null;
+if (outputFile && requestedMode === 'all') throw new Error('An output file requires one replay mode.');
 if (!['implementation-only', 'after', 'cached-after', 'all'].includes(requestedMode)) {
   throw new Error('Use implementation-only, after, cached-after or all. before.json is the preserved pre-edit baseline.');
 }
@@ -108,6 +113,9 @@ async function assess(row) {
       source: candidate.display.assessmentInputs?.source || null, logReady: candidate.canUse,
       nutritionScore: nutrition.nutritionScore100, nutritionReasons: nutrition.reasons,
       nutritionWarnings: nutrition.warnings, overallScore: overall.overallScore100, overallStatus: overall.status,
+      methodVersion: nutrition.result?.methodVersion || null,
+      milkDrinkEvidence: nutrition.result?.comparison?.milkDrinkEvidence || null,
+      milkDrinkPolicyApplied: nutrition.result?.comparison?.milkDrinkPolicyApplied === true,
       overallReasons: [overall.reason, ...overall.additiveAssessment.reasons],
       ingredientReview: overall.additiveAssessment.status, causes: causes(candidate, nutrition, overall),
       correctionId: candidate.display.nutritionCorrection?.id || null,
@@ -126,7 +134,8 @@ async function assess(row) {
   for (const row of captures) products.push(await assess(row));
   const causeCounts = {};
   for (const product of products) for (const cause of product.causes || []) causeCounts[cause] = (causeCounts[cause] || 0) + 1;
-  const report = { mode, startingHead: '8fd1803291f073b5c2b6d3bdb9ab817cae876c48',
+  const report = { mode, startingHead: outputFile ? execFileSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' }).trim()
+    : '8fd1803291f073b5c2b6d3bdb9ab817cae876c48',
     codeEdition: 'working-tree', evaluated: products.length, loggingReady: products.filter(product => product.logReady).length,
     nutritionScores: products.filter(product => Number.isInteger(product.nutritionScore)).length,
     overallScores: products.filter(product => Number.isInteger(product.overallScore)).length,
@@ -145,7 +154,7 @@ async function assess(row) {
       alternatives: 'docs/barcode-source-fallback-2026-10-21/alternative-responses.jsonl',
       interpretation: 'Same frozen products and original OFF observations. Reconstructed offline transport preserves that corpus preference; explicit USDA alternatives use captured normalized gateway records, not upstream USDA responses. Other USDA attempt outcomes are unobserved and are modeled as unavailable, never not-found. These are implementation experiments, not a live configured-provider coverage or US market estimate. Whole source records are selected without nutrient/ingredient splicing; source differences and uncertainty remain.' }, products };
   assert.equal(report.evaluated, 100); assert.equal(report.errors, 0); assert.equal(report.reviewRendered, 100);
-  fs.writeFileSync(path.join(folder, mode + '.json'), JSON.stringify(report, null, 2) + '\n');
+  fs.writeFileSync(outputFile || path.join(folder, mode + '.json'), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify({ ...report, products: undefined }, null, 2));
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -22,7 +22,7 @@ test('exact density equation, bounded benefits and disabled public output', () =
   expect(result.rawScore).toBeCloseTo(49.5);
   expect(result.nutritionScore100).toBe(50);
   expect(result).toMatchObject({ grade: null, scoreReady: false, scanMatchEligible: false,
-    methodVersion: '2-density-development-2026-10-20' });
+    methodVersion: '2.1-milk-development-2026-10-21' });
   expect(JSON.stringify(input)).toBe(before);
   expect(Object.isFrozen(result)).toBe(true);
 });

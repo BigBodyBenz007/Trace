@@ -1,7 +1,9 @@
 // Independent development experiment. FDA reference amounts inform this model;
 // the density ramps, weights and 0–100 equation are Trace choices.
+import { resolveMilkDrinkEvidence } from './milkDrinkEvidence';
+
 export const TRACE_US_METHOD = 'trace-us-practical-nutrition';
-export const TRACE_US_VERSION = '2-density-development-2026-10-20';
+export const TRACE_US_VERSION = '2.1-milk-development-2026-10-21';
 export const TRACE_US_GUIDANCE = Object.freeze({
   dailyValues: 'https://www.fda.gov/food/nutrition-facts-label/daily-value-nutrition-and-supplement-facts-labels',
   label: 'https://www.fda.gov/food/nutrition-facts-label/how-understand-and-use-nutrition-facts-label',
@@ -69,20 +71,25 @@ export function evaluateTraceUsNutritionV2(input) {
   // Per-100 density comparisons prevent energy-rich snacks being assessed as
   // increasingly tiny portions. Fat-rich foods use fat quality instead.
   const fatRich = category === 'nuts' || category === 'oil';
+  const milkDrinkEvidence = resolveMilkDrinkEvidence(input.productEvidence, input.source, basis);
+  const milkDrink = category === 'beverage' && milkDrinkEvidence.status === 'source-identified';
   const ramp = (value, low, high) => clamp((value - low) / (high - low));
   const total = nutrients.totalSugar !== null ? per100.totalSugar : null;
   const added = sugarMode === 'addedSugar' ? per100.addedSugar : null;
   const addedBurden = added === null ? null : ramp(added, category === 'beverage' ? 0 : 2.5, category === 'beverage' ? 10 : 25);
   const totalBurden = total === null ? null : ramp(total, category === 'beverage' ? 0 : 4.5, category === 'beverage' ? 10 : 45);
   const measuredSugar = [addedBurden, totalBurden].filter(value => value !== null);
-  const sugarBurden = measuredSugar.length ? Math.max(...measuredSugar) : null;
-  sugarMode = addedBurden !== null && (totalBurden === null || addedBurden >= totalBurden) ? 'addedSugar' : totalBurden !== null ? 'totalSugar' : 'unknown';
+  const sugarBurden = milkDrink ? addedBurden !== null ? addedBurden : totalBurden
+    : measuredSugar.length ? Math.max(...measuredSugar) : null;
+  sugarMode = addedBurden !== null && (milkDrink || totalBurden === null || addedBurden >= totalBurden) ? 'addedSugar' : totalBurden !== null ? 'totalSugar' : 'unknown';
   if (sugarMode === 'totalSugar' && addedBurden !== null) warnings.push('Total-sugar density drives the sugar component even though added sugars are reported; both original measurements remain separate.');
   const ratio = per100.saturatedFat === null || per100.fat === null || per100.fat === 0 ? null : per100.saturatedFat / per100.fat;
   const saturatedBurden = fatRich ? ratio === null ? null : ramp(ratio, .10, .64)
     : per100.saturatedFat === null ? null : ramp(per100.saturatedFat, 1, 10);
   const energyInput = fatRich ? per100.saturatedFat === null ? null : 9 * per100.saturatedFat : per100.calories;
-  const energyBurden = energyInput === null ? null : category === 'beverage' ? ramp(energyInput, 0, 60) : ramp(energyInput, 80, 600);
+  // Milk retains its measured mL dimension. Transferring the food ramp to
+  // kcal/100 mL is an experimental policy choice, never an assumed density.
+  const energyBurden = energyInput === null ? null : category === 'beverage' && !milkDrink ? ramp(energyInput, 0, 60) : ramp(energyInput, 80, 600);
   const burdens = { sugar: sugarBurden, saturatedFat: saturatedBurden,
     salt: per100.sodium === null ? null : ramp(per100.sodium, 90, 900) };
   const weights = { sugar: .4, saturatedFat: .3, salt: .3 };
@@ -131,7 +138,8 @@ export function evaluateTraceUsNutritionV2(input) {
     normalized: { basis: { amount: 100, unit: basis.unit }, nutrients: per100, per100, originalBasis: { ...basis }, originalNutrients: nutrients },
     comparison: { category, maxAmount: 100, energyCapKcal: null, limitingBurden: limiting, weightedBurden: weighted,
       strongestBurden: strongest, burdens, missingLimitingNutrients, burdenUpperBounds, saturatedFatBound,
-      energyBurden, energyInput, energyRule: fatRich ? 'saturated-fat energy and fat ratio' : category === 'beverage' ? 'beverage density' : 'food energy density', grainEvidence },
+      energyBurden, energyInput, energyRule: fatRich ? 'saturated-fat energy and fat ratio' : milkDrink ? 'milk food-energy ramp per 100 mL' : category === 'beverage' ? 'beverage density' : 'food energy density',
+      milkDrinkEvidence, milkDrinkPolicyApplied: milkDrink, grainEvidence },
     points: { energy: energyBurden === null ? point(0, 35) : point(35 * energyBurden),
       ...Object.fromEntries(Object.entries(deductions).map(([key, value]) => [key,
         burdens[key] === null ? point(0, 48 * burdenUpperBounds[key]) : point(value)])),
