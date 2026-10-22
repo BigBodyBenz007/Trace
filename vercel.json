@@ -2,5 +2,6 @@
   "rewrites": [
     { "source": "/privacy", "destination": "/" },
     { "source": "/terms", "destination": "/" }
-  ]
+  ],
+  "buildCommand": "node scripts/build-grading-preview.cjs"
 }

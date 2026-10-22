@@ -82,8 +82,13 @@ export default function BarcodeScannerDialog({
   orientation = availableScreenOrientation(),
   reducedMotion = false,
 }) {
-  const grading = process.env.NODE_ENV === 'development'
-    && shouldLoadBarcodeGrading(process.env.NODE_ENV, window.location.hostname, window.location.search)
+  const grading = (process.env.NODE_ENV === 'development'
+    || (process.env.REACT_APP_TRACE_DEPLOYMENT_ENV === 'preview'
+      && process.env.REACT_APP_TRACE_GRADING_PREVIEW === 'true'))
+    && shouldLoadBarcodeGrading(process.env.NODE_ENV, window.location.hostname, window.location.search, {
+      deploymentEnvironment: process.env.REACT_APP_TRACE_DEPLOYMENT_ENV,
+      previewEnabled: process.env.REACT_APP_TRACE_GRADING_PREVIEW,
+    })
     ? require('../development/BarcodeNutritionReview') : null;
   const [manualBarcode, setManualBarcode] = useState("");
   const [cameraState, setCameraState] = useState("idle");

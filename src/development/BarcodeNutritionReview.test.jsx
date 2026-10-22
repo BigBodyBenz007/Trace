@@ -325,3 +325,25 @@ test.each(['eligible', 'unresolved'])('%s review preserves real Nutrition handof
   fireEvent.change(screen.getByLabelText('Number of servings'), { target: { value: '.5' } });
   expect(screen.getByLabelText('Calories', { selector: 'input[aria-label="Calories"]' })).toHaveValue(60);
 });
+
+test('explicit hosted Preview build exposes existing grading and selection without URL flags', async () => {
+  const previousPreview = process.env.REACT_APP_TRACE_GRADING_PREVIEW;
+  const previousDeployment = process.env.REACT_APP_TRACE_DEPLOYMENT_ENV;
+  try {
+    process.env.NODE_ENV = 'production';
+    process.env.REACT_APP_TRACE_DEPLOYMENT_ENV = 'preview';
+    process.env.REACT_APP_TRACE_GRADING_PREVIEW = 'true';
+    window.history.replaceState({}, '', '/');
+    dialog(jest.fn(async () => ({ status: 'found', identifier, food: food() })));
+    await lookup();
+    expect(screen.getByLabelText('Experimental nutrition assessment')).toBeInTheDocument();
+    expect(headline()).toBeInTheDocument();
+    expect(screen.getByLabelText('Score details & limitations').open).toBe(false);
+    expect(screen.getByRole('button', { name: 'Use This Food' })).toBeEnabled();
+  } finally {
+    if (previousPreview === undefined) delete process.env.REACT_APP_TRACE_GRADING_PREVIEW;
+    else process.env.REACT_APP_TRACE_GRADING_PREVIEW = previousPreview;
+    if (previousDeployment === undefined) delete process.env.REACT_APP_TRACE_DEPLOYMENT_ENV;
+    else process.env.REACT_APP_TRACE_DEPLOYMENT_ENV = previousDeployment;
+  }
+});
