@@ -80,6 +80,7 @@ export function assessAdditiveProfile(candidate) {
 
 export function assessOverallFoodQuality(candidate, nutrition) {
   const additives = assessAdditiveProfile(candidate), score = nutrition?.nutritionScore100;
+  const categoryBoundary = nutrition?.ratingStatus === 'not-rated-category';
   const usable = Number.isInteger(score) && score >= 0 && score <= 100;
   const supported = usable && additives.concernBurden !== null;
   const raw = supported ? score * (1 - OVERALL_POLICY.maximumRelativeAdditiveDeduction * additives.concernBurden) : null;
@@ -87,7 +88,8 @@ export function assessOverallFoodQuality(candidate, nutrition) {
   const provisional = supported && additives.status === 'partial';
   const totalWeight = additives.items.reduce((sum, item) => sum + (item.concernBurden ?? 0), 0);
   return freeze({ policy: OVERALL_POLICY, grade: null, scoreReady: false, scanMatchEligible: false,
-    status: !usable ? 'nutrition-unavailable' : !supported ? 'nutrition-only' : provisional ? 'provisional' : 'reviewed',
+    ...(categoryBoundary ? { ratingBoundary: nutrition.ratingBoundary } : {}),
+    status: categoryBoundary ? 'not-rated-category' : !usable ? 'nutrition-unavailable' : !supported ? 'nutrition-only' : provisional ? 'provisional' : 'reviewed',
     nutritionScore100: usable ? score : null, overallScore100: rounded, provisional,
     rawOverall: raw, additiveDeduction: supported ? score - rounded : null,
     rawAdditiveDeduction: supported ? score - raw : null,
@@ -100,7 +102,7 @@ export function assessOverallFoodQuality(candidate, nutrition) {
       rawDeduction: score * OVERALL_POLICY.maximumRelativeAdditiveDeduction * item.concernBurden / Math.max(1, totalWeight),
       rationale: item.review.rationale, conditions: item.review.conditions, sources: item.review.sources,
     })) : [], additiveAssessment: additives,
-    reason: !usable ? 'A nutrition score is unavailable; the ingredient screen remains separate.'
+    reason: categoryBoundary ? nutrition.ratingBoundary.message : !usable ? 'A nutrition score is unavailable; the ingredient screen remains separate.'
       : !supported ? 'Nutrition-only. Overall assessment incomplete; usable ingredient review is unavailable.'
         : provisional ? 'Screening incomplete; further review could decrease this score.'
           : 'Declaration reviewed. No bonus or safety assurance.',

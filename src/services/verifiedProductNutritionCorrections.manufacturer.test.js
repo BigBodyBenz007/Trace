@@ -92,9 +92,10 @@ test.each(panels)('exact manufacturer evidence replaces one coherent panel: $ide
     NUTRITION_ENTRY_NUTRIENT_KEYS.forEach(key => expect(multiplied[key]).toBe(panel.nutrients[key] * quantity));
   }
   const view = render(<><BarcodeNutritionReview candidate={candidate} identifier={lookup.identifier} /><BarcodeAdditives candidate={candidate} /></>);
-  expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent(panel.identity.name);
-  expect(screen.getByLabelText('Manufacturer label comparison')).not.toHaveAttribute('open');
-  expect(screen.getByLabelText('Score details & limitations')).not.toHaveAttribute('open');
+  expect(screen.getByLabelText('Score evidence scope')).toHaveTextContent('manufacturer label');
+  expect(screen.getByText('Manufacturer nutrition')).toHaveAttribute('href', panel.source.nutritionUrl || panel.source.url);
+  expect(screen.queryByLabelText('Manufacturer label comparison')).not.toBeInTheDocument();
+  expect(screen.getByLabelText('Why this score')).not.toHaveAttribute('open');
   expect(screen.getByLabelText('Product additives')).not.toHaveAttribute('open');
   expect(screen.queryByText(/Honey · 10 oz/)).not.toBeInTheDocument();
   view.unmount();

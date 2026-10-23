@@ -1,6 +1,6 @@
 /* Local-only visual review of the real App, NutritionPage and barcode dialog.
  * Replays existing evidence at the lookup boundary; no live product requests.
- * node scripts/verify-grading-user-review.cjs [--presentation | --concise] [--reuse-bundle]
+ * node scripts/verify-grading-user-review.cjs [--presentation | --concise | --protein-boundary] [--reuse-bundle]
  * No user profile, camera, production build or application policy is changed.
  */
 const fs = require('node:fs');
@@ -12,10 +12,11 @@ const assert = require('node:assert/strict');
 const webpack = require('webpack');
 const root = path.resolve(__dirname, '..');
 const presentation = process.argv.includes('--presentation');
-const concise = process.argv.includes('--concise');
+const proteinBoundary = process.argv.includes('--protein-boundary');
+const concise = process.argv.includes('--concise') || proteinBoundary;
 const runId = 'run-' + new Date().toISOString().replace(/[:.]/g, '-');
-const output = path.join(root, concise ? 'artifacts/grading-plain-language-preview-20261022' : presentation ? 'artifacts/grading-presentation-review-20261022' : 'artifacts/grading-user-review-20261021', runId);
-const scratch = path.join(root, concise ? '.tmp-browser/grading-plain-language-review' : presentation ? '.tmp-browser/grading-presentation-review' : '.tmp-browser/grading-user-review');
+const output = path.join(root, proteinBoundary ? 'artifacts/protein-supplement-boundary-20261022' : concise ? 'artifacts/grading-plain-language-preview-20261022' : presentation ? 'artifacts/grading-presentation-review-20261022' : 'artifacts/grading-user-review-20261021', runId);
+const scratch = path.join(root, proteinBoundary ? '.tmp-browser/protein-supplement-boundary' : concise ? '.tmp-browser/grading-plain-language-review' : presentation ? '.tmp-browser/grading-presentation-review' : '.tmp-browser/grading-user-review');
 const read = file => JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const git = args => cp.execFileSync('git', args, { cwd: root, encoding: 'utf8' });

@@ -1,0 +1,1662 @@
+{
+  "scope": "One offline powder comparison; active scoring and hosted Preview unchanged",
+  "reviewDate": "2026-10-22",
+  "startingHead": "804708ad12ed2d47d63ef0d9d620bd7adc99cb9f",
+  "dymatizeCapture": "src/development/__fixtures__/dymatizeCocoaPebblesLookup.json",
+  "sources": {
+    "yuka": {
+      "url": "https://help.yuka.io/l/en/article/6558ot37w5-protein-supplements",
+      "finding": "Yuka excludes protein supplements because its method is not adapted to those products; this is not a Trace policy requirement."
+    },
+    "basisResearch": {
+      "url": "https://pubmed.ncbi.nlm.nih.gov/18985061/",
+      "doi": "10.1038/ejcn.2008.53",
+      "publication": "2009 Jul;63(7):898-904",
+      "scope": "Compares 100-g, 100-kcal and RACC bases for ordinary foods; supports examining basis sensitivity, not these Trace powder thresholds. Abstract favors 100-kcal/RACC positive subscores and 100-g negative subscores."
+    }
+  },
+  "candidate": {
+    "id": "offline-equal-energy-powder-sensitivity",
+    "applicationConsumer": false,
+    "selectedBeforeCandidateResults": true,
+    "scope": "Only source-identified dry protein powder. No high-protein-content rule or milk-ingredient rule.",
+    "comparisonBasis": {
+      "amount": 100,
+      "unit": "kcal"
+    },
+    "changes": [
+      "Express sugar, saturated fat, sodium, fiber and protein per 100 kcal rather than per 100 g.",
+      "Omit dry-food energy-density deduction within the equal-energy comparison; no added water or assumed density."
+    ],
+    "retained": "Existing numerical ramp endpoints, limiting weights/safeguard, credit caps, base 85, final clamping/rounding, and combined additive policy.",
+    "limitation": "Reusing numerical thresholds on a new unit basis is an unvalidated Trace sensitivity candidate, not NRF, an FDA method, protein quality, or evidence of supplement effectiveness. Not proposed for activation based on three results."
+  },
+  "controls": [
+    {
+      "id": "now-whey-unflavored",
+      "name": "NOW Sports Whey Protein Isolate, Unflavored",
+      "evidenceType": "Official US manufacturer web nutrition table; standalone reference, not a successful barcode lookup or package-revision match",
+      "source": {
+        "url": "https://www.nowfoods.com/products/sports-nutrition/whey-protein-isolate-unflavored-powder",
+        "attribution": "NOW Foods US manufacturer nutrition table",
+        "verifiedOn": "2026-10-22",
+        "publicationDate": null,
+        "edition": "Undated web table as accessed; no package revision inferred"
+      },
+      "formEvidence": {
+        "sourceField": "Official product Category",
+        "sourceValue": "Protein Powders",
+        "productForm": "dry-protein-powder",
+        "url": "https://www.nowfoods.com/products/sports-nutrition/whey-protein-isolate-unflavored-powder"
+      },
+      "serving": {
+        "description": "1 level scoop",
+        "amount": 28,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 110,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 45,
+          "unit": "mg"
+        },
+        "addedSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "fiber": {
+          "value": 0,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 24,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 1,
+          "unit": "g"
+        }
+      },
+      "ingredients": {
+        "text": "Whey Protein Isolate, Sunflower Lecithin (< 1%).",
+        "language": "en"
+      },
+      "package": {
+        "upc": "733739021724",
+        "size": "1.2 lbs; about 19 servings"
+      },
+      "preparation": {
+        "liquidAmountText": "8 oz",
+        "options": [
+          "water",
+          "milk or juice/other beverage"
+        ],
+        "finalPreparedMass": null,
+        "finalPreparedVolume": null,
+        "usedForCalculation": false
+      }
+    },
+    {
+      "id": "now-pea-unflavored",
+      "name": "NOW Sports Pea Protein, Unflavored",
+      "evidenceType": "Official US manufacturer web nutrition table; standalone reference, not a successful barcode lookup or package-revision match",
+      "source": {
+        "url": "https://www.nowfoods.com/products/sports-nutrition/pea-protein-unflavored-powder",
+        "attribution": "NOW Foods US manufacturer nutrition table",
+        "verifiedOn": "2026-10-22",
+        "publicationDate": null,
+        "edition": "Undated web table as accessed; no package revision inferred"
+      },
+      "formEvidence": {
+        "sourceField": "Official product Category",
+        "sourceValue": "Protein Powders",
+        "productForm": "dry-protein-powder",
+        "url": "https://www.nowfoods.com/products/sports-nutrition/pea-protein-unflavored-powder"
+      },
+      "serving": {
+        "description": "1 level scoop",
+        "amount": 33,
+        "unit": "g"
+      },
+      "nutrients": {
+        "calories": {
+          "value": 120,
+          "unit": "kcal"
+        },
+        "saturatedFat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 320,
+          "unit": "mg"
+        },
+        "addedSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "fiber": {
+          "value": 0,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 24,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 2,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 1,
+          "unit": "g"
+        }
+      },
+      "ingredients": {
+        "text": "Yellow Pea Protein Isolate.",
+        "language": "en"
+      },
+      "package": {
+        "upc": "733739021328",
+        "size": "12 oz; about 10 servings"
+      },
+      "preparation": {
+        "liquidAmountText": "12 oz",
+        "options": [
+          "water",
+          "milk or juice/other beverage"
+        ],
+        "finalPreparedMass": null,
+        "finalPreparedVolume": null,
+        "usedForCalculation": false
+      }
+    }
+  ],
+  "recommendation": "Keep the existing experimental number but add one source-qualified dry-protein-powder context label explaining that the ordinary-food profile is not a protein-quality or supplement-suitability rating. Do not activate the equal-energy candidate: these three cases do not establish its numerical calibration.",
+  "results": {
+    "methodVersion": "2.1-milk-development-2026-10-21",
+    "engineSha256": "916b89f066f573d2f3d765e0818d377b6f1a2bd1f21852a36adb74bfc514464f",
+    "dymatizeTrace": {
+      "responseLevel": "Existing captured gateway response with retained USDA observations; not a recaptured complete upstream FDC response",
+      "captureType": "Captured real hosted Preview lookup; not a manufacturer-verified panel",
+      "source": {
+        "provider": "usda-fdc",
+        "recordId": "2665690",
+        "url": "https://fdc.nal.usda.gov/food-details/2665690/nutrients",
+        "attribution": "USDA FoodData Central (public domain / CC0)",
+        "revisionDate": "2022-02-03T00:00:00.000Z",
+        "publicationDate": "2023-11-16T00:00:00.000Z",
+        "retrievedAt": "2026-10-23T00:57:22.752Z",
+        "cacheStale": false,
+        "dates": [
+          {
+            "field": "modifiedDate",
+            "value": "2022-02-03"
+          },
+          {
+            "field": "publishedDate",
+            "value": "2023-11-16"
+          }
+        ]
+      },
+      "serving": {
+        "description": "1 scoop",
+        "amount": 32,
+        "unit": "g",
+        "grams": 32
+      },
+      "perServing": {
+        "calories": {
+          "value": 120,
+          "unit": "kcal"
+        },
+        "addedSugar": {
+          "value": 0,
+          "unit": "g"
+        },
+        "totalSugar": {
+          "value": 0.9984000000000001,
+          "unit": "g"
+        },
+        "saturatedFat": {
+          "value": 0,
+          "unit": "g"
+        },
+        "sodium": {
+          "value": 179.84,
+          "unit": "mg"
+        },
+        "fiber": {
+          "value": 0.992,
+          "unit": "g"
+        },
+        "protein": {
+          "value": 24.991999999999997,
+          "unit": "g"
+        },
+        "fat": {
+          "value": 0.49920000000000003,
+          "unit": "g"
+        },
+        "carbohydrates": {
+          "value": 2,
+          "unit": "g"
+        }
+      },
+      "rawObservations": [
+        {
+          "id": "usda-reference",
+          "basis": "100g",
+          "quantity": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "observations": [
+            {
+              "nutrient": "protein",
+              "rawValue": 78.1,
+              "rawUnit": "G",
+              "unitSource": "provider",
+              "enteredUnit": null,
+              "field": "foodNutrients[0].value",
+              "derivation": "Calculated from value per serving size measure"
+            },
+            {
+              "nutrient": "fat",
+              "rawValue": 1.56,
+              "rawUnit": "G",
+              "unitSource": "provider",
+              "enteredUnit": null,
+              "field": "foodNutrients[1].value",
+              "derivation": "Calculated from value per serving size measure"
+            },
+            {
+              "nutrient": "carbohydrates",
+              "rawValue": 6.25,
+              "rawUnit": "G",
+              "unitSource": "provider",
+              "enteredUnit": null,
+              "field": "foodNutrients[2].value",
+              "derivation": "Calculated from value per serving size measure"
+            },
+            {
+              "nutrient": "calories",
+              "rawValue": 375,
+              "rawUnit": "KCAL",
+              "unitSource": "provider",
+              "enteredUnit": null,
+              "field": "foodNutrients[3].value",
+              "derivation": "Calculated from value per serving size measure"
+            },
+            {
+              "nutrient": "totalSugar",
+              "rawValue": 3.12,
+              "rawUnit": "G",
+              "unitSource": "provider",
+              "enteredUnit": null,
+              "field": "foodNutrients[4].value",
+              "derivation": "Calculated from a less than value per serving size measure"
+            },
+            {
+              "nutrient": "fiber",
+              "rawValue": 3.1,
+              "rawUnit": "G",
+              "unitSource": "provider",
+              "enteredUnit": null,
+              "field": "foodNutrients[5].value",
+              "derivation": "Calculated from a less than value per serving size measure"
+            },
+            {
+              "nutrient": "sodium",
+              "rawValue": 562,
+              "rawUnit": "MG",
+              "unitSource": "provider",
+              "enteredUnit": null,
+              "field": "foodNutrients[9].value",
+              "derivation": "Calculated from value per serving size measure"
+            },
+            {
+              "nutrient": "addedSugar",
+              "rawValue": 0,
+              "rawUnit": "G",
+              "unitSource": "provider",
+              "enteredUnit": null,
+              "field": "foodNutrients[11].value",
+              "derivation": "Calculated from value per serving size measure"
+            },
+            {
+              "nutrient": "saturatedFat",
+              "rawValue": 0,
+              "rawUnit": "G",
+              "unitSource": "provider",
+              "enteredUnit": null,
+              "field": "foodNutrients[14].value",
+              "derivation": "Calculated from value per serving size measure"
+            }
+          ]
+        }
+      ],
+      "selectedDatasetId": "usda-reference",
+      "categoryEvidence": {
+        "categories": [
+          "general"
+        ],
+        "providerClaims": [
+          {
+            "field": "foodCategory",
+            "values": [
+              "Energy, Protein & Muscle Recovery Drinks"
+            ]
+          }
+        ],
+        "basis": [
+          "Trace general comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required."
+        ]
+      },
+      "originalGatewayFoodNutrients": {
+        "calories": 120,
+        "protein": 24.991999999999997,
+        "carbohydrates": 2,
+        "fat": 0.49920000000000003,
+        "sodium": 179.84,
+        "fiber": 0.9920000000000001,
+        "totalSugar": 0.9984000000000001,
+        "addedSugar": 0
+      },
+      "providerWarnings": [],
+      "qualification": "Sugar and fiber in this capture are provider calculations from less-than declarations; retained unchanged, not independently measured label precision.",
+      "preparation": "No preparation quantity or final prepared yield in this capture. None inferred."
+    },
+    "powders": [
+      {
+        "id": "dymatize-cocoa-pebbles",
+        "name": "Dymatize Enterprises · Cocoa Pebbles Flavored Iso100 Hydrolyzed Protein Powder, Cocoa Pebbles",
+        "input": {
+          "category": "general",
+          "basis": {
+            "amount": 100,
+            "unit": "g"
+          },
+          "nutrients": {
+            "calories": {
+              "value": 375,
+              "unit": "kcal"
+            },
+            "addedSugar": {
+              "value": 0,
+              "unit": "g"
+            },
+            "totalSugar": {
+              "value": 3.12,
+              "unit": "g"
+            },
+            "saturatedFat": {
+              "value": 0,
+              "unit": "g"
+            },
+            "sodium": {
+              "value": 562,
+              "unit": "mg"
+            },
+            "fiber": {
+              "value": 3.1,
+              "unit": "g"
+            },
+            "protein": {
+              "value": 78.1,
+              "unit": "g"
+            },
+            "fat": {
+              "value": 1.56,
+              "unit": "g"
+            },
+            "carbohydrates": {
+              "value": 6.25,
+              "unit": "g"
+            }
+          },
+          "source": {
+            "provider": "usda-fdc",
+            "recordId": "2665690",
+            "url": "https://fdc.nal.usda.gov/food-details/2665690/nutrients",
+            "attribution": "USDA FoodData Central (public domain / CC0)",
+            "revisionDate": "2022-02-03T00:00:00.000Z",
+            "publicationDate": "2023-11-16T00:00:00.000Z",
+            "retrievedAt": "2026-10-23T00:57:22.752Z",
+            "cacheStale": false,
+            "dates": [
+              {
+                "field": "modifiedDate",
+                "value": "2022-02-03"
+              },
+              {
+                "field": "publishedDate",
+                "value": "2023-11-16"
+              }
+            ]
+          },
+          "grainEvidence": {
+            "status": "not-established",
+            "firstIngredient": "HYDROLYZED WHEY PROTEIN ISOLATE",
+            "originalText": "HYDROLYZED WHEY PROTEIN ISOLATE, WHEY PROTEIN ISOLATE, COCOA POWDER (PROCESSED WITH ALKALI). LESS THAN 1% OF: NATURAL AND ARTIFICIAL FLAVORS, SALT, POTASSIUM CHLORIDE, SOY LECITHIN, SUCRALOSE, STEVIOL GLYCOSIDES (STEVIA).",
+            "identification": "provider-reported-first-ingredient",
+            "percentage": null,
+            "source": {
+              "url": "https://fdc.nal.usda.gov/food-details/2665690/nutrients",
+              "attribution": "USDA FoodData Central (public domain / CC0)",
+              "provider": "usda-fdc",
+              "revisionDate": "2022-02-03T00:00:00.000Z",
+              "retrievedAt": "2026-10-23T00:57:22.752Z"
+            }
+          },
+          "productEvidence": {
+            "name": "COCOA PEBBLES FLAVORED ISO100 HYDROLYZED PROTEIN POWDER, COCOA PEBBLES",
+            "categories": [
+              {
+                "field": "foodCategory",
+                "values": [
+                  "Energy, Protein & Muscle Recovery Drinks"
+                ]
+              }
+            ],
+            "source": {
+              "provider": "usda-fdc",
+              "recordId": "2665690",
+              "url": "https://fdc.nal.usda.gov/food-details/2665690/nutrients",
+              "attribution": "USDA FoodData Central (public domain / CC0)",
+              "revisionDate": "2022-02-03T00:00:00.000Z",
+              "publicationDate": "2023-11-16T00:00:00.000Z",
+              "retrievedAt": "2026-10-23T00:57:22.752Z",
+              "cacheStale": false,
+              "dates": [
+                {
+                  "field": "modifiedDate",
+                  "value": "2022-02-03"
+                },
+                {
+                  "field": "publishedDate",
+                  "value": "2023-11-16"
+                }
+              ]
+            }
+          }
+        },
+        "formEvidence": {
+          "productForm": "dry-protein-powder",
+          "sourceField": "Captured provider product name and mass scoop",
+          "sourceValue": "COCOA PEBBLES FLAVORED ISO100 HYDROLYZED PROTEIN POWDER, COCOA PEBBLES",
+          "servingUnit": "g",
+          "url": "https://fdc.nal.usda.gov/food-details/2665690/nutrients"
+        },
+        "current": {
+          "methodId": "trace-us-practical-nutrition",
+          "methodVersion": "2.1-milk-development-2026-10-21",
+          "grade": null,
+          "scoreReady": false,
+          "scanMatchEligible": false,
+          "nutritionScore100": 41,
+          "rawScore": 40.60560643060643,
+          "reasons": [],
+          "warnings": [],
+          "points": {
+            "energy": {
+              "min": 19.85576923076923,
+              "max": 19.85576923076923,
+              "possible": [
+                19.85576923076923
+              ]
+            },
+            "sugar": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "saturatedFat": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "salt": {
+              "min": 27.970370370370368,
+              "max": 27.970370370370368,
+              "possible": [
+                27.970370370370368
+              ]
+            },
+            "fiber": {
+              "min": 2.3640917107583777,
+              "max": 2.3640917107583777,
+              "possible": [
+                2.3640917107583777
+              ]
+            },
+            "proteinApplied": {
+              "min": 1.0676543209876543,
+              "max": 1.0676543209876543,
+              "possible": [
+                1.0676543209876543
+              ]
+            },
+            "wholeGrain": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            }
+          },
+          "normalized": {
+            "basis": {
+              "amount": 100,
+              "unit": "g"
+            },
+            "nutrients": {
+              "calories": 375,
+              "addedSugar": 0,
+              "totalSugar": 3.12,
+              "saturatedFat": 0,
+              "sodium": 562,
+              "fiber": 3.1,
+              "protein": 78.1,
+              "fat": 1.56,
+              "carbohydrates": 6.25
+            },
+            "per100": {
+              "calories": 375,
+              "addedSugar": 0,
+              "totalSugar": 3.12,
+              "saturatedFat": 0,
+              "sodium": 562,
+              "fiber": 3.1,
+              "protein": 78.1,
+              "fat": 1.56,
+              "carbohydrates": 6.25
+            },
+            "originalBasis": {
+              "amount": 100,
+              "unit": "g"
+            },
+            "originalNutrients": {
+              "calories": 375,
+              "addedSugar": 0,
+              "totalSugar": 3.12,
+              "saturatedFat": 0,
+              "sodium": 562,
+              "fiber": 3.1,
+              "protein": 78.1,
+              "fat": 1.56,
+              "carbohydrates": 6.25
+            }
+          },
+          "guidance": {
+            "dailyValues": "https://www.fda.gov/food/nutrition-facts-label/daily-value-nutrition-and-supplement-facts-labels",
+            "label": "https://www.fda.gov/food/nutrition-facts-label/how-understand-and-use-nutrition-facts-label",
+            "zeroFatRounding": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(2)"
+          },
+          "rawScoreRange": [
+            40.60560643060643,
+            40.60560643060643
+          ],
+          "sugarMode": "addedSugar",
+          "excludedNutrients": [],
+          "methodCategory": "general",
+          "sugarBenchmark": {
+            "type": "Trace-density-screens",
+            "addedThresholds": [
+              2.5,
+              25
+            ],
+            "totalThresholds": [
+              4.5,
+              45
+            ],
+            "unit": "g per 100 g/ml"
+          },
+          "comparison": {
+            "category": "general",
+            "maxAmount": 100,
+            "energyCapKcal": null,
+            "limitingBurden": 0.46617283950617283,
+            "weightedBurden": 0.1748148148148148,
+            "strongestBurden": 0.582716049382716,
+            "burdens": {
+              "sugar": 0,
+              "saturatedFat": 0,
+              "salt": 0.582716049382716
+            },
+            "missingLimitingNutrients": [],
+            "burdenUpperBounds": {
+              "sugar": 1,
+              "saturatedFat": 1,
+              "salt": 1
+            },
+            "saturatedFatBound": null,
+            "energyBurden": 0.5673076923076923,
+            "energyInput": 375,
+            "energyRule": "food energy density",
+            "milkDrinkEvidence": {
+              "status": "not-established",
+              "name": "COCOA PEBBLES FLAVORED ISO100 HYDROLYZED PROTEIN POWDER, COCOA PEBBLES",
+              "claims": [
+                {
+                  "field": "foodCategory",
+                  "value": "Energy, Protein & Muscle Recovery Drinks"
+                }
+              ],
+              "source": {
+                "provider": "usda-fdc",
+                "recordId": "2665690",
+                "url": "https://fdc.nal.usda.gov/food-details/2665690/nutrients",
+                "attribution": "USDA FoodData Central (public domain / CC0)",
+                "revisionDate": "2022-02-03T00:00:00.000Z",
+                "publicationDate": "2023-11-16T00:00:00.000Z",
+                "retrievedAt": "2026-10-23T00:57:22.752Z",
+                "cacheStale": false,
+                "dates": [
+                  {
+                    "field": "modifiedDate",
+                    "value": "2022-02-03"
+                  },
+                  {
+                    "field": "publishedDate",
+                    "value": "2023-11-16"
+                  }
+                ]
+              },
+              "comparisonBasis": {
+                "amount": 100,
+                "unit": "ml"
+              },
+              "reason": "The milk adjustment requires measured volume; no g-to-mL density is assumed."
+            },
+            "milkDrinkPolicyApplied": false,
+            "grainEvidence": {
+              "status": "not-established",
+              "firstIngredient": "HYDROLYZED WHEY PROTEIN ISOLATE",
+              "originalText": "HYDROLYZED WHEY PROTEIN ISOLATE, WHEY PROTEIN ISOLATE, COCOA POWDER (PROCESSED WITH ALKALI). LESS THAN 1% OF: NATURAL AND ARTIFICIAL FLAVORS, SALT, POTASSIUM CHLORIDE, SOY LECITHIN, SUCRALOSE, STEVIOL GLYCOSIDES (STEVIA).",
+              "identification": "provider-reported-first-ingredient",
+              "percentage": null,
+              "source": {
+                "url": "https://fdc.nal.usda.gov/food-details/2665690/nutrients",
+                "attribution": "USDA FoodData Central (public domain / CC0)",
+                "provider": "usda-fdc",
+                "revisionDate": "2022-02-03T00:00:00.000Z",
+                "retrievedAt": "2026-10-23T00:57:22.752Z"
+              }
+            }
+          }
+        },
+        "candidate": {
+          "grade": null,
+          "scoreReady": false,
+          "nutritionScore100": 84,
+          "rawScore": 84.44521606897902,
+          "candidate": "offline-equal-energy-powder-sensitivity",
+          "comparisonBasis": {
+            "amount": 100,
+            "unit": "kcal"
+          },
+          "per100Kcal": {
+            "calories": 100,
+            "addedSugar": 0,
+            "totalSugar": 0.832,
+            "saturatedFat": 0,
+            "sodium": 149.86666666666667,
+            "fiber": 0.8266666666666667,
+            "protein": 20.826666666666664,
+            "fat": 0.416,
+            "carbohydrates": 1.6666666666666667
+          },
+          "burdens": {
+            "sugar": 0,
+            "saturatedFat": 0,
+            "salt": 0.07390946502057615
+          },
+          "weighted": 0.022172839506172843,
+          "strongest": 0.07390946502057615,
+          "limiting": 0.05912757201646092,
+          "energyDensityDeduction": 0,
+          "limitingDeduction": 3.547654320987655,
+          "credits": {
+            "fiber": 1.180952380952381,
+            "proteinApplied": 2,
+            "wholeGrain": 0
+          },
+          "appliedCredits": {
+            "fiber": 1.111125533999608,
+            "proteinApplied": 1.8817448559670782,
+            "wholeGrain": 0
+          }
+        },
+        "combined": {
+          "current": 41,
+          "candidate": 84,
+          "status": "provisional",
+          "candidateStatus": "provisional",
+          "concernKnown": 0,
+          "identified": [
+            {
+              "id": "flavor-mixture",
+              "concernBurden": null,
+              "classification": null
+            },
+            {
+              "id": "E322",
+              "concernBurden": 0,
+              "classification": "reviewed"
+            },
+            {
+              "id": "E955",
+              "concernBurden": null,
+              "classification": null
+            }
+          ],
+          "reasons": [
+            "Unreviewed ingredient phrase: hydrolyzed whey protein isolate",
+            "Unreviewed ingredient phrase: cocoa powder",
+            "Unreviewed ingredient phrase: 1% of: natural",
+            "Unreviewed ingredient phrase: artificial",
+            "Unreviewed ingredient phrase: potassium chloride",
+            "Unreviewed ingredient phrase: steviol glycosides",
+            "Unreviewed ingredient phrase: stevia",
+            "Flavor mixture (constituents unspecified): Constituents are not named; no speculative identities.",
+            "Sucralose: Processing-dependent assessment unresolved: the captured declaration does not establish prolonged heating conditions."
+          ],
+          "policy": {
+            "id": "trace-overall-declared-profile",
+            "version": "4-general-evidence-experimental-2026-10-20",
+            "nutritionWeight": 0.8,
+            "maximumRelativeAdditiveDeduction": 0.2,
+            "exposureSource": "https://www.fda.gov/consumers/consumer-updates/food-safe-if-it-has-chemicals"
+          }
+        },
+        "noInputMutation": true
+      },
+      {
+        "id": "now-whey-unflavored",
+        "name": "NOW Sports Whey Protein Isolate, Unflavored",
+        "input": {
+          "category": "general",
+          "basis": {
+            "description": "1 level scoop",
+            "amount": 28,
+            "unit": "g"
+          },
+          "nutrients": {
+            "calories": {
+              "value": 110,
+              "unit": "kcal"
+            },
+            "saturatedFat": {
+              "value": 0,
+              "unit": "g"
+            },
+            "sodium": {
+              "value": 45,
+              "unit": "mg"
+            },
+            "addedSugar": {
+              "value": 0,
+              "unit": "g"
+            },
+            "totalSugar": {
+              "value": 0,
+              "unit": "g"
+            },
+            "fiber": {
+              "value": 0,
+              "unit": "g"
+            },
+            "protein": {
+              "value": 24,
+              "unit": "g"
+            },
+            "fat": {
+              "value": 0,
+              "unit": "g"
+            },
+            "carbohydrates": {
+              "value": 1,
+              "unit": "g"
+            }
+          },
+          "source": {
+            "url": "https://www.nowfoods.com/products/sports-nutrition/whey-protein-isolate-unflavored-powder",
+            "attribution": "NOW Foods US manufacturer nutrition table",
+            "verifiedOn": "2026-10-22",
+            "publicationDate": null,
+            "edition": "Undated web table as accessed; no package revision inferred"
+          },
+          "grainEvidence": {
+            "status": "not-established",
+            "firstIngredient": "Whey Protein Isolate",
+            "originalText": "Whey Protein Isolate, Sunflower Lecithin (< 1%).",
+            "identification": "provider-reported-first-ingredient",
+            "percentage": null,
+            "source": {
+              "url": "https://www.nowfoods.com/products/sports-nutrition/whey-protein-isolate-unflavored-powder",
+              "attribution": "NOW Foods US manufacturer nutrition table",
+              "provider": null,
+              "revisionDate": null,
+              "retrievedAt": null
+            }
+          }
+        },
+        "formEvidence": {
+          "sourceField": "Official product Category",
+          "sourceValue": "Protein Powders",
+          "productForm": "dry-protein-powder",
+          "url": "https://www.nowfoods.com/products/sports-nutrition/whey-protein-isolate-unflavored-powder"
+        },
+        "current": {
+          "methodId": "trace-us-practical-nutrition",
+          "methodVersion": "2.1-milk-development-2026-10-21",
+          "grade": null,
+          "scoreReady": false,
+          "scanMatchEligible": false,
+          "nutritionScore100": 62,
+          "rawScore": 61.612148962148964,
+          "reasons": [],
+          "warnings": [],
+          "points": {
+            "energy": {
+              "min": 21.057692307692307,
+              "max": 21.057692307692307,
+              "possible": [
+                21.057692307692307
+              ]
+            },
+            "sugar": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "saturatedFat": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "salt": {
+              "min": 4.190476190476191,
+              "max": 4.190476190476191,
+              "possible": [
+                4.190476190476191
+              ]
+            },
+            "fiber": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "proteinApplied": {
+              "min": 1.8603174603174604,
+              "max": 1.8603174603174604,
+              "possible": [
+                1.8603174603174604
+              ]
+            },
+            "wholeGrain": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            }
+          },
+          "normalized": {
+            "basis": {
+              "amount": 100,
+              "unit": "g"
+            },
+            "nutrients": {
+              "calories": 392.85714285714283,
+              "addedSugar": 0,
+              "totalSugar": 0,
+              "saturatedFat": 0,
+              "sodium": 160.71428571428572,
+              "fiber": 0,
+              "protein": 85.71428571428571,
+              "fat": 0,
+              "carbohydrates": 3.5714285714285716
+            },
+            "per100": {
+              "calories": 392.85714285714283,
+              "addedSugar": 0,
+              "totalSugar": 0,
+              "saturatedFat": 0,
+              "sodium": 160.71428571428572,
+              "fiber": 0,
+              "protein": 85.71428571428571,
+              "fat": 0,
+              "carbohydrates": 3.5714285714285716
+            },
+            "originalBasis": {
+              "description": "1 level scoop",
+              "amount": 28,
+              "unit": "g"
+            },
+            "originalNutrients": {
+              "calories": 110,
+              "addedSugar": 0,
+              "totalSugar": 0,
+              "saturatedFat": 0,
+              "sodium": 45,
+              "fiber": 0,
+              "protein": 24,
+              "fat": 0,
+              "carbohydrates": 1
+            }
+          },
+          "guidance": {
+            "dailyValues": "https://www.fda.gov/food/nutrition-facts-label/daily-value-nutrition-and-supplement-facts-labels",
+            "label": "https://www.fda.gov/food/nutrition-facts-label/how-understand-and-use-nutrition-facts-label",
+            "zeroFatRounding": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(2)"
+          },
+          "rawScoreRange": [
+            61.612148962148964,
+            61.612148962148964
+          ],
+          "sugarMode": "addedSugar",
+          "excludedNutrients": [],
+          "methodCategory": "general",
+          "sugarBenchmark": {
+            "type": "Trace-density-screens",
+            "addedThresholds": [
+              2.5,
+              25
+            ],
+            "totalThresholds": [
+              4.5,
+              45
+            ],
+            "unit": "g per 100 g/ml"
+          },
+          "comparison": {
+            "category": "general",
+            "maxAmount": 100,
+            "energyCapKcal": null,
+            "limitingBurden": 0.06984126984126986,
+            "weightedBurden": 0.02619047619047619,
+            "strongestBurden": 0.08730158730158731,
+            "burdens": {
+              "sugar": 0,
+              "saturatedFat": 0,
+              "salt": 0.08730158730158731
+            },
+            "missingLimitingNutrients": [],
+            "burdenUpperBounds": {
+              "sugar": 1,
+              "saturatedFat": 1,
+              "salt": 1
+            },
+            "saturatedFatBound": null,
+            "energyBurden": 0.6016483516483516,
+            "energyInput": 392.85714285714283,
+            "energyRule": "food energy density",
+            "milkDrinkEvidence": {
+              "status": "not-established",
+              "name": null,
+              "claims": [],
+              "source": null,
+              "comparisonBasis": {
+                "amount": 100,
+                "unit": "ml"
+              },
+              "reason": "Matching attributed product-classification evidence is unavailable."
+            },
+            "milkDrinkPolicyApplied": false,
+            "grainEvidence": {
+              "status": "not-established",
+              "firstIngredient": "Whey Protein Isolate",
+              "originalText": "Whey Protein Isolate, Sunflower Lecithin (< 1%).",
+              "identification": "provider-reported-first-ingredient",
+              "percentage": null,
+              "source": {
+                "url": "https://www.nowfoods.com/products/sports-nutrition/whey-protein-isolate-unflavored-powder",
+                "attribution": "NOW Foods US manufacturer nutrition table",
+                "provider": null,
+                "revisionDate": null,
+                "retrievedAt": null
+              }
+            }
+          }
+        },
+        "candidate": {
+          "grade": null,
+          "scoreReady": false,
+          "nutritionScore100": 87,
+          "rawScore": 87,
+          "candidate": "offline-equal-energy-powder-sensitivity",
+          "comparisonBasis": {
+            "amount": 100,
+            "unit": "kcal"
+          },
+          "per100Kcal": {
+            "calories": 100,
+            "saturatedFat": 0,
+            "sodium": 40.90909090909091,
+            "addedSugar": 0,
+            "totalSugar": 0,
+            "fiber": 0,
+            "protein": 21.818181818181817,
+            "fat": 0,
+            "carbohydrates": 0.9090909090909091
+          },
+          "burdens": {
+            "sugar": 0,
+            "saturatedFat": 0,
+            "salt": 0
+          },
+          "weighted": 0,
+          "strongest": 0,
+          "limiting": 0,
+          "energyDensityDeduction": 0,
+          "limitingDeduction": 0,
+          "credits": {
+            "fiber": 0,
+            "proteinApplied": 2,
+            "wholeGrain": 0
+          },
+          "appliedCredits": {
+            "fiber": 0,
+            "proteinApplied": 2,
+            "wholeGrain": 0
+          }
+        },
+        "combined": {
+          "current": 62,
+          "candidate": 87,
+          "status": "provisional",
+          "candidateStatus": "provisional",
+          "concernKnown": 0,
+          "identified": [
+            {
+              "id": "E322",
+              "concernBurden": 0,
+              "classification": "reviewed"
+            }
+          ],
+          "reasons": [
+            "Unreviewed ingredient phrase: sunflower",
+            "Unreviewed ingredient phrase: <"
+          ],
+          "policy": {
+            "id": "trace-overall-declared-profile",
+            "version": "4-general-evidence-experimental-2026-10-20",
+            "nutritionWeight": 0.8,
+            "maximumRelativeAdditiveDeduction": 0.2,
+            "exposureSource": "https://www.fda.gov/consumers/consumer-updates/food-safe-if-it-has-chemicals"
+          }
+        },
+        "noInputMutation": true
+      },
+      {
+        "id": "now-pea-unflavored",
+        "name": "NOW Sports Pea Protein, Unflavored",
+        "input": {
+          "category": "general",
+          "basis": {
+            "description": "1 level scoop",
+            "amount": 33,
+            "unit": "g"
+          },
+          "nutrients": {
+            "calories": {
+              "value": 120,
+              "unit": "kcal"
+            },
+            "saturatedFat": {
+              "value": 0,
+              "unit": "g"
+            },
+            "sodium": {
+              "value": 320,
+              "unit": "mg"
+            },
+            "addedSugar": {
+              "value": 0,
+              "unit": "g"
+            },
+            "totalSugar": {
+              "value": 0,
+              "unit": "g"
+            },
+            "fiber": {
+              "value": 0,
+              "unit": "g"
+            },
+            "protein": {
+              "value": 24,
+              "unit": "g"
+            },
+            "fat": {
+              "value": 2,
+              "unit": "g"
+            },
+            "carbohydrates": {
+              "value": 1,
+              "unit": "g"
+            }
+          },
+          "source": {
+            "url": "https://www.nowfoods.com/products/sports-nutrition/pea-protein-unflavored-powder",
+            "attribution": "NOW Foods US manufacturer nutrition table",
+            "verifiedOn": "2026-10-22",
+            "publicationDate": null,
+            "edition": "Undated web table as accessed; no package revision inferred"
+          },
+          "grainEvidence": {
+            "status": "not-established",
+            "firstIngredient": "Yellow Pea Protein Isolate",
+            "originalText": "Yellow Pea Protein Isolate.",
+            "identification": "provider-reported-first-ingredient",
+            "percentage": null,
+            "source": {
+              "url": "https://www.nowfoods.com/products/sports-nutrition/pea-protein-unflavored-powder",
+              "attribution": "NOW Foods US manufacturer nutrition table",
+              "provider": null,
+              "revisionDate": null,
+              "retrievedAt": null
+            }
+          }
+        },
+        "formEvidence": {
+          "sourceField": "Official product Category",
+          "sourceValue": "Protein Powders",
+          "productForm": "dry-protein-powder",
+          "url": "https://www.nowfoods.com/products/sports-nutrition/pea-protein-unflavored-powder"
+        },
+        "current": {
+          "methodId": "trace-us-practical-nutrition",
+          "methodVersion": "2.1-milk-development-2026-10-21",
+          "grade": null,
+          "scoreReady": false,
+          "scanMatchEligible": false,
+          "nutritionScore100": 18,
+          "rawScore": 18.30909090909091,
+          "reasons": [],
+          "warnings": [],
+          "points": {
+            "energy": {
+              "min": 19.09090909090909,
+              "max": 19.09090909090909,
+              "possible": [
+                19.09090909090909
+              ]
+            },
+            "sugar": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "saturatedFat": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "salt": {
+              "min": 48,
+              "max": 48,
+              "possible": [
+                48
+              ]
+            },
+            "fiber": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            },
+            "proteinApplied": {
+              "min": 0.3999999999999999,
+              "max": 0.3999999999999999,
+              "possible": [
+                0.3999999999999999
+              ]
+            },
+            "wholeGrain": {
+              "min": 0,
+              "max": 0,
+              "possible": [
+                0
+              ]
+            }
+          },
+          "normalized": {
+            "basis": {
+              "amount": 100,
+              "unit": "g"
+            },
+            "nutrients": {
+              "calories": 363.6363636363636,
+              "addedSugar": 0,
+              "totalSugar": 0,
+              "saturatedFat": 0,
+              "sodium": 969.6969696969697,
+              "fiber": 0,
+              "protein": 72.72727272727273,
+              "fat": 6.0606060606060606,
+              "carbohydrates": 3.0303030303030303
+            },
+            "per100": {
+              "calories": 363.6363636363636,
+              "addedSugar": 0,
+              "totalSugar": 0,
+              "saturatedFat": 0,
+              "sodium": 969.6969696969697,
+              "fiber": 0,
+              "protein": 72.72727272727273,
+              "fat": 6.0606060606060606,
+              "carbohydrates": 3.0303030303030303
+            },
+            "originalBasis": {
+              "description": "1 level scoop",
+              "amount": 33,
+              "unit": "g"
+            },
+            "originalNutrients": {
+              "calories": 120,
+              "addedSugar": 0,
+              "totalSugar": 0,
+              "saturatedFat": 0,
+              "sodium": 320,
+              "fiber": 0,
+              "protein": 24,
+              "fat": 2,
+              "carbohydrates": 1
+            }
+          },
+          "guidance": {
+            "dailyValues": "https://www.fda.gov/food/nutrition-facts-label/daily-value-nutrition-and-supplement-facts-labels",
+            "label": "https://www.fda.gov/food/nutrition-facts-label/how-understand-and-use-nutrition-facts-label",
+            "zeroFatRounding": "https://www.ecfr.gov/current/title-21/section-101.9#p-101.9(c)(2)"
+          },
+          "rawScoreRange": [
+            18.30909090909091,
+            18.30909090909091
+          ],
+          "sugarMode": "addedSugar",
+          "excludedNutrients": [],
+          "methodCategory": "general",
+          "sugarBenchmark": {
+            "type": "Trace-density-screens",
+            "addedThresholds": [
+              2.5,
+              25
+            ],
+            "totalThresholds": [
+              4.5,
+              45
+            ],
+            "unit": "g per 100 g/ml"
+          },
+          "comparison": {
+            "category": "general",
+            "maxAmount": 100,
+            "energyCapKcal": null,
+            "limitingBurden": 0.8,
+            "weightedBurden": 0.3,
+            "strongestBurden": 1,
+            "burdens": {
+              "sugar": 0,
+              "saturatedFat": 0,
+              "salt": 1
+            },
+            "missingLimitingNutrients": [],
+            "burdenUpperBounds": {
+              "sugar": 1,
+              "saturatedFat": 1,
+              "salt": 1
+            },
+            "saturatedFatBound": null,
+            "energyBurden": 0.5454545454545454,
+            "energyInput": 363.6363636363636,
+            "energyRule": "food energy density",
+            "milkDrinkEvidence": {
+              "status": "not-established",
+              "name": null,
+              "claims": [],
+              "source": null,
+              "comparisonBasis": {
+                "amount": 100,
+                "unit": "ml"
+              },
+              "reason": "Matching attributed product-classification evidence is unavailable."
+            },
+            "milkDrinkPolicyApplied": false,
+            "grainEvidence": {
+              "status": "not-established",
+              "firstIngredient": "Yellow Pea Protein Isolate",
+              "originalText": "Yellow Pea Protein Isolate.",
+              "identification": "provider-reported-first-ingredient",
+              "percentage": null,
+              "source": {
+                "url": "https://www.nowfoods.com/products/sports-nutrition/pea-protein-unflavored-powder",
+                "attribution": "NOW Foods US manufacturer nutrition table",
+                "provider": null,
+                "revisionDate": null,
+                "retrievedAt": null
+              }
+            }
+          }
+        },
+        "candidate": {
+          "grade": null,
+          "scoreReady": false,
+          "nutritionScore100": 76,
+          "rawScore": 76.18189300411522,
+          "candidate": "offline-equal-energy-powder-sensitivity",
+          "comparisonBasis": {
+            "amount": 100,
+            "unit": "kcal"
+          },
+          "per100Kcal": {
+            "calories": 100,
+            "saturatedFat": 0,
+            "sodium": 266.6666666666667,
+            "addedSugar": 0,
+            "totalSugar": 0,
+            "fiber": 0,
+            "protein": 20,
+            "fat": 1.6666666666666667,
+            "carbohydrates": 0.8333333333333334
+          },
+          "burdens": {
+            "sugar": 0,
+            "saturatedFat": 0,
+            "salt": 0.2181069958847737
+          },
+          "weighted": 0.0654320987654321,
+          "strongest": 0.2181069958847737,
+          "limiting": 0.17448559670781896,
+          "energyDensityDeduction": 0,
+          "limitingDeduction": 10.469135802469138,
+          "credits": {
+            "fiber": 0,
+            "proteinApplied": 2,
+            "wholeGrain": 0
+          },
+          "appliedCredits": {
+            "fiber": 0,
+            "proteinApplied": 1.6510288065843621,
+            "wholeGrain": 0
+          }
+        },
+        "combined": {
+          "current": null,
+          "candidate": null,
+          "status": "nutrition-only",
+          "candidateStatus": "nutrition-only",
+          "concernKnown": null,
+          "identified": [],
+          "reasons": [
+            "Unreviewed ingredient phrase: yellow pea protein isolate"
+          ],
+          "policy": {
+            "id": "trace-overall-declared-profile",
+            "version": "4-general-evidence-experimental-2026-10-20",
+            "nutritionWeight": 0.8,
+            "maximumRelativeAdditiveDeduction": 0.2,
+            "exposureSource": "https://www.fda.gov/consumers/consumer-updates/food-safe-if-it-has-chemicals"
+          }
+        },
+        "noInputMutation": true
+      }
+    ],
+    "nonPowders": [
+      {
+        "id": "water",
+        "current": 85,
+        "candidate": 85,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "regular-soda",
+        "current": 12,
+        "candidate": 12,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "diet-soda",
+        "current": 85,
+        "candidate": 85,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "nonfat-milk",
+        "current": 86,
+        "candidate": 86,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "whole-milk",
+        "current": 80,
+        "candidate": 80,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "sweetened-milk",
+        "current": 72,
+        "candidate": 72,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "plain-yogurt",
+        "current": 87,
+        "candidate": 87,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "sweetened-yogurt",
+        "current": 82,
+        "candidate": 82,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "whole-grain",
+        "current": 83,
+        "candidate": 83,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "sweetened-cereal",
+        "current": 20,
+        "candidate": 20,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "nuts",
+        "current": 95,
+        "candidate": 95,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "produce",
+        "current": 89,
+        "candidate": 89,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "prepared-meal",
+        "current": 75,
+        "candidate": 75,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "packaged-snack",
+        "current": 20,
+        "candidate": 20,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "processed-meat",
+        "current": 21,
+        "candidate": 21,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      },
+      {
+        "id": "protein-bar",
+        "current": 54,
+        "candidate": 54,
+        "fullResultUnchanged": true,
+        "combinedUnchanged": true
+      }
+    ],
+    "checks": [
+      {
+        "id": "dymatize-cocoa-pebbles",
+        "servingRepresentations": [
+          0.5,
+          2,
+          1,
+          0.32
+        ],
+        "labelServingIncluded": true,
+        "unknownAddedSugarPreserved": true,
+        "sourceMismatchUnchanged": true,
+        "constructedWaterMasses": [
+          100,
+          500
+        ],
+        "burdenMonotonicity": 3,
+        "unknownPreserved": true,
+        "unsupportedUnitsRejected": true,
+        "ambiguousFormUnchanged": true
+      },
+      {
+        "id": "now-whey-unflavored",
+        "servingRepresentations": [
+          0.5,
+          2,
+          3.5714285714285716,
+          1
+        ],
+        "labelServingIncluded": true,
+        "unknownAddedSugarPreserved": true,
+        "sourceMismatchUnchanged": true,
+        "constructedWaterMasses": [
+          100,
+          500
+        ],
+        "burdenMonotonicity": 3,
+        "unknownPreserved": true,
+        "unsupportedUnitsRejected": true,
+        "ambiguousFormUnchanged": true
+      },
+      {
+        "id": "now-pea-unflavored",
+        "servingRepresentations": [
+          0.5,
+          2,
+          3.0303030303030303,
+          1
+        ],
+        "labelServingIncluded": true,
+        "unknownAddedSugarPreserved": true,
+        "sourceMismatchUnchanged": true,
+        "constructedWaterMasses": [
+          100,
+          500
+        ],
+        "burdenMonotonicity": 3,
+        "unknownPreserved": true,
+        "unsupportedUnitsRejected": true,
+        "ambiguousFormUnchanged": true
+      }
+    ],
+    "unsupportedFormsUnchanged": [
+      "protein bar",
+      "yogurt",
+      "fluid dairy milk",
+      "egg",
+      "meat",
+      "milk chocolate",
+      "coffee with milk",
+      "unknown powder"
+    ],
+    "networkRequests": 0,
+    "activeFilesChanged": false,
+    "grade": null,
+    "scoreReady": false
+  },
+  "findings": {
+    "diagnosis": "No arithmetic, unit or serving-conversion defect reproduced. The general-food dry-100-g policy penalizes concentration; it does not assess protein quality or supplement suitability. Captured label accuracy remains unverified.",
+    "dymatizeArithmetic": {
+      "basis": "100 g dry powder",
+      "sodiumBurden": "(562-90)/(900-90) = 0.582716049382716",
+      "weightedBurden": "0.3 * 0.582716049382716 = 0.1748148148148148",
+      "strongestSafeguard": "0.8 * 0.582716049382716 = 0.46617283950617283; larger than weighted burden",
+      "limitingDeduction": 27.970370370370368,
+      "energyDeduction": "35 * (375-80)/(600-80) = 19.85576923076923",
+      "sugarDeduction": 0,
+      "saturatedFatDeduction": 0,
+      "fiberCredit": 2.3640917107583777,
+      "proteinCredit": 1.0676543209876543,
+      "wholeGrainCredit": 0,
+      "equation": "85 - 27.970370370370368 - 19.85576923076923 + 2.3640917107583777 + 1.0676543209876543 = 40.60560643060643 -> 41",
+      "additives": "Known concern = 0; provisional overall = round(41 * (1 - 0.20 * 0)) = 41. Unassessed identities remain unresolved, not safe."
+    },
+    "interpretation": "Equal-energy comparison measures nutrient amounts for the same caloric contribution, not per scoop size or guessed prepared beverage. Existing numerical ramps on a new basis have not been validated; the large score shifts are not proof that the candidate is correct.",
+    "limitations": [
+      "Protein credit is capped at two points before limiting-burden attenuation; amino-acid balance and digestibility are not measured.",
+      "Manufacturer controls are undated web-panel references. The whey table supplies 24 g protein; no different size/edition headline is substituted.",
+      "NOW pea remains nutrition-only under the existing incomplete ingredient screen. No additive classification or ingredient vocabulary was expanded.",
+      "The stated liquid amounts in control directions do not establish final prepared yield or one fixed liquid choice. No water, milk, juice nutrient values or densities are inferred.",
+      "Dry-powder form evidence is source identity/category plus mass scoop, never merely protein concentration or a milk ingredient. No runtime classifier was added."
+    ],
+    "exactNewFiles": [
+      "scripts/check-protein-powder-comparison.cjs",
+      "docs/protein-powder-comparison-2026-10-22.json"
+    ],
+    "recommendedNextAction": "Add one source-qualified dry-protein-powder context label alongside the existing experimental score: dry-powder nutrition profile; protein quality not assessed. Keep the number and combined assessment intact; do not activate the unvalidated equal-energy rescale."
+  }
+}

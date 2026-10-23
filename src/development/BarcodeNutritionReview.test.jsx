@@ -291,7 +291,7 @@ test('explicit hosted Preview build exposes existing grading and selection witho
 
 
 const presentationCases = require('./__fixtures__/barcodePresentationCases.cjs').barcodePresentationCases();
-const presentationExpected = {quest:[54,52],dymatize:[41,41],teddy:[20,20],conflicted:[null,null]};
+const presentationExpected = {quest:[54,52],dymatize:[null,null],teddy:[20,20],conflicted:[null,null]};
 test.each(presentationCases)('$id: concise disclosures preserve the complete assessment and effective food', row => {
  const {assessBarcodeNutrition}=require('./barcodeNutritionAssessment');
  const {assessOverallFoodQuality}=require('./traceOverallFoodQuality');
@@ -302,8 +302,8 @@ test.each(presentationCases)('$id: concise disclosures preserve the complete ass
  const section=screen.getByLabelText('Experimental nutrition assessment'),additives=screen.getByLabelText('Product additives');
  expect(section).not.toHaveTextContent(/grade=null|scoreReady|proteinApplied|round\(nutrition|raw deduction|policy:|model:|Unreviewed ingredient phrase/);
  expect(additives).not.toHaveTextContent(/Unreviewed ingredient phrase|closed ordinary|constituents unspecified|concernBurden|weight|conditions:/i);
- expect(within(section).getAllByRole('group',{hidden:true})).toHaveLength(1);expect(within(additives).queryAllByRole('group',{hidden:true})).toHaveLength(0);
- expect(screen.getByLabelText('Why this score')).not.toHaveAttribute('open');expect(additives).not.toHaveAttribute('open');
+ expect(within(section).queryAllByRole('group',{hidden:true})).toHaveLength(row.id==='dymatize'?0:1);expect(within(additives).queryAllByRole('group',{hidden:true})).toHaveLength(0);
+ expect(screen.queryByLabelText('Why this score')?.open ?? false).toBe(false);expect(additives).not.toHaveAttribute('open');
  const afterNutrition=assessBarcodeNutrition(c,row.result.identifier);
  expect(JSON.stringify({c,nutrition:afterNutrition,overall:assessOverallFoodQuality(c,afterNutrition)})).toBe(before);
  const copy=section.textContent+' '+additives.textContent;

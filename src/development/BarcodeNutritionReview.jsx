@@ -18,6 +18,11 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
   const market = assessment.evidence.market?.status;
   const confidence = reviewedLabel ? 'Package revision unconfirmed.' : market === 'unknown' ? 'Product market is unknown.'
     : market === 'foreign-or-multi-market' ? 'US formulation unconfirmed; multi-market record.' : 'US formulation unconfirmed.';
+  if (assessment.ratingStatus === 'not-rated-category') return <section className="trace-barcode-grade" aria-label="Experimental nutrition assessment">
+    <strong className="trace-barcode-grade__category-title">{assessment.ratingBoundary.message}</strong>
+    <p>Nutrition and ingredient information remain available. Unrated does not mean unhealthy or unsafe.</p>
+    {candidate.display.sourceUrl && <p><a href={candidate.display.sourceUrl} target="_blank" rel="noreferrer noopener">Provider nutrition</a></p>}
+  </section>;
   return <section className="trace-barcode-grade" aria-label="Experimental nutrition assessment">
     <div aria-label="Opening score summary">
       <div className="trace-barcode-grade__headline"><strong aria-label={combined == null ? 'Experimental nutrition rating' : 'Experimental overall rating'} data-unavailable={score == null}>{score == null ? 'Score unavailable' : <>{combined ?? score}<small>/100</small></>}</strong>

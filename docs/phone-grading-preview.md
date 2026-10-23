@@ -37,3 +37,15 @@ The complete assessments, ingredient-screening reasons, raw contributions, quali
 Presentation regressions use captured Quest, Teddy and conflicted Fairlife records plus one explicitly authorized hosted lookup of Dymatize Cocoa Pebbles (705016356201). That USDA capture produced nutrition/overall 41/41, matching the user-observed 41; it is not a manufacturer-verified panel. Quest remains 54/52, Teddy remains a separate 20/20 reference comparison, and conflicted Fairlife remains unavailable with nullable sodium and usable logging.
 
 Regenerate the bounded captured-case mobile/desktop checks with `node scripts/verify-grading-user-review.cjs --concise`. Screenshots, copy lengths and source labels are written under `artifacts/grading-plain-language-preview-20261022/`; they are not live lookup claims. Hosted sharing-route verification is recorded separately in local task artifacts. Do not commit sharing credentials, screenshots, bundles or browser profiles.
+
+## Protein-supplement powder rating boundary
+
+Positively source-identified dry protein-supplement powders receive an intentional **not-rated-category** outcome: ?Overall rating not available for protein supplements.? This is neutral scope handling, not a missing-data error or safety classification. Both customer-facing numerical ratings and deduction points are withheld; normal serving facts, ingredients, additive evidence and source links remain available.
+
+A shared resolver binds product-level categories/name/form and mass evidence to the selected source. It never uses protein quantity, brand, barcode or an ingredient-list match. Specific protein-powder categories establish form/use; broad supplement/recovery categories also require explicit powder naming and mass evidence. Ordinary foods, flour/cocoa/milk powders, ingredient mentions and liquid/ready-to-drink or contradictory/ambiguous records retain existing treatment. This resolver is read at assessment time for both fresh and cached observations.
+
+The fallback adapter marks this category outcome resolved without claiming a usable numerical assessment. It neither requests another provider nor changes the preferred source to chase a score. Selection/logging readiness still comes solely from the existing nutrient and serving checks: complete foods stay loggable, genuine missing inputs retain Complete This Food, and sodium conflicts retain nullable sodium.
+
+Nutrition v2 remains unchanged. The original dry-powder calculation is retained only in diagnostics; the isolated equal-calorie candidate and frozen comparison report remain offline development evidence. Regenerate that comparison with `node scripts/check-protein-powder-comparison.cjs`. No application imports the candidate.
+
+Run `node scripts/verify-grading-user-review.cjs --protein-boundary` for captured-case mobile/desktop checks. Hosted sharing-route checks are separate and save no entries. An already-open phone tab must refresh after deployment to receive this boundary.

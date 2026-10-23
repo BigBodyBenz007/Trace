@@ -51,6 +51,8 @@ export function compatibleBarcodeSource(preferred, alternative) {
 export function barcodeAssessmentTier(result, assess) {
   try {
     const value = assess(result);
+    // An intentional category boundary is resolved, not a missing-score trigger.
+    if (value?.ratingStatus === 'not-rated-category') return 2;
     return value?.nutrition === true ? value.overall === true ? 2 : 1 : 0;
   } catch { return 0; }
 }

@@ -1,3 +1,4 @@
+import { resolveProteinSupplementBoundary } from './proteinSupplementBoundary';
 import { canonicalGtinKey } from '../services/productIdentifiers';
 import { normalizeNutritionAssessmentInputs } from '../services/nutritionAssessmentInputs';
 import { reconcileBarcodeDatasets, resolveBarcodeCategory } from './barcodeNutritionEvidence';
@@ -134,5 +135,10 @@ export function assessBarcodeNutrition(candidate, identifier) {
   const replacement = getAppliedVerifiedNutritionCorrection(candidate, identifier)?.mode === 'replacement-panel';
   const original = replacement ? { ...candidate, display: { ...candidate.display,
     ingredients: candidate.selection.remote.ingredients, additives: candidate.selection.remote.additives } } : candidate;
-  return applyVerifiedNutritionToAssessment(candidate, identifier, assessProviderBarcodeNutrition(original, identifier));
+  const assessment = applyVerifiedNutritionToAssessment(candidate, identifier, assessProviderBarcodeNutrition(original, identifier));
+  const boundary = resolveProteinSupplementBoundary(candidate);
+  if (boundary.status !== 'not-rated-category') return assessment;
+  return freeze({ ...assessment, ratingStatus: boundary.status, ratingBoundary: boundary,
+    nutritionScore100: null, result: null, reasons: [boundary.message],
+    diagnostics: { nutrition: assessment } });
 }

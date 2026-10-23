@@ -149,16 +149,17 @@ test.each(['nonfat-milk', 'whole-milk', 'sweetened-milk'])('actual review shows 
   expect(overall.overallScore100).toBe(Math.round(nutrition.nutritionScore100 * (1 - .2 * overall.additiveAssessment.concernBurden)));
   render(<BarcodeNutritionReview candidate={candidate} identifier={lookup.identifier} />);
   expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent(overall.overallScore100 + '/100');
-  const details = screen.getByLabelText('Score details & limitations');
+  const details = screen.getByLabelText('Why this score');
   expect(details).not.toHaveAttribute('open');
   expect(screen.getByLabelText('Experimental nutrition rating')).not.toBeVisible();
-  expect(details).toHaveTextContent('80–600 kcal per 100 mL');
-  expect(details).toHaveTextContent('uses declared added sugars, including zero');
-  expect(details).toHaveTextContent('2.1-milk-development-2026-10-21');
+  expect(nutrition.result.comparison.energyRule).toBe('milk food-energy ramp per 100 mL');
+  expect(nutrition.result.sugarMode).toBe('addedSugar');
+  expect(nutrition.result.methodVersion).toBe('2.1-milk-development-2026-10-21');
+  expect(details).not.toHaveTextContent('2.1-milk-development');
   const opening = screen.getByLabelText('Opening score summary');
   expect(opening).not.toHaveTextContent('Calories lower');
   expect(opening.textContent.includes('sugars lower')).toBe(id === 'sweetened-milk');
-  fireEvent.click(screen.getByText('Score details & limitations'));
+  fireEvent.click(screen.getByText('Why this score'));
   expect(screen.getByLabelText('Experimental nutrition rating')).toBeVisible();
 });
 
