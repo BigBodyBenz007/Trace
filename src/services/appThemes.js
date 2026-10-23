@@ -1,7 +1,7 @@
 export const DEFAULT_APP_THEME_ID = "modern-heirloom";
 export const DEFAULT_SHELL_THEME_ID = DEFAULT_APP_THEME_ID;
 export const APP_SHELL_THEME_COLORS = Object.freeze({
-  "modern-heirloom": "#07131f",
+  "modern-heirloom": "#F5F1E9",
   river: "#0b2426",
   "haunted-forest": "#0b140f",
   "gnome-village": "#365f39",
@@ -30,17 +30,17 @@ export const APP_THEMES = Object.freeze([
   theme({
     id: "modern-heirloom",
     label: "Modern Heirloom",
-    description: "A clean, non-illustrated Life Current with Trace’s deep navy heirloom texture.",
+    description: "A clean, non-illustrated Life Current with Trace’s warm ivory heirloom palette.",
     immersive: false,
     isDefault: true,
     presentation: {
       renderer: "modern-heirloom-current",
       className: "life-current-theme--modern-heirloom",
       colors: {
-        year: "#f2eadc", month: "#b9b0a2", fallback: "#6e604e", stem: "#6e604e",
-        node: "#bd9362", selectedNode: "#d2ad78", nodeBorder: "#07131f",
-        nodeGlow: "rgba(189, 147, 98, 0.7)", card: "#1b3a4d",
-        selectedCardRing: "#83d8cf", selectedCardGlow: "rgba(131, 216, 207, 0.18)",
+        year: "#263432", month: "#59645C", fallback: "#59645C", stem: "#DADFD6",
+        node: "#287C70", selectedNode: "#205F57", nodeBorder: "#F5F1E9",
+        nodeGlow: "rgba(40, 124, 112, 0.18)", card: "#FFFFFF",
+        selectedCardRing: "#287C70", selectedCardGlow: "rgba(40, 124, 112, 0.10)",
       },
     },
     tokenMetadata: { foundation: "modern-heirloom", status: "active" },

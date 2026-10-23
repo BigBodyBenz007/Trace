@@ -7057,3 +7057,116 @@ code {
     width: 100%;
   }
 }
+
+/* Modern Heirloom: legacy component colors, including body-level portals.
+ * Geometry and artwork are intentionally left to the existing component CSS. */
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-barcode-dialog, .trace-barcode-dialog__footer) {
+  background: var(--trace-dialog-surface);
+  border-color: var(--trace-border);
+  color: var(--trace-text);
+  box-shadow: var(--trace-dialog-shadow);
+}
+:root[data-trace-shell-theme="modern-heirloom"] .trace-barcode-dialog__backdrop { background: var(--trace-overlay); }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-barcode-dialog__footer { box-shadow: none; }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-barcode-dialog button {
+  background: var(--trace-button-primary-bg);
+  border-color: var(--trace-button-primary-border);
+  color: var(--trace-button-primary-text);
+}
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-barcode-dialog__close, .trace-barcode-dialog__secondary-actions button) {
+  color: var(--trace-text);
+}
+:root[data-trace-shell-theme="modern-heirloom"] .trace-barcode-dialog :is(input, select) {
+  background: var(--trace-input-bg);
+  border-color: var(--trace-input-border);
+  color: var(--trace-input-text);
+  color-scheme: light;
+}
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-barcode-dialog__camera, .trace-barcode-dialog__nutrients div) {
+  background: var(--trace-surface-secondary);
+  border-color: var(--trace-border);
+}
+:root[data-trace-shell-theme="modern-heirloom"] .trace-barcode-dialog__product {
+  background: var(--trace-surface-primary);
+  border-color: var(--trace-border);
+}
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-barcode-dialog__status, .trace-barcode-dialog__unknowns, .trace-barcode-dialog__source, .trace-barcode-dialog__nutrients dt) { color: var(--trace-text-muted); }
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-barcode-dialog__eyebrow, .trace-barcode-dialog__source a) { color: #205F57; }
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-badge, .trace-barcode-dialog__access-label, .trace-memory-detail__category, .trace-memory-detail__favorite-state, .trace-today-summary__type, .trace-schedule-calendar__event) {
+  background: #EEE8F5 !important;
+  border-color: #D7CDE3;
+  color: #604777 !important;
+}
+:root[data-trace-shell-theme="modern-heirloom"] .life-current-theme-swatch--modern-heirloom { background: #F5F1E9; border-color: #87948A; }
+:root[data-trace-shell-theme="modern-heirloom"] .life-current-theme--modern-heirloom { background: var(--trace-app-background); }
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-memory-editor__field, .trace-feature-page--journal .journal-paper textarea) {
+  background: var(--trace-input-bg);
+  border-color: var(--trace-input-border);
+  color: var(--trace-input-text);
+}
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-memory-editor__field::placeholder, .trace-memory-editor__date-placeholder) { color: var(--trace-input-placeholder); }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-memory-editor__field--date:not([value=""]) { color: var(--trace-input-text); -webkit-text-fill-color: var(--trace-input-text); }
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-memory-editor__close, .trace-memory-editor__photo-picker, .trace-small-action--brass, .trace-memory-detail__action--trophy, .trace-feature-page .trace-today-exercise-action, .journal-mood-options button) {
+  background: var(--trace-button-secondary-bg) !important;
+  border-color: var(--trace-button-secondary-border) !important;
+  color: var(--trace-button-secondary-text) !important;
+  box-shadow: none;
+}
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-memory-editor__category[aria-pressed="true"], .trace-feature-page--journal .journal-mood-options button[aria-pressed="true"]) {
+  background: var(--trace-segment-selected-background);
+  color: var(--trace-segment-selected-text);
+}
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-memory-detail__description, .trace-feature-page--journal .journal-card__body, .trace-trophy-identity h1, .trace-trophy-card > strong, .trace-capsule-film__caption) { color: var(--trace-text); }
+:root[data-trace-shell-theme="modern-heirloom"] :is(.journal-optional, .journal-card__date, .journal-card__meta, .journal-empty, .trace-journal-button__lock, .trace-today-item-status--planned, .trace-today-item-status--scheduled) { color: var(--trace-text-muted); }
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-memory-editor__section, .trace-memory-detail__header, .trace-memory-detail__photos, .trace-memory-detail__actions, .trace-backup-navigation) { border-color: var(--trace-border); }
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-memory-editor__photo-image, .trace-memory-editor__photo-placeholder, .trace-memory-detail__photo-placeholder, .trace-memory-detail__thumbnail-placeholder, .trace-memory-viewer__placeholder, .trace-timeline-photo-placeholder, .trace-timeline-photo-overflow, .trace-memory-detail__thumbnail-button, .trace-capsule-photo-fallback) {
+  background: var(--trace-surface-secondary);
+  color: var(--trace-text-muted);
+  border-color: var(--trace-border);
+  box-shadow: none;
+}
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-feature-page--journal .journal-paper, .trace-feature-page--journal .journal-card, .trace-today-summary li, .trace-schedule-calendar__day, .trace-feature-page--health [data-testid="measurement-header"], .trace-feature-page--health [data-testid="measurement-fields"], .trace-workout-set, .trace-injection-empty-protocol, .trace-injection-pending-copy, .trace-injection-queue, .trace-injection-marker-detail, .trace-injection-legend, .trace-feature-page .trace-injection-recent__row, .trace-medication-dose-schedule__heading span) {
+  background: var(--trace-surface-secondary);
+  border-color: var(--trace-border);
+  color: var(--trace-text);
+}
+:root[data-trace-shell-theme="modern-heirloom"] :is(.journal-recovery, .journal-recovery-words, .trace-today-page__status) { background: var(--trace-toast-bg); color: var(--trace-toast-text); border-color: var(--trace-toast-border); }
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-barcode-dialog__error, .journal-error, .trace-water__error, .trace-template-dialog__error, .trace-workout-exercise__missing-text, .trace-workout-exercise__collapsed-copy .trace-workout-exercise__missing-text, .trace-today-item-status--skipped) { color: var(--trace-error-text); }
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-today-page__error, .trace-status--error) { background: var(--trace-error-bg); border-color: var(--trace-error-border); color: var(--trace-error-text); }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-today-item-status--completed { color: var(--trace-toast-text); }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-feature-page--nutrition [style*="color: rgb(251, 191, 36)"] { color: var(--trace-warning-text) !important; }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-feature-page--trophy-case,
+:root[data-trace-shell-theme="modern-heirloom"] .trace-feature-page--injection-sites { background: var(--trace-app-background); }
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-trophy-card, .trace-trophy-cabinet, .trace-trophy-cabinet__crown, .trace-trophy-cabinet__interior, .trace-trophy-bay, .trace-trophy-bay__label, .trace-trophy-position, .trace-trophy-plaque, .trace-trophy-detail, .trace-trophy-detail__facts > div) {
+  background: var(--trace-surface-primary);
+  border-color: var(--trace-border);
+  color: var(--trace-text);
+  box-shadow: var(--trace-shadow-1);
+}
+:root[data-trace-shell-theme="modern-heirloom"] :is(input, textarea)::placeholder { color: var(--trace-input-placeholder); opacity: 1; }
+:root[data-trace-shell-theme="modern-heirloom"] :is(button, a, input, select, textarea, summary):focus-visible { outline: 3px solid var(--trace-focus); outline-offset: 3px; }
+:root[data-trace-shell-theme="modern-heirloom"] :is(input, select, textarea)[aria-invalid="true"] { border-color: var(--trace-error-border) !important; }
+:root[data-trace-shell-theme="modern-heirloom"] :is(input, select, textarea):disabled { background: var(--trace-surface-secondary) !important; color: var(--trace-text-muted) !important; opacity: 1; }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-barcode-dialog button:hover:not(:disabled):not(.trace-barcode-dialog__close) { background: var(--trace-button-primary-hover); }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-feature-page .trace-action--primary:hover:not(:disabled) { background: var(--trace-button-primary-hover) !important; }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-feature-action--primary { color: var(--trace-button-primary-text); }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-barcode-dialog__secondary-actions button { background: transparent; border-color: transparent; }
+:root[data-trace-shell-theme="modern-heirloom"] :is(
+  [style*="color: rgb(156, 163, 175)"],
+  [style*="color: rgb(209, 213, 219)"],
+  [style*="color: rgb(187, 187, 187)"],
+  [style*="color: rgb(148, 163, 184)"],
+  [style*="color: rgb(203, 213, 225)"]
+) { color: var(--trace-text-muted) !important; }
+:root[data-trace-shell-theme="modern-heirloom"] [style*="color: rgb(252, 165, 165)"] { color: var(--trace-error-text) !important; }
+:root[data-trace-shell-theme="modern-heirloom"] [style*="color: rgb(251, 191, 36)"] { color: var(--trace-warning-text) !important; }
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-app-alert--error, .trace-feature-page [role="alert"][style*="background:"]) { background: var(--trace-error-bg) !important; border-color: var(--trace-error-border) !important; color: var(--trace-error-text) !important; }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-feature-page a { color: #205F57; }
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-food-search__scanner-action, .trace-food-result__nutrient) { background: var(--trace-surface-secondary); border-color: var(--trace-border); }
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-food-search__scanner-action > div, .trace-food-result__details, .trace-food-result__category, .trace-food-result__nutrient-label, .trace-food-result__caffeine, .trace-food-result__completeness, .trace-food-result__notes, .trace-food-result__caffeine strong) { color: var(--trace-text-muted); }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-food-result__nutrient strong { color: var(--trace-text); }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-food-search__access-badge { background: #EEE8F5; border-color: #D7CDE3; color: #604777; }
+:root[data-trace-shell-theme="modern-heirloom"] .trophy-ceremony__header h2 { color: var(--trace-text); }
+:root[data-trace-shell-theme="modern-heirloom"] .trophy-ceremony__eyebrow { color: var(--trace-text-muted); }
+:root[data-trace-shell-theme="modern-heirloom"] .trophy-ceremony__close { background: var(--trace-button-secondary-bg); border-color: var(--trace-border); color: var(--trace-text); }
+:root[data-trace-shell-theme="modern-heirloom"] .trace-memory-detail__action:disabled { background: var(--trace-surface-secondary); border-color: var(--trace-border); color: var(--trace-text-muted); }

@@ -28,7 +28,7 @@ test("registers seven unique app themes with exactly one Modern Heirloom default
   expect(DEFAULT_SHELL_THEME_ID).toBe("modern-heirloom");
   expect(getAppTheme("modern-heirloom")).toMatchObject({
     label: "Modern Heirloom",
-    description: "A clean, non-illustrated Life Current with Trace’s deep navy heirloom texture.",
+    description: "A clean, non-illustrated Life Current with Trace’s warm ivory heirloom palette.",
     presentation: { renderer: "modern-heirloom-current" },
   });
   expect(getAppTheme("river")).toMatchObject({
@@ -73,7 +73,7 @@ test("resolves active full-app themes to distinct shell token sets", () => {
   expect(resolveAppShellThemeId("desert-journey")).toBe("desert-journey");
   expect(resolveAppShellThemeId("outer-space-journey")).toBe("outer-space-journey");
   expect(resolveAppShellThemeId("to-kingdoms-ahead")).toBe("to-kingdoms-ahead");
-  expect(getAppShellThemeColor("modern-heirloom")).toBe("#07131f");
+  expect(getAppShellThemeColor("modern-heirloom")).toBe("#F5F1E9");
   expect(getAppShellThemeColor("river")).toBe("#0b2426");
   expect(getAppShellThemeColor("haunted-forest")).toBe("#0b140f");
   expect(getAppShellThemeColor("gnome-village")).toBe("#365f39");
@@ -86,7 +86,7 @@ test.each([
   "obsolete-theme",
 ])("uses the Modern Heirloom shell fallback for %s", (themeId) => {
   expect(resolveAppShellThemeId(themeId)).toBe("modern-heirloom");
-  expect(getAppShellThemeColor(themeId)).toBe("#07131f");
+  expect(getAppShellThemeColor(themeId)).toBe("#F5F1E9");
 });
 
 test.each([undefined, null, "", "obsolete", {}, []])(

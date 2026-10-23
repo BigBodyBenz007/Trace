@@ -206,3 +206,63 @@ module.exports.runConcise = async function runConcise({records,client,evaluate,u
  const html='<!doctype html><html lang="en"><meta charset="utf-8"><title>Trace concise grading review</title><style>body{font:16px/1.5 system-ui;max-width:1200px;margin:24px auto}img{max-width:100%;border:1px solid #aaa}.shots{display:flex;gap:12px}.shots a{flex:1;min-width:0}section{margin:30px 0}</style><h1>Concise grading: captured-case review</h1><p>Actual Trace application; captured responses at the lookup boundary. No live lookup is claimed in these screenshots. Mobile 390×844 and desktop 1440×1000. Full ingredient declarations remain separate.</p>'+rows.map(row=>'<section><h2>'+escape(row.id+' / '+row.layout)+'</h2><p>Nutrition '+row.nutrition+'; overall '+row.overall+'. '+row.words+' words including identity/source labels. '+escape(row.source)+'</p><div class="shots">'+row.screenshots.map(file=>'<a href="'+file+'"><img src="'+file+'" alt="'+escape(file)+'"></a>').join('')+'</div></section>').join('')+'</html>';
  fs.writeFileSync(path.join(output,'index.html'),html);progress({phase:'concise-screenshots-awaiting-inspection',cases:records.length,layouts:2,images:rows.length*3});console.log(JSON.stringify({output,rows:rows.map(({id,layout,words,nutrition,overall})=>({id,layout,words,nutrition,overall})),runtimeErrors:0,consoleErrors:0,noEntriesSaved:true}));
 };
+
+// Actual shared pages and portal dialogs; reuses the captured food-review path.
+module.exports.runLightTheme = async function runLightTheme(ctx) {
+  const {records,client,evaluate,until,click,input,capture,open,output,progress,wait,exceptions,consoleErrors,base}=ctx;
+  if(!process.argv.includes('--shared-pages-only')) await module.exports.runConcise(ctx);
+  const rows=[];
+  const inspect=async(name)=>{
+    const data=await evaluate(`(()=>{const visible=e=>{const r=e.getBoundingClientRect(),s=getComputedStyle(e);return r.width&&r.height&&r.bottom>0&&r.top<innerHeight&&s.visibility!=='hidden'&&s.display!=='none'};return {theme:document.documentElement.dataset.traceShellTheme,colorScheme:getComputedStyle(document.documentElement).colorScheme,bodyBackground:getComputedStyle(document.body).backgroundColor,overflow:document.documentElement.scrollWidth>innerWidth+1,fields:[...document.querySelectorAll('input,select,textarea')].filter(visible).map(e=>({label:e.getAttribute('aria-label')||e.placeholder||e.name,bg:getComputedStyle(e).backgroundColor,text:getComputedStyle(e).color,placeholder:getComputedStyle(e,'::placeholder').color,scheme:getComputedStyle(e).colorScheme})),inlineColors:[...document.querySelectorAll('[style]')].filter(visible).filter(e=>e.style.color||e.style.background||e.style.backgroundColor).map(e=>({tag:e.tagName,className:e.className,text:e.textContent.trim().slice(0,70),color:getComputedStyle(e).color,bg:getComputedStyle(e).backgroundColor}))}})()`);
+    assert(!data.overflow,name+': page clipping');
+    if(data.theme==='modern-heirloom')assert.equal(data.colorScheme,'light','System dark must not change the selected light theme');
+    rows.push({name,...data,screenshot:await capture(name+'.png')});
+    fs.writeFileSync(path.join(output,'light-theme-results-in-progress.json'),JSON.stringify(rows,null,2));
+  };
+  for(const layout of [{id:'mobile',width:390,height:844,mobile:true},{id:'desktop',width:1440,height:1000,mobile:false}]) {
+    await client.send('Emulation.setDeviceMetricsOverride',{...layout,deviceScaleFactor:1});
+    await client.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:'dark'}]});
+    await client.send('Page.navigate',{url:base+'/?case=quest&theme=modern-heirloom&barcodeGrading=1'});
+    await until(`Boolean(document.querySelector('.trace-home-page h1'))`);
+    await inspect(layout.id+'-home-system-dark');
+    await evaluate(`document.querySelector('button[aria-label="Settings"]').click()`);
+    await until(`Boolean(document.querySelector('[data-testid="settings-page"]'))`);
+    await inspect(layout.id+'-settings');
+    await evaluate(`document.querySelector('.journal-privacy-settings').scrollIntoView({block:'start'})`);
+    await inspect(layout.id+'-settings-privacy');
+    await click('Set up Journal Lock');
+    await until(`Boolean(document.querySelector('.journal-privacy-dialog'))`);
+    await inspect(layout.id+'-privacy-portal-dialog');
+    await click('Cancel');await click('Back to Timeline');
+    await until(`Boolean(document.querySelector('.trace-home-page:not([hidden]) h1'))`);
+    await click('Add Memory');await until(`Boolean(document.querySelector('.trace-memory-editor'))`);
+    await inspect(layout.id+'-memory-entry');
+    const memoryTitle='Synthetic theme review '+layout.id;
+    await input('.trace-memory-editor__field--title',memoryTitle);
+    await evaluate(`(()=>{const el=document.querySelector('.trace-memory-editor__field--story');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(el,'Synthetic layout check only. No personal content.');el.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+    await click('Save Memory');
+    const memorySelector='[aria-label="Open memory '+memoryTitle+'"]';
+    await until(`Boolean(document.querySelector(${JSON.stringify(memorySelector)}))`);
+    await evaluate(`document.querySelector(${JSON.stringify(memorySelector)}).click()`);
+    await until(`Boolean(document.querySelector('.trace-memory-detail'))`);
+    await wait(100);await inspect(layout.id+'-memory-detail');
+    await evaluate(`document.querySelector('.trace-memory-detail__action--edit').click()`);
+    await until(`Boolean(document.querySelector('[aria-label="Close Edit Memory"]'))`);
+    await inspect(layout.id+'-memory-edit');
+    await client.send('Page.navigate',{url:base+'/?case=quest&theme=modern-heirloom&barcodeGrading=1'});
+    await until(`Boolean(document.querySelector('.trace-home-page h1'))`);await click('Nutrition');
+    await until(`Boolean(document.querySelector('.trace-nutrition-today'))`);
+    await inspect(layout.id+'-nutrition');
+    await open(records.find(r=>r.id==='quest'));await click('Use This Food');
+    await until(`Boolean(document.querySelector('input[aria-label="Sodium (mg)"]'))`);
+    await evaluate(`document.querySelector('input[aria-label="Sodium (mg)"]').scrollIntoView({block:'center'});document.querySelector('input[aria-label="Sodium (mg)"]').focus()`);
+    await inspect(layout.id+'-nutrition-form-focused');
+    assert.equal(await evaluate(`JSON.parse(localStorage.getItem('nutritionEntries')||'[]').length`),0);
+  }
+  await client.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  for(const theme of ['river','haunted-forest','gnome-village','desert-journey','outer-space-journey','to-kingdoms-ahead']){
+    progress({phase:'other-theme-controls',theme});await open(records.find(r=>r.id==='quest'),theme);await inspect('control-'+theme);
+  }
+  assert.equal(exceptions.length,0);assert.equal(consoleErrors.length,0);
+  fs.writeFileSync(path.join(output,'light-theme-results.json'),JSON.stringify({rows,runtimeErrors:exceptions,consoleErrors,capturedLookup:true,noSavedNutritionEntries:true,syntheticLocalMemoryOnly:true,systemDark:true},null,2));
+};
