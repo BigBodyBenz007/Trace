@@ -19,3 +19,11 @@ Keep existing Vercel Deployment Protection. An owner can sign in, or create a de
 Physical iPhone camera recognition must be tested on the device; headless browser checks cover hosted lookup, grading, layout and selection only.
 
 Official deployment references: [Vercel system environment variables](https://vercel.com/docs/environment-variables/system-environment-variables), [deployment shareable links](https://vercel.com/docs/deployment-protection/methods-to-bypass-deployment-protection/sharable-links).
+
+## Protected mobile access verification
+
+Use the owner-provided Vercel sharing link for this Preview branch. Its `_vercel_share` parameter grants deployment access; it is not a grading activation flag and must not be committed or logged. The bare deployment URL requires Vercel owner authentication.
+
+The hosted sharing-link check established real Quest lookup, nutrition 54/100, provisional overall 52/100, and same-host Home/Nutrition/review/selection/reload. The earlier reported post-login transition to the production hostname was not reproduced; the shared path avoids that unverified handoff.
+
+That run also demonstrated a protected-manifest defect: the manifest link omitted `crossorigin="use-credentials"`, so the browser requested it without the access cookie and followed Vercel SSO redirects that failed CORS. The link now includes the standard credentials attribute ([MDN reference](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/crossorigin#web_manifest_with_credentials)). This changes neither the relative manifest start URL/scope nor app navigation. Verify the hosted manifest and console after deployment; project-wide protection remains enabled.
