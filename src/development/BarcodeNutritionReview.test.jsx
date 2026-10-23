@@ -50,7 +50,7 @@ test('compact review has a single fixed action set, readable name and collapsed 
   fireEvent.click(screen.getByText('More nutrition & provider details'));
   expect(within(article).getByText('220 mg')).toBeVisible();
   expect(screen.getByLabelText('Score evidence scope')).toHaveTextContent('manufacturer label');
-  expect(screen.getByLabelText('Manufacturer label correction')).not.toBeVisible();
+  expect(screen.getByLabelText('Nutrition sources')).not.toBeVisible();
 });
 
 test('incomplete development review preserves disabled saving and specific fixed-footer recovery', async () => {
@@ -67,29 +67,25 @@ test('incomplete development review preserves disabled saving and specific fixed
   expect(screen.getByLabelText('Carbohydrates (g)')).toHaveValue(null);
 });
 
-test('the reviewed almond profile shows overall and separate nutrition without opening evidence', () => {
-  const archive = require('../../docs/barcode-grading-grocery-pilot-2026-10-20/results.json');
-  const row = archive.observations.find(r => r.barcode === '00041570003831');
-  const c = createBarcodeNutritionCandidate(row.lookup);
-  render(<><BarcodeNutritionReview candidate={c} identifier={row.lookup.identifier} /><BarcodeAdditives candidate={c} /></>);
-  expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('95/100');
-  expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 95/100');
-  expect(screen.getByLabelText('Overall assessment status')).toHaveTextContent('Nutrition drives this score');
-  expect(screen.getByLabelText('Experimental nutrition rating')).not.toBeVisible();
-  expect(screen.getByLabelText('Score details & limitations')).not.toHaveAttribute('open');
-  expect(screen.getByLabelText('Product additives')).not.toHaveAttribute('open');
-  expect(screen.getByLabelText('Overall assessment evidence')).toHaveTextContent('not independently verified');
+test('the reviewed almond profile keeps overall and nutrition separate without declaring safety', () => {
+ const row=require('../../docs/barcode-grading-grocery-pilot-2026-10-20/results.json').observations.find(r=>r.barcode==='00041570003831');
+ render(<><BarcodeNutritionReview candidate={createBarcodeNutritionCandidate(row.lookup)} identifier={row.lookup.identifier}/><BarcodeAdditives candidate={createBarcodeNutritionCandidate(row.lookup)}/></>);
+ expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('95/100');
+ expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 95/100');
+ expect(screen.getByLabelText('Experimental nutrition rating')).not.toBeVisible();
+ expect(screen.getByLabelText('Why this score')).not.toHaveAttribute('open');
+ expect(screen.getByLabelText('Product additives')).not.toHaveAttribute('open');
+ expect(screen.getByLabelText('Product additives')).toHaveTextContent('amounts and package contents remain unverified');
 });
 
-test('partial ingredient review displays a provisional overall score and keeps nutrition separate', () => {
-  render(<BarcodeNutritionReview candidate={candidate()} identifier={identifier} />);
-  expect(screen.getByLabelText('Experimental overall rating').textContent).toMatch(/^\d+\/100$/);
-  expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition');
-  expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
-  expect(screen.getByLabelText('Overall assessment status')).toHaveTextContent('Nutrition drives this score');
-  expect(screen.getByLabelText('Opening score summary')).toHaveTextContent('Additive review incomplete');
-  expect(screen.getByLabelText('Possible overall range')).toHaveTextContent('not a confidence interval');
-  expect(screen.getByLabelText('Overall assessment evidence')).toHaveTextContent('No reviewed local identity');
+test('partial ingredient review keeps its provisional number and a concise uncertainty statement', () => {
+ render(<><BarcodeNutritionReview candidate={candidate()} identifier={identifier}/><BarcodeAdditives candidate={candidate()}/></>);
+ expect(screen.getByLabelText('Experimental overall rating').textContent).toMatch(/^\d+\/100$/);
+ expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition');
+ expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
+ expect(screen.getByLabelText('Opening score summary')).toHaveTextContent('Additive review incomplete');
+ expect(screen.getByLabelText('Product additives')).toHaveTextContent('Unfamiliar ingredients are not automatically concerning');
+ expect(screen.queryByLabelText('Possible overall range')).not.toBeInTheDocument();
 });
 
 test('missing ingredient evidence retains nutrition-only rather than an invented overall assessment', () => {
@@ -115,75 +111,42 @@ test('a real nitrite finding shows its deduction and limitations with the provis
   render(<BarcodeNutritionReview candidate={c} identifier={row.lookup.identifier} />);
   expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('20/100');
   expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 21/100');
-  expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('additive deduction 1 point');
+  expect(screen.getByLabelText('Additive score effect')).toHaveTextContent('1-point additive adjustment');
   expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
   expect(screen.getByLabelText('Additive deduction reasons')).toHaveTextContent('nitrite in processed meat');
-  expect(screen.getByLabelText('Score details & limitations')).not.toHaveAttribute('open');
-  expect(screen.getByLabelText('Overall assessment evidence')).toHaveTextContent('low nitrosamine concern');
+  expect(screen.getByLabelText('Why this score')).not.toHaveAttribute('open');
+  expect(screen.getByLabelText('Additive score effect')).toHaveTextContent('1-point additive adjustment');
 });
 
-test('captured USDA Teddy details retain actual provider rounding and the partial correction scope', () => {
-  const captured = require('../services/__fixtures__/manufacturerProviderLookups.json');
-  const lookup = captured.observations.find(row => row.request.body.barcode === '044000045586').response;
-  const c = createBarcodeNutritionCandidate(lookup);
-  render(<BarcodeNutritionReview candidate={c} identifier={lookup.identifier} />);
-  expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('20/100');
-  expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
-  const details = screen.getByLabelText('Manufacturer label comparison');
-  expect(details).not.toHaveAttribute('open');
-  expect(details).toHaveTextContent('Original provider added sugars: 6.99 g per 30 g');
-  expect(details).toHaveTextContent('Supporting manufacturer total sugar: 7 g');
-  expect(details).toHaveTextContent('remaining provider nutrients are retained, not independently verified');
-  expect(details).not.toHaveTextContent('2.1 g');
-  expect(c.display.nutrients.calories).toBe(lookup.food.nutrients.calories);
-  expect(c.display.nutrients.addedSugar).toBe(7);
-  expect(c.display.nutrients.totalSugar).toBe(7);
+test('captured USDA Teddy keeps provider rounding in evidence and explains the partial correction', () => {
+ const row=require('../services/__fixtures__/manufacturerProviderLookups.json').observations.find(row=>row.request.body.barcode==='044000045586').response;
+ const c=createBarcodeNutritionCandidate(row);render(<BarcodeNutritionReview candidate={c} identifier={row.identifier}/>);
+ expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('20/100');
+ expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
+ expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('7 g added and total sugars per 30 g');
+ expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('Other logged nutrients remain provider values, not independently verified');
+ expect(screen.getByLabelText('Score evidence scope')).toHaveTextContent('Score: manufacturer reference');
+ expect(c.selection.remote.nutrients).toEqual(row.food.nutrients);
+ expect(c.display.nutrients.calories).toBe(row.food.nutrients.calories);
+ expect(c.display.nutrients.addedSugar).toBe(7);expect(c.display.nutrients.totalSugar).toBe(7);
 });
 
-test('actual Teddy uses its reviewed manufacturer sugars, retains provider data and keeps details collapsed', () => {
-  const archive = require('../../docs/trace-nutrition-v2-teddy-2026-10-20.json');
-  const c = createBarcodeNutritionCandidate(archive.lookup);
-  render(<><BarcodeNutritionReview candidate={c} identifier={archive.lookup.identifier} /><BarcodeAdditives candidate={c} /></>);
-  expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('20/100');
-  expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 20/100 · additive deduction 0 points');
-  expect(screen.getByLabelText('Experimental nutrition rating')).not.toBeVisible();
-  const opening = screen.getByLabelText('Opening score summary');
-  expect(within(opening).getAllByRole('listitem')).toHaveLength(3);
-  expect(opening).toHaveTextContent('Calorie density lowers the score');
-  expect(opening).toHaveTextContent('Added sugars lower the score');
-  expect(opening).toHaveTextContent('Whole grains help');
-  expect(opening).not.toHaveTextContent(/baking soda|sodium hydrogen|premenopausal|HR 1.48|deduction 0|46\/100.*46\/100/);
-  expect(opening.textContent.split(/\s+/).length).toBeLessThan(90);
-  expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
-  expect(screen.queryByLabelText('Additive deduction reasons')).not.toBeInTheDocument();
-  const details = screen.getByLabelText('Score details & limitations');
-  expect(details).not.toHaveAttribute('open');
-  expect(screen.getByLabelText('Possible overall range')).toHaveTextContent('16–20/100');
-  expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('Honey · 10 oz');
-  expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('7 g per 30 g');
-  expect(opening).toHaveTextContent('Reference overall score');
-  expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('score compares the full manufacturer reference');
-  expect(screen.getByLabelText('Manufacturer label correction')).toHaveTextContent('New entries retain other provider values');
-  expect(details).toHaveTextContent('Original provider added sugars: 2.1 g per 30 g');
-  expect(screen.getByLabelText('Manufacturer label comparison')).not.toHaveAttribute('open');
-  expect(c.selection.nutrients.addedSugar).toBe(7);
-  fireEvent.click(screen.getByText('Score details & limitations'));
-  expect(screen.getByLabelText('Experimental nutrition rating')).toBeVisible();
-  expect(details).toHaveTextContent('premenopausal');
-  expect(details).toHaveTextContent('No general food-score deduction');
-  fireEvent.click(screen.getByText('Score details & limitations'));
-  const additives = screen.getByLabelText('Product additives');
-  expect(additives).not.toHaveAttribute('open');
-  fireEvent.click(screen.getByText('Additives · 2 provider-reported groups'));
-  const grouped = screen.getByLabelText('Grouped provider additives');
-  expect(within(grouped).getAllByRole('listitem')).toHaveLength(2);
-  expect(grouped).toHaveTextContent('en:e322; en:e322i');
-  expect(grouped).toHaveTextContent('en:e500; en:e500ii');
-  expect(additives).toHaveTextContent('premenopausal');
-  expect(additives).toHaveTextContent('not a general-population result');
-  expect(additives).toHaveTextContent('1975');
-  expect(additives).toHaveTextContent('Flavor mixture');
-  expect(additives).toHaveTextContent('Fortification and purity questions remain unresolved');
+test('actual Teddy separates the reference score from corrected logging without technical dumps', () => {
+ const row=require('../../docs/trace-nutrition-v2-teddy-2026-10-20.json');const c=createBarcodeNutritionCandidate(row.lookup);
+ render(<><BarcodeNutritionReview candidate={c} identifier={row.lookup.identifier}/><BarcodeAdditives candidate={c}/></>);
+ expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('20/100');
+ expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Nutrition 20/100');
+ const opening=screen.getByLabelText('Opening score summary');expect(within(opening).getAllByRole('listitem')).toHaveLength(3);
+ expect(opening).toHaveTextContent('Added sugars lower the score');expect(opening).toHaveTextContent('Whole grains help');
+ expect(opening).not.toHaveTextContent(/baking soda|premenopausal|HR 1.48/);
+ expect(screen.getByLabelText('Score evidence scope')).toHaveTextContent('other values from provider');
+ expect(screen.getByLabelText('Why this score')).not.toHaveAttribute('open');
+ fireEvent.click(screen.getByText('Why this score'));expect(screen.getByLabelText('Experimental nutrition rating')).toBeVisible();
+ expect(screen.getByLabelText('Why this score')).not.toHaveTextContent(/policy|grade=null|proteinApplied|raw deduction|2.1 g/i);
+ expect(c.selection.remote.nutrients.addedSugar).toBe(2.1);expect(c.selection.nutrients.addedSugar).toBe(7);
+ fireEvent.click(screen.getByText('Additives · 2 provider-reported groups'));
+ const additive=screen.getByLabelText('Product additives');expect(additive).toHaveTextContent('Baking soda');expect(additive).toHaveTextContent('Lecithins');
+ expect(additive).not.toHaveTextContent(/premenopausal|HR 1.48|fortification|classification|en:e322/i);
 });
 
 test.each(['development', 'production'])('manufacturer correction reaches review and Use This Food without exposing grading in %s', async environment => {
@@ -204,14 +167,12 @@ test.each(['development', 'production'])('manufacturer correction reaches review
   expect(JSON.stringify(selected)).not.toMatch(/nutritionScore100|overallScore100|reviewedManufacturerLabel/);
 });
 
-test('raw finding remains disclosed when rounding leaves the main whole-number score unchanged', () => {
-  const archive = require('../../docs/barcode-grading-grocery-pilot-2026-10-20/results.json');
-  const row = archive.observations.find(r => r.barcode === '00049000000443');
-  const c = createBarcodeNutritionCandidate(row.lookup);
-  render(<BarcodeNutritionReview candidate={c} identifier={row.lookup.identifier} />);
-  expect(screen.getByLabelText('Score details & limitations')).toHaveTextContent('unchanged by rounding');
-  expect(screen.getByLabelText('Additive deduction reasons')).toHaveTextContent('total dietary intake matters');
-  expect(screen.getByLabelText('Additive calculation')).toHaveTextContent('0.48 points before rounding');
+test('a supported finding remains visible when rounding leaves the displayed score unchanged', () => {
+ const row=require('../../docs/barcode-grading-grocery-pilot-2026-10-20/results.json').observations.find(r=>r.barcode==='00049000000443');
+ const c=createBarcodeNutritionCandidate(row.lookup);render(<BarcodeNutritionReview candidate={c} identifier={row.lookup.identifier}/>);
+ expect(screen.getByLabelText('Additive score effect')).toHaveTextContent('too small to change the whole-number score');
+ expect(screen.getByLabelText('Additive deduction reasons')).toHaveTextContent('total dietary intake matters');
+ expect(screen.queryByLabelText('Additive calculation')).not.toBeInTheDocument();
 });
 test('product switching resets disclosures and never transfers an earlier score', async () => {
   const onUseFood = jest.fn(); dialog(jest.fn().mockResolvedValueOnce({ status: 'found', food: food() })
@@ -219,7 +180,7 @@ test('product switching resets disclosures and never transfers an earlier score'
   await lookup(); expect(headline().textContent).toMatch(/^\d+\/100$/);
   expect(screen.getByRole('button', { name: 'Ingredients' })).toHaveAttribute('aria-expanded', 'false');
   fireEvent.click(screen.getByText(/Additives · 3 provider-reported/));
-  expect(screen.getByText('Original: en:e330 · open-food-facts')).toBeVisible();
+  expect(screen.getByLabelText('Identified additives')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Scan Again' })); await lookup('012000001291');
   expect(screen.getByLabelText('Experimental nutrition rating')).toHaveTextContent('Score unavailable');
   expect(screen.getByLabelText('Product additives')).not.toHaveAttribute('open');
@@ -231,67 +192,47 @@ test.each(['unknown-additives', 'empty-additives'])('%s state stays distinct fro
   render(<BarcodeAdditives candidate={candidate(scenario)} />);
   fireEvent.click(screen.getByText(/Additives ·/));
   expect(screen.getByLabelText('Product additives')).toHaveTextContent(scenario === 'empty-additives'
-    ? 'does not prove the product contains no additives' : 'unavailable or incomplete');
+    ? 'does not prove there are no additives' : 'No provider additive list');
 });
-test('verified additive names keep original identifiers and name-source attribution without safety claims', () => {
-  render(<BarcodeAdditives candidate={candidate()} />); fireEvent.click(screen.getByText(/Additives ·/));
-  expect(screen.getAllByText(/Citric acid/i).some(el => el.textContent.includes('Citric acid'))).toBe(true);
-  expect(screen.getByText(/Name unknown/)).toBeVisible();
-  expect(screen.getAllByRole('link').some(link => link.href.includes('eur-lex.europa.eu'))).toBe(true);
-  expect(screen.getByLabelText('Product additives')).toHaveTextContent('Name matching does not establish regulatory authorization');
-});
-
-test('explanations and additive functions preserve collapsed details and source uncertainty', () => {
-  render(<><BarcodeNutritionReview candidate={candidate()} identifier={identifier} /><BarcodeAdditives candidate={candidate()} /></>);
-  expect(screen.getByLabelText('Experimental nutrition assessment')).toHaveTextContent('This score is lowered by');
-  expect(screen.getByLabelText('Experimental nutrition assessment')).not.toHaveTextContent(/Contributing factors:|Favorable factors:/);
-  expect(screen.getByLabelText('Experimental nutrition assessment')).toHaveTextContent('not independently verified');
-  expect(screen.getByLabelText('Score details & limitations')).not.toHaveAttribute('open');
-  expect(screen.getByLabelText('Product additives')).not.toHaveAttribute('open');
-  fireEvent.click(screen.getByText(/Additives ·/));
-  expect(screen.getAllByText(/Acidity regulator/).length).toBeGreaterThan(0);
-  expect(screen.getAllByText(/Preservative — helps prevent spoilage/).some(el => el.textContent.includes('Preservative'))).toBe(true);
-  expect(screen.getByText(/Identity not verified in this reference/)).toBeVisible();
-  expect(screen.getByText(/Verified US provision:/)).toHaveTextContent('good manufacturing practice');
-  expect(screen.getByLabelText('Product additives')).toHaveTextContent('Reviewed 2026-10-20');
-  expect(screen.getByLabelText('Product additives')).toHaveTextContent('Scientific assessment incomplete');
-  fireEvent.click(screen.getByText(/Additives ·/));
-  expect(screen.getByLabelText('Product additives')).not.toHaveAttribute('open');
+test('verified names retain source links and unrecognized identities remain neutral', () => {
+ render(<BarcodeAdditives candidate={candidate()}/>);fireEvent.click(screen.getByText(/Additives ·/));
+ expect(screen.getByLabelText('Identified additives')).toHaveTextContent('Citric acid');
+ expect(screen.getByLabelText('Identified additives')).toHaveTextContent('Unrecognized additive');
+ expect(screen.getAllByRole('link').some(link=>link.href.includes('eur-lex.europa.eu'))).toBe(true);
+ expect(screen.getByLabelText('Product additives')).toHaveTextContent('Unfamiliar ingredients are not automatically concerning');
 });
 
-test('approximate provider energy remains qualified in collapsed evidence, without replacing entered kcal', () => {
-  const record = barcodeGradingRecord();
-  record.nutriments['energy-kj_100g'] = 2000;
-  record.nutriments['energy-kj_modifier'] = '~';
-  const c = createBarcodeNutritionCandidate({ status: 'found', identifier,
-    food: normalizeOpenFoodFactsProduct(record, BARCODE, RETRIEVED_AT) });
-  render(<BarcodeNutritionReview candidate={c} identifier={identifier} />);
-  expect(headline().textContent).toMatch(/^\d+\/100$/);
-  expect(screen.getByLabelText('Score details & limitations')).not.toHaveAttribute('open');
-  expect(screen.getByLabelText('Original energy evidence')).not.toHaveAttribute('open');
-  expect(screen.getByText(/nutriments.energy-kj_100g: ~2000/)).toHaveTextContent('Qualified approximations retained separately');
+test('short explanations preserve collapsed details, source links and uncertainty', () => {
+ render(<><BarcodeNutritionReview candidate={candidate()} identifier={identifier}/><BarcodeAdditives candidate={candidate()}/></>);
+ expect(screen.getByLabelText('Experimental nutrition assessment')).toHaveTextContent('Lowered by');
+ expect(screen.getByLabelText('Why this score')).not.toHaveAttribute('open');expect(screen.getByLabelText('Product additives')).not.toHaveAttribute('open');
+ fireEvent.click(screen.getByText(/Additives ·/));expect(screen.getByLabelText('Product additives')).toHaveTextContent('Review incomplete');
+ expect(screen.getByRole('link',{name:'Provider ingredients'})).toHaveAttribute('href',candidate().display.sourceUrl);
+ expect(screen.getByLabelText('Product additives')).not.toHaveTextContent(/raw|classification|SCOGS|technical effect/i);
 });
 
-test('plant percentages are not required and the independent method remains inside collapsed technical details', () => {
-  const record = barcodeGradingRecord();
-  record.ingredients_text = 'Whole grain wheat. bht is added to the packaging material to preserve freshness.';
-  delete record.nutriments['fruits-vegetables-nuts_100g'];
-  const c = createBarcodeNutritionCandidate({ status: 'found', identifier,
-    food: normalizeOpenFoodFactsProduct(record, BARCODE, RETRIEVED_AT) });
-  render(<BarcodeNutritionReview candidate={c} identifier={identifier} />);
-  const details = screen.getByLabelText('Score details & limitations');
-  expect(details).not.toHaveAttribute('open');
-  expect(screen.queryByLabelText('Plant-content evidence')).not.toBeInTheDocument();
-  expect(details).toHaveTextContent('Trace US nutrition model');
-  expect(details).toHaveTextContent('Independent development calculation');
-  expect(headline().textContent).toMatch(/^\d+\/100$/);
-  expect(c.display.ingredients.text).toBe(record.ingredients_text);
+test('approximate energy evidence stays in the assessment without a customer-facing raw dump', () => {
+ const record=barcodeGradingRecord();record.nutriments['energy-kj_100g']=2000;record.nutriments['energy-kj_modifier']='~';
+ const c=createBarcodeNutritionCandidate({status:'found',identifier,food:normalizeOpenFoodFactsProduct(record,BARCODE,RETRIEVED_AT)});
+ render(<BarcodeNutritionReview candidate={c} identifier={identifier}/>);
+ expect(headline().textContent).toMatch(/^\d+\/100$/);expect(screen.getByLabelText('Why this score')).not.toHaveAttribute('open');
+ expect(screen.queryByLabelText('Original energy evidence')).not.toBeInTheDocument();
+ expect(c.display.assessmentInputs.datasets.flatMap(d=>d.observations).some(o=>o.rawValue===2000&&o.derivation==='off:modifier:~')).toBe(true);
+});
+
+test('ingredient evidence and packaging-only distinctions remain without model internals', () => {
+ const record=barcodeGradingRecord();record.ingredients_text='Whole grain wheat. bht is added to the packaging material to preserve freshness.';delete record.nutriments['fruits-vegetables-nuts_100g'];
+ const c=createBarcodeNutritionCandidate({status:'found',identifier,food:normalizeOpenFoodFactsProduct(record,BARCODE,RETRIEVED_AT)});
+ render(<><BarcodeNutritionReview candidate={c} identifier={identifier}/><BarcodeAdditives candidate={c}/></>);
+ expect(screen.getByLabelText('Why this score')).not.toHaveTextContent(/model|points|proteinApplied/i);
+ expect(screen.getByLabelText('Identified additives')).toHaveTextContent('packaging only');
+ expect(headline().textContent).toMatch(/^\d+\/100$/);expect(c.display.ingredients.text).toBe(record.ingredients_text);
 });
 
 test.each(['unknown-additives', 'empty-additives'])('%s preserves provider state while named ingredient screening remains possible', scenario => {
   render(<BarcodeAdditives candidate={candidate(scenario)} />);
   expect(screen.queryByText(/Verified US provision:/)).not.toBeInTheDocument();
-  expect(screen.getByLabelText('Ingredient screening evidence')).toHaveTextContent('Citric acid');
+  expect(screen.getByLabelText('Identified additives')).toHaveTextContent('Citric acid');
   expect(screen.getByLabelText('Product additives')).not.toHaveAttribute('open');
 });
 test('unknown market and missing nutrients have concise explanations and no letter ratings', () => {
@@ -338,7 +279,7 @@ test('explicit hosted Preview build exposes existing grading and selection witho
     await lookup();
     expect(screen.getByLabelText('Experimental nutrition assessment')).toBeInTheDocument();
     expect(headline()).toBeInTheDocument();
-    expect(screen.getByLabelText('Score details & limitations').open).toBe(false);
+    expect(screen.getByLabelText('Why this score').open).toBe(false);
     expect(screen.getByRole('button', { name: 'Use This Food' })).toBeEnabled();
   } finally {
     if (previousPreview === undefined) delete process.env.REACT_APP_TRACE_GRADING_PREVIEW;
@@ -346,4 +287,42 @@ test('explicit hosted Preview build exposes existing grading and selection witho
     if (previousDeployment === undefined) delete process.env.REACT_APP_TRACE_DEPLOYMENT_ENV;
     else process.env.REACT_APP_TRACE_DEPLOYMENT_ENV = previousDeployment;
   }
+});
+
+
+const presentationCases = require('./__fixtures__/barcodePresentationCases.cjs').barcodePresentationCases();
+const presentationExpected = {quest:[54,52],dymatize:[41,41],teddy:[20,20],conflicted:[null,null]};
+test.each(presentationCases)('$id: concise disclosures preserve the complete assessment and effective food', row => {
+ const {assessBarcodeNutrition}=require('./barcodeNutritionAssessment');
+ const {assessOverallFoodQuality}=require('./traceOverallFoodQuality');
+ const c=createBarcodeNutritionCandidate(row.result),nutrition=assessBarcodeNutrition(c,row.result.identifier),overall=assessOverallFoodQuality(c,nutrition);
+ const before=JSON.stringify({c,nutrition,overall});
+ render(<><BarcodeNutritionReview candidate={c} identifier={row.result.identifier}/><BarcodeAdditives candidate={c}/></>);
+ expect([nutrition.nutritionScore100,overall.overallScore100]).toEqual(presentationExpected[row.id]);
+ const section=screen.getByLabelText('Experimental nutrition assessment'),additives=screen.getByLabelText('Product additives');
+ expect(section).not.toHaveTextContent(/grade=null|scoreReady|proteinApplied|round\(nutrition|raw deduction|policy:|model:|Unreviewed ingredient phrase/);
+ expect(additives).not.toHaveTextContent(/Unreviewed ingredient phrase|closed ordinary|constituents unspecified|concernBurden|weight|conditions:/i);
+ expect(within(section).getAllByRole('group',{hidden:true})).toHaveLength(1);expect(within(additives).queryAllByRole('group',{hidden:true})).toHaveLength(0);
+ expect(screen.getByLabelText('Why this score')).not.toHaveAttribute('open');expect(additives).not.toHaveAttribute('open');
+ const afterNutrition=assessBarcodeNutrition(c,row.result.identifier);
+ expect(JSON.stringify({c,nutrition:afterNutrition,overall:assessOverallFoodQuality(c,afterNutrition)})).toBe(before);
+ const copy=section.textContent+' '+additives.textContent;
+ expect(copy.trim().split(/\s+/).length).toBeLessThan(220);
+});
+
+test('Dymatize keeps identified additives and neutral uncertainty without raw ingredient fragments', () => {
+ const row=presentationCases.find(row=>row.id==='dymatize');
+ render(<BarcodeAdditives candidate={createBarcodeNutritionCandidate(row.result)}/>);
+ const additives=screen.getByLabelText('Product additives');
+ expect(additives).toHaveTextContent('Sucralose');
+ expect(additives).toHaveTextContent('Review incomplete');
+ expect(additives).not.toHaveTextContent('hydrolyzed whey protein isolate');
+});
+
+test('conflicted presentation leaves sodium unknown and logging available', () => {
+ const row=presentationCases.find(row=>row.id==='conflicted'),c=createBarcodeNutritionCandidate(row.result);
+ render(<BarcodeNutritionReview candidate={c} identifier={row.result.identifier}/>);
+ expect(headline()).toHaveTextContent('Score unavailable');
+ expect(screen.getByLabelText('Experimental nutrition assessment')).toHaveTextContent('Provider sodium and salt disagree');
+ expect(c.selection.nutrients.sodium).toBeNull();expect(c.canUse).toBe(true);
 });

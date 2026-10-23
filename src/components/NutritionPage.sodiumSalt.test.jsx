@@ -38,8 +38,9 @@ test.each(['development', 'production'])('%s: captured conflict reaches review a
   const review = await screen.findByRole('article', {name: 'Barcode product review'}, {timeout: 5000});
   await waitFor(() => expect(within(review).getByLabelText('Unresolved sodium evidence')).toHaveTextContent('Other available nutrition can still be logged'));
   expect(within(review).getByLabelText('Sodium and salt evidence').open).toBe(false);
-  expect(within(review).getByLabelText('Sodium and salt evidence')).toHaveTextContent('nutriments.sodium_serving: 0.000288 g');
-  expect(within(review).getByLabelText('Sodium and salt evidence')).toHaveTextContent('nutriments.salt_serving: 0.288 g');
+  expect(within(review).getByLabelText('Sodium and salt evidence')).toHaveTextContent('Sodium remains unknown');
+  expect(within(review).getByRole('link', {name:'Provider nutrient record'})).toHaveAttribute('href', food.provenance.sourceUrl);
+  expect(within(review).getByLabelText('Sodium and salt evidence')).not.toHaveTextContent('nutriments.');
   await waitFor(() => expect(within(review).queryByLabelText('Experimental nutrition rating')?.textContent ?? null)
     .toBe(environment === 'development' ? 'Score unavailable' : null));
   expect(within(review).queryByLabelText('Overall assessment status')?.textContent ?? null)

@@ -99,3 +99,12 @@ test('regulatory summaries bind exact editions and preserve conditions, not blan
   expect(getBarcodeAdditiveInformation('E211').regulation.text).toMatch(/0.1%.*significantly different.*Prior-sanction/);
   expect(getBarcodeAdditiveInformation('E415').regulation.text).toMatch(/standards do not preclude.*food-grade labeling/);
 });
+
+
+test('concise explanation uses the same applied contributions while full diagnostic copy remains available', () => {
+ const input={...result({energy:point(20),saturatedFat:point(8),fiber:point(2),proteinApplied:point(1)}),methodId:'trace-us-practical-nutrition',sugarMode:'totalSugar',normalized:{originalNutrients:{addedSugar:null},nutrients:{fiber:2,protein:1}},comparison:{milkDrinkPolicyApplied:true,missingLimitingNutrients:[]}};
+ const before=JSON.stringify(input);
+ expect(explainNutritionPoints(input,{concise:true})).toBe('Lowered by energy density and saturated fat. Helped by fiber and protein.');
+ expect(explainNutritionPoints(input)).toContain('The milk rule uses total sugars');
+ expect(JSON.stringify(input)).toBe(before);
+});

@@ -99,6 +99,7 @@ async function compile(production = false) {
   }
   const stats = await new Promise((resolve, reject) => {
     const compiler = webpack({ mode: production ? 'production' : 'development', devtool: false, entry,
+      plugins: [new webpack.DefinePlugin({'process.env.REACT_APP_TRACE_DEPLOYMENT_ENV': JSON.stringify(''), 'process.env.REACT_APP_TRACE_GRADING_PREVIEW': JSON.stringify('false')})],
       output: { path: scratch, filename: production ? 'production.js' : 'preview.js', publicPath: '/' },
       optimization: { minimize: false, concatenateModules: false },
       resolve: { extensions: ['.js', '.jsx', '.json'] },

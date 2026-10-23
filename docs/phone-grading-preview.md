@@ -27,3 +27,13 @@ Use the owner-provided Vercel sharing link for this Preview branch. Its `_vercel
 The hosted sharing-link check established real Quest lookup, nutrition 54/100, provisional overall 52/100, and same-host Home/Nutrition/review/selection/reload. The earlier reported post-login transition to the production hostname was not reproduced; the shared path avoids that unverified handoff.
 
 That run also demonstrated a protected-manifest defect: the manifest link omitted `crossorigin="use-credentials"`, so the browser requested it without the access cookie and followed Vercel SSO redirects that failed CORS. The link now includes the standard credentials attribute ([MDN reference](https://developer.mozilla.org/en-US/docs/Web/HTML/Reference/Attributes/crossorigin#web_manifest_with_credentials)). This changes neither the relative manifest start URL/scope nor app navigation. Verify the hosted manifest and console after deployment; project-wide protection remains enabled.
+
+## Plain-language score explanations
+
+The opening score, applied nutrition factors, supported additive note and provisional/source status remain visible. The native **Why this score** and **Additives** disclosures start closed and use a short nutrition breakdown, the actual displayed additive adjustment, relevant uncertainty and labeled links. Full ingredient text remains in its separate Ingredients disclosure. There is no replacement technical accordion.
+
+The complete assessments, ingredient-screening reasons, raw contributions, qualifications and source editions remain in the existing assessment functions and developer reports. The default diagnostic explanation is retained; only the Preview opts into concise copy. Nutrition v2, additive classifications/weights, source selection, correction applicability, caching and logging are unchanged.
+
+Presentation regressions use captured Quest, Teddy and conflicted Fairlife records plus one explicitly authorized hosted lookup of Dymatize Cocoa Pebbles (705016356201). That USDA capture produced nutrition/overall 41/41, matching the user-observed 41; it is not a manufacturer-verified panel. Quest remains 54/52, Teddy remains a separate 20/20 reference comparison, and conflicted Fairlife remains unavailable with nullable sodium and usable logging.
+
+Regenerate the bounded captured-case mobile/desktop checks with `node scripts/verify-grading-user-review.cjs --concise`. Screenshots, copy lengths and source labels are written under `artifacts/grading-plain-language-preview-20261022/`; they are not live lookup claims. Hosted sharing-route verification is recorded separately in local task artifacts. Do not commit sharing credentials, screenshots, bundles or browser profiles.

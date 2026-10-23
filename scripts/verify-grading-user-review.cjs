@@ -1,6 +1,6 @@
 /* Local-only visual review of the real App, NutritionPage and barcode dialog.
  * Replays existing evidence at the lookup boundary; no live product requests.
- * node scripts/verify-grading-user-review.cjs [--presentation] [--reuse-bundle]
+ * node scripts/verify-grading-user-review.cjs [--presentation | --concise] [--reuse-bundle]
  * No user profile, camera, production build or application policy is changed.
  */
 const fs = require('node:fs');
@@ -12,9 +12,10 @@ const assert = require('node:assert/strict');
 const webpack = require('webpack');
 const root = path.resolve(__dirname, '..');
 const presentation = process.argv.includes('--presentation');
+const concise = process.argv.includes('--concise');
 const runId = 'run-' + new Date().toISOString().replace(/[:.]/g, '-');
-const output = path.join(root, presentation ? 'artifacts/grading-presentation-review-20261022' : 'artifacts/grading-user-review-20261021', runId);
-const scratch = path.join(root, presentation ? '.tmp-browser/grading-presentation-review' : '.tmp-browser/grading-user-review');
+const output = path.join(root, concise ? 'artifacts/grading-plain-language-preview-20261022' : presentation ? 'artifacts/grading-presentation-review-20261022' : 'artifacts/grading-user-review-20261021', runId);
+const scratch = path.join(root, concise ? '.tmp-browser/grading-plain-language-review' : presentation ? '.tmp-browser/grading-presentation-review' : '.tmp-browser/grading-user-review');
 const read = file => JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const git = args => cp.execFileSync('git', args, { cwd: root, encoding: 'utf8' });
@@ -43,6 +44,7 @@ function checkPreservation() {
 }
 const { normalizeOpenFoodFactsProduct } = require('../api/nutrition/_barcodeGateway.cjs');
 function cases() {
+  if (concise) return require('../src/development/__fixtures__/barcodePresentationCases.cjs').barcodePresentationCases();
   const captured = fs.readFileSync(path.join(root, 'docs/barcode-grade-coverage-2026-10-21/raw-responses.jsonl'), 'utf8').trim().split(/\r?\n/).map(JSON.parse);
   const normalized = code => {
     const row = captured.find(row => row.barcode === code);
@@ -110,7 +112,10 @@ async function compile(records) {
       cache: false,
       output: { path: scratch, filename: 'review.js', publicPath: '/' },
       optimization: { minimize: false }, resolve: { extensions: ['.js', '.jsx', '.json'] },
-      plugins: [new webpack.NormalModuleReplacementPlugin(/^\.\/components\/NutritionPage$/, wrapper)],
+      plugins: [new webpack.DefinePlugin({
+        'process.env.REACT_APP_TRACE_DEPLOYMENT_ENV': JSON.stringify(''),
+        'process.env.REACT_APP_TRACE_GRADING_PREVIEW': JSON.stringify('false'),
+      }), new webpack.NormalModuleReplacementPlugin(/^\.\/components\/NutritionPage$/, wrapper)],
       module: { rules: [
         { test: /\.jsx?$/, exclude: /node_modules/, use: { loader: require.resolve('babel-loader'), options: { presets: [[require.resolve('babel-preset-react-app'), { runtime: 'automatic' }]] } } },
         { test: /\.css$/, use: [require.resolve('style-loader'), require.resolve('css-loader')] },
@@ -190,7 +195,8 @@ async function main() {
       await wait(120);
     };
     // Remaining visual/flow steps live in the helper below for resumability.
-    const run = require('./lib/grading-user-review-checks.cjs');
+    const checks = require('./lib/grading-user-review-checks.cjs');
+    const run = concise ? checks.runConcise : checks;
     await run({records,client,evaluate,until,click,input,capture,open,output,progress,wait,exceptions,consoleErrors,base});
   } finally {
     fs.writeFileSync(path.join(output,'browser-errors.json'),JSON.stringify({exceptions,consoleErrors},null,2));

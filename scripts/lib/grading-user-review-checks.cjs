@@ -71,7 +71,7 @@ module.exports = async function run({ records, client, evaluate, until, click, i
       if(record.id==='teddy')assert(data.visibleScope.includes('other values from provider'));
       const actions=await controls(); assert(actions.every(action=>action.unobstructed),record.id+': controls initially visible and unobstructed');
       const file=await capture(layout.id+'-'+record.id+'.png');
-      await evaluate(`document.querySelector('.trace-barcode-dialog__nutrition-details').open=true;document.querySelector('[aria-label="Score details & limitations"]').open=true;document.querySelector('.trace-barcode-dialog__content').scrollTop=99999`);
+      await evaluate(`document.querySelector('.trace-barcode-dialog__nutrition-details').open=true;document.querySelector('[aria-label="Why this score"]').open=true;document.querySelector('.trace-barcode-dialog__content').scrollTop=99999`);
       await wait(100);
       const scrolledActions=await controls();
       assert(scrolledActions.every(action=>action.unobstructed),record.id+': actions and close remain accessible with expanded details and scrolling');
@@ -83,7 +83,7 @@ module.exports = async function run({ records, client, evaluate, until, click, i
         if(layout.id==='mobile')await capture('mobile-cheerios-logging.png');
       }
       if(layout.id==='mobile'&&['spam','teddy'].includes(record.id)){
-        await evaluate(`document.querySelector('[aria-label="Score details & limitations"]').open=true; document.querySelector('[aria-label="Manufacturer label comparison"]').open=true;document.querySelector('.trace-barcode-dialog__content').scrollTop=250`);
+        await evaluate(`document.querySelector('[aria-label="Why this score"]').open=true;document.querySelector('.trace-barcode-dialog__content').scrollTop=250`);
         await capture('mobile-'+record.id+'-evidence.png');
       }
       rows.push({id:record.id,layout:layout.id,file,evidenceType:record.kind,...data,effectiveSelection:undefined,actions,scrolledActions});
@@ -161,4 +161,39 @@ module.exports = async function run({ records, client, evaluate, until, click, i
   fs.writeFileSync(path.join(output,'index.html'),html);
   progress({phase:'captured-awaiting-visual-inspection',cases:7,layouts:2,flows:flows.length,themes:themes.length});
   console.log(JSON.stringify({rows:rows.map(r=>({id:r.id,layout:r.layout,score:r.mainScore,status:r.status})),flows:flows.length,themes:themes.length,exceptions:exceptions.length}));
+};
+
+// Four bounded captured cases for the concise Preview disclosure. No provider
+// requests or saved test entries. Reuses the actual App/camera-boundary tooling.
+module.exports.runConcise = async function runConcise({records,client,evaluate,until,click,input,capture,open,output,progress,wait,exceptions,consoleErrors}) {
+ const expected={quest:[54,52],dymatize:[41,41],teddy:[20,20],conflicted:[null,null]},rows=[];
+ const controls=()=>evaluate(`Array.from(document.querySelectorAll('.trace-barcode-dialog__footer button,.trace-barcode-dialog__close')).map(b=>{const r=b.getBoundingClientRect();return {name:b.getAttribute('aria-label')||b.textContent.trim(),disabled:b.disabled,visible:r.top>=0&&r.bottom<=innerHeight&&b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))}})`);
+ const key=async name=>{const codes={Enter:13,Tab:9};await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:name,code:name,windowsVirtualKeyCode:codes[name],...(name==='Enter'?{text:'\r',unmodifiedText:'\r'}:{})});await client.send('Input.dispatchKeyEvent',{type:'keyUp',key:name,code:name,windowsVirtualKeyCode:codes[name]});await wait(80)};
+ const data=()=>evaluate(`(()=>{const a=document.querySelector('[aria-label="Barcode product review"]'),score=a.querySelector('.trace-barcode-grade'),additives=a.querySelector('[aria-label="Product additives"]'),expected=window.reviewExpected;const text=node=>{const clone=node.cloneNode(true);clone.querySelectorAll('p,li,summary,div,ul').forEach(e=>e.append(document.createTextNode(' ')));return clone.textContent};const explanation=text(score)+' '+text(additives);return {score:score.querySelector('strong').textContent,nutrition:expected.nutrition.nutritionScore100,overall:expected.overall.overallScore100,canUse:expected.candidate.canUse,source:window.reviewCase.kind,allCollapsed:Array.from(a.querySelectorAll('details')).every(e=>!e.open)&&a.querySelector('[aria-label="Product ingredients"] button').getAttribute('aria-expanded')==='false',words:explanation.trim().split(/\\s+/).length,explanation,clipping:document.querySelector('.trace-barcode-dialog__content').scrollWidth>document.querySelector('.trace-barcode-dialog__content').clientWidth+1,ingredientText:expected.candidate.display.ingredients?.text,sourceLinks:Array.from(a.querySelectorAll('.trace-barcode-grade a,.trace-barcode-additives a')).map(e=>({label:e.getAttribute('aria-label')||e.textContent,href:e.href}))}})()`);
+ for(const layout of [{id:'mobile',width:390,height:844,mobile:true},{id:'desktop',width:1440,height:1000,mobile:false}]){
+  await client.send('Emulation.setDeviceMetricsOverride',{width:layout.width,height:layout.height,deviceScaleFactor:1,mobile:layout.mobile});
+  for(const record of records){
+   progress({phase:'concise-visual-review',layout:layout.id,case:record.id,completed:rows.length});await open(record);const row={id:record.id,layout:layout.id,...await data()};
+   assert.deepEqual([row.nutrition,row.overall],expected[record.id]);assert(row.allCollapsed);assert(!row.clipping);assert(row.words<180,'Bounded total copy including identities/source labels');assert(!/grade=null|scoreReady|proteinApplied|round\(nutrition|raw deduction|Unreviewed ingredient phrase|concernBurden|policy:/i.test(row.explanation));assert((await controls()).every(c=>c.visible));
+   row.screenshots=[await capture(layout.id+'-'+record.id+'-collapsed.png')];
+   await evaluate(`document.querySelector('[aria-label="Why this score"] summary').focus()`);await key('Enter');await until(`document.querySelector('[aria-label="Why this score"]').open`);
+   await evaluate(`document.querySelector('[aria-label="Why this score"]').scrollIntoView({block:'center'})`);await wait(80);assert((await controls()).every(c=>c.visible));row.screenshots.push(await capture(layout.id+'-'+record.id+'-score-expanded.png'));
+   await evaluate(`document.querySelector('[aria-label="Why this score"] summary').focus()`);await key('Tab');assert.equal(await evaluate(`document.activeElement.tagName`),'A','Score source is keyboard reachable');
+   await evaluate(`document.querySelector('[aria-label="Why this score"]').open=false;document.querySelector('[aria-label="Product additives"] summary').focus()`);await key('Enter');await until(`document.querySelector('[aria-label="Product additives"]').open`);await evaluate(`document.querySelector('[aria-label="Product additives"]').scrollIntoView({block:'center'})`);await wait(80);assert((await controls()).every(c=>c.visible));row.screenshots.push(await capture(layout.id+'-'+record.id+'-additives-expanded.png'));
+   assert(row.sourceLinks.every(s=>s.label.trim()&&s.href.startsWith('https:')),'Source labels and secure links retained');
+   await evaluate(`document.querySelector('[aria-label="Product additives"] summary').focus()`);await key('Tab');assert.equal(await evaluate(`document.activeElement.tagName`),'A','Ingredient/concern sources are keyboard reachable');
+   await evaluate(`document.querySelector('[aria-label="Product additives"]').open=false;document.querySelector('[aria-label="Product ingredients"] button').click()`);
+   const ingredients=await evaluate(`document.querySelector('[aria-label="Product ingredients"]').textContent`);if(row.ingredientText)assert(ingredients.includes(row.ingredientText),'Full ingredient declaration accessible separately');
+   assert((await controls()).every(c=>c.visible));row.keyboardDisclosureAndSources=true;row.fullIngredientsAccessible=true;
+   await click('Scan Again');await until(`!document.querySelector('[aria-label="Barcode product review"]')`);row.scanAgain=true;
+   assert.equal(await evaluate(`JSON.parse(localStorage.getItem('nutritionEntries')||'[]').length`),0);
+   rows.push(row);fs.writeFileSync(path.join(output,'concise-results-in-progress.json'),JSON.stringify(rows,null,2));
+  }
+ }
+ assert.equal(exceptions.length,0);assert.equal(consoleErrors.length,0);
+ const report={actualApp:true,capturedLookupBoundary:true,liveLookupCount:0,rows,runtimeErrors:exceptions,consoleErrors,noEntriesSaved:true,userProfileAccessed:false};
+ fs.writeFileSync(path.join(output,'concise-results.json'),JSON.stringify(report,null,2));
+ const escape=value=>String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+ const html='<!doctype html><html lang="en"><meta charset="utf-8"><title>Trace concise grading review</title><style>body{font:16px/1.5 system-ui;max-width:1200px;margin:24px auto}img{max-width:100%;border:1px solid #aaa}.shots{display:flex;gap:12px}.shots a{flex:1;min-width:0}section{margin:30px 0}</style><h1>Concise grading: captured-case review</h1><p>Actual Trace application; captured responses at the lookup boundary. No live lookup is claimed in these screenshots. Mobile 390×844 and desktop 1440×1000. Full ingredient declarations remain separate.</p>'+rows.map(row=>'<section><h2>'+escape(row.id+' / '+row.layout)+'</h2><p>Nutrition '+row.nutrition+'; overall '+row.overall+'. '+row.words+' words including identity/source labels. '+escape(row.source)+'</p><div class="shots">'+row.screenshots.map(file=>'<a href="'+file+'"><img src="'+file+'" alt="'+escape(file)+'"></a>').join('')+'</div></section>').join('')+'</html>';
+ fs.writeFileSync(path.join(output,'index.html'),html);progress({phase:'concise-screenshots-awaiting-inspection',cases:records.length,layouts:2,images:rows.length*3});console.log(JSON.stringify({output,rows:rows.map(({id,layout,words,nutrition,overall})=>({id,layout,words,nutrition,overall})),runtimeErrors:0,consoleErrors:0,noEntriesSaved:true}));
 };

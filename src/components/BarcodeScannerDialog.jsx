@@ -782,13 +782,9 @@ export default function BarcodeScannerDialog({
               <p>{(!grading || candidate.display.nutritionCorrection) && <>{candidate.display.nutritionConflicts[0].message}{' '}</>}
                 {candidate.canUse ? 'Other available nutrition can still be logged.' : 'Complete the missing fields to log this food.'}</p>
               <details aria-label="Sodium and salt evidence"><summary>Sodium &amp; salt evidence</summary>
-                {candidate.display.nutritionConflicts.map(conflict => <p key={conflict.datasetId}>
-                  {conflict.datasetId} ({conflict.quantity.amount} {conflict.quantity.unit}):{' '}
-                  {conflict.observations.map(o => `${o.field}: ${o.rawValue} ${o.rawUnit}`).join('; ')}.
-                  {' '}{conflict.qualification}{' '}
-                  <a href={conflict.source.url} target="_blank" rel="noreferrer noopener">{conflict.source.attribution}</a>{' · '}
-                  <a href={conflict.methodUrl} target="_blank" rel="noreferrer noopener">Conversion reference</a>.
-                </p>)}
+                <p>The provider's sodium and salt values conflict. Sodium remains unknown.{' '}
+                  <a href={candidate.display.nutritionConflicts[0].source.url} target="_blank" rel="noreferrer noopener">Provider nutrient record</a>.
+                </p>
               </details>
             </div>}
             {candidate.stale && (

@@ -37,7 +37,7 @@ export function getNutritionHighlights(result) {
     .slice(0, 3).map(({ order, ...item }) => item);
 }
 
-export function explainNutritionPoints(result) {
+export function explainNutritionPoints(result, { concise = false } = {}) {
   if (result?.nutritionScore100 == null) return null;
   const points = result.points || {};
   const applied = key => Number.isFinite(points[key]?.min) && points[key].min > 0;
@@ -52,6 +52,8 @@ export function explainNutritionPoints(result) {
       .filter(([key]) => applied(key)).map(([, label]) => label);
     const sentences = [lower.length ? `This score is lowered by ${list(lower)}.` : 'The measured limiting nutrients do not lower this score.'];
     if (higher.length) sentences.push(`It is raised by ${list(higher)}.`);
+    if (concise) return [lower.length && 'Lowered by ' + list(lower) + '.', higher.length && 'Helped by ' + list(higher) + '.'].filter(Boolean).join(' ')
+      || 'Available data do not identify an individual contribution.';
     if (result.comparison.milkDrinkPolicyApplied) sentences.push(result.sugarMode === 'addedSugar'
       ? 'The milk rule uses declared added sugars, including zero, rather than total sugars.'
       : 'The milk rule uses total sugars because usable added sugars are unavailable; naturally occurring sugars are not estimated.');

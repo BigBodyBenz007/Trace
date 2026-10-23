@@ -1,0 +1,265 @@
+{
+  "evidenceType": "Captured real hosted Preview lookup; not a manufacturer-verified panel",
+  "capturedAt": "2026-10-23T00:57:24.220Z",
+  "barcode": "705016356201",
+  "displayedName": "Dymatize Enterprises · Cocoa Pebbles Flavored Iso100 Hydrolyzed Protein Powder, Cocoa Pebbles",
+  "displayedScore": "41/100",
+  "lookup": {
+    "status": "found",
+    "identifier": {
+      "scheme": "gtin",
+      "value": "705016356201"
+    },
+    "food": {
+      "sourceType": "remote-barcode",
+      "dataType": "branded",
+      "identifiers": [
+        {
+          "scheme": "gtin",
+          "value": "705016356201"
+        }
+      ],
+      "provider": {
+        "id": "usda-fdc",
+        "recordId": "2665690",
+        "attribution": "USDA FoodData Central"
+      },
+      "brand": "Dymatize Enterprises, LLC",
+      "name": "COCOA PEBBLES FLAVORED ISO100 HYDROLYZED PROTEIN POWDER, COCOA PEBBLES",
+      "packageQuantity": "22.6 oz/1.4 LB/640 g",
+      "serving": {
+        "description": "1 scoop",
+        "amount": 32,
+        "unit": "g",
+        "grams": 32
+      },
+      "servingsPerContainer": null,
+      "nutrients": {
+        "calories": 120,
+        "protein": 24.991999999999997,
+        "carbohydrates": 2,
+        "fat": 0.49920000000000003,
+        "sodium": 179.84,
+        "fiber": 0.9920000000000001,
+        "totalSugar": 0.9984000000000001,
+        "addedSugar": 0
+      },
+      "ingredients": {
+        "text": "HYDROLYZED WHEY PROTEIN ISOLATE, WHEY PROTEIN ISOLATE, COCOA POWDER (PROCESSED WITH ALKALI). LESS THAN 1% OF: NATURAL AND ARTIFICIAL FLAVORS, SALT, POTASSIUM CHLORIDE, SOY LECITHIN, SUCRALOSE, STEVIOL GLYCOSIDES (STEVIA).",
+        "language": null
+      },
+      "additives": {
+        "status": "unknown",
+        "source": "usda-fdc",
+        "sourceField": null,
+        "items": null
+      },
+      "assessmentInputs": {
+        "schemaVersion": 1,
+        "identification": "provider-reported",
+        "identity": {
+          "gtin": "705016356201",
+          "providerGtin": "705016356201",
+          "name": "COCOA PEBBLES FLAVORED ISO100 HYDROLYZED PROTEIN POWDER, COCOA PEBBLES",
+          "brand": "Dymatize Enterprises, LLC"
+        },
+        "source": {
+          "provider": "usda-fdc",
+          "recordId": "2665690",
+          "url": "https://fdc.nal.usda.gov/food-details/2665690/nutrients",
+          "attribution": "USDA FoodData Central (public domain / CC0)",
+          "revisionDate": "2022-02-03T00:00:00.000Z",
+          "publicationDate": "2023-11-16T00:00:00.000Z",
+          "retrievedAt": "2026-10-23T00:57:22.752Z",
+          "cacheStale": false,
+          "dates": [
+            {
+              "field": "modifiedDate",
+              "value": "2022-02-03"
+            },
+            {
+              "field": "publishedDate",
+              "value": "2023-11-16"
+            }
+          ]
+        },
+        "markets": [
+          {
+            "field": "marketCountry",
+            "values": [
+              "United States"
+            ]
+          }
+        ],
+        "categories": [
+          {
+            "field": "foodCategory",
+            "values": [
+              "Energy, Protein & Muscle Recovery Drinks"
+            ]
+          }
+        ],
+        "serving": [
+          {
+            "field": "servingSize",
+            "value": 32
+          },
+          {
+            "field": "servingSizeUnit",
+            "value": "GRM"
+          },
+          {
+            "field": "householdServingFullText",
+            "value": "1 scoop"
+          }
+        ],
+        "ingredients": {
+          "field": "ingredients",
+          "language": null,
+          "textAvailable": true
+        },
+        "datasets": [
+          {
+            "id": "usda-reference",
+            "basis": "100g",
+            "quantity": {
+              "amount": 100,
+              "unit": "g"
+            },
+            "observations": [
+              {
+                "nutrient": "protein",
+                "rawValue": 78.1,
+                "rawUnit": "G",
+                "unitSource": "provider",
+                "enteredUnit": null,
+                "field": "foodNutrients[0].value",
+                "derivation": "Calculated from value per serving size measure"
+              },
+              {
+                "nutrient": "fat",
+                "rawValue": 1.56,
+                "rawUnit": "G",
+                "unitSource": "provider",
+                "enteredUnit": null,
+                "field": "foodNutrients[1].value",
+                "derivation": "Calculated from value per serving size measure"
+              },
+              {
+                "nutrient": "carbohydrates",
+                "rawValue": 6.25,
+                "rawUnit": "G",
+                "unitSource": "provider",
+                "enteredUnit": null,
+                "field": "foodNutrients[2].value",
+                "derivation": "Calculated from value per serving size measure"
+              },
+              {
+                "nutrient": "calories",
+                "rawValue": 375,
+                "rawUnit": "KCAL",
+                "unitSource": "provider",
+                "enteredUnit": null,
+                "field": "foodNutrients[3].value",
+                "derivation": "Calculated from value per serving size measure"
+              },
+              {
+                "nutrient": "totalSugar",
+                "rawValue": 3.12,
+                "rawUnit": "G",
+                "unitSource": "provider",
+                "enteredUnit": null,
+                "field": "foodNutrients[4].value",
+                "derivation": "Calculated from a less than value per serving size measure"
+              },
+              {
+                "nutrient": "fiber",
+                "rawValue": 3.1,
+                "rawUnit": "G",
+                "unitSource": "provider",
+                "enteredUnit": null,
+                "field": "foodNutrients[5].value",
+                "derivation": "Calculated from a less than value per serving size measure"
+              },
+              {
+                "nutrient": "sodium",
+                "rawValue": 562,
+                "rawUnit": "MG",
+                "unitSource": "provider",
+                "enteredUnit": null,
+                "field": "foodNutrients[9].value",
+                "derivation": "Calculated from value per serving size measure"
+              },
+              {
+                "nutrient": "addedSugar",
+                "rawValue": 0,
+                "rawUnit": "G",
+                "unitSource": "provider",
+                "enteredUnit": null,
+                "field": "foodNutrients[11].value",
+                "derivation": "Calculated from value per serving size measure"
+              },
+              {
+                "nutrient": "saturatedFat",
+                "rawValue": 0,
+                "rawUnit": "G",
+                "unitSource": "provider",
+                "enteredUnit": null,
+                "field": "foodNutrients[14].value",
+                "derivation": "Calculated from value per serving size measure"
+              }
+            ]
+          }
+        ],
+        "foodGroups": [],
+        "limitations": []
+      },
+      "dataBasis": "serving",
+      "nutritionBasis": {
+        "kind": "derived-serving",
+        "source": "foodNutrients",
+        "sourceBasis": "100g",
+        "sourceQuantity": {
+          "amount": 100,
+          "unit": "g",
+          "dimension": "mass"
+        },
+        "servingQuantity": {
+          "amount": 32,
+          "unit": "g",
+          "dimension": "mass"
+        },
+        "conversionFactor": 0.32,
+        "sourceNutrients": {
+          "calories": 375,
+          "protein": 78.1,
+          "carbohydrates": 6.25,
+          "fat": 1.56,
+          "sodium": 562,
+          "fiber": 3.1,
+          "totalSugar": 3.12,
+          "addedSugar": 0
+        }
+      },
+      "completeness": "partial",
+      "unknownFields": [
+        "servingsPerContainer"
+      ],
+      "logReady": true,
+      "provenance": {
+        "sourceUrl": "https://fdc.nal.usda.gov/food-details/2665690/nutrients",
+        "provider": "USDA FoodData Central",
+        "providerRecordId": "2665690",
+        "attribution": "USDA FoodData Central (public domain / CC0)",
+        "revisionDate": "2023-11-16T00:00:00.000Z",
+        "retrievedAt": "2026-10-23T00:57:22.752Z"
+      }
+    },
+    "providerAttempts": [
+      {
+        "provider": "usda-fdc",
+        "status": "found"
+      }
+    ]
+  }
+}
