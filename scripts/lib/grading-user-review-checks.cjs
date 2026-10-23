@@ -266,3 +266,45 @@ module.exports.runLightTheme = async function runLightTheme(ctx) {
   assert.equal(exceptions.length,0);assert.equal(consoleErrors.length,0);
   fs.writeFileSync(path.join(output,'light-theme-results.json'),JSON.stringify({rows,runtimeErrors:exceptions,consoleErrors,capturedLookup:true,noSavedNutritionEntries:true,syntheticLocalMemoryOnly:true,systemDark:true},null,2));
 };
+
+// Bounded action styling review using the real App and existing Quest capture.
+module.exports.runButtonContrast = async function runButtonContrast({records,client,evaluate,until,click,input,capture,output,progress,wait,exceptions,consoleErrors,base}) {
+  const rows=[],quest=records.find(r=>r.id==='quest');
+  await client.send('DOM.enable');await client.send('CSS.enable');
+  const style=selector=>evaluate(`(()=>{const e=document.querySelector(${JSON.stringify(selector)}),s=getComputedStyle(e),r=e.getBoundingClientRect();return {text:e.textContent.trim(),background:s.backgroundColor,color:s.color,outline:s.outlineColor,outlineWidth:s.outlineWidth,outlineOffset:s.outlineOffset,disabled:e.disabled,scheme:getComputedStyle(document.documentElement).colorScheme,visible:r.width>0&&r.height>0,overflow:document.documentElement.scrollWidth>innerWidth+1}})()`);
+  const contrast=(a,b)=>{const luminance=c=>{const rgb=c.match(/[\d.]+/g).slice(0,3).map(n=>{const v=Number(n)/255;return v<=.04045?v/12.92:((v+.055)/1.055)**2.4});return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722};const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+  const checkAction=async(selector,label)=>{const s=await style(selector);assert.equal(s.background,'rgb(40, 104, 94)',label+': solid action fill');assert.equal(s.color,'rgb(255, 255, 255)',label+': light text/icons');assert(contrast(s.background,s.color)>=4.5,label+': text contrast');assert.equal(s.scheme,'light');assert(!s.overflow);return {label,...s,contrast:contrast(s.background,s.color)}};
+  const force=async(selector,states)=>{const doc=await client.send('DOM.getDocument');const {nodeId}=await client.send('DOM.querySelector',{nodeId:doc.root.nodeId,selector});assert(nodeId);await client.send('CSS.forcePseudoState',{nodeId,forcedPseudoClasses:states});await evaluate(`(async()=>{const el=document.querySelector(${JSON.stringify(selector)});getComputedStyle(el).backgroundColor;await Promise.all(el.getAnimations().map(animation=>animation.finished.catch(()=>{})));})()`);await wait(30)};
+  for(const layout of [{id:'mobile',width:390,height:844,mobile:true},{id:'desktop',width:1440,height:1000,mobile:false}]) {
+    progress({phase:'button-contrast',layout:layout.id});
+    await client.send('Emulation.setDeviceMetricsOverride',{width:layout.width,height:layout.height,deviceScaleFactor:1,mobile:layout.mobile});
+    await client.send('Emulation.setEmulatedMedia',{features:[{name:'prefers-color-scheme',value:'dark'}]});
+    await client.send('Page.navigate',{url:base+'/?case=quest&theme=modern-heirloom&barcodeGrading=1'});await until(`Boolean(document.querySelector('.trace-home-page h1'))`);
+    const home=await evaluate(`Array.from(document.querySelectorAll('.trace-feature-navigation button,.trace-home-utilities button')).map(e=>'.'+e.classList[0])`);
+    for(const selector of [...new Set(home)])rows.push(await checkAction(selector,layout.id+' '+selector));
+    await capture(layout.id+'-home.png');
+    const primary='.trace-feature-action--primary';
+    await force(primary,['hover']);let state=await style(primary);assert.equal(state.background,'rgb(32, 86, 78)');
+    await client.send('Input.dispatchKeyEvent',{type:'keyDown',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});await client.send('Input.dispatchKeyEvent',{type:'keyUp',key:'Tab',code:'Tab',windowsVirtualKeyCode:9});await evaluate(`document.querySelector(${JSON.stringify(primary)}).focus()`);assert.equal(await evaluate(`document.querySelector(${JSON.stringify(primary)}).matches(':focus-visible')`),true);
+    await force(primary,['active','focus-visible']);state=await style(primary);assert.equal(state.background,'rgb(32, 86, 78)');assert(parseFloat(state.outlineWidth)>=3);assert(parseFloat(state.outlineOffset)>=2);await capture(layout.id+'-home-pressed-focus.png');await force(primary,[]);
+    await click('Nutrition');await until(`Boolean(document.querySelector('.trace-nutrition-today'))`);
+    for(const selector of ['.trace-nutrition-back','.trace-nutrition-details-toggle','.trace-nutrition-goals-toggle','.trace-nutrition-quick-actions button:first-child','.trace-nutrition-quick-actions button:last-child'])rows.push(await checkAction(selector,layout.id+' '+selector));
+    await capture(layout.id+'-nutrition.png');
+    await click('View all nutrition');assert.equal(await evaluate(`document.querySelector('.trace-nutrition-details-toggle').getAttribute('aria-expanded')`),'true');await click('Hide nutrition details');
+    await input('.trace-food-search input','apple');await until(`Boolean(document.querySelector('.trace-search-result'))`);const result=await style('.trace-search-result');assert(contrast(result.background,result.color)>=4.5,'Food result cards remain readable');assert.equal(result.background,'rgb(255, 255, 255)');await input('.trace-food-search input','');
+    await click('Scan Barcode');await until(`Boolean(document.querySelector('.trace-barcode-dialog__manual input'))`);
+    const disabled=await style('.trace-barcode-dialog__manual button');assert(disabled.disabled);assert(contrast(disabled.background,disabled.color)>=4.5,'Disabled label readable');assert.notEqual(disabled.background,'rgb(40, 104, 94)');await capture(layout.id+'-scanner-disabled.png');
+    await input('.trace-barcode-dialog__manual input',quest.code);await click('Look Up Barcode');await until(`Boolean(document.querySelector('[aria-label="Experimental nutrition assessment"]'))`);
+    const score=await evaluate(`window.reviewExpected.overall.overallScore100`);assert.equal(score,52);
+    for(const selector of ['.trace-barcode-dialog__close','.trace-barcode-dialog__review-actions button:first-child','.trace-barcode-dialog__review-actions button:last-child','.trace-barcode-dialog__secondary-actions button'])rows.push(await checkAction(selector,layout.id+' '+selector));
+    const disclosure=await style('.trace-barcode-ingredients__toggle');assert.equal(disclosure.background,'rgb(255, 255, 255)');assert(contrast(disclosure.background,disclosure.color)>=4.5,'Disclosure stays a light row');
+    assert.equal(await evaluate(`Array.from(document.querySelectorAll('.trace-barcode-dialog__footer button')).every(b=>{const r=b.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight&&b.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2))})`),true);
+    await capture(layout.id+'-quest-review.png');await click('Scan Again');await until(`!document.querySelector('[aria-label="Barcode product review"]')`);
+    await client.send('Page.navigate',{url:base+'/?case=quest&theme=modern-heirloom&barcodeGrading=1'});await until(`Boolean(document.querySelector('.trace-home-page h1'))`);await evaluate(`document.querySelector('[aria-label="Settings"]').click()`);await until(`Boolean(document.querySelector('[data-testid="settings-page"]'))`);await click('Set up Journal Lock');await until(`Boolean(document.querySelector('.journal-privacy-dialog'))`);
+    rows.push(await checkAction('.journal-actions .trace-action--primary',layout.id+' portal primary'));rows.push(await checkAction('.journal-actions .trace-action--secondary',layout.id+' portal secondary'));await capture(layout.id+'-portal-actions.png');
+    assert.equal(await evaluate(`JSON.parse(localStorage.getItem('nutritionEntries')||'[]').length`),0);
+  }
+  assert.deepEqual(exceptions,[]);assert.deepEqual(consoleErrors,[]);
+  fs.writeFileSync(path.join(output,'button-contrast-results.json'),JSON.stringify({rows,mobile:'390x844',desktop:'1440x1000',systemDark:true,realApp:true,capturedQuest:true,noSavedEntries:true,runtimeErrors:exceptions,consoleErrors},null,2));
+  progress({phase:'button-contrast-passed',checks:rows.length,screenshots:12});
+};
