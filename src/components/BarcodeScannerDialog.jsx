@@ -14,6 +14,8 @@ import {
   webAppLifecycleAdapter,
 } from "../services/appLifecycleAdapter";
 import { acquireDocumentScrollLock } from "../services/documentScrollLock";
+import PersonalPackageLabelEditor, { LabelPhoto } from './PersonalPackageLabelEditor';
+import { personalLabelsFor, readPersonalLabels, removePersonalLabel } from '../services/personalPackageLabels';
 import GroceryFoodForm from "./GroceryFoodForm";
 import BarcodeIngredients from "./BarcodeIngredients";
 import { shouldLoadBarcodeGrading } from "../development/barcodeGradingMode";
@@ -90,6 +92,9 @@ export default function BarcodeScannerDialog({
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState("");
   const [candidate, setCandidate] = useState(null);
+  const [labelEditor, setLabelEditor] = useState(null);
+  const [lookupResult, setLookupResult] = useState(null);
+  const [labelChoices, setLabelChoices] = useState([]);
   const [message, setMessage] = useState(access.message);
   const [errorMessage, setErrorMessage] = useState("");
   const [lookingUp, setLookingUp] = useState(false);
@@ -185,7 +190,12 @@ export default function BarcodeScannerDialog({
     }
     if (!mountedRef.current) return;
 
-    const nextCandidate = createBarcodeNutritionCandidate(result);
+    let resolved = result;
+    try { resolved = personalLabelsFor(result,readPersonalLabels()); }
+    catch (error) { resolved = {...result,personalLabelWarning:error.message}; }
+    setLookupResult(resolved);
+    setLabelChoices(resolved.personalLabelChoices || []);
+    const nextCandidate = createBarcodeNutritionCandidate(resolved);
     setLookingUp(false);
     pendingLookupRef.current = false;
     if (nextCandidate) {
@@ -193,7 +203,7 @@ export default function BarcodeScannerDialog({
       setMessage(nextCandidate.canUse
         ? "Product found. Review it before using this food."
         : "Product found, but required nutrition is missing. Review the available information.");
-      setErrorMessage("");
+      setErrorMessage(resolved.personalLabelWarning || "");
       return;
     }
 
@@ -217,6 +227,8 @@ export default function BarcodeScannerDialog({
     cameraStartPendingRef.current = true;
     acceptedBarcodeRef.current = false;
     setCandidate(null);
+    setLabelEditor(null);
+    setLabelChoices([]);
     setRecovery(null);
     setLookupIdentifier(null);
     setDeletePending(false);
@@ -369,6 +381,7 @@ export default function BarcodeScannerDialog({
   }
 
   function beginRecovery() {
+    if (candidate?.personalLabel) { setLabelEditor({newVersion:false}); return; }
     if (!lookupIdentifier) return;
     releaseCamera();
     setCameraState("idle");
@@ -424,6 +437,21 @@ export default function BarcodeScannerDialog({
     setErrorMessage("");
   }
 
+  function chooseLabel(profile) {
+    setCandidate(createBarcodeNutritionCandidate({...lookupResult, ...(profile?.providerObservation ? {food:profile.providerObservation,status:"found"} : {}), personalLabel:profile}));
+    setLabelEditor(null);
+  }
+  function savedLabel(profile) {
+    setLabelChoices(readPersonalLabels().filter(p=>p.status==="active" && p.barcode.replace(/^0+/,"")===lookupIdentifier.value.replace(/^0+/,"")));
+    chooseLabel(profile);setMessage("Your confirmed label is saved on this device. Future matching scans can use it.");
+  }
+  function removeLabel() {
+    try { removePersonalLabel(candidate.personalLabel.id);
+      setLabelChoices(labelChoices.filter(p=>p.id!==candidate.personalLabel.id));
+      setCandidate(createBarcodeNutritionCandidate({...lookupResult,personalLabel:undefined}));
+      setMessage("Personal correction removed from future scans. Previous entries and label history are unchanged.");
+    } catch(error) { setErrorMessage(error.message); }
+  }
   function useFood() {
     if (!candidate?.canUse || !candidate.selection) return;
     const accepted = onUseFood(candidate.selection);
@@ -759,12 +787,21 @@ export default function BarcodeScannerDialog({
           />
         )}
 
-        {candidate && !recovery && (
+        {labelEditor && <PersonalPackageLabelEditor key={labelEditor.newVersion ? "new" : candidate.personalLabel?.id || "first"}
+          candidate={labelEditor.newVersion ? candidate.originalCandidate || candidate : candidate}
+          lookupResult={lookupResult} identifier={lookupIdentifier} onCancel={()=>setLabelEditor(null)} onSaved={savedLabel} />}
+        {candidate && !recovery && !labelEditor && (
           <article className="trace-barcode-dialog__product" aria-label="Barcode product review">
             <p className="trace-barcode-dialog__eyebrow">
               {candidate.canUse ? "Ready to review" : "Review required"}
             </p>
             <h3>{grading ? grading.getBarcodeReviewName(candidate) : [candidate.display.brand, candidate.display.name].filter(Boolean).join(" · ")}</h3>
+            {labelChoices.length > 0 && <details className="trace-package-label-evidence"><summary>{candidate.personalLabel ? "Your saved package labels" : "Choose your saved package version"}</summary>
+              <p>Package editions can share a barcode. Choose the label matching your package. Labels stay on this device.</p>
+              {labelChoices.map(p=><button type="button" key={p.id} onClick={()=>chooseLabel(p)}>Use {p.variant} / {p.packageDescription} / {new Date(p.confirmedAt).toLocaleDateString()}</button>)}
+              <button type="button" onClick={()=>setLabelEditor({newVersion:true})}>Add another package version</button>
+              <button type="button" onClick={()=>chooseLabel(undefined)}>Use provider information for this scan</button>
+            </details>}
             {grading && <grading.default candidate={candidate} identifier={lookupIdentifier} />}
             {!grading && candidate.display.packageQuantity && <p>Package: {candidate.display.packageQuantity}</p>}
             {!grading && candidate.display.servingsPerContainer !== null
@@ -794,8 +831,17 @@ export default function BarcodeScannerDialog({
                 </div>
               ))}
             </dl>
+            <button type="button" onClick={()=>setLabelEditor({newVersion:false})}>{candidate.personalLabel ? "Edit my package label" : "Use my package label"}</button>
+            {candidate.personalLabel && <div className="trace-package-label-evidence">
+              <details><summary>Your label evidence</summary><p>Confirmed {new Date(candidate.personalLabel.confirmedAt).toLocaleString()}. Device-local; not independently authenticated. Original provider observations are retained with new entries.</p>
+                {candidate.personalLabel.photos.map(p=><LabelPhoto key={p.id} photo={p}/>)}
+                <details><summary>Original provider ingredients</summary><p>These may describe a different edition and are not used as your package declaration.</p><p>{candidate.originalCandidate?.display.ingredients?.text || "Ingredient information unavailable."}</p></details>
+                <button type="button" onClick={removeLabel}>Remove my correction from future scans</button>
+              </details>
+              <details><summary>Optional shared review</summary><p>Sharing is not available in this Preview: private submission storage and owner authentication have not been provisioned. Nothing is uploaded. Shared review will require clear barcode, package and complete nutrition photos; ingredient evidence is required to change ingredients.</p><button type="button" disabled>Submit for owner review (unavailable)</button></details>
+            </div>}
             <p className="trace-barcode-dialog__label-notice" aria-label="Package label notice">
-              Check your package label. Nutrition and ingredients come from external sources and may differ from your package.{' '}
+              {candidate.personalLabel ? "Nutrition uses your confirmed label. Ingredients need separate confirmation from the same package." : "Check your package label. Nutrition and ingredients come from external sources and may differ from your package."}{' '}
               {grading && candidate.display.nutritionCorrection?.mode === 'nutrient-correction'
                 ? 'This reference score uses the separately identified manufacturer reference panel.'
                 : 'Grades use the information shown.'}
@@ -820,7 +866,7 @@ export default function BarcodeScannerDialog({
             {!grading && <p className="trace-barcode-dialog__source">
               Source: {candidate.display.attribution}
               {candidate.display.sourceUrl && (
-                <> · <a href={candidate.display.sourceUrl} rel="noreferrer noopener" target="_blank">View source</a></>
+                <> · <a href={candidate.display.sourceUrl} rel="noreferrer noopener" target="_blank">{candidate.personalLabel ? "Original provider record" : "View source"}</a></>
               )}
             </p>}
             {!grading && !candidate.canUse && (
@@ -842,7 +888,7 @@ export default function BarcodeScannerDialog({
         )}
         </div>
         <footer className="trace-barcode-dialog__footer">
-          {candidate && !recovery && <>
+          {candidate && !recovery && !labelEditor && <>
             {loggingReason && <p id="trace-barcode-logging-reason" role="status">{loggingReason}</p>}
             {reviewActions}
           </>}

@@ -45,6 +45,7 @@ const excludedLocalStorageRecovery = (key, owner, description) => ({
 export const TRACE_STORAGE_DOMAIN_MANIFEST = Object.freeze([
   durableLocalStorage("memories", "App / photoStorage", "Memory metadata and IndexedDB photo references."),
   durableLocalStorage("nutritionGoals", "App", "Nutrition and water goals."),
+  durableLocalStorage("personalPackageLabels", "personalPackageLabels", "Versioned device-local package labels and IndexedDB evidence-photo references; never automatically shared."),
   durableLocalStorage("userFoods", "userFoodCatalog", "User-created grocery and other saved foods."),
   durableLocalStorage("nutritionEntries", "App", "Logged nutrition, including branded and restaurant snapshots."),
   excludedLocalStorageRecovery(

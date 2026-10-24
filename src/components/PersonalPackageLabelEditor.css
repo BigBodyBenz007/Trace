@@ -1,0 +1,14 @@
+.trace-package-label { text-align:left; }
+.trace-package-label__grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin:16px 0; }
+.trace-package-label label { display:block; margin:10px 0; }
+.trace-package-label input:not([type=checkbox]), .trace-package-label select, .trace-package-label textarea { width:100%; box-sizing:border-box; }
+.trace-package-label input[type=checkbox] { margin-right:8px; }
+.trace-package-label details { margin:12px 0; padding:10px 0; }
+.trace-package-label summary { cursor:pointer; }
+.trace-package-label img, .trace-package-label-evidence img { display:block; max-width:100%; max-height:360px; object-fit:contain; margin:8px 0; }
+.trace-package-label__photo { padding:10px 0; border-bottom:1px solid var(--border-color,#b4bdb5); }
+.trace-package-label__actions { display:flex; flex-wrap:wrap; gap:12px; margin:16px 0; }
+.trace-package-label pre { white-space:pre-wrap; overflow-wrap:anywhere; }
+.trace-package-label-evidence { text-align:left; }
+@media(max-width:480px) { .trace-package-label__grid { gap:8px; } .trace-package-label__grid label { min-width:0; font-size:14px; } }
+.trace-package-label-evidence button { margin:6px 4px 6px 0; }

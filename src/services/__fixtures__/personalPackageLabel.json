@@ -1,0 +1,25 @@
+{
+  "evidenceType": "CONSTRUCTED confirmed-package regression; values correspond to the user's bun reproduction, not a newly verified manufacturer edition",
+  "profile": {
+    "schemaVersion": 1,
+    "id": "package-label-constructed-v1",
+    "editionId": "package-label-constructed-edition",
+    "previousVersionId": null,
+    "barcode": "050400740280",
+    "name": "Seeded Jumbo Burger Buns",
+    "brand": "Bimbo Bakeries USA",
+    "variant": "Seeded",
+    "packageDescription": "8 buns",
+    "serving": {"description": "1 bun (65 g)", "amount": 65, "unit": "g"},
+    "servingsPerContainer": 8,
+    "nutrients": {"calories":190,"protein":6,"carbohydrates":33,"fat":3,"fiber":2,"sodium":340,"totalSugar":5,"addedSugar":4,"saturatedFat":0.5},
+    "ingredientsConfirmed": false,
+    "ingredients": null,
+    "photos": [],
+    "autoUse": true,
+    "observedScope": "replaced by captured provider scope in tests",
+    "status": "active",
+    "createdAt": "2026-10-24T16:00:00.000Z",
+    "confirmedAt": "2026-10-24T16:00:00.000Z"
+  }
+}

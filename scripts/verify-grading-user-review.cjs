@@ -11,14 +11,15 @@ const crypto = require('node:crypto');
 const assert = require('node:assert/strict');
 const webpack = require('webpack');
 const root = path.resolve(__dirname, '..');
+const packageLabel = process.argv.includes('--package-label');
 const buttonContrast = process.argv.includes('--button-contrast');
 const lightTheme = process.argv.includes('--light-theme');
 const presentation = process.argv.includes('--presentation');
 const proteinBoundary = process.argv.includes('--protein-boundary');
 const concise = process.argv.includes('--concise') || proteinBoundary || lightTheme || buttonContrast;
 const runId = 'run-' + new Date().toISOString().replace(/[:.]/g, '-');
-const output = path.join(root, buttonContrast ? 'artifacts/modern-heirloom-buttons-20261023' : lightTheme ? 'artifacts/modern-heirloom-light-20261023' : proteinBoundary ? 'artifacts/protein-supplement-boundary-20261022' : concise ? 'artifacts/grading-plain-language-preview-20261022' : presentation ? 'artifacts/grading-presentation-review-20261022' : 'artifacts/grading-user-review-20261021', runId);
-const scratch = path.join(root, buttonContrast ? '.tmp-browser/modern-heirloom-buttons' : lightTheme ? '.tmp-browser/modern-heirloom-light' : proteinBoundary ? '.tmp-browser/protein-supplement-boundary' : concise ? '.tmp-browser/grading-plain-language-review' : presentation ? '.tmp-browser/grading-presentation-review' : '.tmp-browser/grading-user-review');
+const output = path.join(root, packageLabel ? 'artifacts/package-label-20261024' : buttonContrast ? 'artifacts/modern-heirloom-buttons-20261023' : lightTheme ? 'artifacts/modern-heirloom-light-20261023' : proteinBoundary ? 'artifacts/protein-supplement-boundary-20261022' : concise ? 'artifacts/grading-plain-language-preview-20261022' : presentation ? 'artifacts/grading-presentation-review-20261022' : 'artifacts/grading-user-review-20261021', runId);
+const scratch = path.join(root, packageLabel ? '.tmp-browser/package-label' : buttonContrast ? '.tmp-browser/modern-heirloom-buttons' : lightTheme ? '.tmp-browser/modern-heirloom-light' : proteinBoundary ? '.tmp-browser/protein-supplement-boundary' : concise ? '.tmp-browser/grading-plain-language-review' : presentation ? '.tmp-browser/grading-presentation-review' : '.tmp-browser/grading-user-review');
 const read = file => JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const git = args => cp.execFileSync('git', args, { cwd: root, encoding: 'utf8' });
@@ -172,7 +173,7 @@ async function main() {
     await client.send('Page.addScriptToEvaluateOnNewDocument',{source:`(() => {
       const theme = new URLSearchParams(location.search).get('theme') || 'modern-heirloom';
       const settings = JSON.parse(localStorage.getItem('appSettings') || '{}');localStorage.setItem('appSettings',JSON.stringify({...settings,themeId:theme}));
-      Object.defineProperty(window,'indexedDB',{value:undefined,configurable:true});Object.defineProperty(navigator,'serviceWorker',{value:undefined,configurable:true});
+      if(!${JSON.stringify(packageLabel)})Object.defineProperty(window,'indexedDB',{value:undefined,configurable:true});Object.defineProperty(navigator,'serviceWorker',{value:undefined,configurable:true});
       if(navigator.mediaDevices)Object.defineProperty(navigator.mediaDevices,'getUserMedia',{value:()=>Promise.reject(Error('Camera disabled in isolated review')),configurable:true});
     })()`});
     const evaluate=async expression=>{const r=await client.send('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(r.exceptionDetails)throw Error(JSON.stringify(r.exceptionDetails));return r.result.value;};
@@ -199,7 +200,7 @@ async function main() {
     };
     // Remaining visual/flow steps live in the helper below for resumability.
     const checks = require('./lib/grading-user-review-checks.cjs');
-    const run = buttonContrast ? checks.runButtonContrast : lightTheme ? checks.runLightTheme : concise ? checks.runConcise : checks;
+    const run = packageLabel ? require('./lib/package-label-review-checks.cjs') : buttonContrast ? checks.runButtonContrast : lightTheme ? checks.runLightTheme : concise ? checks.runConcise : checks;
     await run({records,client,evaluate,until,click,input,capture,open,output,progress,wait,exceptions,consoleErrors,base});
   } finally {
     fs.writeFileSync(path.join(output,'browser-errors.json'),JSON.stringify({exceptions,consoleErrors},null,2));

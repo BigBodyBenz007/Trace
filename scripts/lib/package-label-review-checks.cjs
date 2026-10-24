@@ -1,0 +1,51 @@
+const fs=require('node:fs'),path=require('node:path'),assert=require('node:assert/strict');
+module.exports=async function run(c){
+ const {records,client,evaluate,until,click,input,capture,open,output,progress,wait}=c;
+ const r={evidence:'Captured lookup fixture, constructed test image, real App/IndexedDB/save flow; not a live lookup',screenshots:[],checks:[]};
+ const persist=()=>fs.writeFileSync(path.join(output,'package-label-result.json'),JSON.stringify(r,null,2));
+ const panel=require(path.resolve(__dirname,'../../src/data/questSpamManufacturerLabels.json'))[0];
+ const quest=records.find(x=>x.id==='quest');
+ const field=(name,value)=>evaluate("(function(){var l=Array.from(document.querySelectorAll('.trace-package-label label')).find(l=>l.firstChild.textContent.trim()==="+JSON.stringify(name)+");if(!l)throw Error('Missing field');var e=l.querySelector('input,textarea');Object.getOwnPropertyDescriptor((e.tagName==='TEXTAREA'?HTMLTextAreaElement:HTMLInputElement).prototype,'value').set.call(e,"+JSON.stringify(String(value))+");e.dispatchEvent(new Event('input',{bubbles:true}));e.dispatchEvent(new Event('change',{bubbles:true}));})()");
+ const shot=async name=>{r.screenshots.push(await capture(name));persist();};
+ progress({phase:'package-label-mobile'});await client.send('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});await open(quest);
+ await shot('mobile-before.png');await click('Use my package label');await shot('mobile-editor.png');
+ assert.equal(await evaluate("document.querySelectorAll('.trace-package-label input[capture=environment]').length"),4);
+ const lines=['CONSTRUCTED TEST PANEL','Nutrition Facts','Serving size 1 bar (60g)','Calories '+panel.nutrients.calories,'Total Fat '+panel.nutrients.fat+'g',
+ 'Saturated Fat '+panel.nutrients.saturatedFat+'g','Sodium '+panel.nutrients.sodium+'mg','Total Carbohydrate '+panel.nutrients.carbohydrates+'g',
+ 'Dietary Fiber '+panel.nutrients.fiber+'g','Total Sugars '+panel.nutrients.totalSugar+'g','Includes '+panel.nutrients.addedSugar+'g Added Sugars','Protein '+panel.nutrients.protein+'g'];
+ const png=await evaluate("(function(){var c=document.createElement('canvas');c.width=1100;c.height=1250;var x=c.getContext('2d');x.fillStyle='white';x.fillRect(0,0,c.width,c.height);x.fillStyle='black';x.font='bold 42px Arial';"+JSON.stringify(lines)+".forEach((t,i)=>x.fillText(t,30,70+i*90));return c.toDataURL('image/png').split(',')[1];})()");
+ const image=path.join(output,'constructed-test-panel.png');fs.writeFileSync(image,Buffer.from(png,'base64'));
+ await evaluate("document.querySelector('.trace-package-label details').open=true");
+ const doc=await client.send('DOM.getDocument');const fileInput=await client.send('DOM.querySelector',{nodeId:doc.root.nodeId,selector:'.trace-package-label__photo input[type=file]'});
+ await client.send('DOM.setFileInputFiles',{nodeId:fileInput.nodeId,files:[image]});
+ await until("Array.from(document.querySelectorAll('button')).some(b=>b.textContent==='Read Nutrition Facts on device'&&!b.disabled)");
+ await shot('mobile-photo.png');await click('Read Nutrition Facts on device');
+ for(let i=0;i<800;i++){if(await evaluate("!Array.from(document.querySelectorAll('button')).find(b=>b.textContent==='Read Nutrition Facts on device').disabled"))break;await wait(100);}
+ r.ocr=await evaluate("({status:document.querySelector('.trace-package-label [role=status]').textContent,error:document.querySelector('.trace-package-label [role=alert]')?.textContent||null,text:document.querySelector('.trace-package-label pre')?.textContent||null})");persist();
+ assert(!r.ocr.error,'On-device OCR: '+r.ocr.error);assert(r.ocr.text?.includes(String(panel.nutrients.calories)));
+ await click('Use OCR draft in fields');
+ r.ocr.prefilled=await evaluate("Object.fromEntries(Array.from(document.querySelectorAll('.trace-package-label__grid label')).map(l=>[l.firstChild.textContent.trim(),l.querySelector('input,select')?.value]))");assert.equal(r.ocr.prefilled['Sodium (mg)'],'220');assert.equal(r.ocr.prefilled['Calories (kcal)'],'190');persist();await evaluate("document.querySelector('.trace-package-label details').open=false");
+ for(const [k,v]of Object.entries({'Product name':panel.identity.name,Brand:panel.identity.brand,'Flavor / variant (or Plain)':'Constructed test edition','Package size / identity':panel.identity.packageQuantity,'Serving description':panel.serving.description,'Declared quantity':panel.serving.amount}))await field(k,v);
+ const names={calories:'Calories (kcal)',protein:'Protein (g)',carbohydrates:'Carbohydrates (g)',fat:'Total fat (g)',fiber:'Fiber (g)',sodium:'Sodium (mg)',totalSugar:'Total sugars (g)',addedSugar:'Added sugars (g)',saturatedFat:'Saturated fat (g)'};
+ for(const[k,v]of Object.entries(panel.nutrients))if(names[k])await field(names[k],v);
+ await field('Ingredient declaration',panel.ingredients.text);
+ await evaluate("Array.from(document.querySelectorAll('.trace-package-label label')).find(l=>l.textContent.includes('I checked this ingredient')).querySelector('input').click()");
+ await evaluate("Array.from(document.querySelectorAll('.trace-package-label label')).find(l=>l.textContent.includes('I checked the product')).querySelector('input').click()");
+ await evaluate("document.querySelector('.trace-barcode-dialog__content').scrollTop=document.querySelector('.trace-barcode-dialog__content').scrollHeight");await shot('mobile-confirmation.png');
+ await click('Save my label');await until("!document.querySelector('.trace-package-label')");
+ r.personal=await evaluate("JSON.parse(localStorage.getItem('personalPackageLabels'))[0]");assert.equal(r.personal.nutrients.sodium,220);assert.equal(r.personal.photos.length,1);
+ await evaluate("document.querySelector('.trace-barcode-dialog__content').scrollTop=0");await shot('mobile-personal-review.png');
+ await click('Use This Food');await until("Array.from(document.querySelectorAll('label')).some(l=>l.textContent.trim().startsWith('Number of servings'))");
+ const quantitySelector=await evaluate("(function(){var e=Array.from(document.querySelectorAll('label')).find(l=>l.textContent.trim().startsWith('Number of servings')).querySelector('input');e.id='package-label-test-quantity';return '#'+e.id;})()");
+ await input(quantitySelector,'1.25');assert.equal(await evaluate("document.querySelector('input[aria-label=\"Sodium (mg)\"]').value"),'275');
+ await click('Save Entry');await until("JSON.parse(localStorage.getItem('nutritionEntries')||'[]').length===1");
+ r.entry=await evaluate("JSON.parse(localStorage.getItem('nutritionEntries'))[0]");assert.equal(r.entry.sodium,275);assert.equal(r.entry.foodReference.personalLabel.nutrients.sodium,220);
+ await client.send('Page.reload',{ignoreCache:true});await until("Boolean(document.querySelector('.trace-home-page h1'))");await click('Nutrition');
+ await until("Array.from(document.querySelectorAll('button')).some(b=>b.textContent.trim()==='Edit')");await click('Edit');
+ assert.equal(await evaluate("document.querySelector('input[aria-label=\"Sodium (mg)\"]').value"),'275');r.checks.push('review -> 1.25 servings -> save -> reload -> reopen');
+ await open(quest);assert(await evaluate("document.querySelector('[aria-label=\"Barcode product review\"]').textContent.includes('Your confirmed label')"));r.checks.push('remembered correction after reload');
+ await client.send('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+ await evaluate("document.querySelector('[aria-label=\"Why this score\"]').open=true");await shot('desktop-details.png');
+ r.layout=await evaluate("({overflow:document.documentElement.scrollWidth>innerWidth,buttons:Array.from(document.querySelectorAll('.trace-barcode-dialog__footer button')).map(b=>({text:b.textContent,disabled:b.disabled,rect:b.getBoundingClientRect().toJSON()}))})");assert(!r.layout.overflow);
+ assert.equal(c.exceptions.length,0);assert.equal(c.consoleErrors.length,0);r.success=true;persist();progress({phase:'package-label-visual-complete',output});console.log(JSON.stringify({output,checks:r.checks,ocr:r.ocr.status}));
+};

@@ -728,7 +728,7 @@ test("schema 9 backs up and restores a pending recording with its draft ownershi
     storage: makeStorage({ timeCapsuleDraft: JSON.stringify(draft) }),
     openDatabase: async () => makeDatabaseWithMedia([], [media]),
   });
-  expect(created.schemaVersion).toBe(9);
+  expect(created.schemaVersion).toBe(TRACE_BACKUP_SCHEMA_VERSION);
   expect(created.data.structured.timeCapsuleDraft).toEqual(draft);
   expect(created.integrity.media.count).toBe(1);
   const destination = makeStorage();
@@ -784,8 +784,8 @@ test("legacy schema 9 drafts remain absent of pending state, with integrity chec
 test("schema 8 validates with its historical manifest and restores empty capsule domains", async () => {
   const current = await createTraceBackup({ storage: makeStorage(), openDatabase: async () => makeDatabaseWithMedia() });
   const structured = cloneJsonForTest(current.data.structured);
-  ["timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].forEach((key) => delete structured[key]);
-  const domains = TRACE_STORAGE_KEYS.filter((key) => !["timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key));
+  ["personalPackageLabels", "timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].forEach((key) => delete structured[key]);
+  const domains = TRACE_STORAGE_KEYS.filter((key) => !["personalPackageLabels", "timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key));
   const schemaEight = {
     ...current,
     schemaVersion: 8,
@@ -1688,9 +1688,10 @@ test("imports and restores an integrity-protected schema-5 backup without workou
   delete structured.timeCapsules;
   delete structured.timeCapsuleDraft;
   delete structured.timeCapsuleReminders;
+  delete structured.personalPackageLabels;
   structured.nutritionEntries[0].portion.amount = "0.5";
   const schemaFiveKeys = TRACE_STORAGE_KEYS.filter((key) =>
-    !["workoutTemplates", "memoryDraft", "formDrafts", "timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key)
+    !["personalPackageLabels", "workoutTemplates", "memoryDraft", "formDrafts", "timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key)
   );
   const schemaFive = {
     ...current,
@@ -1736,7 +1737,8 @@ test("imports schema 6 without an unfinished Memory draft and clears any current
   delete structured.timeCapsules;
   delete structured.timeCapsuleDraft;
   delete structured.timeCapsuleReminders;
-  const schemaSixKeys = TRACE_STORAGE_KEYS.filter((key) => !["memoryDraft", "formDrafts", "timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key));
+  delete structured.personalPackageLabels;
+  const schemaSixKeys = TRACE_STORAGE_KEYS.filter((key) => !["personalPackageLabels", "memoryDraft", "formDrafts", "timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key));
   const schemaSix = {
     ...current,
     schemaVersion: 6,
@@ -1782,7 +1784,8 @@ test("imports schema 7 without unfinished form drafts and clears current drafts"
   delete structured.timeCapsules;
   delete structured.timeCapsuleDraft;
   delete structured.timeCapsuleReminders;
-  const schemaSevenKeys = TRACE_STORAGE_KEYS.filter((key) => !["formDrafts", "timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key));
+  delete structured.personalPackageLabels;
+  const schemaSevenKeys = TRACE_STORAGE_KEYS.filter((key) => !["personalPackageLabels", "formDrafts", "timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key));
   const schemaSeven = {
     ...current,
     schemaVersion: 7,

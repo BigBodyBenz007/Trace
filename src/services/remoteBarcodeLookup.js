@@ -1,3 +1,4 @@
+import { readPersonalLabels, personalLabelsFor } from './personalPackageLabels';
 import { lookupCatalogFoodByBarcode } from "./barcodeFoodLookup";
 import { canonicalGtinKey, normalizeGtin } from "./productIdentifiers";
 import { createRemoteBarcodeCache } from "./remoteBarcodeCache";
@@ -208,7 +209,12 @@ export function createRemoteBarcodeLookup({
   }
 
   async function lookup(value, { assess } = {}) {
-    const preferred = await lookupPreferred(value);
+    let preferred = await lookupPreferred(value);
+    if (preferred.status === "invalid") return preferred;
+    try { preferred = personalLabelsFor(preferred, readPersonalLabels(storage)); }
+    catch (error) { preferred = {...preferred, personalLabelWarning:error.message}; }
+    // Another provider cannot confirm a private package edition.
+    if (preferred.personalLabelChoices?.length) return preferred;
     if (typeof assess !== "function" || preferred.source === "user" || preferred.status === "invalid"
       || barcodeAssessmentTier(preferred, assess) === 2) return preferred;
     const barcode = normalizeGtin(value), key = canonicalGtinKey(barcode);
