@@ -2639,6 +2639,12 @@
 :root:not([data-trace-shell-theme]),
 :root[data-trace-shell-theme="modern-heirloom"] {
   color-scheme: light;
+  --trace-timeline-background: #DCE7DF;
+  --trace-timeline-border: #C2D1C6;
+  --trace-memory-tag-background: #EAE3F3;
+  --trace-memory-tag-text: #543E69;
+  --trace-photo-count-background: #28685E;
+  --trace-photo-count-text: #FFFFFF;
   --trace-app-background-color: #F5F1E9;
   --trace-app-background: #F5F1E9;
   --trace-app-decoration: none;

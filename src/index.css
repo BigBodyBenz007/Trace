@@ -7099,7 +7099,10 @@ code {
   color: #604777 !important;
 }
 :root[data-trace-shell-theme="modern-heirloom"] .life-current-theme-swatch--modern-heirloom { background: #F5F1E9; border-color: #87948A; }
-:root[data-trace-shell-theme="modern-heirloom"] .life-current-theme--modern-heirloom { background: var(--trace-app-background); }
+:root[data-trace-shell-theme="modern-heirloom"] .life-current-theme--modern-heirloom {
+  background: var(--trace-timeline-background);
+  outline-color: var(--trace-timeline-border);
+}
 :root[data-trace-shell-theme="modern-heirloom"] :is(.trace-memory-editor__field, .trace-feature-page--journal .journal-paper textarea) {
   background: var(--trace-input-bg);
   border-color: var(--trace-input-border);
@@ -7211,3 +7214,14 @@ code {
 :root[data-trace-shell-theme="modern-heirloom"] .trace-settings-button::before { content: "\2699\fe0e"; font-size: 20px; }
 :root[data-trace-shell-theme="modern-heirloom"] .trace-water__units button:not([aria-pressed="true"]) { color: var(--trace-text); }
 :root[data-trace-shell-theme="modern-heirloom"] .trace-feature-page .trace-search-result { color: var(--trace-text) !important; }
+
+/* Memory-only accents; leave illustrated timelines and all other themes intact. */
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-memory-card__category, .trace-memory-detail__category) {
+  background: var(--trace-memory-tag-background) !important;
+  border-color: var(--trace-memory-tag-background);
+  color: var(--trace-memory-tag-text) !important;
+}
+:root[data-trace-shell-theme="modern-heirloom"] .trace-timeline-photo-overflow {
+  background: var(--trace-photo-count-background) !important;
+  color: var(--trace-photo-count-text) !important;
+}

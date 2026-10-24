@@ -1335,6 +1335,7 @@ function HomePage({
                     >
                       {memory.categories.slice(0, 2).map((category) => (
                         <span
+                          className="trace-memory-card__category"
                           key={category}
                           style={{
                             background: "#374151",
