@@ -4559,6 +4559,7 @@ code {
 }
 
 .trace-nutrition-goals-disclosure {
+  margin-top: var(--trace-space-3);
   max-width: 700px;
   text-align: left;
   width: 100%;
