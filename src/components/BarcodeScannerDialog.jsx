@@ -14,6 +14,7 @@ import {
   webAppLifecycleAdapter,
 } from "../services/appLifecycleAdapter";
 import { acquireDocumentScrollLock } from "../services/documentScrollLock";
+import { createPersonalPackageLabelDraft } from '../services/personalPackageLabelCandidate';
 import PersonalPackageLabelEditor, { LabelPhoto } from './PersonalPackageLabelEditor';
 import { personalLabelsFor, readPersonalLabels, removePersonalLabel } from '../services/personalPackageLabels';
 import GroceryFoodForm from "./GroceryFoodForm";
@@ -440,6 +441,7 @@ export default function BarcodeScannerDialog({
   function chooseLabel(profile) {
     setCandidate(createBarcodeNutritionCandidate({...lookupResult, ...(profile?.providerObservation ? {food:profile.providerObservation,status:"found"} : {}), personalLabel:profile}));
     setLabelEditor(null);
+    setErrorMessage(profile ? "" : (LOOKUP_MESSAGES[lookupResult?.status] || ""));
   }
   function savedLabel(profile) {
     setLabelChoices(readPersonalLabels().filter(p=>p.status==="active" && p.barcode.replace(/^0+/,"")===lookupIdentifier.value.replace(/^0+/,"")));
@@ -449,6 +451,7 @@ export default function BarcodeScannerDialog({
     try { removePersonalLabel(candidate.personalLabel.id);
       setLabelChoices(labelChoices.filter(p=>p.id!==candidate.personalLabel.id));
       setCandidate(createBarcodeNutritionCandidate({...lookupResult,personalLabel:undefined}));
+      setErrorMessage(lookupResult?.food ? "" : LOOKUP_MESSAGES[lookupResult?.status] || LOOKUP_MESSAGES.unavailable);
       setMessage("Personal correction removed from future scans. Previous entries and label history are unchanged.");
     } catch(error) { setErrorMessage(error.message); }
   }
@@ -615,6 +618,13 @@ export default function BarcodeScannerDialog({
     </div>
   );
 
+  const savedPackageChooser = labelChoices.length > 0 && <details className="trace-package-label-evidence"><summary>{candidate?.personalLabel ? "Your saved package labels" : "Choose your saved package version"}</summary>
+              <p>Package editions can share a barcode. Choose the label matching your package. Labels stay on this device.</p>
+              {labelChoices.map(p=><button type="button" key={p.id} onClick={()=>chooseLabel(p)}>Use {p.variant} / {p.packageDescription} / {new Date(p.confirmedAt).toLocaleDateString()}</button>)}
+              <button type="button" onClick={()=>setLabelEditor({newVersion:true})}>Add another package version</button>
+              {lookupResult?.food && <button type="button" onClick={()=>chooseLabel(undefined)}>Use provider information for this scan</button>}
+            </details>;
+
   return (
     <div className="trace-barcode-dialog__backdrop">
       <section
@@ -764,13 +774,17 @@ export default function BarcodeScannerDialog({
         </div>
         {errorMessage && <p className="trace-barcode-dialog__error" role="alert">{errorMessage}</p>}
 
-        {!candidate && !recovery && lookupIdentifier && !lookingUp && errorMessage
+        {!candidate && !recovery && !labelEditor && lookupIdentifier && !lookingUp && errorMessage
           && errorMessage !== LOOKUP_MESSAGES.invalid && (
+          <div className="trace-package-label-evidence">
+          <button type="button" onClick={()=>setLabelEditor({newVersion:true})}>Use my package label</button>
+          {savedPackageChooser}
           <button onClick={beginRecovery} type="button">
             {errorMessage === LOOKUP_MESSAGES["not-found"]
               ? "Create This Food"
               : "Create This Food Manually"}
           </button>
+          </div>
         )}
 
         {recovery && (
@@ -787,8 +801,8 @@ export default function BarcodeScannerDialog({
           />
         )}
 
-        {labelEditor && <PersonalPackageLabelEditor key={labelEditor.newVersion ? "new" : candidate.personalLabel?.id || "first"}
-          candidate={labelEditor.newVersion ? candidate.originalCandidate || candidate : candidate}
+        {labelEditor && <PersonalPackageLabelEditor key={labelEditor.newVersion ? "new" : candidate?.personalLabel?.id || "first"}
+          candidate={(labelEditor.newVersion ? candidate?.originalCandidate || candidate : candidate) || createPersonalPackageLabelDraft(lookupIdentifier)}
           lookupResult={lookupResult} identifier={lookupIdentifier} onCancel={()=>setLabelEditor(null)} onSaved={savedLabel} />}
         {candidate && !recovery && !labelEditor && (
           <article className="trace-barcode-dialog__product" aria-label="Barcode product review">
@@ -796,12 +810,7 @@ export default function BarcodeScannerDialog({
               {candidate.canUse ? "Ready to review" : "Review required"}
             </p>
             <h3>{grading ? grading.getBarcodeReviewName(candidate) : [candidate.display.brand, candidate.display.name].filter(Boolean).join(" · ")}</h3>
-            {labelChoices.length > 0 && <details className="trace-package-label-evidence"><summary>{candidate.personalLabel ? "Your saved package labels" : "Choose your saved package version"}</summary>
-              <p>Package editions can share a barcode. Choose the label matching your package. Labels stay on this device.</p>
-              {labelChoices.map(p=><button type="button" key={p.id} onClick={()=>chooseLabel(p)}>Use {p.variant} / {p.packageDescription} / {new Date(p.confirmedAt).toLocaleDateString()}</button>)}
-              <button type="button" onClick={()=>setLabelEditor({newVersion:true})}>Add another package version</button>
-              <button type="button" onClick={()=>chooseLabel(undefined)}>Use provider information for this scan</button>
-            </details>}
+            {savedPackageChooser}
             {grading && <grading.default candidate={candidate} identifier={lookupIdentifier} />}
             {!grading && candidate.display.packageQuantity && <p>Package: {candidate.display.packageQuantity}</p>}
             {!grading && candidate.display.servingsPerContainer !== null

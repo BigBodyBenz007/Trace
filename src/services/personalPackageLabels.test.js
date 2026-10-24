@@ -111,3 +111,18 @@ test('constructed milk classification preserves the existing zero-versus-unknown
  expect(mass.result.normalized.originalBasis.unit).toBe('g');
  expect(mass.result.comparison.energyRule).not.toBe('milk food-energy ramp per 100 mL');
 });
+
+test.each(['not-found','unavailable','offline'])('provider-free label keeps %s separate from user confirmation',status=>{
+ const p=profile({providerObservation:null});
+ const missing={status,identifier:lookup().identifier,food:null,personalLabel:p};
+ const c=createBarcodeNutritionCandidate(missing);
+ expect(c.canUse).toBe(true);expect(c.selection.nutrients.sodium).toBe(340);
+ expect(c.selection.remote.provider.id).toBe('personal-label');
+ expect(c.display.sourceUrl).toBeNull();
+ expect(c.originalCandidate.display.nutrients.sodium).toBeNull();
+ expect(assessBarcodeNutrition(c,missing.identifier).evidence.market.exactUsFormulationVerified).toBe(false);
+ const restored=personalLabelsFor({...missing,personalLabel:undefined},[p]);
+ expect(restored.status).toBe(status);expect(restored.food).toBeNull();
+ expect(restored.personalLabel).toBeUndefined();expect(restored.personalLabelChoices).toHaveLength(1);
+ expect(createBarcodeNutritionCandidate({...restored,personalLabel:p}).selection.nutrients.sodium).toBe(340);
+});

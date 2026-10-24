@@ -4,7 +4,7 @@ import { getNutritionAssessmentQuality, normalizeNutritionAssessmentInputs } fro
 import { resolveVerifiedNutritionCorrection } from "./verifiedProductNutritionCorrections";
 import { findSodiumSaltConflicts } from "./sodiumSaltEvidence";
 
-import { applyPersonalPackageLabel } from './personalPackageLabelCandidate';
+import { applyPersonalPackageLabel, createPersonalPackageLabelDraft } from './personalPackageLabelCandidate';
 
 const REQUIRED_NUTRIENTS = ["calories", "protein", "carbohydrates", "fat"];
 const SAFE_REMOTE_BASIS_KINDS = new Set([
@@ -242,7 +242,10 @@ function localCandidate(result) {
 // The explicit opt-out is for retrospective source-only research replays.
 // Normal lookup/selection always applies reviewed fact corrections.
 export function createBarcodeNutritionCandidate(result, { applyVerifiedCorrections = true } = {}) {
-  if (!result || !["found", "incomplete"].includes(result.status) || !result.food) return null;
+  if (!result) return null;
+  if (!["found", "incomplete"].includes(result.status) || !result.food) {
+    return result.personalLabel ? applyPersonalPackageLabel(createPersonalPackageLabelDraft(result.identifier),result.personalLabel,result.identifier) : null;
+  }
   const candidate = result.food.sourceType === "remote-barcode"
     ? remoteCandidate(result, applyVerifiedCorrections)
     : localCandidate(result);

@@ -2,6 +2,16 @@ import { validatePersonalLabel, LABEL_NUTRIENTS, labelMeasurement } from './pers
 import { canonicalGtinKey } from './productIdentifiers';
 import { immutableCopy } from './remoteFoodModel';
 
+// No provider identity or nutrients are fabricated when lookup supplies no panel.
+export function createPersonalPackageLabelDraft(identifier) {
+  if (!canonicalGtinKey(identifier?.value)) return null;
+  return immutableCopy({status:'incomplete',canUse:false,selection:null,
+    display:{name:'',brand:'',packageQuantity:null,servingDescription:'',servingsPerContainer:null,
+      nutrients:Object.fromEntries(LABEL_NUTRIENTS.map(k=>[k,null])),ingredients:{status:'unknown',text:null,language:null},
+      additives:{status:'unknown',items:[]},sourceUrl:null,attribution:'No provider panel available',
+      unknownFields:LABEL_NUTRIENTS.map(k=>'nutrients.'+k)}});
+}
+
 // A private, whole serving panel. No old nutrition conflict or manufacturer
 // verification is transferred onto the user's independently entered edition.
 export function applyPersonalPackageLabel(candidate, profile, identifier) {

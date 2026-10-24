@@ -73,3 +73,44 @@ test('a confirmed label with unknown sodium saves/reopens unknown rather than ze
  const saved=readNutritionEntries(localStorage).entries[0];expect(saved.sodium).toBeNull();
  view.unmount();view=render(<NutritionPage {...props} nutritionEntries={[saved]}/>);fireEvent.click(screen.getByRole('button',{name:'Edit'}));expect(sodium()).toHaveValue(null);view.unmount();
 },15000);
+
+test.each(['not-found','unavailable','offline'])('package label can be confirmed, selected and saved without a %s provider panel',async status=>{
+ const barcode='00000000000000';
+ const result={status,identifier:{scheme:'gtin',value:barcode},food:null};
+ const service={lookup:jest.fn(async()=>result)};
+ const props={onBack:jest.fn(),nutritionEntries:[],nutritionGoals:{},saveNutritionEntry:e=>appendNutritionEntry(localStorage,e,{createId:()=> 'provider-free-entry'}).status==='saved',
+  updateNutritionEntry:jest.fn(),deleteNutritionEntry:jest.fn(),saveNutritionGoals:jest.fn(),barcodeLookupService:service,
+  lifecycleAdapter:{subscribe:()=>()=>{}},buttonStyle:{},inputStyle:{},containerStyle:{}};
+ let view=render(<NutritionPage {...props}/>);
+ const scan=async()=>{fireEvent.click(screen.getByRole('button',{name:'Scan Barcode'}));fireEvent.change(screen.getByLabelText('Enter barcode manually'),{target:{value:barcode}});fireEvent.click(screen.getByRole('button',{name:'Look Up Barcode'}));await screen.findByRole('button',{name:'Use my package label'});};
+ await scan();
+ fireEvent.click(screen.getByRole('button',{name:'Use my package label'}));
+ const form=within(screen.getByRole('form',{name:'Your package label'}));
+ expect(form.getAllByLabelText('Take photo')).toHaveLength(4);
+ expect(form.getByLabelText('Calories (kcal)')).toHaveValue(null);
+ for(const[label,value]of Object.entries({'Product name':'Constructed package without provider','Brand':'Synthetic test','Flavor / variant (or Plain)':'Plain','Package size / identity':'1 test package','Serving description':'1 portion (65 g)','Declared quantity':'65','Calories (kcal)':'190','Protein (g)':'6','Carbohydrates (g)':'33','Total fat (g)':'3','Sodium (mg)':'340'}))fireEvent.change(form.getByLabelText(label),{target:{value}});
+ fireEvent.change(form.getByLabelText('Declared unit'),{target:{value:'g'}});
+ fireEvent.click(form.getByRole('checkbox',{name:/I checked the product/}));
+ fireEvent.click(form.getByRole('button',{name:'Save my label'}));
+ await screen.findByRole('article',{name:'Barcode product review'});
+ expect(readPersonalLabels()[0].providerObservation).toBeNull();
+ expect(screen.queryByText(/manufacturer label/i)).not.toBeInTheDocument();
+ fireEvent.click(screen.getByRole('button',{name:'Use This Food'}));
+ expect(screen.getByLabelText('Calories',{selector:'input[aria-label="Calories"]'})).toHaveValue(190);
+ fireEvent.change(screen.getByLabelText('Number of servings'),{target:{value:'0.5'}});
+ fireEvent.click(screen.getByRole('button',{name:'Save Entry'}));
+ await waitFor(()=>expect(readNutritionEntries(localStorage).entries).toHaveLength(1));
+ const entry=readNutritionEntries(localStorage).entries[0];
+ expect(entry).toMatchObject({calories:95,sodium:170,addedSugar:null});
+ expect(entry.foodReference.personalLabel.barcode).toBe(barcode);
+ view.unmount();view=render(<NutritionPage {...props} nutritionEntries={[entry]}/>);
+ fireEvent.click(screen.getByRole('button',{name:'Edit'}));
+ expect(screen.getByLabelText('Sodium (mg)',{selector:'input[aria-label="Sodium (mg)"]'})).toHaveValue(170);
+ view.unmount();view=render(<NutritionPage {...props}/>);
+ await scan();
+ const choice=screen.getByText('Choose your saved package version');fireEvent.click(choice);
+ fireEvent.click(screen.getByRole('button',{name:/^Use Plain \/ 1 test package/}));
+ expect(screen.getByRole('article',{name:'Barcode product review'})).toHaveTextContent('Your confirmed label');
+ expect(screen.getByRole('button',{name:'Use This Food'})).toBeEnabled();
+ view.unmount();
+},15000);
