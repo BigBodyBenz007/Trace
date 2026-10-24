@@ -7141,12 +7141,31 @@ code {
 :root[data-trace-shell-theme="modern-heirloom"] .trace-feature-page--nutrition [style*="color: rgb(251, 191, 36)"] { color: var(--trace-warning-text) !important; }
 :root[data-trace-shell-theme="modern-heirloom"] .trace-feature-page--trophy-case,
 :root[data-trace-shell-theme="modern-heirloom"] .trace-feature-page--injection-sites { background: var(--trace-app-background); }
-:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-trophy-card, .trace-trophy-cabinet, .trace-trophy-cabinet__crown, .trace-trophy-cabinet__interior, .trace-trophy-bay, .trace-trophy-bay__label, .trace-trophy-position, .trace-trophy-plaque, .trace-trophy-detail, .trace-trophy-detail__facts > div) {
+:root[data-trace-shell-theme="modern-heirloom"] :is(.trace-trophy-card, .trace-trophy-detail, .trace-trophy-detail__facts > div) {
   background: var(--trace-surface-primary);
   border-color: var(--trace-border);
   color: var(--trace-text);
   box-shadow: var(--trace-shadow-1);
 }
+/* Keep the established cabinet materials independent of the light app chrome.
+ * Detail panels remain light; no dimensions, artwork or interactions change. */
+:root[data-trace-shell-theme="modern-heirloom"] .trace-trophy-cabinet {
+  --trace-brass: #bd9362;
+  --trace-brass-strong: #d2ad78;
+  --trace-text-muted: #b9b0a2;
+  --trace-focus: #83d8cf;
+}
+:root[data-trace-shell-theme="modern-heirloom"] .trace-trophy-plaque {
+  /* Retain the brass plaque, with readable dark text across its whole face. */
+  background: linear-gradient(145deg, #c29a62, #b58b55);
+}
+:root[data-trace-shell-theme="modern-heirloom"] .trace-trophy-detail {
+  --trace-brass: var(--trace-accent-secondary);
+  --trace-brass-strong: var(--trace-accent-secondary-strong);
+  --trace-text-muted: var(--trace-text-secondary);
+  --trace-focus: var(--trace-focus-ring);
+}
+
 :root[data-trace-shell-theme="modern-heirloom"] :is(input, textarea)::placeholder { color: var(--trace-input-placeholder); opacity: 1; }
 :root[data-trace-shell-theme="modern-heirloom"] :is(button, a, input, select, textarea, summary):focus-visible { outline: 3px solid var(--trace-focus); outline-offset: 3px; }
 :root[data-trace-shell-theme="modern-heirloom"] :is(input, select, textarea)[aria-invalid="true"] { border-color: var(--trace-error-border) !important; }
