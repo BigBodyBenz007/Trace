@@ -26,7 +26,7 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
   return <section className="trace-barcode-grade" aria-label="Experimental nutrition assessment">
     <div aria-label="Opening score summary">
       <div className="trace-barcode-grade__headline"><strong aria-label={combined == null ? 'Experimental nutrition rating' : 'Experimental overall rating'} data-unavailable={score == null}>{score == null ? 'Score unavailable' : <>{combined ?? score}<small>/100</small></>}</strong>
-        <span>{score == null ? 'Assessment unavailable' : combined == null ? 'Nutrition only' : reviewedLabel && !replacement ? 'Reference overall score' : 'Overall score'}<small>Preview</small>{overall.provisional && <small aria-label="Provisional overall score">Provisional</small>}</span></div>
+        <span>{score == null ? 'Assessment unavailable' : combined == null ? 'Nutrition only' : reviewedLabel && !replacement ? 'Reference overall score' : 'Overall score'}<small>Experimental</small>{overall.provisional && <small aria-label="Provisional overall score">Provisional</small>}</span></div>
       {factors.length > 0 && <ul aria-label="Main nutrition factors">{factors.map(factor => <li key={factor.key}>{factor.text}</li>)}</ul>}
       {(score == null || combined == null) && <p aria-label="Overall assessment status">{score == null ? assessment.reasons[0] || 'Nutrition information is incomplete.'
         : 'Nutrition-only. Additive review is incomplete.'}</p>}

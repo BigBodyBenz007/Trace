@@ -6,7 +6,7 @@ import { normalizeOpenFoodFactsAdditives } from '../services/productAdditives';
 const candidate = (text = 'ALMONDS. PEANUT FREE.', tags = []) => ({ display: {
   ingredients: { text, language: 'en' }, additives: normalizeOpenFoodFactsAdditives(tags),
   sourceUrl: 'https://example.org/synthetic-label', attribution: 'Synthetic ingredient declaration' } });
-const nutrition = nutritionScore100 => ({ nutritionScore100, grade: null, scoreReady: false });
+const nutrition = nutritionScore100 => ({ nutritionScore100, grade: null, scoreReady: true });
 const assess = (text, tags = [], n = 80) => assessOverallFoodQuality(candidate(text, tags), nutrition(n));
 
 test('percentage-decorated known ingredients support the existing provisional route without classifying unknowns', () => {
@@ -132,7 +132,7 @@ test('a valid positive SIN percentage retains identity without supplying an expo
 test.each([0, 46, 95, 100])('reviewed composition preserves %s with no bonus or inferred exposure', n => {
   const input = candidate(), before = JSON.stringify(input), result = assessOverallFoodQuality(input, nutrition(n));
   expect(result).toMatchObject({ nutritionScore100: n, overallScore100: n, additiveDeduction: 0,
-    status: 'reviewed', grade: null, scoreReady: false, scanMatchEligible: false });
+    status: 'reviewed', grade: null, scoreReady: true, scanMatchEligible: false });
   expect(result.additiveAssessment).toMatchObject({ status: 'reviewed', concernBurden: 0,
     exposure: 'unknown', originalIngredientText: input.display.ingredients.text });
   expect(result.rawOverall).toBe(n);
@@ -280,7 +280,7 @@ test('actual Teddy retains two provider groups and an overall score without an u
   const c = createBarcodeNutritionCandidate(archive.lookup), before = JSON.stringify(c);
   const r = assessOverallFoodQuality(c, nutrition(46));
   expect(r).toMatchObject({ nutritionScore100: 46, overallScore100: 46, rawOverall: 46,
-    additiveDeduction: 0, status: 'provisional', possibleRange: { min: 37, max: 46 }, grade: null, scoreReady: false });
+    additiveDeduction: 0, status: 'provisional', possibleRange: { min: 37, max: 46 }, grade: null, scoreReady: true });
   expect(r.deductions).toHaveLength(0);
   expect([...r.additiveAssessment.items.find(i => i.identifier === 'E322i').providerIdentifiers].sort()).toEqual(['en:e322', 'en:e322i']);
   expect([...r.additiveAssessment.items.find(i => i.identifier === 'E500ii').providerIdentifiers].sort()).toEqual(['en:e500', 'en:e500ii']);

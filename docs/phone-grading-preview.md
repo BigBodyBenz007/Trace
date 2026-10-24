@@ -1,3 +1,5 @@
+> Release update (2026-10-23): normal Production now intentionally exposes the reviewed experimental barcode assessment without flags. The protected Preview and relative manifest remain available. Earlier Production-hiding statements below describe the original Preview rollout, not the current release. See [the release report](food-grading-release-2026-10-23.md).
+
 # Isolated iPhone grading Preview
 
 This branch enables the existing experimental barcode review only in the existing Vercel project's **Preview** environment. It is not a consumer grading release.

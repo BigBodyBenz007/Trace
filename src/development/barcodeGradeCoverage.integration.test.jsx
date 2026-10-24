@@ -74,7 +74,7 @@ test('legacy cache evidence refresh reaches the real development review without 
   const onUseFood = await openReview(service, row.barcode);
   expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('12/100');
   expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
-  expect(screen.getByLabelText('Score details & limitations')).not.toHaveAttribute('open');
+  expect(screen.getByLabelText('Why this score')).not.toHaveAttribute('open');
   expect(screen.getByRole('button', { name: 'Ingredients' })).toHaveAttribute('aria-expanded', 'false');
   fireEvent.click(screen.getByRole('button', { name: 'Use This Food' }));
   expect(onUseFood.mock.calls[0][0].nutrients).toEqual(row.lookup.food.nutrients);
@@ -93,13 +93,13 @@ test.each(['3270190174356', '5449000214799'])(
     const nutrition = assessBarcodeNutrition(candidate, result.identifier);
     const overall = assessOverallFoodQuality(candidate, nutrition);
     expect(Number.isInteger(nutrition.nutritionScore100)).toBe(true);
-    expect(nutrition).toMatchObject({ grade: null, scoreReady: false });
+    expect(nutrition).toMatchObject({ grade: null, scoreReady: Number.isInteger(nutrition.nutritionScore100) });
     const onUseFood = await openReview(service, barcode);
     expect(screen.getByLabelText('Experimental nutrition rating'))
       .toHaveTextContent(String(nutrition.nutritionScore100) + '/100');
     expect(screen.queryByLabelText('Experimental overall rating')?.textContent ?? null)
       .toBe(overall.overallScore100 === null ? null : overall.overallScore100 + '/100');
-    expect(screen.getByLabelText('Score details & limitations')).not.toHaveAttribute('open');
+    expect(screen.getByLabelText('Why this score')).not.toHaveAttribute('open');
     fireEvent.click(screen.getByRole('button', { name: 'Use This Food' }));
     expect(onUseFood.mock.calls[0][0].nutrients).toEqual(result.food.nutrients);
     expect(JSON.stringify(row)).toBe(snapshot);
@@ -122,7 +122,7 @@ test('a real mixed-dimension soup cannot become a beverage when its reference is
   expect(onUseFood.mock.calls[0][0].nutrients).toEqual(result.food.nutrients);
 });
 
-test('a known volume reference retains established category handling despite a separate package mass', async () => {
+test('captured volume basis is retained but its sodium conflict prevents a score', async () => {
   const row = captures.find(entry => entry.barcode === '0036632011411');
   const { service } = offlineService(row, null);
   const result = await service.lookup(row.barcode);
@@ -130,8 +130,11 @@ test('a known volume reference retains established category handling despite a s
   expect(candidate.display.assessmentInputs.datasets.find(d => d.id === 'off-100g').basis).toBe('100ml');
   expect(candidate.display.assessmentInputs.serving).toContainEqual({ field: 'product_quantity_unit', value: 'g' });
   const nutrition = assessBarcodeNutrition(candidate, result.identifier);
-  expect(nutrition.evidence.category.categories).toEqual(['beverage']);
-  expect(nutrition.nutritionScore100).toBe(44);
+  expect(nutrition.evidence.nutritionConflicts).toHaveLength(3);
+  expect(nutrition.nutritionScore100).toBeNull();
+  expect(nutrition.reasons).toContain('Provider sodium and salt disagree. Sodium is unknown until resolved.');
+  expect(candidate.selection.nutrients.sodium).toBeNull();
+  expect(nutrition.scoreReady).toBe(false);
 });
 
 test('a captured percentage-decorated declaration reaches the real review as provisional, with unknown identities retained', async () => {
@@ -140,13 +143,14 @@ test('a captured percentage-decorated declaration reaches the real review as pro
   await openReview(service, row.barcode);
   expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent('8/100');
   expect(screen.getByLabelText('Provisional overall score')).toBeVisible();
-  expect(screen.getByLabelText('Score details & limitations')).not.toHaveAttribute('open');
-  expect(screen.getByLabelText('Overall assessment evidence')).toHaveTextContent('nata de coco');
+  expect(screen.getByLabelText('Why this score')).not.toHaveAttribute('open');
+  expect(screen.getByLabelText('Product additives')).toHaveTextContent('Review incomplete');
+  expect(screen.getByLabelText('Product additives')).toHaveTextContent('Unfamiliar ingredients are not automatically concerning');
 });
 
 test.each([
   ['4056489714392', 95, false], // Ordinary whole food, not a new additive safety assessment.
-  ['0021130070121', 2, true], // Fortificant identities still unresolved; nutrition unchanged.
+  ['0021130070121', 83, true], // Existing milk adjustment on captured, unverified inputs; fortificant identities remain unresolved.
   ['5449000214799', 82, true], // Same existing E338 evidence/weight, now matched in French.
   ['7755073001807', 77, true], // Explicit SIN identities retain unknown scientific weights.
   ['3036811460259', 77, true], // Available ordinary food evidence; truncation remains visible.
@@ -156,7 +160,7 @@ test.each([
   const onUseFood = await openReview(service, barcode);
   expect(screen.getByLabelText('Experimental overall rating')).toHaveTextContent(score + '/100');
   expect(Boolean(screen.queryByLabelText('Provisional overall score'))).toBe(provisional);
-  expect(screen.getByLabelText('Score details & limitations')).not.toHaveAttribute('open');
+  expect(screen.getByLabelText('Why this score')).not.toHaveAttribute('open');
   expect(screen.getByRole('button', { name: 'Ingredients' })).toHaveAttribute('aria-expanded', 'false');
   fireEvent.click(screen.getByRole('button', { name: 'Use This Food' }));
   const selected = onUseFood.mock.calls[0][0];

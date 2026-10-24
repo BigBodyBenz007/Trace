@@ -9,19 +9,19 @@ const clone = value => JSON.parse(JSON.stringify(value));
 const candidate = record => createBarcodeNutritionCandidate({ status: 'found', identifier,
   food: normalizeOpenFoodFactsProduct(record || barcodeGradingRecord(), BARCODE, RETRIEVED_AT) });
 
-test.each(['production', 'test', undefined])('production grading stays disabled in %s', environment => {
+test.each(['test', undefined])('unknown/test grading stays isolated in %s', environment => {
   expect(shouldLoadBarcodeGrading(environment, 'localhost', '?barcodeGrading=1')).toBe(false);
 });
-test('requires explicit local development opt-in', () => {
+test('normal production and development expose grading without flags', () => {
   expect(shouldLoadBarcodeGrading('development', 'localhost', '?barcodeGrading=1')).toBe(true);
-  expect(shouldLoadBarcodeGrading('development', 'remote.example', '?barcodeGrading=1')).toBe(false);
-  expect(shouldLoadBarcodeGrading('development', 'localhost', '')).toBe(false);
+  expect(shouldLoadBarcodeGrading('production', 'trace-umber.vercel.app', '')).toBe(true);
+  expect(shouldLoadBarcodeGrading('development', 'localhost', '')).toBe(true);
 });
 test('a single attributed panel yields an isolated integer without mutating logging or provider data', () => {
   const c = candidate(), before = JSON.stringify(c), result = assessBarcodeNutrition(c, identifier);
   expect(Number.isInteger(result.nutritionScore100)).toBe(true);
   expect(result.result.methodId).toBe('trace-us-practical-nutrition');
-  expect(result).toMatchObject({ grade: null, scoreReady: false, scanMatchEligible: false });
+  expect(result).toMatchObject({ grade: null, scoreReady: true, scanMatchEligible: false });
   expect(JSON.stringify(result)).not.toMatch(/"letters?":/);
   expect(JSON.stringify(c)).toBe(before);
 });
@@ -111,7 +111,7 @@ test('the actual archived Chobani catalog profile is assessed without requiring 
   expect(result.evidence.selectedDatasetId).toBe('catalog-label-serving');
   expect(result.result.normalized.nutrients.saturatedFat).toBeNull();
   expect(result.evidence.originalDataset.nutrients).toEqual(observation.lookup.food.nutrients);
-  expect(result).toMatchObject({ grade: null, scoreReady: false, scanMatchEligible: false });
+  expect(result).toMatchObject({ grade: null, scoreReady: true, scanMatchEligible: false });
   expect(result.confidence).toContain('not independently verified');
   expect(JSON.stringify(c)).toBe(before);
 });

@@ -73,8 +73,8 @@ test.each(cases)('$label: provider selection and original observations survive t
   }
   const nutrition = assessBarcodeNutrition(candidate, row.lookup.identifier);
   const overall = assessOverallFoodQuality(candidate, nutrition);
-  expect(nutrition).toMatchObject({ grade: null, scoreReady: false, scanMatchEligible: false });
-  expect(overall).toMatchObject({ grade: null, scoreReady: false });
+  expect(nutrition).toMatchObject({ grade: null, scoreReady: true, scanMatchEligible: false });
+  expect(overall).toMatchObject({ grade: null, scoreReady: true });
   expect(JSON.stringify(row.lookup)).toBe(original);
 });
 

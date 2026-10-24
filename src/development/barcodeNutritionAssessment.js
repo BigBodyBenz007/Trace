@@ -30,7 +30,7 @@ function assessCatalogProfile(candidate, identifier, base) {
   return freeze({ ...base, confidence: result.comparison?.saturatedFatBound
     ? 'Manufacturer-attributed catalog profile assessed using US zero-fat label rounding; current US formulation/package match is not independently verified.'
     : 'Existing manufacturer-attributed catalog profile; current US formulation and package match are not independently verified by this assessment.',
-    nutritionScore100: result.nutritionScore100, result, reasons: result.reasons,
+    nutritionScore100: result.nutritionScore100, scoreReady: Number.isInteger(result.nutritionScore100), result, reasons: result.reasons,
     warnings: [...result.warnings, 'Existing catalog nutrient facts are used directly; no newer assessment wrapper, barcode proof or source revision is required.'],
     evidence: { market: { claims: [], status: 'catalog-profile', exactUsFormulationVerified: false },
       selectedDatasetId: 'catalog-label-serving', originalDataset: { serving: food.serving, nutrients: food.nutrients, provenance: food.provenance },
@@ -128,7 +128,7 @@ function assessProviderBarcodeNutrition(candidate, identifier) {
   base.warnings.push(...result.warnings);
   base.evidence.assessment = { methodId: result.methodId, methodVersion: result.methodVersion,
     sugarMode: result.sugarMode ?? null, excludedNutrients: [...new Set([...excludedFromPanel, ...(result.excludedNutrients ?? [])])], source: { ...input.source } };
-  return freeze({ ...base, result, nutritionScore100: result.nutritionScore100, reasons: result.reasons });
+  return freeze({ ...base, result, nutritionScore100: result.nutritionScore100, scoreReady: Number.isInteger(result.nutritionScore100), reasons: result.reasons });
 }
 
 export function assessBarcodeNutrition(candidate, identifier) {
@@ -139,8 +139,9 @@ export function assessBarcodeNutrition(candidate, identifier) {
     ingredients: candidate.selection.remote.ingredients, additives: candidate.selection.remote.additives } } : candidate;
   const assessment = applyVerifiedNutritionToAssessment(candidate, identifier, assessProviderBarcodeNutrition(original, identifier));
   const boundary = resolveProteinSupplementBoundary(candidate);
-  if (boundary.status !== 'not-rated-category') return assessment;
+  if (boundary.status !== 'not-rated-category') return freeze({ ...assessment,
+    scoreReady: Number.isInteger(assessment.nutritionScore100) });
   return freeze({ ...assessment, ratingStatus: boundary.status, ratingBoundary: boundary,
-    nutritionScore100: null, result: null, reasons: [boundary.message],
+    nutritionScore100: null, scoreReady: false, result: null, reasons: [boundary.message],
     diagnostics: { nutrition: assessment } });
 }

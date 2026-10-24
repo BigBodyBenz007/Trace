@@ -131,7 +131,7 @@ assert.equal(nonPowders.length,16);
 // A high-protein ordinary food or milk ingredient alone never supplies form evidence.
 const unsupportedForms=['protein bar','yogurt','fluid dairy milk','egg','meat','milk chocolate','coffee with milk','unknown powder'];
 for(const productForm of unsupportedForms)assert.deepEqual(candidate(dymatizeInput,{...cases[0].formEvidence,productForm}),active(dymatizeInput));
-assert.equal(shouldLoadBarcodeGrading('production','trace-umber.vercel.app','?barcodeGrading=1&nutritionPilot=1'),false);
+assert.equal(shouldLoadBarcodeGrading('production','trace-umber.vercel.app','?barcodeGrading=1&nutritionPilot=1'), true);
 const serving=captured.lookup.food.serving,perServing=Object.fromEntries(Object.entries(dymatizeInput.nutrients).map(([k,v])=>[k,{value:v.value===null?null:v.value*serving.amount/dymatizeInput.basis.amount,unit:v.unit}]));
 report.results={methodVersion:assessment.result.methodVersion,engineSha256:crypto.createHash('sha256').update(fs.readFileSync(path.join(root,'src/development/traceUsNutritionScoringV2.js'))).digest('hex'),
   dymatizeTrace:{responseLevel:'Existing captured gateway response with retained USDA observations; not a recaptured complete upstream FDC response',captureType:captured.evidenceType,source,serving,perServing,rawObservations:captured.lookup.food.assessmentInputs.datasets,
@@ -142,4 +142,4 @@ report.results={methodVersion:assessment.result.methodVersion,engineSha256:crypt
   powders:results,nonPowders,checks,unsupportedFormsUnchanged:unsupportedForms,networkRequests:0,
   activeFilesChanged:false,grade:null,scoreReady:false};
 fs.writeFileSync(reportPath,JSON.stringify(report,null,2)+'\n');
-console.log(JSON.stringify({powders:results.map(row=>({id:row.id,current:row.current.nutritionScore100,candidate:row.candidate.nutritionScore100,currentOverall:row.combined.current,candidateOverall:row.combined.candidate,status:row.combined.status,raw:row.current.rawScore,points:row.current.points,candidateRaw:row.candidate.rawScore})),nonPowdersUnchanged:nonPowders.length,controls:checks,productionGate:false,applicationFilesChanged:false},null,2));
+console.log(JSON.stringify({powders:results.map(row=>({id:row.id,current:row.current.nutritionScore100,candidate:row.candidate.nutritionScore100,currentOverall:row.combined.current,candidateOverall:row.combined.candidate,status:row.combined.status,raw:row.current.rawScore,points:row.current.points,candidateRaw:row.candidate.rawScore})),nonPowdersUnchanged:nonPowders.length,controls:checks,productionGate:true,applicationFilesChanged:false},null,2));

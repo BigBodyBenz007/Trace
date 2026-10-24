@@ -24,7 +24,7 @@ test("captures saturated fat and complete nutrients without adding them to the l
   expect(food.nutrients).not.toHaveProperty("saturatedFat");
   expect(getNutritionAssessmentQuality(food.assessmentInputs)).toMatchObject({
     nutrientCapture: "complete", missingEssentialNutrients: [],
-    scoreReady: false, scoreReadiness: "method-not-approved",
+    scoreReady: false, scoreReadiness: "assessment-required",
   });
   expect(Object.isFrozen(food.assessmentInputs.datasets[0].observations)).toBe(true);
 });

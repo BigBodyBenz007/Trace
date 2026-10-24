@@ -38,7 +38,7 @@ test('captured bun search -> exact detail retains original observations and uses
   expect(candidate.selection.nutrients).toEqual(food.nutrients);
   expect(candidate.selection.remote.usdaDetails).toEqual(food.usdaDetails);
   const assessment = assessBarcodeNutrition(candidate, result.identifier);
-  expect(assessment.grade).toBeNull(); expect(assessment.scoreReady).toBe(false);
+  expect(assessment.grade).toBeNull(); expect(assessment.scoreReady).toBe(true);
   expect(assessment.evidence.selectedDatasetId).toBe('usda-label-serving');
   expect(assessment.result.excludedNutrients).toContain('addedSugar');
   expect(assessment.result.normalized.originalNutrients.calories).toBe(180);

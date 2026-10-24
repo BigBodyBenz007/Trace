@@ -396,3 +396,5 @@
     padding-top: 6px;
   }
 }
+
+.trace-barcode-dialog__label-notice { font-size: 0.875rem; line-height: 1.4; text-align: left; overflow-wrap: anywhere; color: inherit; }

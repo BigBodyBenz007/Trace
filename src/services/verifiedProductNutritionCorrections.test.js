@@ -17,7 +17,7 @@ test.each(['044000045586', '0044000045586', '00044000045586'])('equivalent UPC/E
   expect(c.selection.nutrients.addedSugar).toBe(7);
   expect(c.selection.remote.nutrients.addedSugar).toBe(2.1);
   expect(getAppliedVerifiedNutritionCorrection(c, lookup.identifier).product.flavor).toBe('Honey');
-  expect(assessBarcodeNutrition(c, lookup.identifier)).toMatchObject({ nutritionScore100: 20, grade: null, scoreReady: false, scanMatchEligible: false });
+  expect(assessBarcodeNutrition(c, lookup.identifier)).toMatchObject({ nutritionScore100: 20, grade: null, scoreReady: true, scanMatchEligible: false });
 });
 
 test('the complete manufacturer panel and original provider facts retain separate attribution', () => {
@@ -41,7 +41,7 @@ test('only factual inputs change: historical source score 46, current review and
   expect(current.result.rawScore).toBeCloseTo(19.650047483380824, 10);
   expect(current.evidence.originalProviderAssessment).toEqual(original);
   expect(current.result.sugarMode).toBe('addedSugar');
-  expect(assessOverallFoodQuality(c, current)).toMatchObject({ overallScore100: 20, additiveDeduction: 0, provisional: true, grade: null, scoreReady: false });
+  expect(assessOverallFoodQuality(c, current)).toMatchObject({ overallScore100: 20, additiveDeduction: 0, provisional: true, grade: null, scoreReady: true });
 });
 
 test.each([0.5, 1, 1.25, 2, 1 / 3, 2.3456789])('serving precision is retained without intermediate rounding at %s servings', quantity => {

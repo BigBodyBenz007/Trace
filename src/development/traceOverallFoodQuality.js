@@ -87,7 +87,7 @@ export function assessOverallFoodQuality(candidate, nutrition) {
   const rounded = raw === null ? null : Math.round(raw);
   const provisional = supported && additives.status === 'partial';
   const totalWeight = additives.items.reduce((sum, item) => sum + (item.concernBurden ?? 0), 0);
-  return freeze({ policy: OVERALL_POLICY, grade: null, scoreReady: false, scanMatchEligible: false,
+  return freeze({ policy: OVERALL_POLICY, grade: null, scoreReady: supported, scanMatchEligible: false,
     ...(categoryBoundary ? { ratingBoundary: nutrition.ratingBoundary } : {}),
     status: categoryBoundary ? 'not-rated-category' : !usable ? 'nutrition-unavailable' : !supported ? 'nutrition-only' : provisional ? 'provisional' : 'reviewed',
     nutritionScore100: usable ? score : null, overallScore100: rounded, provisional,

@@ -1,4 +1,5 @@
-// Branch-scoped Vercel build entry. Fail closed outside the approved Preview.
+// Existing Vercel build entry. Preserve Preview markers for diagnostics;
+// normal production and development now expose the reviewed experimental UI.
 const { spawnSync } = require('node:child_process');
 const PREVIEW_BRANCH = 'preview/iphone-food-grading-20261022';
 function gradingBuildEnvironment(env) {
@@ -11,7 +12,7 @@ function gradingBuildEnvironment(env) {
 }
 if (require.main === module) {
   const env = gradingBuildEnvironment(process.env);
-  console.log('Experimental barcode grading: ' + (env.REACT_APP_TRACE_GRADING_PREVIEW === 'true' ? 'enabled for the approved Preview branch' : 'disabled'));
+  console.log('Experimental barcode grading enabled in normal production; Preview protection is unchanged.');
   const result = spawnSync(process.execPath, [require.resolve('react-scripts/scripts/build')], { stdio: 'inherit', env });
   if (result.error) throw result.error;
   process.exitCode = result.status === null ? 1 : result.status;

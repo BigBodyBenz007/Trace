@@ -114,9 +114,12 @@ async function compile(production = false) {
   });
   if (production) {
     const modules = stats.toJson({ all: false, modules: true }).modules.map(module => module.name);
-    assert(!modules.some(name => /BarcodeNutritionReview|barcodeNutritionAssessment|traceNutritionConversion|updatedNutritionScoring|traceOverallFoodQuality|traceUsNutritionScoring|additiveScreeningPolicy/.test(name)), 'Experimental modules must be absent from production dependency graph');
-    fs.writeFileSync(path.join(output, 'production-gating.json'), JSON.stringify({ target: 'real BarcodeScannerDialog', experimentalModulesAbsent: true, modules: modules.length }, null, 2));
-    console.log('Targeted production gating passed; experimental modules absent.');
+    for (const name of ['BarcodeNutritionReview', 'barcodeNutritionAssessment', 'traceOverallFoodQuality', 'traceUsNutritionScoringV2', 'proteinSupplementBoundary']) {
+      assert(modules.some(module => module.includes(name)), 'Normal production must include ' + name);
+    }
+    assert(!modules.some(name => /publishedNutritionScoring|updatedNutritionScoring|NutritionPilot.jsx/.test(name)), 'Legacy pilot engines stay isolated');
+    fs.writeFileSync(path.join(output, 'production-gating.json'), JSON.stringify({ target: 'real BarcodeScannerDialog', experimentalModulesPresent: true, modules: modules.length }, null, 2));
+    console.log('Targeted release check passed; reviewed assessment present and legacy pilots isolated.');
   }
 }
 

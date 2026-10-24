@@ -80,13 +80,13 @@ test.each(panels)('exact manufacturer evidence replaces one coherent panel: $ide
   expect(nutrition.result.normalized.originalBasis).toMatchObject({ amount: panel.serving.amount, unit: 'g' });
   expect(nutrition.evidence.originalProviderAssessment).toEqual(oldNutrition);
   expect(nutrition.evidence.reviewedManufacturerLabel).toEqual(panel);
-  expect(nutrition).toMatchObject({ grade: null, scoreReady: false, scanMatchEligible: false });
+  expect(nutrition).toMatchObject({ grade: null, scoreReady: true, scanMatchEligible: false });
   const overall = assessOverallFoodQuality(candidate, nutrition);
   expect(overall.overallScore100).toBe(panel.identity.brand === 'Quest' ? 52 : 20);
   expect(overall.additiveAssessment.source).toEqual({ url: panel.source.url, attribution: panel.source.attribution });
   expect(overall.additiveAssessment.originalIngredientText).toBe(panel.ingredients.text);
   expect(overall.additiveAssessment.items.every(item => item.providerIdentifiers.length === 0)).toBe(true);
-  expect(overall).toMatchObject({ grade: null, scoreReady: false });
+  expect(overall).toMatchObject({ grade: null, scoreReady: true });
   for (const quantity of [.5, 1, 2]) {
     const multiplied = scaleNutrition(candidate.selection.nutrients, quantity);
     NUTRITION_ENTRY_NUTRIENT_KEYS.forEach(key => expect(multiplied[key]).toBe(panel.nutrients[key] * quantity));

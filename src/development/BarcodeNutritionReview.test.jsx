@@ -24,16 +24,18 @@ async function lookup(barcode = BARCODE, options) {
   fireEvent.click(screen.getByRole('button', { name: 'Look Up Barcode' }));
   return screen.findByRole('article', { name: 'Barcode product review' }, options);
 }
-test.each(['production', 'test'])('%s runtime cannot expose grading with URL flag', async environment => {
+test.each(['test'])('%s runtime cannot expose grading with URL flag', async environment => {
   process.env.NODE_ENV = environment; dialog(jest.fn(async () => ({ status: 'found', food: food() })));
   await lookup(); expect(screen.queryByLabelText('Experimental nutrition rating')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Experimental overall rating')).not.toBeInTheDocument();
   expect(screen.queryByLabelText('Product additives')).not.toBeInTheDocument();
   expect(screen.getByRole('button', { name: 'Use This Food' })).toBeEnabled();
 });
-test('development without explicit opt-in retains original review', async () => {
-  window.history.replaceState({}, '', '/'); dialog(jest.fn(async () => ({ status: 'found', food: food() })));
-  await lookup(); expect(screen.queryByLabelText('Experimental nutrition rating')).not.toBeInTheDocument();
+test.each(['development', 'production'])('%s review exposes grading without flags', async environment => {
+  process.env.NODE_ENV = environment; window.history.replaceState({}, '', '/'); dialog(jest.fn(async () => ({ status: 'found', food: food() })));
+  await lookup(); expect(screen.getByLabelText('Experimental overall rating')).toBeVisible();
+  expect(screen.getByLabelText('Package label notice')).toBeVisible();
+  expect(screen.getByLabelText('Why this score')).not.toContainElement(screen.getByLabelText('Package label notice'));
 });
 
 test('compact review has a single fixed action set, readable name and collapsed secondary nutrition', async () => {
@@ -149,15 +151,15 @@ test('actual Teddy separates the reference score from corrected logging without 
  expect(additive).not.toHaveTextContent(/premenopausal|HR 1.48|fortification|classification|en:e322/i);
 });
 
-test.each(['development', 'production'])('manufacturer correction reaches review and Use This Food without exposing grading in %s', async environment => {
+test.each(['development', 'production'])('manufacturer correction reaches review and Use This Food with grading and separate reference attribution in %s', async environment => {
   process.env.NODE_ENV = environment;
   const archive = require('../../docs/trace-nutrition-v2-teddy-2026-10-20.json');
   const onUseFood = jest.fn(() => true);
   dialog(jest.fn(async () => archive.lookup), onUseFood);
   await lookup(archive.barcode, { timeout: 5000 });
-  expect(screen.queryByLabelText('Experimental overall rating')?.textContent || null).toBe(environment === 'development' ? '20/100' : null);
-  expect(Boolean(screen.queryByLabelText('Experimental nutrition assessment'))).toBe(environment === 'development');
-  expect(screen.queryByLabelText('Score evidence scope')?.textContent.includes('other values from provider') || false).toBe(environment === 'development');
+  expect(screen.queryByLabelText('Experimental overall rating')?.textContent || null).toBe('20/100');
+  expect(Boolean(screen.queryByLabelText('Experimental nutrition assessment'))).toBe(true);
+  expect(screen.queryByLabelText('Score evidence scope')?.textContent.includes('other values from provider') || false).toBe(true);
   expect(within(screen.getByRole('article', { name: 'Barcode product review' })).getAllByText('7 g')).toHaveLength(2);
   fireEvent.click(screen.getByRole('button', { name: 'Use This Food' }));
   const selected = onUseFood.mock.calls[0][0];
@@ -325,4 +327,25 @@ test('conflicted presentation leaves sodium unknown and logging available', () =
  expect(headline()).toHaveTextContent('Score unavailable');
  expect(screen.getByLabelText('Experimental nutrition assessment')).toHaveTextContent('Provider sodium and salt disagree');
  expect(c.selection.nutrients.sodium).toBeNull();expect(c.canUse).toBe(true);
+});
+
+// Captured provider observations, not live lookups or package verification.
+const releaseExpected = {
+  quest: { nutrition: 'Nutrition 54/100.', overall: '52/100', scope: 'Nutrition & ingredients: manufacturer label.', message: '52/100', suffix: 'Grades use the information shown.' },
+  teddy: { nutrition: 'Nutrition 20/100.', overall: '20/100', scope: 'Score: manufacturer reference. Logging: corrected sugars; other values from provider.', message: '20/100', suffix: 'This reference score uses the separately identified manufacturer reference panel.' },
+  dymatize: { nutrition: null, overall: null, scope: '', message: 'Overall rating not available for protein supplements.', suffix: 'Grades use the information shown.' },
+  conflicted: { nutrition: 'Score unavailable', overall: null, scope: '', message: 'Score unavailable', suffix: 'Grades use the information shown.' },
+};
+test.each(presentationCases)('$id: normal Production review keeps the package notice visible, with accurate score scope', async row => {
+  process.env.NODE_ENV = 'production'; window.history.replaceState({}, '', '/');
+  dialog(jest.fn(async () => row.result)); await lookup(row.code, { timeout: 5000 });
+  const notice = screen.getByLabelText('Package label notice'), expected = releaseExpected[row.id];
+  expect(notice).toBeVisible();
+  expect(notice).toHaveTextContent('Check your package label. Nutrition and ingredients come from external sources and may differ from your package.');
+  expect(notice).toHaveTextContent(expected.suffix);
+  expect(screen.getByLabelText('Experimental nutrition assessment')).toHaveTextContent(expected.message);
+  expect(screen.queryByLabelText('Experimental nutrition rating')?.textContent ?? null).toBe(expected.nutrition);
+  expect(screen.queryByLabelText('Experimental overall rating')?.textContent ?? null).toBe(expected.overall);
+  expect(screen.queryByLabelText('Score evidence scope')?.textContent ?? '').toBe(expected.scope);
+  expect(screen.getByRole('button', { name: 'Use This Food' })).toBeEnabled();
 });

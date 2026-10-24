@@ -42,10 +42,10 @@ test.each(['development', 'production'])('%s: captured conflict reaches review a
   expect(within(review).getByRole('link', {name:'Provider nutrient record'})).toHaveAttribute('href', food.provenance.sourceUrl);
   expect(within(review).getByLabelText('Sodium and salt evidence')).not.toHaveTextContent('nutriments.');
   await waitFor(() => expect(within(review).queryByLabelText('Experimental nutrition rating')?.textContent ?? null)
-    .toBe(environment === 'development' ? 'Score unavailable' : null));
+    .toBe('Score unavailable'));
   expect(within(review).queryByLabelText('Overall assessment status')?.textContent ?? null)
-    .toBe(environment === 'development' ? 'Provider sodium and salt disagree. Sodium is unknown until resolved.' : null);
-  expect(within(review).queryByLabelText('Experimental nutrition assessment') !== null).toBe(environment === 'development');
+    .toBe('Provider sodium and salt disagree. Sodium is unknown until resolved.');
+  expect(within(review).queryByLabelText('Experimental nutrition assessment') !== null).toBe(true);
   expect(fetchImpl).toHaveBeenCalledTimes(1);
   expect(screen.getByRole('button', {name: 'Use This Food'})).toBeEnabled();
   fireEvent.click(screen.getByRole('button', {name: 'Use This Food'}));

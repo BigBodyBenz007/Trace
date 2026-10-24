@@ -43,7 +43,7 @@ test.each(comparison.products.slice(0, 20))('already-normalized score replay (by
   const overall = assessOverallFoodQuality(candidate, assessment);
   expect(assessment.nutritionScore100).toBe(row.after.nutritionScore100);
   expect(overall.overallScore100).toBe(overallArchive.products.find(p => p.barcode === row.barcode).overallScore100);
-  expect(overall).toMatchObject({ grade: null, scoreReady: false });
+  expect(overall).toMatchObject({ grade: null, scoreReady: Number.isInteger(overall.overallScore100) });
   expect(JSON.stringify(candidate)).toBe(before);
   expect(JSON.stringify(observation)).toBe(original);
 });
@@ -92,7 +92,7 @@ test('corrected raw units reach real review, selection, assessment, save and reo
   const assessment = assessBarcodeNutrition(createBarcodeNutritionCandidate(lookup), lookup.identifier);
   expect(assessment.nutritionScore100).not.toBeNull();
   expect(assessment.result.normalized.originalNutrients.sodium).toBe(500);
-  expect(assessment).toMatchObject({ grade: null, scoreReady: false });
+  expect(assessment).toMatchObject({ grade: null, scoreReady: true });
 
   // Test-only memory storage. No real browser/profile/storage is opened.
   const legacy = { id: 'legacy-unit-check', name: 'Historical unit check', loggedAt: '2026-10-20T12:00:00.000Z',
@@ -149,9 +149,9 @@ test('corrected raw units reach real review, selection, assessment, save and reo
   }
 });
 
-test('production preview flags cannot enable grading', () => {
-  expect(shouldLoadBarcodeGrading('production', 'localhost', '?barcodeGrading=1&nutritionPilot=1')).toBe(false);
-  expect(shouldLoadBarcodeGrading('production', 'trace-umber.vercel.app', '?barcodeGrading=1&nutritionPilot=1')).toBe(false);
+test('normal Production grading needs no preview flag', () => {
+  expect(shouldLoadBarcodeGrading('production', 'trace-umber.vercel.app', '')).toBe(true);
+  expect(shouldLoadBarcodeGrading('production', 'trace-umber.vercel.app', '?barcodeGrading=1&nutritionPilot=1')).toBe(true);
 });
 
 test('normalized OFF units agree across review, assessment and new-entry serving multiplication', () => {

@@ -82,13 +82,7 @@ export default function BarcodeScannerDialog({
   orientation = availableScreenOrientation(),
   reducedMotion = false,
 }) {
-  const grading = (process.env.NODE_ENV === 'development'
-    || (process.env.REACT_APP_TRACE_DEPLOYMENT_ENV === 'preview'
-      && process.env.REACT_APP_TRACE_GRADING_PREVIEW === 'true'))
-    && shouldLoadBarcodeGrading(process.env.NODE_ENV, window.location.hostname, window.location.search, {
-      deploymentEnvironment: process.env.REACT_APP_TRACE_DEPLOYMENT_ENV,
-      previewEnabled: process.env.REACT_APP_TRACE_GRADING_PREVIEW,
-    })
+  const grading = shouldLoadBarcodeGrading(process.env.NODE_ENV)
     ? require('../development/BarcodeNutritionReview') : null;
   const [manualBarcode, setManualBarcode] = useState("");
   const [cameraState, setCameraState] = useState("idle");
@@ -800,6 +794,12 @@ export default function BarcodeScannerDialog({
                 </div>
               ))}
             </dl>
+            <p className="trace-barcode-dialog__label-notice" aria-label="Package label notice">
+              Check your package label. Nutrition and ingredients come from external sources and may differ from your package.{' '}
+              {grading && candidate.display.nutritionCorrection?.mode === 'nutrient-correction'
+                ? 'This reference score uses the separately identified manufacturer reference panel.'
+                : 'Grades use the information shown.'}
+            </p>
             {grading && <details className="trace-barcode-dialog__nutrition-details">
               <summary>More nutrition &amp; provider details</summary>
               <dl className="trace-barcode-dialog__nutrients">

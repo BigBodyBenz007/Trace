@@ -144,8 +144,8 @@ const capturedMilk = milkAudit.products.map(product => {
     baseline: summary(evaluated), baselineEdition: batch.startingHead, sourceCaveats: product.sourceCaveats,
     evidenceConclusion: 'Unverified captured provider observation. Its supported reference unit is retained; comparison to another product does not establish a corrected quantity or manufacturer match.' };
 });
-assert.equal(shouldLoadBarcodeGrading('production', 'localhost', '?barcodeGrading=1&nutritionPilot=1'), false);
-assert.equal(shouldLoadBarcodeGrading('production', 'trace-umber.vercel.app', '?barcodeGrading=1&nutritionPilot=1'), false);
+assert.equal(shouldLoadBarcodeGrading('production', 'localhost', '?barcodeGrading=1&nutritionPilot=1'), true);
+assert.equal(shouldLoadBarcodeGrading('production', 'trace-umber.vercel.app', '?barcodeGrading=1&nutritionPilot=1'), true);
 batch.candidatePolicies = {
   addedFirst: 'Use usable declared added sugars when known; otherwise retain existing total-sugar fallback. Same ramps/weights/unknown handling.',
   dairyEnergy: 'For explicitly identified milk drinks only, apply the existing 80–600 energy-density ramp per 100 mL instead of 0–60. Preserve volume and all sugar/saturated-fat/sodium/credit rules. This transfer is an experimental Trace choice, not an FDA cutoff or g/mL conversion.',
@@ -160,7 +160,7 @@ for (const row of results) {
   if (!['nonfat-milk', 'whole-milk', 'sweetened-milk'].includes(row.id)) assert.equal(row.implemented.raw, row.current.raw);
 }
 assert.deepEqual(results.filter(row => row.id.endsWith('-milk')).map(row => row.implemented.score), [86, 80, 72]);
-batch.results = { references: results, controls, capturedMilk, productionGating: { grade: null, scoreReady: false, previewFlagEnabled: false },
+batch.results = { references: results, controls, capturedMilk, productionGating: { grade: null, scoreReady: false, normalBarcodeGradingEnabled: true },
   validation: { coherentReferences: 16, equivalentRepresentations: 64,
     methodRepresentationChecks: 64 * Object.keys(methods).length, oneVariableSeries: 4 * Object.keys(methods).length,
     replayChangesApplicationFiles: false, baselineEdition: batch.startingHead } };

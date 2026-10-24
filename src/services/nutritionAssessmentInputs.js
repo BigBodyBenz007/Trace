@@ -223,7 +223,7 @@ function getNutritionAssessmentQuality(value, { stale = false } = {}) {
   if (!input) return freeze({ nutrientCapture: "missing", states: [value === undefined
     ? "legacy-not-captured" : "invalid-or-oversized-inputs"], marketStatus: "unknown",
     sourceDateStatus: stale ? "stale" : "undated", scoreReady: false,
-    scoreReadiness: "method-not-approved", missingEssentialNutrients: [...ESSENTIAL_PROFILE_NUTRIENTS] });
+    scoreReadiness: "assessment-required", missingEssentialNutrients: [...ESSENTIAL_PROFILE_NUTRIENTS] });
   const states = new Set();
   const records = input.datasets.map((dataset) => ({ dataset, nutrients: getAssessmentDatasetNutrients(dataset) }));
   const knownBasis = records.filter(({ dataset }) => dataset.basis !== "unknown");
@@ -272,7 +272,7 @@ function getNutritionAssessmentQuality(value, { stale = false } = {}) {
   input.limitations.forEach((entry) => states.add(entry));
   return freeze({ nutrientCapture, states: [...states], completeDatasetIds: complete.map(({ dataset }) => dataset.id),
     missingEssentialNutrients, marketStatus, sourceDateStatus,
-    scoreReady: false, scoreReadiness: "method-not-approved" });
+    scoreReady: false, scoreReadiness: "assessment-required" });
 }
 
 module.exports = { ASSESSMENT_INPUT_VERSION, MAX_ASSESSMENT_BYTES, NUTRIENT_UNITS,
