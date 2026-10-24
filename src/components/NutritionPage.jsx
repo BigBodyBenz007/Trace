@@ -388,6 +388,7 @@ function NutritionPage({
     : "");
   const [entryStatusMessage, setEntryStatusMessage] = useState("");
   const [confirmationMessage, setConfirmationMessage] = useState("");
+  const [selectedDate, setSelectedDate] = useState("");
   const [goalsExpanded, setGoalsExpanded] = useState(false);
   const [visibleEntryCount, setVisibleEntryCount] = useState(FOOD_HISTORY_BATCH_SIZE);
   const [barcodeScannerOpen, setBarcodeScannerOpen] = useState(false);
@@ -399,6 +400,7 @@ function NutritionPage({
   const nutritionPageTopRef = useRef(null);
   const todaySectionRef = useRef(null);
   const entryFormRef = useRef(null);
+  const entryDisclosureRef = useRef(null);
   const nameInputRef = useRef(null);
   const previousWaterUnitRef = useRef(waterUnit);
   const savedWaterGoalMlRef = useRef(toNutritionNumber(nutritionGoals.waterGoalMl));
@@ -545,6 +547,10 @@ function NutritionPage({
   const remainingEntryCount = Math.max(0, sortedEntries.length - visibleEntries.length);
   const nextEntryBatchCount = Math.min(FOOD_HISTORY_BATCH_SIZE, remainingEntryCount);
   const today = new Date();
+  const selectedDay = selectedDate ? new Date(`${selectedDate}T12:00:00`) : today;
+  const selectedDayIsToday = getLocalDateKey(selectedDay) === getLocalDateKey(today);
+  const selectedDayLabel = selectedDay.toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+  const dailyEntries = sortedEntries.filter(entry => getLocalDateKey(new Date(entry.loggedAt)) === getLocalDateKey(selectedDay));
   const nutritionMetrics = [
     { key: "calories", label: "Calories", unit: "" },
     { key: "protein", label: "Protein", unit: "g" },
@@ -804,6 +810,7 @@ function NutritionPage({
   }
 
   function selectFood(food) {
+    if (entryDisclosureRef.current) entryDisclosureRef.current.open = true;
     const servingOptions = food.servingOptions?.length ? food.servingOptions : [{ id: food.id, serving: food.serving, nutrients: food.nutrients, provenance: food.provenance }];
     const selectedOption = servingOptions[0];
     const selectedNutritionBasis = {
@@ -973,6 +980,7 @@ function NutritionPage({
   }
 
   function editEntry(entry) {
+    if (entryDisclosureRef.current) entryDisclosureRef.current.open = true;
     const localDateTime = getLocalDateTimeFromTimestamp(entry.loggedAt);
     const hasCalculationBasis = hasValidSavedCalculationBasis(entry);
     const entryNutritionValues = Object.fromEntries(NUTRITION_ENTRY_NUTRIENT_KEYS.map((nutrient) => [
@@ -1167,6 +1175,8 @@ function NutritionPage({
       </button>
 
       <NutritionSummary
+        selectedDate={selectedDate}
+        onDateChange={setSelectedDate}
         entries={nutritionEntries}
         goals={nutritionGoals}
         waterEntries={waterEntries}
@@ -1397,10 +1407,10 @@ function NutritionPage({
         </p>
       )}
 
-      <form
-        className="trace-feature-surface trace-feature-form trace-nutrition-entry"
-        ref={entryFormRef}
-        onSubmit={saveFood}
+      <details
+        aria-labelledby="nutrition-entry-heading"
+        className="trace-feature-surface trace-feature-form trace-nutrition-entry-disclosure"
+        ref={entryDisclosureRef}
         style={{
           background: "#1f2937",
           borderRadius: "16px",
@@ -1411,11 +1421,10 @@ function NutritionPage({
           width: "100%",
         }}
       >
-        <h2 style={{ marginTop: 0 }}>
-          {editingEntryId === null
-            ? "Add Nutrition Entry"
-            : "Edit Nutrition Entry"}
-        </h2>
+        <summary className="trace-nutrition-section-summary">
+          <h2 id="nutrition-entry-heading">{editingEntryId === null ? "Add Nutrition Entry" : "Edit Nutrition Entry"}</h2>
+        </summary>
+        <form className="trace-nutrition-entry" ref={entryFormRef} onSubmit={saveFood} style={{ paddingTop: "16px" }}>
 
         {restaurantServingOptions.length > 1 && (
           <label style={{ display: "block", marginBottom: "16px" }}>
@@ -1719,9 +1728,11 @@ function NutritionPage({
           </button>
 
         </div>
-      </form>
+        </form>
+      </details>
 
       <WaterTrackerSection
+        collapsible
         entries={waterEntries}
         unit={waterUnit}
         changeUnit={changeWaterUnit}
@@ -1732,6 +1743,38 @@ function NutritionPage({
       />
 
       <section
+        aria-labelledby="nutrition-day-log-heading"
+        className="trace-feature-surface trace-nutrition-day-log"
+        style={{ background: "#1f2937", borderRadius: "16px", marginTop: "24px", maxWidth: "700px", padding: "24px", textAlign: "left", width: "100%" }}
+      >
+        <h2 id="nutrition-day-log-heading" style={{ marginTop: 0 }}>
+          {selectedDayIsToday ? "Today's Nutrition" : `Nutrition for ${selectedDayLabel}`}
+        </h2>
+        {dailyEntries.length === 0 ? (
+          <p>{selectedDayIsToday ? "No nutrition entries logged today." : `No nutrition entries logged for ${selectedDayLabel}.`}</p>
+        ) : (
+          <div style={{ display: "grid", gap: "12px" }}>
+            {dailyEntries.map(entry => (
+              <article className="trace-data-card" key={entry.id} style={{ overflowWrap: "anywhere" }}>
+                <h3 style={{ margin: "0 0 8px" }}>{entry.name}</h3>
+                <p style={{ margin: "0 0 8px" }}>{formatNutrientValue(entry.calories, "calories")} calories</p>
+                {entry.portion?.amount != null && entry.portion.unit && (
+                  <p style={{ margin: "0 0 8px" }}>
+                    {entry.portion.amount} {entry.portion.unit}{entry.portion.basis?.description ? ` x ${entry.portion.basis.description}` : ""}
+                  </p>
+                )}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: "10px" }}>
+                  <button aria-label={`Edit ${entry.name}`} className="trace-action trace-action--secondary" type="button" onClick={() => editEntry(entry)} style={buttonStyle}>Edit</button>
+                  <button aria-label={`Delete ${entry.name}`} className="trace-action trace-action--danger" type="button" onClick={() => deleteEntry(entry.id)} style={buttonStyle}>Delete</button>
+                </div>
+              </article>
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section
+        aria-labelledby="nutrition-averages-heading"
         className="trace-feature-surface trace-nutrition-averages"
         style={{
           background: "#1f2937",
@@ -1743,7 +1786,7 @@ function NutritionPage({
           width: "100%",
         }}
       >
-        <h2 style={{ marginTop: 0 }}>Nutrition Averages</h2>
+        <h2 id="nutrition-averages-heading" style={{ marginTop: 0 }}>Nutrition Averages</h2>
 
         <div
           style={{
@@ -1790,6 +1833,7 @@ function NutritionPage({
       </section>
 
       <section
+        aria-labelledby="nutrition-history-heading"
         className="trace-feature-section trace-feature-history"
         style={{
           marginTop: "30px",
@@ -1798,7 +1842,7 @@ function NutritionPage({
           width: "100%",
         }}
       >
-        <h2>Saved Entries</h2>
+        <h2 id="nutrition-history-heading">Saved Entries</h2>
 
         {sortedEntries.length === 0 ? (
           <p style={{ color: "#bbb" }}>No food entries yet.</p>

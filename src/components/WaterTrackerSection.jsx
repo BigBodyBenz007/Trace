@@ -62,6 +62,7 @@ function convertedDraftAmount(amount, fromUnit, toUnit) {
 }
 
 export default function WaterTrackerSection({
+  collapsible = false,
   entries = [],
   unit = WATER_UNITS.OUNCES,
   changeUnit = () => false,
@@ -249,12 +250,14 @@ export default function WaterTrackerSection({
     setError("");
   }
 
+  const Container = collapsible ? "details" : "section";
   return (
-    <section className="trace-feature-surface trace-water" aria-labelledby="water-heading">
+    <Container className="trace-feature-surface trace-water" aria-labelledby="water-heading">
+      {collapsible && <summary className="trace-nutrition-section-summary"><h2 id="water-heading">Water</h2></summary>}
       <div className="trace-water__heading">
         <div>
           <p className="trace-water__eyebrow">Hydration</p>
-          <h2 id="water-heading">Water</h2>
+          {!collapsible && <h2 id="water-heading">Water</h2>}
         </div>
         <div aria-label="Water display unit" className="trace-water__units" role="group">
           {[WATER_UNITS.OUNCES, WATER_UNITS.MILLILITERS].map((option) => (
@@ -421,6 +424,6 @@ export default function WaterTrackerSection({
           </div>
         )}
       </details>
-    </section>
+    </Container>
   );
 }

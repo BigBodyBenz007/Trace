@@ -132,6 +132,8 @@ function renderNutritionPage(overrides = {}) {
   };
 
   const view = render(<NutritionPage {...props} />);
+  // Existing form/history tests explicitly expand their working sections.
+  for (const name of ["Add Nutrition Entry", "Water"]) fireEvent.click(within(screen.getByRole("group", { name })).getByRole("heading"));
   return { ...props, ...view, props };
 }
 
@@ -260,8 +262,8 @@ test("daily sugar totals distinguish complete, partial, all-unknown, and explici
 
 test("places Water directly below the food entry form", () => {
   renderNutritionPage();
-  const foodEntryForm = screen.getByRole("heading", { name: "Add Nutrition Entry" }).closest("form");
-  const waterSection = screen.getByRole("heading", { name: "Water" }).closest("section");
+  const foodEntryForm = screen.getByRole("group", { name: "Add Nutrition Entry" });
+  const waterSection = screen.getByRole("group", { name: "Water" });
 
   expect(foodEntryForm.nextElementSibling).toBe(waterSection);
 });
@@ -590,9 +592,7 @@ test("warns that sodium goal progress may be incomplete", () => {
 
 function entryForm() {
   return within(
-    screen
-      .getByRole("heading", { name: /(?:Add|Edit) Nutrition Entry/ })
-      .closest("form")
+    screen.getByRole("group", { name: /(?:Add|Edit) Nutrition Entry/ })
   );
 }
 
@@ -626,7 +626,7 @@ test("provides matching timeline navigation controls without changing draft or s
     screen.getByRole("heading", { name: "Find a Food" }),
     screen.getByRole("heading", { name: "Add Nutrition Entry" }),
     screen.getByRole("heading", { name: "Saved Entries" }),
-    screen.getByRole("heading", { name: "Logged lunch" }),
+    within(savedEntriesSection()).getByRole("heading", { name: "Logged lunch" }),
   ].forEach((content) => {
     expect(content.compareDocumentPosition(bottomNavigation) & Node.DOCUMENT_POSITION_FOLLOWING)
       .not.toBe(0);
@@ -1977,9 +1977,7 @@ test("invalid reusable serving amounts block saving with an explanation", () => 
   });
 
   fireEvent.submit(
-    screen
-      .getByRole("heading", { name: "Add Nutrition Entry" })
-      .closest("form")
+    screen.getByRole("button", { name: "Save Entry" }).form
   );
 
   expect(props.saveNutritionEntry).not.toHaveBeenCalled();
@@ -2869,7 +2867,7 @@ test("saved entry cards show known sugar and preserve explicit zero", () => {
     }],
   });
 
-  const card = screen.getByRole("heading", { name: "Sugar example" }).closest("article");
+  const card = within(savedEntriesSection()).getByRole("heading", { name: "Sugar example" }).closest("article");
   expect(card).toHaveTextContent("Total Sugar 2 g");
   expect(card).toHaveTextContent("Added Sugar 0 g");
 });

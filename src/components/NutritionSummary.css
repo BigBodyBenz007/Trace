@@ -180,3 +180,25 @@
   padding: 8px 14px !important;
   font-size: 0.9rem !important;
 }
+
+/* Native disclosures keep forms mounted without displaying them until opened. */
+.trace-nutrition-section-summary {
+  cursor: pointer;
+  min-height: 44px;
+  align-content: center;
+}
+
+.trace-nutrition-section-summary h2 {
+  display: inline;
+  margin: 0;
+}
+
+.trace-nutrition-section-summary:focus-visible {
+  outline: 3px solid var(--trace-shell-accent, currentColor);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+.trace-nutrition-day-log .trace-data-card {
+  padding: 16px;
+}

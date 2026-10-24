@@ -81,10 +81,12 @@ function ActionIcon({ scan = false }) {
   </svg>;
 }
 
-export default function NutritionSummary({ entries, goals, waterEntries, waterUnit, summaryRef, barcodeAccess, scanButtonRef, onScanBarcode, onAddFood }) {
+export default function NutritionSummary({ entries, goals, waterEntries, waterUnit, summaryRef, barcodeAccess, scanButtonRef, onScanBarcode, onAddFood, selectedDate: controlledDate, onDateChange }) {
   const [expanded, setExpanded] = useState(false);
   // An empty selection follows today, including after a laptop resumes on a later day.
-  const [selectedDate, setSelectedDate] = useState("");
+  const [localSelectedDate, setLocalSelectedDate] = useState("");
+  const selectedDate = controlledDate ?? localSelectedDate;
+  const setSelectedDate = onDateChange ?? setLocalSelectedDate;
   const today = new Date();
   const dateValue = selectedDate || localDateValue(today);
   const day = new Date(`${dateValue}T12:00:00`);
