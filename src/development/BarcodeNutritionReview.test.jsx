@@ -349,3 +349,12 @@ test.each(presentationCases)('$id: normal Production review keeps the package no
   expect(screen.queryByLabelText('Score evidence scope')?.textContent ?? '').toBe(expected.scope);
   expect(screen.getByRole('button', { name: 'Use This Food' })).toBeEnabled();
 });
+
+test('provider-free personal label states that no provider panel exists, without claiming retained external evidence',()=>{
+ const {profile}=require('../services/__fixtures__/personalPackageLabel.json');
+ const c=createBarcodeNutritionCandidate({status:'unavailable',identifier:{scheme:'gtin',value:profile.barcode},food:null,personalLabel:{...profile,providerObservation:null}});
+ render(<BarcodeNutritionReview candidate={c} identifier={{scheme:'gtin',value:profile.barcode}}/>);
+ expect(screen.getByLabelText('Score evidence scope')).toHaveTextContent('No provider panel was available.');
+ expect(screen.getByLabelText('Score evidence scope')).not.toHaveTextContent('Original provider evidence is retained');
+ expect(screen.queryByRole('link',{name:'Original provider record'})).not.toBeInTheDocument();
+});

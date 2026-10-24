@@ -34,7 +34,7 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
       {overall.deductions.length > 0 && <p aria-label="Additive deduction reasons">{overall.deductions.slice(0, 2).map(item => item.summary).join(' ')}{overall.deductions.length > 2 && ' More in Additives.'}</p>}
       <p className="trace-barcode-grade__confidence">{overall.provisional && 'Additive review incomplete. '}{confidence}</p>
     </div>
-    {personal && <p aria-label="Score evidence scope">Your confirmed nutrition{personal.ingredientsConfirmed ? ' and ingredients' : '; ingredients not confirmed for this package'}. Original provider evidence is retained separately.</p>}
+    {personal && <p aria-label="Score evidence scope">Your confirmed nutrition{personal.ingredientsConfirmed ? ' and ingredients' : '; ingredients not confirmed for this package'}. {candidate.originalCandidate?.providerUnavailable ? 'No provider panel was available.' : 'Original provider evidence is retained separately.'}</p>}
     {reviewedLabel && <p aria-label="Score evidence scope">
       {replacement ? <>Nutrition &amp; ingredients: <a href={reviewedLabel.source.url} target="_blank" rel="noreferrer noopener">manufacturer label</a>.</>
         : <>Score: manufacturer reference. Logging: <a href={reviewedLabel.source.url} target="_blank" rel="noreferrer noopener">corrected sugars</a>; other values from provider.</>}

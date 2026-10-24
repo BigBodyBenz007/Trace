@@ -631,7 +631,7 @@ export default function BarcodeScannerDialog({
         aria-describedby="trace-barcode-description"
         aria-labelledby="trace-barcode-title"
         aria-modal="true"
-        className={`trace-barcode-dialog${candidate && !recovery ? " trace-barcode-dialog--review" : ""}${grading && candidate && !recovery ? " trace-barcode-dialog--grading" : ""}${reducedMotion ? " trace-barcode-dialog--reduced-motion" : ""}`}
+        className={`trace-barcode-dialog${(candidate || labelEditor) && !recovery ? " trace-barcode-dialog--review" : ""}${grading && (candidate || labelEditor) && !recovery ? " trace-barcode-dialog--grading" : ""}${reducedMotion ? " trace-barcode-dialog--reduced-motion" : ""}`}
         data-camera-state={cameraState}
         data-orientation-layout="responsive"
         data-mobile-safe="true"
@@ -842,7 +842,7 @@ export default function BarcodeScannerDialog({
             </dl>
             <button type="button" onClick={()=>setLabelEditor({newVersion:false})}>{candidate.personalLabel ? "Edit my package label" : "Use my package label"}</button>
             {candidate.personalLabel && <div className="trace-package-label-evidence">
-              <details><summary>Your label evidence</summary><p>Confirmed {new Date(candidate.personalLabel.confirmedAt).toLocaleString()}. Device-local; not independently authenticated. Original provider observations are retained with new entries.</p>
+              <details><summary>Your label evidence</summary><p>Confirmed {new Date(candidate.personalLabel.confirmedAt).toLocaleString()}. Device-local; not independently authenticated. {candidate.originalCandidate?.providerUnavailable ? "No provider panel was available." : "Original provider observations are retained with new entries."}</p>
                 {candidate.personalLabel.photos.map(p=><LabelPhoto key={p.id} photo={p}/>)}
                 <details><summary>Original provider ingredients</summary><p>These may describe a different edition and are not used as your package declaration.</p><p>{candidate.originalCandidate?.display.ingredients?.text || "Ingredient information unavailable."}</p></details>
                 <button type="button" onClick={removeLabel}>Remove my correction from future scans</button>
