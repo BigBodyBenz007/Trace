@@ -59,6 +59,7 @@ function remoteCandidate(result, applyVerifiedCorrections) {
     ? { ...food.nutrients }
     : Object.fromEntries(NUTRITION_ENTRY_NUTRIENT_KEYS.map((key) => [key, null]));
   const providerSnapshot = immutableCopy({
+    ...(food.usdaDetails ? { usdaDetails: food.usdaDetails } : {}),
     ...ingredientFields,
     provider: food.provider,
     dataBasis: food.dataBasis,

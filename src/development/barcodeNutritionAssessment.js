@@ -94,11 +94,13 @@ function assessProviderBarcodeNutrition(candidate, identifier) {
   const reconciliation = reconcileBarcodeDatasets(input);
   base.evidence.energy = reconciliation.records.map(record => record.energyEvidence);
   base.warnings.push(...reconciliation.warnings);
-  // Select one whole reference panel, preferring explicit per-100 over derived
-  // serving/entered aliases. Do not splice nutrients or convert g to ml.
+  // USDA detail labelNutrients is the serving panel used by review/logging.
+  // Prefer it at equal completeness; OFF serving aliases may be calculated,
+  // so retain their existing reference preference. Never splice panels.
   const rank = record => ['calories', 'saturatedFat', 'sodium'].filter(key => record.nutrients[key].value !== null).length * 100
     + Number(record.nutrients.addedSugar.value !== null || record.nutrients.totalSugar.value !== null) * 100
-    + (['100g', '100ml'].includes(record.dataset.basis) ? 10 : 0);
+    + (input.source.provider === 'usda-fdc' && record.dataset.id === 'usda-label-serving' ? 20
+      : ['100g', '100ml'].includes(record.dataset.basis) ? 10 : 0);
   const records = reconciliation.records.filter(record => record.quantity
     && (category === 'oil' || record.quantity.unit === (category === 'beverage' ? 'ml' : 'g'))).sort((a, b) => rank(b) - rank(a));
   if (!records.length) return freeze({ ...base, reasons: ['A known compatible mass or volume measurement basis is missing; no density is assumed.'] });

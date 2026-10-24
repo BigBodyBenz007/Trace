@@ -55,7 +55,9 @@ function needsAssessmentRefresh(food) {
   // Refresh only captured shapes affected by the known basis/unit fixes. A
   // genuinely missing nutrient or unresolved category is not a refresh trigger.
   if (input.source.provider === "usda-fdc") {
-    return input.datasets.some(dataset => ["grm", "mlt"].includes(dataset.quantity?.unit?.toLowerCase())
+    return (food.nutritionBasis?.kind === "derived-serving"
+      && !["retrieved", "not-supplied"].includes(food.usdaDetails?.status))
+      || input.datasets.some(dataset => ["grm", "mlt"].includes(dataset.quantity?.unit?.toLowerCase())
       || (dataset.id === "usda-reference" && dataset.basis === "unknown" && unit(fields.servingSizeUnit)));
   }
   if (input.source.provider !== "open-food-facts") return false;
@@ -126,7 +128,12 @@ export function createRemoteBarcodeLookup({
       }
       rememberAttempts(barcode, result, provider);
       if (["found", "incomplete"].includes(result.status)) {
-        if (!provider) cache.set(barcode, result);
+        if (!provider) {
+          cache.set(barcode, result);
+          // We just asked the gateway for current evidence. Do not immediately
+          // refresh it again if that response still lacks optional details.
+          legacyRefreshAttempts.add(canonicalGtinKey(barcode));
+        }
         return result;
       }
       return fallback ? immutableCopy({ ...fallback, gatewayStatus: result.status,

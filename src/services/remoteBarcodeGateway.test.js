@@ -228,7 +228,8 @@ test("USDA raw ingredients survive provider lookup and browser normalization wit
   expect(normalized.provider.id).toBe("usda-fdc");
   expect(normalized.provenance.attribution).toBe("USDA FoodData Central (public domain / CC0)");
   expect(normalized.provenance.providerRecordId).toBe("100");
-  expect(fetchImpl).toHaveBeenCalledTimes(1);
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+  expect(fetchImpl.mock.calls[1][0]).toContain("api.nal.usda.gov/fdc/v1/food/");
 });
 
 test("Open Food Facts requests raw ingredients and preserves their main language, separate from allergens", async () => {
@@ -273,7 +274,8 @@ test("a ready USDA product with unknown ingredients does not trigger or merge an
   expect(result.food.ingredients.text).toBeNull();
   expect(result.food.additives).toEqual({ status: "unknown", source: "usda-fdc", sourceField: null, items: null });
   expect(result.food.provider.id).toBe("usda-fdc");
-  expect(fetchImpl).toHaveBeenCalledTimes(1);
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+  expect(fetchImpl.mock.calls[1][0]).toContain("api.nal.usda.gov/fdc/v1/food/");
 });
 
 test("ingredient names, counts, and unrelated provider fields do not invent additive identities", () => {
@@ -323,7 +325,8 @@ test("selects the newest exact USDA branded revision and rejects fuzzy results",
   });
   expect(Object.isFrozen(result)).toBe(true);
   expect(Object.isFrozen(result.food.nutrients)).toBe(true);
-  expect(fetchImpl).toHaveBeenCalledTimes(1);
+  expect(fetchImpl).toHaveBeenCalledTimes(2);
+  expect(fetchImpl.mock.calls[1][0]).toContain("api.nal.usda.gov/fdc/v1/food/");
   const [url, request] = fetchImpl.mock.calls[0];
   expect(url).toContain("api.nal.usda.gov/fdc/v1/foods/search");
   expect(request.method).toBe("POST");

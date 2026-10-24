@@ -904,6 +904,7 @@ function NutritionPage({
               ...(food.remote.assessmentInputs === undefined
                 ? {}
                 : { assessmentInputs: food.remote.assessmentInputs }),
+              ...(food.remote.usdaDetails ? { usdaDetails: food.remote.usdaDetails } : {}),
               providerNutritionBasis: {
                 dataBasis: food.remote.dataBasis,
                 serving: { ...food.remote.serving },

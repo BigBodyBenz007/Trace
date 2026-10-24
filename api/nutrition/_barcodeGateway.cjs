@@ -812,6 +812,7 @@ function withCandidateEvidence(preferred, results, providerAttempts) {
 
 async function lookupUsda({ barcode, fetchImpl, apiKey, now, timeoutMs, maxBytes }) {
   if (!textOrNull(apiKey)) return lookupResult("unconfigured", barcode);
+  const deadline = Date.now() + timeoutMs;
   const response = await fetchProviderJson({
     fetchImpl,
     url: `${USDA_SEARCH_URL}?api_key=${encodeURIComponent(apiKey)}`,
@@ -839,7 +840,41 @@ async function lookupUsda({ barcode, fetchImpl, apiKey, now, timeoutMs, maxBytes
     const food = normalizeUsdaFood(candidate, barcode, retrievedAt);
     if (food) normalized.push(lookupResult(food.logReady ? "found" : "incomplete", barcode, food));
   }
-  if (normalized.length) return withCandidateEvidence(normalized[0], normalized);
+  if (normalized.length) {
+    let preferred = normalized[0];
+    // Search omits labelNutrients. Retrieve only the preferred exact record,
+    // within the original USDA time budget; never assemble a panel field by field.
+    if (preferred.food.nutritionBasis.kind === "derived-serving") {
+      const searchFood = preferred.food;
+      const remaining = deadline - Date.now();
+      const detail = remaining > 0 ? await fetchProviderJson({
+        fetchImpl,
+        url: `https://api.nal.usda.gov/fdc/v1/food/${encodeURIComponent(searchFood.provider.recordId)}?api_key=${encodeURIComponent(apiKey)}`,
+        options: { method: "GET" }, timeoutMs: remaining, maxBytes,
+      }) : { status: "unavailable" };
+      const record = detail.data;
+      const identityMatches = detail.status === "ok"
+        && String(record?.fdcId) === searchFood.provider.recordId
+        && String(record?.dataType).toLowerCase() === "branded"
+        && canonicalGtin(record?.gtinUpc) === canonicalGtin(barcode);
+      const detailedFood = identityMatches ? normalizeUsdaFood(record, barcode, retrievedAt) : null;
+      const useDetail = detailedFood?.nutritionBasis.kind === "provider-serving"
+        && (!searchFood.logReady || detailedFood.logReady);
+      const food = {
+        ...(useDetail ? detailedFood : searchFood),
+        usdaDetails: {
+          status: useDetail ? "retrieved" : identityMatches ? "not-supplied"
+            : detail.status === "ok" ? "identity-mismatch" : "unavailable",
+          ...(useDetail ? { searchFood } : {}),
+        },
+      };
+      // Preserve the existing transport budget, including original observations.
+      if (Buffer.byteLength(JSON.stringify(food), "utf8") <= MAX_LOOKUP_EVIDENCE_BYTES - 1024) {
+        preferred = lookupResult(food.logReady ? "found" : "incomplete", barcode, deepFreeze(food));
+      }
+    }
+    return withCandidateEvidence(preferred, normalized);
+  }
   return lookupResult("not-found", barcode);
 }
 

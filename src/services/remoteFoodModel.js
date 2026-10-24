@@ -176,7 +176,7 @@ export function immutableCopy(value) {
   return value;
 }
 
-export function normalizeRemoteFood(food) {
+export function normalizeRemoteFood(food, { searchEvidence = true } = {}) {
   if (!plainObject(food)) return null;
   const identifiers = normalizeProductIdentifiers(food.identifiers);
   const providerId = food.provider?.id;
@@ -288,7 +288,20 @@ export function normalizeRemoteFood(food) {
     !== [...calculatedUnknownFields].sort().join("\n")
   ) return null;
 
+  let usdaDetails;
+  if (food.usdaDetails !== undefined) {
+    if (!searchEvidence || providerId !== "usda-fdc" || !plainObject(food.usdaDetails)
+      || !["retrieved", "not-supplied", "unavailable", "identity-mismatch"].includes(food.usdaDetails.status)) return null;
+    const searchFood = food.usdaDetails.status === "retrieved"
+      ? normalizeRemoteFood(food.usdaDetails.searchFood, { searchEvidence: false }) : null;
+    if (food.usdaDetails.status === "retrieved" && (!searchFood
+      || searchFood.provider.id !== providerId || searchFood.provider.recordId !== providerRecordId
+      || canonicalGtinKey(searchFood.identifiers[0].value) !== canonicalGtinKey(identifiers[0].value))) return null;
+    usdaDetails = { status: food.usdaDetails.status, ...(searchFood ? { searchFood } : {}) };
+  }
+
   return deepFreeze({
+    ...(usdaDetails ? { usdaDetails } : {}),
     sourceType: "remote-barcode",
     dataType: "branded",
     identifiers,
