@@ -1,3 +1,4 @@
+import { getReviewedLabels } from './sharedPackageLabels';
 import { readPersonalLabels, personalLabelsFor } from './personalPackageLabels';
 import { lookupCatalogFoodByBarcode } from "./barcodeFoodLookup";
 import { canonicalGtinKey, normalizeGtin } from "./productIdentifiers";
@@ -208,7 +209,7 @@ export function createRemoteBarcodeLookup({
     return immutableCopy({ ...primary, alternatives, providerAttempts: [...attempts.values()] });
   }
 
-  async function lookup(value, { assess } = {}) {
+  async function lookupEvidence(value, { assess } = {}) {
     let preferred = await lookupPreferred(value);
     if (preferred.status === "invalid") return preferred;
     try { preferred = personalLabelsFor(preferred, readPersonalLabels(storage)); }
@@ -267,5 +268,15 @@ export function createRemoteBarcodeLookup({
     return chosen;
   }
 
+  async function lookup(value, options) {
+    const result=await lookupEvidence(value,options);
+    if(result.status==='invalid'||result.personalLabelChoices?.length) return result;
+    const state=typeof runtime==='function'?runtime():runtime;
+    if(state?.isOnline===false||state?.isWeb===false) return result;
+    try {
+      const published=await getReviewedLabels(result.identifier?.value||value);
+      return {...result,reviewedLabelChoices:published.versions,reviewedLabelsCheckedAt:published.checkedAt};
+    } catch {return result;}
+  }
   return Object.freeze({ lookup });
 }

@@ -6,8 +6,9 @@ import { createRemoteBarcodeLookup } from '../services/remoteBarcodeLookup';
 import { appendNutritionEntry,readNutritionEntries,updateStoredNutritionEntry } from '../services/nutritionEntryStorage';
 import { readPersonalLabels,removePersonalLabel } from '../services/personalPackageLabels';
 const originalScroll=window.scrollTo;
-beforeEach(()=>{window.scrollTo=jest.fn();localStorage.clear();});
-afterEach(()=>{window.scrollTo=originalScroll;localStorage.clear();});
+const originalFetch=global.fetch;
+beforeEach(()=>{window.scrollTo=jest.fn();localStorage.clear();global.fetch=jest.fn().mockRejectedValue(new Error('Shared service unconfigured in isolated personal-label test'));});
+afterEach(()=>{window.scrollTo=originalScroll;localStorage.clear();global.fetch=originalFetch;});
 test('manual package correction -> review -> fractional selection/save -> remount/reopen; history and original observations survive',async()=>{
  const historical={id:'synthetic-history',name:'Synthetic prior record',loggedAt:'2026-10-20T12:00:00Z',calories:180.05,protein:6,carbohydrates:33.02,fat:3,sodium:369.85,notes:''};
  localStorage.setItem('nutritionEntries',JSON.stringify([historical]));

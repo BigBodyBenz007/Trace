@@ -4,6 +4,7 @@ import './appThemes.css';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import SharedLabelReviewPage from './components/SharedLabelReviewPage';
 import { shouldLoadSyntheticLife } from "./development/syntheticMode";
 import { registerTraceServiceWorker } from "./serviceWorkerRegistration";
 import { shouldLoadNutritionPilot } from "./development/nutritionPilotMode";
@@ -16,6 +17,8 @@ if (process.env.NODE_ENV === 'development'
   && shouldLoadNutritionPilot(process.env.NODE_ENV, window.location.hostname, window.location.search)) {
   RootComponent = require('./development/NutritionPilot').default;
 }
+
+if (new URLSearchParams(window.location.search).get('labelReview') === '1') RootComponent = SharedLabelReviewPage;
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

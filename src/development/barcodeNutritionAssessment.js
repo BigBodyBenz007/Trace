@@ -118,7 +118,7 @@ function assessProviderBarcodeNutrition(candidate, identifier) {
 }
 
 export function assessBarcodeNutrition(candidate, identifier) {
-  if (candidate?.personalLabel) return freeze(assessPersonalPackageLabel(candidate));
+  if (candidate?.personalLabel || candidate?.reviewedLabel) return freeze(assessPersonalPackageLabel(candidate));
   // Resolve the independent manufacturer panel even when an older cached
   // provider panel cannot be scored. Keep that entire original result separate.
   const replacement = getAppliedVerifiedNutritionCorrection(candidate, identifier)?.mode === 'replacement-panel';

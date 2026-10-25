@@ -239,3 +239,10 @@ test.each([true, false])("opening sound credits in a tab preserves the offline a
   expect(cache.put).not.toHaveBeenCalledWith("https://trace.test/__trace_offline_shell__", expect.anything());
   if (alreadyCached) expect(fetch).not.toHaveBeenCalled();
 });
+
+test.each(['navigate','cors'])('private API requests bypass all service-worker caches: %s',mode=>{
+ const {listeners,cache,fetch}=loadWorker({fetchImplementation:()=>Promise.reject(new Error('must not intercept'))});
+ const respondWith=jest.fn();
+ listeners.fetch({request:{method:'GET',mode,url:'https://trace.test/api/labels/evidence?id=private&role=nutrition'},respondWith});
+ expect(respondWith).not.toHaveBeenCalled();expect(cache.put).not.toHaveBeenCalled();expect(fetch).not.toHaveBeenCalled();
+});

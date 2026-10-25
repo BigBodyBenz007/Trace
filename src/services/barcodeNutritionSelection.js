@@ -4,7 +4,7 @@ import { getNutritionAssessmentQuality, normalizeNutritionAssessmentInputs } fro
 import { resolveVerifiedNutritionCorrection } from "./verifiedProductNutritionCorrections";
 import { findSodiumSaltConflicts } from "./sodiumSaltEvidence";
 
-import { applyPersonalPackageLabel, createPersonalPackageLabelDraft } from './personalPackageLabelCandidate';
+import { applyPersonalPackageLabel, applyReviewedPackageLabel, createPersonalPackageLabelDraft } from './personalPackageLabelCandidate';
 
 const REQUIRED_NUTRIENTS = ["calories", "protein", "carbohydrates", "fat"];
 const SAFE_REMOTE_BASIS_KINDS = new Set([
@@ -244,12 +244,15 @@ function localCandidate(result) {
 export function createBarcodeNutritionCandidate(result, { applyVerifiedCorrections = true } = {}) {
   if (!result) return null;
   if (!["found", "incomplete"].includes(result.status) || !result.food) {
-    return result.personalLabel ? applyPersonalPackageLabel(createPersonalPackageLabelDraft(result.identifier),result.personalLabel,result.identifier) : null;
+    const draft=createPersonalPackageLabelDraft(result.identifier);
+    return result.personalLabel ? applyPersonalPackageLabel(draft,result.personalLabel,result.identifier)
+      : result.reviewedLabel ? applyReviewedPackageLabel(draft,result.reviewedLabel,result.identifier) : null;
   }
   const candidate = result.food.sourceType === "remote-barcode"
     ? remoteCandidate(result, applyVerifiedCorrections)
     : localCandidate(result);
-  const effective = result.personalLabel ? applyPersonalPackageLabel(candidate,result.personalLabel,result.identifier) : candidate;
+  const effective = result.personalLabel ? applyPersonalPackageLabel(candidate,result.personalLabel,result.identifier)
+    : result.reviewedLabel ? applyReviewedPackageLabel(candidate,result.reviewedLabel,result.identifier) : candidate;
   if (!effective || !result.sourceSelection) return effective;
   return immutableCopy({ ...effective,
     display: { ...effective.display, sourceSelection: result.sourceSelection },

@@ -5,11 +5,13 @@ import { resolveGrainEvidence } from './traceFoodQualityEvidence';
 import { resolveProteinSupplementBoundary } from './proteinSupplementBoundary';
 
 export function assessPersonalPackageLabel(candidate) {
-  const label = candidate.personalLabel;
+  const shared=!!candidate.reviewedLabel;
+  const label = candidate.personalLabel || candidate.reviewedLabel;
   const original = candidate.originalCandidate;
-  const source = {url:'urn:trace:personal-label:'+label.id,attribution:'Your confirmed label',revisionDate:label.confirmedAt};
+  const source = {url:'urn:trace:'+(shared?'reviewed-label:':'personal-label:')+label.id,
+    attribution:shared?'Reviewed by Trace':'Your confirmed label',revisionDate:shared?label.publishedAt:label.confirmedAt};
   const base = {grade:null,scoreReady:false,scanMatchEligible:false,nutritionScore100:null,result:null,reasons:[],warnings:[],
-    confidence:'Your confirmed label; not independently authenticated.',evidence:{personalLabel:label,
+    confidence:shared?'Reviewed by Trace; package matching and authenticity are not guaranteed.':'Your confirmed label; not independently authenticated.',evidence:{[shared?'reviewedPackageLabel':'personalLabel']:label,
       market:{status:'user-confirmed-package',exactUsFormulationVerified:false}}};
   const boundary=resolveProteinSupplementBoundary(original || candidate);
   if(boundary.status==='not-rated-category') return {...base,ratingStatus:boundary.status,ratingBoundary:boundary,reasons:[boundary.message]};

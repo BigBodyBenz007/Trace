@@ -1,6 +1,6 @@
-// Server-only preparation. Not an authentication implementation or database.
-// A future handler must derive owner identity from a verified server session,
-// never from request-body roles. No publication endpoint is currently enabled.
+// Server-only review hints and immutable offline policy helpers. The live routes
+// authenticate the owner independently and use transactional database decisions.
+// Neither a caller-supplied role nor these pure helpers grants API authorization.
 const crypto = require('node:crypto');
 const copy=v=>JSON.parse(JSON.stringify(v));
 const freeze=v=>{if(v&&typeof v==='object'){Object.values(v).forEach(freeze);Object.freeze(v);}return v;};

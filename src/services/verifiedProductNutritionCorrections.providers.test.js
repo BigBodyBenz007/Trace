@@ -16,6 +16,8 @@ import { appendNutritionEntry, readNutritionEntries } from './nutritionEntryStor
 import { assessBarcodeNutrition } from '../development/barcodeNutritionAssessment';
 import { assessOverallFoodQuality } from '../development/traceOverallFoodQuality';
 
+// Shared publication is a separate transport; these captured manufacturer/conflict tests do not contact it.
+jest.mock('./sharedPackageLabels',()=>({...jest.requireActual('./sharedPackageLabels'),getReviewedLabels:jest.fn(async()=>({versions:[]}))}));
 const { normalizeOpenFoodFactsProduct } = require('../../api/nutrition/_barcodeGateway.cjs');
 const clone = value => JSON.parse(JSON.stringify(value));
 const memory = () => { const values = new Map(); return {

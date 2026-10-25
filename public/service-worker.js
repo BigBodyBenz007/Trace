@@ -128,6 +128,8 @@ self.addEventListener("fetch", (event) => {
   if (request.method !== "GET") return;
   const url = new URL(request.url);
   if (url.origin !== scopeUrl.origin) return;
+  // Private review evidence and mutable approvals must never enter shell caches.
+  if (url.pathname.startsWith("/api/")) return;
 
   const isBuildAsset = url.pathname.includes("/static/");
   const isKnownShellAsset = shellAssets.includes(url.href);

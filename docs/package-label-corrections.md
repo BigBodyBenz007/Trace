@@ -96,3 +96,7 @@ The investigation did reproduce a shared integration defect: the personal editor
 Focused follow-up validation: 74/74 personal-route/scanner tests and 100/100 lookup/manufacturer/startup/gating tests passed. Changed-file lint and syntax checks passed with no findings. The 74 include three clearly constructed end-to-end failures (`not-found`, `unavailable`, `offline`): confirmation without a provider, half-serving save/reopen, and explicit reuse of a remembered version. These are local regressions, not claims about the user's iPhone response. The user no longer has the failing barcodes; no particular upstream failure cause is asserted.
 
 Hosted inspection also removed the misleading retained-provider wording when there was no provider panel at all, and applied the existing compact editor layout to the provider-free editor. This changes presentation/attribution only.
+
+## Shared review follow-up
+
+The private shared-review implementation and provisioning requirements are documented in [shared-package-label-review.md](shared-package-label-review.md). The earlier disabled endpoint/preparation description below reflects the original checkpoint; shared services now have an implementation but remain fail-closed until that setup is provisioned. Personal labels remain independent.

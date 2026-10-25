@@ -35,12 +35,12 @@ export function assessAdditiveProfile(candidate) {
   const display = candidate?.display || {}, value = display.additives;
   const data = normalizeProductAdditives(value, value?.source);
   const reported = data?.status === 'reported';
-  const source = { url: display.personalLabel ? null : display.ingredientSource?.url || display.sourceUrl || null,
+  const source = { url: (display.personalLabel || display.reviewedLabel) ? null : display.ingredientSource?.url || display.sourceUrl || null,
     attribution: display.ingredientSource?.attribution || display.attribution || null };
   const screen = screenIngredientDeclaration(display.ingredients?.text, reported ? data.items : []);
   const providerState = value == null ? 'not-collected' : !reported ? 'unknown'
     : data.items.length ? 'reported-identifiers' : 'provider-reported-empty';
-  const attributed = (text(source.url) || display.personalLabel?.ingredientsConfirmed) && text(source.attribution) && !candidate?.customFood;
+  const attributed = (text(source.url) || display.personalLabel?.ingredientsConfirmed || display.reviewedLabel?.ingredientsConfirmed) && text(source.attribution) && !candidate?.customFood;
   const items = screen.items.map(item => {
     const info = getBarcodeAdditiveInformation(/^E322i{1,2}$/.test(item.id) ? 'E322' : item.id);
     const matches = reported ? data.items.filter(entry => item.origins.some(origin => origin.identifier === entry.providerIdentifier)) : [];
