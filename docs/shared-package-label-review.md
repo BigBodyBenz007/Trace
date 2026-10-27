@@ -2,14 +2,34 @@
 
 This extends working device-local personal labels. Nothing is uploaded when a
 personal label is saved. Sharing is a separate, explicit consent action.
-**The Supabase project, owner identity and Vercel server variables have not been
-provisioned. Shared submission/authentication/publication is therefore disabled
-on the hosted Preview.** Local synthetic tests are not hosted end-to-end proof.
+**Setup progress, October 27, 2026:** the owner created the dedicated Free project
+and ran the committed migration. Owner-provided catalog results confirm all
+three tables have RLS, browser roles have no table/RPC access, service_role has
+explicit data/RPC grants, and the JPEG evidence bucket is private (2 MiB limit).
+Storage RLS is enabled with no Storage policies; ensure_rls is active. The owner
+created the one confirmed Auth user, verified that its password is set, enabled
+the Email provider and disabled public sign-ups. Account metadata does not prove
+a known/strong password or a successful login.
+
+The owner reported saving all seven documented Vercel settings for Preview on
+feature/personal-package-label-20261024 only, with Production and Development
+unselected. Server/publishable keys, owner email and rate secret were saved as
+Secret; no credential values or owner UUID/email were collected in chat or this
+report. Vercel settings were not independently inspected through its management
+API. The next verification uses the real hosted Preview; local tests and these
+owner-reported setup steps do not prove hosted authentication or transactions.
+
+The hosted default email templates cannot be edited without custom SMTP, as
+reported by the Dashboard. The SMTP-dependent code-entry setup is replaced in
+this checkout by Supabase email/password authentication for the existing owner.
+No custom SMTP, paid service, billing or account has been added. The deployed
+Preview is not updated until the feature branch is redeployed. Local synthetic
+tests are not hosted sign-in or shared-publication proof.
 
 ## One recommended setup, with no purchase
 
 Use a dedicated **Supabase Free project** for Postgres, private Storage and the
-single owner's email-code authentication. Ordinary submitters do not create
+single owner's email/password authentication. Ordinary submitters do not create
 accounts. Do not enable billing or upgrade plans for this Preview.
 
 Public quotas checked October 24, 2026: Free is $0/month, 500 MB database,
@@ -18,10 +38,18 @@ can pause after a week. Automatic backups are not included. This is suitable for
 a small protected trial, not an uptime or long-term archival commitment.
 [Supabase pricing](https://supabase.com/pricing)
 
-The default Auth email service sends only to project-team addresses, currently
-two messages/hour, with no delivery SLA. Use the owner's project-team email for
-this initial Preview. A wider/reliable email service would require separately
-approved SMTP setup; no such account or expense was created.
+Routine owner sign-in uses Supabase's password grant, which sends no email and
+does not depend on template editing or custom SMTP. It requires the existing
+owner's confirmed email identity, a privately held password and the Email provider
+enabled. Public sign-ups stay disabled. This is Supabase Auth verification, not
+a password embedded in Trace or compared in client code.
+[Password sign-in](https://supabase.com/docs/guides/auth/passwords),
+[Auth password-grant contract](https://supabase.github.io/auth/#post-token).
+
+The default mail service remains restricted to project-team addresses with
+best-effort delivery and currently two messages/hour. Password-reset/confirmation
+emails are separate from routine sign-in; an app recovery flow is not configured
+or verified here. Do not assume a default reset link completes recovery in Trace.
 [Supabase SMTP limits](https://supabase.com/docs/guides/auth/auth-smtp)
 
 ## Exact setup steps for the owner
@@ -35,11 +63,24 @@ approved SMTP setup; no such account or expense was created.
    policies, and the trace-label-evidence Storage bucket is private. On a fresh
    dedicated project there must be no broad Storage policies allowing browser
    roles into this bucket.
-3. Under **Authentication → Users**, create the one owner user with your project
-   team email, confirm its email, and copy its user UUID. Disable public sign-ups.
-   Under **Authentication → Email Templates → Magic Link**, use an email-code
-   template containing `{{ .Token }}`, rather than a redirect link.
-   [Email OTP configuration](https://supabase.com/docs/guides/auth/auth-email-passwordless)
+3. Under **Authentication → Users**, use the one existing owner user with your
+   project-team email, a confirmed email and a strong unique password. This is the
+   project's Auth user, separate from the Supabase Dashboard login. Keep public
+   sign-ups disabled and the Email provider enabled. Copy the user's UUID directly
+   into the Vercel setting below. Do not edit email templates, configure SMTP or
+   disable email confirmation globally. Never paste passwords or keys into chat.
+   A read-only check can confirm readiness without exposing identity/hash values:
+
+   ```sql
+   select count(*) as user_count,
+     bool_and(email_confirmed_at is not null) as all_emails_confirmed,
+     bool_and(coalesce(encrypted_password, '') <> '') as all_passwords_set
+   from auth.users;
+   ```
+
+   For this dedicated initial project expect one user and both booleans true.
+   These booleans do not establish password strength, knowledge or successful
+   authentication. If they differ, inspect the specific account before proceeding.
 4. In the existing Vercel Trace project, add the following **server-side variables
    to Preview only**, scoped to branch `feature/personal-package-label-20261024`.
    Never prefix these with REACT_APP_ or put them in a browser bundle:
@@ -55,8 +96,12 @@ approved SMTP setup; no such account or expense was created.
 5. Redeploy the existing feature branch to **Preview**, retaining Deployment
    Protection and its sharing route. No Production variables or domain change.
    Owner screen: open the protected Preview, then `/?labelReview=1`.
-   Send a code to your configured email and enter it. The API validates the
-   returned confirmed user ID/email on every review/evidence operation.
+   Enter the configured owner's email and Supabase Auth password in Trace. Do not
+   put that password into Vercel variables or chat. The server exchanges it with
+   Supabase over HTTPS, validates the confirmed user ID/email and sets a host-only
+   HttpOnly Secure SameSite=Strict session cookie. Each review/evidence operation
+   rechecks the current Auth user. Existing same-origin and durable rate limits
+   remain in force; passwords and refresh tokens are not persisted by Trace.
 6. Complete the first real hosted synthetic submission → review/transcription
    edit → approve → new-browser version choice → withdraw check. No hosted shared
    transaction has been tested yet. Withdraw any test publication and remove only
@@ -64,9 +109,13 @@ approved SMTP setup; no such account or expense was created.
    after checking references. Keep real review history and approved evidence.
    Do not publish real labels until these provisioned checks pass.
 
-**Next owner action:** create the dedicated Free project and follow steps 2–4.
-No secret needs to be sent to Codex. Provisioning and a Preview redeploy are
-required before sharing or owner sign-in can work.
+**Setup handoff:** configuration steps are reported complete. Release the saved
+five-file owner-auth repair on this feature branch to Preview only, verify its
+exact deployment and test the real protected sharing route. Any necessary owner
+sign-in must happen privately in Trace, using that Auth user's password, never
+in chat or an environment variable. Provide one plain-language owner step at a
+time if sharing access or sign-in needs interaction. Real sign-in, evidence
+access and approval/rejection/withdrawal remain unverified until exercised.
 
 ## User and owner flows
 
@@ -144,9 +193,9 @@ expired abandoned/rejected disposable uploads and orphaned objects, respecting
 approved-version references and history. A failed object/DB cleanup can leave an
 orphan; Free storage limits still apply. There is no automatic retention deletion
 or external backup service. Keep separately secured operational backups before
-real shared publication. The database migration and real Auth/Storage RLS must
-be exercised against the provisioned project; static checks and mock stores do
-not establish that deployment.
+real shared publication. Owner-provided catalog checks establish the applied
+migration grants/RLS and private bucket settings. Actual Auth requests, Storage denial/access and database
+transactions still require hosted verification; mock stores do not establish them.
 
 ## Reproducible focused validation
 
@@ -210,12 +259,48 @@ statements. Integration covers coherent review → selected edition → 1.25 ser
 
 The preceding 90cf77541e2253f9ac012fdc2ed3028011d0a72a commit also retains the already-released Trophy Case repair in src/index.css; main is unchanged.
 
-## Final local evidence
+## Original implementation evidence (October 24, 2026)
 
 - 194 distinct focused Jest cases passed across reviewed runs. One 5-second handoff timeout under concurrent compilation passed with its original timeout when isolated; no timeout was increased.
-- Ten Node API/image/security contracts passed using a synthetic store. No real shared-database transaction is claimed.
+- Ten original Node API/image/security contracts passed using a synthetic store. Later SMTP-independent owner-auth checks are reported separately; no real shared-database transaction is claimed.
 - Seven actual-component mobile/desktop screenshots inspected. Synthetic local transport is labeled. Visual checks saved no food entries. The isolated storage regression did save/reopen synthetic records.
-- A temporary PostgreSQL test-engine install failed with ENOSPC. Only temporary profiles created by this task and its failed install were removed. SQL grants/locking statements were inspected, but the migration was not executed. Real Auth/Storage/database verification remains a provisioning blocker.
+- A temporary PostgreSQL test-engine install failed with ENOSPC. Only temporary profiles created by this task and its failed install were removed. SQL grants/locking statements were inspected, but at that time the migration was not executed. On October 25 the owner executed it and supplied passing catalog checks; real Auth/Storage/database transactions still await Preview configuration.
 - Existing manufacturer corrections, personal-label independence, null-sodium save/reopen, powder boundaries, grading-mode contracts and the CommonJS repair were checked without changing scoring.
 
 API keys are copied from Supabase Settings → API Keys. Modern secret keys are sent only in the apikey header, never as a bearer JWT; owner access tokens are separate verified user JWTs. [Supabase API-key semantics](https://supabase.com/docs/guides/getting-started/api-keys)
+
+## SMTP-independent owner sign-in validation (October 25, 2026)
+
+The SMTP-independent owner-authentication repair changes exactly these files:
+
+- `api/labels/_service.cjs`
+- `src/components/SharedLabelReviewPage.jsx`
+- `scripts/shared-package-label-server.test.cjs`
+- `src/components/SharedLabelReviewPage.test.jsx`
+- `docs/shared-package-label-review.md`
+
+No migration, grants, Storage policies, dependencies, personal-label flow or
+Production configuration changed. All imports remain already tracked.
+
+Fresh focused checks: 7 Node API/security contracts and all 5 owner-review UI
+cases passed. The four changed code/test files lint with zero errors/warnings;
+server/test syntax and Git whitespace checks pass. Main's protected 62 Git
+entries exactly match the prior preservation baseline. No real credentials,
+owner login, hosted submission or shared publication were used in these tests.
+
+Reproduce the focused runs with:
+
+```powershell
+node --test --test-name-pattern='owner|Production|cross-origin|rejection' scripts/shared-package-label-server.test.cjs
+npm test -- --watch=false --runInBand --runTestsByPath src/components/SharedLabelReviewPage.test.jsx
+```
+
+The supported Supabase password-grant protocol and Free-plan availability were
+checked against the official references above. The owner-reported account check
+passed on October 27; actual hosted authentication is still pending. Password reset/recovery was not added
+or exercised. At the October 25 checkpoint the repair was saved without staging
+or deployment. On October 27 the seven Node security cases and three existing
+CommonJS startup cases passed fresh; the unchanged five UI cases and clean lint
+are reused. Release only the feature branch, retain Preview protection and keep
+Production unchanged. Actual hosted outcomes must be distinguished from these
+local checks; never claim owner authentication from mocked results.

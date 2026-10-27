@@ -103,17 +103,57 @@ test('public DTO excludes evidence/session/internal fields; SQL denies browser r
  assert(sql.includes("s.revision<>(p_data->>'revision')::integer"));assert(sql.includes("set active=false"));assert(sql.includes("reinstates"));
 });
 
-test('owner email code produces only an HttpOnly secure session; wrong subject cannot obtain it and logout expires it',async()=>{
- const s=store(),calls=[];
- const fetchImpl=async(url,options)=>{calls.push({url,body:JSON.parse(options.body||'{}')});
-  return {ok:true,json:async()=>({access_token:'test-jwt',expires_in:3600,user:{id:env.TRACE_LABEL_OWNER_ID,email:env.TRACE_LABEL_OWNER_EMAIL,email_confirmed_at:'2026-10-24'}})};};
- let r=await invoke('session',{method:'POST',body:{action:'send-code',email:env.TRACE_LABEL_OWNER_EMAIL}},{store:s,fetchImpl});
- assert.equal(r.status,200);assert.equal(calls[0].body.create_user,false);
- r=await invoke('session',{method:'POST',body:{action:'verify-code',email:env.TRACE_LABEL_OWNER_EMAIL,code:'123456'}},{store:s,fetchImpl});
- assert.equal(r.status,200);assert(!JSON.stringify(r.body).includes('test-jwt'));assert(r['Set-Cookie'].includes('HttpOnly; Secure; SameSite=Strict'));
- r=await invoke('session',{method:'POST',body:{action:'verify-code',email:env.TRACE_LABEL_OWNER_EMAIL,code:'123456'}},{store:s,fetchImpl:async()=>({ok:true,json:async()=>({access_token:'test',user:{id:'different'}})})});
- assert.equal(r.status,403);assert.equal(r['Set-Cookie'],undefined);
+test('owner password sign-in uses Supabase and a host-only secure cookie without returning credentials',async()=>{
+ const s=store(),calls=[],password=' synthetic password with spaces ';
+ const fetchImpl=async(url,options)=>{calls.push({url,headers:options.headers,body:JSON.parse(options.body)});
+  return {ok:true,json:async()=>({access_token:'test-jwt',refresh_token:'test-refresh',expires_in:7200,
+   user:{id:env.TRACE_LABEL_OWNER_ID,email:env.TRACE_LABEL_OWNER_EMAIL,email_confirmed_at:'2026-10-24'}})};};
+ let r=await invoke('session',{method:'POST',body:{action:'sign-in',email:env.TRACE_LABEL_OWNER_EMAIL.toUpperCase(),password}},{store:s,fetchImpl});
+ assert.equal(r.status,200);assert.deepEqual(r.body,{owner:true});assert.equal(calls.length,1);
+ assert.equal(calls[0].url,env.SUPABASE_URL+'/auth/v1/token?grant_type=password');
+ assert.deepEqual(calls[0].body,{email:env.TRACE_LABEL_OWNER_EMAIL,password});
+ assert.equal(calls[0].headers.apikey,env.SUPABASE_ANON_KEY);
+ assert.equal(calls[0].headers.Authorization,undefined);
+ assert(r['Set-Cookie'].startsWith(COOKIE+'=test-jwt; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=3600'));
+ assert(!r['Set-Cookie'].includes('Domain='));assert(!JSON.stringify(r).includes(password));assert(!JSON.stringify(r).includes('test-refresh'));
  r=await invoke('session',{method:'POST',body:{action:'logout'}},{store:s});assert(r['Set-Cookie'].includes('Max-Age=0'));
+});
+
+test('owner password sign-in rejects other identities, unconfirmed users and invalid tokens',async()=>{
+ const user={id:env.TRACE_LABEL_OWNER_ID,email:env.TRACE_LABEL_OWNER_EMAIL,email_confirmed_at:'2026-10-24'};
+ const responses=[{user:{...user,id:'different'},access_token:'test'},
+  {user:{...user,email:'other@example.test'},access_token:'test'},
+  {user:{...user,email_confirmed_at:null},access_token:'test'},
+  {user,access_token:''},{user,access_token:'x'.repeat(6001)},{user}];
+ for(const session of responses){const r=await invoke('session',{method:'POST',body:{action:'sign-in',email:user.email,password:'synthetic-password'}},
+  {store:store(),fetchImpl:async()=>({ok:true,json:async()=>session})});
+  assert.equal(r.status,403);assert.equal(r['Set-Cookie'],undefined);assert(!JSON.stringify(r.body).includes('synthetic-password'));}
+});
+
+test('owner password sign-in retains same-origin, durable rate limits and safe Auth failures',async()=>{
+ const body={action:'sign-in',email:env.TRACE_LABEL_OWNER_EMAIL,password:'synthetic-password'},s=store();let calls=0;
+ const unreachable=async()=>{calls++;throw Error('must not contact Auth');};
+ assert.equal((await invoke('session',{method:'POST',body,headers:{origin:'https://attacker.test'}},{store:s,fetchImpl:unreachable})).status,403);
+ const limited={...s,rpc:async()=>false};
+ assert.equal((await invoke('session',{method:'POST',body},{store:limited,fetchImpl:unreachable})).status,429);
+ assert.equal(calls,0);
+ for(const [status,expected] of [[400,401],[401,401],[429,429],[500,503]]){
+  const r=await invoke('session',{method:'POST',body},{store:s,fetchImpl:async()=>({ok:false,status,json:async()=>({error:'PRIVATE AUTH DETAIL'})})});
+  assert.equal(r.status,expected);assert.equal(r['Set-Cookie'],undefined);assert(!JSON.stringify(r).includes('PRIVATE AUTH DETAIL'));assert(!JSON.stringify(r).includes(body.password));
+ }
+ const r=await invoke('session',{method:'POST',body},{store:s,fetchImpl:async()=>{throw Error('PRIVATE NETWORK DETAIL');}});
+ assert.equal(r.status,503);assert(!JSON.stringify(r).includes('PRIVATE NETWORK DETAIL'));
+});
+
+test('owner password sign-in never sends email or accepts missing passwords and forged roles',async()=>{
+ let calls=0;const fetchImpl=async()=>{calls++;throw Error('must not contact Auth');};
+ for(const body of [{action:'send-code',email:env.TRACE_LABEL_OWNER_EMAIL},
+  {action:'verify-code',email:env.TRACE_LABEL_OWNER_EMAIL,code:'123456'},
+  ...[undefined,null,{},'', 'x'.repeat(4097)].map(password=>({action:'sign-in',email:env.TRACE_LABEL_OWNER_EMAIL,password})),
+  {action:'sign-in',email:'other@example.test',password:'synthetic-password',role:'owner'}]){
+  const r=await invoke('session',{method:'POST',body},{store:store(),fetchImpl});assert(r.status>=400);assert.equal(r['Set-Cookie'],undefined);
+ }
+ assert.equal(calls,0);
 });
 
 test('rejection keeps a pending label unpublished; invalid owner evidence never runs a decision',async()=>{

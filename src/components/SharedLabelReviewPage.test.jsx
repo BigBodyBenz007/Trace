@@ -44,3 +44,39 @@ test('private owner screen shows photos beside editable values, differences, fla
  fireEvent.click(screen.getByRole('button',{name:'Approve this edition'}));
  await waitFor(()=>expect(ownerLabelRequest).toHaveBeenCalledWith('review',expect.objectContaining({action:'approve',revision:3,reason:expect.stringContaining('Corrected sodium'),panel:expect.objectContaining({nutrients:expect.objectContaining({sodium:345})})})));
 });
+
+test('owner password form signs in without email delivery and clears its password after sign-out',async()=>{
+ ownerLabelRequest.mockImplementation(async(path,body)=>{
+  if(path==='session'&&!body)throw new Error('Sign-in required');
+  if(path==='session'&&body.action==='sign-in')return {owner:true};
+  if(path==='session'&&body.action==='logout')return {owner:false};
+  if(path.startsWith('review?status'))return {submissions:[]};return {available:true};
+ });
+ render(<SharedLabelReviewPage/>);
+ const password=screen.getByLabelText('Owner password');
+ expect(password).toHaveAttribute('type','password');expect(password).toHaveAttribute('autoComplete','current-password');
+ expect(screen.queryByRole('button',{name:'Send sign-in code'})).not.toBeInTheDocument();
+ expect(screen.getByRole('button',{name:'Sign in'})).toBeDisabled();
+ fireEvent.change(screen.getByLabelText('Owner email'),{target:{value:'owner@example.test'}});
+ fireEvent.change(password,{target:{value:'synthetic-owner-password'}});
+ fireEvent.click(screen.getByRole('button',{name:'Sign in'}));
+ fireEvent.click(await screen.findByRole('button',{name:'Sign out'}));
+ expect(await screen.findByLabelText('Owner password')).toHaveValue('');
+ expect(ownerLabelRequest).toHaveBeenCalledWith('session',{action:'sign-in',email:'owner@example.test',password:'synthetic-owner-password'});
+ expect(ownerLabelRequest.mock.calls.filter(([,body])=>body?.action==='send-code')).toHaveLength(0);
+});
+
+test('failed owner sign-in stays private, clears the password and cannot grant review access',async()=>{
+ ownerLabelRequest.mockImplementation(async(path,body)=>{
+  if(path==='session')throw new Error(body?'Owner sign-in failed. Check your email and password.':'Sign-in required');
+  return {available:true};
+ });
+ render(<SharedLabelReviewPage/>);
+ fireEvent.change(screen.getByLabelText('Owner email'),{target:{value:'owner@example.test'}});
+ fireEvent.change(screen.getByLabelText('Owner password'),{target:{value:'synthetic-wrong-password'}});
+ fireEvent.click(screen.getByRole('button',{name:'Sign in'}));
+ await screen.findByText('Owner sign-in failed. Check your email and password.');
+ expect(screen.getByLabelText('Owner password')).toHaveValue('');
+ expect(screen.queryByRole('button',{name:'Sign out'})).not.toBeInTheDocument();
+ expect(ownerLabelRequest.mock.calls.some(([url])=>url.startsWith('review?'))).toBe(false);
+});

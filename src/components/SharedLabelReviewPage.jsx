@@ -7,7 +7,7 @@ import { resolveAppShellThemeId } from '../services/appThemes';
 
 const UNITS={calories:'kcal',sodium:'mg'};
 export default function SharedLabelReviewPage() {
-  const [owner,setOwner]=useState(false),[available,setAvailable]=useState(true),[email,setEmail]=useState(''),[code,setCode]=useState('');
+  const [owner,setOwner]=useState(false),[available,setAvailable]=useState(true),[email,setEmail]=useState(''),[password,setPassword]=useState('');
   const [rows,setRows]=useState([]),[status,setStatus]=useState('pending'),[detail,setDetail]=useState(null),[panel,setPanel]=useState(null);
   const [reason,setReason]=useState(''),[reviewed,setReviewed]=useState(false),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
   async function run(action){setBusy(true);setMessage('');try{await action();}catch(error){setMessage(error.message);}finally{setBusy(false);}}
@@ -28,11 +28,10 @@ export default function SharedLabelReviewPage() {
   return <main className="trace-label-owner"><a href="/">Back to Trace</a><h1>Private label review</h1>
     <p>Owner decisions publish label values, never private photos. Photos, OCR and review do not certify authenticity or a current package match.</p>
     {!available&&<p role="status">Shared storage and owner sign-in are not configured. Personal labels continue working. Follow the repository's shared-label setup instructions.</p>}
-    {!owner?<form onSubmit={e=>{e.preventDefault();run(async()=>{await ownerLabelRequest('session',{action:'verify-code',email,code});setOwner(true);});}}>
-      <label>Owner email<input type="email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} required/></label>
-      <button type="button" disabled={!available||busy||!email} onClick={()=>run(async()=>{await ownerLabelRequest('session',{action:'send-code',email});setMessage('Check your owner email for the code.');})}>Send sign-in code</button>
-      <label>Email code<input inputMode="numeric" autoComplete="one-time-code" value={code} onChange={e=>setCode(e.target.value)} required/></label>
-      <button disabled={!available||busy||!code}>Sign in</button>
+    {!owner?<form onSubmit={e=>{e.preventDefault();run(async()=>{try{await ownerLabelRequest('session',{action:'sign-in',email,password});setOwner(true);}finally{setPassword('');}});}}>
+      <label>Owner email<input type="email" autoComplete="username" value={email} onChange={e=>setEmail(e.target.value)} required/></label>
+      <label>Owner password<input type="password" autoComplete="current-password" value={password} onChange={e=>setPassword(e.target.value)} required/></label>
+      <button disabled={!available||busy||!email||!password}>Sign in</button>
     </form>:<>
       <button type="button" disabled={busy} onClick={()=>run(async()=>{await ownerLabelRequest('session',{action:'logout'});setOwner(false);setDetail(null);setRows([]);})}>Sign out</button>
       <label>Submission status<select value={status} onChange={e=>setStatus(e.target.value)}>{['pending','approved','rejected','withdrawn','uploading'].map(v=><option key={v}>{v}</option>)}</select></label>

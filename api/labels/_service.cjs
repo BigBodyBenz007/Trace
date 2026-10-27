@@ -115,22 +115,28 @@ async function handle(kind,req,res,{env=process.env,fetchImpl=fetch,store:inject
     if(kind==='session') {
       if(req.method==='GET') {await owner(req,c,fetchImpl);return send(200,{owner:true});}
       if(data.action==='logout') {res.setHeader('Set-Cookie',COOKIE+'=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0');return send(200,{owner:false});}
+      if(data.action!=='sign-in') throw V.fail('Unsupported sign-in action.');
       if(data.email?.toLowerCase()!==c.email) throw V.fail('Use the configured owner address.',403);
-      const headers={apikey:c.anon,'Content-Type':'application/json'};
-      if(data.action==='send-code') {
-        const response=await fetchImpl(c.url+'/auth/v1/otp',{method:'POST',headers,body:JSON.stringify({email:c.email,create_user:false}),signal:AbortSignal.timeout(10000)});
-        if(!response.ok) throw V.fail('The sign-in email could not be sent. Check the owner setup or try later.',503);
-        return send(200,{message:'Check the owner email for a sign-in code.'});
+      if(typeof data.password!=='string'||!data.password.length||Buffer.byteLength(data.password,'utf8')>4096) throw V.fail('Enter your owner password.');
+      // Supabase verifies the existing owner's password. No email delivery,
+      // browser-side password comparison or application-stored password is used.
+      let response;
+      try {
+        response=await fetchImpl(c.url+'/auth/v1/token?grant_type=password',{method:'POST',
+          headers:{apikey:c.anon,'Content-Type':'application/json'},
+          body:JSON.stringify({email:c.email,password:data.password}),signal:AbortSignal.timeout(10000)});
+      } catch {throw V.fail('Owner authentication is temporarily unavailable.',503);}
+      if(!response.ok) {
+        if(response.status===429) throw V.fail('Too many sign-in attempts. Please try later.',429);
+        if(response.status>=500) throw V.fail('Owner authentication is temporarily unavailable.',503);
+        throw V.fail('Owner sign-in failed. Check your email and password.',401);
       }
-      if(data.action==='verify-code' && typeof data.code==='string' && /^\d{6,10}$/.test(data.code)) {
-        const response=await fetchImpl(c.url+'/auth/v1/verify',{method:'POST',headers,body:JSON.stringify({email:c.email,token:data.code,type:'email'}),signal:AbortSignal.timeout(10000)});
-        if(!response.ok) throw V.fail('The sign-in code is invalid or expired.',401);
-        const session=await response.json(),user=session.user;
-        if(user?.id!==c.owner||user.email?.toLowerCase()!==c.email||!user.email_confirmed_at||typeof session.access_token!=='string') throw V.fail('Owner authorization is required.',403);
-        res.setHeader('Set-Cookie',COOKIE+'='+session.access_token+'; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age='+Math.min(session.expires_in||3600,3600));
-        return send(200,{owner:true});
-      }
-      throw V.fail('Unsupported sign-in action.');
+      const session=await response.json(),user=session.user;
+      if(user?.id!==c.owner||user.email?.toLowerCase()!==c.email||!user.email_confirmed_at
+        ||typeof session.access_token!=='string'||!session.access_token.length||session.access_token.length>6000) throw V.fail('Owner authorization is required.',403);
+      const lifetime=Number.isFinite(session.expires_in)&&session.expires_in>=1?Math.min(Math.floor(session.expires_in),3600):3600;
+      res.setHeader('Set-Cookie',COOKIE+'='+session.access_token+'; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age='+lifetime);
+      return send(200,{owner:true});
     }
     if(kind==='versions') {
       if(req.method!=='GET') throw V.fail('Read-only endpoint.',405);
