@@ -4,6 +4,8 @@ import { getNutritionAssessmentQuality, normalizeNutritionAssessmentInputs } fro
 import { resolveVerifiedNutritionCorrection } from "./verifiedProductNutritionCorrections";
 import { findSodiumSaltConflicts } from "./sodiumSaltEvidence";
 
+import { applyPersonalPackageLabel, applyReviewedPackageLabel, createPersonalPackageLabelDraft } from './personalPackageLabelCandidate';
+
 const REQUIRED_NUTRIENTS = ["calories", "protein", "carbohydrates", "fat"];
 const SAFE_REMOTE_BASIS_KINDS = new Set([
   "provider-serving",
@@ -240,13 +242,20 @@ function localCandidate(result) {
 // The explicit opt-out is for retrospective source-only research replays.
 // Normal lookup/selection always applies reviewed fact corrections.
 export function createBarcodeNutritionCandidate(result, { applyVerifiedCorrections = true } = {}) {
-  if (!result || !["found", "incomplete"].includes(result.status) || !result.food) return null;
+  if (!result) return null;
+  if (!["found", "incomplete"].includes(result.status) || !result.food) {
+    const draft=createPersonalPackageLabelDraft(result.identifier);
+    return result.personalLabel ? applyPersonalPackageLabel(draft,result.personalLabel,result.identifier)
+      : result.reviewedLabel ? applyReviewedPackageLabel(draft,result.reviewedLabel,result.identifier) : null;
+  }
   const candidate = result.food.sourceType === "remote-barcode"
     ? remoteCandidate(result, applyVerifiedCorrections)
     : localCandidate(result);
-  if (!candidate || !result.sourceSelection) return candidate;
-  return immutableCopy({ ...candidate,
-    display: { ...candidate.display, sourceSelection: result.sourceSelection },
-    selection: candidate.selection ? { ...candidate.selection, sourceSelection: result.sourceSelection } : null,
+  const effective = result.personalLabel ? applyPersonalPackageLabel(candidate,result.personalLabel,result.identifier)
+    : result.reviewedLabel ? applyReviewedPackageLabel(candidate,result.reviewedLabel,result.identifier) : candidate;
+  if (!effective || !result.sourceSelection) return effective;
+  return immutableCopy({ ...effective,
+    display: { ...effective.display, sourceSelection: result.sourceSelection },
+    selection: effective.selection ? { ...effective.selection, sourceSelection: result.sourceSelection } : null,
   });
 }

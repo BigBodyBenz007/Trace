@@ -5,6 +5,8 @@ import NutritionPage from './NutritionPage';
 import { createRemoteBarcodeLookup } from '../services/remoteBarcodeLookup';
 import { appendNutritionEntry, readNutritionEntries, updateStoredNutritionEntry } from '../services/nutritionEntryStorage';
 
+// Shared publication is a separate transport; these captured manufacturer/conflict tests do not contact it.
+jest.mock('../services/sharedPackageLabels',()=>({...jest.requireActual('../services/sharedPackageLabels'),getReviewedLabels:jest.fn(async()=>({versions:[]}))}));
 const { normalizeOpenFoodFactsProduct } = require('../../api/nutrition/_barcodeGateway.cjs');
 const captured = fs.readFileSync(path.join(__dirname, '../../docs/barcode-grade-coverage-2026-10-21/raw-responses.jsonl'), 'utf8').trim().split(/\r?\n/).map(JSON.parse);
 const row = captured.find(r => r.barcode === '0856312002757');

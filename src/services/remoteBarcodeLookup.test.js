@@ -156,7 +156,8 @@ test("a verified local hit returns without cache or remote access", async () => 
 
   const result = await service.lookup("012000001291");
   expect(result).toMatchObject({ status: "found", source: "local", food: localFood });
-  expect(storage.getItem).not.toHaveBeenCalled();
+  expect(storage.getItem).toHaveBeenCalledTimes(1);
+  expect(storage.getItem).toHaveBeenCalledWith("personalPackageLabels");
   expect(fetchImpl).not.toHaveBeenCalled();
   expect(Object.isFrozen(result.food)).toBe(true);
 });

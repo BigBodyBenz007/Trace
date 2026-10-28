@@ -27,6 +27,8 @@ import { canonicalGtinKey, normalizeProductIdentifiers } from "./productIdentifi
 import { normalizeRemoteFood } from "./remoteFoodModel";
 import { normalizeFormDraftCollection } from "./formDrafts";
 
+import { validatePersonalLabel } from './personalPackageLabels';
+
 const NUTRIENT_KEYS = ["calories", "protein", "carbohydrates", "fat", "fiber", "sodium", "totalSugar", "addedSugar"];
 const DATE_FIELDS = ["createdAt", "updatedAt", "occurredAt", "loggedAt", "startedAt", "finishedAt", "endedAt", "achievedAt", "addedToTrophyCaseAt"];
 const NON_NEGATIVE_JSON_NUMBER = /^(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?$/;
@@ -473,6 +475,11 @@ export function validateTraceStructuredDomains(data) {
   if (data.memoryDraft != null) assert(normalizeMemoryDraft(data.memoryDraft), "The backup contains invalid unfinished Memory draft data.");
   if (data.workoutDraft != null) assert(normalizeWorkoutDraft(data.workoutDraft), "The backup contains invalid active workout draft data.");
   if (data.workoutEntries != null) recordArray(data.workoutEntries, "workout", validateWorkout);
+  if (data.personalPackageLabels != null) {
+    assert(Array.isArray(data.personalPackageLabels) && data.personalPackageLabels.every(validatePersonalLabel)
+      && new Set(data.personalPackageLabels.map(p=>p.id)).size === data.personalPackageLabels.length,
+      "The backup contains invalid personal package-label data.");
+  }
   if (data.savedExercises != null) recordArray(data.savedExercises, "saved exercise", validateSavedExercise);
   if (data.trophyCaseEntries != null) recordArray(data.trophyCaseEntries, "Trophy Case", validateTrophy);
   if (data.journalEntries != null) validateJournalEntries(data.journalEntries);

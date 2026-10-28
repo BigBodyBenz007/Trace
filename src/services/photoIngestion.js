@@ -216,7 +216,7 @@ async function preparePhoto(file, index, policy, environment) {
       throw new Error("The selected image has invalid dimensions.");
     }
     const needsOptimization =
-      file.size > policy.optimizeAboveBytes ||
+      policy.alwaysReencode || file.size > policy.optimizeAboveBytes ||
       Math.max(decoded.width, decoded.height) > policy.maxLongEdgePixels;
     if (!needsOptimization) {
       return {
@@ -232,7 +232,7 @@ async function preparePhoto(file, index, policy, environment) {
     }
     const optimized = await optimizePhoto(file, decoded, inputType, policy, environment);
     if (
-      file.size <= policy.maxStoredBytesPerPhoto &&
+      !policy.alwaysReencode && file.size <= policy.maxStoredBytesPerPhoto &&
       Math.max(decoded.width, decoded.height) <= policy.maxLongEdgePixels &&
       optimized.blob.size >= file.size
     ) {

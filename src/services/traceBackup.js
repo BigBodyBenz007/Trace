@@ -77,11 +77,12 @@ import {
 } from "./traceBackupIntegrity";
 
 export const TRACE_BACKUP_FORMAT = "trace-backup";
-export const TRACE_BACKUP_SCHEMA_VERSION = 9;
+export const TRACE_BACKUP_SCHEMA_VERSION = 10;
 export const TRACE_STORAGE_KEYS = TRACE_BACKUP_STORAGE_KEYS;
 export const TRACE_BACKUP_LARGE_WARNING_BYTES = 128 * 1024 * 1024;
 const TRACE_BACKUP_MEMORY_RESERVE_BYTES = 16 * 1024 * 1024;
-const TRACE_STORAGE_KEYS_V8 = TRACE_STORAGE_KEYS.filter((key) => !["timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key));
+const TRACE_STORAGE_KEYS_V9 = TRACE_STORAGE_KEYS.filter(key => key !== "personalPackageLabels");
+const TRACE_STORAGE_KEYS_V8 = TRACE_STORAGE_KEYS_V9.filter((key) => !["timeCapsules", "timeCapsuleDraft", "timeCapsuleReminders"].includes(key));
 const TRACE_STORAGE_KEYS_V7 = TRACE_STORAGE_KEYS_V8.filter((key) => key !== "formDrafts");
 const TRACE_STORAGE_KEYS_V6 = TRACE_STORAGE_KEYS_V7.filter((key) => key !== "memoryDraft");
 const TRACE_STORAGE_KEYS_V5 = TRACE_STORAGE_KEYS_V6.filter((key) => key !== "workoutTemplates");
@@ -280,7 +281,8 @@ export async function estimateTraceBackupSize({
 }
 
 function storageKeysForSchema(schemaVersion) {
-  if (schemaVersion >= 9) return TRACE_STORAGE_KEYS;
+  if (schemaVersion >= 10) return TRACE_STORAGE_KEYS;
+  if (schemaVersion === 9) return TRACE_STORAGE_KEYS_V9;
   if (schemaVersion === 8) return TRACE_STORAGE_KEYS_V8;
   if (schemaVersion === 7) return TRACE_STORAGE_KEYS_V7;
   if (schemaVersion === 6) return TRACE_STORAGE_KEYS_V6;
@@ -452,6 +454,7 @@ function validateStructuredData(structuredData, schemaVersion = TRACE_BACKUP_SCH
   if (excludedKey) throw new Error("The backup contains internal transaction recovery data.");
   TRACE_STORAGE_KEYS.forEach((key) => {
     const value = structuredData[key];
+    if (key === "personalPackageLabels" && schemaVersion < 10 && value === undefined) return;
     if (value === null || (LEGACY_OPTIONAL_KEYS.has(key) && value === undefined)) return;
     if (ARRAY_KEYS.has(key) && !Array.isArray(value)) {
       throw new Error(`The backup contains invalid ${key} data.`);
@@ -597,6 +600,7 @@ function photoReferenceIds(structuredData) {
       if (id) ids.push(id);
     });
   });
+  (structuredData.personalPackageLabels || []).forEach(label => label.photos.forEach(photo => ids.push(photo.id)));
   return ids;
 }
 
@@ -650,6 +654,7 @@ export function summarizeTraceBackup(backup) {
     savedExercises: data.savedExercises?.length || 0,
     savedCompounds: data.medicationCompounds?.length || 0,
     userFoods: data.userFoods?.length || 0,
+    personalPackageLabels: data.personalPackageLabels?.length || 0,
     journalEntries: data[JOURNAL_VAULT_STORAGE_KEY] ? null : (data.journalEntries?.length || 0),
     journalDraft: data[JOURNAL_VAULT_STORAGE_KEY] ? null : Boolean(data.journalDraft),
     encryptedJournal: Boolean(data[JOURNAL_VAULT_STORAGE_KEY]),
@@ -814,6 +819,10 @@ function validateAndNormalizeBackup(value) {
   });
   const missingReference = photoReferenceIds(normalizedBackup.data.structured).find((id) => !photoIds.has(id));
   if (missingReference) throw new Error(`The backup is missing referenced photo ${missingReference}.`);
+  for(const label of normalizedBackup.data.structured.personalPackageLabels || []) for(const ref of label.photos) {
+    const photo=value.data.photos.find(p=>p.id===ref.id);
+    if(photo.blob.size!==ref.bytes || photo.blob.type!==ref.mimeType) throw new Error("A package-label photo does not match its retained metadata.");
+  }
   if (!Array.isArray(normalizedBackup.data.media)) throw new Error("The backup is missing its media collection.");
   const { owners, duplicateId } = capsuleMediaOwners(normalizedBackup.data.structured);
   if (duplicateId) throw new Error(`Backup media ${duplicateId} is referenced by more than one capsule owner.`);
@@ -844,7 +853,7 @@ export function validateTraceBackup(value, { cryptoProvider } = {}) {
   if (value.schemaVersion > TRACE_BACKUP_SCHEMA_VERSION) {
     throw new Error("This Trace backup was created by a newer, unsupported backup version.");
   }
-  if (![1, 2, 3, 4, 5, 6, 7, 8, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
+  if (![1, 2, 3, 4, 5, 6, 7, 8, 9, TRACE_BACKUP_SCHEMA_VERSION].includes(value.schemaVersion)) throw new Error("This Trace backup version is unsupported.");
   if (!value.createdAt || Number.isNaN(Date.parse(value.createdAt))) throw new Error("The Trace backup timestamp is invalid.");
   if (value.schemaVersion < 5) return validateAndNormalizeBackup(value);
   return verifyBackupIntegrity(value, cryptoProvider).then(async () => {

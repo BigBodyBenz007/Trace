@@ -1,7 +1,8 @@
+import { assessPersonalPackageLabel } from './personalPackageLabelAssessment';
 import { resolveProteinSupplementBoundary } from './proteinSupplementBoundary';
 import { canonicalGtinKey } from '../services/productIdentifiers';
 import { normalizeNutritionAssessmentInputs } from '../services/nutritionAssessmentInputs';
-import { reconcileBarcodeDatasets, resolveBarcodeCategory } from './barcodeNutritionEvidence';
+import { reconcileBarcodeDatasets, resolvePracticalBarcodeCategory } from './barcodeNutritionEvidence';
 import { evaluateTraceUsNutritionV2 as evaluatePracticalUsNutrition } from './traceUsNutritionScoringV2';
 import { assessAdditiveEvidence, resolveGrainEvidence } from './traceFoodQualityEvidence';
 import { applyVerifiedNutritionToAssessment } from './verifiedBarcodeNutritionAssessment';
@@ -72,22 +73,7 @@ function assessProviderBarcodeNutrition(candidate, identifier) {
   const nutritionConflicts = findSodiumSaltConflicts(input);
   if (nutritionConflicts.length) return freeze({ ...base, reasons: [SODIUM_SALT_MESSAGE],
     evidence: { ...base.evidence, nutritionConflicts } });
-  const categoryEvidence = resolveBarcodeCategory(input, display);
-  const tags = input.categories.flatMap(entry => entry.values).join(' ');
-  const name = input.identity.name.toLowerCase();
-  const isOil = /en:(?:olive-oils|vegetable-oils|oils)(?:\s|$)/.test(tags) && /\boil\b/.test(name);
-  const isNuts = !/en:chestnuts(?:\s|$)/.test(tags) && (/en:(?:nuts|seeds|peanut-butters|nut-butters)(?:\s|$)/.test(tags)
-    || categoryEvidence.basis.includes('Complete single-nut ingredient declaration.'));
-  // An unresolved reference must not erase the provider's mass evidence and
-  // accidentally turn a food (e.g. soup) into a beverage. Keep the existing
-  // volume-only fallback only when the captured measurement evidence agrees.
-  const declaredMass = input.serving.some(entry => ['servingSizeUnit', 'serving_quantity_unit', 'product_quantity_unit'].includes(entry.field)
-    && /^(g|grm|gram|grams)$/i.test(String(entry.value).trim()));
-  const unresolvedMassReference = declaredMass && input.datasets.some(d => d.id === 'off-100g' && d.basis === 'unknown');
-  const volumeOnly = !unresolvedMassReference && input.datasets.some(d => d.quantity?.unit === 'ml')
-    && !input.datasets.some(d => d.quantity?.unit === 'g');
-  const drinking = categoryEvidence.categories.includes('beverage') || (!isOil && !isNuts && volumeOnly);
-  const category = drinking ? 'beverage' : isOil ? 'oil' : isNuts ? 'nuts' : 'general';
+  const { category, categoryEvidence } = resolvePracticalBarcodeCategory(input, display);
   base.evidence.category = { categories: [category], providerClaims: input.categories,
     basis: [`Trace ${category} comparison from available food-description/category and measurement evidence; exact taxonomy tags and plant percentages are not required.`] };
   if (categoryEvidence.excluded) base.warnings.push('Provider reports special-purpose/supplement scope. This score describes nutrients only; it does not establish suitability, food status or intended use.');
@@ -132,6 +118,7 @@ function assessProviderBarcodeNutrition(candidate, identifier) {
 }
 
 export function assessBarcodeNutrition(candidate, identifier) {
+  if (candidate?.personalLabel || candidate?.reviewedLabel) return freeze(assessPersonalPackageLabel(candidate));
   // Resolve the independent manufacturer panel even when an older cached
   // provider panel cannot be scored. Keep that entire original result separate.
   const replacement = getAppliedVerifiedNutritionCorrection(candidate, identifier)?.mode === 'replacement-panel';

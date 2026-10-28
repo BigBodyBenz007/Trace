@@ -9,6 +9,8 @@ export { getBarcodeReviewName } from './barcodeReviewInformation';
 
 export default function BarcodeNutritionReview({ candidate, identifier }) {
   const assessment = assessBarcodeNutrition(candidate, identifier);
+  const personal = candidate.personalLabel;
+  const shared=candidate.reviewedLabel;
   const reviewedLabel = assessment.evidence.reviewedManufacturerLabel;
   const replacement = reviewedLabel?.mode === 'replacement-panel';
   const score = assessment.nutritionScore100;
@@ -16,12 +18,12 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
   const combined = overall.overallScore100;
   const factors = getNutritionHighlights(assessment.result);
   const market = assessment.evidence.market?.status;
-  const confidence = reviewedLabel ? 'Package revision unconfirmed.' : market === 'unknown' ? 'Product market is unknown.'
+  const confidence = shared ? 'Reviewed by Trace; confirm this package edition.' : personal ? 'Your confirmed label. Not independently authenticated.' : reviewedLabel ? 'Package revision unconfirmed.' : market === 'unknown' ? 'Product market is unknown.'
     : market === 'foreign-or-multi-market' ? 'US formulation unconfirmed; multi-market record.' : 'US formulation unconfirmed.';
   if (assessment.ratingStatus === 'not-rated-category') return <section className="trace-barcode-grade" aria-label="Experimental nutrition assessment">
     <strong className="trace-barcode-grade__category-title">{assessment.ratingBoundary.message}</strong>
-    <p>Nutrition and ingredient information remain available. Unrated does not mean unhealthy or unsafe.</p>
-    {candidate.display.sourceUrl && <p><a href={candidate.display.sourceUrl} target="_blank" rel="noreferrer noopener">Provider nutrition</a></p>}
+    <p>{personal && 'Your confirmed label. '}Nutrition and ingredient information remain available. Unrated does not mean unhealthy or unsafe.</p>
+    {candidate.display.sourceUrl && <p><a href={candidate.display.sourceUrl} target="_blank" rel="noreferrer noopener">{personal ? 'Original provider record' : 'Provider nutrition'}</a></p>}
   </section>;
   return <section className="trace-barcode-grade" aria-label="Experimental nutrition assessment">
     <div aria-label="Opening score summary">
@@ -33,6 +35,8 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
       {overall.deductions.length > 0 && <p aria-label="Additive deduction reasons">{overall.deductions.slice(0, 2).map(item => item.summary).join(' ')}{overall.deductions.length > 2 && ' More in Additives.'}</p>}
       <p className="trace-barcode-grade__confidence">{overall.provisional && 'Additive review incomplete. '}{confidence}</p>
     </div>
+    {shared && <p aria-label="Score evidence scope">Score uses the selected Trace-reviewed nutrition{shared.ingredientsConfirmed?' and ingredients':''}. {!shared.ingredientsConfirmed&&'Ingredients remain unknown. '}Owner review does not certify authenticity or a current package match.</p>}
+    {personal && <p aria-label="Score evidence scope">Your confirmed nutrition{personal.ingredientsConfirmed ? ' and ingredients' : '; ingredients not confirmed for this package'}. {candidate.originalCandidate?.providerUnavailable ? 'No provider panel was available.' : 'Original provider evidence is retained separately.'}</p>}
     {reviewedLabel && <p aria-label="Score evidence scope">
       {replacement ? <>Nutrition &amp; ingredients: <a href={reviewedLabel.source.url} target="_blank" rel="noreferrer noopener">manufacturer label</a>.</>
         : <>Score: manufacturer reference. Logging: <a href={reviewedLabel.source.url} target="_blank" rel="noreferrer noopener">corrected sugars</a>; other values from provider.</>}
@@ -53,7 +57,7 @@ export default function BarcodeNutritionReview({ candidate, identifier }) {
       {candidate.display.sourceSelection?.outcome === 'fallback-selected' && <p>A more complete provider record was selected.</p>}
       <p className="trace-barcode-grade__confidence">Experimental rating, not a health-risk measurement.</p>
       <p aria-label="Nutrition sources">{reviewedLabel && <><a href={reviewedLabel.source.nutritionUrl || reviewedLabel.source.url} target="_blank" rel="noreferrer noopener">{replacement ? 'Manufacturer nutrition' : 'Manufacturer reference'}</a>{' · '}</>}
-        {candidate.display.sourceUrl && <a href={candidate.display.sourceUrl} target="_blank" rel="noreferrer noopener">Provider nutrition</a>}</p>
+        {candidate.display.sourceUrl && <a href={candidate.display.sourceUrl} target="_blank" rel="noreferrer noopener">{personal ? 'Original provider record' : 'Provider nutrition'}</a>}</p>
     </details>
   </section>;
 }

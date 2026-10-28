@@ -264,6 +264,7 @@ export default function BackupPage({
             <li>Active workout draft: {summary.activeWorkoutDraft ? "Included — it will replace any current active workout draft" : "None — any current active workout draft will be removed"}</li>
             <li>Medication & supplement entries: {summary.medicationEntries}</li><li>Scheduled doses: {summary.medicationDoseSchedules || 0}</li><li>Dose occurrence changes: {summary.medicationDoseOccurrences || 0}</li><li>Protocols: {summary.protocols}</li><li>Protocol daily statuses: {summary.protocolOccurrences || 0}</li><li>Protocol compound results: {summary.protocolCompoundOutcomes || 0}</li><li>Injection shots: {summary.injectionSiteEntries || 0}</li>
             <li>Trophy Case entries: {summary.trophyCaseEntries}</li><li>Saved exercises: {summary.savedExercises}</li>
+            <li>Personal package-label versions: {summary.personalPackageLabels || 0} (replaces current device labels)</li>
             <li>Saved compounds: {summary.savedCompounds}</li><li>Saved foods: {summary.userFoods}</li>
             <li>{summary.encryptedJournal ? "Encrypted Journal included" : `Journal entries: ${summary.journalEntries || 0}`}</li>
             {!summary.encryptedJournal && <li>Unfinished Journal draft: {summary.journalDraft ? "Included" : "None"}</li>}

@@ -243,3 +243,24 @@ export function resolveBarcodePlantContent(input, display, categoryEvidence) {
     identification: proposal ? 'closed-ingredient-declaration' : 'provider-reported-zero',
     basis: proposal || 'Provider reports zero for the older broader fruit/vegetable/nut group; the updated subset cannot exceed it.' };
 }
+
+// Shared category interpretation; personal panels supply their own measured basis.
+export function resolvePracticalBarcodeCategory(input, display) {
+  const categoryEvidence = resolveBarcodeCategory(input, display);
+  const tags = input.categories.flatMap(entry => entry.values).join(' ');
+  const name = input.identity.name.toLowerCase();
+  const isOil = /en:(?:olive-oils|vegetable-oils|oils)(?:\s|$)/.test(tags) && /\boil\b/.test(name);
+  const isNuts = !/en:chestnuts(?:\s|$)/.test(tags) && (/en:(?:nuts|seeds|peanut-butters|nut-butters)(?:\s|$)/.test(tags)
+    || categoryEvidence.basis.includes('Complete single-nut ingredient declaration.'));
+  // An unresolved reference must not erase the provider's mass evidence and
+  // accidentally turn a food (e.g. soup) into a beverage. Keep the existing
+  // volume-only fallback only when the captured measurement evidence agrees.
+  const declaredMass = input.serving.some(entry => ['servingSizeUnit', 'serving_quantity_unit', 'product_quantity_unit'].includes(entry.field)
+    && /^(g|grm|gram|grams)$/i.test(String(entry.value).trim()));
+  const unresolvedMassReference = declaredMass && input.datasets.some(d => d.id === 'off-100g' && d.basis === 'unknown');
+  const volumeOnly = !unresolvedMassReference && input.datasets.some(d => d.quantity?.unit === 'ml')
+    && !input.datasets.some(d => d.quantity?.unit === 'g');
+  const drinking = categoryEvidence.categories.includes('beverage') || (!isOil && !isNuts && volumeOnly);
+  const category = drinking ? 'beverage' : isOil ? 'oil' : isNuts ? 'nuts' : 'general';
+  return { category, categoryEvidence };
+}

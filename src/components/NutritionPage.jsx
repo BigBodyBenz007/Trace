@@ -87,6 +87,8 @@ function waterGoalInputValue(amountMl, unit) {
 }
 
 function getEntrySourceDetails(foodReference) {
+  if (foodReference?.reviewedLabel) return ["Reviewed by Trace", foodReference.reviewedLabel.brand, foodReference.reviewedLabel.variant];
+  if (foodReference?.personalLabel) return ["Your confirmed label", foodReference.personalLabel.brand, foodReference.personalLabel.variant];
   if (foodReference?.sourceType === "restaurant") {
     return ["Restaurant", foodReference.restaurantName].filter(Boolean);
   }
@@ -899,6 +901,8 @@ function NutritionPage({
               retrievedAt: food.remote.provenance.retrievedAt,
               dataBasis: food.remote.dataBasis,
               unknownFields: [...food.remote.unknownFields],
+              ...(food.personalLabel ? { personalLabel: food.personalLabel } : {}),
+              ...(food.reviewedLabel ? { reviewedLabel: food.reviewedLabel } : {}),
               ...(food.nutritionCorrection ? { nutritionCorrection: food.nutritionCorrection } : {}),
               ...(food.nutritionConflicts ? { nutritionConflicts: food.nutritionConflicts } : {}),
               ...(food.ingredientSource ? { ingredientSource: food.ingredientSource } : {}),
